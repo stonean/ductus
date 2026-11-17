@@ -110,7 +110,8 @@ behind — the adopter still carries `Bash(command -v gvrn)`, `Bash(gvrn --versi
 batch. `ductus-rename` scopes itself to the `mcp__gvrn__` entries, which is
 correct for what it claims. But nothing else prunes them: `configure.md` is
 explicit that it adds canonical entries and removes only **exact-match
-duplicates**, and never rewrites non-duplicate entries another command added —
+duplicates** and the retired entries its step 4 lists, which name none of
+these, and never rewrites non-duplicate entries another command added —
 so these survive every future run. They are dead rather than dangerous, and the
 report-not-repair rule above applies: name them, let the operator decide.
 

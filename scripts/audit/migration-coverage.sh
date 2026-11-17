@@ -2,15 +2,18 @@
 # scripts/audit/migration-coverage.sh — Family 10 of /audit.
 #
 # Verifies framework/migrations.toml is internally consistent with the
-# adjacent framework/migrations/*.md procedure files and with current
-# framework/ state. Four checks:
+# adjacent framework/migrations/*.md procedure files, with CHANGELOG.md's
+# archived entries and with current framework/ state. Five checks:
 #
 #   10a no-orphan-procedure-files: every framework/migrations/*.md has a
 #       matching TOML entry whose procedure_file points at it.
-#   10b no-stale-target-paths: every active registry entry's framework/-
-#       prefixed target_paths refers to a path that does NOT exist in
-#       current framework/. (Non-framework/ target_paths are adopter-
-#       relative and cannot be verified from this repo.)
+#   10b no-stale-target-paths: every framework/-prefixed target_path of an
+#       active registry entry, and of an archived entry in CHANGELOG.md's
+#       Archived migrations (its **Target paths:** line), refers to a path
+#       that does NOT exist in current framework/. (Non-framework/ target_paths
+#       are adopter-relative and cannot be verified from this repo.) An
+#       archived entry with no **Target paths:** line is a finding, since 10b
+#       could not check it.
 #   10c no-broken-procedure-references: every TOML entry's procedure_file
 #       points at an existing framework/migrations/{id}.md.
 #   10d no-earlier-sorting-late-entry: every entry sorts after every entry
@@ -22,6 +25,13 @@
 #       by 048's review, 2026-10-29). Entries first present in the same
 #       commit are exempt from each other. This check reads history and needs
 #       a full-depth checkout; a shallow one is a finding, never a pass.
+#   10e no-overdue-sunset: no active entry's sunset_after is at or below the
+#       release the repository's `version` file names. Pre-run Migrations
+#       already skips such an entry, so it belongs archived: removed from the
+#       registry, its procedure appended to CHANGELOG.md with its target
+#       paths, and its procedure file deleted, in one commit (spec 027 AC13,
+#       AC14). Nothing else prompts that archival, which five entries missed
+#       for up to 49 minor releases.
 #
 # Requires `python3` (standard on developer macOS / CI Ubuntu) for TOML
 # parsing — Python 3.11+ ships with `tomllib`.
@@ -118,11 +128,14 @@ while IFS=$'\037' read -r id pf tps; do
   fi
 done <<< "$ENTRY_DATA"
 
-# 10b no-stale-target-paths: every framework/-prefixed target_path in an
-# active entry must NOT exist in current framework/.
+# 10b no-stale-target-paths: every framework/-prefixed target_path of an
+# active or archived entry must NOT exist in current framework/.
 # Glob patterns (containing *) are expanded; literal paths use test -e.
-while IFS=$'\037' read -r id pf tps; do
-  [ -n "$id" ] || continue
+# check_target_paths LOCATION LABEL TPS — LOCATION is the file a finding
+# names, LABEL how it names the entry, TPS the paths joined by `|`.
+check_target_paths() {
+  local location="$1" label="$2" tps="$3" p m
+  local -a paths matches
   IFS='|' read -r -a paths <<< "$tps"
   for p in "${paths[@]+"${paths[@]}"}"; do
     case "$p" in
@@ -134,7 +147,7 @@ while IFS=$'\037' read -r id pf tps; do
     contained "$ROOT" "$p"
     case $? in
       1)
-        emit "$REGISTRY" "[[migrations]] entry '$id' target_path resolves outside the repository and was not probed: $p" \
+        emit "$location" "$label target_path resolves outside the repository and was not probed: $p" \
           "correct the target_path to a path inside the repository"
         continue
         ;;
@@ -151,7 +164,7 @@ while IFS=$'\037' read -r id pf tps; do
         contained "$ROOT" "$m"
         case $? in
           1)
-            emit "$REGISTRY" "[[migrations]] entry '$id' target_path '$p' matched '$m', which resolves outside the repository and was not probed" \
+            emit "$location" "$label target_path '$p' matched '$m', which resolves outside the repository and was not probed" \
               "remove the symbolic link '$m', or narrow the target_path"
             continue
             ;;
@@ -161,18 +174,79 @@ while IFS=$'\037' read -r id pf tps; do
             ;;
         esac
         if [ -e "$m" ]; then
-          emit "$REGISTRY" "[[migrations]] entry '$id' claims '$p' was removed but '$m' still exists" \
+          emit "$location" "$label claims '$p' was removed but '$m' still exists" \
             "delete $m or remove the target_path from the entry"
         fi
       done
     else
       if [ -e "$p" ]; then
-        emit "$REGISTRY" "[[migrations]] entry '$id' claims '$p' was removed but it still exists" \
+        emit "$location" "$label claims '$p' was removed but it still exists" \
           "delete $p or remove the target_path from the entry"
       fi
     fi
   done
+}
+
+while IFS=$'\037' read -r id pf tps; do
+  [ -n "$id" ] || continue
+  check_target_paths "$REGISTRY" "[[migrations]] entry '$id'" "$tps"
 done <<< "$ENTRY_DATA"
+
+# 10b, archived half: each entry under CHANGELOG.md's `## Archived migrations`
+# opens with a `### {id} (…)` heading and keeps its target_paths on a
+# `**Target paths:**` line of backticked paths (spec 027 AC18). A repository
+# with no CHANGELOG.md has archived nothing.
+#
+# archived_rows FILE — one row per archived entry, unit-separated: ROW, the id
+# and its paths joined by `|`; MISSING and the id; then COVERAGE and the count.
+# A function, since bash 3.2 misparses a heredoc holding backticks inside $().
+archived_rows() {
+  ARCHIVE="$1" python3 <<'PY'
+import os, re
+text = open(os.environ["ARCHIVE"], encoding="utf-8").read()
+section = re.search(r"^## Archived migrations[ \t]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+count = 0
+for block in re.split(r"(?m)^### ", section.group(1) if section else "")[1:]:
+    head, _, rest = block.partition("\n")
+    id_ = head.split(" ", 1)[0].strip()
+    count += 1
+    line = re.search(r"(?m)^\*\*Target paths:\*\*(.*)$", rest)
+    if line is None:
+        print("MISSING\x1f" + id_ + "\x1f")
+    else:
+        print("ROW\x1f" + id_ + "\x1f" + "|".join(re.findall(r"`([^`]+)`", line.group(1))))
+print("COVERAGE\x1f" + str(count) + "\x1f")
+PY
+}
+
+ARCHIVE="CHANGELOG.md"
+if [ -f "$ARCHIVE" ]; then
+  contained "$ROOT" "$ARCHIVE"
+  case $? in
+    1)
+      emit "$ARCHIVE" "the archive resolves outside the repository, so its entries were not examined" \
+        "replace the symbolic link with the file"
+      ;;
+    2)
+      containment_unchecked "$ARCHIVE"
+      exit "$drift"
+      ;;
+    *)
+      ARCHIVED_DATA=$(archived_rows "$ARCHIVE")
+      if [ -z "$ARCHIVED_DATA" ]; then
+        emit "$ARCHIVE" "10b's archived half produced no output: the archive could not be read" "re-run with python3 3.11+"
+      fi
+      while IFS=$'\037' read -r kind id tps; do
+        case "$kind" in
+          ROW) check_target_paths "$ARCHIVE" "archived entry '$id'" "$tps" ;;
+          MISSING) emit "$ARCHIVE" "archived entry '$id' has no **Target paths:** line, so 10b could not check it" \
+            "add a **Target paths:** line listing the entry's target_paths, each in backticks" ;;
+          COVERAGE) echo "migration-coverage | 10b examined: $id archived entries in $ARCHIVE" >&2 ;;
+        esac
+      done <<< "$ARCHIVED_DATA"
+      ;;
+  esac
+fi
 
 # 10d no-earlier-sorting-late-entry: the registry's ordering key is
 # (introduced_in, id); an entry that first appeared in a later commit than
@@ -255,8 +329,50 @@ PY
   done <<< "$ORDER_OUT"
 fi
 
-# TODO: parse archived CHANGELOG.md entries for the same no-stale-target-paths check.
-# Deferred until the first sunset commit so the archive format is established
-# by example. Captured in spec 027 as a future Family 10 enhancement.
+# 10e no-overdue-sunset: an active entry whose sunset_after is at or below the
+# release `version` names is one Pre-run Migrations already skips ("the current
+# ductus release version is less than sunset_after" keeps it), so it is owed
+# its archival.
+if [ ! -f version ]; then
+  emit "version" "10e cannot run: no version file names the current release" \
+    "restore the repository's version file"
+else
+  SUNSET_OUT=$(REGISTRY="$REGISTRY" python3 <<'PY'
+import os, re, tomllib
+
+def release(text):
+    m = re.fullmatch(r"\s*(\d+)\.(\d+)\.(\d+)\s*", text or "")
+    return tuple(int(x) for x in m.groups()) if m else None
+
+raw = open("version", encoding="utf-8").read().strip()
+current = release(raw)
+if current is None:
+    print("FINDING\tversion holds " + repr(raw) + ", not a MAJOR.MINOR.PATCH release, so 10e cannot compare")
+else:
+    with open(os.environ["REGISTRY"], "rb") as f:
+        entries = tomllib.load(f).get("migrations", [])
+    compared = 0
+    for m in entries:
+        if "sunset_after" not in m:
+            continue
+        compared += 1
+        sunset = release(str(m["sunset_after"]))
+        if sunset is None:
+            print("FINDING\t[[migrations]] entry " + repr(m.get("id", "")) + " has sunset_after " + repr(m["sunset_after"]) + ", not a MAJOR.MINOR.PATCH release")
+        elif current >= sunset:
+            print("FINDING\t[[migrations]] entry " + repr(m.get("id", "")) + " is past its sunset_after " + str(m["sunset_after"]) + " (version " + raw + "), so Pre-run Migrations already skips it")
+    print("COVERAGE\t" + str(compared) + " entries with a sunset_after compared with version " + raw)
+PY
+)
+  if [ -z "$SUNSET_OUT" ]; then
+    emit "$REGISTRY" "10e produced no output: the sunset comparison could not run" "re-run with python3 3.11+"
+  fi
+  while IFS=$'\t' read -r kind msg; do
+    case "$kind" in
+      FINDING) emit "$REGISTRY" "$msg" "archive it: remove the entry, append its procedure and **Target paths:** to CHANGELOG.md's Archived migrations, and delete its procedure file, in one commit (spec 027 AC13, AC14)" ;;
+      COVERAGE) echo "migration-coverage | 10e examined: $msg" >&2 ;;
+    esac
+  done <<< "$SUNSET_OUT"
+fi
 
 exit "$drift"

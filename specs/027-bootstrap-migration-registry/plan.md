@@ -41,10 +41,10 @@ Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break
 [migrations]
 # Slug of the newest migration applied. Bootstrap runs only entries newer
 # than this. Absent field means "no migrations applied" — runs every active entry.
-last_applied = "rule-files-relocate"
+last_applied = "substitute-seed-placeholders"
 ```
 
-Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applied every active entry (most of which are no-ops because their targets are absent), then wrote the section with `last_applied = <newest entry's id>`. Since spec 071's task 20 a greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run.
+Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applied every active entry (most of which are no-ops because their targets are absent), then wrote the section with `last_applied = <newest entry's id>`. Since spec 071's task 20 a greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run. Since task 16 a first adoption does the same, which Pre-flight Checks decides from finding no signal an earlier run leaves (scenario `a-first-adoption-runs-no-migration`).
 
 Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md`.
 
@@ -122,28 +122,29 @@ If, after implementation, a SemVer helper proves common across multiple procedur
 
 ### Sunset commit shape
 
-When a maintainer sunsets a migration (current ductus ≥ entry's `sunset_after`), the work is one commit:
+When the release reaches an entry's `sunset_after` (current ductus ≥ `sunset_after`), Family 10's check 10e fails until the entry is archived, in one commit:
 
 1. Delete the `[[migrations]]` entry from `framework/migrations.toml`.
-2. Append the procedure file's content to `CHANGELOG.md` at the repo root under:
+2. Append it to `CHANGELOG.md`'s `## Archived migrations` at the repo root:
 
    ```markdown
-   ## {id} — sunset {ductus version}
+   ### {id} (introduced {introduced_in}, sunset after {sunset_after})
 
-   Introduced in ductus {introduced_in}; sunset after ductus {sunset_after}.
-   Adopters who skipped past this window must apply manually.
+   **Summary:** {the procedure file's summary}
 
-   {full content of framework/migrations/{id}.md}
+   **Target paths:** `{each target_paths entry}`, …
+
+   {the procedure file's steps}
    ```
 
 3. Delete `framework/migrations/{id}.md`.
-4. `/audit`'s Family 10 verifies the consistency of steps 1+3 (no orphan procedure files, no broken refs); it does not verify the CHANGELOG append (no static check can — discipline + code review).
+4. `/audit`'s Family 10 verifies steps 1 and 3 (10a, 10c, 10e) and the archived entry's target paths (10b, which reads the `**Target paths:**` line and fails an archived entry without one). It does not verify that the recipe text was appended.
 
-`CHANGELOG.md` is created in this spec's implementation with a seed entry describing the registry's introduction (no historical entries yet — back-filled migrations are still active).
+`CHANGELOG.md` holds seven archived entries: two archived by 043 on 2026-07-22, and five, long past their `sunset_after`, archived on 2026-11-17 when 10e was added (owner decision).
 
 ### Family 10 design (`scripts/audit/migration-coverage.sh`)
 
-Shell script under the existing `scripts/audit/` directory. Follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only. Three checks:
+Shell script under the existing `scripts/audit/` directory. Follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only. Five checks, of which the sketch below shows the first three; the script's header states all five. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17):
 
 ```bash
 # 10a no-orphan-procedure-files
@@ -163,7 +164,7 @@ done
 # Verify each path exists.
 ```
 
-CHANGELOG.md parsing for 10b: archived entries have a recognizable heading (`## {id} — sunset {version}`) followed by a TOML-fenced block (or the raw procedure content). The script grep's for the `target_paths` line within archived sections. If the format changes, the script needs updating — captured as a future Family 10 brittleness risk.
+CHANGELOG.md parsing for 10b: each archived entry under `## Archived migrations` opens with a `### {id} (…)` heading and keeps its target paths on a `**Target paths:**` line of backticked paths, which 10b checks as it does an active entry's. An archived entry with no such line is a finding, so a format change fails loudly rather than leaving entries unchecked.
 
 Wiring: append one line to `scripts/audit/run-all.sh` after the Family 9 invocation:
 
@@ -200,15 +201,12 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/migrations.toml` | Create | Registry; back-filled with six entries |
-| `framework/migrations/spec-and-plan-sunset.md` | Create | Procedure for lightweight-track sunset |
-| `framework/migrations/rule-files-relocate.md` | Create | Procedure for rule-file relocation (subsumes `configuration.md` rename) |
-| `framework/migrations/governance-config-rename.md` | Create | Procedure for `.governance.toml` → `.govern.toml` |
-| `framework/migrations/gitignore-marker-rename.md` | Create | Procedure for `# Governance` → `# ductus` gitignore marker |
 | `framework/bootstrap/ductus.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.ductus/config.toml` `[migrations]` section to the §Project Configuration schema |
-| `scripts/audit/migration-coverage.sh` | Create | Family 10 — three static checks |
+| `scripts/audit/migration-coverage.sh` | Create | Family 10 — its five checks, 10a to 10e |
+| `scripts/tests/test-migration-coverage.sh` | Create | Cases for 10d, 10e and 10b's archived half, each failing when its check is removed |
 | `scripts/audit/run-all.sh` | Modify | Append Family 10 invocation |
 | `framework/commands/audit.md` | Modify | Append step for Family 10 in the Markdown-only reference |
-| `CHANGELOG.md` | Create | Adopter-facing archive (seed content; no entries yet) |
+| `CHANGELOG.md` | Create | Adopter-facing archive: each archived entry's recipe and its target paths |
 | `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` | Create | Cross-spec impact: 026 is `done`; Family 10 extension lands as a scenario with back-link to 027 |
 | `specs/027-bootstrap-migration-registry/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `→ in-progress` and `→ done` during implementation |
 
@@ -244,7 +242,7 @@ Family 10 verifies registry/state consistency, not registry/diff coverage. A mai
 
 ### CHANGELOG.md append at sunset is maintainer-discipline
 
-When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. Family 10 catches two of three (no-orphan, no-broken-ref) but cannot verify the CHANGELOG actually received the content. A maintainer who deletes the TOML entry and procedure file without appending to CHANGELOG breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate; a stronger automated check could parse the previous registry's sunsetted entry against CHANGELOG diff in CI — captured as a future enhancement.
+When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. 10e makes the sunset itself not depend on anyone remembering it: five entries sat past their `sunset_after` for up to 49 minor releases before it existed. Family 10 still cannot verify that the CHANGELOG received the recipe: a maintainer who deletes the TOML entry and procedure file without appending breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate for that step.
 
 ### Procedure file content format is loosely specified
 

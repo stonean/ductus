@@ -6,7 +6,7 @@ section: "Adopter State"
 
 ## Context
 
-Pre-run Migrations skips only a **greenfield** run, one with no config file at any tier and no spec root (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, step 4). A first adoption into a project that keeps its own spec root is not greenfield, so it runs every active entry, though no earlier `ductus` run left anything to convert: Pre-flight Checks has already decided it is a first adoption from signals only an earlier run leaves (007's scenario `a-first-adoption-with-existing-specs-is-not-an-update`).
+Pre-run Migrations skipped only a **greenfield** run, one with no config file at any tier and no spec root (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, step 4). A first adoption into a project that keeps its own spec root was not greenfield, so it ran every active entry, though no earlier `ductus` run left anything to convert: Pre-flight Checks has already decided it is a first adoption from signals only an earlier run leaves (007's scenario `a-first-adoption-with-existing-specs-is-not-an-update`).
 
 Found by 007 task 7's scratch-adopter bootstrap on 2026-11-16: a first adoption into a project with two specs of its own, `specs/001-greeting/spec.md` and `specs/002-farewell/spec.md`, neither with frontmatter. All 14 pending entries ran. `criterion-label-backfill`'s `label-criteria` and `audit-record-relocate`'s `relocate-audit-records` each exited 1 on both specs (`frontmatter missing … (no leading --- block)`), and the procedure gives no case for a migration's primitive error, so the run went on. The Frontmatter Migration then skipped both (`no metadata to migrate`), and the run ended reporting success with two specs that `/{project}:analyze` reads as a hard fail, which nothing told the operator.
 
@@ -24,6 +24,7 @@ Decided by the owner on 2026-11-16, over the same change plus default frontmatte
 - **A project's own root `constitution.md` on a first adoption:** `constitution-relocate` no longer runs, so the file is untouched without relying on that migration's content gate, which still guards an update (scenario `a-projects-own-constitution-is-not-relocated`).
 - **A spec with frontmatter that does not parse** is not one without frontmatter: it is not named here, and `/{project}:analyze` reports it.
 - **An update whose spec has no frontmatter** still runs its migrations, and the closing summary names the spec the same way.
+- **A first adoption that stopped early and is run again.** The stopped run left a `.ductus/config.toml` without the `[host]` table, which is no earlier-adoption signal, so the re-run is still a first adoption and runs no migration (007's scenario `a-first-adoption-with-existing-specs-is-not-an-update`; owner, 2026-11-17).
 
 ## Open Questions
 

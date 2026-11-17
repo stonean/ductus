@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Test surface for scripts/audit/migration-coverage.sh check 10d (Family 10).
+# Test surface for scripts/audit/migration-coverage.sh checks 10d, 10e and
+# 10b's archived half (Family 10).
 #
 # 10d holds the registry's ordering key, (introduced_in, id), against the order
 # entries were added: Pre-run Migrations runs only entries after an adopter's
@@ -26,6 +27,15 @@
 #      are still examined (10b and 10c's unit-separated rows)
 #   J. an entry with no target_paths does not stop 10b for the entries
 #      after it, or 10d (bash 3.2's empty array under `set -u`)
+#   K. 10e: an entry at or past its sunset_after fails, naming it; one whose
+#      sunset_after is still ahead passes, with a coverage line
+#   L. 10e: no version file, or one that is no release, fails rather than
+#      passing
+#   M. 10b's archived half: an archived entry whose framework/ target path
+#      still exists fails, one with no **Target paths:** line fails, and one
+#      whose paths are gone passes, with a coverage line
+#
+# Every fixture holds a version file (0.59.0), since 10e reads it.
 #
 # The fixture repositories hold their own copy of the check and its lib, so the
 # check reads the fixture's history. The job that runs this needs the git
@@ -51,6 +61,7 @@ make_repo() {
   local dir="$WORK/$1"
   mkdir -p "$dir/scripts/audit" "$dir/framework/migrations"
   cp "$REPO_ROOT/scripts/audit/migration-coverage.sh" "$REPO_ROOT/scripts/audit/lib.sh" "$dir/scripts/audit/"
+  printf '0.59.0\n' > "$dir/version"
   git -C "$dir" init -q
   echo "$dir"
 }
@@ -88,7 +99,7 @@ expect() {
   if printf '%s' "$out" | grep -qE -- "$3"; then pass "$1"; else fail "$1: no finding matched /$3/: $out"; fi
 }
 
-echo "Running migration-coverage 10d tests..."
+echo "Running migration-coverage tests..."
 
 dir="$(make_repo a)"
 entry "$dir" alpha 0.60.0; commit "$dir"
@@ -207,8 +218,91 @@ else
   fail "J: 10d did not run: $err"
 fi
 
+# sunset_entry DIR ID VERSION SUNSET — an entry carrying a sunset_after.
+sunset_entry() {
+  printf '[[migrations]]\nid = "%s"\nintroduced_in = "%s"\nsunset_after = "%s"\nsummary = "s"\ntarget_paths = ["adopter/x"]\nprocedure_file = "framework/migrations/%s.md"\n\n' \
+    "$2" "$3" "$4" "$2" >> "$1/framework/migrations.toml"
+  printf '# %s\n' "$2" > "$1/framework/migrations/$2.md"
+}
+
+dir="$(make_repo k)"
+sunset_entry "$dir" overdue 0.2.0 0.10.0
+sunset_entry "$dir" at-version 0.50.0 0.59.0
+sunset_entry "$dir" ahead 0.58.0 0.61.0
+commit "$dir"
+run_check "$dir"
+expect "K: an entry past its sunset_after fails, naming it" 1 \
+  "entry 'overdue' is past its sunset_after 0.10.0 \(version 0.59.0\)"
+expect "K: an entry whose sunset_after equals the version fails" 1 \
+  "entry 'at-version' is past its sunset_after 0.59.0"
+if printf '%s' "$out" | grep -q "'ahead'"; then
+  fail "K: an entry whose sunset_after is still ahead was reported: $out"
+else
+  pass "K: an entry whose sunset_after is still ahead passes"
+fi
+if printf '%s' "$err" | grep -q '10e examined: 3 entries with a sunset_after compared with version 0.59.0'; then
+  pass "K: the coverage line states what 10e compared"
+else
+  fail "K: 10e coverage line missing or wrong: $err"
+fi
+
+dir="$(make_repo l)"
+entry "$dir" alpha 0.60.0; commit "$dir"
+rm -f "$dir/version"
+run_check "$dir"
+expect "L: no version file fails rather than passing" 1 "10e cannot run: no version file"
+printf 'main\n' > "$dir/version"
+run_check "$dir"
+expect "L: a version that is no release fails" 1 "version holds 'main', not a MAJOR.MINOR.PATCH release"
+
+dir="$(make_repo m)"
+entry "$dir" alpha 0.60.0
+mkdir -p "$dir/framework/workflows"
+printf '# Still here\n' > "$dir/framework/workflows/kept.md"
+cat > "$dir/CHANGELOG.md" << 'MD'
+# CHANGELOG
+
+## Archived migrations
+
+### stale-one (introduced 0.2.0, sunset after 0.10.0)
+
+**Summary:** s.
+
+**Target paths:** `adopter/y`, `framework/workflows/kept.md`
+
+### no-paths-line (introduced 0.2.0, sunset after 0.10.0)
+
+**Summary:** s.
+
+### clean-one (introduced 0.3.0, sunset after 0.10.0)
+
+**Summary:** s.
+
+**Target paths:** `framework/skills/`, `framework/gone/*.md`
+
+## Later section
+
+### not-archived (introduced 0.4.0, sunset after 0.10.0)
+MD
+commit "$dir"
+run_check "$dir"
+expect "M: an archived framework/ target path that still exists fails" 1 \
+  "archived entry 'stale-one' claims 'framework/workflows/kept.md' was removed but it still exists"
+expect "M: an archived entry with no Target paths line fails" 1 \
+  "archived entry 'no-paths-line' has no \*\*Target paths:\*\* line"
+if printf '%s' "$out" | grep -qE "'clean-one'|'not-archived'"; then
+  fail "M: a clean archived entry, or a heading outside the section, was reported: $out"
+else
+  pass "M: an archived entry whose paths are gone passes, and only the section is read"
+fi
+if printf '%s' "$err" | grep -q '10b examined: 3 archived entries in CHANGELOG.md'; then
+  pass "M: the coverage line counts the archived entries"
+else
+  fail "M: 10b archived coverage line missing or wrong: $err"
+fi
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2
   exit 1
 fi
-echo "All migration-coverage 10d cases passed."
+echo "All migration-coverage cases passed."

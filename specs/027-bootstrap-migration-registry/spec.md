@@ -1,7 +1,7 @@
 ---
 status: in-progress
 dependencies: [026-framework-self-audit]
-next-criterion: 31
+next-criterion: 33
 ---
 
 # 027 — Bootstrap Migration Registry
@@ -61,13 +61,19 @@ Entries past their `sunset_after` version are excluded from this loop entirely �
 
 ## Sunset and Adopter Changelog
 
-When an entry's `sunset_after` version is older than the current ductus release, the entry is removed from `framework/migrations.toml` and its text is appended to the adopter-facing changelog, `CHANGELOG.md` at the repo root. Adopters who are far enough behind to need an expired migration must apply it manually using the archive entry as a recipe.
+When an entry's `sunset_after` version is older than the current ductus release, the entry is removed from `framework/migrations.toml` and its text is appended to the adopter-facing changelog, `CHANGELOG.md` at the repo root, with its target paths. Adopters who are far enough behind to need an expired migration must apply it manually using the archive entry as a recipe. Family 10's 10e fails while an active entry is past its `sunset_after`, so the archival does not wait on anyone remembering it.
 
 The sunset window is per-entry, not global. High-impact removals (like a directory rename) can stay active longer than low-impact ones (like a gitignore-marker rename). The sunset value is chosen when the entry is written.
 
 ## Audit Family
 
-Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as `scripts/audit/migration-coverage.sh`. It runs three static current-state checks: no orphan procedure file (every `framework/migrations/{id}.md` has a registry entry), no stale target path (every `framework/`-prefixed `target_paths` entry in the active registry names something absent from current `framework/`; the others are adopter-relative and unverifiable here), and no broken procedure reference (every `procedure_file` exists). Whether a removal shipped with its migration is a property of a diff, not of the current state, so it is not this family's to check — see the detection-mechanism resolution below.
+Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as `scripts/audit/migration-coverage.sh`. It runs five checks:
+
+- **10a**, no orphan procedure file: every `framework/migrations/{id}.md` has a registry entry.
+- **10b**, no stale target path: every `framework/`-prefixed `target_paths` entry of the active registry, and of each archived entry in `CHANGELOG.md` (its `**Target paths:**` line), names something absent from current `framework/`. The others are adopter-relative and unverifiable here.
+- **10c**, no broken procedure reference: every `procedure_file` exists.
+- **10d**, since task 15: no entry added after another sorts before it, which reads the registry's git history.
+- **10e**: no active entry is past its `sunset_after` against the release `version` names (owner, 2026-11-17). Whether a removal shipped with its migration is a property of a diff, not of the current state, so it is not this family's to check — see the detection-mechanism resolution below.
 
 ## Acceptance Criteria
 
@@ -100,11 +106,13 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 ### Audit (Family 10)
 
-- [x] AC16: A new `scripts/audit/migration-coverage.sh` (Family 10 of [026](../026-framework-self-audit/spec.md)) runs three static checks against current state:
+- [x] AC16: A new `scripts/audit/migration-coverage.sh` (Family 10 of [026](../026-framework-self-audit/spec.md)) runs these checks against the registry, its archive and its history:
   - [x] AC17: **No orphan procedure files**: every `framework/migrations/{id}.md` has a matching TOML entry with `procedure_file` pointing at it. Failures: orphan files exist.
-  - [x] AC18: **No stale target paths**: every `target_paths` entry across `framework/migrations.toml` *and* archived entries in `CHANGELOG.md` refers to a path that does *not* exist in current `framework/`. Failures: a registry entry says "removed" but the path still exists.
+  - [x] AC18: **No stale target paths**: every `target_paths` entry across `framework/migrations.toml` *and* archived entries in `CHANGELOG.md` (each entry's `**Target paths:**` line, without which the entry is itself a failure) refers to a path that does *not* exist in current `framework/`. Failures: a registry entry says "removed" but the path still exists.
   - [x] AC19: **No broken procedure references**: every TOML entry's `procedure_file` field points at an existing `framework/migrations/{id}.md`. Failures: dangling references.
-- [x] AC20: Family 10 exits `0` when all three checks pass, `1` otherwise. Output format matches the other families (header + findings rows on stdout). The orchestrator `scripts/audit/run-all.sh` invokes Family 10.
+  - [ ] AC31: **No late entry sorting early** (10d): every entry sorts, by (`introduced_in`, then `id`), after every entry first present in an earlier commit of `framework/migrations.toml`, entries added in one commit exempt from each other; a shallow checkout, whose history it cannot read, is a failure. Failures: an entry an adopter's `last_applied` would skip forever.
+  - [ ] AC32: **No overdue sunset** (10e): no active entry's `sunset_after` is at or below the release the repository's `version` file names, and a missing or malformed `version` is a failure. Failures: an entry Pre-run Migrations already skips, still owed its archival (AC13, AC14).
+- [x] AC20: Family 10 exits `0` when every check passes, `1` otherwise. Output format matches the other families (header + findings rows on stdout). The orchestrator `scripts/audit/run-all.sh` invokes Family 10.
 
 ### Idempotency
 
@@ -144,6 +152,6 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 - **Sunset archive location** — `CHANGELOG.md` at the repo root. Paths disambiguate; the runtime crate's `runtime/CHANGELOG.md` stays where Cargo expects it. Adopters who hit a removed convention with no active migration browse the repo root first; that's where the recipe-of-record belongs. Category separation: `framework/` holds in-force conventions, the repo-root `CHANGELOG.md` holds the historical record. Append-only, one file, easy to grep — no directory traversal needed. When a migration sunsets: its procedure file is appended to `CHANGELOG.md` under a heading, the procedure file is deleted, and the TOML entry is removed in the same commit. The bootstrap loop never reads `CHANGELOG.md` — it's for humans, not tooling.
 - **Back-filled migration values** — hybrid: accurate `introduced_in` per git history (one-time `git log` for six entries), uniform `sunset_after = registry_introduction_version + 2 minor versions` for the back-fill. Accurate `introduced_in` makes the eventual CHANGELOG entries read correctly. Uniform sunset because we lack per-entry signal; +2 minor versions gives adopters two release cycles of grace. Spec doesn't pin the actual `registry_introduction_version` — acceptance criterion phrases it relative to whatever release ships the registry.
 - **Batch behavior** — single prompt at start listing all pending migrations with `introduced_in` annotation, then run sequentially. `last_applied` updates after each migration completes (not at the very end), so an aborted batch resumes from the next run. Inner per-migration interactions (e.g., spec-and-plan's per-file Y/n) are unaffected — the outer prompt only gates "attempt the batch." Declining the outer prompt emits a warning summary and makes no filesystem changes.
-- **`/audit` detection mechanism** — Family 10 runs three static current-state checks: no-orphan-procedure-files (every `framework/migrations/{id}.md` has a TOML entry), no-stale-target-paths (every registry/archive `target_paths` refers to something absent from current `framework/`), and no-broken-procedure-references (every TOML `procedure_file` points at an existing markdown file). The "removal must ship with a migration" enforcement moves to a separate pre-commit hook (out of scope for this spec — captured as follow-on) because it's fundamentally a diff operation against HEAD, not a static-state check. `/audit`'s contract stays current-state-only, matching every other family.
+- **`/audit` detection mechanism** — Family 10 runs static checks: no-orphan-procedure-files (every `framework/migrations/{id}.md` has a TOML entry), no-stale-target-paths (every registry/archive `target_paths` refers to something absent from current `framework/`), no-broken-procedure-references (every TOML `procedure_file` points at an existing markdown file), and, since 2026-11-17, no-overdue-sunset (10e, owner decision). The "removal must ship with a migration" enforcement moves to a separate pre-commit hook (out of scope for this spec — captured as follow-on) because it's fundamentally a diff operation against HEAD, not a static-state check. Family 10 reads history in one place only: task 15's 10d compares the registry's order with the order its entries were added, which no current-state check can see (048's review, 2026-10-29), so it needs a full-depth checkout.
 - **Removal target type taxonomy** — no type field; per-entry free-form is sufficient. Motivation evaporated when Q4 dropped the declarative DSL (no defaults to drive). No consumer benefits from a type enum: the bootstrap loop and Family 10 both read `target_paths` + `procedure_file`, and humans reading `CHANGELOG.md` get the human-readable framing from the `summary` string. Adding a taxonomy creates maintenance cost (categorizing each new entry, evolving the enum) without a corresponding consumer.
 - **Interaction with 022 (runtime primitive vs host-side)** — host-side procedure at v1; no new primitive. Migration loop contains user prompts and per-file branching, which is host-side territory by 022's boundary. The mechanical TOML-read is the only new operation and doesn't warrant a primitive by itself. Defer promotion until Family 9 (`primitive-promotion-candidates.sh`) detects the same pattern across multiple procedure files — then promote whatever small operation duplicates (atomic-rename, semver-compare, registry-read).
