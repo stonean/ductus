@@ -109,7 +109,7 @@ MUTATIONS = [
     (
         'M13 resolve-references reads a spec value that leaves the checkout',
         'src/primitives/resolve_references.rs',
-        '    if super::validate_contained(&specs_dir, &format!("{}/spec.md", entry.spec)).is_err() {\n        return Ok((ReferenceOutcome::StatusUnreadable, None));\n    }\n',
+        '    if super::validate_contained(&specs_dir, &format!("{}/spec.md", entry.spec)).is_err() {\n        return Ok((ReferenceOutcome::Broken, None));\n    }\n',
         '',
         'resolve_references::tests::a_spec_value_that_leaves_the_checkouts_spec_root_is_unread',
     ),

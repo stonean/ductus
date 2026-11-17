@@ -1313,8 +1313,13 @@ fn dispatch_primitive(
 /// *directory*, as `write-session` records it, and what `/analyze` reads as
 /// "the spec path" is that directory's `spec.md`; a `path` naming anything
 /// else is the spec file already and is returned as given.
+///
+/// `path` comes from the walker context, so it is contained before it is
+/// probed: one that leaves the project, lexically or through a link, is
+/// returned as given, for the primitive that takes it to refuse
+/// (`BE-INPUT-004`; 022 task 46).
 fn spec_file(repo: &Path, path: &str) -> String {
-    if repo.join(path).is_dir() {
+    if !primitives::leaves_project(repo, path) && repo.join(path).is_dir() {
         format!("{}/spec.md", path.trim_end_matches('/'))
     } else {
         path.to_string()
@@ -3514,6 +3519,22 @@ mod tests {
         Walker::new(procedure, fixture_repo(), Map::new(), reader, writer).unwrap()
     }
 
+    /// A context `path` that leaves the project is not probed for being a
+    /// directory, so the spec-file binding never names a file beneath a place
+    /// outside it: the path stands as given, for the primitive to refuse.
+    #[cfg(unix)]
+    #[test]
+    fn a_context_path_that_leaves_the_project_is_not_probed_for_a_spec_file() {
+        let fixture = escape_fixture();
+        let outside = fixture.outside.path().to_string_lossy().into_owned();
+        assert_eq!(spec_file(&fixture.repo, "link"), "link");
+        assert_eq!(spec_file(&fixture.repo, &outside), outside);
+        assert_eq!(
+            spec_file(&fixture.repo, "specs/003-clean"),
+            "specs/003-clean/spec.md"
+        );
+    }
+
     #[test]
     fn a_spec_file_path_never_overwrites_the_retargeted_session_path() {
         // `/ductus:specify` runs create-feature → label-criteria → write-session.
@@ -3767,7 +3788,8 @@ mod tests {
     /// A project whose links lead out of it. `specs/001-out` is a link to a
     /// feature directory outside the project; `specs/002-in` is a real feature
     /// directory whose `tasks.md` links out; `specs/003-clean` has no link;
-    /// `link` is a directory link out of the project.
+    /// `specs/004-001-out` is a link to nothing; `link` is a directory link
+    /// out of the project.
     #[cfg(unix)]
     struct EscapeFixture {
         _project: tempfile::TempDir,
@@ -3799,6 +3821,11 @@ mod tests {
         std::os::unix::fs::symlink(out.join("tasks.md"), repo.join("specs/002-in/tasks.md"))
             .unwrap();
         std::os::unix::fs::symlink(out.join("dir"), repo.join("link")).unwrap();
+        // The directory `create-feature` would make for the title `001-out`
+        // (`004-001-out`, after the three above) is a link to nothing: absent
+        // to `list_feature_dirs`, so the number stays, and outside the
+        // project to the check.
+        std::os::unix::fs::symlink(out.join("absent"), repo.join("specs/004-001-out")).unwrap();
         // `migrate-session-file` takes only `<config-dir>/<name>-session.json`
         // (spec 022 task 11), so its outward link is a config directory.
         std::os::unix::fs::symlink(out.join("dir"), repo.join(".claude")).unwrap();
@@ -3812,11 +3839,29 @@ mod tests {
     }
 
     #[cfg(unix)]
-    /// One case per feature-argument call site, `feature` in the slot the
-    /// site checks and `other` in any second feature slot.
+    /// One case per call site that takes a feature from a call's arguments and
+    /// hands it to a `validate_feature_*` helper: `feature` in the slot the
+    /// site checks and `other` in any second feature slot. `dashboard` takes no
+    /// feature, and checks each directory it lists, so its case ignores both;
+    /// `create-feature` names a directory it creates, from the title. The
+    /// callers that take the name from text a file holds are no rows, each
+    /// held by a test of its own: `decisions::work_state`
+    /// (`work_behind_a_link_out_of_the_project_is_unreadable`), the analyze
+    /// lint subject (`the_analyze_lint_subject_is_bound_only_for_a_contained_feature`)
+    /// and `payload.rs`' `feature_dir` and `load_plan_relevant_files`
+    /// (`load_rules_refuses_a_feature_linked_outside_the_project`,
+    /// `a_plan_outside_the_project_is_not_read`).
     fn feature_argument_cases(feature: &str, other: &str) -> Vec<(&'static str, Value)> {
+        let mut cases = feature_argument_cases_through_invalidate(feature);
+        cases.extend(feature_argument_cases_from_label(feature, other));
+        cases
+    }
+
+    /// The first half of [`feature_argument_cases`], in name order, up to
+    /// `invalidate-review`.
+    #[cfg(unix)]
+    fn feature_argument_cases_through_invalidate(feature: &str) -> Vec<(&'static str, Value)> {
         let path = format!("specs/{feature}");
-        let at = "2026-10-20T00:00:00Z";
         let sha = "0".repeat(40);
         vec![
             (
@@ -3832,6 +3877,26 @@ mod tests {
                 serde_json::json!({"feature": feature}),
             ),
             ("check-artifacts", serde_json::json!({"feature": feature})),
+            (
+                "brief-re-read",
+                serde_json::json!({"feature": feature, "base": sha}),
+            ),
+            (
+                "check-prescriptions",
+                serde_json::json!({"feature": feature, "base": sha}),
+            ),
+            (
+                "classify-spec-edit",
+                serde_json::json!({"feature": feature}),
+            ),
+            ("create-feature", serde_json::json!({"title": feature})),
+            ("dashboard", serde_json::json!({})),
+            // The rules' verdicts are read from the feature's analysis record,
+            // only under `rules` and `all`.
+            (
+                "discover-rule-files",
+                serde_json::json!({"feature": feature, "rules": true, "all": true}),
+            ),
             ("check-departures", serde_json::json!({"feature": feature})),
             ("check-review-gate", serde_json::json!({"feature": feature})),
             (
@@ -3853,6 +3918,15 @@ mod tests {
             ("derive-boundary", serde_json::json!({"feature": feature})),
             ("diff-cross-spec", serde_json::json!({"feature": feature})),
             ("invalidate-review", serde_json::json!({"feature": feature})),
+        ]
+    }
+
+    /// The second half of [`feature_argument_cases`], from `label-criteria`.
+    #[cfg(unix)]
+    fn feature_argument_cases_from_label(feature: &str, other: &str) -> Vec<(&'static str, Value)> {
+        let at = "2026-10-20T00:00:00Z";
+        let sha = "0".repeat(40);
+        vec![
             ("label-criteria", serde_json::json!({"feature": feature})),
             (
                 "mark-criterion",
@@ -3869,6 +3943,10 @@ mod tests {
             ("process-waivers", serde_json::json!({"feature": feature})),
             ("prune-plan", serde_json::json!({"feature": feature})),
             ("prune-tasks", serde_json::json!({"feature": feature})),
+            (
+                "read-re-read",
+                serde_json::json!({"feature": feature, "base": sha}),
+            ),
             ("read-spec", serde_json::json!({"feature": feature})),
             ("read-tasks", serde_json::json!({"feature": feature})),
             (
@@ -3899,6 +3977,12 @@ mod tests {
                 "rewrite-spec-links",
                 serde_json::json!({"from": other, "to": feature}),
             ),
+            // A scenario target, whose feature half is walked on its own.
+            (
+                "rewrite-spec-links",
+                serde_json::json!({"from": other, "to": format!("{feature}/s")}),
+            ),
+            ("start-fix-rounds", serde_json::json!({"feature": feature})),
             (
                 "set-status",
                 serde_json::json!({"feature": feature, "from": "in-progress", "to": "done"}),
@@ -3937,7 +4021,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 33);
+        assert_eq!(cases.len(), 42);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(
@@ -3957,12 +4041,22 @@ mod tests {
     /// finds an outward link beneath it, which the argument check alone does
     /// not see. All but `check-artifacts` refuse the call; it keeps 067's
     /// skip-and-continue (scenario `sibling-symlink-trust-boundary`) and
-    /// records the link as a `target-unparseable` skip.
+    /// records the link as a `target-unparseable` skip. `create-feature` is
+    /// the exception that has nothing to walk: the directory it names is one
+    /// it creates, so its check is the argument's alone, which the first test
+    /// holds. `dashboard`'s fixture has no `specs/001-out` link, which would
+    /// refuse it before it reached the link beneath `specs/002-in`.
     #[cfg(unix)]
     #[test]
     fn every_feature_argument_site_walks_the_feature_directory() {
         let fixture = escape_fixture();
         for (name, args) in feature_argument_cases("002-in", "003-clean") {
+            if name == "create-feature" {
+                continue;
+            }
+            if name == "dashboard" {
+                std::fs::remove_file(fixture.repo.join("specs/001-out")).unwrap();
+            }
             let result = dispatch_primitive(name, &context_of(&args), &fixture.repo);
             if name == "check-artifacts" {
                 assert!(
@@ -3986,6 +4080,12 @@ mod tests {
         // would leave every later case nothing to refuse.
         for (name, args) in feature_argument_cases("003-clean", "003-clean") {
             let fresh = escape_fixture();
+            if name == "dashboard" {
+                // It checks every directory it lists, so the links of the
+                // other features are taken away.
+                std::fs::remove_file(fresh.repo.join("specs/001-out")).unwrap();
+                std::fs::remove_file(fresh.repo.join("specs/002-in/tasks.md")).unwrap();
+            }
             let result = dispatch_primitive(name, &context_of(&args), &fresh.repo);
             assert!(!refused_through_a_symlink(&result), "`{name}`: {result:?}");
         }

@@ -235,7 +235,9 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveReferencesResult> {
 /// [`super::PrimitiveError::Git`] when a
 /// repository contains the project but its index or status cannot be read —
 /// the listing of which specs to derive then has no answer, and guessing one
-/// would rewrite drafts or skip specs silently.
+/// would rewrite drafts or skip specs silently; and
+/// [`super::PrimitiveError::InvalidPath`] when no repository contains the
+/// project and its spec root is or runs through a link that leaves it.
 pub fn compute(args: &DeriveReferencesArgs, repo: &Path) -> Result<Derived> {
     compute_between(args, repo, &mut |_| {})
 }

@@ -4073,11 +4073,15 @@ pub(crate) fn tracked_project_paths(repo: &Path) -> Result<Option<Vec<String>>> 
 /// (spec 017, `tracked-specs-not-worktree`). Falls back to a worktree walk
 /// only outside a git repo, where there is no index; a repository whose index
 /// cannot be read is an error rather than that fallback, which would rewrite
-/// the drafts the index exists to exclude.
+/// the drafts the index exists to exclude. The walk contains what it lists:
+/// a spec path that leaves the project is named, unprobed, for the caller to
+/// report unread.
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::Git`] when the repository's index cannot be read.
+/// Returns [`PrimitiveError::Git`] when the repository's index cannot be read,
+/// and, on the worktree walk, [`PrimitiveError::InvalidPath`] when the spec
+/// root is or runs through a symbolic link that leaves the project.
 pub(crate) fn list_tracked_specs(repo: &Path, specs_root: &str) -> Result<Vec<String>> {
     if let Some(tracked) = tracked_project_paths(repo)? {
         return Ok(tracked
@@ -4085,12 +4089,19 @@ pub(crate) fn list_tracked_specs(repo: &Path, specs_root: &str) -> Result<Vec<St
             .filter(|path| is_spec_path(path, specs_root))
             .collect());
     }
+    // The walk lists and probes the project's files itself, so the spec root
+    // is contained before it is listed, as a path argument is.
+    validate_contained(repo, specs_root)?;
     let mut out = Vec::new();
     let specs_dir = repo.join(specs_root);
     for feature in list_feature_dirs(&specs_dir) {
         for name in ["spec.md", "spec-and-plan.md"] {
-            if specs_dir.join(&feature).join(name).is_file() {
-                out.push(format!("{specs_root}/{feature}/{name}"));
+            let rel = format!("{specs_root}/{feature}/{name}");
+            // A path that leaves the project is named without being probed:
+            // each caller reports it unread (`leaves_project`), so it is
+            // neither followed nor dropped.
+            if leaves_project(repo, &rel) || specs_dir.join(&feature).join(name).is_file() {
+                out.push(rel);
             }
         }
     }
@@ -6882,6 +6893,43 @@ mod spec_corpus_tests {
         assert!(list_tracked_specs(tmp.path(), "specs").is_err());
         assert!(list_untracked_specs(tmp.path(), "specs").is_err());
         assert!(list_staged_specs(tmp.path(), "specs").is_err());
+    }
+
+    /// Outside a repository the listing walks the worktree, and that walk
+    /// contains what it lists (`BE-INPUT-004`; 022 task 46): a spec root that
+    /// leaves the project is refused, and a feature directory that does is
+    /// named without being probed, for the caller to report unread.
+    #[cfg(unix)]
+    #[test]
+    fn the_worktree_walk_contains_the_spec_root_and_names_an_outward_feature() {
+        let outside = tempfile::tempdir().unwrap();
+        git_fixture::write(&outside.path().join("001-x/spec.md"), &spec_body("X"));
+
+        let rooted = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), rooted.path().join("specs")).unwrap();
+        let err = list_tracked_specs(rooted.path(), "specs").unwrap_err();
+        assert!(
+            matches!(err, crate::primitives::PrimitiveError::InvalidPath { .. }),
+            "{err}"
+        );
+
+        let project = tempfile::tempdir().unwrap();
+        git_fixture::write(&project.path().join("specs/002-y/spec.md"), &spec_body("Y"));
+        std::fs::create_dir_all(outside.path().join("003-z")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("003-z"),
+            project.path().join("specs/003-z"),
+        )
+        .unwrap();
+        assert_eq!(
+            list_tracked_specs(project.path(), "specs").unwrap(),
+            vec![
+                "specs/002-y/spec.md".to_string(),
+                "specs/003-z/spec-and-plan.md".to_string(),
+                "specs/003-z/spec.md".to_string(),
+            ],
+            "the linked feature has neither file, and is named all the same"
+        );
     }
 
     /// A project whose path from the work tree holds a glob character. As a

@@ -1372,8 +1372,9 @@ its version and date.
   its session names, the rule directory (`discover-rule-files` and
   `write-analysis` refuse it, the exec analyze walk halts naming it, and
   `derive-routing-candidates` records a skip), the spec root's `inbox.md`, a
-  `references:` entry's `spec` under a service checkout (reported
-  `status-unreadable`), `check-orphaned-references`' migration registry,
+  `references:` entry's `spec` under a service checkout (reported `broken`,
+  the outcome of a target that does not resolve),
+  `check-orphaned-references`' migration registry,
   `check-artifact-size`'s project files, and the fixed-name sources of
   `check-step-references`, `check-corpus-links`, `check-artifacts`,
   `append-inbox`, `compute-review-scope` and `derive-routing-candidates`.
@@ -1382,6 +1383,23 @@ its version and date.
   points at, and holds `from` to the feature-directory name rule before it
   reads anything (`BE-INPUT-002`): `--from .` re-pointed every `./` link in a
   fixture corpus, and now exits with an invalid-argument error.
+- **Five more project-file reads and probes are contained, and the containment
+  test holds every feature-argument site (spec 022 task 46; 022's review of
+  2026-11-17, `BE-INPUT-004`).** `resolve-anchor` no longer reads
+  `framework/bootstrap/ductus.md` through a link that leaves the project (it
+  reads as an absent installer, so nothing is judged across documents);
+  `derive-dependencies` and `derive-references`, outside a git repository,
+  refuse a spec root that is such a link (`invalid-path`) and name a feature
+  directory that is one as `unparseable` without probing it; the exec walker's
+  spec-file binding no longer probes a context `path` that leaves the project;
+  and the session peek, and the `ductus exec` seed, refuse a link at the
+  process's own session file whether or not its target exists, where they read
+  a dangling one as no record. The interpreter tests' feature-argument table
+  gains the eight sites it lacked (`brief-re-read`, `read-re-read`,
+  `check-prescriptions`, `start-fix-rounds`, `classify-spec-edit`,
+  `discover-rule-files`, `create-feature` and `dashboard`) and
+  `rewrite-spec-links`' scenario target, so removing any one site's check fails
+  a named case.
 - **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
   from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
   check before the marker was stripped, so it was written as an empty bullet

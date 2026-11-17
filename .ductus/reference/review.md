@@ -40,7 +40,8 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
      auto-reset.
 5. Discover rule files: step 2's `discover-rule-files` applies what follows
    and returns the notice lines, in order, to emit verbatim, in its `notices`
-   or past the read size in the file `lists-file` names. It lists
+   or past the read size in the file `lists-file` names, which also holds
+   `selected`. It lists
    `framework/rules/*.md` in ductus's own repository, or `specs/rules/*.md` in
    adopter projects, and classifies each by basename suffix:
    - `*-backend.md` → backend surface

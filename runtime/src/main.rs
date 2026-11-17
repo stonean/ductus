@@ -790,7 +790,7 @@ fn seed_context(
     // primitive argument with no `feature` beside it (a bootstrap walk's
     // `merge-managed-block`). A malformed default or own file halts the walk,
     // naming the file (AC22, `CFG-ENV-008`).
-    if !has_own_record(repo, identity) {
+    if !has_own_record(repo, identity)? {
         return Ok(context);
     }
     let resolution = ductus::session::peek(repo, identity, std::time::SystemTime::now())?;
@@ -812,10 +812,24 @@ fn seed_context(
 
 /// Whether the process acting as `identity` has a per-process record of its own
 /// in `repo`, whose target then overrides the shared default's target keys in
-/// the exec seed.
-fn has_own_record(repo: &std::path::Path, identity: Option<&ductus::session::Identity>) -> bool {
-    ductus::session::effective(repo, identity)
-        .is_some_and(|identity| ductus::session::own_path(repo, identity).exists())
+/// the exec seed. The file is contained before it is probed, so a link at it
+/// that leaves the project is refused, as `resolve-session` refuses it, and
+/// never read as no record (`BE-INPUT-004`; 022 task 46).
+///
+/// # Errors
+///
+/// [`ductus::primitives::PrimitiveError::InvalidPath`] when the file, or a
+/// directory above it, is a link that leaves the project.
+fn has_own_record(
+    repo: &std::path::Path,
+    identity: Option<&ductus::session::Identity>,
+) -> ductus::primitives::Result<bool> {
+    let Some(identity) = ductus::session::effective(repo, identity) else {
+        return Ok(false);
+    };
+    let own = ductus::session::own_path(repo, identity);
+    ductus::session::contained(repo, &own)?;
+    Ok(own.exists())
 }
 
 /// The first of [`exec_candidates`] that exists, or the exec error code and
@@ -1634,6 +1648,28 @@ mod tests {
         .unwrap();
         let err = seed_context(tmp.path(), Some(&review)).unwrap_err();
         assert!(err.to_string().contains("review.toml"), "{err}");
+    }
+
+    /// A link at the process's own session file that leaves the project is
+    /// refused by the seed, whether or not its target exists, and is not read
+    /// as no record (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn an_exec_seed_refuses_an_own_record_that_is_a_link_out_of_the_project() {
+        let tmp = repo_with_default("feature = \"055-a\"\npath = \"specs/055-a\"\n");
+        std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
+        let gone = tmp.path().parent().unwrap().join(format!(
+            "{}-gone.toml",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        std::os::unix::fs::symlink(&gone, tmp.path().join(".ductus/sessions/review.toml")).unwrap();
+        let review = Identity::named("review").unwrap();
+        let err = seed_context(tmp.path(), Some(&review)).unwrap_err();
+        assert!(
+            matches!(err, ductus::primitives::PrimitiveError::InvalidPath { .. }),
+            "{err}"
+        );
+        assert!(!gone.exists());
     }
 
     #[test]

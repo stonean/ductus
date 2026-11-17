@@ -5792,7 +5792,8 @@ pub enum ReferenceOutcome {
     NotCheckedOut,
     /// Registered and reachable, but the target spec does not resolve
     /// (renamed / moved / deleted / mistyped upstream, or a malformed URL that
-    /// yielded no such spec). A provable defect — an analyze finding.
+    /// yielded no such spec), or its `spec` value leaves the checkout's spec
+    /// root and is not read. A provable defect — an analyze finding.
     Broken,
     /// The target file exists but its `status` cannot be read (no frontmatter,
     /// malformed YAML, missing or out-of-set `status`). Surfaced, never silent;
@@ -8091,7 +8092,9 @@ pub struct CheckUnfoldedSpecsResult {
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksArgs {
     /// The retiring or renamed feature directory name, e.g.
-    /// `1234.1-widget-cache`. Matched as a whole path segment, so a
+    /// `1234.1-widget-cache`, held to the same name rule as the feature half
+    /// of `to` and refused as an invalid argument before anything is read; the
+    /// directory need not exist. Matched as a whole path segment, so a
     /// directory whose name merely starts with this one is left alone.
     #[arg(long)]
     pub from: String,

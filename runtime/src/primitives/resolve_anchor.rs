@@ -722,9 +722,16 @@ impl<'a> Shipped<'a> {
 /// [`BOOTSTRAP`] whose first two cells are each one backticked span. Read from
 /// that section alone: the slash-command table below it maps per-agent paths
 /// with placeholders, which no citing line names. Empty when the file is
-/// absent or unreadable, which disables the judgment rather than guessing.
+/// absent, unreadable or a link that leaves the project, which disables the
+/// judgment rather than guessing.
 fn shipped_sources(repo: &Path) -> HashMap<String, String> {
-    let Ok(text) = read_text(&repo.join(BOOTSTRAP)) else {
+    // A fixed name, but a project file all the same: an installer that is, or
+    // runs through, a link out of the project is left unread, as an absent one
+    // is, never followed (`BE-INPUT-004`; 022 task 46).
+    let Ok(path) = contained_path(repo, BOOTSTRAP) else {
+        return HashMap::new();
+    };
+    let Ok(text) = read_text(&path) else {
         return HashMap::new();
     };
     let mut map = HashMap::new();
@@ -1542,6 +1549,48 @@ mod tests {
     #[test]
     fn without_the_installer_nothing_is_judged_across_documents() {
         let r = judge_in(false, "**§Nope** in `.ductus/reference/x.md`.\n");
+        assert_eq!(kinds(&r), ["qualified"]);
+        assert_eq!(r.cross_document, 0);
+    }
+
+    /// The installer is a project file under a fixed name: one that is a link
+    /// out of the project is not read, so nothing is judged across documents,
+    /// as when it is absent (`BE-INPUT-004`; 022 task 46).
+    #[cfg(unix)]
+    #[test]
+    fn an_installer_that_is_a_link_out_of_the_project_judges_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
+        std::fs::create_dir_all(root.join("framework/bootstrap")).unwrap();
+        std::fs::create_dir_all(root.join("framework/reference")).unwrap();
+        std::fs::write(
+            outside.path().join("ductus.md"),
+            "# ductus\n\n## Shared Files\n\n\
+             | Source Path | Destination Path |\n| --- | --- |\n\
+             | `framework/reference/x.md` | `.ductus/reference/x.md` |\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(outside.path().join("ductus.md"), root.join(BOOTSTRAP)).unwrap();
+        std::fs::write(
+            root.join("framework/reference/x.md"),
+            "# x\n\n## Grounding\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("citing.md"),
+            "**§Nope** in `.ductus/reference/x.md`.\n",
+        )
+        .unwrap();
+        let r = compute(
+            &ResolveAnchorArgs {
+                path: "citing.md".into(),
+                markers_path: Some("markers.md".into()),
+            },
+            root,
+        )
+        .unwrap();
         assert_eq!(kinds(&r), ["qualified"]);
         assert_eq!(r.cross_document, 0);
     }

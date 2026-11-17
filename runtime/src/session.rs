@@ -1205,8 +1205,12 @@ pub fn peek(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result
     let Some(identity) = effective(repo, identity) else {
         return resolve_unidentified(repo);
     };
-    let _lock = lock_if_shared(repo)?;
     let own = own_path(repo, identity);
+    // A view reads no record it did not contain: a link at the caller's own
+    // file, or a sessions directory, that leaves the project is refused here,
+    // whether or not its target exists, and is not read as no record.
+    contained(repo, &own)?;
+    let _lock = lock_if_shared(repo)?;
     if own.exists() {
         let record = ProcessRecord::load(repo, &own)?;
         let due = due_notices(repo, identity, &record, now)?;
@@ -2701,6 +2705,23 @@ mod tests {
             peer_record("055-a", &iso8601_utc(t0()))
         );
         std::fs::remove_file(&far).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_peek_refuses_an_outward_own_link_whose_target_is_absent() {
+        let tmp = repo();
+        let x = id("x");
+        std::fs::create_dir_all(tmp.path().join(".ductus/sessions")).unwrap();
+        let missing = tmp.path().parent().unwrap().join(format!(
+            "{}-gone.toml",
+            tmp.path().file_name().unwrap().to_string_lossy()
+        ));
+        std::os::unix::fs::symlink(&missing, own_path(tmp.path(), &x)).unwrap();
+
+        let err = peek(tmp.path(), Some(&x), at(1)).unwrap_err();
+        assert!(is_outward(&err), "{err}");
+        assert!(!missing.exists());
     }
 
     #[cfg(unix)]

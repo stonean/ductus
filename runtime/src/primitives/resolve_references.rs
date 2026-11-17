@@ -237,11 +237,10 @@ fn classify(
     let specs_dir = paths::specs_dir(&checkout)?;
     // `spec` is committed frontmatter text turned into a path: an absolute or
     // `..` value, or a link on the way leaving the spec root, names a file the
-    // checkout does not hold. Refused unread, so reported as a status that
-    // could not be read, never as a broken reference or a status
-    // (`BE-INPUT-004`).
+    // checkout does not hold. Refused before any read, so the target does not
+    // resolve: `broken`, never a status (`BE-INPUT-004`).
     if super::validate_contained(&specs_dir, &format!("{}/spec.md", entry.spec)).is_err() {
-        return Ok((ReferenceOutcome::StatusUnreadable, None));
+        return Ok((ReferenceOutcome::Broken, None));
     }
     let target = specs_dir.join(&entry.spec).join("spec.md");
     if !target.is_file() {
@@ -699,8 +698,8 @@ mod tests {
 
     /// A `spec` value in the committed `references:` index that leaves the
     /// checkout's spec root, relative or absolute, is not read: the reference
-    /// is reported as a status that could not be read, not as the status of
-    /// the file it names (`BE-INPUT-004`; 022 task 42, F1).
+    /// is `broken`, not the status of the file it names (`BE-INPUT-004`; 022
+    /// task 42, F1).
     #[test]
     fn a_spec_value_that_leaves_the_checkouts_spec_root_is_unread() {
         let tmp = tempfile::tempdir().unwrap();
@@ -727,7 +726,7 @@ mod tests {
             let resolved = run_consumer(repo);
             assert_eq!(
                 resolved.references[0].outcome,
-                ReferenceOutcome::StatusUnreadable,
+                ReferenceOutcome::Broken,
                 "{spec}"
             );
             assert_eq!(resolved.references[0].status, None, "{spec}");
