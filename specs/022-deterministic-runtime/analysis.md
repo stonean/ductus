@@ -1,7 +1,7 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-17T19:34:20Z
-analyzed-against: 3e35c5341c0751e9aacb220347e90c39bc9fb88e
+last-run: 2026-11-17T20:06:33Z
+analyzed-against: 991f1f9a265becb1cccd2ff8ea1b32258d15a192
 hard-fail: 0
 blocking-findings: 0
 advisory: 19
@@ -9,7 +9,7 @@ unexamined: 67
 analyzed-digest:
   data-model.md: 7ec795f721c05faeb74e015f56730c9ef5fcebe81d6bf5f1641e621b4ec176b8
   plan.md: 65ad6b42485e27485ddfc74213f42397f074ade133387c5bfdfef4219ba62d9f
-  review.md: 22865fd9492c855c4952aaf5c5e61e76f1e3aa11a69f67e83046d983597fd550
+  review.md: d77fe7d046ba64b6cff538325beac8ca6260026ff457d74e517377d4b6afa9b9
   scenarios/a-closed-stdout-is-a-quiet-exit.md: ef3db93cc91fecfca53ab67300605cbdf3823c916fe6f1131933740434ad0ca5
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: f3c4072fc69ebfa829d92ae21c7043b7e3aa2a4be3db175b7df56204882e6fb4
   scenarios/a-done-when-clause-reads-to-its-end.md: b2d6b2ab8cbd208eec3ac811edc662c296792d51ec7ab1e0c49ec2c8acb045e9
@@ -89,7 +89,7 @@ analyzed-digest:
   scenarios/writecode-payload-bundling.md: 196c9d5ee60f7afe918bf0308e9276bcb8b224c80a2f80beacc44b474b39e195
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
   spec.md: 9ff2245166d6c1a0630b8424b10ca93bcc36490f237206338ad23d55148334ee
-  tasks.md: fe1bd8292746fd24372acd58c23e0a4f87e5c08747ae02b39e97fa67179d1039
+  tasks.md: 3554845d81a365bbe9249c9b873e569168c0c451fd332e864170d68aefaceb62
 unexamined-by-reason:
   never-existed: 15
   not-a-live-claim: 5
@@ -174,7 +174,7 @@ rule-verdicts:
   SEC-LOG-001: {verdict: addressed, cite: "plan.md#Dependency selection"}
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 0
   deferred: 0
   waived: 19
   undispositioned: 0
@@ -280,7 +280,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 19 advisory; not blocking. 67 unexamined target(s). Dispositions: 3 fixed, 0 deferred, 19 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 19 advisory; not blocking. 67 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 19 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -329,6 +329,4 @@ decisions:
 
 ## Fixed in this run
 
-- body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: "No edits to `framework/templates/project/project-readme.md`: the template ships to adopters, and the runtime reaches them through `/ductus`, not through their README." — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
-- plan-consistency — data-model.md §Notes said every payload path is repo-relative but for two echoes, while plan.md §Path arguments makes the staging paths absolute — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
-- rule-assessment — BE-DATA-001: plan.md's fetch-archive transport let DUCTUS_FETCH_ALLOW_INSECURE_HOSTS exempt any named host from the https-only screen, so plain http reached a host off loopback — `specs/022-deterministic-runtime/plan.md` — **fixed**
+*None.*
