@@ -2186,7 +2186,9 @@ mod tests {
                 let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
                 proxy.set_nonblocking(true).unwrap();
                 let proxy_url = format!("http://{}", proxy.local_addr().unwrap());
-                let origin = std::net::TcpListener::bind(loopback).unwrap();
+                let origin = std::net::TcpListener::bind(loopback).unwrap_or_else(|err| {
+                    panic!("cannot bind the {named} loopback origin (is IPv6 loopback available?): {err}")
+                });
                 let url = format!("http://{}/main.tar.gz", origin.local_addr().unwrap());
                 std::thread::spawn(move || {
                     let (stream, _) = origin.accept().unwrap();
