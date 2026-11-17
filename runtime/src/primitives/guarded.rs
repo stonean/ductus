@@ -51,6 +51,44 @@ pub(crate) fn write_guarded(snapshot: &ReadSnapshot, content: &str) -> Result<()
     snapshot.write_if_unchanged(content)
 }
 
+/// Write `content` to `path` only when nothing lives there, atomically, for
+/// content that is not text: the tempfile [`crate::primitives::write_atomic_bytes`]
+/// writes, persisted with `persist_noclobber`, which fails rather than replace
+/// an existing file. Of two writers racing on one path exactly one creates it;
+/// the loser gets `false`, writing nothing, and its caller reports the file as
+/// already there (`BE-RACE-003`; spec 022 task 43). Text goes through
+/// [`crate::primitives::write_new_atomic`], the same operation on a `&str`.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the parent cannot be created, the tempfile
+/// cannot be written or synced, or the persist fails for any reason but the
+/// destination already existing.
+pub(crate) fn write_new_bytes(path: &Path, content: &[u8]) -> Result<bool> {
+    use std::io::Write;
+
+    let io = |at: &Path| {
+        let at = at.to_path_buf();
+        move |source| PrimitiveError::Io { path: at, source }
+    };
+    let parent = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    std::fs::create_dir_all(parent).map_err(io(parent))?;
+    let mut tmp = tempfile::NamedTempFile::new_in(parent).map_err(io(parent))?;
+    tmp.as_file_mut().write_all(content).map_err(io(path))?;
+    tmp.as_file_mut().sync_all().map_err(io(path))?;
+    match tmp.persist_noclobber(path) {
+        Ok(_) => Ok(true),
+        Err(err) if err.error.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+        Err(err) => Err(PrimitiveError::Io {
+            path: path.into(),
+            source: err.error,
+        }),
+    }
+}
+
 /// Run `hook` once between the read and the write of the next
 /// [`write_guarded`] on this thread, as a second writer landing there would.
 /// Test builds only; production has no hook.
@@ -63,6 +101,25 @@ pub(crate) fn between_read_and_write<R>(
     let out = run();
     tests_seam::HOOK.with(|slot| *slot.borrow_mut() = None);
     out
+}
+
+#[cfg(test)]
+mod write_new_bytes_tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::write_new_bytes;
+
+    /// Binary content is created, with its parent, and an existing file is
+    /// never replaced: `false` and its bytes untouched (`BE-RACE-003`).
+    #[test]
+    fn creates_once_and_never_replaces() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("a/b/file.bin");
+        assert!(write_new_bytes(&path, &[0xff, 0x00, 0x7f]).unwrap());
+        assert_eq!(std::fs::read(&path).unwrap(), [0xff, 0x00, 0x7f]);
+        assert!(!write_new_bytes(&path, b"second").unwrap());
+        assert_eq!(std::fs::read(&path).unwrap(), [0xff, 0x00, 0x7f]);
+    }
 }
 
 #[cfg(test)]
@@ -95,8 +152,8 @@ mod raw_writes_allowlist {
     //! review. The check reads the crate's own source, so it needs no build step.
     //!
     //! What it sees: a call spelled `write_atomic(` or `write_atomic_bytes(`
-    //! outside comments and outside the file's trailing `#[cfg(test)] mod`, and
-    //! not a `fn` definition. `write_new_atomic` is a different name and is not
+    //! outside comments and outside every `#[cfg(test)] mod`'s body, wherever in
+    //! the file the module sits, and not a `fn` definition. `write_new_atomic` is a different name and is not
     //! counted: it is create-only and refuses an existing file, so it cannot
     //! replace another writer's change. It does not see the function passed as a
     //! value, and it cannot tell a call that reads its file first from one that
@@ -120,44 +177,47 @@ mod raw_writes_allowlist {
         ),
         (
             "src/primitives/apply_manifest.rs",
-            4,
-            "regenerates each destination whole from its manifest source, never from the \
-             destination's own content",
+            2,
+            "the `update` strategy alone, whose contract is to replace the destination with its \
+             manifest source's bytes, never computed from the destination's own content; \
+             `create` and `skip-if-conflict` write through `write_new_bytes`",
         ),
         (
             "src/primitives/bounded_lists.rs",
             1,
-            "writes a fresh file under .ductus/results/ named by its content, never read first",
+            "writes a file under .ductus/results/ named by its content's hash, so a second writer \
+             of that name writes the same bytes: a repeat that is harmless (`BE-RACE-003`'s \
+             carve-out)",
         ),
         (
             "src/primitives/brief_re_read.rs",
             2,
-            "writes a round's record and brief into a directory it creates, whole",
+            "replaces by design: a base briefed again clears its round directory first and \
+             writes the round's record and brief whole, never from the files' own content",
         ),
         (
             "src/primitives/create_feature.rs",
             1,
-            "creates the new feature's spec.md from a template, after refusing an existing feature",
+            "writes spec.md into the feature directory this call just claimed with `create_dir`, \
+             which the operating system grants to one of any racers, so no other writer of this \
+             call's file exists",
         ),
         (
             "src/primitives/create_plan_artifacts.rs",
             1,
-            "copies a template into a plan artifact that does not exist yet",
+            "the confirmed `overwrite` branch alone, which replaces an artifact with its fresh \
+             template; an artifact observed absent is written through `write_new_bytes`",
         ),
         (
             "src/primitives/fetch_archive.rs",
             1,
-            "writes the downloaded archive to a staging path the caller names, whole",
+            "replaces by design: a re-fetch overwrites the staging file the caller names, which \
+             lies outside the project, whole and never from its own content",
         ),
         (
             "src/primitives/merge_status_hook.rs",
             1,
             "waived: spec 080's `departs: BE-TXN-002` entry covers `merge-status-hook` alone",
-        ),
-        (
-            "src/primitives/migrate_session_file.rs",
-            1,
-            "writes the destination session file whole from the legacy file's values, once",
         ),
         (
             "src/session.rs",
@@ -181,16 +241,99 @@ mod raw_writes_allowlist {
         }
     }
 
+    /// The offset just past the `}` closing the block whose `{` ends
+    /// `source[..open]`, reading Rust's comments, string and character
+    /// literals, so a brace inside one is not counted. The end of `source` when
+    /// the block never closes.
+    fn block_end(source: &str, open: usize) -> usize {
+        let bytes = source.as_bytes();
+        let mut depth = 1usize;
+        let mut at = open;
+        while at < bytes.len() {
+            match bytes[at] {
+                b'/' if bytes.get(at + 1) == Some(&b'/') => {
+                    at += source[at..].find('\n').unwrap_or(bytes.len() - at);
+                }
+                b'/' if bytes.get(at + 1) == Some(&b'*') => {
+                    at += source[at + 2..]
+                        .find("*/")
+                        .map_or(bytes.len() - at, |n| n + 4);
+                }
+                b'"' => {
+                    // A raw string closes on a quote and its own hashes.
+                    let hashes = bytes[..at].iter().rev().take_while(|b| **b == b'#').count();
+                    let raw = bytes
+                        .get(at - hashes - 1)
+                        .is_some_and(|b| *b == b'r')
+                        .then_some(hashes);
+                    at += 1;
+                    while at < bytes.len() {
+                        match (bytes[at], raw) {
+                            (b'\\', None) => at += 1,
+                            (b'"', None) => break,
+                            (b'"', Some(n))
+                                if bytes[at + 1..].iter().take_while(|b| **b == b'#').count()
+                                    >= n =>
+                            {
+                                at += n;
+                                break;
+                            }
+                            _ => {}
+                        }
+                        at += 1;
+                    }
+                    at += 1;
+                }
+                b'\'' => {
+                    // A character literal, not a lifetime: `'x'` or `'\n'`.
+                    let close = if bytes.get(at + 1) == Some(&b'\\') {
+                        source[at + 3..].find('\'').map(|n| at + 3 + n)
+                    } else {
+                        source[at + 1..]
+                            .chars()
+                            .next()
+                            .map(|c| at + 1 + c.len_utf8())
+                            .filter(|end| bytes.get(*end) == Some(&b'\''))
+                    };
+                    at = close.map_or(at + 1, |end| end + 1);
+                }
+                b'{' => {
+                    depth += 1;
+                    at += 1;
+                }
+                b'}' => {
+                    depth -= 1;
+                    at += 1;
+                    if depth == 0 {
+                        return at;
+                    }
+                }
+                _ => at += 1,
+            }
+        }
+        bytes.len()
+    }
+
+    /// `source` without the body of any `#[cfg(test)] mod`, wherever it sits.
+    fn without_test_modules(source: &str) -> String {
+        let test_module =
+            Regex::new(r"(?m)^[ \t]*#\[cfg\(test\)\]\s*\n[ \t]*(?:pub(?:\([a-z]+\))? )?mod \w+ \{")
+                .unwrap();
+        let mut out = String::new();
+        let mut from = 0;
+        while let Some(found) = test_module.find_at(source, from) {
+            out.push_str(&source[from..found.start()]);
+            from = block_end(source, found.end());
+        }
+        out.push_str(&source[from..]);
+        out
+    }
+
     /// The number of raw write calls in `source`'s non-test code.
     fn raw_write_calls(source: &str) -> usize {
         let call = Regex::new(r"\bwrite_atomic(?:_bytes)?\s*\(").unwrap();
         let definition = Regex::new(r"\bfn\s+write_atomic(?:_bytes)?\b").unwrap();
-        let test_module =
-            Regex::new(r"(?m)^[ \t]*#\[cfg\(test\)\]\s*\n[ \t]*(?:pub(?:\([a-z]+\))? )?mod \w+ \{")
-                .unwrap();
-        let production = test_module
-            .find(source)
-            .map_or(source, |found| &source[..found.start()]);
+        let production = without_test_modules(source);
         production
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
@@ -273,6 +416,28 @@ mod raw_writes_allowlist {
         fn t() { write_atomic(&p, &t).unwrap(); }
     }
     ";
+        assert_eq!(raw_write_calls(source), 3);
+    }
+
+    /// A test module in the middle of a file hides its own body only: a raw
+    /// call in production code after it is counted, as is one in a module
+    /// whose literals hold braces (spec 022 task 43, O32).
+    #[test]
+    fn the_scan_counts_a_call_after_a_test_module() {
+        let source = r##"
+    fn first() { write_atomic(&p, &t)?; }
+    #[cfg(test)]
+    mod project_artifact_tests {
+        fn t() { write_atomic(&p, "}").unwrap(); let c = '{'; let q = '\''; let r = r#"}"#; }
+        fn u<'a>(x: &'a str) { /* } */ write_atomic_bytes(&p, b"{").unwrap(); }
+    }
+    fn second() { write_atomic_bytes(&p, &b)?; }
+    #[cfg(test)]
+    mod tests {
+        fn t() { write_atomic(&p, &t).unwrap(); }
+    }
+    fn third() { write_atomic(&p, &t)?; }
+    "##;
         assert_eq!(raw_write_calls(source), 3);
     }
 }

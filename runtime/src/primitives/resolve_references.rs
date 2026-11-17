@@ -169,6 +169,7 @@ pub(crate) fn resolve(args: &ResolveReferencesArgs, repo: &Path) -> Result<Resol
 /// matched service's `description`, and `derive-references`.
 pub(crate) fn load_services(repo: &Path) -> Result<Services> {
     let toml_path = paths::config_path(repo);
+    super::contained_file(repo, &toml_path)?;
     if !toml_path.exists() {
         return Ok(Services::default());
     }
@@ -233,9 +234,16 @@ fn classify(
     }
 
     // Reachable checkout: the target spec either resolves or is provably broken.
-    let target = paths::specs_dir(&checkout)?
-        .join(&entry.spec)
-        .join("spec.md");
+    let specs_dir = paths::specs_dir(&checkout)?;
+    // `spec` is committed frontmatter text turned into a path: an absolute or
+    // `..` value, or a link on the way leaving the spec root, names a file the
+    // checkout does not hold. Refused unread, so reported as a status that
+    // could not be read, never as a broken reference or a status
+    // (`BE-INPUT-004`).
+    if super::validate_contained(&specs_dir, &format!("{}/spec.md", entry.spec)).is_err() {
+        return Ok((ReferenceOutcome::StatusUnreadable, None));
+    }
+    let target = specs_dir.join(&entry.spec).join("spec.md");
     if !target.is_file() {
         return Ok((ReferenceOutcome::Broken, None));
     }
@@ -670,5 +678,59 @@ mod tests {
 
         let rec = &run_consumer(repo).references[0];
         assert_eq!(rec.outcome, ReferenceOutcome::Unregistered);
+    }
+
+    /// `the services registry`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"../api\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&load_services(
+            repo.path()
+        )));
+    }
+
+    /// A `spec` value in the committed `references:` index that leaves the
+    /// checkout's spec root, relative or absolute, is not read: the reference
+    /// is reported as a status that could not be read, not as the status of
+    /// the file it names (`BE-INPUT-004`; 022 task 42, F1).
+    #[test]
+    fn a_spec_value_that_leaves_the_checkouts_spec_root_is_unread() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        write_checkout_spec(
+            repo,
+            "checkouts/api",
+            "003-user",
+            "---\nstatus: done\ndependencies: []\n---\n\n# User\n",
+        );
+        let done = "---\nstatus: done\ndependencies: []\n---\n\n# Other\n";
+        write_file(&repo.join("checkouts/other/spec.md"), done);
+        let outside = tempfile::tempdir().unwrap();
+        write_file(&outside.path().join("spec.md"), done);
+        for spec in [
+            "../../other".to_string(),
+            outside.path().to_string_lossy().into_owned(),
+        ] {
+            seed_consumer(
+                repo,
+                API_TOML,
+                &format!("references:\n  - service: api\n    spec: {spec}\n"),
+            );
+            let resolved = run_consumer(repo);
+            assert_eq!(
+                resolved.references[0].outcome,
+                ReferenceOutcome::StatusUnreadable,
+                "{spec}"
+            );
+            assert_eq!(resolved.references[0].status, None, "{spec}");
+        }
     }
 }

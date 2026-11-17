@@ -2028,6 +2028,23 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
     Ok(repo.join(rel))
 }
 
+/// [`validate_contained`] for a project file the runtime opens under a fixed
+/// name or one a config key resolved (`.ductus/config.toml`, a rule
+/// directory), given as the absolute `file` under `base`: refused, never read,
+/// when a symbolic link on the way leaves `base`. A path not under `base` is
+/// judged as given, so an absolute one is refused (`BE-INPUT-004`; spec 022
+/// plan §Path arguments, *Fixed names*).
+///
+/// # Errors
+///
+/// As [`validate_contained`].
+pub(crate) fn contained_file(base: &Path, file: &Path) -> Result<()> {
+    validate_contained(
+        base,
+        &file.strip_prefix(base).unwrap_or(file).to_string_lossy(),
+    )
+}
+
 /// Whether `rel`, a project-relative path the runtime builds from text the
 /// repository holds (a `dependencies:` name, a tracked or listed file, a link
 /// target a primitive then probes), is refused by [`validate_contained`]: it
@@ -2845,6 +2862,50 @@ pub(crate) mod git_fixture {
                 &parents,
             )
             .unwrap()
+    }
+}
+
+/// A symbolic link planted in a fixture project that leaves it, for the
+/// tests of every read the project's own files must be refused through
+/// (`BE-INPUT-004`).
+#[cfg(all(test, unix))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+pub(crate) mod outward {
+    use std::path::Path;
+
+    /// Link `project/rel` to a new outside file holding `contents`. The
+    /// returned directory holds the file, so it lives as long as the test.
+    pub(crate) fn file(project: &Path, rel: &str, contents: &str) -> tempfile::TempDir {
+        let outside = tempfile::TempDir::new().unwrap();
+        let target = outside.path().join("outside");
+        std::fs::write(&target, contents).unwrap();
+        link(project, rel, &target);
+        outside
+    }
+
+    /// Link `project/rel` to a new outside directory, which `populate` fills.
+    pub(crate) fn dir(
+        project: &Path,
+        rel: &str,
+        populate: impl FnOnce(&Path),
+    ) -> tempfile::TempDir {
+        let outside = tempfile::TempDir::new().unwrap();
+        let target = outside.path().join("outside");
+        std::fs::create_dir_all(&target).unwrap();
+        populate(&target);
+        link(project, rel, &target);
+        outside
+    }
+
+    fn link(project: &Path, rel: &str, target: &Path) {
+        let at = project.join(rel);
+        std::fs::create_dir_all(at.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink(target, at).unwrap();
+    }
+
+    /// Whether `err` is the refusal of a path that leaves the project.
+    pub(crate) fn refused<T>(result: &super::Result<T>) -> bool {
+        matches!(result, Err(super::PrimitiveError::InvalidPath { .. }))
     }
 }
 

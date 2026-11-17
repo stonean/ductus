@@ -294,6 +294,12 @@ configure_root() {
 }
 
 # I. Family 7 — a spec.md and a plan.md linking out, under a configured root.
+# The family enumerates the corpus through `dashboard`, which refuses the whole
+# call when a feature directory holds a link leaving the project (spec 022 task
+# 42, F24; the owner's decision of 2026-11-17 keeps that refusal), so the family
+# reports that it examined nothing and never reaches either path. Case S builds
+# in-tree fixtures for this family and for Families 8 and 37, so their own
+# containment of the paths the corpus lists stays tested.
 dir="$(new_tree i sibling-coupling.sh)"
 repo2="$(far "$dir")"
 configure_root "$dir"
@@ -306,10 +312,9 @@ ln -s "$repo2/spec-b.md" "$dir/features/002-bbb/spec.md"
 ln -s "$repo2/plan-b.md" "$dir/features/002-bbb/plan.md"
 track "$dir"
 run_family "$dir" sibling-coupling.sh
-expect "I: Family 7 reports a spec.md linking out of the tree, under a configured root" 1 \
-  '^sibling-coupling \| features/002-bbb/spec\.md \| resolves outside the repository, so it was not read'
-expect "I: Family 7 reports a plan.md linking out of the tree" 1 \
-  '^sibling-coupling \| features/002-bbb/plan\.md \| resolves outside the repository, so it was not read'
+expect "I: Family 7 reports that the corpus could not be enumerated, under a configured root" 1 \
+  '^sibling-coupling \| \(precondition\) \| ductus dashboard could not be read'
+expect_absent "I: Family 7 never reaches the paths linking out" 'features/002-bbb/(spec|plan)\.md'
 expect_absent "I: Family 7 never reads them (the pair it would report as a bundling candidate)" 'bundling candidate'
 
 # I2. Family 7 — an awk that cannot evaluate match() is a finding and a failing
@@ -333,7 +338,8 @@ set -e
 expect "I2: Family 7 reports an awk that cannot run match() and exits non-zero" 1 \
   '^sibling-coupling \| \(precondition\) \| awk cannot evaluate match\(\)'
 
-# J. Family 8 — a done spec.md linking out, under a configured root.
+# J. Family 8 — a done spec.md linking out, under a configured root. The
+# dashboard refuses the corpus, as in case I.
 dir="$(new_tree j introducing-drift.sh)"
 repo2="$(far "$dir")"
 configure_root "$dir"
@@ -342,8 +348,9 @@ printf -- '---\nstatus: done\ndependencies: []\n---\n# Old\n\nRun `/capture` now
 ln -s "$repo2/old.md" "$dir/features/001-old/spec.md"
 track "$dir"
 run_family "$dir" introducing-drift.sh
-expect "J: Family 8 reports a done spec.md linking out of the tree, under a configured root" 1 \
-  '^introducing-drift \| features/001-old/spec\.md \| resolves outside the repository, so it was not read'
+expect "J: Family 8 reports that the corpus could not be enumerated, under a configured root" 1 \
+  '^introducing-drift \| \(precondition\) \| ductus dashboard could not be read'
+expect_absent "J: Family 8 never reaches the path linking out" 'features/001-old/spec\.md'
 expect_absent "J: Family 8 never reads it (the old name it would report)" 'references old name'
 
 # K. Family 10 — registry text naming paths that resolve outside the tree.
@@ -537,7 +544,9 @@ expect "O: Family 27 reports a spec root resolving outside the tree" 1 \
   '^done-spec-criteria \| \.\./repo2/specs/ \| the configured spec root resolves outside the repository'
 expect_absent "O: Family 27 never lists under it (the empty enumeration it would report)" 'no tracked spec\.md files found'
 
-# P. Family 37 — a record linking out, and a spec root linking out.
+# P. Family 37 — a record linking out, and a spec root linking out. The
+# dashboard refuses each corpus, as in case I, and this family reads a corpus it
+# could not enumerate as one that examined nothing.
 dir="$(new_tree p analyze-record-backlog.sh)"
 repo2="$(far "$dir")"
 mkdir -p "$dir/specs/001-x" "$dir/scripts/audit"
@@ -547,8 +556,9 @@ ln -s "$repo2/review.md" "$dir/specs/001-x/review.md"
 printf '0\n' > "$dir/scripts/audit/analyze-record-baseline.txt"
 track "$dir"
 run_family "$dir" analyze-record-backlog.sh
-expect "P: Family 37 reports a record linking out of the tree" 1 \
-  '^analyze-record \| specs/001-x/review\.md \| audit artifact resolves outside the repository, so it was not read'
+expect "P: Family 37 reports that it examined nothing when a record links out of the tree" 1 \
+  '^analyze-record \| scripts/audit/analyze-record-backlog\.sh \| the spec corpus enumerated no features'
+expect_absent "P: Family 37 never reaches the record linking out" 'specs/001-x/review\.md'
 expect_absent "P: Family 37 never reads it (the backlog it would count)" 'no analyze record'
 
 dir="$(new_tree p2 analyze-record-backlog.sh)"
@@ -560,8 +570,9 @@ printf '[paths]\nspecs-root = "linked"\n' > "$dir/.ductus/config.toml"
 printf '0\n' > "$dir/scripts/audit/analyze-record-baseline.txt"
 track "$dir"
 run_family "$dir" analyze-record-backlog.sh
-expect "P: Family 37 reports a spec root linking out of the tree" 1 \
-  '^analyze-record \| linked/ \| the configured spec root resolves outside the repository'
+expect "P: Family 37 reports that it examined nothing when the spec root links out of the tree" 1 \
+  '^analyze-record \| scripts/audit/analyze-record-backlog\.sh \| the spec corpus enumerated no features'
+expect_absent "P: Family 37 never reports the outside spec root as read" 'linked/001-x'
 
 # Q. Family 39 — a tracked markdown file linking out.
 dir="$(new_tree q shipped-anchor-resolution.sh)"
@@ -740,12 +751,38 @@ each_verdict "leaves every path unchecked for a python3 that fails" "$unchecked_
 each_verdict "leaves every path unchecked for a python3 that prints nothing" "$unchecked_both" "$s_dir/bin-silent"
 each_verdict "leaves every path unchecked for a python3 that prints no verdict" "$unchecked_both" "$s_dir/bin-garbled"
 
-# Each family calling contained, over the fixture its own case built, where
-# python3 fails the containment call alone.
-for entry in i:sibling-coupling.sh:sibling-coupling j:introducing-drift.sh:introducing-drift \
+# Families 7, 8 and 37 enumerate their corpus through `dashboard`, which refuses
+# the fixtures cases I, J and P built (each holds a link leaving the project),
+# so they never reach their own containment there. These in-tree fixtures mirror
+# those cases with regular files, so the dashboard lists the corpus and each
+# family reaches the containment call that python3 then fails.
+dir="$(new_tree si sibling-coupling.sh)"
+configure_root "$dir"
+mkdir -p "$dir/features/001-aaa" "$dir/features/002-bbb"
+printf -- '---\nstatus: draft\ndependencies: []\n---\n# A\n\nSee [b](../002-bbb/spec.md).\n' > "$dir/features/001-aaa/spec.md"
+printf -- '---\nstatus: draft\ndependencies: []\n---\n# B\n\nSee [a](../001-aaa/spec.md).\n' > "$dir/features/002-bbb/spec.md"
+printf '# Plan\n\n## Affected Files\n\n| `x/shared.md` | edit |\n' > "$dir/features/001-aaa/plan.md"
+cp "$dir/features/001-aaa/plan.md" "$dir/features/002-bbb/plan.md"
+track "$dir"
+dir="$(new_tree sj introducing-drift.sh)"
+configure_root "$dir"
+mkdir -p "$dir/features/001-old"
+printf -- '---\nstatus: done\ndependencies: []\n---\n# Old\n\nRun `/capture` now.\n' > "$dir/features/001-old/spec.md"
+track "$dir"
+dir="$(new_tree sp analyze-record-backlog.sh)"
+mkdir -p "$dir/specs/001-x" "$dir/scripts/audit"
+printf -- '---\nstatus: done\ndependencies: []\n---\n# X\n' > "$dir/specs/001-x/spec.md"
+printf -- '---\nspec: 001-x\nlast-run: null\n---\n' > "$dir/specs/001-x/review.md"
+printf '0\n' > "$dir/scripts/audit/analyze-record-baseline.txt"
+track "$dir"
+
+# Each family calling contained, over the fixture its own case built (the
+# in-tree ones above for Families 7, 8 and 37), where python3 fails the
+# containment call alone.
+for entry in si:sibling-coupling.sh:sibling-coupling sj:introducing-drift.sh:introducing-drift \
   k:migration-coverage.sh:migration-coverage l:fixture-session-shape.sh:fixture-session-shape \
   m1:host-namespace-parity.sh:host-namespace-parity n:rename-sweep-residue.sh:sweep-residue \
-  o:done-spec-criteria.sh:done-spec-criteria p:analyze-record-backlog.sh:analyze-record \
+  o:done-spec-criteria.sh:done-spec-criteria sp:analyze-record-backlog.sh:analyze-record \
   r:deprecation-removal.sh:deprecation-removal d:manifest-destination-links.sh:manifest-dest \
   t:placeholder-roundtrip.sh:placeholder-roundtrip u:primitive-promotion-candidates.sh:primitive-promotion \
   v:installer-command-parity.sh:installer-command-parity w:readme-command-parity.sh:readme-command; do

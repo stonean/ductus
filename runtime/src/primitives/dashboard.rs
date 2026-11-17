@@ -283,7 +283,9 @@ fn reference_line(record: &ResolutionRecord, services: &Services, project: &str)
     }
 }
 
-/// Walk `specs/` and build the per-spec entry list. Non-`NNN-feature`
+/// Walk `specs/` and build the per-spec entry list. Each feature directory is
+/// walked for links that leave the project before it is read, and one that
+/// holds such a link refuses the call. Non-`NNN-feature`
 /// directories are skipped (via the shared [`list_feature_dirs`]); a
 /// present-but-missing `spec.md` still halts with a structured error from
 /// [`load_one_spec`]. After the first pass, walks the list a second time
@@ -297,6 +299,10 @@ fn load_specs(repo: &Path) -> Result<(Vec<DashboardSpec>, pipeline_view::Questio
     let mut questions = pipeline_view::QuestionsBySpec::new();
 
     for slug in list_feature_dirs(&specs_dir) {
+        // The feature directory is walked for outward links before anything
+        // under it opens, as every feature-argument site walks it, so a link
+        // that leaves the project refuses the whole call (`BE-INPUT-004`).
+        super::validate_feature_argument(repo, &layout.specs_root, &slug)?;
         let (entry, carried) = load_one_spec(&specs_dir, &layout.specs_root, &slug)?;
         if !carried.is_empty() {
             let scenarios = carried.into_iter().map(|q| q.scenario).collect();
@@ -442,6 +448,7 @@ struct DisabledRuleFile {
 /// provenance tag names the file that was actually read.
 fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
     let (toml_path, name) = paths::resolve_config(repo);
+    super::contained_file(repo, &toml_path)?;
     if !toml_path.is_file() {
         return Ok((
             DashboardConfig {
@@ -542,6 +549,12 @@ fn load_session_target(
 /// primitive-robustness-hardening). The corrective surface for both is
 /// the same: re-target or fix the scenario file.
 fn load_scenario_detail(repo: &Path, rel_path: &str) -> Result<Option<DashboardScenarioDetail>> {
+    // The session file names this path, not the repository, but it is opened
+    // all the same: one that leaves the project is not read, and degrades to a
+    // detail-less target as a stale path does.
+    if super::leaves_project(repo, rel_path) {
+        return Ok(None);
+    }
     let path = repo.join(rel_path);
     if !path.is_file() {
         return Ok(None);
@@ -974,13 +987,17 @@ mod tests {
         std::fs::write(dir.join("spec.md"), content).unwrap();
     }
 
-    /// The dashboard resolves every spec's references through
-    /// `resolve-references`, which checks its feature, so one spec directory
-    /// holding a link that leaves the project refuses the whole view
-    /// (scenario `a-path-argument-resolves-inside-its-base`).
+    /// The dashboard payload walks each feature directory before it reads
+    /// anything under it, so one spec directory holding a link that leaves the
+    /// project, a file or the directory itself, refuses the whole call, as
+    /// `render-status`, whose view model resolves each spec's references,
+    /// refuses it (scenario `a-path-argument-resolves-inside-its-base`).
     #[cfg(unix)]
     #[test]
     fn a_spec_directory_holding_an_outward_link_refuses_the_dashboard() {
+        let refused = |tmp: &TempDir| {
+            super::run_as(&DashboardArgs::default(), tmp.path(), None, UNIX_EPOCH).unwrap_err()
+        };
         let tmp = TempDir::new().unwrap();
         write_spec(tmp.path(), "001-a", "status: draft\ndependencies: []\n", "");
         write_spec(tmp.path(), "002-b", "status: draft\ndependencies: []\n", "");
@@ -991,10 +1008,32 @@ mod tests {
             tmp.path().join("specs/002-b/notes.md"),
         )
         .unwrap();
-        let err = run(&DashboardArgs::default(), tmp.path()).unwrap_err();
+        let err = refused(&tmp);
         assert!(
             matches!(&err, PrimitiveError::InvalidPath { reason, .. }
                 if reason.contains("notes.md")),
+            "{err:?}"
+        );
+
+        // A feature directory that is itself the link: its `spec.md` and
+        // status are the outside file's, and were reported before the walk.
+        let tmp = TempDir::new().unwrap();
+        write_spec(tmp.path(), "001-a", "status: draft\ndependencies: []\n", "");
+        let linked = TempDir::new().unwrap();
+        write_spec(
+            linked.path(),
+            "002-y",
+            "status: done\ndependencies: []\n",
+            "",
+        );
+        std::os::unix::fs::symlink(
+            linked.path().join("specs/002-y"),
+            tmp.path().join("specs/002-y"),
+        )
+        .unwrap();
+        let err = refused(&tmp);
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { path, .. } if path.contains("002-y")),
             "{err:?}"
         );
     }
@@ -2179,5 +2218,42 @@ reason = "Deferred until v2 perf budget lands."
             Some("Inbox: 2 item(s) outstanding, age undeterminable — run /ductus:groom to route"),
             "an age blame cannot determine is unknown, never today"
         );
+    }
+
+    /// `dashboard`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[artifacts]\nread-size-bytes = 9\n",
+        );
+        assert!(crate::primitives::outward::refused(&load_config(
+            repo.path()
+        )));
+    }
+
+    /// The scenario path a session names is opened for the target's detail,
+    /// so one that leaves the project is not read: the target is detail-less,
+    /// as for a stale path, and the view is not bricked (`BE-INPUT-004`; 022
+    /// task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_scenario_path_through_a_link_outside_the_project_is_not_read() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside =
+            crate::primitives::outward::dir(repo.path(), "specs/001-a/scenarios", |dir| {
+                std::fs::write(
+                    dir.join("s.md"),
+                    "---\nsection: X\n---\n\n## Context\n\nc\n",
+                )
+                .unwrap();
+            });
+        let result = load_scenario_detail(repo.path(), "specs/001-a/scenarios/s.md");
+        assert_eq!(result.unwrap(), None);
     }
 }

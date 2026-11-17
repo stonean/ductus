@@ -124,6 +124,7 @@ impl Host {
     /// read or does not parse is an error naming it.
     fn load_host_block(repo: &Path) -> Result<Option<HostBlock>> {
         let toml_path = paths::config_path(repo);
+        crate::primitives::contained_file(repo, &toml_path)?;
         let Some(content) = read_text_if_present(&toml_path)? else {
             return Ok(None);
         };
@@ -598,5 +599,22 @@ mod tests {
         std::os::unix::fs::symlink(far.path(), repo.path().join(".ductus/session.toml")).unwrap();
         let err = Host::load(repo.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
+    }
+
+    /// `Host::load`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[host]\nproject = \"x\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&Host::load(
+            repo.path()
+        )));
     }
 }

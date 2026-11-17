@@ -1342,6 +1342,25 @@ its version and date.
   was written. Every judgment now runs, and only the config-directory verdict
   is skipped. `extract-archive` and `fetch-archive` refuse a `dest` that
   contains the working directory, as they already refused one inside it.
+- **`apply-manifest`'s `create` and `skip-if-conflict` strategies,
+  `create-plan-artifacts` and `migrate-session-file` create their destination
+  exclusively (spec 022 task 43; 022's review of 2026-11-17, `BE-RACE-003`).**
+  Each checked that the file was absent and then replaced it with a rename, so
+  a file that appeared in between was overwritten. A file that appears after
+  the check is now kept, and reported `skipped-exists`, `kept` or
+  `kept-existing`. The raw-write allowlist check sees production code that
+  follows a mid-file test module, which it used to skip.
+- **A project file the runtime reads under a fixed name, or through a path a
+  config key or committed text builds, is refused or reported unread when a
+  symbolic link leads it out of the project (spec 022 task 42; `BE-INPUT-004`,
+  the owner's class decision of 2026-11-17).** Contained now:
+  `.ductus/config.toml` in every reader (`Host::load`, `Paths::load` and seven
+  primitives), each feature directory `dashboard` lists and the scenario path
+  its session names, the rule directory (`discover-rule-files` and
+  `write-analysis` refuse it, and the exec analyze walk halts naming it), the
+  spec root's `inbox.md`, a `references:` entry's `spec` under a service
+  checkout (reported `status-unreadable`), `check-orphaned-references`'
+  migration registry and `check-artifact-size`'s project files.
 - **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
   from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
   check before the marker was stripped, so it was written as an empty bullet

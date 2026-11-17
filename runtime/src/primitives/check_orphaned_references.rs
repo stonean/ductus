@@ -609,6 +609,11 @@ struct MigrationsSection {
 /// unparseable one both land here, and nothing distinguishes them for the
 /// caller: both read `watermark`, and neither adds a `skipped` entry.
 fn read_registry(repo: &Path) -> Option<Vec<RegistryEntry>> {
+    // A registry that is, or lies under, a link leaving the project is not
+    // read, and is reported as the unreadable registry it is (`BE-INPUT-004`).
+    if super::leaves_project(repo, "framework/migrations.toml") {
+        return None;
+    }
     let text = std::fs::read_to_string(repo.join("framework/migrations.toml")).ok()?;
     let parsed: RegistryFile = toml::from_str(&text).ok()?;
     Some(parsed.migrations)
@@ -661,6 +666,7 @@ fn covers(claimed: &str, target: &str) -> bool {
 /// caller distinguishes it from an id by its emptiness.
 fn read_last_applied(repo: &Path) -> Result<String> {
     let path = paths::config_path(repo);
+    super::contained_file(repo, &path)?;
     let Some(text) = read_text_if_present(&path)? else {
         return Ok(String::new());
     };
@@ -1497,5 +1503,46 @@ mod tests {
             &serde_json::to_value(&file).unwrap(),
             &lists,
         );
+    }
+
+    /// `the last-applied migration`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[migrations]\nlast-applied = \"x\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&read_last_applied(
+            repo.path()
+        )));
+    }
+
+    /// A migrations registry that is a link leaving the project is not read:
+    /// it is the unreadable registry, never a registry (`BE-INPUT-004`; 022
+    /// task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_registry_linked_outside_the_project_is_not_read() {
+        let repo = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join("framework")).unwrap();
+        std::fs::write(
+            repo.path().join("framework/migrations.toml"),
+            "migrations = []\n",
+        )
+        .unwrap();
+        assert!(read_registry(repo.path()).is_some());
+
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            "framework/migrations.toml",
+            "migrations = []\n",
+        );
+        assert!(read_registry(repo.path()).is_none());
     }
 }

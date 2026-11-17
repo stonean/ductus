@@ -216,6 +216,7 @@ fn over_limit_warning(record: &ConstitutionRecord, bytes: u64, limit: u64) -> St
 /// field because nothing else in the run ever will.
 fn load_constitutions(repo: &Path) -> Result<Constitutions> {
     let toml_path = paths::config_path(repo);
+    super::contained_file(repo, &toml_path)?;
     if !toml_path.exists() {
         return Ok(Constitutions::default());
     }
@@ -940,5 +941,22 @@ mod tests {
                 .is_some_and(|warning| warning.contains("https://example.test/h")),
             "{result:?}"
         );
+    }
+
+    /// `the constitutions registry`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[constitutions.acme]\nrepo = \"https://github.com/acme/g\"\npath = \"../g\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&load_constitutions(
+            repo.path()
+        )));
     }
 }

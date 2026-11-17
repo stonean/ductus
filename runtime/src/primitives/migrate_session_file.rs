@@ -9,7 +9,9 @@
 //! - Leaves every other top-level key intact under its existing name.
 //!   Adopters with non-standard usage (walker-context-seed fields,
 //!   custom adopter additions) keep those values.
-//! - Writes via the standard tempfile + rename pattern.
+//! - Writes the destination exclusively (tempfile, then a no-replace persist): a
+//!   `.ductus/session.toml` another writer lands first is kept, and the legacy
+//!   file is still deleted (`BE-RACE-003`; spec 022 task 43).
 //!
 //! Backs `framework/migrations/session-file-consolidate.md`.
 
@@ -19,7 +21,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value as JsonValue};
 
-use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
+use crate::primitives::{PrimitiveError, Result, read_text, write_new_atomic};
 use crate::schema::paths::SESSION_FILE;
 use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult};
 
@@ -63,16 +65,7 @@ pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionF
     // still delete the legacy one (it's superseded and would otherwise
     // confuse future readers).
     if dest_path.is_file() {
-        std::fs::remove_file(&legacy_path).map_err(|source| PrimitiveError::Io {
-            path: legacy_path.clone(),
-            source,
-        })?;
-        return Ok(MigrateSessionFileResult {
-            source: args.legacy_path.clone(),
-            dest: SESSION_FILE.into(),
-            action: "kept-existing".into(),
-            legacy_deleted: true,
-        });
+        return keep_existing(args, &legacy_path);
     }
 
     // Translate JSON → TOML with key renames.
@@ -90,10 +83,24 @@ pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionF
     };
 
     let toml_body = render_toml(legacy_map);
-    write_atomic(&dest_path, &toml_body)?;
+    land(args, &legacy_path, &dest_path, &toml_body)
+}
 
-    std::fs::remove_file(&legacy_path).map_err(|source| PrimitiveError::Io {
-        path: legacy_path.clone(),
+/// Create `dest_path` from `toml_body` and delete the legacy file. A
+/// destination that exists by then, written by another process after the
+/// check in [`run`], is the `kept-existing` outcome, not replaced.
+fn land(
+    args: &MigrateSessionFileArgs,
+    legacy_path: &Path,
+    dest_path: &Path,
+    toml_body: &str,
+) -> Result<MigrateSessionFileResult> {
+    if !write_new_atomic(dest_path, toml_body)? {
+        return keep_existing(args, legacy_path);
+    }
+
+    std::fs::remove_file(legacy_path).map_err(|source| PrimitiveError::Io {
+        path: legacy_path.into(),
         source,
     })?;
 
@@ -101,6 +108,24 @@ pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionF
         source: args.legacy_path.clone(),
         dest: SESSION_FILE.into(),
         action: "migrated".into(),
+        legacy_deleted: true,
+    })
+}
+
+/// The new session file is already there: preserve it, and still delete the
+/// legacy one, which it supersedes.
+fn keep_existing(
+    args: &MigrateSessionFileArgs,
+    legacy_path: &Path,
+) -> Result<MigrateSessionFileResult> {
+    std::fs::remove_file(legacy_path).map_err(|source| PrimitiveError::Io {
+        path: legacy_path.into(),
+        source,
+    })?;
+    Ok(MigrateSessionFileResult {
+        source: args.legacy_path.clone(),
+        dest: SESSION_FILE.into(),
+        action: "kept-existing".into(),
         legacy_deleted: true,
     })
 }
@@ -185,6 +210,35 @@ mod tests {
             fs::create_dir_all(parent).unwrap();
         }
         fs::write(&path, body).unwrap();
+    }
+
+    /// A `.ductus/session.toml` another writer lands after `run` checked that
+    /// it was absent is kept, not replaced by the legacy file's values
+    /// (`BE-RACE-003`; spec 022 task 43, F16): the check has passed, so the
+    /// destination appears before the write.
+    #[test]
+    fn a_destination_that_appears_before_the_write_is_kept() {
+        let tmp = tempdir().unwrap();
+        let legacy = tmp.path().join(".claude/acme-session.json");
+        write_legacy(
+            tmp.path(),
+            ".claude/acme-session.json",
+            r#"{"feature":"old"}"#,
+        );
+        let dest = tmp.path().join(SESSION_FILE);
+        fs::create_dir_all(dest.parent().unwrap()).unwrap();
+        fs::write(&dest, "feature = \"theirs\"\n").unwrap();
+        let result = land(
+            &args(".claude/acme-session.json"),
+            &legacy,
+            &dest,
+            "feature = \"old\"\n",
+        )
+        .unwrap();
+        assert_eq!(result.action, "kept-existing");
+        assert!(result.legacy_deleted);
+        assert!(!legacy.exists(), "the superseded legacy file is deleted");
+        assert_eq!(fs::read_to_string(&dest).unwrap(), "feature = \"theirs\"\n");
     }
 
     #[test]

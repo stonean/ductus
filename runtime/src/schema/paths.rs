@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::primitives::{PrimitiveError, Result, read_text_if_present};
+use crate::primitives::{PrimitiveError, Result, contained_file, read_text_if_present};
 use crate::schema::config_keys;
 
 /// Default spec-root directory name when the project config does not configure
@@ -305,6 +305,7 @@ impl Paths {
     /// value that fails validation is an error naming the file.
     fn load_configured(base: &Path) -> Result<Option<String>> {
         let toml_path = config_path(base);
+        contained_file(base, &toml_path)?;
         let Some(content) = read_text_if_present(&toml_path)? else {
             return Ok(None);
         };
@@ -733,5 +734,22 @@ mod tests {
             session_path_for_write(repo.path()),
             repo.path().join(LEGACY_DIR_SESSION_FILE)
         );
+    }
+
+    /// `Paths::load`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[paths]\nspecs-root = \"elsewhere\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&Paths::load(
+            repo.path()
+        )));
     }
 }

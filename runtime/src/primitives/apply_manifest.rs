@@ -73,6 +73,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::primitives::guarded::write_new_bytes;
 use crate::primitives::host_config::{self, HostRow};
 use crate::primitives::tool_loading;
 use crate::primitives::{PrimitiveError, Result, write_atomic_bytes};
@@ -436,7 +437,12 @@ fn apply_create(
         Some(content) => content,
         None => read_entry(source, entry, substitutions, tool_search)?,
     };
-    write_atomic_bytes(dest, &new_bytes)?;
+    // Created exclusively: a destination another writer lands after the probe
+    // above is kept, and reported as it would have been had it been there
+    // (`BE-RACE-003`).
+    if !write_new_bytes(dest, &new_bytes)? {
+        return Ok((ACTION_SKIPPED_EXISTS, None));
+    }
     mirror_source_mode(source, dest)?;
     Ok((ACTION_CREATED, applied))
 }
@@ -460,7 +466,10 @@ fn apply_skip_if_conflict(
             source: src,
         })?,
     };
-    write_atomic_bytes(dest, &bytes)?;
+    // Created exclusively, as `apply_create` does (`BE-RACE-003`).
+    if !write_new_bytes(dest, &bytes)? {
+        return Ok((ACTION_SKIPPED_EXISTS, None));
+    }
     mirror_source_mode(source, dest)?;
     Ok((ACTION_CREATED, None))
 }
@@ -957,6 +966,36 @@ mod tests {
         // the observed behavior so future refactors don't quietly change
         // it.
         assert_eq!(out, "BEE");
+    }
+
+    /// A destination another writer lands after the walk probed it absent is
+    /// kept by `create` and `skip-if-conflict`, and reported `skipped-exists`,
+    /// not replaced (`BE-RACE-003`; spec 022 task 43, F4). The probe's answer
+    /// is handed in as the walk would have it: absent.
+    #[test]
+    fn a_destination_that_appears_after_the_probe_is_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src.md");
+        let dest = tmp.path().join("out/dest.md");
+        fs::write(&src, b"from the template\n").unwrap();
+        fs::create_dir_all(dest.parent().unwrap()).unwrap();
+        fs::write(&dest, b"adopter-seeded\n").unwrap();
+        let (action, applied) = apply_create(
+            &src,
+            &dest,
+            false,
+            &entry("src.md", "out/dest.md", "create"),
+            &BTreeMap::new(),
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!((action, applied), (ACTION_SKIPPED_EXISTS, None));
+        assert_eq!(fs::read(&dest).unwrap(), b"adopter-seeded\n");
+
+        let (action, applied) = apply_skip_if_conflict(&src, &dest, false, None).unwrap();
+        assert_eq!((action, applied), (ACTION_SKIPPED_EXISTS, None));
+        assert_eq!(fs::read(&dest).unwrap(), b"adopter-seeded\n");
     }
 
     fn entry(source: &str, dest: &str, strategy: &str) -> ManifestEntry {
@@ -1629,6 +1668,43 @@ mod tests {
         let err = run(&args, tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
         assert!(!dst.join("leaked.md").exists());
+    }
+
+    /// An entry whose `source` or `dest` runs through a link that leaves its
+    /// root is refused before anything is read or written: the one
+    /// containment check at the head of `run` is what every later read and
+    /// write of the walk (`check_host_destination`, `process_entry`,
+    /// `apply_update`, `read_and_substitute`, `tool_search_context`) rests on
+    /// (`BE-INPUT-004`; spec 022 task 43's containment audit).
+    #[cfg(unix)]
+    #[test]
+    fn an_entry_through_an_outward_link_is_refused_before_any_read_or_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("secret.md"), "secret\n").unwrap();
+        let src = write_source(tmp.path(), &[("ok.md", "fine\n")]);
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        std::os::unix::fs::symlink(&outside, src.join("via")).unwrap();
+        std::os::unix::fs::symlink(&outside, dst.join("via")).unwrap();
+
+        for entries in [
+            vec![entry("via/secret.md", "leaked.md", "update")],
+            vec![entry("ok.md", "via/written.md", "update")],
+        ] {
+            let args = args_for(&src, &dst, entries, vec![], BTreeMap::new());
+            let err = run(&args, tmp.path()).unwrap_err();
+            assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        }
+        assert!(
+            !dst.join("leaked.md").exists(),
+            "the linked source was read"
+        );
+        assert!(
+            !outside.join("written.md").exists(),
+            "written through a link"
+        );
     }
 
     // --- Root bounds (spec 022 task 17, the owner's answer (a)) ----------

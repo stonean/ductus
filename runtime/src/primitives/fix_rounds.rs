@@ -262,6 +262,7 @@ fn malformed(index: usize, finding: &ReReadFinding) -> Option<String> {
 /// the file does not parse; [`PrimitiveError::Io`] when it cannot be read.
 pub(crate) fn re_reads_off(repo: &Path) -> Result<Option<String>> {
     let (path, _) = paths::resolve_config(repo);
+    super::contained_file(repo, &path)?;
     if !path.is_file() {
         return Ok(None);
     }
@@ -777,5 +778,22 @@ mod tests {
             assert!(message.contains(file), "{file}: {message}");
             assert!(message.contains("`[review] re-reads-off`"), "{message}");
         }
+    }
+
+    /// `the re-reads switch`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[review]\nre-reads-off = \"a reason long enough\"\n",
+        );
+        assert!(crate::primitives::outward::refused(&re_reads_off(
+            repo.path()
+        )));
     }
 }

@@ -36,6 +36,10 @@ use crate::schema::primitives::{InboxStanding, InboxState};
 pub(crate) fn standing(repo: &Path) -> Result<InboxStanding> {
     let specs_root = paths::Paths::load(repo)?.specs_root;
     let rel = format!("{specs_root}/inbox.md");
+    // A spec root, or an `inbox.md`, that is a link leaving the project is
+    // refused, never read: a count taken from the neighbour's file would read
+    // as this project's (`BE-INPUT-004`).
+    super::validate_contained(repo, &rel)?;
     let Ok(content) = std::fs::read_to_string(repo.join(&rel)) else {
         // No file, or one that is not readable UTF-8. Distinct from clean: a
         // project with no `inbox.md` has not been examined-and-found-empty,
@@ -576,5 +580,22 @@ mod tests {
         // A leap day, the case the March-based shift exists to get right.
         assert_eq!(format_utc_date(1_709_164_800), "2024-02-29");
         assert_eq!(format_utc_date(1_747_612_800), "2025-05-19");
+    }
+
+    /// A spec root that is a link leaving the project is refused: its
+    /// `inbox.md` is not read and never counted as this project's
+    /// (`BE-INPUT-004`; 022 task 42, F9).
+    #[cfg(unix)]
+    #[test]
+    fn an_inbox_under_a_spec_root_linked_outside_the_project_is_refused() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs", |dir| {
+            std::fs::write(
+                dir.join("inbox.md"),
+                "# Inbox\n\n- [ ] a\n- [ ] b\n- [ ] c\n",
+            )
+            .unwrap();
+        });
+        assert!(crate::primitives::outward::refused(&standing(repo.path())));
     }
 }

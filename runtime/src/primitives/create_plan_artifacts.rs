@@ -4,8 +4,9 @@
 //! The deterministic template-copy and existing-artifact-detection step of
 //! `/ductus:plan` (spec 022, scenario coverage-expansion-primitives): the
 //! plan-side mirror of `create-feature`, which covers only `spec.md`. Each
-//! copy is atomic and mode-preserving ([`write_atomic_bytes`] +
-//! [`mirror_source_mode`], same as `create-feature`); templates resolve
+//! copy is atomic and mode-preserving ([`write_new_bytes`] or, for a
+//! confirmed replace, [`write_atomic_bytes`], then [`mirror_source_mode`]);
+//! templates resolve
 //! through the shared [`resolve_template`] candidate order. The LLM fills
 //! the copied sections afterwards via `writeSpecBody`.
 //!
@@ -17,10 +18,15 @@
 //! (`include-data-model`; whether the feature has domain entities is the
 //! host's judgment), but a pre-existing `data-model.md` is always reported
 //! so the prompt sees the full artifact set.
+//!
+//! An artifact observed absent is created exclusively: one another writer lands
+//! between the observation and the copy is kept, and reported `kept`, not
+//! replaced (`BE-RACE-003`; spec 022 task 43).
 
 use std::path::{Path, PathBuf};
 
 use crate::primitives::apply_manifest::mirror_source_mode;
+use crate::primitives::guarded::write_new_bytes;
 use crate::primitives::{PrimitiveError, Result, rel_path, resolve_template, write_atomic_bytes};
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -96,25 +102,45 @@ pub fn run(args: &CreatePlanArtifactsArgs, repo: &Path) -> Result<CreatePlanArti
 
     let mut artifacts = Vec::with_capacity(pending.len());
     for entry in pending {
-        if let Some((_, template_abs)) = &entry.template {
-            let bytes = std::fs::read(template_abs).map_err(|source| PrimitiveError::Io {
-                path: template_abs.clone(),
-                source,
-            })?;
-            write_atomic_bytes(&entry.abs, &bytes)?;
-            mirror_source_mode(template_abs, &entry.abs)?;
-        }
-        artifacts.push(PlanArtifact {
-            file: entry.file.to_string(),
-            path: rel_path(&entry.abs, repo),
-            action: entry.action,
-            template: entry.template.map(|(rel, _)| rel),
-        });
+        artifacts.push(copy_artifact(entry, repo)?);
     }
 
     Ok(CreatePlanArtifactsResult {
         path: format!("{root}/{}", args.feature),
         artifacts,
+    })
+}
+
+/// Copy `entry`'s template over its artifact as its action says, and report
+/// it. A `Created` artifact is written exclusively; one that exists by then
+/// is left as it is and reported `Kept`, naming no template. A `Replaced` one
+/// is the confirmed replace, whose rename is meant to replace.
+fn copy_artifact(entry: Pending, repo: &Path) -> Result<PlanArtifact> {
+    let mut action = entry.action;
+    let mut template = entry.template;
+    if let Some((_, template_abs)) = &template {
+        let bytes = std::fs::read(template_abs).map_err(|source| PrimitiveError::Io {
+            path: template_abs.clone(),
+            source,
+        })?;
+        let written = if action == PlanArtifactAction::Created {
+            write_new_bytes(&entry.abs, &bytes)?
+        } else {
+            write_atomic_bytes(&entry.abs, &bytes)?;
+            true
+        };
+        if written {
+            mirror_source_mode(template_abs, &entry.abs)?;
+        } else {
+            action = PlanArtifactAction::Kept;
+            template = None;
+        }
+    }
+    Ok(PlanArtifact {
+        file: entry.file.to_string(),
+        path: rel_path(&entry.abs, repo),
+        action,
+        template: template.map(|(rel, _)| rel),
     })
 }
 
@@ -202,6 +228,35 @@ mod tests {
         assert_eq!(result.artifacts[2].action, PlanArtifactAction::Created);
         let body = fs::read_to_string(tmp.path().join("specs/042-widget/data-model.md")).unwrap();
         assert_eq!(body, DATA_MODEL_TEMPLATE);
+    }
+
+    /// An artifact another writer lands after it was observed absent is kept,
+    /// not replaced by the template (`BE-RACE-003`; spec 022 task 43, F15):
+    /// the entry is the `Created` one the observation made, and the file is
+    /// there by the time of the copy.
+    #[test]
+    fn an_artifact_that_appears_before_its_copy_is_kept() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path());
+        let abs = tmp.path().join("specs/042-widget/plan.md");
+        let theirs = "# Plan: widget\n\nlanded in between\n";
+        fs::write(&abs, theirs).unwrap();
+        let entry = Pending {
+            file: "plan.md",
+            abs: abs.clone(),
+            action: PlanArtifactAction::Created,
+            template: Some((
+                "specs/templates/plan.md".into(),
+                tmp.path().join("specs/templates/plan.md"),
+            )),
+        };
+        let reported = copy_artifact(entry, tmp.path()).unwrap();
+        assert_eq!(reported.action, PlanArtifactAction::Kept);
+        assert!(
+            reported.template.is_none(),
+            "a kept entry names no template"
+        );
+        assert_eq!(fs::read_to_string(&abs).unwrap(), theirs);
     }
 
     #[test]

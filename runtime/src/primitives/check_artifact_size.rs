@@ -330,6 +330,12 @@ fn measure_project_files(
         };
         let Some(project) = &project else {
             let on_disk = repo.join(&rel);
+            // A file that is, or lies under, a link leaving the project is
+            // not opened: it is unreadable here, never measured (`BE-INPUT-004`).
+            if super::leaves_project(repo, &rel) {
+                records.push(record(ProjectSizeState::Unreadable, None));
+                continue;
+            }
             records.push(match on_disk.symlink_metadata() {
                 Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                     record(ProjectSizeState::Absent, None)
@@ -743,6 +749,7 @@ fn effect_text(effect: OnDone) -> &'static str {
 /// limit one way.
 pub(crate) fn resolve_threshold(repo: &Path) -> Result<(ReadSizeThreshold, Vec<String>)> {
     let (path, name) = paths::resolve_config(repo);
+    super::contained_file(repo, &path)?;
     if !path.is_file() {
         return Ok((DEFAULT_THRESHOLD, Vec::new()));
     }
@@ -2079,5 +2086,36 @@ mod tests {
         let tmp = project_tree(1, 1);
         let err = compute(&project_args(None, true), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Git(_)), "{err:?}");
+    }
+
+    /// `the read-size threshold`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[artifacts]\nread-size-bytes = 9\n",
+        );
+        assert!(crate::primitives::outward::refused(&resolve_threshold(
+            repo.path()
+        )));
+    }
+
+    /// A project file that is a link leaving the project is reported
+    /// unreadable, never measured through the link (`BE-INPUT-004`; 022
+    /// task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_project_file_linked_outside_the_project_is_unreadable_not_measured() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(repo.path(), "AGENTS.md", "outside\n");
+        let records = measure_project_files(false, repo.path(), "specs", 100).unwrap();
+        let agents = records.iter().find(|r| r.path == "AGENTS.md").unwrap();
+        assert_eq!(agents.state, ProjectSizeState::Unreadable);
+        assert_eq!(agents.bytes, None);
     }
 }

@@ -377,10 +377,15 @@ fn has(surfaces: &[String], member: &str) -> bool {
 /// when the project config cannot be read or parsed.
 pub(crate) fn resolve_rules_dir(repo: &Path) -> Result<(Option<PathBuf>, String)> {
     let layout = paths::Paths::load(repo)?;
+    // Each candidate directory is contained before it is probed, so a rules
+    // directory, or a spec root, that is a link leaving the project is refused
+    // rather than listed and read (`BE-INPUT-004`).
+    super::validate_contained(repo, &format!("{}/rules", layout.specs_root))?;
     let adopter = repo.join(&layout.specs_root).join("rules");
     if adopter.is_dir() {
         return Ok((Some(adopter), format!("{}/rules", layout.specs_root)));
     }
+    super::validate_contained(repo, "framework/rules")?;
     let own = repo.join("framework").join("rules");
     if own.is_dir() {
         return Ok((Some(own), "framework/rules".to_string()));
@@ -662,6 +667,7 @@ fn apply_disabled_filter(
 /// across a concurrent migration.
 fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, Vec<UnknownKey>, &'static str, PathBuf)> {
     let (path, name) = paths::resolve_config(repo);
+    super::contained_file(repo, &path)?;
     if !path.is_file() {
         return Ok((DuctusToml::default(), Vec::new(), name, path));
     }
@@ -1810,5 +1816,53 @@ mod tests {
             &serde_json::to_value(&result).unwrap(),
             &lists,
         );
+    }
+
+    /// `discover-rule-files`'s config read refuses a `.ductus/config.toml` that is a link
+    /// leaving the project, naming it, and reads nothing through it
+    /// (`BE-INPUT-004`; 022 task 42).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_file_linked_outside_the_project_is_refused_unread() {
+        let repo = tempfile::tempdir().unwrap();
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            ".ductus/config.toml",
+            "[rules]\nsurfaces = [\"backend\"]\n",
+        );
+        assert!(crate::primitives::outward::refused(&load_ductus_toml(
+            repo.path()
+        )));
+    }
+
+    /// A rules directory that is a link leaving the project, `specs/rules` or
+    /// `framework/rules`, is refused rather than listed and read, and the
+    /// rule IDs, tiers and Statements outside the project are not returned
+    /// (`BE-INPUT-004`; 022 task 42, F8).
+    #[cfg(unix)]
+    #[test]
+    fn a_rules_directory_linked_outside_the_project_is_refused_not_listed() {
+        for rel in ["specs/rules", "framework/rules"] {
+            let repo = tempfile::tempdir().unwrap();
+            let _outside = crate::primitives::outward::dir(repo.path(), rel, |dir| {
+                std::fs::write(
+                    dir.join("x-cross.md"),
+                    "### X-001\n\n> It MUST hold.\n\n**Verification:** read it.\n",
+                )
+                .unwrap();
+            });
+            assert!(
+                crate::primitives::outward::refused(&resolve_rules_dir(repo.path())),
+                "{rel}"
+            );
+            let args = DiscoverRuleFilesArgs {
+                rules: true,
+                ..DiscoverRuleFilesArgs::default()
+            };
+            assert!(
+                crate::primitives::outward::refused(&run(&args, repo.path())),
+                "{rel}"
+            );
+        }
     }
 }
