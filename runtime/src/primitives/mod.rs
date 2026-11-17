@@ -4089,12 +4089,11 @@ pub(crate) fn list_tracked_specs(repo: &Path, specs_root: &str) -> Result<Vec<St
             .filter(|path| is_spec_path(path, specs_root))
             .collect());
     }
-    // The walk lists and probes the project's files itself, so the spec root
-    // is contained before it is listed, as a path argument is.
-    validate_contained(repo, specs_root)?;
+    // The walk lists and probes the project's files itself; the listing
+    // contains the spec root, as a path argument is contained.
     let mut out = Vec::new();
     let specs_dir = repo.join(specs_root);
-    for feature in list_feature_dirs(&specs_dir) {
+    for feature in list_feature_dirs(repo, specs_root)? {
         for name in ["spec.md", "spec-and-plan.md"] {
             let rel = format!("{specs_root}/{feature}/{name}");
             // A path that leaves the project is named without being probed:
@@ -4205,15 +4204,27 @@ pub(crate) fn list_staged_specs(
     Ok(out)
 }
 
-/// List feature directories under the spec root — sequential (`NNN-slug`)
-/// and branch-scoped (`{identifier}.{n}-slug`) alike — in corpus order
-/// ([`feature_dir_cmp`]), which compares numbers numerically. Best-effort: a missing or unreadable spec root yields an empty
-/// list — a repo without a spec root has no features by definition, and
-/// every caller reports the empty case as "no features" rather than an
-/// operational error.
-pub(crate) fn list_feature_dirs(specs_dir: &Path) -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir(specs_dir) else {
-        return Vec::new();
+/// List feature directories under the spec root `specs_root` (relative to the
+/// project root `repo`) — sequential (`NNN-slug`) and branch-scoped
+/// (`{identifier}.{n}-slug`) alike — in corpus order ([`feature_dir_cmp`]),
+/// which compares numbers numerically.
+///
+/// The root is contained before it is listed ([`validate_contained`]), so no
+/// caller can list one that is, or runs through, a symbolic link leaving the
+/// project (`BE-INPUT-004`; spec 022 task 48). Otherwise best-effort: a
+/// missing or unreadable spec root yields an empty list — a repo without a
+/// spec root has no features by definition, and every caller reports the
+/// empty case as "no features" rather than an operational error.
+///
+/// # Errors
+///
+/// As [`validate_contained`]: [`PrimitiveError::InvalidPath`] for a root that
+/// leaves the project. A caller whose subject is the root propagates it; one
+/// that keeps running reports the root unread.
+pub(crate) fn list_feature_dirs(repo: &Path, specs_root: &str) -> Result<Vec<String>> {
+    validate_contained(repo, specs_root)?;
+    let Ok(entries) = std::fs::read_dir(repo.join(specs_root)) else {
+        return Ok(Vec::new());
     };
     let mut features: Vec<String> = entries
         .filter_map(std::result::Result::ok)
@@ -4222,7 +4233,7 @@ pub(crate) fn list_feature_dirs(specs_dir: &Path) -> Vec<String> {
         .filter(|name| is_feature_slug(name))
         .collect();
     features.sort_by(|a, b| feature_dir_cmp(a, b));
-    features
+    Ok(features)
 }
 
 /// Total order over a mixed spec root, shared by every surface that
@@ -6840,8 +6851,8 @@ mod spec_corpus_tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::{
-        git_fixture, is_spec_path, list_staged_specs, list_tracked_specs, list_untracked_specs,
-        spec_feature_slug, tracked_project_paths,
+        git_fixture, is_spec_path, list_feature_dirs, list_staged_specs, list_tracked_specs,
+        list_untracked_specs, spec_feature_slug, tracked_project_paths,
     };
     use std::path::Path;
 
@@ -6929,6 +6940,48 @@ mod spec_corpus_tests {
                 "specs/003-z/spec.md".to_string(),
             ],
             "the linked feature has neither file, and is named all the same"
+        );
+    }
+
+    /// The listing contains the spec root before it lists it (`BE-INPUT-004`;
+    /// 022 task 48): a root that is, or runs through, a link out of the
+    /// project is refused and none of what it holds is named, while a missing
+    /// root is an empty list and a contained one lists in corpus order.
+    #[cfg(unix)]
+    #[test]
+    fn the_feature_listing_refuses_a_spec_root_that_leaves_the_project() {
+        let outside = tempfile::tempdir().unwrap();
+        git_fixture::write(&outside.path().join("001-x/spec.md"), &spec_body("X"));
+
+        let linked = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), linked.path().join("specs")).unwrap();
+        let err = list_feature_dirs(linked.path(), "specs").unwrap_err();
+        assert!(
+            matches!(err, crate::primitives::PrimitiveError::InvalidPath { .. }),
+            "{err}"
+        );
+
+        // A root that only runs through a link out is refused the same way.
+        let through = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), through.path().join("docs")).unwrap();
+        git_fixture::write(&outside.path().join("specs/002-y/spec.md"), &spec_body("Y"));
+        let err = list_feature_dirs(through.path(), "docs/specs").unwrap_err();
+        assert!(
+            matches!(err, crate::primitives::PrimitiveError::InvalidPath { .. }),
+            "{err}"
+        );
+
+        let project = tempfile::tempdir().unwrap();
+        assert_eq!(
+            list_feature_dirs(project.path(), "specs").unwrap(),
+            Vec::<String>::new(),
+            "a missing root has no features"
+        );
+        git_fixture::write(&project.path().join("specs/010-b/spec.md"), &spec_body("B"));
+        git_fixture::write(&project.path().join("specs/002-a/spec.md"), &spec_body("A"));
+        assert_eq!(
+            list_feature_dirs(project.path(), "specs").unwrap(),
+            vec!["002-a".to_string(), "010-b".to_string()]
         );
     }
 

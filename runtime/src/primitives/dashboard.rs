@@ -302,7 +302,7 @@ fn load_specs(repo: &Path) -> Result<(Vec<DashboardSpec>, pipeline_view::Questio
     let mut entries: Vec<DashboardSpec> = Vec::new();
     let mut questions = pipeline_view::QuestionsBySpec::new();
 
-    for slug in list_feature_dirs(&specs_dir) {
+    for slug in list_feature_dirs(repo, &layout.specs_root)? {
         // The feature directory is walked for outward links before anything
         // under it opens, as every feature-argument site walks it, so a link
         // that leaves the project refuses the whole call (`BE-INPUT-004`).
@@ -2310,5 +2310,18 @@ reason = "Deferred until v2 perf budget lands."
             });
         let result = load_scenario_detail(repo.path(), "specs/001-a/scenarios/s.md");
         assert_eq!(result.unwrap(), None);
+    }
+
+    /// The dashboard's spec walk refuses a spec root that is a link out of the
+    /// project rather than reading an empty corpus (`BE-INPUT-004`; 022
+    /// task 48). The call is refused a step later by the inbox check, so the
+    /// walk is held on its own.
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_linked_outside_the_project_refuses_the_spec_walk() {
+        let repo = TempDir::new().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs", |_| {});
+        let result = super::load_specs(repo.path());
+        assert!(crate::primitives::outward::refused(&result), "{result:?}");
     }
 }

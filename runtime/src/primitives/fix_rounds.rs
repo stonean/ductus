@@ -549,7 +549,7 @@ fn changed_only_by_other_specs(
         return Ok(BTreeSet::new());
     }
 
-    let attributor = Attributor::new(project, subject.repo, subject.specs_root);
+    let attributor = Attributor::new(project, subject.repo, subject.specs_root)?;
     let mut walk = repository.revwalk()?;
     walk.push(snapshot_head.id())?;
     walk.hide(base_head.id())?;

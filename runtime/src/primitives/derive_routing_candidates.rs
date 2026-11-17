@@ -257,7 +257,12 @@ fn runtime_signal(description: &str) -> Option<String> {
 /// wins so the answer is stable; `None` when no spec claims it.
 fn runtime_home(repo: &Path, specs_root: &str) -> Option<String> {
     let specs_dir = repo.join(specs_root);
-    list_feature_dirs(&specs_dir).into_iter().find(|slug| {
+    // A spec root that leaves the project is not listed: it claims nothing
+    // here, and `derive_spec_corpus` reports it unread (`BE-INPUT-004`).
+    let Ok(slugs) = list_feature_dirs(repo, specs_root) else {
+        return None;
+    };
+    slugs.into_iter().find(|slug| {
         // A plan that is, or lies under, a link leaving the project is not
         // read (`BE-INPUT-004`). An unreadable plan claims nothing here, as it
         // always has: routing candidates are advice, and this caller's
@@ -360,15 +365,20 @@ fn derive_spec_corpus(
 ) -> Result<()> {
     let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
-    if !specs_dir.is_dir() {
+    // A spec root that leaves the project is not listed, and reads as an
+    // unreadable one (`BE-INPUT-004`).
+    let listed = list_feature_dirs(repo, &layout.specs_root)
+        .ok()
+        .filter(|_| specs_dir.is_dir());
+    let Some(listed) = listed else {
         skipped.push(RoutingSkip {
             source: "spec-corpus".into(),
             reason: "spec root is missing or unreadable".into(),
             path: layout.specs_root.clone(),
         });
         return Ok(());
-    }
-    for slug in list_feature_dirs(&specs_dir) {
+    };
+    for slug in listed {
         // Already offered by the runtime-work source, which is the more
         // specific claim; a second entry for the same spec would read as two
         // independent matches.
@@ -810,5 +820,39 @@ mod tests {
             derived.skipped
         );
         assert!(derived.candidates.is_empty(), "{:?}", derived.candidates);
+    }
+
+    /// A spec root that is a link out of the project is not listed: the
+    /// corpus source is skipped as unreadable, so the derivation is
+    /// incomplete, and no spec outside is offered (`BE-INPUT-004`; 022
+    /// task 48).
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_linked_outside_the_project_is_skipped_and_not_listed() {
+        let repo = tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs", |dir| {
+            write(
+                &dir.join("001-token-logging/spec.md"),
+                "---\nstatus: done\ndependencies: []\n---\n\n# 001\n",
+            );
+        });
+        let result = run(&args("rework the token logging"), repo.path()).unwrap();
+        assert!(
+            result
+                .candidates
+                .iter()
+                .all(|c| c.target != "001-token-logging"),
+            "{:?}",
+            result.candidates
+        );
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|skip| skip.source == "spec-corpus"),
+            "{:?}",
+            result.skipped
+        );
+        assert!(result.derivation_incomplete);
     }
 }

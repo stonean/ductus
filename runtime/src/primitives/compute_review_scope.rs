@@ -710,7 +710,7 @@ fn attribute_window(
     let mut walk = repository.revwalk()?;
     walk.push_head()?;
     walk.hide(Oid::from_str(base)?)?;
-    let attributor = Attributor::new(project, repo, specs_root);
+    let attributor = Attributor::new(project, repo, specs_root)?;
     let own_prefix = format!("{specs_root}/{feature}/");
     let own_plan = PlanEntries::new(plan_affected);
     let mut plans: BTreeMap<String, PlanEntries> = BTreeMap::new();

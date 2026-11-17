@@ -90,12 +90,11 @@ pub(crate) fn compute(
 ) -> Result<(Vec<UnfoldedSpec>, u32)> {
     let layout = paths::Paths::load(repo)?;
     let specs_dir = repo.join(&layout.specs_root);
-    super::validate_contained(repo, &layout.specs_root)?;
 
     let mut unfolded: Vec<UnfoldedSpec> = Vec::new();
     let mut examined: u32 = 0;
 
-    for slug in list_feature_dirs(&specs_dir) {
+    for slug in list_feature_dirs(repo, &layout.specs_root)? {
         // Counted before the form check: `examined` bounds the claim by the
         // corpus that was walked, so a sequential directory contributes to
         // "we looked at 47 features and none of them staged" even though it

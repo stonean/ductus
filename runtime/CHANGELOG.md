@@ -1383,6 +1383,16 @@ its version and date.
   points at, and holds `from` to the feature-directory name rule before it
   reads anything (`BE-INPUT-002`): `--from .` re-pointed every `./` link in a
   fixture corpus, and now exits with an invalid-argument error.
+- **The spec-root listing is contained before it is read (spec 022 task 48;
+  `BE-INPUT-004`, the owner's class decision of 2026-11-17).**
+  `list_feature_dirs` refuses a spec root that is, or runs through, a symbolic
+  link leaving the project, instead of listing the outside directory.
+  `resolve-feature` (whose `ambiguous` and `not-found` outcomes could name or
+  hide outside entries), `create-feature`, `prune-plan`, `prune-tasks`,
+  `dashboard` and the commit attribution behind `compute-review-scope`,
+  `diff-cross-spec` and the fix-round primitives return the invalid-path error;
+  `derive-routing-candidates` skips its spec-corpus source as unreadable, and
+  the derivation reads as incomplete.
 - **Five more project-file reads and probes are contained, and the containment
   test holds every feature-argument site (spec 022 task 46; 022's review of
   2026-11-17, `BE-INPUT-004`).** `resolve-anchor` no longer reads

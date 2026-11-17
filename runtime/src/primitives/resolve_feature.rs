@@ -52,9 +52,12 @@ use crate::schema::primitives::{
 /// `scenario` slug does not match the kebab-case grammar enforced by
 /// [`crate::primitives::validate_slug`], and [`PrimitiveError::InvalidPath`]
 /// when the matched feature directory is, or holds, a symlink that resolves
-/// outside the project ([`crate::primitives::validate_feature_argument`]).
-/// Ambiguity and no-match are domain outcomes, not errors; a missing or
-/// unreadable spec root simply yields `not-found`.
+/// outside the project ([`crate::primitives::validate_feature_argument`]),
+/// or when the spec root is, or runs through, one: it is contained before it
+/// is listed ([`crate::primitives::list_feature_dirs`]), so an outside entry
+/// is never offered as a candidate. Ambiguity and no-match are domain
+/// outcomes, not errors; a missing or unreadable spec root inside the project
+/// simply yields `not-found`.
 pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResult> {
     let identifier = args.identifier.trim();
     if identifier.is_empty() {
@@ -69,7 +72,7 @@ pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResul
     }
 
     let root = paths::Paths::load(repo)?.specs_root;
-    let features = list_feature_dirs(&repo.join(&root));
+    let features = list_feature_dirs(repo, &root)?;
 
     match match_identifier(&features, identifier) {
         Match::One(feature) => {
@@ -545,5 +548,27 @@ mod tests {
         assert_eq!(result.outcome, ResolveFeatureOutcome::Resolved);
         assert_eq!(result.feature.as_deref(), Some("001-basic"));
         assert_eq!(result.status.as_deref(), Some("clarified"));
+    }
+
+    /// A spec root that is a link out of the project is refused, whatever the
+    /// identifier: `ambiguous` would name the outside entries and `not-found`
+    /// would pass an unread root off as an empty one (`BE-INPUT-004`; 022
+    /// task 48).
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_linked_outside_the_project_is_refused_whatever_matches() {
+        let repo = tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(repo.path(), "specs", |dir| {
+            for name in ["007-out-a", "008-out-b"] {
+                write(&dir.join(name).join("spec.md"), "---\nstatus: done\n---\n");
+            }
+        });
+        for identifier in ["out", "zzz"] {
+            let result = run(&args(identifier, None), repo.path());
+            assert!(
+                crate::primitives::outward::refused(&result),
+                "{identifier}: {result:?}"
+            );
+        }
     }
 }

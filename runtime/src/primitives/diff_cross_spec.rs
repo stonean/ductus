@@ -155,7 +155,7 @@ pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSur
     // window keeps every committed sibling change rather than reading as clean.
     let mut own: BTreeSet<String> = BTreeSet::new();
     if form.is_some() && window_base != head.id() {
-        let attributor = Attributor::new(&project, repo, &layout.specs_root);
+        let attributor = Attributor::new(&project, repo, &layout.specs_root)?;
         let mut walk = repository.revwalk()?;
         walk.push(head.id())?;
         walk.hide(window_base)?;

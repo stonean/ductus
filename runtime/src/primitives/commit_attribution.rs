@@ -67,16 +67,26 @@ pub(crate) struct Attributor<'a> {
 
 impl<'a> Attributor<'a> {
     /// An attributor for the project at `repo`, whose spec root is `specs_root`.
-    pub(crate) fn new(project: &'a ProjectRepository, repo: &Path, specs_root: &'a str) -> Self {
-        let known = list_feature_dirs(&repo.join(specs_root))
+    ///
+    /// # Errors
+    ///
+    /// [`crate::primitives::PrimitiveError::InvalidPath`] when the spec root is
+    /// or runs through a symbolic link leaving the project: the listing is
+    /// refused, never followed (`BE-INPUT-004`).
+    pub(crate) fn new(
+        project: &'a ProjectRepository,
+        repo: &Path,
+        specs_root: &'a str,
+    ) -> Result<Self> {
+        let known = list_feature_dirs(repo, specs_root)?
             .into_iter()
             .filter_map(|name| parse_feature_dir(&name).map(|form| (form, name)))
             .collect();
-        Self {
+        Ok(Self {
             project,
             specs_root,
             known,
-        }
+        })
     }
 
     /// The directory of the spec `form`, when it is on disk.
@@ -261,6 +271,7 @@ mod tests {
         let project = ProjectRepository::discover(project_root).unwrap();
         let commit = project.repository.find_commit(oid).unwrap();
         Attributor::new(&project, project_root, "specs")
+            .unwrap()
             .claims(&commit)
             .unwrap()
     }
@@ -345,6 +356,7 @@ mod tests {
         let project = ProjectRepository::discover(root).unwrap();
         let commit = project.repository.find_commit(oid).unwrap();
         Attributor::new(&project, root, "specs")
+            .unwrap()
             .belongs_to(&commit, form)
             .unwrap()
     }
@@ -585,6 +597,28 @@ mod tests {
         assert_eq!(
             numbers("impl(013) task 25, impl(058) task 2"),
             vec![seq(13)]
+        );
+    }
+
+    /// An attributor lists the spec root, so one that is a link out of the
+    /// project is refused and the specs it holds are never known
+    /// (`BE-INPUT-004`; 022 task 48).
+    #[cfg(unix)]
+    #[test]
+    fn an_attributor_refuses_a_spec_root_linked_outside_the_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        Repository::init(tmp.path()).unwrap();
+        let _outside = crate::primitives::outward::dir(tmp.path(), "specs", |dir| {
+            write(&dir.join("012-a/spec.md"), "a\n");
+        });
+        let project = ProjectRepository::discover(tmp.path()).unwrap();
+        let attributor = Attributor::new(&project, tmp.path(), "specs");
+        assert!(
+            matches!(
+                attributor,
+                Err(crate::primitives::PrimitiveError::InvalidPath { .. })
+            ),
+            "the spec root was listed"
         );
     }
 }

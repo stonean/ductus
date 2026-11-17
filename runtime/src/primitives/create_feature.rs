@@ -52,9 +52,9 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
     let root = paths::Paths::load(repo)?.specs_root;
     let specs_dir = repo.join(&root);
     let feature = match &branch {
-        None => format!("{:03}-{slug}", next_feature_number(&specs_dir)),
+        None => format!("{:03}-{slug}", next_feature_number(repo, &root)?),
         Some(scope) => {
-            let n = next_branch_number(&specs_dir, &scope.identifier);
+            let n = next_branch_number(repo, &root, &scope.identifier)?;
             format!("{}.{n}-{slug}", scope.identifier)
         }
     };
@@ -263,8 +263,8 @@ fn stamp_fold_target(template: &[u8], target: &str, template_rel: &str) -> Resul
 /// number is reusable, accepted because fold-back re-points every link in
 /// the spec root and the root files it reads before a directory is retired,
 /// and names in `skipped` each of those it cannot rewrite (spec 051).
-fn next_branch_number(specs_dir: &Path, identifier: &str) -> u32 {
-    list_feature_dirs(specs_dir)
+fn next_branch_number(repo: &Path, specs_root: &str, identifier: &str) -> Result<u32> {
+    Ok(list_feature_dirs(repo, specs_root)?
         .iter()
         .filter_map(|name| parse_feature_dir(name))
         .filter_map(|form| match form {
@@ -273,7 +273,7 @@ fn next_branch_number(specs_dir: &Path, identifier: &str) -> u32 {
         })
         .max()
         .unwrap_or(0)
-        + 1
+        + 1)
 }
 
 /// Compute the next feature number: the max existing three-digit `NNN-`
@@ -284,14 +284,14 @@ fn next_branch_number(specs_dir: &Path, identifier: &str) -> u32 {
 /// Branch-scoped directories contribute nothing: they carry no sequential
 /// number, so a spec root holding `050-a` and `1234.1-b` still yields
 /// `051`. The counter is a property of the sequential form alone.
-fn next_feature_number(specs_dir: &Path) -> u32 {
-    list_feature_dirs(specs_dir)
+fn next_feature_number(repo: &Path, specs_root: &str) -> Result<u32> {
+    Ok(list_feature_dirs(repo, specs_root)?
         .iter()
         .filter_map(|name| parse_feature_dir(name))
         .filter_map(|form| form.sequential_number())
         .max()
         .unwrap_or(0)
-        + 1
+        + 1)
 }
 
 #[cfg(test)]
@@ -375,7 +375,9 @@ mod tests {
         // Visible to the corpus, which is the half the bug broke: the
         // directory existed but no reader could see it.
         assert!(
-            list_feature_dirs(&tmp.path().join("specs")).contains(&next.feature),
+            list_feature_dirs(tmp.path(), "specs")
+                .unwrap()
+                .contains(&next.feature),
             "the new directory must be enumerable"
         );
         assert_eq!(

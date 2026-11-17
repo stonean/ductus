@@ -192,8 +192,8 @@ MUTATIONS = [
     (
         'M24 check-unfolded-specs lists a spec root that is a link out of the project',
         'src/primitives/check_unfolded_specs.rs',
-        '    super::validate_contained(repo, &layout.specs_root)?;\n',
-        '',
+        '    for slug in list_feature_dirs(repo, &layout.specs_root)? {',
+        '    for slug in list_feature_dirs(repo, &layout.specs_root).unwrap_or_default() {',
         'check_unfolded_specs::tests::a_spec_root_that_leaves_the_project_halts_unlisted',
     ),
     (

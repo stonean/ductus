@@ -171,8 +171,8 @@ MUTATIONS = [
     (
         'M22 available-specs lists a spec root leaving the project',
         'src/interpreter/payload.rs',
-        '    refuse_outside(\n        crate::primitives::validate_contained(repo, &specs_root),\n        &specs_root,\n    )?;\n    Ok(\n',
-        '    Ok(\n',
+        '    let features = refuse_outside(\n        crate::primitives::list_feature_dirs(repo, &specs_root),\n        &specs_root,\n    )?;',
+        '    let features = crate::primitives::list_feature_dirs(repo, &specs_root).unwrap_or_default();',
         'interpreter::payload::tests::available_specs_read_nothing_outside_the_project',
     ),
     (

@@ -23,8 +23,8 @@ MUTATIONS = [
     (
         'M2 the worktree spec listing lists a spec root that is a link out of the project',
         'src/primitives/mod.rs',
-        '    validate_contained(repo, specs_root)?;\n    let mut out = Vec::new();\n    let specs_dir = repo.join(specs_root);',
-        '    let mut out = Vec::new();\n    let specs_dir = repo.join(specs_root);',
+        '    validate_contained(repo, specs_root)?;\n    let Ok(entries) = std::fs::read_dir(repo.join(specs_root)) else {',
+        '    let Ok(entries) = std::fs::read_dir(repo.join(specs_root)) else {',
         'primitives::spec_corpus_tests::the_worktree_walk_contains',
     ),
     (

@@ -229,7 +229,7 @@ impl BoundedPruneResult for PrunePlanResult {
 /// is examined and left out, and one with no `plan.md` is skipped with that
 /// reason.
 fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<PrunePlanSummary>> {
-    let names = list_feature_dirs(&repo.join(root));
+    let names = list_feature_dirs(repo, root)?;
     let mut features = Vec::new();
     let mut skipped = Vec::new();
     for feature in &names {
@@ -1337,5 +1337,17 @@ mod tests {
         );
         let result = remove_journal(&root);
         assert_eq!(result.reopen_required, Some(true));
+    }
+
+    /// A walk of a spec root that is a link out of the project is refused,
+    /// not reported as a corpus that held no feature (`BE-INPUT-004`; 022
+    /// task 48).
+    #[cfg(unix)]
+    #[test]
+    fn a_walk_of_a_spec_root_linked_outside_the_project_is_refused() {
+        let tmp = tempdir().unwrap();
+        let _outside = crate::primitives::outward::dir(tmp.path(), "specs", |_| {});
+        let result = super::run(&all(), tmp.path());
+        assert!(crate::primitives::outward::refused(&result), "{result:?}");
     }
 }

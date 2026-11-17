@@ -584,12 +584,12 @@ fn classify_contained(canon_repo: &Path, rel: &Path) -> Contained {
 /// project, [`PayloadError::PathOutsideProject`] naming `rel` when it leaves it
 /// ([`PrimitiveError::InvalidPath`]), and any other error as the config error
 /// it is, as the command-file candidates are judged in [`locate_command_file`].
-fn refuse_outside(
-    verdict: Result<(), crate::primitives::PrimitiveError>,
+fn refuse_outside<T>(
+    verdict: Result<T, crate::primitives::PrimitiveError>,
     rel: &str,
-) -> Result<(), PayloadError> {
+) -> Result<T, PayloadError> {
     match verdict {
-        Ok(()) => Ok(()),
+        Ok(value) => Ok(value),
         Err(crate::primitives::PrimitiveError::InvalidPath { .. }) => {
             Err(PayloadError::PathOutsideProject {
                 path: rel.to_string(),
@@ -1104,22 +1104,20 @@ fn load_available_specs(repo: &Path) -> Result<Vec<RouteInboxSpec>, PayloadError
     let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
     // The listing opens the spec root: a root that is, or runs through, a link
     // out of the project is refused, never listed.
-    refuse_outside(
-        crate::primitives::validate_contained(repo, &specs_root),
+    let features = refuse_outside(
+        crate::primitives::list_feature_dirs(repo, &specs_root),
         &specs_root,
     )?;
-    Ok(
-        crate::primitives::list_feature_dirs(&repo.join(&specs_root))
-            .into_iter()
-            .map(|slug| {
-                let status = read_spec_status(repo, &format!("{specs_root}/{slug}/spec.md"));
-                RouteInboxSpec {
-                    feature: slug,
-                    status,
-                }
-            })
-            .collect(),
-    )
+    Ok(features
+        .into_iter()
+        .map(|slug| {
+            let status = read_spec_status(repo, &format!("{specs_root}/{slug}/spec.md"));
+            RouteInboxSpec {
+                feature: slug,
+                status,
+            }
+        })
+        .collect())
 }
 
 /// The fold decision's route vocabulary. Two leaves, and deliberately not
