@@ -18,6 +18,14 @@ The behaviours and the tests that hold them:
       address is fetched over http. Killed by the same test.
   M3  `is_loopback_literal` does not strip a bracketed IPv6 host, so `[::1]`
       is refused over http. Killed by the same test.
+  M4  A named host is refused over https too, so the internal-address
+      exemption reaches no mirror. Killed by the same test (022's review of
+      2026-11-17).
+  M5  With no NO_PROXY set, the loopback ranges are not on the proxies' list,
+      so a named loopback fetch goes through a configured proxy, off this host.
+      Killed by fetch_archive's
+      `a_named_loopback_host_is_fetched_without_the_proxy`.
+  M6  With NO_PROXY naming another host, the same. Killed by the same test.
 
 No mutation is an expected survivor.
 """
@@ -45,5 +53,26 @@ MUTATIONS = [
         "    let bare = host\n        .strip_prefix('[')\n        .and_then(|inner| inner.strip_suffix(']'))\n        .unwrap_or(host);\n    bare.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())\n",
         "    host.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())\n",
         'plain_http_reaches_only_a_named_loopback_literal',
+    ),
+    (
+        'M4 a named host is refused over https',
+        'src/primitives/fetch_archive.rs',
+        '            "https" => return Ok(FetchScreen::Unpinned),\n',
+        '            "https" if host.is_empty() => return Ok(FetchScreen::Unpinned),\n',
+        'plain_http_reaches_only_a_named_loopback_literal',
+    ),
+    (
+        'M5 with no NO_PROXY, the loopback ranges are not on the list',
+        'src/primitives/fetch_archive.rs',
+        '            LOOPBACK_NO_PROXY.to_string()\n',
+        '            String::new()\n',
+        'a_named_loopback_host_is_fetched_without_the_proxy',
+    ),
+    (
+        'M6 with NO_PROXY naming another host, the loopback ranges are not on the list',
+        'src/primitives/fetch_archive.rs',
+        '            format!("{},{LOOPBACK_NO_PROXY}", self.no)\n',
+        '            self.no.clone()\n',
+        'a_named_loopback_host_is_fetched_without_the_proxy',
     ),
 ]

@@ -1354,9 +1354,11 @@ its version and date.
   over `https`. Plain `http` now passes only when the named host is a loopback
   literal (`127.0.0.0/8` or `::1`). Any other named host, the name `localhost`
   among them, is refused over `http` with an error that names loopback, on the
-  fetch URL and every redirect hop alike. `specs/system.md` documents the
-  loopback plaintext. An adopter fetching from an `http` mirror now fails and
-  must serve it over `https`.
+  fetch URL and every redirect hop alike. A loopback address is never fetched
+  through a configured proxy: the loopback ranges join every proxy's
+  `NO_PROXY` list, so that plaintext stays on this host (022's review of
+  2026-11-17). `specs/system.md` documents the loopback plaintext. An adopter
+  fetching from an `http` mirror now fails and must serve it over `https`.
 - **BREAKING: `ductus exec` refuses a forwarded argument it cannot bind (spec
   022 task 49; found by 022's pre-done verification, 2026-11-17).** `run_exec`
   bound each `key=value` argument into the walker context and dropped any other

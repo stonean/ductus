@@ -19,6 +19,13 @@
 #   I. a report that is not JSON is exit 2, never a pass
 #   J. an entry with no reason is exit 2
 #   K. a gating package tracing to no gating advisory is exit 2
+#   L. npm's own error object, with no vulnerabilities map, is exit 2
+#   M. a listed advisory whose package changed fails
+#   N. a listed advisory npm now reports below high fails (stale)
+#   O. a vulnerability whose via is null is exit 2, never a traceback
+#   P. beside a listed advisory, a gating package that reaches no gating
+#      advisory is exit 2
+#   Q. one advisory on two packages fails when either has a non-breaking fix
 #
 # CHECKER, when set, names the checker to run, so a mutant can be run against
 # these cases.
@@ -65,6 +72,8 @@ EOF
 printf '{"allowed": []}\n' > "$WORK/none.allowed.json"
 BREAKING='{"name": "markdownlint-cli2", "version": "0.0.4", "isSemVerMajor": true}'
 
+passed=0
+
 # run CASE EXPECTED REPORT ALLOWED [TEXT]: the checker exits EXPECTED and, when
 # TEXT is given, prints it.
 run() {
@@ -76,6 +85,7 @@ run() {
     fail "$1: output lacks '$5': $out"
   else
     pass "$1"
+    passed=$((passed + 1))
   fi
 }
 
@@ -113,10 +123,55 @@ cat > "$WORK/orphan.json" <<'EOF'
     "via": ["picomatch"], "range": ">=4.0.0", "fixAvailable": false}
 }, "metadata": {}}
 EOF
-run "K a gating package with no gating advisory is exit 2" 2 orphan none "no gating advisory"
+run "K a gating package with no gating advisory is exit 2" 2 orphan none "reaches no high or critical advisory"
+
+printf '{"error": {"code": "ENOLOCK", "summary": "no lockfile"}}\n' > "$WORK/error.json"
+run "L npm's error object is exit 2" 2 error listed "no \`vulnerabilities\` map"
+
+cat > "$WORK/othername.allowed.json" <<'EOF'
+{"allowed": [{"advisory": "GHSA-fc5q-39xc-vjpf", "package": "micromatch",
+  "range": "<=4.0.7", "reason": "listed under the wrong package"}]}
+EOF
+run "M a listed advisory whose package changed fails" 1 high othername "judge the entry again"
+
+report moderate moderate '<=4.0.7' "$BREAKING"
+run "N a listed advisory now below high fails" 1 moderate listed "no longer high or critical"
+
+cat > "$WORK/vianull.json" <<'EOF'
+{"auditReportVersion": 2, "vulnerabilities": {
+  "picomatch": {"name": "picomatch", "severity": "high", "via": null, "fixAvailable": false}
+}, "metadata": {}}
+EOF
+run "O a null via is exit 2" 2 vianull listed "has no \`via\` list"
+
+cat > "$WORK/ghost.json" <<EOF
+{"auditReportVersion": 2, "vulnerabilities": {
+  "picomatch": {"name": "picomatch", "severity": "high", "isDirect": false,
+    "via": [{"source": 1, "name": "picomatch", "title": "ReDoS", "severity": "high",
+      "url": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf", "range": "<=4.0.7"}],
+    "range": "*", "fixAvailable": $BREAKING},
+  "other": {"name": "other", "severity": "critical", "isDirect": true,
+    "via": ["ghost"], "range": "*", "fixAvailable": false}
+}, "metadata": {}}
+EOF
+run "P a gating package reaching no advisory, beside a listed one, is exit 2" 2 ghost listed "reaches no high or critical advisory"
+
+cat > "$WORK/twice.json" <<EOF
+{"auditReportVersion": 2, "vulnerabilities": {
+  "picomatch": {"name": "picomatch", "severity": "high", "isDirect": false,
+    "via": [{"source": 1, "name": "picomatch", "title": "ReDoS", "severity": "high",
+      "url": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf", "range": "<=4.0.7"}],
+    "range": "*", "fixAvailable": {"name": "x", "version": "1.0.1", "isSemVerMajor": false}},
+  "picomatch-copy": {"name": "picomatch-copy", "severity": "high", "isDirect": false,
+    "via": [{"source": 1, "name": "picomatch", "title": "ReDoS", "severity": "high",
+      "url": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf", "range": "<=4.0.7"}],
+    "range": "*", "fixAvailable": $BREAKING}
+}, "metadata": {}}
+EOF
+run "Q one advisory on two packages, one fixable, fails" 1 twice listed "apply it"
 
 if [ "$failures" -ne 0 ]; then
   printf '%s case(s) failed\n' "$failures" >&2
   exit 1
 fi
-printf 'test-check-npm-audit: 11 case(s) passed\n'
+printf 'test-check-npm-audit: %s case(s) passed\n' "$passed"

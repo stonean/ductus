@@ -104,7 +104,7 @@ MUTATIONS = [
     (
         'M10 NO_PROXY exempts no host',
         'src/primitives/fetch_archive.rs',
-        '                    .map(|proxy| proxy.no_proxy(reqwest::NoProxy::from_string(&self.no)))\n',
+        '                    .map(|proxy| proxy.no_proxy(reqwest::NoProxy::from_string(&self.no_proxy())))\n',
         '                    .map(|proxy| proxy)\n',
         'a_host_no_proxy_names_is_fetched_without_the_proxy',
     ),

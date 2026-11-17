@@ -19,6 +19,10 @@ The behaviours and the tests that hold them:
       `exec_refuses_an_argument_it_cannot_bind`.
   M2  `exec_overrides` binds an empty key. Killed by the same test's
       `=001-basic` case.
+  M3  The arguments are screened only after the command file is found and
+      parsed, so a bare argument to a command with no file reads as
+      command-not-found. Killed by the same test's `absent` case (022's
+      review of 2026-11-17).
 
 No mutation is an expected survivor.
 """
@@ -38,6 +42,19 @@ MUTATIONS = [
         'src/main.rs',
         "            Some((key, value)) if !key.is_empty() => Ok((key, value)),\n",
         "            Some((key, value)) => Ok((key, value)),\n",
+        '--test exec_subprocess exec_refuses_an_argument_it_cannot_bind',
+    ),
+    (
+        'M3 the arguments are screened after the command file is read',
+        'src/main.rs',
+        [
+            '    let overrides = match exec_overrides(args) {\n        Ok(overrides) => overrides,\n        Err(message) => {\n            emit_exec_error("invalid-argument", &message);\n            eprintln!("ductus exec: {message}");\n            return ExitCode::from(1);\n        }\n    };\n    let host = match Host::load(repo) {\n',
+            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(path, &err),\n    };\n',
+        ],
+        [
+            '    let host = match Host::load(repo) {\n',
+            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(path, &err),\n    };\n    let overrides = match exec_overrides(args) {\n        Ok(overrides) => overrides,\n        Err(message) => {\n            emit_exec_error("invalid-argument", &message);\n            eprintln!("ductus exec: {message}");\n            return ExitCode::from(1);\n        }\n    };\n',
+        ],
         '--test exec_subprocess exec_refuses_an_argument_it_cannot_bind',
     ),
 ]

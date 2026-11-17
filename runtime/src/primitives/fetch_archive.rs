@@ -55,7 +55,9 @@
 //! an internal target past the v4 screen. A host the operator names in
 //! `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` skips the address screen over `https`,
 //! and passes over plain `http` only as a loopback literal
-//! ([`is_loopback_literal`]), the one plaintext `specs/system.md` documents.
+//! ([`is_loopback_literal`]), the one plaintext `specs/system.md` documents;
+//! a loopback address is never fetched through a proxy
+//! ([`LOOPBACK_NO_PROXY`]), so that plaintext stays on this host.
 //!
 //! The connection uses only screened addresses (`BE-INPUT-016`). The first
 //! host is pinned to the addresses the screen resolved, so it is resolved
@@ -739,7 +741,7 @@ impl ProxyEnv {
                     ProxyScheme::All => reqwest::Proxy::all(value).map_err(drop),
                 };
                 proxy
-                    .map(|proxy| proxy.no_proxy(reqwest::NoProxy::from_string(&self.no)))
+                    .map(|proxy| proxy.no_proxy(reqwest::NoProxy::from_string(&self.no_proxy())))
                     .map_err(|()| {
                         (
                             variable(scheme),
@@ -751,6 +753,18 @@ impl ProxyEnv {
                     })
             })
             .collect()
+    }
+
+    /// The hosts reached directly: `NO_PROXY`'s, and always the loopback
+    /// ranges ([`LOOPBACK_NO_PROXY`]), so a fetch from a named loopback host,
+    /// the one plaintext `specs/system.md` documents, never leaves this host
+    /// through a proxy (BE-DATA-001; 022's review of 2026-11-17).
+    fn no_proxy(&self) -> String {
+        if self.no.trim().is_empty() {
+            LOOPBACK_NO_PROXY.to_string()
+        } else {
+            format!("{},{LOOPBACK_NO_PROXY}", self.no)
+        }
     }
 
     /// The proxies a fetch applies, in the order reqwest tries them, each as
@@ -835,6 +849,12 @@ fn redact_proxy(value: &str) -> String {
     };
     flatten_line(&shown)
 }
+
+/// The loopback ranges every proxy's `NO_PROXY` list carries
+/// ([`ProxyEnv::no_proxy`]): a loopback address is this host, so a proxy, on
+/// another host as often as not, would carry the fetch, plain http to a named
+/// loopback host included, across a host boundary.
+const LOOPBACK_NO_PROXY: &str = "127.0.0.0/8,::1";
 
 /// Apply `proxies` — those [`ProxyEnv::parse`] built — to a client under
 /// construction, or none. Either way reqwest's system proxy is off —
@@ -1001,10 +1021,6 @@ fn fetch_refused(url: &str, reason: &str) -> PrimitiveError {
     }
 }
 
-/// Classify a resolved address as internal (must-not-be-fetched) per the
-/// SSRF denial ranges. Delegates to per-family helpers; IPv4-mapped IPv6
-/// addresses are unwrapped to their v4 form first so they cannot bypass
-/// the v4 screen.
 /// Whether a URL's host is a loopback IP literal: an IPv4 address in
 /// `127.0.0.0/8` or the IPv6 `::1`, bracketed as a URL carries it. A name, even
 /// `localhost`, is not one, since it resolves to whatever the system says;
@@ -1018,6 +1034,10 @@ fn is_loopback_literal(host: &str) -> bool {
     bare.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
 }
 
+/// Classify a resolved address as internal (must-not-be-fetched) per the
+/// SSRF denial ranges. Delegates to per-family helpers; IPv4-mapped IPv6
+/// addresses are unwrapped to their v4 form first so they cannot bypass
+/// the v4 screen.
 fn is_internal_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_internal_v4(v4),
@@ -1497,6 +1517,42 @@ mod tests {
         assert!(msg.contains("only https is allowed"), "{msg}");
         // An unnamed loopback host is not exempt over http.
         let msg = validate_fetch_url("http://127.0.0.2/a.tar.gz", &screen)
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("only https is allowed"), "{msg}");
+        // A redirect hop meets the same screen: to a named host off loopback
+        // over http it is refused naming loopback; to a named loopback literal
+        // it is followed.
+        match redirect_verdict("http://mirror.internal/next.tar.gz", 1, &screen) {
+            RedirectVerdict::Refuse(msg) => {
+                assert!(msg.contains("only to a loopback host"), "{msg}");
+            }
+            RedirectVerdict::Follow => panic!("an http hop off loopback must be refused"),
+        }
+        assert!(matches!(
+            redirect_verdict("http://127.0.0.1:8080/next.tar.gz", 1, &screen),
+            RedirectVerdict::Follow
+        ));
+        // The URL parser spells a host one way before it is matched: `127.1`
+        // and `2130706433` are `127.0.0.1`, which the list names, while an
+        // IPv4-mapped IPv6 loopback is no loopback literal and a trailing-dot
+        // name is not the name the list holds.
+        for url in ["http://127.1/a.tar.gz", "http://2130706433/a.tar.gz"] {
+            assert!(
+                matches!(validate_fetch_url(url, &screen), Ok(FetchScreen::Unpinned)),
+                "{url} is the named 127.0.0.1"
+            );
+        }
+        let mapped = Screen::new(
+            Box::new(|_, _| Ok(Vec::new())),
+            vec!["[::ffff:7f00:1]".to_string(), "localhost".to_string()],
+            &ProxyEnv::NONE,
+        );
+        let msg = validate_fetch_url("http://[::ffff:127.0.0.1]/a.tar.gz", &mapped)
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("only to a loopback host"), "{msg}");
+        let msg = validate_fetch_url("http://LOCALHOST./a.tar.gz", &mapped)
             .unwrap_err()
             .to_string();
         assert!(msg.contains("only https is allowed"), "{msg}");
@@ -2113,6 +2169,58 @@ mod tests {
             proxy.accept().is_err(),
             "the fetch went through the proxy NO_PROXY exempts"
         );
+    }
+
+    /// A named loopback host is reached directly whatever `NO_PROXY` names,
+    /// nothing or only another host, so plain http to it never crosses to the
+    /// proxy's host (BE-DATA-001; 022's review of 2026-11-17). Killed by M5 and
+    /// M6, which drop the loopback ranges from each branch
+    /// (`scripts/mutation/fetch-archive-loopback-http.py`).
+    #[test]
+    fn a_named_loopback_host_is_fetched_without_the_proxy() {
+        use std::io::{BufRead, BufReader, Write};
+
+        for no_proxy in [None, Some("example.com")] {
+            let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            proxy.set_nonblocking(true).unwrap();
+            let proxy_url = format!("http://{}", proxy.local_addr().unwrap());
+            let origin = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let url = format!("http://{}/main.tar.gz", origin.local_addr().unwrap());
+            std::thread::spawn(move || {
+                let (stream, _) = origin.accept().unwrap();
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                while reader.read_line(&mut line).unwrap() > 2 {
+                    line.clear();
+                }
+                let mut stream = stream;
+                stream
+                    .write_all(
+                        b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                    )
+                    .unwrap();
+            });
+            let mut vars = vec![("HTTP_PROXY", proxy_url.as_str())];
+            if let Some(no) = no_proxy {
+                vars.push(("NO_PROXY", no));
+            }
+            let env = ProxyEnv::capture(lookup(&vars), false);
+            let screen = Screen::new(
+                Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+                vec!["127.0.0.1".into()],
+                &env,
+            );
+            let err = fetch_bytes_with(&url, &env, FETCH_TIMEOUT, FETCH_DEADLINE, Arc::new(screen))
+                .unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::HttpStatus { status: 404, .. }),
+                "NO_PROXY {no_proxy:?}: {err:?}"
+            );
+            assert!(
+                proxy.accept().is_err(),
+                "NO_PROXY {no_proxy:?}: the loopback fetch went through the proxy"
+            );
+        }
     }
 
     #[test]

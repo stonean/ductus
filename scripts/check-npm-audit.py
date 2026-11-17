@@ -12,13 +12,16 @@ its affected range and why it does not reach this repository. That list is
 BE-DEPS-001's documented exception, for an advisory no release fixes yet. An
 entry fails the check again, so it goes from the list, when:
 
-  - npm reports a fix for its package that is not a breaking change;
-  - the advisory's affected range differs from the one the entry records;
-  - the advisory is no longer reported.
+  - npm reports a fix that is not a breaking change, on any package it names
+    the advisory on;
+  - the advisory's package or affected range differs from the entry's;
+  - the advisory is no longer reported, or is no longer high or critical.
 
 Exit status: 0 when every high or critical advisory is listed and every entry
 is live; 1 when one is not, naming each; 2 when the report or the list cannot
-be read, which is never a pass. Every run says how many advisories it judged.
+be read, npm runs past NPM_AUDIT_TIMEOUT_SECONDS, or a package npm flags high or
+critical reaches no such advisory, which is never a pass. Every run says how
+many advisories it judged.
 """
 
 import json
@@ -30,6 +33,10 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_ALLOWED = os.path.join(ROOT, "scripts", "npm-audit-allowed.json")
 GATING = {"high", "critical"}
+# How long `npm audit` may run before the check reports it could not read a
+# report (BE-TIMEOUT-001): a registry that never answers fails the step in this
+# bound, not at the job's timeout-minutes.
+NPM_AUDIT_TIMEOUT_SECONDS = 300
 ADVISORY_ID = re.compile(r"^GHSA(-[0-9a-z]{4}){3}$")
 
 
@@ -76,11 +83,20 @@ def read_report(args):
             command.append("--package-lock-only")
         # npm audit exits non-zero whenever it reports a vulnerability, so its
         # status says nothing here: the report it prints is what is judged.
-        run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        try:
+            run = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True,
+                timeout=NPM_AUDIT_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as err:
+            raise ValueError(f"npm audit ran past {NPM_AUDIT_TIMEOUT_SECONDS} seconds") from err
         text = run.stdout
     report = json.loads(text)
     if not isinstance(report, dict) or not isinstance(report.get("vulnerabilities"), dict):
         raise ValueError("it holds no `vulnerabilities` map")
+    for package, vuln in report["vulnerabilities"].items():
+        if not isinstance(vuln, dict) or not isinstance(vuln.get("via"), list):
+            raise ValueError(f"`{package}` has no `via` list")
     return report
 
 
@@ -98,6 +114,82 @@ def parse_args(argv):
     return args
 
 
+def fixable(fix):
+    """Whether npm reports a fix that is not a breaking change."""
+    return fix is True or (isinstance(fix, dict) and not fix.get("isSemVerMajor"))
+
+
+def reached(package, vulnerabilities, seen=None):
+    """The advisory IDs a flagged package reaches: its own, and through each
+    package its `via` strings name, theirs."""
+    seen = set() if seen is None else seen
+    if package in seen or package not in vulnerabilities:
+        return set()
+    seen.add(package)
+    found = set()
+    for via in vulnerabilities[package]["via"]:
+        if isinstance(via, dict):
+            found.add(advisory_id(via))
+        else:
+            found |= reached(via, vulnerabilities, seen)
+    return found
+
+
+def judge(report, allowed):
+    """The failures, the advisories judged and those listed; raises ValueError
+    for a report this check cannot read."""
+    vulnerabilities = report["vulnerabilities"]
+    # Each advisory npm reports, at every package it names it on directly; a
+    # package flagged only through another (a string `via`) inherits that
+    # one's.
+    advisories = {}
+    for package, vuln in vulnerabilities.items():
+        for via in vuln["via"]:
+            if not isinstance(via, dict):
+                continue
+            ident = advisory_id(via)
+            if ident is None:
+                raise ValueError(f"an advisory on `{package}` names no advisory ID: {via!r}")
+            advisories.setdefault(ident, []).append({
+                "package": package,
+                "severity": via.get("severity"),
+                "range": via.get("range"),
+                "fix": vuln.get("fixAvailable"),
+                "title": via.get("title", ""),
+            })
+
+    # A package npm flags at a gating severity must reach a gating advisory,
+    # or the report holds something this check did not read.
+    gating = {ident for ident, seen in advisories.items() if any(s["severity"] in GATING for s in seen)}
+    for package, vuln in vulnerabilities.items():
+        if vuln.get("severity") in GATING and not reached(package, vulnerabilities) & gating:
+            raise ValueError(f"`{package}` is {vuln.get('severity')} but reaches no high or critical advisory")
+
+    failures, listed = [], 0
+    for ident in sorted(gating):
+        seen = advisories[ident]
+        first = seen[0]
+        entry = allowed.get(ident)
+        if entry is None:
+            failures.append(
+                f"{ident} ({first['severity']}, {first['package']} {first['range']}): {first['title']} — "
+                "update or replace the dependency, or list it with why it does not reach this repository"
+            )
+        elif any(fixable(s["fix"]) for s in seen):
+            fix = next(s["fix"] for s in seen if fixable(s["fix"]))
+            failures.append(f"{ident} is listed, but npm reports a fix that is not a breaking change ({fix!r}): apply it and remove the entry")
+        elif any(s["package"] != entry["package"] or s["range"] != entry["range"] for s in seen):
+            reported = ", ".join(f"{s['package']} {s['range']}" for s in seen)
+            failures.append(f"{ident} is listed for {entry['package']} {entry['range']}, but npm now reports {reported}: judge the entry again")
+        else:
+            listed += 1
+    for ident in sorted(set(allowed) - set(advisories)):
+        failures.append(f"{ident} is listed but no longer reported: remove the entry")
+    for ident in sorted((set(allowed) & set(advisories)) - gating):
+        failures.append(f"{ident} is listed but no longer high or critical: remove the entry")
+    return failures, len(gating), listed
+
+
 def main(argv):
     try:
         args = parse_args(argv)
@@ -109,59 +201,9 @@ def main(argv):
         return fail_to_run(f"the list {args['allowed']} cannot be read: {err}")
     try:
         report = read_report(args)
-    except (OSError, ValueError) as err:
+        failures, judged, listed = judge(report, allowed)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as err:
         return fail_to_run(f"the npm audit report cannot be read: {err}")
-
-    # Each advisory npm reports, at the package it names directly; a package
-    # flagged only through another (a string `via`) inherits that one's.
-    advisories = {}
-    for package, vuln in report["vulnerabilities"].items():
-        for via in vuln.get("via", []):
-            if not isinstance(via, dict):
-                continue
-            ident = advisory_id(via)
-            if ident is None:
-                return fail_to_run(f"an advisory on `{package}` names no advisory ID: {via!r}")
-            advisories[ident] = {
-                "package": package,
-                "severity": via.get("severity"),
-                "range": via.get("range"),
-                "fix": vuln.get("fixAvailable"),
-                "title": via.get("title", ""),
-            }
-
-    failures, judged, listed = [], 0, 0
-    for ident, adv in sorted(advisories.items()):
-        if adv["severity"] not in GATING:
-            continue
-        judged += 1
-        entry = allowed.get(ident)
-        if entry is None:
-            failures.append(
-                f"{ident} ({adv['severity']}, {adv['package']} {adv['range']}): {adv['title']} — "
-                "update or replace the dependency, or list it with why it does not reach this repository"
-            )
-            continue
-        fix = adv["fix"]
-        if fix is True or (isinstance(fix, dict) and not fix.get("isSemVerMajor")):
-            failures.append(f"{ident} is listed, but npm reports a fix that is not a breaking change ({fix!r}): apply it and remove the entry")
-            continue
-        if entry["package"] != adv["package"] or entry["range"] != adv["range"]:
-            failures.append(
-                f"{ident} is listed for {entry['package']} {entry['range']}, "
-                f"but npm now reports {adv['package']} {adv['range']}: judge the entry again"
-            )
-            continue
-        listed += 1
-    for ident in sorted(set(allowed) - set(advisories)):
-        failures.append(f"{ident} is listed but no longer reported: remove the entry")
-
-    # A package npm flags at a gating severity while no gating advisory was
-    # found means the report holds something this check did not read.
-    if judged == 0:
-        for package, vuln in report["vulnerabilities"].items():
-            if vuln.get("severity") in GATING:
-                return fail_to_run(f"`{package}` is {vuln.get('severity')} but no gating advisory was found")
 
     print(
         f"check-npm-audit: {judged} high or critical advisory(ies) reported, "

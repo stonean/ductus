@@ -722,6 +722,24 @@ fn exec_refuses_an_argument_it_cannot_bind() {
         String::from_utf8_lossy(&bound.stderr)
     );
 
+    // Refused before the command file is read: a command with no file meets
+    // the argument's refusal, never command-not-found.
+    let absent = ductus_command(runtime_binary())
+        .arg("exec")
+        .arg("absent")
+        .arg("001-basic")
+        .current_dir(tmp.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn runtime");
+    let stdout = String::from_utf8_lossy(&absent.stdout);
+    assert!(
+        stdout.contains("\"invalid-argument\"") && !stdout.contains("command-not-found"),
+        "the argument is refused before the command file is looked for: {stdout}"
+    );
+
     for refused in ["001-basic", "=001-basic"] {
         let output = run(&["feature=001-basic", refused]);
         let stdout = String::from_utf8_lossy(&output.stdout);
