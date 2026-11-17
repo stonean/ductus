@@ -1,8 +1,8 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 cross-spec-impact: [036-quality-cross-rules, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
-next-criterion: 24
+next-criterion: 25
 ---
 
 # 050 — Constitution
@@ -233,6 +233,7 @@ closing it.
 
 - [x] AC22: **A universal rule that governs code routes to a rule file, not to this document.** §Classification carries a fourth destination alongside universal / shared / project-only, for an entry that passes the reword test but states a requirement about **code** rather than about the pipeline: [§rules](../../framework/constitution.md#rules-1) puts a cross-cutting code concern in a rule file with a permanent ID and a Verification clause `/ductus:review` can apply, which a three-tier classification cannot express. The second round's one such entry — *replacing a hand-rolled predicate with a shared one widens everything it was quietly doing* — is registered as `QUAL-DELEG-001` in `framework/rules/quality-cross.md`, added through the back-edge of the spec that owns that surface (`036-quality-cross-rules`) rather than here, and its `AGENTS.md` line points at the rule ID.
 - [x] AC23: **The constitution fits one read.** `framework/constitution.md` is at most 50,000 bytes and `scripts/lint-governing-size.sh` holds it there; a rule only one command applies lives in that command's `framework/reference/<command>.md`, with the constitution pointing at it; the project template's `CLAUDE.md` and this repository's import the constitution in the `@path` form, and two migrations bring an adopter's existing `CLAUDE.md` to the same line: `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line, and `constitution-import` adds the line where nothing imports the constitution
+- [ ] AC24: **A citation names no line number.** §grounding's *Cite what you consulted* bullet states the rule for a citation written into a spec, plan, data model, research file or scenario. Such a citation names a path with a symbol, test name, heading or quoted phrase, and no line number, or pins the line to the commit it was read at. A line citation already in one of those files records what was read, not a current claim, so it is not rewritten when code moves. The bullet keeps its position and anchor (AC10) and holds for an adopter (AC5). `framework/commands/plan.md`, `framework/reference/plan.md` and `framework/reference/clarify.md` point at it instead of restating "never a bare line number". `AGENTS.md`'s *A `path:line` citation in a spec body is provenance* gotcha becomes a pointer to it.
 
 ## Open Questions
 
