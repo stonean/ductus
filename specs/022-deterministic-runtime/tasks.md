@@ -1,5 +1,5 @@
 ---
-next-task: 48
+next-task: 49
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -155,7 +155,14 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 
 ## 47. Task 44's O6 test holds on Windows, where a root through a regular file is absent, not unresolvable (found by runtime.yml at aeee5ae9)
 
-- [ ] `an_unresolvable_project_root_is_not_reported_as_an_outward_command_file` (`runtime/src/main.rs`, task 44's O6) runs on Unix alone, its doc comment saying why: Windows reports a path running through a regular file as not found, so `resolve_symlinks` judges that root absent, `locate_exec_command` returns `command-not-found`, and the construction reaches no I/O error. `runtime.yml`'s Windows `cargo test --release --locked` failed on it at `aeee5ae9` (run 44093644823, 2026-11-17), with `command-not-found` where the test expects `config-unreadable`
-- [ ] `scripts/mutation/review-022-task-44.py`'s O6 mutant is still killed on macOS
+- [x] `an_unresolvable_project_root_is_not_reported_as_an_outward_command_file` (`runtime/src/main.rs`, task 44's O6) runs on Unix alone, its doc comment saying why: Windows reports a path running through a regular file as not found, so `resolve_symlinks` judges that root absent, `locate_exec_command` returns `command-not-found`, and the construction reaches no I/O error. `runtime.yml`'s Windows `cargo test --release --locked` failed on it at `aeee5ae9` (run 44093644823, 2026-11-17), with `command-not-found` where the test expects `config-unreadable`
+- [x] `scripts/mutation/review-022-task-44.py`'s O6 mutant is still killed on macOS
 
 - **Done when**: `runtime.yml` passes on every platform at the pushed head, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 48. The spec-root listing is contained (BE-INPUT-004, the owner's 2026-11-17 class decision; found implementing task 46)
+
+- [ ] `list_feature_dirs` (`runtime/src/primitives/mod.rs`) lists the spec root with `read_dir`, which follows a root that is, or runs through, a symbolic link leaving the project; neither task 42's nor task 46's grep named it. Contain the root before listing, through plan §Path arguments' helpers, refused or reported unread and never followed, for each caller that lists before it contains: `resolve_feature::run` (whose `Many` and `NotFound` outcomes can name entries outside the project), `commit_attribution`, `check_unfolded_specs`, `create_feature::next_feature_number`, `prune_plan::walk` and `prune_tasks::plan_walk`. Each caller gets a verdict in the commit, by its contract, as task 46's did
+- [ ] A test per caller class whose spec root links outside the project shows nothing outside is listed, each failing under its mutant; plan §Path arguments names the listing
+
+- **Done when**: no caller lists a spec root that leaves the project, proven by tests their mutants turn red; `cargo fmt --check`, clippy and the whole `cargo test` pass; and the review's fix-round loop from base `050ef7a6` re-reads the change.
