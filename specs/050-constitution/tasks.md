@@ -1,5 +1,5 @@
 ---
-next-task: 50
+next-task: 51
 ---
 
 # 050 — Constitution Tasks
@@ -21,3 +21,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] Each `done` spec the rewrite reopens, as `classify-spec-edit` judges it, moves to `in-progress` with `set-status`, its analysis owed
 
 - **Done when**: `check-artifacts` reports no `line-number-citations` finding for any spec, `classify-spec-edit` reads the strip commit as mechanical for each spec it alone touches, and each reopened spec is `in-progress` with its analysis owed.
+
+## 50. The Guiding Principles carry no Technology or Business list (AC25, owner decision 2026-11-17)
+
+- [ ] `framework/constitution.md`'s `## Guiding Principles` drops its opening sentence and its Technology and Business lists, keeping the `<!-- §principles -->` marker, the heading, §cost-levers and §design-principles, within the ceiling `scripts/lint-governing-size.sh` holds
+- [ ] 050's `succinctness-is-a-guiding-principle` scenario is deleted, `the-constitution-fits-one-read`'s Behavior stops naming the principles among what the constitution keeps, and each `plan.md` statement about the lists' current content is corrected; a figure measured at a named commit stays
+- [ ] Each live artifact that describes a removed principle as current is corrected, found by meaning rather than by token (§drift-prevention): `008-security-rules`' AC28 is annotated as superseded by this spec, and present-tense prose in specs including 008, 010, 016, 037, 039 and 077 is corrected, while a decision record or motivation stating what the constitution said then keeps its words
+- [ ] Each `done` spec the edits reopen, as `classify-spec-edit` judges it, moves to `in-progress` with `set-status`, its analysis owed
+
+- **Done when**: `framework/constitution.md` has no `### Technology` or `### Business` heading, `scripts/lint-governing-size.sh` and `scripts/audit/run-all.sh` pass, no live artifact describes a removed principle as current, and each reopened spec is `in-progress` with its analysis owed.
