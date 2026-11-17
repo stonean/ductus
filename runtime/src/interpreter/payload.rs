@@ -116,6 +116,16 @@ pub enum PayloadError {
     /// built from it (`BE-INPUT-004`).
     #[error("invalid-command-name: {0}")]
     InvalidCommandName(String),
+    /// A project file a builder reads, by a path the project's own files or
+    /// the walker context name, leaves the project: it climbs out of it, or it
+    /// is, or runs through, a link that does. Nothing is read; the walk halts
+    /// rather than build a request from a part of the project it could not
+    /// examine (`BE-INPUT-004`; 022 task 41).
+    #[error("path-outside-project: '{path}' leaves the project")]
+    PathOutsideProject {
+        /// The project-relative path that was refused.
+        path: String,
+    },
 }
 
 /// Machine-readable code emitted in the `error` envelope when payload
@@ -133,6 +143,7 @@ impl PayloadError {
             Self::RequestListsUnwritable { .. } => "request-lists-unwritable",
             Self::ConfigUnreadable(_) => "config-unreadable",
             Self::InvalidCommandName(_) => "invalid-command-name",
+            Self::PathOutsideProject { .. } => "path-outside-project",
         }
     }
 }
@@ -160,15 +171,6 @@ impl PayloadError {
 ///   [`build_perform_review_request`]); filtered legacy context fields
 ///   follow the typed prefix, preserving the primitive results the pass
 ///   needs (`scope`/`diff-base`, `selected`/`rules-dir`/`notices`).
-///
-/// Every request that carries a file body is bounded (`BE-PAYLOAD-001`):
-/// inline while the request, serialized, fits `[artifacts] read-size-bytes`
-/// ([`fits`], the reader a bounded result shares), and past it carrying no
-/// body but the path of each file the host reads itself, with
-/// `content-form: path` ([`ContentForm`]). A body the runtime could not read
-/// is never bounded: it stays as inline sends it. A request still past the
-/// size then moves the lists that grow with entries, and its legacy tail, to a
-/// file ([`bound_lists`]).
 /// - `assessSpecQuality` — builds [`AssessSpecQualityRequest`] from the
 ///   walker context's `path` (the spec under review, read off disk for
 ///   `spec-content`) and the one rule the walker seeded under
@@ -195,6 +197,15 @@ impl PayloadError {
 /// - any other identifier — [`PayloadError::UnknownExtension`]; the raw
 ///   context dump fallback was removed by the extension-request-hygiene
 ///   scenario.
+///
+/// Every request that carries a file body is bounded (`BE-PAYLOAD-001`):
+/// inline while the request, serialized, fits `[artifacts] read-size-bytes`
+/// ([`fits`], the reader a bounded result shares), and past it carrying no
+/// body but the path of each file the host reads itself, with
+/// `content-form: path` ([`ContentForm`]). A body the runtime could not read
+/// is never bounded: it stays as inline sends it. A request still past the
+/// size then moves the lists that grow with entries, and its legacy tail, to a
+/// file ([`bound_lists`]). `routeInboxItem` carries no body, only lists.
 ///
 /// # Errors
 ///
@@ -555,6 +566,25 @@ fn classify_contained(canon_repo: &Path, rel: &Path) -> Contained {
     }
 }
 
+/// Judge a containment check's verdict: `Ok` when the path stays in the
+/// project, [`PayloadError::PathOutsideProject`] naming `rel` when it leaves it
+/// ([`PrimitiveError::InvalidPath`]), and any other error as the config error
+/// it is, as the command-file candidates are judged in [`locate_command_file`].
+fn refuse_outside(
+    verdict: Result<(), crate::primitives::PrimitiveError>,
+    rel: &str,
+) -> Result<(), PayloadError> {
+    match verdict {
+        Ok(()) => Ok(()),
+        Err(crate::primitives::PrimitiveError::InvalidPath { .. }) => {
+            Err(PayloadError::PathOutsideProject {
+                path: rel.to_string(),
+            })
+        }
+        Err(err) => Err(err.into()),
+    }
+}
+
 /// Load `scope` paths (from `compute-review-scope`) into `ReviewScopeFile`
 /// records, reading each file's content.
 ///
@@ -733,7 +763,7 @@ fn build_write_code_request(
     let plan_relevant_files = load_plan_relevant_files(&feature, repo)?;
     let excerpts = load_constitution_excerpts(command_name, repo)?;
     let write_boundary = string_array(context, "write-boundary");
-    let task = load_current_task(&feature, context, repo);
+    let (task, task_unexaminable) = load_current_task(&feature, context, repo);
 
     let mut typed = WriteCodeRequest {
         constitution_excerpts: excerpts.excerpts,
@@ -741,6 +771,7 @@ fn build_write_code_request(
         plan_relevant_files,
         write_boundary,
         task,
+        task_unexaminable,
         content_form: None,
     };
 
@@ -788,7 +819,10 @@ fn build_write_code_request(
 ///   `/ductus:specify`); omitted when absent or empty.
 ///
 /// Filtered legacy context fields follow the typed prefix for hosts that
-/// already parse them.
+/// already parse them. Past the read size `template-content` and
+/// `existing-content` are absent, `existing-path` names the file the section
+/// is read from, `content-form` is `path`, and the legacy tail moves to a
+/// file ([`bound_lists`]); a body not read stays as it is inline.
 fn build_write_spec_body_request(
     context: &Map<String, Value>,
     repo: &Path,
@@ -802,21 +836,43 @@ fn build_write_spec_body_request(
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
-    let existing_content = if section.is_empty() {
+    let existing = if section.is_empty() {
         None
     } else {
         let feature = context.get("feature").and_then(Value::as_str);
         let path_hint = context.get("path").and_then(Value::as_str);
         read_existing_section(&section, feature, path_hint, repo, command_name)?
     };
-    let typed = WriteSpecBodyRequest {
+    let (existing_content, existing_path) = match existing {
+        Some((body, file)) => (Some(body), file),
+        None => (None, None),
+    };
+    let mut typed = WriteSpecBodyRequest {
         template_path,
-        template_content,
+        template_content: Some(template_content),
         section,
         feature_description,
         existing_content,
+        // The inline form names no file for the section: the host has it.
+        existing_path: None,
+        content_form: None,
     };
-    Ok(typed_with_legacy_context(&typed, context))
+    let mut value = typed_with_legacy_context(&typed, context);
+    // A template that was not found is `""` with no path, and a section that
+    // was not read is no `existing-content`: neither is a body to bound.
+    let template_read = !typed.template_path.is_empty();
+    if !fits(repo, &value)? && (template_read || existing_path.is_some()) {
+        if template_read {
+            typed.template_content = None;
+        }
+        if existing_path.is_some() {
+            typed.existing_content = None;
+            typed.existing_path = existing_path;
+        }
+        typed.content_form = Some(ContentForm::Path);
+        value = typed_with_legacy_context(&typed, context);
+    }
+    bound_lists(repo, "writeSpecBody", value, &[], Some(typed_keys(&typed)))
 }
 
 /// Resolve the template file the running command fills. `/ductus:plan` fills
@@ -969,14 +1025,18 @@ const INBOX_ROUTES: [&str; 5] = ["rule", "spec", "scenario", "chore", "discard"]
 ///   the groom walk); empty when unseeded.
 /// - `routes` — the fixed [`INBOX_ROUTES`] vocabulary, so hosts need not
 ///   parse the command prose to learn the closed decision set.
-/// - `available-specs` — `NNN-slug` directories under the spec root with
-///   each spec's frontmatter `status` (status drives the
+/// - `available-specs` — every feature directory under the spec root,
+///   sequential or branch-scoped, in corpus order, with each spec's
+///   frontmatter `status` (status drives the
 ///   done → in-progress reopen consent on a scenario route).
 /// - `candidates` — `derive-routing-candidates`' result threaded through the
 ///   walker context, present on the `/ductus:specify` path and absent on the
 ///   groom path. Omitted from the payload when empty, so groom's request is
 ///   byte-unchanged and the two entry points share one routing point rather
 ///   than growing a second tree.
+///
+/// Past the read size `available-specs`, which grows with the corpus, and
+/// `candidates` move to a file ([`bound_lists`]); the request carries no body.
 ///
 /// `item-text` falls back to `description` — the key `/ductus:specify` seeds —
 /// so the specify path needs no second context key for the same value.
@@ -1001,27 +1061,43 @@ fn build_route_inbox_item_request(
         available_specs: load_available_specs(repo)?,
         candidates,
     };
-    Ok(typed_only(&typed))
+    bound_lists(
+        repo,
+        "routeInboxItem",
+        typed_only(&typed),
+        &["available-specs", "candidates"],
+        None,
+    )
 }
 
-/// Scan the configured spec root for `NNN-slug` feature directories and
-/// read each spec's frontmatter `status`. An unreadable directory yields an
-/// empty list and an unreadable or malformed `spec.md` an empty status (the
-/// feature's existence still matters to the router); a project config that
-/// cannot be read or parsed is an error. Sorted by slug for deterministic
-/// payloads.
+/// Scan the configured spec root for every feature directory, sequential or
+/// branch-scoped, and read each spec's frontmatter `status`. An unreadable
+/// directory yields an empty list and an unreadable, malformed or
+/// linked-out-of-the-project `spec.md` an empty status (the feature's existence
+/// still matters to the router); a project config that cannot be read or
+/// parsed is an error, and so is a spec root that leaves the project
+/// ([`PayloadError::PathOutsideProject`]). In corpus order
+/// ([`crate::primitives::feature_dir_cmp`]) for deterministic payloads.
 fn load_available_specs(repo: &Path) -> Result<Vec<RouteInboxSpec>, PayloadError> {
-    let specs_dir = crate::schema::paths::specs_dir(repo)?;
-    Ok(crate::primitives::list_feature_dirs(&specs_dir)
-        .into_iter()
-        .map(|slug| {
-            let status = read_spec_status(&specs_dir.join(&slug).join("spec.md"));
-            RouteInboxSpec {
-                feature: slug,
-                status,
-            }
-        })
-        .collect())
+    let specs_root = crate::schema::paths::Paths::load(repo)?.specs_root;
+    // The listing opens the spec root: a root that is, or runs through, a link
+    // out of the project is refused, never listed.
+    refuse_outside(
+        crate::primitives::validate_contained(repo, &specs_root),
+        &specs_root,
+    )?;
+    Ok(
+        crate::primitives::list_feature_dirs(&repo.join(&specs_root))
+            .into_iter()
+            .map(|slug| {
+                let status = read_spec_status(repo, &format!("{specs_root}/{slug}/spec.md"));
+                RouteInboxSpec {
+                    feature: slug,
+                    status,
+                }
+            })
+            .collect(),
+    )
 }
 
 /// The fold decision's route vocabulary. Two leaves, and deliberately not
@@ -1070,8 +1146,7 @@ fn build_route_fold_request(
         .unwrap_or_default()
         .to_string();
 
-    let feature_dir = repo.join(&specs_root).join(&feature);
-    let scenarios = load_fold_source_scenarios(&feature_dir);
+    let scenarios = load_fold_source_scenarios(repo, &specs_root, &feature)?;
 
     let fold_target = folds_into(&spec_content).unwrap_or_default();
     let target_spec = repo.join(&specs_root).join(&fold_target).join("spec.md");
@@ -1133,16 +1208,35 @@ fn build_route_fold_request(
 /// shared [`crate::primitives::list_scenario_files`] listing — the same set
 /// `check-artifacts` derives scenario slugs from, so the fold sees exactly
 /// what the artifact checks see.
-fn load_fold_source_scenarios(feature_dir: &Path) -> Vec<FoldSourceScenario> {
-    let scenarios_dir = feature_dir.join("scenarios");
-    crate::primitives::list_scenario_files(&scenarios_dir)
+fn load_fold_source_scenarios(
+    repo: &Path,
+    specs_root: &str,
+    feature: &str,
+) -> Result<Vec<FoldSourceScenario>, PayloadError> {
+    let scenarios_rel = format!("{specs_root}/{feature}/scenarios");
+    // `feature` is the segment of the walker context's `path`: the directory
+    // is refused when it, or anything above it, leaves the project, and a
+    // scenario file that is a link out is kept as the detail-less entry an
+    // unreadable one is, its `section` never read.
+    refuse_outside(
+        crate::primitives::validate_contained(repo, &scenarios_rel),
+        &scenarios_rel,
+    )?;
+    let scenarios_dir = repo.join(&scenarios_rel);
+    Ok(crate::primitives::list_scenario_files(&scenarios_dir)
         .into_iter()
-        .map(|name| FoldSourceScenario {
-            slug: name.trim_end_matches(".md").to_string(),
-            section: crate::primitives::read_scenario_section(&scenarios_dir.join(&name))
-                .unwrap_or_default(),
+        .map(|name| {
+            let contained =
+                !crate::primitives::leaves_project(repo, &format!("{scenarios_rel}/{name}"));
+            FoldSourceScenario {
+                slug: name.trim_end_matches(".md").to_string(),
+                section: contained
+                    .then(|| crate::primitives::read_scenario_section(&scenarios_dir.join(&name)))
+                    .flatten()
+                    .unwrap_or_default(),
+            }
         })
-        .collect()
+        .collect())
 }
 
 /// A spec's declared `folds-into` target, read from its frontmatter block.
@@ -1197,13 +1291,14 @@ fn section_headings(content: &str) -> Vec<String> {
     headings
 }
 
-/// Read a spec file's frontmatter `status`, best-effort: empty string
-/// when the file is missing or the frontmatter does not parse.
-fn read_spec_status(spec_path: &Path) -> String {
-    let Ok(content) = std::fs::read_to_string(spec_path) else {
+/// Read a spec file's frontmatter `status`, best-effort: empty string when the
+/// file is missing, is outside the project ([`read_repo_file`]'s containment),
+/// or its frontmatter does not parse. `rel` is project-relative.
+fn read_spec_status(repo: &Path, rel: &str) -> String {
+    let Some(content) = read_repo_file(repo, rel) else {
         return String::new();
     };
-    crate::primitives::frontmatter_status(&content, spec_path).unwrap_or_default()
+    crate::primitives::frontmatter_status(&content, &repo.join(rel)).unwrap_or_default()
 }
 
 /// Build the `verifyCriteria` request for `/ductus:implement`'s completion
@@ -1409,7 +1504,16 @@ impl LoadedRules {
 /// (BE-INPUT-004), and sort its rule sections into those a request can
 /// assess and those it cannot. A rule's tier is its Statement's RFC 2119
 /// keyword, never the asking step's ([`RuleSection::tier`]).
-pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRules {
+///
+/// # Errors
+///
+/// As [`feature_dir`]: the feature the walk names is read for the stored
+/// verdicts and the departure entries, and one that cannot be resolved halts
+/// the walk instead of reading as a feature with none.
+pub(crate) fn load_rules(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<LoadedRules, PayloadError> {
     let mut loaded = LoadedRules::default();
     let mut digested: Vec<rule_verdicts::LoadedRuleFile> = Vec::new();
     for rel in string_array(context, "rule-files") {
@@ -1436,7 +1540,7 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
             }
         }
     }
-    let feature_dir = feature_dir(context, repo);
+    let feature_dir = feature_dir(context, repo)?;
     loaded.standing = feature_dir
         .as_ref()
         .map(|feature_dir| rule_verdicts::standing(feature_dir, &digested));
@@ -1451,41 +1555,72 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
                 .collect()
         })
         .unwrap_or_default();
-    loaded
+    Ok(loaded)
 }
 
 /// The directory of the feature the walk targets, when it names one that
 /// exists under the project's spec root.
-fn feature_dir(context: &Map<String, Value>, repo: &Path) -> Option<std::path::PathBuf> {
-    let feature = context.get("feature").and_then(Value::as_str)?;
-    let root = crate::schema::paths::Paths::load(repo).ok()?.specs_root;
-    crate::primitives::validate_feature_argument(repo, &root, feature).ok()?;
+///
+/// # Errors
+///
+/// A project config that cannot be read or parsed, or whose `specs-root` is
+/// invalid, as every reader of it halts (`CFG-ENV-008`); and
+/// [`PayloadError::PathOutsideProject`] for a feature that leaves the project,
+/// by its own name or by a link beneath its directory. Neither reads as a walk
+/// that names no feature.
+fn feature_dir(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Option<std::path::PathBuf>, PayloadError> {
+    let Some(feature) = context.get("feature").and_then(Value::as_str) else {
+        return Ok(None);
+    };
+    let root = crate::schema::paths::Paths::load(repo)?.specs_root;
+    refuse_outside(
+        crate::primitives::validate_feature_argument(repo, &root, feature),
+        &format!("{root}/{feature}"),
+    )?;
     let dir = repo.join(&root).join(feature);
-    dir.is_dir().then_some(dir)
+    Ok(dir.is_dir().then_some(dir))
 }
 
-fn load_current_task(feature: &str, context: &Map<String, Value>, repo: &Path) -> WriteCodeTask {
+/// The task `writeCode` implements, from `tasks.md` by the walker context's
+/// `task-number` (the first incomplete task when it seeds none), with the
+/// reason it could not be that task: `None` when it was found.
+///
+/// A task that was not examined reads differently from a task that has no
+/// subtasks (`QUAL-CLAIM-001`): the walk names no feature, `tasks.md` could
+/// not be read, or it holds no task by that number. The reason carries no
+/// error text, which can name an absolute path, and the request rides to a
+/// host.
+fn load_current_task(
+    feature: &str,
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> (WriteCodeTask, Option<String>) {
     let task_number = context
         .get("task-number")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
+    let unexamined = |reason: String| {
+        (
+            WriteCodeTask {
+                number: task_number.clone(),
+                heading: String::new(),
+                subtasks: Vec::new(),
+            },
+            Some(reason),
+        )
+    };
     if feature.is_empty() {
-        return WriteCodeTask {
-            number: task_number,
-            heading: String::new(),
-            subtasks: Vec::new(),
-        };
+        return unexamined("no-feature: the walk names no feature".into());
     }
     let args = ReadTasksArgs {
         feature: feature.to_string(),
     };
     let Ok(result) = read_tasks::compute(&args, repo) else {
-        return WriteCodeTask {
-            number: task_number,
-            heading: String::new(),
-            subtasks: Vec::new(),
-        };
+        return unexamined(format!("tasks-unreadable: {feature}"));
     };
     // Locate by explicit task-number; fall back to the first incomplete
     // task when the context did not seed one.
@@ -1499,16 +1634,18 @@ fn load_current_task(feature: &str, context: &Map<String, Value>, repo: &Path) -
         result.tasks.iter().find(|t| t.number == task_number)
     };
     match task {
-        Some(t) => WriteCodeTask {
-            number: t.number.clone(),
-            heading: t.heading.clone(),
-            subtasks: t.subtasks.iter().map(|s| s.text.clone()).collect(),
-        },
-        None => WriteCodeTask {
-            number: task_number,
-            heading: String::new(),
-            subtasks: Vec::new(),
-        },
+        Some(t) => (
+            WriteCodeTask {
+                number: t.number.clone(),
+                heading: t.heading.clone(),
+                subtasks: t.subtasks.iter().map(|s| s.text.clone()).collect(),
+            },
+            None,
+        ),
+        None if task_number.is_empty() => {
+            unexamined(format!("task-not-found: {feature} holds no task"))
+        }
+        None => unexamined(format!("task-not-found: {task_number} in {feature}")),
     }
 }
 
@@ -1525,9 +1662,15 @@ fn load_plan_relevant_files(
     let Ok(canon_repo) = repo.canonicalize() else {
         return Ok(Vec::new());
     };
-    let plan_path = crate::schema::paths::specs_dir(&canon_repo)?
-        .join(feature)
-        .join("plan.md");
+    // `feature` arrives in the walker context: the plan is read only from a
+    // feature directory that stays in the project, link-free beneath it, as
+    // `feature_dir` and the feature-argument primitives hold it.
+    let specs_root = crate::schema::paths::Paths::load(&canon_repo)?.specs_root;
+    refuse_outside(
+        crate::primitives::validate_feature_argument(repo, &specs_root, feature),
+        &format!("{specs_root}/{feature}/plan.md"),
+    )?;
+    let plan_path = canon_repo.join(&specs_root).join(feature).join("plan.md");
     let Ok(plan_content) = std::fs::read_to_string(&plan_path) else {
         return Ok(Vec::new());
     };
@@ -1661,6 +1804,21 @@ fn load_constitution_excerpts(
             paths::CONSTITUTION_CHAIN.join(" or ")
         )));
     };
+    // The constitution is a fixed name, but a project file all the same: a
+    // link at it that leaves the project is left unread and named, as a
+    // command-file candidate is, never followed (BE-INPUT-004; 022 task 41).
+    match refuse_outside(
+        crate::primitives::validate_contained(repo, constitution_rel),
+        constitution_rel,
+    ) {
+        Ok(()) => {}
+        Err(PayloadError::PathOutsideProject { path }) => {
+            return Ok(ConstitutionExcerptScan::unexaminable(format!(
+                "constitution-outside-project: {path}"
+            )));
+        }
+        Err(err) => return Err(err),
+    }
     let Ok(constitution) = std::fs::read_to_string(repo.join(constitution_rel)) else {
         return Ok(ConstitutionExcerptScan::unexaminable(format!(
             "constitution-unreadable: {constitution_rel}"
@@ -1823,14 +1981,15 @@ pub fn extract_anchor_body(content: &str, anchor: &str) -> Option<String> {
 /// Any other command yields `None`: only `/ductus:plan` and `/ductus:specify`
 /// carry the `writeSpecBody` marker. Returns `None` too when the file does
 /// not exist or the section is absent or empty. Whitespace-only bodies count
-/// as empty.
+/// as empty. The body comes with the project-relative path of the file it was
+/// read from, or `None` for that path when the name is not UTF-8.
 fn read_existing_section(
     section: &str,
     feature: Option<&str>,
     path_hint: Option<&str>,
     repo: &Path,
     command_name: &str,
-) -> Result<Option<String>, PayloadError> {
+) -> Result<Option<(String, Option<String>)>, PayloadError> {
     let feature_dir = match feature {
         Some(f) if !f.is_empty() => crate::schema::paths::specs_dir(repo)?.join(f),
         _ => repo.join(path_hint.unwrap_or_default()),
@@ -1859,7 +2018,13 @@ fn read_existing_section(
             if trimmed.is_empty() {
                 return Ok(None);
             }
-            return Ok(Some(trimmed.to_string()));
+            // Named by the file that was read, from the project root, as the
+            // plan files are: the path form sends it for the host to read. A
+            // name that is not UTF-8 cannot be sent, so that body stays inline.
+            return Ok(Some((
+                trimmed.to_string(),
+                project_relative(&canon_repo, &abs),
+            )));
         }
     }
     Ok(None)
@@ -2187,6 +2352,7 @@ mod tests {
                 heading: "A task".to_string(),
                 subtasks: vec![],
             },
+            task_unexaminable: None,
             content_form: None,
         };
         let json = serde_json::to_string(&request).unwrap();
@@ -2251,7 +2417,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2285,7 +2452,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2335,7 +2503,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2379,7 +2548,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2421,7 +2591,8 @@ mod tests {
                 | PayloadError::ListsFileUnreadable { .. }
                 | PayloadError::RequestListsUnwritable { .. }
                 | PayloadError::ConfigUnreadable(_)
-                | PayloadError::InvalidCommandName(_)),
+                | PayloadError::InvalidCommandName(_)
+                | PayloadError::PathOutsideProject { .. }),
             ) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
@@ -2534,7 +2705,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2581,7 +2753,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2627,7 +2800,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -2685,7 +2859,8 @@ mod tests {
             | PayloadError::ListsFileUnreadable { .. }
             | PayloadError::RequestListsUnwritable { .. }
             | PayloadError::ConfigUnreadable(_)
-            | PayloadError::InvalidCommandName(_)) => {
+            | PayloadError::InvalidCommandName(_)
+            | PayloadError::PathOutsideProject { .. }) => {
                 panic!("expected SecretExfiltration, got {other:?}")
             }
         }
@@ -3085,7 +3260,7 @@ mod tests {
                 "../outside.md"
             ]),
         );
-        let loaded = load_rules(&ctx, &repo);
+        let loaded = load_rules(&ctx, &repo).unwrap();
         let assessable: Vec<(&str, RuleSeverity)> = loaded
             .assessable
             .iter()
@@ -3123,7 +3298,7 @@ mod tests {
             "rule-files".into(),
             serde_json::json!(["framework/rules/security-backend.md"]),
         );
-        let loaded = load_rules(&ctx, &repo);
+        let loaded = load_rules(&ctx, &repo).unwrap();
         let rule = loaded
             .assessable
             .into_iter()
@@ -3154,7 +3329,7 @@ mod tests {
     #[test]
     fn a_rule_set_is_empty_only_when_it_holds_no_rule_at_all() {
         let tmp = tempdir().unwrap();
-        assert!(load_rules(&Map::new(), tmp.path()).is_empty());
+        assert!(load_rules(&Map::new(), tmp.path()).unwrap().is_empty());
         fs::write(
             tmp.path().join("r.md"),
             "### TR-NONE-001\n\n> No keyword.\n\n**Verification:** v\n",
@@ -3162,7 +3337,7 @@ mod tests {
         .unwrap();
         let mut ctx = Map::new();
         ctx.insert("rule-files".into(), serde_json::json!(["r.md"]));
-        let loaded = load_rules(&ctx, tmp.path());
+        let loaded = load_rules(&ctx, tmp.path()).unwrap();
         assert_eq!(loaded.assessable, [] as [AssessSpecQualityRule; 0]);
         assert!(!loaded.is_empty());
     }
@@ -4821,5 +4996,515 @@ mod tests {
             "{err}"
         );
         assert_eq!(err.code(), "request-lists-unwritable");
+    }
+
+    // -- 022 task 41: every request is bounded whole; every read is contained --
+
+    const FILL_PROSE: &str = "Fill the Technical Decisions section of the plan.";
+
+    /// The plan template and a plan whose `Technical Decisions` section is
+    /// `big_body` long, for `/plan`'s `writeSpecBody` over feature `123-foo`.
+    fn stage_plan_fill(repo: &Path) -> Map<String, Value> {
+        let template = repo.join("specs/templates/plan.md");
+        fs::create_dir_all(template.parent().unwrap()).unwrap();
+        fs::write(&template, big_body("template")).unwrap();
+        let feature_dir = repo.join("specs/123-foo");
+        fs::create_dir_all(&feature_dir).unwrap();
+        fs::write(
+            feature_dir.join("plan.md"),
+            format!(
+                "## Technical Decisions\n\n{}\n## Trade-offs\n",
+                "a line of spec text\n".repeat(200)
+            ),
+        )
+        .unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        ctx
+    }
+
+    fn write_spec_body(repo: &Path, ctx: &Map<String, Value>) -> Result<Value, PayloadError> {
+        build_extension_request("writeSpecBody", ctx, repo, "plan", FILL_PROSE)
+    }
+
+    #[test]
+    fn write_spec_body_under_the_read_size_carries_its_bodies_inline() {
+        let tmp = tempdir().unwrap();
+        let ctx = stage_plan_fill(tmp.path());
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert!(value.get("content-form").is_none(), "{value}");
+        assert!(value.get("existing-path").is_none(), "{value}");
+        assert_eq!(value["template-content"], big_body("template").as_str());
+        assert!(
+            value["existing-content"]
+                .as_str()
+                .unwrap()
+                .contains("a line of spec text")
+        );
+    }
+
+    #[test]
+    fn write_spec_body_past_the_read_size_names_its_files_instead() {
+        let tmp = tempdir().unwrap();
+        let ctx = stage_plan_fill(tmp.path());
+        set_read_size(tmp.path(), "1000");
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert!(value.get("template-content").is_none(), "{value}");
+        assert!(value.get("existing-content").is_none(), "{value}");
+        assert_eq!(value["template-path"], "specs/templates/plan.md");
+        assert_eq!(value["existing-path"], "specs/123-foo/plan.md");
+        assert_eq!(value["section"], "Technical Decisions");
+        assert!(
+            serde_json::to_vec(&value).unwrap().len() <= 1000,
+            "the bounded request fits the read size"
+        );
+        // The named files hold what the inline form carried.
+        let plan = fs::read_to_string(tmp.path().join("specs/123-foo/plan.md")).unwrap();
+        assert!(plan.contains("a line of spec text"));
+    }
+
+    #[test]
+    fn write_spec_body_bounds_only_the_body_it_read() {
+        // A template that is not on disk is `""` with no path, and stays so.
+        let tmp = tempdir().unwrap();
+        let ctx = stage_plan_fill(tmp.path());
+        fs::remove_file(tmp.path().join("specs/templates/plan.md")).unwrap();
+        set_read_size(tmp.path(), "1000");
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert_eq!(value["template-path"], "");
+        assert_eq!(value["template-content"], "");
+        assert_eq!(value["existing-path"], "specs/123-foo/plan.md");
+        assert!(value.get("existing-content").is_none(), "{value}");
+
+        // A section that holds nothing sends no `existing-path`.
+        let tmp = tempdir().unwrap();
+        let ctx = stage_plan_fill(tmp.path());
+        fs::write(
+            tmp.path().join("specs/123-foo/plan.md"),
+            "## Technical Decisions\n\n## Trade-offs\n",
+        )
+        .unwrap();
+        set_read_size(tmp.path(), "1000");
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert_eq!(value["template-path"], "specs/templates/plan.md");
+        assert!(value.get("template-content").is_none(), "{value}");
+        assert!(value.get("existing-content").is_none(), "{value}");
+        assert!(value.get("existing-path").is_none(), "{value}");
+    }
+
+    #[test]
+    fn write_spec_body_with_no_body_read_stays_inline_past_the_read_size() {
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "1");
+        let ctx = Map::new();
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert!(value.get("content-form").is_none(), "{value}");
+        assert_eq!(value["template-content"], "");
+    }
+
+    #[test]
+    fn write_spec_body_past_the_bound_moves_its_legacy_tail() {
+        let tmp = tempdir().unwrap();
+        let mut ctx = stage_plan_fill(tmp.path());
+        ctx.insert(
+            "notices".into(),
+            Value::Array(vec![Value::String("a notice of some length".into()); 40]),
+        );
+        set_read_size(tmp.path(), "600");
+        let value = write_spec_body(tmp.path(), &ctx).unwrap();
+        assert_eq!(value["content-form"], "path");
+        assert!(value.get("notices").is_none(), "the tail moved whole");
+        assert_eq!(value["legacy-context-count"], 2, "feature and notices");
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(
+            moved["legacy-context"]["notices"].as_array().unwrap().len(),
+            40
+        );
+        // What the host decides with stays inline.
+        assert_eq!(value["section"], "Technical Decisions");
+        assert_eq!(value["existing-path"], "specs/123-foo/plan.md");
+    }
+
+    #[test]
+    fn a_malformed_read_size_halts_a_write_spec_body_request() {
+        for staged in [true, false] {
+            let tmp = tempdir().unwrap();
+            let ctx = if staged {
+                stage_plan_fill(tmp.path())
+            } else {
+                Map::new()
+            };
+            set_read_size(tmp.path(), "\"big\"");
+            let err = write_spec_body(tmp.path(), &ctx).unwrap_err();
+            assert!(
+                matches!(err, PayloadError::ConfigUnreadable(_)),
+                "staged: {staged}: {err}"
+            );
+        }
+    }
+
+    /// `count` specs under `specs/`, each a draft with a spec file.
+    fn stage_available_specs(repo: &Path, count: usize) {
+        for n in 0..count {
+            let dir = repo.join(format!("specs/{n:03}-a-feature-directory"));
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join("spec.md"), "---\nstatus: draft\n---\n\n# x\n").unwrap();
+        }
+    }
+
+    fn route_inbox_context() -> Map<String, Value> {
+        let mut ctx = Map::new();
+        ctx.insert("item-text".into(), Value::String("an item".into()));
+        ctx.insert(
+            "candidates".into(),
+            serde_json::json!([{
+                "route": "scenario",
+                "source": "runtime-work",
+                "target": "022-deterministic-runtime",
+                "path": "specs/022-deterministic-runtime",
+                "status": "in-progress",
+                "reopens": false,
+                "reason": "names the primitive `check-artifacts`"
+            }]),
+        );
+        ctx
+    }
+
+    #[test]
+    fn route_inbox_item_under_the_read_size_carries_its_lists_inline() {
+        let tmp = tempdir().unwrap();
+        stage_available_specs(tmp.path(), 40);
+        let value = build_route_inbox_item_request(&route_inbox_context(), tmp.path()).unwrap();
+        assert!(value.get("request-lists-file").is_none(), "{value}");
+        assert_eq!(value["available-specs"].as_array().unwrap().len(), 40);
+        assert_eq!(value["candidates"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn route_inbox_item_past_the_bound_moves_its_lists() {
+        let tmp = tempdir().unwrap();
+        stage_available_specs(tmp.path(), 40);
+        set_read_size(tmp.path(), "600");
+        let value = build_route_inbox_item_request(&route_inbox_context(), tmp.path()).unwrap();
+        assert!(value.get("available-specs").is_none(), "{value}");
+        assert!(value.get("candidates").is_none(), "{value}");
+        assert_eq!(value["available-specs-count"], 40);
+        assert_eq!(value["candidates-count"], 1);
+        // What the router decides with stays inline.
+        assert_eq!(value["item-text"], "an item");
+        assert_eq!(value["routes"].as_array().unwrap().len(), 5);
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["available-specs"].as_array().unwrap().len(), 40);
+        assert_eq!(
+            moved["candidates"][0]["target"],
+            "022-deterministic-runtime"
+        );
+        assert!(
+            serde_json::to_vec(&value).unwrap().len() <= 600,
+            "the bounded request fits the read size"
+        );
+    }
+
+    #[test]
+    fn a_malformed_read_size_halts_a_route_inbox_item_request() {
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "\"big\"");
+        let err = build_route_inbox_item_request(&Map::new(), tmp.path()).unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err}");
+    }
+
+    #[test]
+    fn a_malformed_read_size_halts_a_write_code_request() {
+        // No plan file: the first read is skipped by short-circuit, so
+        // `bound_lists`' own read of the setting is the only one.
+        let tmp = tempdir().unwrap();
+        set_read_size(tmp.path(), "\"big\"");
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        let err = build_write_code_request(&ctx, tmp.path(), "implement").unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err}");
+    }
+
+    /// `writeCode`'s task says when it is not the task `tasks.md` holds, so a
+    /// task that was not examined never reads as one with no subtasks.
+    #[test]
+    fn write_code_names_why_its_task_was_not_read() {
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/123-foo");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let build = |ctx: &Map<String, Value>| {
+            build_write_code_request(ctx, tmp.path(), "implement").unwrap()
+        };
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        ctx.insert("task-number".into(), Value::String("2".into()));
+
+        // No tasks.md.
+        let value = build(&ctx);
+        assert_eq!(value["task-unexaminable"], "tasks-unreadable: 123-foo");
+        assert_eq!(value["task"]["number"], "2");
+        assert_eq!(value["task"]["heading"], "");
+
+        // A tasks.md with no task 2.
+        fs::write(feature_dir.join("tasks.md"), "## 1. One\n\n- [ ] a\n").unwrap();
+        let value = build(&ctx);
+        assert_eq!(value["task-unexaminable"], "task-not-found: 2 in 123-foo");
+
+        // One with no task at all, asked for the first incomplete.
+        fs::write(feature_dir.join("tasks.md"), "# Tasks\n").unwrap();
+        ctx.remove("task-number");
+        let value = build(&ctx);
+        assert_eq!(
+            value["task-unexaminable"],
+            "task-not-found: 123-foo holds no task"
+        );
+
+        // The task is found: the field is not on the wire.
+        fs::write(feature_dir.join("tasks.md"), "## 1. One\n\n- [ ] a\n").unwrap();
+        ctx.insert("task-number".into(), Value::String("1".into()));
+        let value = build(&ctx);
+        assert!(value.get("task-unexaminable").is_none(), "{value}");
+        assert_eq!(value["task"]["heading"], "One");
+
+        // A walk that names no feature has nothing to read.
+        let value = build(&Map::new());
+        assert!(
+            value["task-unexaminable"]
+                .as_str()
+                .unwrap()
+                .starts_with("no-feature:"),
+            "{value}"
+        );
+    }
+
+    /// The constitution at its fixed name is a project file, and a link at it
+    /// that leaves the project is left unread and named (spec 022 task 41).
+    #[cfg(unix)]
+    #[test]
+    fn a_constitution_linked_outside_the_project_is_not_read() {
+        let tmp = tempdir().unwrap();
+        let outside = tempdir().unwrap();
+        fs::write(
+            outside.path().join("constitution.md"),
+            "<!-- §alpha -->\n\nBody of alpha from outside.\n",
+        )
+        .unwrap();
+        write_command_file(tmp.path(), "implement", "§alpha");
+        fs::create_dir_all(tmp.path().join("framework")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("constitution.md"),
+            tmp.path().join("framework/constitution.md"),
+        )
+        .unwrap();
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
+        assert!(scan.excerpts.is_empty(), "{scan:?}");
+        assert_eq!(
+            scan.unexaminable,
+            vec!["constitution-outside-project: framework/constitution.md".to_owned()]
+        );
+    }
+
+    /// A link at the constitution that stays inside the project is followed,
+    /// as everywhere else.
+    #[cfg(unix)]
+    #[test]
+    fn a_constitution_linked_inside_the_project_is_read() {
+        let tmp = tempdir().unwrap();
+        write_command_file(tmp.path(), "implement", "§alpha");
+        fs::create_dir_all(tmp.path().join("framework")).unwrap();
+        fs::write(
+            tmp.path().join("real.md"),
+            "<!-- §alpha -->\n\nBody of alpha.\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            tmp.path().join("real.md"),
+            tmp.path().join("framework/constitution.md"),
+        )
+        .unwrap();
+        let scan = load_constitution_excerpts("implement", tmp.path()).unwrap();
+        assert!(scan.unexaminable.is_empty(), "{scan:?}");
+        assert_eq!(scan.excerpts.len(), 1);
+    }
+
+    /// The plan is read from a feature directory that stays in the project:
+    /// a feature that is a link out, a `plan.md` that is one, and a feature
+    /// that climbs out are each refused, naming the path, and read nothing.
+    #[cfg(unix)]
+    #[test]
+    fn a_plan_outside_the_project_is_not_read() {
+        let plan =
+            "## Affected Files\n\n| File | Action |\n| --- | --- |\n| `existing.txt` | Edit |\n";
+        let outside = tempdir().unwrap();
+        fs::write(outside.path().join("plan.md"), plan).unwrap();
+
+        // The feature directory is a link out.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        fs::write(tmp.path().join("existing.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("specs/123-foo")).unwrap();
+        let err = load_plan_relevant_files("123-foo", tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PayloadError::PathOutsideProject { path } if path == "specs/123-foo/plan.md"),
+            "{err}"
+        );
+        assert_eq!(err.code(), "path-outside-project");
+
+        // The plan itself is a link out.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs/123-foo")).unwrap();
+        fs::write(tmp.path().join("existing.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("plan.md"),
+            tmp.path().join("specs/123-foo/plan.md"),
+        )
+        .unwrap();
+        let err = load_plan_relevant_files("123-foo", tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PayloadError::PathOutsideProject { .. }),
+            "{err}"
+        );
+
+        // The feature climbs out of the spec root.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        let err = load_plan_relevant_files("../../x", tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PayloadError::PathOutsideProject { .. }),
+            "{err}"
+        );
+
+        // A link that stays inside is followed.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs/real")).unwrap();
+        fs::write(tmp.path().join("specs/real/plan.md"), plan).unwrap();
+        fs::write(tmp.path().join("existing.txt"), "x").unwrap();
+        std::os::unix::fs::symlink("real", tmp.path().join("specs/123-foo")).unwrap();
+        let files = load_plan_relevant_files("123-foo", tmp.path()).unwrap();
+        assert_eq!(files.len(), 1);
+    }
+
+    /// A config that exists and does not parse halts the rule load, as it
+    /// halts every reader: the feature is not read as one with no record
+    /// (`CFG-ENV-008`).
+    #[test]
+    fn load_rules_halts_on_a_config_that_does_not_parse() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(tmp.path().join(".ductus/config.toml"), "[paths\n").unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        let err = load_rules(&ctx, tmp.path()).map(|_| ()).unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err}");
+        // A walk naming no feature reads no config here.
+        assert!(load_rules(&Map::new(), tmp.path()).is_ok());
+    }
+
+    /// A feature that leaves the project is refused, not read as a walk that
+    /// names no feature.
+    #[cfg(unix)]
+    #[test]
+    fn load_rules_refuses_a_feature_linked_outside_the_project() {
+        let tmp = tempdir().unwrap();
+        let outside = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("specs/123-foo")).unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("123-foo".into()));
+        let err = load_rules(&ctx, tmp.path()).map(|_| ()).unwrap_err();
+        assert!(
+            matches!(err, PayloadError::PathOutsideProject { .. }),
+            "{err}"
+        );
+    }
+
+    /// `available-specs` lists no spec root that leaves the project, and a
+    /// `spec.md` that is a link out lists with the empty status an unreadable
+    /// one has, its text never read.
+    #[cfg(unix)]
+    #[test]
+    fn available_specs_read_nothing_outside_the_project() {
+        let outside = tempdir().unwrap();
+        fs::create_dir_all(outside.path().join("001-out")).unwrap();
+        fs::write(
+            outside.path().join("001-out/spec.md"),
+            "---\nstatus: done\n---\n",
+        )
+        .unwrap();
+        fs::write(outside.path().join("spec.md"), "---\nstatus: done\n---\n").unwrap();
+
+        // The spec root is a link out.
+        let tmp = tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("specs")).unwrap();
+        let err = load_available_specs(tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PayloadError::PathOutsideProject { path } if path == "specs"),
+            "{err}"
+        );
+
+        // One spec's file is a link out.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs/001-a")).unwrap();
+        fs::create_dir_all(tmp.path().join("specs/002-b")).unwrap();
+        fs::write(
+            tmp.path().join("specs/002-b/spec.md"),
+            "---\nstatus: draft\n---\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("spec.md"),
+            tmp.path().join("specs/001-a/spec.md"),
+        )
+        .unwrap();
+        let specs = load_available_specs(tmp.path()).unwrap();
+        let shown: Vec<(&str, &str)> = specs
+            .iter()
+            .map(|spec| (spec.feature.as_str(), spec.status.as_str()))
+            .collect();
+        assert_eq!(shown, [("001-a", ""), ("002-b", "draft")]);
+    }
+
+    /// The fold's source scenarios are listed from a directory inside the
+    /// project, and a scenario file that is a link out is the detail-less
+    /// entry an unreadable one is.
+    #[cfg(unix)]
+    #[test]
+    fn fold_scenarios_read_nothing_outside_the_project() {
+        let outside = tempdir().unwrap();
+        fs::write(
+            outside.path().join("s.md"),
+            "---\nsection: \"Outside\"\n---\n",
+        )
+        .unwrap();
+
+        // The scenarios directory is a link out.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs/1234.1-staged")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path(),
+            tmp.path().join("specs/1234.1-staged/scenarios"),
+        )
+        .unwrap();
+        let err = load_fold_source_scenarios(tmp.path(), "specs", "1234.1-staged").unwrap_err();
+        assert!(
+            matches!(err, PayloadError::PathOutsideProject { .. }),
+            "{err}"
+        );
+
+        // One scenario file is a link out; its sibling is read.
+        let tmp = tempdir().unwrap();
+        let scenarios = tmp.path().join("specs/1234.1-staged/scenarios");
+        fs::create_dir_all(&scenarios).unwrap();
+        fs::write(scenarios.join("in.md"), "---\nsection: \"Inside\"\n---\n").unwrap();
+        std::os::unix::fs::symlink(outside.path().join("s.md"), scenarios.join("out.md")).unwrap();
+        let found = load_fold_source_scenarios(tmp.path(), "specs", "1234.1-staged").unwrap();
+        let shown: Vec<(&str, &str)> = found
+            .iter()
+            .map(|scenario| (scenario.slug.as_str(), scenario.section.as_str()))
+            .collect();
+        assert_eq!(shown, [("in", "Inside"), ("out", "")]);
     }
 }

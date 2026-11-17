@@ -463,4 +463,11 @@ MUTATIONS = [
         '        &[\n            "constitution-excerpts",\n            "plan-relevant-files",\n        ],',
         'interpreter::payload::tests::write_code_past_the_bound',
     ),
+    (
+        'M64 a malformed read size is swallowed where bound_lists reads it',
+        'src/interpreter/payload.rs',
+        '    if fits(repo, &value)? {\n        return Ok(value);\n    }\n    let Value::Object(map) = &mut value else {',
+        '    if fits(repo, &value).unwrap_or(true) {\n        return Ok(value);\n    }\n    let Value::Object(map) = &mut value else {',
+        'interpreter::payload::tests::a_malformed_read_size_halts_a_write_code_request',
+    ),
 ]

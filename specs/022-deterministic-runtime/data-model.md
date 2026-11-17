@@ -623,7 +623,7 @@ The three initial-release single-shot extension points, plus the follow-on point
 
 A request is held to `[artifacts] read-size-bytes` (`BE-PAYLOAD-001`), the size a primitive's result is held to, read by the one reader they share: a request exactly at it fits, and the bound is on the whole serialized request, legacy tail included. A malformed read size halts the walk at the request, as it halts every reader of the setting, whether or not a body was read. A request that fits is sent whole, as the sections below show it, with none of the fields this section adds. Past it the request is bounded in two steps, and the second runs only if the request is still past the read size after the first.
 
-**Bodies.** Each file body is dropped and each file the request names by a repo-relative path is one the host reads itself: `content-form` is `"path"`, every body field is absent, and the paths are `spec-path` and `target-path`, a `scope-files`, `rule-files` or `plan-relevant-files` entry's `path`. A host reads an absent body beside `content-form: "path"` as a body left to read, never as an empty file; an empty file is `""` inline. A body the runtime could not read (a missing file, a path outside the project) is never bounded: the request sends what it sends inline, with no path to a file the host would not find, and one with no body to read stays as it is. The form writes no file: the host reads the project's own, by a path the runtime's containment check (`BE-INPUT-004`) already read; `writeCode`'s secret-exfiltration refusal runs before any bounding, so a refused path is never named.
+**Bodies.** Each file body is dropped and each file the request names by a repo-relative path is one the host reads itself: `content-form` is `"path"`, every body field is absent, and the paths are `spec-path`, `target-path`, `template-path` and `existing-path`, a `scope-files`, `rule-files` or `plan-relevant-files` entry's `path`. A host reads an absent body beside `content-form: "path"` as a body left to read, never as an empty file; an empty file is `""` inline. A body the runtime could not read (a missing file, a path outside the project) is never bounded: the request sends what it sends inline, with no path to a file the host would not find, and one with no body to read stays as it is. The form writes no file: the host reads the project's own, by a path the runtime's containment check (`BE-INPUT-004`) already read; `writeCode`'s secret-exfiltration refusal runs before any bounding, so a refused path is never named.
 
 **Lists.** The lists that grow with entries rather than with a file's size move to one file: each non-empty list the request carries from its point's set below, and the whole legacy context tail, which is the primitive results and seeded values behind the typed fields. The file is `.ductus/results/exec-request/{extension point}/{sha256}.json`, written as a primitive's list file is (`.ductus/results/` ignores itself), an object holding each moved list under its own key and the tail under `legacy-context`. The request keeps `{list}-count` for each moved list, `legacy-context-count`, the number of tail keys, for the tail, and `request-lists-file`, the file's path from the project root, which is also how a host knows the request took this form. A list file that cannot be written halts the walk with `request-lists-unwritable`. What stays inline is the typed fields no list owns (`pass`, `rule`, `question`, `task`, `routes`, `fold-target`, `target-status`), so a host decides with them without reading the file. A request with no non-empty list and no tail is still past the read size if a scalar or an object no list owns is: no request can be made smaller by moving what it does not hold.
 
@@ -632,19 +632,21 @@ The marker names are `content-form` and `request-lists-file`, never `form` or `l
 | Extension point | Bodies | Lists moved past the bound |
 | --- | --- | --- |
 | `writeCode` | `plan-relevant-files[].content` | `constitution-excerpts`, `plan-relevant-files`, `write-boundary`, the tail |
+| `writeSpecBody` | `template-content`, `existing-content` (`existing-path` names the file the section is read from) | the tail |
 | `performReview` | `scope-files[].content`, `rule-files[].content` (each `rule-files` entry names its `path` in this form) | `scope-files`, `rule-files`, `loaded-rule-files`, `passes-run`, the tail |
 | `assessSpecQuality` | `spec-content` | `loaded-rule-files` |
 | `askClarifyQuestion` | `spec-content` | none |
 | `routeFold` | `spec-content`, `target-content` | `scenarios`, `target-sections` |
 | `verifyCriteria` | `spec-content` | `criteria` |
+| `routeInboxItem` | none | `available-specs`, `candidates` |
 
 ### `assessSpecQuality`
 
 Used by `/ductus:analyze`'s per-rule Verification reads.
 
-One request carries one rule. The exec walker sends one per loaded rule of the asking step's tier — step 11 asks about MUST-tier rules, step 12 about SHOULD-tier ones — so each rule is asked about once (spec 060). `rule.severity` is the tier the rule's Statement states through its RFC 2119 keyword, MUST winning when a Statement carries both; the step's prose only selects which rules it asks about. The walker evaluates no Verification trigger: the host judges whether the rule's trigger fires against the spec, and answers `passed: true` with a `null` finding when it does not. A rule with no keyword or no Verification is never sent, and is recorded under `rule-assessments-not-checked` instead.
+One request carries one rule. The exec walker sends one per loaded rule of the asking step's tier — step 11 asks about MUST-tier rules, step 12 about SHOULD-tier ones — so each rule is asked about once (spec 060). `rule.severity` is the tier the rule's Statement states through its RFC 2119 keyword, MUST winning when a Statement carries both; the step's prose only selects which rules it asks about. The walker evaluates no Verification trigger: the host judges whether the rule's trigger fires against the spec, and answers `passed: true` with a `null` finding when it does not. A rule with no keyword or no Verification is never sent, and is recorded under `rule-assessments-not-checked` instead. The walk loads its rules, and the feature's stored verdicts and departure entries, at its first assessment step; a project config that cannot be read or parsed, or a feature that leaves the project, halts the walk there, naming why, never reading as a feature with no record (`CFG-ENV-008`).
 
-The walker sends one request per assessed rule, up to 192 per walk, so `spec-content` is the field the bound exists for. The request is bounded as §Request bodies past the read size states, and the host reads `spec-path` when `content-form` is `"path"`.
+The walker sends one request per loaded rule of the step's tier (spec 060 counted 192 rule sections on 2026-09-26; the shipped files hold more now), so `spec-content` is the field the bound exists for. The request is bounded as §Request bodies past the read size states, and the host reads `spec-path` when `content-form` is `"path"`.
 
 `loaded-rule-files` lists the basenames of the rule files the walk loaded, in its `rule-files` order; a listed file it could not read is absent, so the list names exactly the files whose rules the walk assessed. A Verification that yields a case "where `{file}` is also loaded" (`specs/008-security-rules/data-model.md` §Verification phrasing item 6) yields it only when `{file}` is in the list; a file it names that the list lacks, and a request carrying no list, which a runtime predating the field sends, make the condition false, so the yielding rule keeps the case (spec 060, scenario `an-assessment-sees-the-loaded-rule-files`).
 
@@ -690,7 +692,7 @@ The walker asks about a rule only when the feature's stored verdict for it is no
 
 Used by `/ductus:implement`'s per-task work step.
 
-`plan-relevant-files[].content`, and the lists the request carries, are bounded as §Request bodies past the read size states; the path form names each file by the `path` the builder contained.
+`plan-relevant-files[].content`, and the lists the request carries, are bounded as §Request bodies past the read size states; the path form names each file by the `path` the builder contained. `plan.md` is read only from a feature directory that stays in the project, with no link beneath it leaving it; one that does halts the walk with `path-outside-project` naming it, the refusal an Affected Files entry leaving the project already gets.
 
 Request payload:
 
@@ -714,7 +716,9 @@ Request payload:
 }
 ```
 
-`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `command-file-outside-project: {path}` for a candidate leaving the project, which is never read (task 40), `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, a host could not tell "no constitutional context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
+`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `command-file-outside-project: {path}` for a candidate leaving the project, which is never read (task 40), `constitution-unreadable: {path}`, `constitution-outside-project: {path}` for a constitution that is, or runs through, a link leaving the project, which is never read (task 41), or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, a host could not tell "no constitutional context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
+
+`task-unexaminable` sits beside `task` and is **omitted from the wire when the task was found**: `no-feature: …` when the walk names no feature, `tasks-unreadable: {feature}` when `tasks.md` could not be read, and `task-not-found: {number} in {feature}`, or `task-not-found: {feature} holds no task` when the walk seeds no number, when `tasks.md` holds none by that number. The `task` then carries the seeded `number` and an empty `heading` and `subtasks`, which without the field read as a task that genuinely has none (`QUAL-CLAIM-001`). The reason carries no error text, which can name an absolute path.
 
 Response payload:
 
@@ -753,6 +757,8 @@ Request payload:
   "existing-content": null
 }
 ```
+
+`template-content` and `existing-content` are bounded (§Request bodies past the read size). In the path form `template-content` and `existing-content` are absent, `content-form` is `"path"`, `template-path` names the template the host reads, and `existing-path` the file, from the project root, whose `section` the host reads; `existing-path` appears only in that form and only for a section that was read, and a template that was not found stays `template-content: ""` with no path.
 
 Response payload:
 
@@ -858,7 +864,7 @@ Request payload:
 }
 ```
 
-`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (`NNN-slug` directories, sorted, with each spec's frontmatter `status` — status drives the done → in-progress reopen consent on a scenario route; empty status means the spec file was unreadable).
+`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (every feature directory, sequential or branch-scoped, in corpus order, with each spec's frontmatter `status` — status drives the done → in-progress reopen consent on a scenario route; empty status means the spec file was unreadable, or is a link leaving the project, which is never read). The request is bounded as §Request bodies past the read size states: it carries no body, and past the bound `available-specs` and `candidates` move to the lists file. A spec root that is, or runs through, a link leaving the project halts the walk with `path-outside-project`, as `scenarios` does for `routeFold`.
 
 Response payload:
 
@@ -893,7 +899,7 @@ Request payload:
 }
 ```
 
-`spec-content` and `target-content` are bounded (§Request bodies past the read size). In the path form `spec-path` (`{specs-root}/{feature}/spec.md`) and `target-path` (the upstream's `spec.md`) name the files the host reads, and `scenarios` and `target-sections` can move to the lists file; `target-status` stays inline. A body not read stays `""`, with no path: a spec whose `folds-into` names no readable upstream sends `target-content: ""` in both forms.
+`spec-content` and `target-content` are bounded (§Request bodies past the read size). In the path form `spec-path` (`{specs-root}/{feature}/spec.md`) and `target-path` (the upstream's `spec.md`) name the files the host reads, and `scenarios` and `target-sections` can move to the lists file; `target-status` stays inline. A body not read stays `""`, with no path: a spec whose `folds-into` names no readable upstream sends `target-content: ""` in both forms. The `scenarios` directory is listed only when it stays in the project (one that does not halts the walk with `path-outside-project`), and a scenario file that is a link leaving it is a detail-less entry, its `section` never read.
 
 `target-content` and `target-sections` are both present inline because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs. `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
 

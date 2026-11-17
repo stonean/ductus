@@ -1839,6 +1839,11 @@ mod tests {
     /// Only a candidate leaving the project is `command-file-outside-project`
     /// (022 task 44, O6): a project root that cannot be resolved is a failure
     /// to read the project, not a link, and is not labelled as one.
+    ///
+    /// Unix only (022 task 47): Windows reports a path running through a
+    /// regular file as not found, so this root reads as absent there and the
+    /// construction reaches no I/O error.
+    #[cfg(unix)]
     #[test]
     fn an_unresolvable_project_root_is_not_reported_as_an_outward_command_file() {
         let tmp = tempfile::tempdir().unwrap();

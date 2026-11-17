@@ -14,7 +14,7 @@ Origin: inbox item surfaced 2026-05-19 during runtime-improvement investigation,
 
 ## Behavior
 
-**Resolved 2026-08-30: no shape ships.** `writeCode` continues to carry `constitution-excerpts` as an inlined `Vec<String>`, leading the cache-anchored prefix exactly as `spec.md` §LLM extension points describes. This scenario is the record of that decision, not a change to be implemented.
+**Resolved 2026-08-30: no shape ships.** `writeCode` continues to carry `constitution-excerpts` as an inlined `Vec<String>`, leading the cache-anchored prefix exactly as `spec.md` §LLM extension points describes, while the request fits `[artifacts] read-size-bytes`. Past it the array moves to the request's lists file with `constitution-excerpts-count` and `request-lists-file` left inline (022's data model §Request bodies past the read size, task 37): the bound holds the whole request to the read size, so it is not a reference shape, and the runtime still selects and reads each anchor, with only the carrier changed. This scenario is the record of the shape decision, not a change to be implemented.
 
 Two shapes were considered and both rejected:
 
@@ -37,7 +37,7 @@ Reopening this needs new evidence, not a new framing: a measured cost that survi
 Retained as the checklist any future proposal on this seam must answer — each is a case the inlined array handles today by construction:
 
 - **Host already holds the constitution** — every adopter's `CLAUDE.md` carries `@import .ductus/constitution.md` (`framework/templates/project/claude-md.md:3`), so on claude-style layouts the excerpts duplicate context the host loaded before the request arrived. This is the case that removed the motivation, and any future proposal must state what it saves *given* this.
-- **Host that ignores the reference** — a `writeCode` response written without constitutional context, with nothing in the envelope revealing it. The inlined shape makes this impossible; both rejected shapes make it silent.
+- **Host that ignores the reference** — a `writeCode` response written without constitutional context, with nothing in the envelope revealing it. The inlined shape makes this impossible; both rejected shapes make it silent. Past the read size the lists file makes it possible, and the inline `constitution-excerpts-count` is what keeps it visible: a host that skips the file sees a count above zero beside an absent array.
 - **Command file with no `Reference:` line** — yields an empty array today; any shape MUST keep yielding an empty set rather than a missing-resource error.
 - **Anchor that resolves to nothing** — an anchor naming a section the constitution no longer carries. A reference shape defers the failure from resolve-time to host-read-time, which is later and quieter; any shape MUST fail where the inlined shape fails.
 - **Adopter with a pinned or customized constitution** — references must resolve against the adopter's constitution, never the framework's shipped copy.

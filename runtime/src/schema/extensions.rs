@@ -174,7 +174,8 @@ pub struct WriteCodeRequest {
     pub constitution_excerpts: Vec<String>,
     /// What the excerpt load could not examine, one entry per cause
     /// (`command-file-missing: …`, `command-file-unreadable: …`,
-    /// `constitution-unreadable: …`, `anchor-unresolved: §…`). Empty in the
+    /// `command-file-outside-project: …`, `constitution-unreadable: …`,
+    /// `constitution-outside-project: …`, `anchor-unresolved: §…`). Empty in the
     /// ordinary case, and omitted from the wire when empty, so a clean
     /// payload is byte-identical to one built before this field existed.
     ///
@@ -193,6 +194,16 @@ pub struct WriteCodeRequest {
     pub write_boundary: Vec<String>,
     /// Task being implemented.
     pub task: WriteCodeTask,
+    /// Why `task` is not the task `tasks.md` holds: the feature names no
+    /// tasks file the runtime could read (`tasks-unreadable: …`), or it holds
+    /// no task by the walk's task number (`task-not-found: …`). Absent when
+    /// the task was found, so a request whose task was read is byte-identical
+    /// to one built before this field existed. Sits beside `task`, as
+    /// `constitution-excerpts-unexaminable` sits beside its list, so a host
+    /// can tell a task with no subtasks from a task that was not examined
+    /// (`QUAL-CLAIM-001`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_unexaminable: Option<String>,
     /// `path` when the request is past the read size and the host reads each
     /// `plan-relevant-files` entry's `path` itself; absent when the contents
     /// are inline.
@@ -248,15 +259,28 @@ pub struct WriteCodeResponse {
 pub struct WriteSpecBodyRequest {
     /// Repo-relative path to the template the section is being filled into.
     pub template_path: String,
-    /// Full template contents.
-    pub template_content: String,
+    /// Full template contents; absent when the request's `content-form` is
+    /// `path`, and the host reads `template-path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_content: Option<String>,
     /// Section heading being filled.
     pub section: String,
     /// User-provided feature description supplied at the slash command.
     pub feature_description: String,
-    /// Existing section content (when re-running on a partially-filled file).
+    /// Existing section content (when re-running on a partially-filled file);
+    /// absent when the request's `content-form` is `path`, and the host reads
+    /// the section named by `section` from `existing-path`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub existing_content: Option<String>,
+    /// Repo-relative path of the file `existing-content` was read from, in the
+    /// `path` form only; absent when the content is inline or there is none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub existing_path: Option<String>,
+    /// `path` when the request is past the read size and the host reads
+    /// `template-path`, and `existing-path`, itself; absent when the bodies
+    /// are inline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_form: Option<ContentForm>,
 }
 
 /// Response payload for `writeSpecBody`.
@@ -1063,6 +1087,7 @@ mod tests {
                 "specs/022-deterministic-runtime/**".into(),
             ],
             constitution_excerpts: vec!["§runtime-boundary…".into()],
+            task_unexaminable: None,
             content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
@@ -1385,6 +1410,7 @@ mod tests {
                 heading: "h".into(),
                 subtasks: vec![],
             },
+            task_unexaminable: None,
             content_form: None,
         };
         let text = serde_json::to_string(&request).unwrap();
@@ -1410,10 +1436,12 @@ mod tests {
     fn write_spec_body_round_trip() {
         let request = WriteSpecBodyRequest {
             template_path: "framework/templates/spec/spec.md".into(),
-            template_content: "# {{ heading }}".into(),
+            template_content: Some("# {{ heading }}".into()),
             section: "Motivation".into(),
             feature_description: "Deterministic runtime".into(),
             existing_content: None,
+            existing_path: None,
+            content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         assert_eq!(value["template-path"], "framework/templates/spec/spec.md");

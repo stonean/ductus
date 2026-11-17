@@ -443,8 +443,8 @@ its version and date.
 
 - **A `ductus exec` extension request is bounded whole (spec 022 tasks 36
   and 37; spec 060's and spec 020's analyses, `BE-PAYLOAD-001`).**
-  `writeCode`, `assessSpecQuality` (one request per assessed rule, up to 192
-  per walk), `askClarifyQuestion`, `routeFold`, `verifyCriteria` and
+  `writeCode`, `assessSpecQuality` (one request per loaded rule of the step's
+  tier; the count grows with the rule files), `askClarifyQuestion`, `routeFold`, `verifyCriteria` and
   `performReview` are inline while the request fits `[artifacts]
   read-size-bytes`, byte for byte as before. Past it the request carries no
   body: `spec-content`, `routeFold`'s `target-content`, and each
@@ -463,6 +463,25 @@ its version and date.
   inline; a file that cannot be written halts the walk with
   `request-lists-unwritable`. Spec 022's data model states the shapes,
   including a new `performReview` section.
+
+- **`writeSpecBody` and `routeInboxItem` are bounded whole, and `payload.rs` contains its reads (spec 022 task 41; 022's review of 2026-11-17, `BE-PAYLOAD-001`, `BE-INPUT-004`).**
+  Both were the two extension requests the bound missed. `writeSpecBody` past
+  `[artifacts] read-size-bytes` drops `template-content` and `existing-content`,
+  names the file the host reads in `template-path` and a new `existing-path`,
+  sets `content-form: path` and moves its legacy tail to the file
+  `request-lists-file` names; `routeInboxItem` moves `available-specs` and
+  `candidates` there, each with its `-count` inline. A request under the size is
+  byte for byte as before. `writeCode` gains `task-unexaminable`, beside `task`
+  and omitted when the task was found, naming why the task was not read
+  (`no-feature`, `tasks-unreadable`, `task-not-found`). The constitution, a
+  feature's `plan.md`, a spec root, a spec's `spec.md` and a fold's `scenarios/`
+  are read only when they stay in the project: a constitution that is a link
+  out is the unexaminable cause `constitution-outside-project`, and the others
+  halt the walk with the new `path-outside-project` code (a `spec.md` or
+  scenario file link out reads as the empty status or `section` an unreadable
+  one has). The rule load propagates a project config it cannot parse and a
+  feature that leaves the project, so the first assessment step of an `/analyze`
+  walk halts instead of judging every rule against a feature with no record.
 
 - **A `prune-tasks` or `prune-plan` result carries `form` and `lists-file`
   once, and a file-form walk deserializes back (spec 041's review).** The two

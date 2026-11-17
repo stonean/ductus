@@ -518,7 +518,9 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         prose: &str,
     ) -> std::io::Result<Option<WalkOutcome>> {
         let step = Some(format_step_number(number));
-        self.load_rules_once();
+        if let Some(outcome) = self.load_rules_once()? {
+            return Ok(Some(outcome));
+        }
         let tier = payload::severity_from_step_prose(prose);
         let (loaded_none, in_tier, loaded_files): (bool, Vec<AssessSpecQualityRule>, Vec<Value>) =
             match &self.rules {
@@ -681,16 +683,28 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
 
     /// Load the walk's rule set from its `rule-files` the first time an
     /// assessment step needs it, recording what it could not bring to an
-    /// assessment then — once per walk, not once per step.
-    fn load_rules_once(&mut self) {
+    /// assessment then — once per walk, not once per step. A walk whose
+    /// project config or feature cannot be resolved halts here, naming why,
+    /// rather than judge every rule against a feature with no record
+    /// (`CFG-ENV-008`).
+    fn load_rules_once(&mut self) -> std::io::Result<Option<WalkOutcome>> {
         if self.rules.is_some() {
-            return;
+            return Ok(None);
         }
-        let loaded = payload::load_rules(&self.context, &self.repo);
+        let loaded = match payload::load_rules(&self.context, &self.repo) {
+            Ok(loaded) => loaded,
+            Err(err) => {
+                let code = err.code().to_string();
+                let message = err.to_string();
+                self.emit_error(code.clone(), message.clone(), None)?;
+                return Ok(Some(WalkOutcome::Errored { code, message }));
+            }
+        };
         if let Some(tally) = &mut self.analyze_tally {
             tally.record_rule_set(loaded.unreadable_files, loaded.unassessable);
         }
         self.rules = Some(loaded);
+        Ok(None)
     }
 
     /// Build one extension request from the walker context, send it, and
@@ -2838,6 +2852,44 @@ mod tests {
             "{outcome:?}"
         );
         assert!(!repo.path().join("specs/001-x/analysis.md").exists());
+    }
+
+    /// A project config that stops parsing after the walk began halts the
+    /// first assessment step, naming why, instead of judging every rule
+    /// against a feature that has no record (`CFG-ENV-008`; spec 022 task 41).
+    #[test]
+    fn an_assessment_step_halts_when_the_project_config_stops_parsing() {
+        let repo = analyze_repo(Some(
+            "### TS-MUST-001\n\n> A MUST.\n\n**Verification:** one.\n",
+        ));
+        let procedure = analyze_procedure(vec![assess_tier(11, "MUST")]);
+        let mut context = Map::new();
+        context.insert("feature".into(), Value::String("001-x".into()));
+        context.insert("path".into(), Value::String("specs/001-x".into()));
+        context.insert(
+            "rule-files".into(),
+            serde_json::json!(["framework/rules/quality-cross.md"]),
+        );
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            repo.path().to_path_buf(),
+            context,
+            &mut reader,
+            &mut writer,
+        )
+        .unwrap();
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(repo.path().join(".ductus/config.toml"), "[paths\n").unwrap();
+        let outcome = walker.run().unwrap();
+        assert!(
+            matches!(&outcome, WalkOutcome::Errored { code, .. } if code == "config-unreadable"),
+            "{outcome:?}"
+        );
+        let emitted = String::from_utf8(writer).unwrap();
+        assert!(emitted.contains("config-unreadable"), "{emitted}");
+        assert!(!emitted.contains("llm-request"), "{emitted}");
     }
 
     /// With no rule loaded, steps 11 and 12 send no request and each records

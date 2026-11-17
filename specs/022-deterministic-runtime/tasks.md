@@ -1,5 +1,5 @@
 ---
-next-task: 47
+next-task: 48
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -152,3 +152,10 @@ Lands after task 41. When it does, plan §Compare before persist's line naming `
 - **Done when**: every named function has a verdict, each uncontained read is contained and proven by a test its mutant turns red, the test table holds every feature-argument site, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
 
 Lands last, after task 42, built on a tree holding tasks 41-43.
+
+## 47. Task 44's O6 test holds on Windows, where a root through a regular file is absent, not unresolvable (found by runtime.yml at aeee5ae9)
+
+- [ ] `an_unresolvable_project_root_is_not_reported_as_an_outward_command_file` (`runtime/src/main.rs`, task 44's O6) runs on Unix alone, its doc comment saying why: Windows reports a path running through a regular file as not found, so `resolve_symlinks` judges that root absent, `locate_exec_command` returns `command-not-found`, and the construction reaches no I/O error. `runtime.yml`'s Windows `cargo test --release --locked` failed on it at `aeee5ae9` (run 44093644823, 2026-11-17), with `command-not-found` where the test expects `config-unreadable`
+- [ ] `scripts/mutation/review-022-task-44.py`'s O6 mutant is still killed on macOS
+
+- **Done when**: `runtime.yml` passes on every platform at the pushed head, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.

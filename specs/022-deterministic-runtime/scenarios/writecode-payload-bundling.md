@@ -16,7 +16,7 @@ The per-task loop of `/ductus:implement` compounds the cost: across N tasks in o
 
 2. **Populate `writeCode.constitution-excerpts`.** Before emitting, the interpreter parses the running slash command file's `Reference: §<anchor>, §<anchor>` line under Scope Boundaries, resolves each anchor via the existing `resolve-anchor` primitive, and emits each resolved section body as a string in the array. Command files with no `Reference:` line yield an empty array.
 
-3. **Reorder `WriteCodeRequest` for cache anchoring.** The struct field order in `runtime/src/schema/extensions.rs` becomes: `constitution-excerpts`, `plan-relevant-files`, `write-boundary`, `task`. The stable prefix (the first three fields) is contiguous and front; the per-task variable suffix (`task`) is last. Serialized JSON respects this order via `serde`'s declaration-order serialization.
+3. **Reorder `WriteCodeRequest` for cache anchoring.** The struct field order in `runtime/src/schema/extensions.rs` becomes: `constitution-excerpts`, `constitution-excerpts-unexaminable` (omitted from the wire when empty), `plan-relevant-files`, `write-boundary`, `task`, then `task-unexaminable` and `content-form`, each omitted from the wire when absent. The stable prefix (every field before `task`) is contiguous and front; the per-task variable suffix (`task` and the fields after it) is last. Serialized JSON respects this order via `serde`'s declaration-order serialization.
 
 4. **Cache-breakpoint contract.** Spec 022's LLM extension points section gains a one-paragraph contract: hosts SHOULD place a prompt-cache anchor immediately after `write-boundary` and before `task` in serialized `writeCode` request payloads. The contract is advisory — hosts that do not implement prompt caching produce correct results, just at higher token cost per task. Independent host integrations (Claude Code, Pi) converge on the same anchor position by following the contract.
 
@@ -28,6 +28,8 @@ The per-task loop of `/ductus:implement` compounds the cost: across N tasks in o
 
 ## Edge Cases
 
+- **Feature directory leaving the project** (a link out, a `..` feature, or a link beneath it): `plan.md` is not read and the procedure halts with `path-outside-project`, naming it (022 task 41).
+- **A task `tasks.md` does not yield** (no tasks file the runtime could read, or no task by the walk's number): `task` carries the seeded number with an empty heading and no subtasks, and `task-unexaminable` names why, so it never reads as a task that has none (`QUAL-CLAIM-001`; 022 task 41).
 - **Missing or malformed Affected Files table** in `plan.md`: `plan-relevant-files` emits as `[]`; the procedure continues. The host's LLM falls back to its existing context-gathering behavior.
 - **Listed file absent from disk** (planned-new file or rename): omit from the array; do not error.
 - **Command file has no `Reference:` line** (legacy command files yet to be rewritten under 022's conventions): `constitution-excerpts` emits as `[]`.

@@ -188,8 +188,8 @@ MUTATIONS = [
     (
         'M23 a list file that cannot be read does not halt the walk',
         'src/interpreter/mod.rs',
-        '                return Ok(Some(WalkOutcome::Errored { code, message }));\n',
-        '                let _ = (code, message);\n                return Ok(None);\n',
+        '                    }),\n                )?;\n                return Ok(Some(WalkOutcome::Errored { code, message }));\n',
+        '                    }),\n                )?;\n                let _ = (code, message);\n                return Ok(None);\n',
         'interpreter::tests::a_result_whose_list_file_cannot_be_read_halts_the_walk',
     ),
     (
