@@ -8,7 +8,7 @@ The exec walker loads the project's rules once per `/{project}:analyze` walk, th
 
 `framework/commands/analyze.md` and 022's data model are updated to describe the per-rule walk and the host's trigger judgment. 022 is reopened to take those edits and a signpost back to this spec, which discharges the `cross-spec-impact:` entry, then re-reviewed back to `done`. The runtime change ships in a patch release, `0.54.2`.
 
-No `data-model.md` is created here. The only vocabulary this spec adds, one unexamined reason, belongs in the reason table 066's data model owns (`specs/066-audit-records-and-the-completion-gate/data-model.md`, `write-analysis`), and the walker's rule type is internal. There is no `specs/system.md`, `specs/events.md` or `specs/errors.md` in this repository to check the plan against.
+No `data-model.md` is created here. The only vocabulary this spec adds, one unexamined reason, belongs in the reason table 066's data model owns (`specs/066-audit-records-and-the-completion-gate/data-model.md`, `write-analysis`), and the walker's rule type is internal. This repository's `specs/system.md` holds only the network section 022's task 50 added, which this plan does not touch, and there is no `specs/events.md` or `specs/errors.md` to check the plan against.
 
 ## Technical Decisions
 
