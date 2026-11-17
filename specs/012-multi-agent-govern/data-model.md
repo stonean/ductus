@@ -8,7 +8,7 @@ The agent registry is a structured, in-file data model carried by `framework/boo
 
 ## Agent Registry
 
-Each row describes one supported agent. Each row carries six fields; the sixth, `layout`, is what lets an agent whose tree differs structurally from Claude's (Pi's flat `prompts/` directory, say) join the registry.
+Each row describes one supported agent. Each row carries six fields; `layout` is what lets an agent whose tree differs structurally from Claude's (Pi's flat `prompts/` directory, say) join the registry.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |

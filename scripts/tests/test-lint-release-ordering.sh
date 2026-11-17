@@ -22,6 +22,7 @@
 #   L. a tag check publish does not wait for fails, even through other jobs
 #   M. a tag check publish reaches only through another job passes
 #   N. a commented-out tag check fails, as a deleted one does
+#   O. a trailing comment on `needs:`, inline or on a block item, names no job
 #
 # Usage: scripts/tests/test-lint-release-ordering.sh
 
@@ -199,6 +200,27 @@ elif grep -q "no job runs scripts/check-release-tag.sh" "$WORK/n-tag-check-comme
 else
   fail "N: rejected for the wrong reason: $(cat "$WORK/n-tag-check-commented/out")"
 fi
+
+# O. a trailing YAML comment is not part of the job it follows. Read as one,
+#    `needs: publish # gate` names a job `publish#gate`, and the lint cries wolf
+#    on a correctly ordered workflow.
+for form in inline block; do
+  if [ "$form" = inline ]; then
+    edit='s|^    needs: publish$|    needs: publish # gate|'
+  else
+    edit='s|^    needs: publish$|    needs:\
+      - publish # gate|'
+  fi
+  if probe "o-comment-$form" "$edit"; then
+    if cmp -s "$WORKFLOW" "$WORK/o-comment-$form/.github/workflows/runtime-release.yml"; then
+      fail "O ($form): the edit matched nothing, so the trailing comment was not tested"
+    else
+      pass "O ($form): a trailing comment on needs is not read as a job"
+    fi
+  else
+    fail "O ($form): a trailing comment was read as part of the job: $(cat "$WORK/o-comment-$form/out")"
+  fi
+done
 
 echo
 if [ "$failures" -gt 0 ]; then

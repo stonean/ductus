@@ -102,6 +102,8 @@ summary="$(
     /^    needs:[[:space:]]*[^[:space:]]/ {
       needs = $0
       sub(/^    needs:[[:space:]]*/, "", needs)
+      # A trailing YAML comment (`needs: publish # gate`) names no job.
+      sub(/[[:space:]]+#.*$/, "", needs)
       gsub(/[][ ]/, "", needs)
       in_needs = 0
       next
@@ -114,6 +116,7 @@ summary="$(
     in_needs && /^      -[[:space:]]*[^[:space:]]/ {
       item = $0
       sub(/^      -[[:space:]]*/, "", item)
+      sub(/[[:space:]]+#.*$/, "", item)
       gsub(/[][", ]/, "", item)
       needs = (needs == "" ? item : needs "," item)
       next
