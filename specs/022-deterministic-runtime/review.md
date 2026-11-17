@@ -1,27 +1,22 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-17T19:33:00Z
-reviewed-against: b61413d9e5d9abb2b1442b150ec5f3f4f83f0523
-diff-base: 771385fbab93c2ffc916471bcae8178a31f27e3b
+last-run: 2026-11-17T20:05:55Z
+reviewed-against: 56ab4553473e02b5ed9f9c7b4547c68087e348e0
+diff-base: 3e35c5341c0751e9aacb220347e90c39bc9fb88e
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 12
-scope: 20
+examined: 2
+scope: 4
 unread:
-  - docs/runtime.md
-  - runtime/CHANGELOG.md
-  - runtime/src/schema/primitives.rs
-  - specs/022-deterministic-runtime/data-model.md
-  - specs/022-deterministic-runtime/plan.md
-  - specs/022-deterministic-runtime/spec.md
+  - specs/022-deterministic-runtime/analysis.md
   - specs/022-deterministic-runtime/tasks.md
-excluded: 0
+excluded: 1
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
+fix-rounds: 1
 re-reads: 1
-diff-checked: 1
+diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
@@ -106,9 +101,9 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 13
+  fixed: 2
   deferred: 0
-  waived: 20
+  waived: 4
   undispositioned: 0
 decisions:
   - key: "reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs`"
@@ -947,9 +942,9 @@ decisions:
 
 ## Summary
 
-The window since 771385fb (tasks 49-51 and the artifact commits b88a31f4, a7a6f723 and 614a3bdb) was reviewed in two parts. Part A took the runtime: fetch_archive.rs, main.rs and exec_subprocess.rs whole, both mutation lists, specs/system.md and six scenarios whole. Part B took task 51's checker, its test, its list and both workflows whole. Twelve of the 19 scope entries were read whole. The other seven were read by their hunks and are named in unread: primitives.rs and CHANGELOG.md (each about 480 KB, changed only in doc comments and two entries), docs/runtime.md's row, and the spec, plan, data model and tasks hunks, which the analysis judges whole. Each part read the twelve rule files' Statements through discover-rule-files' result, as a projection of ID, tier and Statement. Verifications and Not flagged clauses were read where a case needed them (BE-DATA-001, BE-DEPS-001, QUAL-TEST-001, QUAL-CLAIM-001). The passes found three low-confidence findings: BE-DATA-001 (a named loopback http fetch went through a configured proxy) and QUAL-CLAIM-001 twice in check-npm-audit.py. Round 1 (c0f20d8a) fixed all three, with 12 observations. Five observations were waived by the rule, each with its reason, and fifteen stored decisions on files the scope holds were matched after checking that each issue still stands. The npm timeout bound added in round 1 has no test, since every case drives a report file. That is a test gap, not a claim, and the commit names it.
+The window since 3e35c534 holds task 52 (7d64a274), which extends the loopback proxy test to a [::1] origin and adds M7. One reviewer ran the five passes. It read runtime/src/primitives/fetch_archive.rs and scripts/mutation/fetch-archive-loopback-http.py whole, and the twelve rule files' Statements through discover-rule-files' result, as a projection of ID, tier and Statement. No Verification was needed. The two other scope entries, analysis.md and tasks.md, are artifacts read by their hunks and are named in unread. The reviewer ran the test and M7 by hand in a scratch copy on macOS, where M7 kills only through the [::1] origin. runtime.yml runs the test on Linux and Windows. No finding. Two observations were fixed in round 1: the [::1] bind names IPv6 when it cannot bind, and task 52's text names where the proxy-bypass claim lives. The four stored decisions on fetch_archive.rs were checked and still stand.
 
-2 fix round(s): 1 re-read, 1 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
 ## MUST violations (blocking)
 
@@ -974,38 +969,11 @@ The window since 771385fb (tasks 49-51 and the artifact commits b88a31f4, a7a6f7
 ## Observations
 
 - security: a redirect hop is looked up twice rather than connected to the address its screen resolved — `runtime/src/primitives/fetch_archive.rs` — **waived**: 022's scenario allows an equivalent connect-time re-check, both lookups are screened, and the owner prescribed this resolver and its staged-rebind test
-- security — ductus parse FILE reads any path it is given with no containment and prints the parsed procedure (the whole AST, content included) when the file is Procedure-shaped markdown; every primitive path argument goes through validate_contained. The subcommand is CLI-only (excluded from the MCP registry by NON_PRIMITIVE_SUBCOMMANDS) and is driven by scripts/lint-procedure-parseability.sh over framework/commands. — `runtime/src/main.rs:635-681` — **waived**: a local CLI debug and CI surface the MCP server does not expose, supplied by the operator or a script, and an agent that can run it can already read the same file with its shell; no host-to-runtime trust boundary lies between the path's supplier and its reader, and the plan's path-argument section scopes the check to primitives (decided by the rule)
-- convention — is_loopback_literal sits between is_internal_ip's doc comment and its fn, so is_internal_ip lost its doc and the two docs merged — `runtime/src/primitives/fetch_archive.rs:1004` — **fixed** (decided by the rule)
-- other — scripts/mutation/fetch-archive-loopback-http.py holds no mutant of the https exemption arm, which task 50's each-failing-under-its-mutant names — `scripts/mutation/fetch-archive-loopback-http.py` — **fixed** (decided by the rule)
-- other — no test holds that ductus exec refuses a bare argument before the command file is read: the test's command file exists and parses, so moving exec_overrides later stays green — `runtime/tests/exec_subprocess.rs:689` — **fixed** (decided by the rule)
-- other — no test pins a redirect to plain http at a named host off loopback, or the named loopback's other spellings, which behave as documented — `runtime/src/primitives/fetch_archive.rs:1459` — **fixed** (decided by the rule)
-- convention — the Exec arguments paragraph sits between the inbound messages' JSON-shape sentence and the gate-response paragraph that continues the same topic — `specs/022-deterministic-runtime/data-model.md:124` — **waived**: the move would change no claim, rule or behavior, which the Observations rules in framework/reference/review.md say is no observation (decided by the rule)
-- other — no test case feeds a report without a vulnerabilities map, npm's own error object among them, so deleting that check leaves every case passing — `scripts/tests/test-check-npm-audit.sh` — **fixed** (decided by the rule)
-- other — no test case lists an advisory under another package, so dropping the package comparison leaves every case passing — `scripts/tests/test-check-npm-audit.sh:118` — **fixed** (decided by the rule)
-- other — no list under scripts/mutation/ records task 51's checker mutants — `scripts/check-npm-audit.py` — **waived**: scripts/mutation/run.py applies Rust anchors and runs cargo test; the checker's mutants run through the test's CHECKER override, as e254a3f8 and this round's commit record (decided by the rule)
-- bug — a listed advisory npm reports below high passes, counted neither as listed nor as stale — `scripts/check-npm-audit.py:135` — **fixed** (decided by the rule)
-- convention — the test's closing line hard-codes its case count — `scripts/tests/test-check-npm-audit.sh:122` — **fixed** (decided by the rule)
-- other — the exception's reason says no pattern from outside the repository reaches the lint tooling, but .githooks/pre-commit passes staged .md paths to markdownlint-cli2 --fix as globs with no parenthesis screen — `scripts/npm-audit-allowed.json` — **fixed** (decided by the rule)
-- other — --package-lock-only judges the lockfile alone and passes against a package.json out of step with it, and runtime-currency.yml runs no npm ci — `.github/workflows/runtime-currency.yml` — **waived**: framework-checks.yml runs npm ci, which fails on a lockfile out of step with package.json, on every push and pull request, so such drift cannot reach main without failing that run (decided by the rule)
-- bug — a vulnerability whose via is null, or any other shape the checker does not expect, crashes it with a traceback and exit 1, not the documented exit 2 — `scripts/check-npm-audit.py:120` — **fixed** (decided by the rule)
-- perf — subprocess.run of npm audit sets no timeout, so only the jobs' timeout-minutes bound a hung npm — `scripts/check-npm-audit.py:79` — **fixed** (decided by the rule)
-- convention — task 51's text says a listed advisory fails once the installed version falls outside its range, where the checker compares the reported range — `specs/022-deterministic-runtime/tasks.md` — **fixed** (decided by the rule)
-- convention — scripts/npm-audit-allowed.json's listed field is read by nothing — `scripts/npm-audit-allowed.json` — **waived**: a note for the list's reader of when and under what decision the entry was listed, as a decision's decided-at is; the checker reads the four fields its contract names (decided by the rule)
-- convention — parse_args is hand-rolled where argparse would do — `scripts/check-npm-audit.py:95` — **waived**: the four-flag parser keeps the step's exit-2 nothing-was-judged message for an unknown argument, which argparse's own usage error would replace (decided by the rule)
+- other — the [::1] origin's bind in a_named_loopback_host_is_fetched_without_the_proxy is a bare unwrap, so a runner with no IPv6 loopback panics without saying why — `runtime/src/primitives/fetch_archive.rs:2189` — **fixed** (decided by the rule)
+- convention — task 52's text credits specs/system.md and the plan with the loopback proxy-bypass claim, which docs/runtime.md and the changelog carry — `specs/022-deterministic-runtime/tasks.md:196` — **fixed** (decided by the rule)
 - reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs` — **waived**: the GaiResolver it replaced behaves the same way, and in production the lookup is getaddrinfo, which the operating system resolver's own timeouts bound
 - reliability: the initial and redirect-screen lookups run outside the client's timeout — `runtime/src/primitives/fetch_archive.rs` — **waived**: unchanged by this fix and bounded the same way, by the operating system resolver's timeouts; FETCH_DEADLINE bounds the download itself
 - other: two proxy tests each define the same four-line internal-address lookup — `runtime/src/primitives/fetch_archive.rs` — **waived**: test fixtures local to each test; sharing one would couple the tests for no gain
-- tests: the macOS integration test leaks its mktemp directory if building the archive or spawning the binary panics — `runtime/tests/exec_subprocess.rs` — **waived**: it leaks only on a panic before its assertions, one empty directory under the per-user temp directory, which macOS clears
-- other: framework-checks step (m) tests the pins check on fixtures only, so a pull request adding a tag-pinned uses: merges green until the weekly run reports it — `.github/workflows/framework-checks.yml` — **waived**: The owner chose the weekly currency check as the pins' update process (022 task 3, option c); a per-pull-request pin lint is not part of it and would be its own decision.
-- other: runs-on: ubuntu-latest is mutable and now supplies framework-checks' Node too — `.github/workflows/framework-checks.yml` — **waived**: The owner chose the runner image's Node (022 task 3, option a), and a GitHub-hosted image has no immutable reference to pin.
-- other — main.rs error paths use eprintln!, which panics when stderr is a pipe whose reader has gone, so a failing run can exit 101 instead of 1; the closed-stdout scenario scopes itself to stdout and names the eprintln sites as unchanged — `runtime/src/main.rs:455` — **waived**: a-closed-stdout-is-a-quiet-exit scopes its behavior to the stdout result writers and states main.rs still writes errors with eprintln, and the run is already failing when these fire (decided by the rule)
-- other — the CLI flag hydration is a table of 21 hydrate_field calls and tests prove only the shared helper and two primitives, so a call dropped or pointed at the wrong argument (applied against expired waivers, say) fails no test; every_mcp_argument_has_a_cli_form pins clap presence only — `runtime/src/main.rs:339` — **waived**: d3192610 records the hydration helper proved red with its assignment removed, and each of the 21 calls pairs a flag with its same-named field, so a swap shows in review as a name mismatch (decided by the rule)
-- other — a stdout reader that has gone is a quiet exit 141 for every result written through write_stdout_line, but ductus exec (protocol envelopes written by the interpreter and emit_exec_error) and gate-confirm still report it as exit 1 or 74 with a stderr message. Driven on a fixture: resolve-session exits 141 with empty stderr; exec of an unknown command exits 1 and prints 'failed to emit error envelope: Broken pipe'. No panic in either, and the scenario a-closed-stdout-is-a-quiet-exit scopes the fix to the result emitters in main.rs. — `runtime/src/main.rs:733-748` — **waived**: the scenario's Context names the result emitters in main.rs as the sites and its test covers three of them; exec's stdout is the walk's protocol channel, where a closed reader ends the walk with an error status distinct from a panic, which the scenario's second behavior requires, and nothing is written twice (decided by the rule)
-- other — the 21 --{name}-json flags are each hydrated by one hydrate_field call in main.rs (checked: 21 flags in schema/primitives.rs, 21 calls, every flag paired with its own field), but only process-waivers' fired-json and write-review's fix-rounds-json are driven by a test; every_mcp_argument_has_a_cli_form checks that a flag exists, not that main.rs reads it, so dropping a hydrate_field call for any of the other 19 passes the suite and silently sends an empty list. The commit message records one mutation proof only. — `runtime/src/main.rs:1719-1814` — **waived**: scenario every-mcp-argument-has-a-cli-form requires one test that every MCP argument has a CLI form, which every_mcp_argument_has_a_cli_form meets, and the hydration test the commit adds proves its behavior for two flags; the other pairings were read and are correct today, and no loaded rule's Statement is violated by the gap (decided by the rule)
-- other — main.rs reports its failure paths with over thirty eprintln! calls, which panic when the stderr reader has gone, where the stdout writes go through write_stdout_line (task 27) and warn_unknown_keys writes stderr without panicking — `runtime/src/main.rs:285` — **waived**: each call is on a path that is already failing, so a closed stderr changes the exit status from 1 to a panic's 101 on a run that had failed anyway, and no result or write is lost (decided by the rule)
-- other — the two CLI json-flag tests drive 2 of the 14 hydration arms task 24 added (fired-json and fix-rounds-json), so deleting or mis-wiring another arm leaves both green while the flag is ignored; the commit records a mutant for each test, not for each arm — `runtime/src/main.rs:1774` — **waived**: each omitted arm is one hydrate_field call whose flag and field names were read pairwise here and agree, and the commit records how each test was shown to fail (decided by the rule)
-- tests — after b1d319f1 ported the Auggie fixture to a Pi-shaped one, no exec subprocess test reaches the claude-style commands/<project>/ candidate through ductus exec; the candidate order is asserted in host.rs (command_file_candidates_cover_claude_style_then_pi) and the installed claude-style path through the MCP server in tests/mcp.rs — `runtime/tests/exec_subprocess.rs:446-500` — **waived**: locate_exec_command walks a candidate list and is agnostic to which layout produced a candidate, and that list is asserted at the unit level, so the end-to-end exec path loses no distinct branch. (decided by the rule)
-- other — docs/runtime.md's NO_PROXY row said nothing bypasses a set proxy, which round 1 made untrue by always adding the loopback ranges — `docs/runtime.md` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -1013,7 +981,7 @@ The window since 771385fb (tasks 49-51 and the artifact commits b88a31f4, a7a6f7
 
 ## Excluded from scope
 
-*None.*
+- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 060-exec-analyze-assesses-each-loaded-rule
 
 ## Unexamined governance
 
