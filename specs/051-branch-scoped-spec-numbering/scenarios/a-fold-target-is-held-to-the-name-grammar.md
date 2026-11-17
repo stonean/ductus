@@ -10,16 +10,19 @@ section: "Fold-back on merge"
 
 `to` was held only to no parent-directory escape, containment inside the project, and two non-empty halves. The scenario half, which the data model calls a scenario slug, accepted any text — a space, `;`, `$(...)`, a further `/` — and the feature half accepted any directory holding a `spec.md`, `templates` included, which every adopter has. `/{project}:fold` validates the slug one step earlier, at `create-scenario`, so only a caller outside that flow reached the gap; but the primitive is callable on its own, which is why its other guards live inside it. A denylist as the sole defense for a constrained input is what `BE-INPUT-002` forbids, and it is the pattern `retarget-sessions` was held to the session validators for (062). Found by [048](../../048-govern-acquired-runtime/spec.md)'s review on 2026-10-29: `--to '002-b/a b;c'` wrote `specs/002-b/scenarios/a b;c.md` into a fixture's hook and README.
 
+`from` was held only to the same screen, so a dot passed (022 task 42).
+
 ## Behavior
 
 - The feature half of `to` is a feature directory name by the shared membership rule, in visible ASCII with no path separator, and its scenario half, when present, matches the scenario slug grammar: the two checks `retarget-sessions` applies. A legacy sequential slug is otherwise unchecked, as it is for a session, so a hand-made directory whose name carries a shell metacharacter still passes; it must also hold a `spec.md`. Anything else is refused as an invalid `to`, naming the grammar, before any file is read or written.
-- `from` is unchanged: it is compared against path segments and never written.
+- `from` is held to the same feature-directory membership rule as the feature half of `to`, in visible ASCII with no path separator, and refused as an invalid `from`, naming the grammar, before any file is read. It is compared against the first path segment of every link in the corpus, so a dot, a file name or a bare word names no feature and would re-point every link that spells it: `--from . --to 050-alpha` re-pointed every `./` link in a fixture corpus. Only the name is held, not the directory's existence, since a retired feature's directory is gone (022 task 42, the owner's decision of 2026-11-17).
 
 ## Edge Cases
 
 - **`templates`, or any other directory that is not a feature**, is refused though it holds a `spec.md`: the existence check answers whether a link can resolve, not whether the name is a feature's.
 - **A branch-scoped target** (`{identifier}.{n}-{slug}`) passes, so a rename or a fold into one is unaffected.
 - **A refused call leaves the corpus byte-identical**, as the existence check's refusal does.
+- **A `from` that names no feature directory** (`.`, `spec.md`, `a/b`, a bare word) is refused with the corpus byte-identical, as a refused `to` is.
 
 ## Open Questions
 
