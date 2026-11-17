@@ -19,7 +19,7 @@ The same report found three smaller gaps:
 ## Behavior
 
 - `consolidate.md` states the order:
-  1. Merge the content into the target, with body edits and `git mv` for each scenario and data model the target is to hold.
+  1. Merge the content into the target, with body edits and a move for each scenario and data model the target is to hold: `mv`, then `git add -A -- {source} {destination}`, which stages the rename, since `/{project}:configure` denies `git mv` (022 task 45).
   2. Run the command.
   3. Commit the move and the consolidation as one commit.
 
