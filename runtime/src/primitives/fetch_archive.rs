@@ -52,7 +52,10 @@
 //! `169.254.169.254` cloud-metadata endpoint), RFC-1918 private,
 //! unique-local, or unspecified address is rejected. IPv4-mapped IPv6
 //! addresses are unwrapped so a `::ffff:127.0.0.1` literal cannot smuggle
-//! an internal target past the v4 screen.
+//! an internal target past the v4 screen. A host the operator names in
+//! `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` skips the address screen over `https`,
+//! and passes over plain `http` only as a loopback literal
+//! ([`is_loopback_literal`]), the one plaintext `specs/system.md` documents.
 //!
 //! The connection uses only screened addresses (`BE-INPUT-016`). The first
 //! host is pinned to the addresses the screen resolved, so it is resolved
@@ -366,7 +369,9 @@ struct Screen {
     /// The system resolver in production; a test injects one to stage a host
     /// that rebinds between lookups.
     lookup: Box<Lookup>,
-    /// Hosts exempted from both screens (`DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`).
+    /// Hosts exempted from the internal-address screen, and from the
+    /// https-only screen when a loopback literal
+    /// (`DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`).
     insecure: Vec<String>,
     /// The named hosts of the configured proxies reqwest accepts. Through a
     /// proxy the operator's proxy is the trust boundary (module docs), so the
@@ -420,7 +425,9 @@ impl Screen {
         }
     }
 
-    /// Whether `host` is exempted from the SSRF and scheme screens.
+    /// Whether `host` is named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`: exempt from
+    /// the internal-address screen, and from the https-only screen only when
+    /// it is a loopback literal ([`is_loopback_literal`]).
     fn exempt(&self, host: &str) -> bool {
         self.insecure.iter().any(|entry| entry == host)
     }
@@ -515,14 +522,28 @@ fn screen_url(url: &str, screen: &Screen) -> std::result::Result<FetchScreen, St
     // Explicit opt-in escape hatch for internal mirrors and local testing.
     // The SSRF rule (BE-INPUT-007) denies internal ranges *by default*; a
     // host named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` (comma-separated) is
-    // exempted from both the https-only and internal-address screens. Empty
-    // by default, so the secure posture holds unless an operator opts in.
-    // Only a URL that actually carries a host can be allowlisted; hostless
-    // URLs (e.g. `file://`) fall through to the scheme rejection below.
+    // exempted from the internal-address screen over https. Plain `http`
+    // passes only to a named loopback literal, since BE-DATA-001 allows
+    // plaintext on loopback alone (`specs/system.md`); a named host off
+    // loopback is refused over http, and any other scheme falls through to the
+    // scheme rejection below. Empty by default, so the secure posture holds
+    // unless an operator opts in. Only a URL that actually carries a host can
+    // be allowlisted; hostless URLs (e.g. `file://`) fall through as well.
     if let Some(host) = parsed.host_str()
         && screen.exempt(host)
     {
-        return Ok(FetchScreen::Unpinned);
+        match parsed.scheme() {
+            "https" => return Ok(FetchScreen::Unpinned),
+            "http" if is_loopback_literal(host) => return Ok(FetchScreen::Unpinned),
+            "http" => {
+                return Err(format!(
+                    "scheme `http` is permitted only to a loopback host (127.0.0.0/8 or ::1); \
+                     `{host}` is named in {FETCH_ALLOW_INSECURE_HOSTS_ENV} but is not a loopback \
+                     address, so fetch it over https"
+                ));
+            }
+            _ => {}
+        }
     }
     if parsed.scheme() != "https" {
         return Err(format!(
@@ -984,6 +1005,19 @@ fn fetch_refused(url: &str, reason: &str) -> PrimitiveError {
 /// SSRF denial ranges. Delegates to per-family helpers; IPv4-mapped IPv6
 /// addresses are unwrapped to their v4 form first so they cannot bypass
 /// the v4 screen.
+/// Whether a URL's host is a loopback IP literal: an IPv4 address in
+/// `127.0.0.0/8` or the IPv6 `::1`, bracketed as a URL carries it. A name, even
+/// `localhost`, is not one, since it resolves to whatever the system says;
+/// so plain http to a named host goes only to an address that cannot leave
+/// this host (BE-DATA-001).
+fn is_loopback_literal(host: &str) -> bool {
+    let bare = host
+        .strip_prefix('[')
+        .and_then(|inner| inner.strip_suffix(']'))
+        .unwrap_or(host);
+    bare.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+}
+
 fn is_internal_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_internal_v4(v4),
@@ -1414,6 +1448,58 @@ mod tests {
         // in-process env mutation here, which would race sibling tests).
         assert!(!screen().exempt("127.0.0.1"));
         assert!(!screen().exempt("example.com"));
+    }
+
+    /// A named host skips the internal-address screen over https, but plain
+    /// http reaches only a named loopback literal (spec 022 task 50,
+    /// BE-DATA-001): a named mirror, a private address or the name
+    /// `localhost` is refused over http, naming loopback. The resolver
+    /// answers nothing, so a host that reached it would fail differently.
+    #[test]
+    fn plain_http_reaches_only_a_named_loopback_literal() {
+        let named = [
+            "127.0.0.1",
+            "127.8.9.10",
+            "[::1]",
+            "mirror.internal",
+            "10.0.0.5",
+            "localhost",
+        ];
+        let screen = Screen::new(
+            Box::new(|_, _| Ok(Vec::new())),
+            named.iter().map(|host| (*host).to_string()).collect(),
+            &ProxyEnv::NONE,
+        );
+        for url in [
+            "http://127.0.0.1:8080/a.tar.gz",
+            "http://127.8.9.10/a.tar.gz",
+            "http://[::1]:9/a.tar.gz",
+            "https://mirror.internal/a.tar.gz",
+            "https://10.0.0.5/a.tar.gz",
+        ] {
+            assert!(
+                matches!(validate_fetch_url(url, &screen), Ok(FetchScreen::Unpinned)),
+                "{url} is fetched unpinned"
+            );
+        }
+        for url in [
+            "http://mirror.internal/a.tar.gz",
+            "http://10.0.0.5/a.tar.gz",
+            "http://localhost/a.tar.gz",
+        ] {
+            let msg = validate_fetch_url(url, &screen).unwrap_err().to_string();
+            assert!(msg.contains("only to a loopback host"), "{url}: {msg}");
+        }
+        // Another scheme to a named host meets the https-only refusal.
+        let msg = validate_fetch_url("ftp://mirror.internal/a.tar.gz", &screen)
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("only https is allowed"), "{msg}");
+        // An unnamed loopback host is not exempt over http.
+        let msg = validate_fetch_url("http://127.0.0.2/a.tar.gz", &screen)
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("only https is allowed"), "{msg}");
     }
 
     #[test]

@@ -1,5 +1,5 @@
 ---
-next-task: 50
+next-task: 52
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -174,3 +174,19 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 - [ ] A test runs `ductus exec` with a bare argument and with `=value`, and shows the terminal `invalid-argument` envelope naming the argument, exit 1 and no `progress` line, failing under its mutant (the old drop), with the mutant in a list under `scripts/mutation/`
 
 - **Done when**: a bare or empty-key exec argument halts with a terminal `invalid-argument` envelope naming it, proven by a test its mutant turns red; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change.
+
+## 50. fetch-archive allows plain http only to a named loopback host (BE-DATA-001, from 022's analysis; owner decision)
+
+- [ ] `screen_url` (`runtime/src/primitives/fetch_archive.rs`) lets a host named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` skip both the https-only and the internal-address screens, so plain http reaches an internal mirror, a host-crossing leg BE-DATA-001 forbids. A named host keeps the internal-address exemption over https; plain `http` passes only when the named host is a loopback IP literal (127.0.0.0/8, `::1`), and a named non-loopback host over http is refused with an error naming loopback, on the fetch URL and every redirect hop alike. The owner chose loopback-only http on 2026-11-17, over a departure entry or no plaintext at all
+- [ ] A new `specs/system.md` documents the loopback plaintext, as BE-DATA-001 requires; plan.md §`fetch-archive` transport, `docs/runtime.md`'s variable row and the module and doc comments state the narrowed exemption; `runtime/CHANGELOG.md` records it as BREAKING for an adopter fetching from an http mirror
+- [ ] A test shows http reaching a named loopback literal (IPv4 and IPv6), http to a named non-loopback host or name (`localhost` among them) refused naming loopback, and https to a named non-loopback host passing the internal-address screen, each failing under its mutant in a list under `scripts/mutation/`
+
+- **Done when**: plain http reaches only a named loopback literal, proven by a test its mutant turns red; `specs/system.md` documents it; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change.
+
+## 51. The lint tooling's audit allows a named advisory with no patched release (owner decision)
+
+- [ ] framework-checks' step "The lint tooling carries no high or critical advisory" ran `npm audit --audit-level=high`, which failed every push once GHSA-fc5q-39xc-vjpf (picomatch <=4.0.7 ReDoS, reached through markdownlint-cli2 0.24.0's micromatch) was published on 2026-11-17 with no patched release. The step fails on any high or critical advisory except one a committed list names with its advisory ID, why it does not reach this repository, and its affected range, and a listed advisory fails the step again once the installed version falls outside that range or npm reports a fix that is not a breaking change. The owner chose this on 2026-11-17, over waiting for upstream or lowering the level to critical
+- [ ] 022's plan §Provenance names the list and when an entry goes
+- [ ] A test feeds the step's checker an `npm audit --json` report and shows an unlisted high advisory failing it, a listed one passing, and a listed one failing once out of range or once a non-breaking fix is reported, each failing under its mutant
+
+- **Done when**: the audit step passes on the listed picomatch advisory and fails on any unlisted high or critical one, proven by a test its mutants turn red; both workflows' steps pass; and 022's next review reads the change.

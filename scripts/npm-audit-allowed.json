@@ -1,0 +1,11 @@
+{
+  "allowed": [
+    {
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "range": "<=4.0.7",
+      "reason": "A ReDoS through a glob pattern's repeated extglobs, reached through markdownlint-cli2 0.24.0's micromatch. No picomatch release is patched. The lint tooling globs only patterns this repository writes (.markdownlint-cli2.jsonc's globs and the paths its CI steps and scripts pass), and the lint-markdown primitive refuses a path holding a parenthesis, which an extglob needs, so no pattern from outside the repository reaches it.",
+      "listed": "2026-11-17, spec 022 task 51 (owner decision)"
+    }
+  ]
+}

@@ -55,9 +55,10 @@ jobs:
         run: ./scripts/check-runtime-currency.sh
 
       # BE-DEPS-001 between pushes: the same gate as framework-checks.yml's,
-      # read from package-lock.json alone, so nothing is installed. It runs
-      # whatever the step above returned, so one red check never hides the
-      # other. Node and npm are the runner image's own.
+      # scripts/npm-audit-allowed.json's entries included, read from
+      # package-lock.json alone, so nothing is installed. It runs whatever the
+      # step above returned, so one red check never hides the other. Node and
+      # npm are the runner image's own.
       - name: The lint tooling carries no high or critical advisory
         if: ${{ !cancelled() }}
-        run: npm audit --audit-level=high --package-lock-only
+        run: python3 -I scripts/check-npm-audit.py --package-lock-only

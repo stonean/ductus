@@ -79,15 +79,21 @@ jobs:
         run: npm audit signatures
 
       # BE-DEPS-001: a dependency with a known high or critical vulnerability
-      # is updated, replaced, or has a documented exception. npm's own
-      # --audit-level fails this step on any high or critical advisory in the
-      # installed tree, so a new one fails a run instead of waiting for someone
-      # to read a log (022 task 13, the owner's answer (c), 2026-11-12).
+      # is updated, replaced, or has a documented exception. check-npm-audit.py
+      # fails this step on any high or critical advisory in the installed tree
+      # that scripts/npm-audit-allowed.json does not list, so a new one fails a
+      # run instead of waiting for someone to read a log (022 task 13, the
+      # owner's answer (c), 2026-11-12). The list is the documented exception,
+      # for an advisory no release fixes: an entry fails the step again once
+      # npm reports a non-breaking fix, its range changes, or it is no longer
+      # reported (022 task 51, 2026-11-17). Its test runs here too.
       # package.json's overrides entry moves markdownlint-cli2 0.24.0's
       # markdownlint from 0.42.0 to 0.42.1, whose re2js 2.9.1 fixes
       # GHSA-gg6h-894w-4m9c; 022's plan, Provenance, says when it goes.
       - name: The lint tooling carries no high or critical advisory
-        run: npm audit --audit-level=high
+        run: |
+          python3 -I scripts/check-npm-audit.py
+          bash scripts/tests/test-check-npm-audit.sh
 
       # The two frontmatter derivations are runtime primitives since spec
       # 067's adopter-generator-promotion, so this step needs the binary and

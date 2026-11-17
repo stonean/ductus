@@ -1346,6 +1346,17 @@ its version and date.
 
 ### Fixed
 
+- **BREAKING: `fetch-archive` fetches over plain `http` only from a named loopback
+  host (spec 022 task 50; 022's analysis of 2026-11-17, `BE-DATA-001`).** A host
+  named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` skipped both the https-only and
+  the internal-address screens, so plain `http` reached an internal mirror, a
+  leg that crosses hosts. A named host still skips the internal-address screen
+  over `https`. Plain `http` now passes only when the named host is a loopback
+  literal (`127.0.0.0/8` or `::1`). Any other named host, the name `localhost`
+  among them, is refused over `http` with an error that names loopback, on the
+  fetch URL and every redirect hop alike. `specs/system.md` documents the
+  loopback plaintext. An adopter fetching from an `http` mirror now fails and
+  must serve it over `https`.
 - **BREAKING: `ductus exec` refuses a forwarded argument it cannot bind (spec
   022 task 49; found by 022's pre-done verification, 2026-11-17).** `run_exec`
   bound each `key=value` argument into the walker context and dropped any other
