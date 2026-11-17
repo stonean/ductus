@@ -73,6 +73,13 @@
 #      python3 fails that call alone, reports the path as not checked and
 #      stops, never reporting it as resolving outside (placed last, after T to W)
 #
+# Cases I, J and P require, in place of the containment finding, the family's
+# report that it examined nothing, and that it never reached the outside path:
+# Families 7, 8 and 37 enumerate their corpus through `dashboard`, which refuses
+# the whole call when a feature directory or the spec root links out of the
+# project (spec 022 task 42; the owner's decision of 2026-11-17). So case S
+# runs those three families over in-tree fixtures of their own (si, sj, sp).
+#
 # The same file proves the audit fixes of 026's third review that a fixture
 # reaches: I2 (Family 7 fails on an awk that cannot run match(), where it once
 # exited 0 in silence), and L to L4 (Family 12 passes a fixture directory name
