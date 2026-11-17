@@ -1,5 +1,5 @@
 ---
-next-task: 46
+next-task: 47
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -122,10 +122,10 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 44. Review round: tests pin their behavior, and the small fixes (022's review, 2026-11-17)
 
-- [ ] The `dropping_named_tempfile_leaves_target_unchanged` tests in `mark_criterion.rs`, `set_status.rs`, `mark_task.rs` and `append_task.rs` call the primitive they name (F12, F13 and the class; QUAL-TEST-001). `exec`'s missing-command test asserts the `command-not-found` code and message (F22). `locate_exec_command` labels only an `InvalidPath` as `command-file-outside-project` (O6)
-- [ ] Family 17 (`scripts/audit/host-namespace-parity.sh`) halts on a `[host] project` that `Host::load` refuses since task 40, rather than reading it as absent (F23). Its contract assertion greps the key's declaration, `project: Option<String>` (O87)
-- [ ] `append-inbox` refuses marker-only text, a bare checkbox, as scenario `append-primitive-marker-normalization` requires (O37, a broken contract)
-- [ ] Chores: the `APPEND_TASK` description states the lock's attempt bound beside its ten seconds (O56); `install.sh`'s size comment (O77); `runtime.yml`'s path lists gain `.markdownlint-cli2.jsonc` (O81); `parity.rs`'s stale `{REPO}` substitution and comment (O86); `test-lint-release-ordering.sh` cases G and H guard their `sed` edit as case M does (O90); `protected-paths.py`'s reused M6 becomes a new id (O91)
+- [x] The `dropping_named_tempfile_leaves_target_unchanged` tests in `mark_criterion.rs`, `set_status.rs`, `mark_task.rs` and `append_task.rs` call the primitive they name (F12, F13 and the class; QUAL-TEST-001). `exec`'s missing-command test asserts the `command-not-found` code and message (F22). `locate_exec_command` labels only an `InvalidPath` as `command-file-outside-project` (O6)
+- [x] Family 17 (`scripts/audit/host-namespace-parity.sh`) halts on a `[host] project` that `Host::load` refuses since task 40, rather than reading it as absent (F23). Its contract assertion greps the key's declaration, `project: Option<String>` (O87)
+- [x] `append-inbox` refuses marker-only text, a bare checkbox, as scenario `append-primitive-marker-normalization` requires (O37, a broken contract)
+- [x] Chores: the `APPEND_TASK` description states the lock's attempt bound beside its ten seconds (O56); `install.sh`'s size comment (O77); `runtime.yml`'s path lists gain `.markdownlint-cli2.jsonc` (O81); `parity.rs`'s stale `{REPO}` substitution and comment (O86); `test-lint-release-ordering.sh` cases G and H guard their `sed` edit as case M does (O90); `protected-paths.py`'s reused M6 becomes a new id (O91)
 
 - **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
 
@@ -137,3 +137,10 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] `framework/commands/consolidate.md`'s `git mv`, which configure denies (O22). `framework/bootstrap/ductus.md`'s "ls is run by no step", with `govern.md` kept byte-identical (O98). `derive-references`' Errors doc (O47). Task 23's leftover clause (O27)
 
 - **Done when**: every item is fixed and checked on the tree, the generators report in sync, `npx markdownlint-cli2` and the hook pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 46. Every project-file read is contained: the functions the 66-row grep missed, and every feature-argument site in the containment test (BE-INPUT-004, owner decision)
+
+- [ ] Audit each function task 42's wider grep named as reading or probing a project file with no containment helper in its body, and route each uncontained project-file read through plan §Path arguments' helpers, refused or reported unread and never followed, with a test and a mutant each: `analyze_subjects.rs` (`subject_digest`, `analyze_freshness`, `without_plan_edits`), `append_task.rs` (`derive_tasks_heading`), `check_artifact_size.rs` (`decide`), `check_artifacts.rs` (`check_unchecked_boxes`, `read_target_state`, `check_criterion_labels`), `check_review_gate.rs` (`unchecked_task_block`), `classify_spec_edit.rs`, `derive_references.rs` (`load_registry`), `lint_markdown.rs` (`resolve_markdownlint`), `mod.rs` (`read_recorded_list`, `read_json_file_in`, `list_tracked_specs`' non-git fallback), `process_waivers.rs` (`departure_gone`), `prune_plan.rs` (`reopen_required`), `prune_tasks.rs` (`read_status`), `read_spec.rs` and `read_tasks.rs` (`*_unlinked`, `refuse_while_tasks_are_open`), `render_help.rs` (`guide`), `resolve_anchor.rs` (`load`, `shipped_sources`), `resolve_feature.rs` (`read_status`, `scenario_detail`), `resolve_constitutions.rs` (`classify`), `run_generator.rs` (`write_script`), `tool_loading.rs` (`resolve`), `traverse_deps.rs` (`read_dependencies`), `validate_frontmatter.rs` (`validate_spec_row`), `schema/paths.rs` (`constitution_path`), `session.rs`, `interpreter/mod.rs` (`spec_file`) and `main.rs` (`has_own_record`). Each gets a verdict in the commit: contained now, already contained by a named caller, or not a project-file read. The 2026-11-17 grep of 66 rows was taken as an upper bound and was not one; the owner chose on 2026-11-17 to audit these rather than close the class over the 66
+- [ ] The containment test's table (`feature_argument_cases`) holds every caller of a `validate_feature_*` helper, `brief-re-read`, `read-re-read`, `check-prescriptions`, `start-fix-rounds`, `classify-spec-edit`, `discover-rule-files`, `create-feature` and `dashboard` among them, so `every_feature_argument_site_refuses_an_outward_feature_link` holds each to the check; plan §Path arguments and scenario `a-path-argument-resolves-inside-its-base` say so
+
+- **Done when**: every named function has a verdict, each uncontained read is contained and proven by a test its mutant turns red, the test table holds every feature-argument site, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
