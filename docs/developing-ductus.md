@@ -53,6 +53,15 @@ A mutant that survives is a finding: read why before re-landing. After an edit t
 
 Copy each binary out of its target directory first, and check the copy holds what it should with `strings <copy> | grep '<a new literal>'`. `cargo test` runs `cargo build --release` in `CARGO_TARGET_DIR` (`runtime/tests/exec_subprocess.rs`, `concurrent_sessions.rs`), so a binary left there is overwritten by the next landing, and a comparison of it against the new one reads 0 differences, which looks like a clean result. Build the old one from a worktree of its commit into its own target directory. Run from a clean worktree of `HEAD`, since an uncommitted edit joins every spec's scope and the gate lints. Give it a real `node_modules` directory holding a link to the checkout's `node_modules/.bin`: `.gitignore`'s `node_modules/` matches no symbolic link, so a linked `node_modules` is itself an untracked path in every spec's scope.
 
+## Sizing a review's parts
+
+A subagent reviewer finishes a part only when the part fits the reading it will actually do. Measured on 022's review on 2026-11-16 and 2026-11-17, a part is the nine backend rule files (285,666 bytes) plus the spec's acceptance criteria and the scenarios and plan sections its files bear on, plus its own slice:
+
+- Six reviewers given about 1.0 to 1.3 MB each all stopped on their own, at 157K to 482K tokens, with most of the part unread.
+- Twenty-three given about 550 KB each (slice at most about 160 KB of hunks, or one large file whole) all finished, at 275K to 525K tokens, mean 387K.
+
+So size a part by bytes read, not by entry count. Name the contract each part reads instead of the whole spec, plan and data model: the command's normative sources are the rule files, `AGENTS.md`'s sections, the acceptance criteria and the scenarios (`framework/reference/review.md` §Load rules). A reviewer that stops short with a named gap can be asked to finish it with `SendMessage`, keeping its context; the two asked to finish took 34K and 57K more tokens. A fix-round re-read's brief carries the spec, data model and scenarios whole, so keep each round's diff small enough to fit beside them.
+
 ## Running a second session
 
 Each session needs its own checkout: on a fixture, one session's uncommitted file in a shared tree joined the other's review scope and took its gate from passing to `review-owed` until it was gone (079's Resolved Questions), and the pre-commit hook and `.ductus/bin/ductus` are shared there too. Two clones, each on `main`, rebase past each other cleanly, and a record's `reviewed-against` no longer being an ancestor afterwards changes neither the gate nor the scope.
