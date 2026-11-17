@@ -44,8 +44,18 @@ Gate the commit on every check's exit status, mutants included, in one script: a
 
 1. From a worktree of `HEAD` with this checkout's diff applied and its untracked files copied, since a patch carries none, and its own `CARGO_TARGET_DIR`: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, the whole `cargo test`, and each new or re-anchored mutant by id. An uncommitted edit there joins no other session's scope.
 2. Here: `cargo build --release --locked`, since the hook and the audit run that binary, then `framework-checks.yml`'s and `generators.yml`'s steps: `python3 -I scripts/run-workflow-steps.py .github/workflows/framework-checks.yml .github/workflows/generators.yml`. Its generator-diff step reads this uncommitted tree, so before a commit it fails by construction. So does its self-audit step (h) when the change edits a `framework/commands/*.md` source: the audit's check-zero runs `gen-claude-commands.sh --check` before `generators.yml`'s steps regenerate the installed copies, so run `scripts/audit/run-all.sh` again after the run, which then passes.
-3. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
-4. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
+3. Sweep what the change leaves stale, with it staged here, before committing it and before a fix round's `brief-re-read`. A change edits one statement and leaves the ones that depend on it. 022's review fix rounds of 2026-11-17 hit four kinds:
+   - a header still saying "two kinds" after the change added a third;
+   - a byte count another landing had already moved;
+   - a test fixture copying a contract string the change narrowed;
+   - a reader still dropping what the change's rule says to report.
+
+   A re-read finds such slips one round at a time, and each costs the round's budget, so do these three things first, for an artifact-only change too:
+   - **Every literal the diff removes or replaces** (a count, a code, a quoted string, a path, read from `git diff --cached -U0`) is searched across the live-artifact set AGENTS.md lists, with `git grep -nF -e '<old>'`. Update each remaining hit, or name why it stays.
+   - **Every enumeration, count and header** in a file the diff touches is read against the file as changed.
+   - **Every figure the change states** (a byte size, a count, a line) is measured again on this tree. A change written from an older base, by a parallel worker among them, measured it before other landings moved it.
+4. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
+5. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
 
 A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` or `framework/commands/review.md` moves its `-basic` golden, whose fixture repo's commit shas it records: re-bless that one alone, as its message says, and read the diff.
 
