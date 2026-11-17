@@ -15,7 +15,7 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
 The containment tests are Unix only (they plant a symbolic link), so on
-Windows M1-M30 would survive.
+Windows M1-M15, M17 and M24 would survive.
 """
 
 EXPECTED_SURVIVORS = {}
