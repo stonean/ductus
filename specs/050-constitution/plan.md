@@ -494,11 +494,21 @@ The cut to one read moved these universal rules' canonical text out of the const
 | When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |
 | An inbox item blocked on an external event is discarded at `/{project}:groom`, not held | `framework/reference/groom.md` §Groom decision tree |
 
+### A citation names no line number
+
+§grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, so `path:line` no longer reads as allowed (AC24). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and `066-audit-records-and-the-completion-gate` makes removing a line suffix a mechanical edit. The plan command and the plan and clarify references point at the bullet instead of restating it.
+
+- **This repository's sweep splits by what a citation's line already names** (owner decisions, 2026-11-17). Where it names the symbol, heading or phrase, the suffix is stripped, in a commit holding nothing else. Otherwise the citation is rewritten by hand to name what it pointed at in the commit that wrote it, read with `git blame` and `git show`, and so is each prose line reference.
+- **Each `done` spec a rewrite reopens**, as `classify-spec-edit` judges it, moves to `in-progress` with `set-status` and closes again after its own analysis.
+- **An adopter's citations are not edited** (owner decision, 2026-11-17). The check reports one when its spec's analysis next runs, which neither the shipped CI template nor the hook does on its own, so no migration and no strip primitive ships.
+
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, the mechanical-edit test in §spec-lifecycle, and a §drift-prevention canonical-sources row naming this spec |
+| `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
+| `specs/` | Modify | The sweep: no spec artifact carries a line-number citation (task 49) |
 | `AGENTS.md` | Modify | Each promoted entry rewritten to a pointer; project-only entries untouched |
 | `specs/050-constitution/plan.md` | Modify | Carries the classification table — the audit trail AC1 requires |
 | `specs/inbox.md` | Modify | The held `045` chore is resolved against the new mechanical-edit test and removed |
@@ -515,7 +525,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
 | `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
 | `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
-| `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Cite a file and symbol, never a bare line number; clarify records a decision as the operator's only when the operator made it |
+| `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Point at §grounding's *Cite what you consulted* in place of restating it (task 48); clarify records a decision as the operator's only when the operator made it |
 | `framework/reference/review.md` | Modify | §Run review passes checks a claim against the tree before recording it; Observations fixes design rationale as a comment |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |

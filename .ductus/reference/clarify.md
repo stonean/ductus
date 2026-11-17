@@ -12,7 +12,7 @@ Read `spec.md`. If it does not exist, stop and report: "Spec does not exist. Run
 
 1. **Resolve open questions one at a time** — process each open question individually in sequence:
    1. Display the question with its full context.
-   2. Propose an answer with rationale, or ask the user to decide. **When the question turns on existing reality — how current code behaves, what a schema, interface, or dev database holds — consult the specific source that settles it and ground the proposed answer in what you found, citing it (file and symbol, never a bare line number; the query; or the command). Do not resolve a factual question about existing code by conjecture; when no reachable source can settle it, say so and resolve it as an explicit assumption or leave it open (§grounding).**
+   2. Propose an answer with rationale, or ask the user to decide. **When the question turns on existing reality — how current code behaves, what a schema, interface, or dev database holds — consult the specific source that settles it and ground the proposed answer in what you found, citing it as §grounding's *Cite what you consulted* says. Do not resolve a factual question about existing code by conjecture; when no reachable source can settle it, say so and resolve it as an explicit assumption or leave it open (§grounding).**
    3. Wait for the user to review, discuss, refine, or approve the resolution.
    4. Only after the user confirms, move the question from `## Open Questions` to `## Resolved Questions` and proceed to the next one. **Record a decision as the operator's only when the operator made it**; an answer the agent recommended and the operator adopted reads "the agent's recommendation, adopted by the operator, DATE".
    5. If the user wants to skip a question, move to the next and revisit skipped questions at the end.
@@ -82,7 +82,7 @@ Run /ductus:target {feature}/<scenario> then /ductus:clarify on each to resolve 
 
 1. **Resolve open questions one at a time** — process each open question in the scenario's `## Open Questions` section individually in sequence:
    1. Display the question with its full context.
-   2. Propose an answer with rationale, or ask the user to decide. **When the question turns on existing reality — how current code behaves, what a schema, interface, or dev database holds — consult the specific source that settles it and ground the proposed answer in what you found, citing it (file and symbol, never a bare line number; the query; or the command). Do not resolve a factual question about existing code by conjecture; when no reachable source can settle it, say so and resolve it as an explicit assumption or leave it open (§grounding).**
+   2. Propose an answer with rationale, or ask the user to decide. **When the question turns on existing reality — how current code behaves, what a schema, interface, or dev database holds — consult the specific source that settles it and ground the proposed answer in what you found, citing it as §grounding's *Cite what you consulted* says. Do not resolve a factual question about existing code by conjecture; when no reachable source can settle it, say so and resolve it as an explicit assumption or leave it open (§grounding).**
    3. Wait for the user to review, discuss, refine, or approve the resolution.
    4. Only after the user confirms, move the question to Resolved Questions, recorded as in the feature-targeted step 1.4, and proceed to the next one.
    5. If the user wants to skip a question, move to the next and revisit skipped questions at the end.
