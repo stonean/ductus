@@ -102,6 +102,8 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 - **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
 
+Lands first of tasks 41, 43, 42 and 46, a round each, swept before each brief by `docs/developing-ductus.md` §Landing a runtime change step 3. The fix-round loop from base `050ef7a6` has run four rounds: two re-reads, each finding one SHOULD its prescribed edit fixed, each diff-checked. That spent its budget of 2, and the owner let it go on (2026-11-17), to come back only on a MUST or a prescription that does not match. Its third slice re-anchors `scripts/mutation/exec-requests-bounded.py` M57-M60, which its `performReview` change moves, and the round's CHANGELOG entry gains its `unexaminable` list.
+
 ## 42. Review round: every project-file read is contained, three result lists are bounded, and rewrite-spec-links holds its from (022's review, 2026-11-17)
 
 - [ ] Close the containment class (BE-INPUT-004; owner decision 2026-11-17). Audit every function a 2026-11-17 grep flagged as touching the file system with no containment helper in its own body: 66 candidates in 24 files, an upper bound. Route every project-file read, fixed names included, through plan §Path arguments' helpers, refused or reported unread and never followed. That covers `dashboard`'s spec directories (F24), `discover-rule-files`' rules directory (F8), the inbox row's spec root (F9), `resolve-references`' committed `references:` join (F1), `rewrite-spec-links`' scenario-target walk and stat (F6, F7), and `.ductus/config.toml` (F21). Task 41 holds `payload.rs`'s reads and task 43 the bootstrap writers'. Plan §Path arguments gains one bullet for the class, and its counts are corrected: 33 feature-argument sites, and `merge-status-hook` is the seventh file-path site (O26, O42, O48, O118)
@@ -111,6 +113,8 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 - **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
 
+Lands after tasks 41 and 43. F5's amendment of 051's scenario `a-fold-target-is-held-to-the-name-grammar` lands in its own commit, reopening 051 (`done` to `in-progress`), with this text. In `## Behavior`, replace the `from`-is-unchanged line with: `from` is held to the same feature-directory membership rule as the feature half of `to`, in visible ASCII with no path separator, and refused as an invalid `from`, naming the grammar, before any file is read; it is compared against the first path segment of every link, so a dot, a file name or a bare word would re-point every link that spells it (`--from . --to 050-alpha` re-pointed every `./` link in a fixture corpus); only the name is held, not the directory's existence, since a retired feature's directory is gone (022 task 42, the owner's decision of 2026-11-17). Add the Edge Case: a `from` that names no feature directory (`.`, `spec.md`, `a/b`, a bare word) is refused with the corpus byte-identical, as a refused `to` is.
+
 ## 43. Review round: bootstrap writers create exclusively, the agent-reach guards judge every case, and the canonical set retires four entries (022's review, 2026-11-17)
 
 - [ ] `apply-manifest`'s `create` and `skip-if-conflict` strategies (F4), `create-plan-artifacts` (F15) and `migrate-session-file` (F16) write with `write_new_atomic`, not an exists check before a replacing rename. Every other create-only writer on `guarded.rs`' raw-write allowlist is checked for the same race (BE-RACE-003 class), and the allowlist's reasons are corrected
@@ -119,6 +123,8 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [ ] Scenario `framework-list-dedup`'s concurrent-writers edge case states task 38's guard, not last-writer-wins (O128)
 
 - **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+Lands after task 41. When it does, plan §Compare before persist's line naming `migrate-session-file` on the raw-write allowlist is corrected, since that primitive now creates its file exclusively. Its change to `framework/bootstrap/configure/claude.md` gets a scratch-adopter run of `/{project}:configure` before its round's brief, as AGENTS.md asks of a `framework/bootstrap/` change.
 
 ## 44. Review round: tests pin their behavior, and the small fixes (022's review, 2026-11-17)
 
@@ -144,3 +150,5 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [ ] The containment test's table (`feature_argument_cases`) holds every caller of a `validate_feature_*` helper, `brief-re-read`, `read-re-read`, `check-prescriptions`, `start-fix-rounds`, `classify-spec-edit`, `discover-rule-files`, `create-feature` and `dashboard` among them, so `every_feature_argument_site_refuses_an_outward_feature_link` holds each to the check; plan §Path arguments and scenario `a-path-argument-resolves-inside-its-base` say so
 
 - **Done when**: every named function has a verdict, each uncontained read is contained and proven by a test its mutant turns red, the test table holds every feature-argument site, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+Lands last, after task 42, built on a tree holding tasks 41-43.
