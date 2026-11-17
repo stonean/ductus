@@ -1,7 +1,7 @@
 ---
-status: done
+status: draft
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
-next-criterion: 5
+next-criterion: 6
 cross-spec-impact: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 ---
 
@@ -47,10 +47,11 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 - [x] AC2: `resolve-anchor` classifies each `§` reference as `qualified` (its line names a document other than the markers file: a markdown one, a file with an extension, or a URL to a markdown document, or the reference is a code span holding a path and the reference), `intra-document` (the anchor names a heading in the citing file) or `markers` (a claim about the markers file, and the only kind that can be unresolved), reporting the first two as counts so a large exclusion is never silent. The document match is line-scoped, the markers file is excluded from qualification, and local headings match longest-first. **A fourth kind since spec 071:** `cross-document`, a reference pointing into a document the **Shared Files** manifest ships — on a line whose only document other than the markers file is such a document, or written as an explicit `**§X** in` pair — is decided before the other three, judged against that document and counted; it can be unresolved, so `markers` is no longer the only kind that can (scenario `pointers-into-shipped-files-are-judged`). **Longest-first never decided a match:** a local heading resolves a reference when the text after `§` begins with it, so the order the headings are tried in cannot change a result. Since 071 the heading must also end where a word ends, and a heading line inside a fenced code block or an HTML comment is not a heading. **Judged since scenario `shared-constitution-references-are-judged` (2026-11-11):** a `qualified` reference is no longer only counted. It resolves against a heading of a readable document its line names, a registered shared constitution's markers, a heading of the citing file or a marker, and can be unresolved; one it cannot judge carries an `unjudged` reason, `anchor-target-unjudgeable` or `anchor-target-unreadable`, counted beside the kinds. The markers file is recognized by its resolved path, and a code span holding a path and one reference is a reference.
 - [x] AC3: `check-artifacts` reports `artifact-unreadable` as a blocking finding on a spec at `done` and as a skipped target below it — the one exception to the rule that an unknown is never escalated into a defect, scoped to the spec's own artifact, since an unreadable scenario carrying unresolved questions would otherwise pass the gate built to catch it.
 - [x] AC4: `check-promotion-coverage` reports all four terms of `unclassified = rule-bearing − (table-keyed ∪ pointer-citing)`, not the difference alone. `sections` is required with no default; a named section that does not occur is reported in `missing-sections` rather than contributing zero; `unmatched-keys` reports a reworded entry whose table key no longer matches; `table-state` separates `no-table` from a computed zero; and a supplied `table-file` that cannot be read is an error. `/{project}:audit` Family 38 renders the coverage line to stderr where it never affects the exit code, and an unmatched key and a missing section are findings.
+- [ ] AC5: **Line-number citations are reported.** `check-artifacts` runs a `line-number-citations` family over a spec's `spec.md`, `plan.md`, `data-model.md`, `research.md` and `scenarios/*.md`. It reports each citation of a path with a line number or line range, inline code spans included and fenced code and blockquotes excluded, as 050's AC24 forbids. A citation whose line pins it to a commit sha is not reported. The family does not examine `review.md`, `analysis.md` or `tasks.md`. AC1's family list names it, and `framework/reference/analyze.md` states its scope and severity.
 
 ## Open Questions
 
-*None.*
+- Which line-number citations does AC5's `line-number-citations` family report, and at what tier? Either every one in the examined files, including the 490 already there, as advisory findings; or only a new violation, a line-number citation an edit introduces after the family lands, as a blocking finding, with the existing 490 left unreported because 050's AC24 treats them as records of what was read. The 490 were counted 2026-11-17 by regex `path.ext:N` over the spec root, excluding review and analysis records.
 
 ## Resolved Questions
 
