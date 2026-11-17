@@ -73,6 +73,15 @@ The owner's answer (c) to the reopen-avoidance audit (2026-11-12): a rule alone 
 
 `derive-dependencies` and `derive-references` read each `spec.md`, splice its frontmatter and rename the result over it, so a writer landing in that window was dropped (`BE-TXN-002`). Each spec is now read through `ReadSnapshot` (`runtime/src/primitives/mod.rs`) before its first read and written through `write_if_unchanged`; `specs/022-deterministic-runtime/plan.md` §Compare before persist states the strategy and rationale (`BE-LOCK-001`), the lock order, timeout and hold bound (`BE-LOCK-002`) and the residual. Both walk many files, so a refusal does not abort: the spec goes in the result's new `refused` list, is never counted in `updated`, and the walk goes on (`BE-TXN-004`). The CLI's gate and stderr line read the whole derivation as they do for `unwritable`, so a hook under `set -e` stops and the operator runs it again. A test seam, `compute_between`, calls a hook between each spec's read and its write, which the tests use to change the file in that window.
 
+### `line-number-citations` reports every citation, blocking (AC5)
+
+`check_line_number_citations` in `runtime/src/primitives/check_artifacts.rs` reads `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` and each scenario, through the outward-link guard the other families use. It reports each citation `line_citations::find` returns as one blocking finding naming the citation and its line. The definition is `066-audit-records-and-the-completion-gate`'s (`runtime/src/primitives/line_citations.rs`), which `050-constitution`'s strip and the mechanical-edit rule read too, so the check flags exactly what the strip removes.
+
+- **Fenced code and blockquotes are skipped, nothing else.** A line the shared `SkipScanner` reports inside a fence is not read, nor is a line opening with `>`. An HTML comment is read, since AC5 excludes only fences and blockquotes.
+- **Not status-gated.** The rule holds at every status, so a `draft` spec citing a line is as wrong as a `done` one.
+- **An artifact it cannot read** is recorded as the other families record one (`record_unreadable_artifact`).
+- **No history is read.** Nothing is grandfathered: `050-constitution`'s strip removes this repository's citations before the family ships, and the migration released with it removes an adopter's.
+
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
 The rule counts a new value in a response set the schema documents as closed as breaking, and this plan reads a narrowed request or a changed exit status, the CLI's machine-readable contract, as breaking too, by the rule's own intent that schema changes be additive, though the Statement does not list them. The runtime is pre-1.0, so a breaking change ships with a minor bump; the unreleased ones ship with 0.60.0. Commits carrying 067's number that change no interface — the logical-line reading and its markers (`0e484e52`, `0a157563`, `cba81b63`, `3b6e6946`, `3b2f0856`, `830e90cb`), the reference-prefix rules of `check-orphaned-references` and `rewrite-spec-links` (`d1853444`, `3fc5755a`, `54715126`, `38fc39f6`), the derive splices (`2be18da6`) and the reference sweeps (`13acc295`, `bd4da459`) — change which findings fire, not the shape or the contract.
@@ -103,6 +112,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `7f40a52e` (task 33) | `check-artifacts` | `outside-project` also covers a path that passes through a symbolic link resolving outside the project | breaking by this plan's reading: a candidate that was probed and judged is now recorded unread, though no value is new |
 | `7f40a52e` (task 35) | `resolve-anchor`, `read-deprecation-labels` | the results gain a count for each list, `form` and `lists-file`; past the read size the lists move to the file `lists-file` names | breaking: past the read size a list a caller read inline is absent, which is ceasing to populate a response field; the fields are additive |
 | (task 36) | `derive-dependencies`, `derive-references` | under `write` a spec changed since it was read is left unwritten and the result gains `refused` and `refused-count`, both absent at zero and the list absent in the file form; the CLI exits non-zero on a refused spec | breaking: a writing run that exited 0 and overwrote the other writer's change now exits non-zero, and `updated` no longer holds every drifted spec it names; the fields are additive |
+| (task 37) | `check-artifacts` | `family` gains `line-number-citations`, a blocking family, so a spec citing a line by number now blocks its advancement | breaking: a new value of a response set documented closed, and a spec the check passed now blocks |
 
 ## Affected Files
 
@@ -114,6 +124,10 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `scripts/audit/marker-list-parity.sh` | Modify | Reads `criterion-path-existence-family.md` at its new path |
 | `framework/constitution.md` | Modify | The canonical-sources row for the scenario-to-task referencing rule names this data model |
 | `runtime/src/primitives/check_artifacts.rs` | Specify | `check-artifacts` |
+| `runtime/src/schema/descriptions.rs` | Modify | `CHECK_ARTIFACTS` names the `line-number-citations` family and its tier (task 37) |
+| `runtime/src/schema/primitives.rs` | Modify | `ArtifactFinding.family`'s list names the family (task 37) |
+| `framework/reference/analyze.md` | Modify | The family's section, its scope and severity (task 37) |
+| `scripts/mutation/line-number-citations-067.py` | Create | The mutation list proving the family reports what it should and skips what AC5 excludes (task 37) |
 | `runtime/src/primitives/validate_frontmatter.rs` | Specify | `validate-frontmatter` |
 | `runtime/src/primitives/traverse_deps.rs` | Specify | `traverse-deps` |
 | `runtime/src/primitives/resolve_anchor.rs` | Specify | `resolve-anchor` |
@@ -134,3 +148,6 @@ The rule counts a new value in a response set the schema documents as closed as 
 
 - **One new spec for the checks and the records together**, which is keeping the checks with the records in 066 — rejected: the checks have readers the records do not, the `/{project}:audit` families and the pre-commit hook. Size does not decide it: one spec holding both would carry a data model of about 40 KB (the two as built, 19,775 and 20,201 bytes by `wc -c` on 2026-10-15), some 10 KB under the 50,000-byte read size, where two keep each near 20 KB; 022's 44,823 bytes are the same either way.
 - **Splitting each mixed scenario across specs** — rejected: it would rewrite each such requirement document to move part of its Behavior, when a pointer serves every reader.
+- **Reporting only a citation added since the spec's diff base** — rejected (owner, 2026-11-17): the family would read history to tell new from old and leave every existing citation unreported, where the strip removes them once.
+- **Detecting a prose line reference** ("lines 100-103") — rejected: a pattern broad enough to find one also flags a requirement such as a sentinel on line 2, so prose stays the rule's alone.
+- **Known limit:** a host whose last label is also a listed extension (`docs.rs:443`) reads as a citation, the definition's own limit.

@@ -1,5 +1,5 @@
 ---
-next-task: 37
+next-task: 38
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -59,3 +59,12 @@ Owed when this lands, in the same change: 067's `plan.md` decision "A path that 
 The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it runs each derivation under `set -euo pipefail`, so a refused spec's non-zero exit stops the commit and its stderr line shows. Its header comment names only the `unwritable` exit, which stays true, and is left as it is, since an edit under `framework/bootstrap/` owes a real adopter bootstrap.
 
 - **Done when**: Neither derivation's write overwrites a change made between its read and its write, and a spec it refuses is named in the result, proven by tests their mutants turn red; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 37. check-artifacts reports a line-number citation (AC5, owner decisions 2026-11-17)
+
+- [ ] Runs after 066's task 25 lands, since it reads that task's `line_citations` definition. `check_line_number_citations` in `runtime/src/primitives/check_artifacts.rs` reads `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` and each scenario through the outward-link guard, skips a fenced line and a blockquote line, and reports each citation as one blocking `line-number-citations` finding naming the citation and its line, at every status; an unreadable artifact is recorded as the other families record one
+- [ ] Tests show a citation in each examined file reported, one in a fence, a blockquote, `review.md` or `analysis.md` not, a host and port not, and the family reporting at `draft` as at `done`
+- [ ] `CHECK_ARTIFACTS` in `runtime/src/schema/descriptions.rs`, `ArtifactFinding.family` in `runtime/src/schema/primitives.rs`, the data model's family list, `framework/reference/analyze.md` and AC1's family list name the family; every other list or count of the families is swept (`docs/developing-ductus.md` §Adding a member to a closed set)
+- [ ] Each new behavior has a mutant its test kills, listed in `scripts/mutation/line-number-citations-067.py`
+
+- **Done when**: `check-artifacts` reports every line-number citation in a spec's examined artifacts as blocking and nothing AC5 excludes, proven by tests their mutants turn red; every list of the families names it; the whole `cargo test` passes; and 067's next review reads the change.
