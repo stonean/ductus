@@ -1,5 +1,5 @@
 ---
-next-task: 25
+next-task: 26
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -21,3 +21,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test per primitive in which the record changes between its read and its write shows the write refused and the other writer's record kept, each failing under its mutant
 
 - **Done when**: Neither record write overwrites a record written between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 25. Stripping a line-number citation is a mechanical edit (AC6, owner decisions 2026-11-17)
+
+- [x] `runtime/src/primitives/line_citations.rs` defines a line-number citation as the plan's *A stripped line-number citation is a mechanical edit* states, with a finder and a strip, and unit tests holding `db.internal:5432`, a URL with a port and `user@host.example:22` out, and `parity.rs:460`, `src/x.ts:3-9`, `a.rs:12:5`, `x.rs:1–4` and `foo.rs#L12-L20` in
+- [x] `mechanical_sweep`'s `pair_run` compares each removed line stripped of its citations with the added line; tests show a strip-only file exempt, a renumbered or an added citation not, and a strip beside a real change judged on that change, and a built fixture shows `classify-spec-edit` and the analysis freshness agree on a strip-only commit
+- [x] `classify-spec-edit` reads a criterion or open question whose only change strips a citation as unchanged, only the removed side stripped, with tests that a criterion's strip is a correction and a citation added to one reopens
+- [x] §spec-lifecycle in `framework/constitution.md` names the case beside (a) and (b); `CLASSIFY_SPEC_EDIT` and both modules' docs say so; 079's `spec.md` carries a signpost back-linking 066 for the classify change, and 066's frontmatter declares 079 under `cross-spec-impact:`
+- [x] Each new behavior has a mutant its test kills, listed in `scripts/mutation/line-citation-strip-066.py`
+
+- **Done when**: A commit that only strips line-number citations reads mechanical to `classify-spec-edit`, current to the analysis freshness and unchanged to `compute-review-scope`, proven by tests their mutants turn red; nothing else becomes mechanical; the whole `cargo test` passes; and 066's next review reads the change.

@@ -44,6 +44,17 @@ The sections moved from 022 keep every argument and result shape and every field
 
 **`BE-COMPAT-001`:** a write that used to succeed over a record changed since its read now fails with the new operational error `changed-since-read`, **breaking** at the call's contract, shipping with the pending minor bump alongside 041's.
 
+### A stripped line-number citation is a mechanical edit (AC6)
+
+`line_citations` (`runtime/src/primitives/line_citations.rs`) holds the one definition of a line-number citation, which `067-analyze-and-audit-checks`' `line-number-citations` family and 050's strip primitive read as well. A citation is a `:N`, `:N-M` or `:N:C` suffix, or a `#LN` or `#LN-LM` anchor, after a path token that follows neither `:` nor `@`, so a URL's host and a `user@host` never match. The token must either hold a `/` or end in an extension from the module's closed list of source and text extensions, so a host and port such as `db.internal:5432` is not a citation (owner decision, 2026-11-17). A host whose last label is also a listed extension (`docs.rs:443`) still reads as one, since no list can tell the two apart.
+
+- **`mechanical_sweep`'s `pair_run` compares each removed line with its citations stripped against the added line.** A line whose only change is a strip adds no rewrite. A line with another change is judged on that change alone, as before. Adding or renumbering a citation is still a rewrite, since only the removed side is stripped.
+- **The one index is read in three places**, `classify-spec-edit`, the analysis record's freshness at the gate and `compute-review-scope`, so the strip is exempt in all three.
+- **`classify-spec-edit` reads a criterion or open question whose only change strips a citation as unchanged**, as it already removes cross-service references, so a strip inside a criterion is a correction. Only the removed side is stripped, so a citation added to a criterion still reopens. That primitive is `079-review-and-analysis-work-converges`', so 079 records the change.
+- **Stored rule verdicts (082) are not exempt.** They compare raw digests (`design_subjects_match`), so a stripped spec's next analysis judges its rules again.
+
+Rejected: an extension-free definition, which would let an adopter's unattended migration strip a port from a requirement and call the edit mechanical; and matching only tokens with a `/`, which would leave every bare-filename citation.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -60,7 +71,7 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/check_review_gate.rs` | Specify | `check-review-gate` |
 | `runtime/src/schema/primitives.rs` | Specify | The result fields `RecordFreshness.paths`' bound adds |
 | `runtime/src/primitives/analyze_subjects.rs` | Specify | The digest and freshness computation both records and the gate share |
-| `runtime/src/primitives/mechanical_sweep.rs` | Specify | The rename exemption freshness applies |
+| `runtime/src/primitives/mechanical_sweep.rs` | Specify | The rename exemption freshness applies, and the citation-strip exemption (task 25) |
 | `runtime/src/primitives/diff_cross_spec.rs` | Specify | `diff-cross-spec` |
 | `runtime/src/primitives/bounded_lists.rs` | Specify | The read-size bound `compute-review-scope` and `diff-cross-spec` share (scenario `scope-results-have-a-bounded-size`) |
 | `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds the sweep exemption to built fixtures (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
@@ -71,6 +82,10 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/tests/line_ending_discipline.rs` | Specify | The two writers' line-ending exemptions follow their write calls onto the guard (task 24; 022 task 38 widens the subject to guarded writes) |
 | `scripts/mutation/compare-and-set-066.py` | Create | The mutation list proving each record write refuses a record changed since its read (task 24) |
 | `scripts/mutation/gate-cross-spec-containment.py` | Create | The mutation list proving the gate contains each path it builds from a cross-spec-impact slug (task 23) |
+| `runtime/src/primitives/line_citations.rs` | Create | The one definition of a line-number citation, and its strip (task 25) |
+| `runtime/src/primitives/classify_spec_edit.rs` | Modify | Criteria and open questions compared with their citations stripped (task 25) |
+| `framework/constitution.md` | Modify | §spec-lifecycle names the strip beside mechanical cases (a) and (b) (task 25) |
+| `scripts/mutation/line-citation-strip-066.py` | Create | The mutation list proving a strip is mechanical and nothing else becomes so (task 25) |
 
 ## Data Model
 

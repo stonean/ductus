@@ -32,6 +32,12 @@
 //! rename (every `MUST` and `MAY` rewritten to `SHOULD`) still fails the
 //! repo-wide test.
 //!
+//! A removed **line-number citation** is no rewrite at all (066 AC6,
+//! §spec-lifecycle case (c)): a line whose only change strips one, as
+//! `line_citations` defines it, adds no pair, and a token whose only change
+//! strips one is skipped. Only the removed side is stripped, so adding or
+//! renumbering a citation is still a rewrite, which the three parts judge.
+//!
 //! Everything here is derived from the diff. A commit trailer or an opt-out
 //! flag would make correctness depend on an author remembering to set it,
 //! which `framework/constitution.md` §design-principles rules out.
@@ -53,6 +59,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
 use git2::{Delta, DiffFindOptions, DiffOptions, Repository, Tree};
+
+use crate::primitives::line_citations;
 
 /// Rename-detection similarity threshold, in percent — stated here rather
 /// than inherited, so the answer does not depend on libgit2's own default
@@ -362,19 +370,28 @@ fn flush(
 
 /// Token rewrites for one removed/added line run, or `None` when the run is
 /// not a pure substitution (see the module docs' conditions 1 and 2).
+///
+/// A removed line-number citation is no rewrite (066 AC6): a line whose only
+/// change strips one, an anchor or a range included, adds nothing, and a
+/// token whose only change strips one is skipped, so a line holding another
+/// change is judged on that change alone. Only the removed side is stripped,
+/// so adding or renumbering a citation is still a rewrite.
 fn pair_run(old_run: &[&str], new_run: &[&str]) -> Option<BTreeSet<Pair>> {
     if old_run.len() != new_run.len() || old_run.is_empty() {
         return None;
     }
     let mut pairs = BTreeSet::new();
     for (old_line, new_line) in old_run.iter().zip(new_run.iter()) {
+        if line_citations::strip(old_line) == *new_line {
+            continue;
+        }
         let old_toks = tokenize(old_line);
         let new_toks = tokenize(new_line);
         if old_toks.len() != new_toks.len() {
             return None;
         }
         for (a, b) in old_toks.into_iter().zip(new_toks) {
-            if a != b {
+            if a != b && line_citations::strip(a) != b {
                 pairs.insert((a.to_string(), b.to_string()));
             }
         }
@@ -464,6 +481,64 @@ mod tests {
     fn a_line_whose_token_count_changes_is_structural() {
         // Inserting a word is not a rewrite of an existing token.
         assert!(pairs(&["the timeout is 30s"], &["the default timeout is 30s"]).is_none());
+    }
+
+    /// Pairs in test-literal form.
+    fn owned(pairs: &[(&str, &str)]) -> Vec<Pair> {
+        pairs
+            .iter()
+            .map(|(a, b)| ((*a).to_string(), (*b).to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn a_stripped_citation_is_no_rewrite() {
+        for (old, new) in [
+            ("see `a.rs:12` now", "see `a.rs` now"),
+            ("x [a](a.rs#L3-L9) y", "x [a](a.rs) y"),
+            ("x.rs:1–4 y", "x.rs y"),
+            ("a.rs:1 and specs/b/plan.md:2", "a.rs and specs/b/plan.md"),
+        ] {
+            assert_eq!(pairs(&[old], &[new]).unwrap(), Vec::<Pair>::new(), "{old}");
+        }
+    }
+
+    #[test]
+    fn an_added_or_renumbered_citation_is_a_rewrite() {
+        assert_eq!(
+            pairs(&["a.rs"], &["a.rs:12"]).unwrap(),
+            owned(&[("a.rs", "a.rs:12")])
+        );
+        assert_eq!(
+            pairs(&["a.rs:12"], &["a.rs:14"]).unwrap(),
+            owned(&[("a.rs:12", "a.rs:14")])
+        );
+    }
+
+    #[test]
+    fn a_strip_beside_another_change_is_judged_on_that_change() {
+        let rename = owned(&[("/govern", "/ductus")]);
+        assert_eq!(
+            pairs(&["Run /govern at a.rs:12"], &["Run /ductus at a.rs"]).unwrap(),
+            rename
+        );
+        // A citation the edit keeps still lets a rename through, as before.
+        assert_eq!(
+            pairs(&["Run /govern at a.rs:12"], &["Run /ductus at a.rs:12"]).unwrap(),
+            rename
+        );
+    }
+
+    #[test]
+    fn a_port_removed_from_a_host_is_a_rewrite() {
+        assert_eq!(
+            pairs(
+                &["connect to db.internal:5432"],
+                &["connect to db.internal"]
+            )
+            .unwrap(),
+            owned(&[("db.internal:5432", "db.internal")])
+        );
     }
 
     #[test]

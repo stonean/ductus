@@ -1104,6 +1104,60 @@ mod tests {
         }
     }
 
+    /// A commit whose only change strips line-number citations leaves both
+    /// records current, and one that also changes a word stales them (066 AC6).
+    #[test]
+    fn a_strip_only_commit_leaves_the_records_current() {
+        use crate::primitives::git_fixture;
+        type Case = (fn(&str) -> String, bool);
+        let cases: [Case; 2] = [
+            (
+                |body| body.replace("a.rs:12", "a.rs").replace("b.md#L3", "b.md"),
+                true,
+            ),
+            (
+                |body| body.replace("a.rs:12", "a.rs").replace("30s", "60s"),
+                false,
+            ),
+        ];
+        for (edit, current) in cases {
+            let tmp = tempdir().unwrap();
+            let (repository, project) = git_fixture::subdirectory_project(tmp.path());
+            let dir = project.join("specs/001-x");
+            seed(&dir, "");
+            let scenario = dir.join("scenarios/a.md");
+            let body = "# A\n\nAs `a.rs:12` and [b](b.md#L3) show, the timeout is 30s.\n";
+            git_fixture::write(&scenario, body);
+            let base = git_fixture::commit_all(&repository, "base").to_string();
+            let analyze = AnalyzeBlock {
+                last_run: Some("2026-11-17T00:00:00Z".into()),
+                analyzed_against: Some(base.clone()),
+                analyzed_digest: subject_digest(&dir, is_analyze_subject).digests,
+                ..AnalyzeBlock::default()
+            };
+            let review = crate::schema::primitives::ReviewBlock {
+                last_run: Some("2026-11-17T00:00:00Z".into()),
+                reviewed_against: Some(base),
+                reviewed_digest: Some(subject_digest(&dir, is_review_contract).digests),
+                ..crate::schema::primitives::ReviewBlock::default()
+            };
+            git_fixture::write(&scenario, &edit(body));
+            git_fixture::commit_all(&repository, "strip");
+            let analysis = analyze_freshness(&project, "specs/001-x", Some(&analyze));
+            assert_eq!(
+                matches!(analysis, RecordFreshness::Current { .. }),
+                current,
+                "{analysis:?}"
+            );
+            let reviewed = review_freshness(&project, "specs/001-x", Some(&review));
+            assert_eq!(
+                matches!(reviewed, RecordFreshness::Current { .. }),
+                current,
+                "{reviewed:?}"
+            );
+        }
+    }
+
     /// The reach failure, not the read failure — the one that used to be
     /// dropped by `filter_map(Result::ok)`.
     ///

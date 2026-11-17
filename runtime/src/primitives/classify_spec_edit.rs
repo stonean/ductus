@@ -13,7 +13,9 @@
 //! missing one as blocking.
 //!
 //! A contract edit is `mechanical` when it only adds, removes or rewrites a cross-service
-//! reference, or is a sweep's: one file's diff cannot show a sweep, so a snapshot of the
+//! reference, or is a sweep's or a line-number strip's (spec 066), which the sweep rule
+//! also decides. A strip in a criterion or a question leaves it unchanged, as a reference
+//! does. One file's diff cannot show a sweep, so a snapshot of the
 //! working tree goes through `mechanical_sweep`'s repo-wide index, the rule the analysis
 //! record's freshness at the gate uses, so the two agree on a sweep once it is committed.
 //! Its blind spot comes with it: a real change made with the same token in two files reads
@@ -29,6 +31,7 @@ use git2::{Delta, DiffOptions, Oid, Tree};
 use crate::primitives::analyze_subjects::is_review_contract;
 use crate::primitives::derive_references::ReferenceScrub;
 use crate::primitives::fix_rounds::snapshot;
+use crate::primitives::line_citations;
 use crate::primitives::mechanical_sweep::SweepIndex;
 use crate::primitives::read_spec::{parse_checkboxes, parse_open_questions};
 use crate::primitives::read_tasks::adds_unchecked_box;
@@ -252,15 +255,46 @@ fn spec_reasons(
     // A reference is informative, so one in a criterion or question changes neither.
     let base_body = side.scrub.without_references(base_body);
     let now_body = side.scrub.without_references(now_body);
-    if criterion_texts(&base_body) != criterion_texts(&now_body)
+    if !same_items(&criterion_texts(&base_body), &criterion_texts(&now_body))
         || unticks_a_criterion(&base_body, &now_body)
     {
         reasons.insert(SpecEditReason::Criterion);
     }
-    if question_texts(&base_body) != question_texts(&now_body) {
+    if !same_items(&question_texts(&base_body), &question_texts(&now_body)) {
         reasons.insert(SpecEditReason::OpenQuestion);
     }
     Ok(())
+}
+
+/// Whether `now` says what `base` said, item for item, an item whose only change strips
+/// a line-number citation counting as unchanged (066 AC6). Only the base side is
+/// stripped, so a citation added or renumbered is still a change. Exact matches are
+/// taken first, so an item kept as it was is never spent on a stripped one.
+fn same_items(base: &[String], now: &[String]) -> bool {
+    if base.len() != now.len() {
+        return false;
+    }
+    let mut unmatched: Vec<&str> = now.iter().map(String::as_str).collect();
+    let mut changed = Vec::new();
+    for item in base {
+        match unmatched
+            .iter()
+            .position(|candidate| *candidate == item.as_str())
+        {
+            Some(at) => {
+                unmatched.swap_remove(at);
+            }
+            None => changed.push(item),
+        }
+    }
+    changed.into_iter().all(|item| {
+        let stripped = line_citations::strip(item);
+        unmatched
+            .iter()
+            .position(|candidate| *candidate == stripped)
+            .map(|at| unmatched.swap_remove(at))
+            .is_some()
+    })
 }
 
 /// What the criteria say, sorted, so moving one changes nothing, and with each
@@ -285,12 +319,17 @@ fn criterion_text(criterion: &AcceptanceCriterion) -> String {
     unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)
 }
 
-/// Whether a criterion ticked at the base is unticked now.
+/// Whether a criterion ticked at the base is unticked now, its text read with and without
+/// its line-number citations, so a strip does not hide an untick.
 fn unticks_a_criterion(base: &str, now: &str) -> bool {
     let ticked: BTreeSet<String> = parse_checkboxes(base, "Acceptance Criteria")
         .iter()
         .filter(|criterion| criterion.checked)
         .map(criterion_text)
+        .flat_map(|text| {
+            let stripped = line_citations::strip(&text).into_owned();
+            [text, stripped]
+        })
         .collect();
     parse_checkboxes(now, "Acceptance Criteria")
         .iter()
@@ -610,6 +649,82 @@ mod tests {
             &SPEC.replace("First thing.", &format!("First, see {moved}.")),
         );
         assert_correction(&root);
+    }
+
+    /// A strip is no change to what a criterion says (066 AC6).
+    #[test]
+    fn a_citation_stripped_from_a_criterion_is_a_correction() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        let cited = SPEC.replace("First thing.", "First thing, at `a.rs:12`.");
+        edit(&root, "spec.md", &cited);
+        commit_all(&repository, "chore: a citation in a criterion");
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", "First thing, at `a.rs`."),
+        );
+        assert_correction(&root);
+    }
+
+    /// Only the removed side is stripped, so a citation added to a criterion is a change.
+    #[test]
+    fn a_citation_added_to_a_criterion_reopens() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", "First thing, at `a.rs`."),
+        );
+        commit_all(&repository, "chore: a path in a criterion");
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", "First thing, at `a.rs:12`."),
+        );
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
+    }
+
+    /// A strip that also unticks the criterion is still an untick.
+    #[test]
+    fn a_strip_does_not_hide_an_untick() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace("First thing.", "First thing, at `a.rs:12`."),
+        );
+        commit_all(&repository, "chore: a citation in a criterion");
+        edit(
+            &root,
+            "spec.md",
+            &SPEC.replace(
+                "- [x] AC1: First thing.",
+                "- [ ] AC1: First thing, at `a.rs`.",
+            ),
+        );
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
+    }
+
+    /// A scenario whose only change strips its citations is mechanical (066 AC6).
+    #[test]
+    fn a_citation_stripped_from_a_scenario_is_mechanical() {
+        let (_dir, root) = fixture();
+        let repository = Repository::open(&root).unwrap();
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nSee `a.rs:12` and [b](b.md#L3).\n",
+        );
+        commit_all(&repository, "chore: citations");
+        edit(
+            &root,
+            "scenarios/s.md",
+            "---\nsection: x\n---\n\n# s\n\nSee `a.rs` and [b](b.md).\n",
+        );
+        assert_kind(&root, SpecEditKind::Mechanical);
     }
 
     fn assert_correction(root: &Path) {

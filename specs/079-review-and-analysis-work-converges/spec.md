@@ -67,6 +67,8 @@ Each earlier attempt at this cost added machinery: `058-findings-route-at-discov
 - **Adopters get it.** Each change to how the pipeline behaves lands in what a release ships, so an adopter's review and analysis converge too, and the measurement runs in an adopter's project over its own history.
 
 > **Signpost:** spec 081 ([081 — Reviews and checks follow what changed](../081-reviews-and-checks-follow-what-changed/spec.md)) owes a review for code alone, a stale digest and a contract edit included, and gives a named commit's code to the specs it names. AC4, AC6 and two Resolved Questions below say so.
+>
+> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md)'s AC6 makes a removed line-number citation a mechanical edit. `classify-spec-edit` reads a criterion or question whose only change strips one as unchanged, and the sweep rule it shares with the analysis freshness exempts a strip.
 
 ## Edge Cases
 

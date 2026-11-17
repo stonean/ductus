@@ -2,6 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime]
 next-criterion: 7
+cross-spec-impact: [079-review-and-analysis-work-converges]
 ---
 
 # 066 — Audit Records and the Completion Gate
@@ -46,7 +47,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 
 ## Record freshness
 
-A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The analysis's subjects are every markdown file under the feature except `analysis.md`, with `spec.md` digested less its acceptance criteria's checkbox state, so a tick does not stale the analysis (`scenarios/checkbox-state-is-outside-the-analysis-digest.md`), and on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md` (`scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`). The recorded commit is provenance, read only to exempt a mechanical rename sweep. The review's digest covers the spec's durable contracts, `scenarios/*.md` and `data-model.md`, and no gate check compares it (spec 081): a review is owed for code alone, so a changed contract owes an analysis, and `compute-review-scope` puts each contract the digest says changed in the scope of a review that runs.
+A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The analysis's subjects are every markdown file under the feature except `analysis.md`, with `spec.md` digested less its acceptance criteria's checkbox state, so a tick does not stale the analysis (`scenarios/checkbox-state-is-outside-the-analysis-digest.md`), and on a `done` spec the comparison also ignores an in-place edit to `plan.md` or `tasks.md` (`scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`). The recorded commit is provenance, read only to exempt a mechanical rename sweep or a line-number strip (AC6). The review's digest covers the spec's durable contracts, `scenarios/*.md` and `data-model.md`, and no gate check compares it (spec 081): a review is owed for code alone, so a changed contract owes an analysis, and `compute-review-scope` puts each contract the digest says changed in the scope of a review that runs.
 
 ## Acceptance Criteria
 

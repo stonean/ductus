@@ -58,6 +58,7 @@ pub(crate) mod host_config;
 pub(crate) mod inbox_standing;
 pub mod invalidate_review;
 pub mod label_criteria;
+pub(crate) mod line_citations;
 pub mod lint_markdown;
 pub mod mark_criterion;
 pub mod mark_task;

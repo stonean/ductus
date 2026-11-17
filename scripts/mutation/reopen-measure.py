@@ -131,15 +131,15 @@ MUTATIONS = [
     (
         'M17 criteria are not compared',
         'src/primitives/classify_spec_edit.rs',
-        'if criterion_texts(&base_body) != criterion_texts(&now_body)\n',
-        'if false && criterion_texts(&base_body) != criterion_texts(&now_body)\n',
+        'if !same_items(&criterion_texts(&base_body), &criterion_texts(&now_body))\n',
+        'if false && !same_items(&criterion_texts(&base_body), &criterion_texts(&now_body))\n',
         'classify_spec_edit::tests::a_changed_criterion_reopens',
     ),
     (
         'M18 questions are not compared',
         'src/primitives/classify_spec_edit.rs',
-        'if question_texts(&base_body) != question_texts(&now_body) {',
-        'if false && question_texts(&base_body) != question_texts(&now_body) {',
+        'if !same_items(&question_texts(&base_body), &question_texts(&now_body)) {',
+        'if false && !same_items(&question_texts(&base_body), &question_texts(&now_body)) {',
         'classify_spec_edit::tests::an_added_question_reopens',
     ),
     (
@@ -768,8 +768,8 @@ MUTATIONS = [
     (
         'M114 an untick is a correction',
         'src/primitives/classify_spec_edit.rs',
-        '    if criterion_texts(&base_body) != criterion_texts(&now_body)\n        || unticks_a_criterion(&base_body, &now_body)\n    {',
-        '    if criterion_texts(&base_body) != criterion_texts(&now_body) {',
+        '    if !same_items(&criterion_texts(&base_body), &criterion_texts(&now_body))\n        || unticks_a_criterion(&base_body, &now_body)\n    {',
+        '    if !same_items(&criterion_texts(&base_body), &criterion_texts(&now_body)) {',
         'classify_spec_edit::tests::an_untick_reopens',
     ),
     (
