@@ -51,7 +51,10 @@ Gate the commit on every check's exit status, mutants included, in one script: a
    - a reader still dropping what the change's rule says to report.
 
    A re-read finds such slips one round at a time, and each costs the round's budget, so do these three things first, for an artifact-only change too:
-   - **Every literal the diff removes or replaces** (a count, a code, a quoted string, a path, read from `git diff --cached -U0`) is searched across the live-artifact set AGENTS.md lists, with `git grep -nF -e '<old>'`. Update each remaining hit, or name why it stays.
+   - **Every literal the diff removes or replaces** is listed with each remaining hit in the live-artifact set AGENTS.md lists by `scripts/stale-literals.sh BASE`.
+     - BASE is the commit the change starts from: `HEAD` before a commit, a fix round's base before its brief.
+     - It covers backticked spans and multi-digit figures. Search by hand for any other literal the diff replaces, passing the paths as an array, since zsh does not split an unquoted one.
+     - Update each remaining hit, or name why it stays.
    - **Every enumeration, count and header** in a file the diff touches is read against the file as changed.
    - **Every figure the change states** (a byte size, a count, a line) is measured again on this tree. A change written from an older base, by a parallel worker among them, measured it before other landings moved it.
 4. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.

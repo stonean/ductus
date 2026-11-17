@@ -336,6 +336,16 @@ jobs:
       - name: (z) Anchor and deprecation-label families read the bounded results
         run: bash scripts/tests/test-anchor-and-label-families.sh
 
+      # (aa) scripts/stale-literals.sh is the literal search of a landing's
+      # sweep (docs/developing-ductus.md §Landing a runtime change, step 3).
+      # It runs by hand before a change commits, so nothing else in CI
+      # exercises it. The test builds fixture repositories and shows that it:
+      #   - lists a removed literal another target still holds;
+      #   - leaves out one an edited line keeps;
+      #   - exits 2 rather than reporting nothing when it cannot search.
+      - name: (aa) Stale-literal search lists what a diff left behind
+        run: bash scripts/tests/test-stale-literals.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
