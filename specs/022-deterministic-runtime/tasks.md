@@ -1,5 +1,5 @@
 ---
-next-task: 41
+next-task: 46
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -92,3 +92,48 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] A test per reader whose candidate is a symbolic link leaving the project, and a test per value carrying `..`, shows the file left unread, each failing under its mutant
 
 - **Done when**: no command-file candidate is read through a link or a value that leaves the project, proven by tests their mutants turn red; the whole `cargo test` passes; and 022's next review reads the change.
+
+## 41. Review round: every exec request is bounded whole, and payload.rs contains its reads (022's review, 2026-11-17)
+
+- [ ] `writeSpecBody` and `routeInboxItem` requests are held to `[artifacts] read-size-bytes`, as data model §Request bodies past the read size states for every request: bodies by path, and `available-specs`, `candidates` and the legacy tail through `bound_lists`; the data model's table gains both rows. Today `build_write_spec_body_request` and `build_route_inbox_item_request` call neither `fits` nor `bound_lists`, a broken contract against task 37's done-when (review items F2, O5)
+- [ ] `payload.rs`'s reads are contained, under the owner's 2026-11-17 decision to close the containment class: the constitution excerpt read (F19) and `specs/{feature}/plan.md` by the walker-context feature (F18). `feature_dir` propagates `Paths::load`'s error rather than `.ok()?` (F20, CFG-ENV-008), and `writeCode`'s current task says when `tasks.md` could not be read or the task is not found, not an empty task (F17, QUAL-CLAIM-001)
+- [ ] Artifact corrections: scenario `constitution-excerpts-as-skill-resources` says the excerpts move to the lists file past the bound (O66); `writecode-payload-bundling`'s field order holds `constitution-excerpts-unexaminable` (O139); data model `routeInboxItem`'s `available-specs` wording (O119) and the `up to 192 per walk` claim, in the data model and `runtime/CHANGELOG.md` (O13); doc comments on `build_extension_request` (O50) and `constitution_excerpts_unexaminable` (O67)
+- [ ] A test and a mutant for `writeCode`'s malformed read size (O74), and each code fix above proven by a test its mutant turns red
+
+- **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 42. Review round: every project-file read is contained, three result lists are bounded, and rewrite-spec-links holds its from (022's review, 2026-11-17)
+
+- [ ] Close the containment class (BE-INPUT-004; owner decision 2026-11-17). Audit every function a 2026-11-17 grep flagged as touching the file system with no containment helper in its own body: 66 candidates in 24 files, an upper bound. Route every project-file read, fixed names included, through plan §Path arguments' helpers, refused or reported unread and never followed. That covers `dashboard`'s spec directories (F24), `discover-rule-files`' rules directory (F8), the inbox row's spec root (F9), `resolve-references`' committed `references:` join (F1), `rewrite-spec-links`' scenario-target walk and stat (F6, F7), and `.ductus/config.toml` (F21). Task 41 holds `payload.rs`'s reads and task 43 the bootstrap writers'. Plan §Path arguments gains one bullet for the class, and its counts are corrected: 33 feature-argument sites, and `merge-status-hook` is the seventh file-path site (O26, O42, O48, O118)
+- [ ] Bounded results (BE-PAYLOAD-001): `dashboard`'s `config.disabled-rule-files` (F0), `discover-rule-files`' `selected` (F10) and `label-criteria`'s `assigned` (F14), each count inline in both forms; the `DASHBOARD` description's file-form sentence is corrected (O49, O55)
+- [ ] `rewrite-spec-links` holds `from` to the feature-directory membership rule that `to`'s feature half uses, refused before any read (F5, BE-INPUT-002; owner decision 2026-11-17: `from=.` re-pointed every `./` link in a fixture corpus). 051's scenario `a-fold-target-is-held-to-the-name-grammar` is amended to say so, in its own commit, which reopens 051 (`done` to `in-progress`); 051 then owes its analysis and the owner's approval for `done`
+- [ ] A test separating `label-criteria`'s highest label plus one from the stored counter (F11), and scenario `a-path-argument-resolves-inside-its-base`'s `dashboard` edge case and the `dashboard` test comment match the code (O125)
+
+- **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 43. Review round: bootstrap writers create exclusively, the agent-reach guards judge every case, and the canonical set retires four entries (022's review, 2026-11-17)
+
+- [ ] `apply-manifest`'s `create` and `skip-if-conflict` strategies (F4), `create-plan-artifacts` (F15) and `migrate-session-file` (F16) write with `write_new_atomic`, not an exists check before a replacing rename. Every other create-only writer on `guarded.rs`' raw-write allowlist is checked for the same race (BE-RACE-003 class), and the allowlist's reasons are corrected
+- [ ] `check_no_protected` (`host_config.rs`) runs every judgment instead of stopping at the first config-directory refusal (O30: a link under a config directory let `merge-permissions` write `.git/hooks/pre-commit` in a fixture). `validate_staging_outside` (`mod.rs`) refuses a `dest` that contains the working directory (O31). The raw-write allowlist scan sees production code after a mid-file test module, such as `mod.rs`'s at line 3926 (O32). Contain the reads in these files flagged by task 42's audit
+- [ ] Claude's canonical allow set retires `Bash(git push *)`, `Bash(gh api *)`, `Bash(git commit *)` and `Bash(git config --unset core.hooksPath)` (owner decision 2026-11-17; O100, O106, O112, O117). `CANONICAL_ALLOW_STATIC` goes from 16 to 12 and `RETIRED_ALLOW` from 27 to 31, in `merge_permissions.rs`, `framework/bootstrap/configure/claude.md` steps 2 and 4 and their count tests. Plan §Agent reach records the retirement and drops its stale sentences that the canonical sets still grant `git diff`, `mkdir -p`, `chmod +x` and `git config core.hooksPath` (O99, O113, O116)
+- [ ] Scenario `framework-list-dedup`'s concurrent-writers edge case states task 38's guard, not last-writer-wins (O128)
+
+- **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 44. Review round: tests pin their behavior, and the small fixes (022's review, 2026-11-17)
+
+- [ ] The `dropping_named_tempfile_leaves_target_unchanged` tests in `mark_criterion.rs`, `set_status.rs`, `mark_task.rs` and `append_task.rs` call the primitive they name (F12, F13 and the class; QUAL-TEST-001). `exec`'s missing-command test asserts the `command-not-found` code and message (F22). `locate_exec_command` labels only an `InvalidPath` as `command-file-outside-project` (O6)
+- [ ] Family 17 (`scripts/audit/host-namespace-parity.sh`) halts on a `[host] project` that `Host::load` refuses since task 40, rather than reading it as absent (F23). Its contract assertion greps the key's declaration, `project: Option<String>` (O87)
+- [ ] `append-inbox` refuses marker-only text, a bare checkbox, as scenario `append-primitive-marker-normalization` requires (O37, a broken contract)
+- [ ] Chores: the `APPEND_TASK` description states the lock's attempt bound beside its ten seconds (O56); `install.sh`'s size comment (O77); `runtime.yml`'s path lists gain `.markdownlint-cli2.jsonc` (O81); `parity.rs`'s stale `{REPO}` substitution and comment (O86); `test-lint-release-ordering.sh` cases G and H guard their `sed` edit as case M does (O90); `protected-paths.py`'s reused M6 becomes a new id (O91)
+
+- **Done when**: every item is fixed and checked on the tree, each code fix proven by a test its mutant turns red, `cargo fmt --check`, clippy and the whole `cargo test` pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 45. Review round: artifact corrections (022's review, 2026-11-17)
+
+- [ ] `framework/commands/audit.md` step 1 leaves `run-generator` unbackticked under `<!-- audit:ignore-promotion -->` and says the host runs it, and spec.md's `run-generator` line calls it a host-run CLI subcommand, never an MCP tool or a `ductus exec` step, since the walker binds no `script` (O111; owner decision 2026-11-17: the contract moves). Regenerate the command copies
+- [ ] AC28 and scenario `the-cli-surface-nothing-pins` name `hook` among the subcommands the set-equality excludes (O61, O134)
+- [ ] Scenario corrections: `config-resolution-single-probe`, where `load_ductus_toml` returns four values (O136); `commands-dir-parameterization`, where `project` is screened since task 40 (O137); `review-scope-parse-fidelity`, where the scope is a union (O135); `groom-command-acceleration`, where the chore rule's home is the groom reference (O120); `clarify-command-acceleration`, where `derive-dependencies` is the safety net (O121); `write-session-primitive`, which cites target's step 8 (O129); and three scenarios citing the six-site rule `docs/developing-ductus.md` now holds (O133)
+- [ ] `framework/commands/consolidate.md`'s `git mv`, which configure denies (O22). `framework/bootstrap/ductus.md`'s "ls is run by no step", with `govern.md` kept byte-identical (O98). `derive-references`' Errors doc (O47). Task 23's leftover clause (O27)
+
+- **Done when**: every item is fixed and checked on the tree, the generators report in sync, `npx markdownlint-cli2` and the hook pass, and the review's fix-round loop from base `050ef7a6` re-reads the change.
