@@ -24,7 +24,7 @@ Decided by the owner on 2026-11-16, over the same change plus default frontmatte
 - **A project's own root `constitution.md` on a first adoption:** `constitution-relocate` no longer runs, so the file is untouched without relying on that migration's content gate, which still guards an update (scenario `a-projects-own-constitution-is-not-relocated`).
 - **A spec with frontmatter that does not parse** is not one without frontmatter: it is not named here, and `/{project}:analyze` reports it.
 - **An update whose spec has no frontmatter** still runs its migrations, and the closing summary names the spec the same way.
-- **A first adoption that stopped early and is run again.** The stopped run left a `.ductus/config.toml` without the `[host]` table, which is no earlier-adoption signal, so the re-run is still a first adoption and runs no migration (007's scenario `a-first-adoption-with-existing-specs-is-not-an-update`; owner, 2026-11-17).
+- **A first adoption that stopped before step 4 and is run again.** The stopped run left a `.ductus/config.toml` without the `[host]` table, which is no earlier-adoption signal, so the re-run is still a first adoption and runs no migration. One that stopped after step 3a had already seeded `last_applied`, so its re-run, an update, has none pending either (007's scenario `a-first-adoption-with-existing-specs-is-not-an-update`; owner, 2026-11-17).
 
 ## Open Questions
 

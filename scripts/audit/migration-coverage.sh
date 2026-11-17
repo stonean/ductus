@@ -195,26 +195,33 @@ done <<< "$ENTRY_DATA"
 # 10b, archived half: each entry under CHANGELOG.md's `## Archived migrations`
 # opens with a `### {id} (…)` heading and keeps its target_paths on a
 # `**Target paths:**` line of backticked paths (spec 027 AC18). A repository
-# with no CHANGELOG.md has archived nothing.
+# with no CHANGELOG.md has archived nothing; one whose CHANGELOG.md holds no
+# `## Archived migrations` section is a finding, since a renamed heading would
+# otherwise leave every archived entry unread.
 #
 # archived_rows FILE — one row per archived entry, unit-separated: ROW, the id
-# and its paths joined by `|`; MISSING and the id; then COVERAGE and the count.
+# and its paths joined by `|`; MISSING and the id, for an entry with no
+# **Target paths:** line or one naming no backticked path; NOSECTION when the
+# section is absent; then COVERAGE and the count.
 # A function, since bash 3.2 misparses a heredoc holding backticks inside $().
 archived_rows() {
   ARCHIVE="$1" python3 <<'PY'
 import os, re
 text = open(os.environ["ARCHIVE"], encoding="utf-8").read()
 section = re.search(r"^## Archived migrations[ \t]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+if section is None:
+    print("NOSECTION\x1f\x1f")
 count = 0
 for block in re.split(r"(?m)^### ", section.group(1) if section else "")[1:]:
     head, _, rest = block.partition("\n")
     id_ = head.split(" ", 1)[0].strip()
     count += 1
     line = re.search(r"(?m)^\*\*Target paths:\*\*(.*)$", rest)
-    if line is None:
+    paths = re.findall(r"`([^`]+)`", line.group(1)) if line else []
+    if not paths:
         print("MISSING\x1f" + id_ + "\x1f")
     else:
-        print("ROW\x1f" + id_ + "\x1f" + "|".join(re.findall(r"`([^`]+)`", line.group(1))))
+        print("ROW\x1f" + id_ + "\x1f" + "|".join(paths))
 print("COVERAGE\x1f" + str(count) + "\x1f")
 PY
 }
@@ -239,8 +246,10 @@ if [ -f "$ARCHIVE" ]; then
       while IFS=$'\037' read -r kind id tps; do
         case "$kind" in
           ROW) check_target_paths "$ARCHIVE" "archived entry '$id'" "$tps" ;;
-          MISSING) emit "$ARCHIVE" "archived entry '$id' has no **Target paths:** line, so 10b could not check it" \
+          MISSING) emit "$ARCHIVE" "archived entry '$id' has no **Target paths:** line naming a backticked path, so 10b could not check it" \
             "add a **Target paths:** line listing the entry's target_paths, each in backticks" ;;
+          NOSECTION) emit "$ARCHIVE" "$ARCHIVE holds no '## Archived migrations' section, so 10b read no archived entry" \
+            "restore the section heading the archived entries sit under" ;;
           COVERAGE) echo "migration-coverage | 10b examined: $id archived entries in $ARCHIVE" >&2 ;;
         esac
       done <<< "$ARCHIVED_DATA"

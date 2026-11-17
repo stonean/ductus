@@ -34,6 +34,9 @@
 #   M. 10b's archived half: an archived entry whose framework/ target path
 #      still exists fails, one with no **Target paths:** line fails, and one
 #      whose paths are gone passes, with a coverage line
+#   N. 10b's archived half: a **Target paths:** line naming no backticked path
+#      fails, and a CHANGELOG.md with no Archived migrations section fails
+#      rather than reading as an empty archive
 #
 # Every fixture holds a version file (0.59.0), since 10e reads it.
 #
@@ -300,6 +303,26 @@ if printf '%s' "$err" | grep -q '10b examined: 3 archived entries in CHANGELOG.m
 else
   fail "M: 10b archived coverage line missing or wrong: $err"
 fi
+
+dir="$(make_repo n)"
+entry "$dir" alpha 0.60.0
+cat > "$dir/CHANGELOG.md" << 'MD'
+# CHANGELOG
+
+## Archived migrations
+
+### bare-paths (introduced 0.2.0, sunset after 0.10.0)
+
+**Target paths:** framework/workflows/kept.md
+MD
+commit "$dir"
+run_check "$dir"
+expect "N: a Target paths line naming no backticked path fails" 1 \
+  "archived entry 'bare-paths' has no \*\*Target paths:\*\* line naming a backticked path"
+printf '# CHANGELOG\n\n## Retired migrations\n\n### moved (introduced 0.2.0, sunset after 0.10.0)\n\n**Target paths:** `framework/x/`\n' > "$dir/CHANGELOG.md"
+run_check "$dir"
+expect "N: a CHANGELOG.md with no Archived migrations section fails" 1 \
+  "CHANGELOG.md holds no '## Archived migrations' section"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

@@ -22,7 +22,7 @@ The missing config file does not mark a first adoption on its own: §Pre-run Mig
 - **A project's own root `constitution.md`** is no signal: nothing tells a project's own from a legacy ductus copy by its name (027's scenario `a-projects-own-constitution-is-not-relocated`).
 - **A project that built its own `{spec-root}/templates/spec.md`** reads as an update; the pre-flight report names that file as the deciding signal, so the operator sees why.
 - **A project whose spec root is renamed.** The decision reads the configured `[paths] specs-root`, as the pre-flight check already does.
-- **A first adoption that stopped early.** Collect Project Inputs and Recording the source write `.ductus/config.toml` before the run can fail or abort, so a run that stops on a stale bootstrap or a failed archive fetch leaves a config file without `[host]`. That file is no signal, so the re-run is still a first adoption, runs no migration and prints the first-run steps (owner, 2026-11-17).
+- **A first adoption that stopped early.** Collect Project Inputs and Recording the source write `.ductus/config.toml` before the run can fail or abort, so a run that stops on a stale bootstrap or a failed archive fetch, before step 4, leaves a config file without `[host]`. That file is no signal, so the re-run is still a first adoption, runs no migration and prints the first-run steps (owner, 2026-11-17). A run that stops after step 4 has written that step's files, which are signals, so it re-runs as an update, with no migration pending, since step 3a seeded `last_applied`.
 
 ## Open Questions
 

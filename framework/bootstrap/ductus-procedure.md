@@ -82,7 +82,7 @@ If `framework/migrations.toml` contains two entries with the same `id`, or if an
 
 ## Frontmatter Migration
 
-If `specs/` does not exist (a greenfield run), skip this section — there is nothing to migrate.
+If `specs/` does not exist, skip this section — there is nothing to migrate.
 
 Bring existing spec and scenario files into the YAML frontmatter format declared in `framework/constitution.md` §text-first-artifacts. Migration is idempotent: re-running on an already-migrated project produces no further metadata changes.
 

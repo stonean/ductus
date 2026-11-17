@@ -100,8 +100,9 @@ const SECTIONS: &[Section] = &[
     Section::entries("constitutions", &["repo", "path", "description"]),
     // `resolve-references` and `derive-references` (spec 030).
     Section::entries("services", &["repo", "path", "description"]),
-    // Retired by spec 043, whose `workflows-sunset` migration removes it, so
-    // anything still in it is reported.
+    // Retired by spec 043. Since 0.25.0 it is removed by hand, with the
+    // `workflows-sunset` recipe archived in CHANGELOG.md, so anything still in
+    // it is reported.
     Section::keys("workflows", &[]),
 ];
 
