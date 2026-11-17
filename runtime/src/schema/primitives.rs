@@ -7073,8 +7073,9 @@ pub struct ArtifactFinding {
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
     /// `criterion-path-existence`, `body-path-existence`,
-    /// `criterion-labels`, `disposition-drift`, `cross-spec-impact-drift`,
-    /// `spec-integrity`, or `plan-consistency`, matching the
+    /// `line-number-citations`, `criterion-labels`, `disposition-drift`,
+    /// `cross-spec-impact-drift`, `spec-integrity`, or `plan-consistency`,
+    /// matching the
     /// `family:` literals the primitive emits.
     pub family: String,
     /// Severity tier: `blocking` or `advisory`. Which family takes which is

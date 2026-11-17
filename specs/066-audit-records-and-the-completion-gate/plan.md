@@ -46,14 +46,14 @@ The sections moved from 022 keep every argument and result shape and every field
 
 ### A stripped line-number citation is a mechanical edit (AC6)
 
-`line_citations` (`runtime/src/primitives/line_citations.rs`) holds the one definition of a line-number citation, which `067-analyze-and-audit-checks`' `line-number-citations` family and 050's strip primitive read as well. A citation is a `:N`, `:N-M` or `:N:C` suffix, or a `#LN` or `#LN-LM` anchor, after a path token that follows neither `:` nor `@`, so a URL's host and a `user@host` never match. The token must either hold a `/` or end in an extension from the module's closed list of source and text extensions, so a host and port such as `db.internal:5432` is not a citation (owner decision, 2026-11-17). A host whose last label is also a listed extension (`docs.rs:443`) still reads as one, since no list can tell the two apart.
+`line_citations` (`runtime/src/primitives/line_citations.rs`) holds the one definition of a line-number citation, which `067-analyze-and-audit-checks`' `line-number-citations` family reads as well. A citation is a `:N`, `:N-M` or `:N:C` suffix, or a `#LN` or `#LN-LM` anchor, after a path token that follows neither `:` nor `@`, so a URL's host and a `user@host` never match. The token must either hold a `/` or end in an extension from the module's closed list of source and text extensions, so a host and port such as `db.internal:5432` is not a citation (owner decision, 2026-11-17). A host whose last label is also a listed extension, such as `docs.rs` with a port, still reads as one, since no list can tell the two apart.
 
 - **`mechanical_sweep`'s `pair_run` compares each removed line with its citations stripped against the added line.** A line whose only change is a strip adds no rewrite. A line with another change is judged on that change alone, as before. Adding or renumbering a citation is still a rewrite, since only the removed side is stripped.
 - **The one index is read in three places**, `classify-spec-edit`, the analysis record's freshness at the gate and `compute-review-scope`, so the strip is exempt in all three.
 - **`classify-spec-edit` reads a criterion or open question whose only change strips a citation as unchanged**, as it already removes cross-service references, so a strip inside a criterion is a correction. Only the removed side is stripped, so a citation added to a criterion still reopens. That primitive is `079-review-and-analysis-work-converges`', so 079 records the change.
 - **Stored rule verdicts (082) are not exempt.** They compare raw digests (`design_subjects_match`), so a stripped spec's next analysis judges its rules again.
 
-Rejected: an extension-free definition, which would let an adopter's unattended migration strip a port from a requirement and call the edit mechanical; and matching only tokens with a `/`, which would leave every bare-filename citation.
+Rejected: an extension-free definition, which would make removing a port from a host in a requirement a mechanical edit and have the check flag every host and port; and matching only tokens with a `/`, which would leave every bare-filename citation.
 
 ## Affected Files
 

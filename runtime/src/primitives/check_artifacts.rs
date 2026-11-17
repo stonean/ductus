@@ -99,6 +99,11 @@
 //!   path no revision ever held is a name, not a file (`never-existed`), and
 //!   a line describing a transition is not a presence claim
 //!   (`not-a-live-claim`). See [`check_body_path_existence`].
+//! - **line-number-citations** (blocking) — a citation of a path by line
+//!   number in the spec, plan, tasks, data model, research or a scenario,
+//!   which 050's AC24 forbids, by the definition 066's mechanical-edit rule
+//!   shares (spec 067, AC5). Examined at every status, with no
+//!   history read. See [`check_line_number_citations`].
 //! - **The two path families are status-gated.** They examine a spec at
 //!   `in-progress` and `done`, where the analysis the pre-`done` gate reads
 //!   is taken; at any other status each records one `status-gated` skip
@@ -135,6 +140,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::check_review_gate::cross_spec_impact_states;
 use crate::primitives::label_criteria::StoredCounter;
+use crate::primitives::line_citations;
 use crate::primitives::read_tasks::describe_unchecked;
 use crate::primitives::{
     BlockReading, MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans,
@@ -232,6 +238,7 @@ fn check_text_families(
     check_link_adjacent_drift(findings, skipped, &feature_dir, spec, repo, outward);
     check_criterion_path_existence(findings, skipped, status, spec, &spec_path, repo);
     check_body_path_existence(findings, skipped, status, &feature_dir, repo, outward);
+    check_line_number_citations(findings, skipped, status, &feature_dir, repo, outward);
     check_integrity(
         findings,
         skipped,
@@ -2646,7 +2653,22 @@ fn logical_lines(text: &str) -> Vec<String> {
 /// `spec.md`, `plan.md` and `data-model.md` when present, then each scenario
 /// in the shared scenario order.
 fn body_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]
+    feature_artifacts(
+        feature_dir,
+        outward,
+        &["spec.md", "plan.md", "data-model.md"],
+    )
+}
+
+/// The `names` under `feature_dir` that are present, in the order given, then
+/// each scenario in the shared scenario order, leaving out each one reached
+/// through a link that leaves the project.
+fn feature_artifacts(
+    feature_dir: &Path,
+    outward: &super::OutwardLinks,
+    names: &[&str],
+) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = names
         .iter()
         .map(|name| feature_dir.join(name))
         .filter(|path| !outward.covers(path) && path.is_file())
@@ -2661,6 +2683,74 @@ fn body_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<Path
             .filter(|path| !outward.covers(path)),
     );
     out
+}
+
+/// The family name [`check_line_number_citations`] reports under.
+const LINE_CITATION_FAMILY: &str = "line-number-citations";
+
+/// (j) Line-number citations (blocking) — a citation of a path by line number
+/// in a spec's `spec.md`, `plan.md`, `tasks.md`, `data-model.md`,
+/// `research.md` or a scenario, which 050's AC24 forbids since the line drifts
+/// as the code moves (067 AC5). What a citation is, is `line_citations`',
+/// the definition 066's mechanical-edit rule reads too, so removing a
+/// citation this flags is a mechanical edit.
+///
+/// Every status is examined, a `draft` spec's citation being as wrong as a
+/// `done` one's, and nothing is grandfathered, so no history is read. A line
+/// inside a fenced block and a blockquote line are skipped; an HTML comment is
+/// read. An artifact that cannot be read is recorded as the other families
+/// record one.
+fn check_line_number_citations(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    status: &str,
+    feature_dir: &Path,
+    repo: &Path,
+    outward: &super::OutwardLinks,
+) {
+    for artifact in citation_artifacts(feature_dir, outward) {
+        let citing = rel_path(&artifact, repo);
+        let Ok(text) = read_text(&artifact) else {
+            record_unreadable_artifact(findings, skipped, LINE_CITATION_FAMILY, status, citing);
+            continue;
+        };
+        let mut scanner = super::SkipScanner::default();
+        for (index, line) in text.lines().enumerate() {
+            if (scanner.skip(line) && scanner.in_fence()) || line.trim_start().starts_with('>') {
+                continue;
+            }
+            for citation in line_citations::find(line) {
+                findings.push(ArtifactFinding {
+                    family: LINE_CITATION_FAMILY.into(),
+                    severity: AnalyzeSeverity::Blocking,
+                    message: format!(
+                        "line {}: `{}` cites a line by number, which drifts as the code moves; name the symbol, test, heading or a quoted phrase it points at instead (§grounding)",
+                        index + 1,
+                        &line[citation.path_start..citation.suffix.end]
+                    ),
+                    path: citing.clone(),
+                });
+            }
+        }
+    }
+}
+
+/// The artifacts [`check_line_number_citations`] reads, in a fixed order:
+/// `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and `research.md` when
+/// present, then each scenario in the shared scenario order. The run records
+/// `review.md` and `analysis.md` are not among them.
+fn citation_artifacts(feature_dir: &Path, outward: &super::OutwardLinks) -> Vec<PathBuf> {
+    feature_artifacts(
+        feature_dir,
+        outward,
+        &[
+            "spec.md",
+            "plan.md",
+            "tasks.md",
+            "data-model.md",
+            "research.md",
+        ],
+    )
 }
 
 /// `path` resolved lexically against `base`, as a project-relative string, or
@@ -6677,5 +6767,115 @@ mod tests {
             &manifest,
         );
         assert!(adopter_destinations(repo.path()).is_empty());
+    }
+
+    /// The `line-number-citations` findings of `result`, as (path, message).
+    fn citation_findings(result: &Checked) -> Vec<(String, String)> {
+        result
+            .findings
+            .iter()
+            .filter(|f| f.family == LINE_CITATION_FAMILY)
+            .map(|f| (f.path.clone(), f.message.clone()))
+            .collect()
+    }
+
+    /// Append `text` to the artifact at `rel`.
+    fn append(repo: &Path, rel: &str, text: &str) {
+        let path = repo.join(rel);
+        let mut body = fs::read_to_string(&path).unwrap();
+        body.push_str(text);
+        fs::write(path, body).unwrap();
+    }
+
+    /// A citation in each examined artifact is one blocking finding naming its
+    /// line, and one in either run record is none (067 AC5).
+    #[test]
+    fn a_line_number_citation_is_reported_in_each_examined_artifact() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_feature(repo, "draft", Some(CLEAN_REVIEW), Some(CLEAN_ANALYZE));
+        for record in ["review.md", "analysis.md"] {
+            append(
+                repo,
+                &format!("specs/{FEATURE}/{record}"),
+                "\nAt `c.rs:9`.\n",
+            );
+        }
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\nSee `src/a.rs:12`.\n",
+        );
+        let others = [
+            "plan.md",
+            "tasks.md",
+            "data-model.md",
+            "research.md",
+            "scenarios/s.md",
+        ];
+        for file in others {
+            write(
+                repo,
+                &format!("specs/{FEATURE}/{file}"),
+                "# X\n\nAt [b](b.md#L3).\n",
+            );
+        }
+        let result = compute(&args(), repo).unwrap();
+        let found = citation_findings(&result);
+        let paths: Vec<String> = found.iter().map(|(path, _)| path.clone()).collect();
+        let mut expected = vec![format!("specs/{FEATURE}/spec.md")];
+        expected.extend(others.iter().map(|file| format!("specs/{FEATURE}/{file}")));
+        assert_eq!(paths, expected);
+        assert!(
+            found[0].1.starts_with("line 8: `src/a.rs:12` cites"),
+            "{found:?}"
+        );
+        assert!(
+            found[1].1.starts_with("line 3: `b.md#L3` cites"),
+            "{found:?}"
+        );
+        assert!(
+            result
+                .findings
+                .iter()
+                .filter(|f| f.family == LINE_CITATION_FAMILY)
+                .all(|f| f.severity == AnalyzeSeverity::Blocking)
+        );
+    }
+
+    /// A fenced line, a blockquote and a host's port are no finding; an HTML
+    /// comment, one spanning lines included, is read, since AC5 excludes only
+    /// fences and blockquotes.
+    #[test]
+    fn fenced_quoted_and_port_text_is_no_citation_finding() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\n```text\nsrc/a.rs:12\n```\n\n\
+             > Quoted `src/a.rs:12`.\n\nConnect to db.internal:5432.\n\n<!--\nsee src/b.rs:4\n-->\n",
+        );
+        let found = citation_findings(&compute(&args(), repo).unwrap());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("`src/b.rs:4`"), "{found:?}");
+    }
+
+    /// The rule holds at every status, so the family is not status-gated.
+    #[test]
+    fn a_line_number_citation_is_reported_at_every_status() {
+        for status in ["draft", "clarified", "in-progress", "done"] {
+            let tmp = tempdir().unwrap();
+            let repo = tmp.path();
+            write(
+                repo,
+                &format!("specs/{FEATURE}/spec.md"),
+                &format!(
+                    "---\nstatus: {status}\ndependencies: []\n---\n\n# Demo\n\nSee `src/a.rs:12`.\n"
+                ),
+            );
+            let found = citation_findings(&compute(&args(), repo).unwrap());
+            assert_eq!(found.len(), 1, "{status}: {found:?}");
+        }
     }
 }

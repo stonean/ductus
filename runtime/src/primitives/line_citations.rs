@@ -1,10 +1,11 @@
-//! What a line-number citation is, and how one is stripped (specs 066, 067 and 050).
+//! What a line-number citation is, and how one is stripped (specs 066 and 067), for the
+//! rule 050's AC24 states.
 //!
-//! One definition for the readers that must agree on it: `mechanical_sweep`, which
-//! counts a removed citation as a mechanical edit (066 AC6); `check-artifacts`'
-//! `line-number-citations` family, which reports one (067 AC5); and the primitive and
-//! migration that strip them (050 AC24). A copy per reader would let the check flag what
-//! the strip leaves, or the strip remove what the rule calls a real change.
+//! One definition for the readers that must agree on it: `mechanical_sweep` and
+//! `classify-spec-edit`, which count a removed citation as a mechanical edit (066 AC6),
+//! and `check-artifacts`' `line-number-citations` family, which reports one (067 AC5). A
+//! copy per reader would let the check flag a citation whose removal the rule calls a
+//! real change.
 //!
 //! A citation is a suffix after a path token:
 //!

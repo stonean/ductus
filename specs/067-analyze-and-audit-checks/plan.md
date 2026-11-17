@@ -75,12 +75,12 @@ The owner's answer (c) to the reopen-avoidance audit (2026-11-12): a rule alone 
 
 ### `line-number-citations` reports every citation, blocking (AC5)
 
-`check_line_number_citations` in `runtime/src/primitives/check_artifacts.rs` reads `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` and each scenario, through the outward-link guard the other families use. It reports each citation `line_citations::find` returns as one blocking finding naming the citation and its line. The definition is `066-audit-records-and-the-completion-gate`'s (`runtime/src/primitives/line_citations.rs`), which `050-constitution`'s strip and the mechanical-edit rule read too, so the check flags exactly what the strip removes.
+`check_line_number_citations` in `runtime/src/primitives/check_artifacts.rs` reads `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` and each scenario, through the outward-link guard the other families use. It reports each citation `line_citations::find` returns as one blocking finding naming the citation and its line. The definition is `066-audit-records-and-the-completion-gate`'s (`runtime/src/primitives/line_citations.rs`), which the mechanical-edit rule reads too, so removing a citation the check flags is a mechanical edit.
 
 - **Fenced code and blockquotes are skipped, nothing else.** A line the shared `SkipScanner` reports inside a fence is not read, nor is a line opening with `>`. An HTML comment is read, since AC5 excludes only fences and blockquotes.
 - **Not status-gated.** The rule holds at every status, so a `draft` spec citing a line is as wrong as a `done` one.
 - **An artifact it cannot read** is recorded as the other families record one (`record_unreadable_artifact`).
-- **No history is read.** Nothing is grandfathered: `050-constitution`'s strip removes this repository's citations before the family ships, and the migration released with it removes an adopter's.
+- **No history is read.** Nothing is grandfathered: `050-constitution`'s sweep removes this repository's citations before the family ships, and an adopter's are reported when that spec's analysis next runs, which neither the shipped CI template nor the hook does on its own (owner, 2026-11-17).
 
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
@@ -150,4 +150,4 @@ The rule counts a new value in a response set the schema documents as closed as 
 - **Splitting each mixed scenario across specs** — rejected: it would rewrite each such requirement document to move part of its Behavior, when a pointer serves every reader.
 - **Reporting only a citation added since the spec's diff base** — rejected (owner, 2026-11-17): the family would read history to tell new from old and leave every existing citation unreported, where the strip removes them once.
 - **Detecting a prose line reference** ("lines 100-103") — rejected: a pattern broad enough to find one also flags a requirement such as a sentinel on line 2, so prose stays the rule's alone.
-- **Known limit:** a host whose last label is also a listed extension (`docs.rs:443`) reads as a citation, the definition's own limit.
+- **Known limit:** a host whose last label is also a listed extension, such as `docs.rs` with a port, reads as a citation, the definition's own limit.
