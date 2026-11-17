@@ -289,8 +289,6 @@ Tag scheme is `ductus-v<MAJOR>.<MINOR>.<PATCH>`, one tag per release, carrying t
 
 The runtime section is `## The runtime` in the root `README.md`. It says what the runtime is, that `/ductus` acquires it rather than the adopter installing it, how the per-machine store and the per-project pointer relate, and that it is required, and it points at `docs/runtime.md` for the operational detail.
 
-No edits to `framework/templates/project/project-readme.md`: the template ships to adopters, and the runtime reaches them through `/ductus`, not through their README.
-
 ### Bootstrap completion-message pointer
 
 The "Next steps" list in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output ends with a line saying the runtime is already acquired and wired by the run, pointing at the README's runtime section for how it is pinned and upgraded.

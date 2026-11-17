@@ -121,6 +121,8 @@ Newline-delimited JSON. Each line is one complete JSON object terminated by `\n`
 
 The runtime ignores any other inbound JSON shape — it logs to stderr and continues waiting for a valid response.
 
+**Exec arguments.** `ductus exec <command> [ARGS]...` seeds the walker context from the session file, then binds each forwarded argument as one context entry, `key=value` split at its first `=`, overriding the session's value for that key. An argument with no `=`, or with an empty key, halts before the command file is read, with a terminal `error` envelope coded `invalid-argument` that names it: a bare argument has no key to bind, and dropping it would run the command against the session's target and still report `complete`.
+
 A `gate-response` with `confirmed: true` binds `apply: true` into the arguments of every primitive the walker dispatches after the gate, because a gate is what authorizes the writes that follow. It is bound as an argument, not a context key, so no extension payload built from the context carries it. A primitive with an `apply` argument therefore previews before the gate and applies after it, and `/{project}:prune`'s step 7 performs the reduction step 6 confirmed. `confirmed: false` ends the walk with a clean `complete`. Scenario [a-confirmed-gate-authorizes-the-writes-after-it](scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md).
 
 ## Per-project file resolution

@@ -1,5 +1,5 @@
 ---
-next-task: 49
+next-task: 50
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -166,3 +166,11 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 - [x] A test per caller class whose spec root links outside the project shows nothing outside is listed, each failing under its mutant; plan §Path arguments names the listing
 
 - **Done when**: no caller lists a spec root that leaves the project, proven by tests their mutants turn red; `cargo fmt --check`, clippy and the whole `cargo test` pass; and the review's fix-round loop from base `050ef7a6` re-reads the change.
+
+## 49. ductus exec refuses a forwarded argument it cannot bind (found by 022's pre-done verification; owner decision)
+
+- [ ] `run_exec` (`runtime/src/main.rs`) binds each forwarded argument as one walker-context entry and today drops any argument with no `=` without a word, so `ductus exec analyze 022` analyzes the session's target and reports `complete`. Refuse an argument with no `=`, or with an empty key, before the command file is read: a terminal `error` envelope coded `invalid-argument` naming it, exit 1 in the clean band, as data model §JSON-over-stdio protocol's **Exec arguments** paragraph states. The owner chose to refuse it on 2026-11-17, over binding bare arguments to each command's grammar or waiving it
+- [ ] The `exec` subcommand's `args` doc comment, which renders as `--help`, says each argument is `key=value`; `runtime/CHANGELOG.md` records the refusal
+- [ ] A test runs `ductus exec` with a bare argument and with `=value`, and shows the terminal `invalid-argument` envelope naming the argument, exit 1 and no `progress` line, failing under its mutant (the old drop), with the mutant in a list under `scripts/mutation/`
+
+- **Done when**: a bare or empty-key exec argument halts with a terminal `invalid-argument` envelope naming it, proven by a test its mutant turns red; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change.
