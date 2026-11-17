@@ -2171,55 +2171,59 @@ mod tests {
         );
     }
 
-    /// A named loopback host is reached directly whatever `NO_PROXY` names,
-    /// nothing or only another host, so plain http to it never crosses to the
-    /// proxy's host (BE-DATA-001; 022's review of 2026-11-17). Killed by M5 and
-    /// M6, which drop the loopback ranges from each branch
+    /// A named loopback host, `127.0.0.1` or `[::1]`, is reached directly
+    /// whatever `NO_PROXY` names, nothing or only another host, so plain http
+    /// to it never crosses to the proxy's host (BE-DATA-001; 022's review of
+    /// 2026-11-17, and task 52). Killed by M5 and M6, which drop the loopback
+    /// ranges from each branch, and M7, which drops `::1`
     /// (`scripts/mutation/fetch-archive-loopback-http.py`).
     #[test]
     fn a_named_loopback_host_is_fetched_without_the_proxy() {
         use std::io::{BufRead, BufReader, Write};
 
-        for no_proxy in [None, Some("example.com")] {
-            let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-            proxy.set_nonblocking(true).unwrap();
-            let proxy_url = format!("http://{}", proxy.local_addr().unwrap());
-            let origin = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-            let url = format!("http://{}/main.tar.gz", origin.local_addr().unwrap());
-            std::thread::spawn(move || {
-                let (stream, _) = origin.accept().unwrap();
-                let mut reader = BufReader::new(stream.try_clone().unwrap());
-                let mut line = String::new();
-                while reader.read_line(&mut line).unwrap() > 2 {
-                    line.clear();
-                }
-                let mut stream = stream;
-                stream
+        for (loopback, named) in [("127.0.0.1:0", "127.0.0.1"), ("[::1]:0", "[::1]")] {
+            for no_proxy in [None, Some("example.com")] {
+                let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+                proxy.set_nonblocking(true).unwrap();
+                let proxy_url = format!("http://{}", proxy.local_addr().unwrap());
+                let origin = std::net::TcpListener::bind(loopback).unwrap();
+                let url = format!("http://{}/main.tar.gz", origin.local_addr().unwrap());
+                std::thread::spawn(move || {
+                    let (stream, _) = origin.accept().unwrap();
+                    let mut reader = BufReader::new(stream.try_clone().unwrap());
+                    let mut line = String::new();
+                    while reader.read_line(&mut line).unwrap() > 2 {
+                        line.clear();
+                    }
+                    let mut stream = stream;
+                    stream
                     .write_all(
                         b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
                     )
                     .unwrap();
-            });
-            let mut vars = vec![("HTTP_PROXY", proxy_url.as_str())];
-            if let Some(no) = no_proxy {
-                vars.push(("NO_PROXY", no));
+                });
+                let mut vars = vec![("HTTP_PROXY", proxy_url.as_str())];
+                if let Some(no) = no_proxy {
+                    vars.push(("NO_PROXY", no));
+                }
+                let env = ProxyEnv::capture(lookup(&vars), false);
+                let screen = Screen::new(
+                    Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+                    vec![named.into()],
+                    &env,
+                );
+                let err =
+                    fetch_bytes_with(&url, &env, FETCH_TIMEOUT, FETCH_DEADLINE, Arc::new(screen))
+                        .unwrap_err();
+                assert!(
+                    matches!(err, PrimitiveError::HttpStatus { status: 404, .. }),
+                    "{named}, NO_PROXY {no_proxy:?}: {err:?}"
+                );
+                assert!(
+                    proxy.accept().is_err(),
+                    "{named}, NO_PROXY {no_proxy:?}: the loopback fetch went through the proxy"
+                );
             }
-            let env = ProxyEnv::capture(lookup(&vars), false);
-            let screen = Screen::new(
-                Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
-                vec!["127.0.0.1".into()],
-                &env,
-            );
-            let err = fetch_bytes_with(&url, &env, FETCH_TIMEOUT, FETCH_DEADLINE, Arc::new(screen))
-                .unwrap_err();
-            assert!(
-                matches!(err, PrimitiveError::HttpStatus { status: 404, .. }),
-                "NO_PROXY {no_proxy:?}: {err:?}"
-            );
-            assert!(
-                proxy.accept().is_err(),
-                "NO_PROXY {no_proxy:?}: the loopback fetch went through the proxy"
-            );
         }
     }
 

@@ -1,5 +1,5 @@
 ---
-next-task: 52
+next-task: 53
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -190,3 +190,10 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 - [x] A test feeds the step's checker an `npm audit --json` report and shows an unlisted high advisory failing it, a listed one passing, and a listed one failing once out of range or once a non-breaking fix is reported, each failing under its mutant
 
 - **Done when**: the audit step passes on the listed picomatch advisory and fails on any unlisted high or critical one, proven by a test its mutants turn red; both workflows' steps pass; and 022's next review reads the change.
+
+## 52. The loopback proxy bypass is pinned for ::1 as well as 127.0.0.0/8 (found verifying 022's review)
+
+- [x] `a_named_loopback_host_is_fetched_without_the_proxy` (`runtime/src/primitives/fetch_archive.rs`) drives only a `127.0.0.1` origin, so removing `::1` from `LOOPBACK_NO_PROXY` leaves every test passing, though `specs/system.md`, the plan and the changelog claim it. A scratch run on 2026-11-17 showed a `[::1]` fetch with `HTTP_PROXY` set going direct, and through the proxy once `::1` was dropped. The test also drives a `[::1]` origin named in the list, under both `NO_PROXY` branches
+- [x] A mutant drops `::1` from `LOOPBACK_NO_PROXY` and the test turns red (`scripts/mutation/fetch-archive-loopback-http.py` M7)
+
+- **Done when**: removing `::1` from `LOOPBACK_NO_PROXY` fails a test, proven by M7; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change.

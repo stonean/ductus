@@ -26,6 +26,8 @@ The behaviours and the tests that hold them:
       Killed by fetch_archive's
       `a_named_loopback_host_is_fetched_without_the_proxy`.
   M6  With NO_PROXY naming another host, the same. Killed by the same test.
+  M7  `::1` leaves the loopback ranges, so a named `[::1]` fetch goes through
+      a configured proxy. Killed by the same test's `[::1]` origin (task 52).
 
 No mutation is an expected survivor.
 """
@@ -73,6 +75,13 @@ MUTATIONS = [
         'src/primitives/fetch_archive.rs',
         '            format!("{},{LOOPBACK_NO_PROXY}", self.no)\n',
         '            self.no.clone()\n',
+        'a_named_loopback_host_is_fetched_without_the_proxy',
+    ),
+    (
+        'M7 ::1 leaves the loopback ranges',
+        'src/primitives/fetch_archive.rs',
+        'const LOOPBACK_NO_PROXY: &str = "127.0.0.0/8,::1";\n',
+        'const LOOPBACK_NO_PROXY: &str = "127.0.0.0/8";\n',
         'a_named_loopback_host_is_fetched_without_the_proxy',
     ),
 ]
