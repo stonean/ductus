@@ -97,6 +97,7 @@ Review state drift (blocking) | not-template-related — reads review.md, which 
 Analyze state drift (blocking) | not-template-related — reads analysis.md, which /analyze writes and no template scaffolds
 Departure entries (blocking) | covered — spec.md's Applicable Rules comment carries the departs: grammar (a commented example, so it yields no entry)
 Rules (blocking and advisory) | not-template-related — validates rule files, not spec templates
+Line-number citations (blocking) | not-template-related — forbids content (a citation of a path by line number) and requires no field; no spec template carries one, so a scaffolded artifact passes it
 JUDGED
 }
 
