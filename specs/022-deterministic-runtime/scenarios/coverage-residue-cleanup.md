@@ -14,7 +14,7 @@ Two smaller findings from the 2026-07-11 coverage review, distinct from the new-
 
 ## Behavior
 
-- `substitute-templates` and `merge-claude-md` are either wired into a command step that genuinely needs them, or retired — removed from `TOOL_NAMES`, `PRIMITIVE_NAMES`, the interpreter dispatch, the CLI enum, `runtime-tools.txt`, the data-model, and the configure permission blocks (the six-site rule in reverse), so the exposed surface matches what commands actually use.
+- `substitute-templates` and `merge-claude-md` are either wired into a command step that genuinely needs them, or retired — removed from `TOOL_NAMES`, `PRIMITIVE_NAMES`, the interpreter dispatch, the CLI enum, `runtime-tools.txt`, the data-model, and the configure permission blocks (that registration list in reverse), so the exposed surface matches what commands actually use.
 - `clarify.md`'s exec-path scope matches its markdown-only scope: steps 7–8 either gain `llm:` markers (folding into the `askClarifyQuestion` loop) so the exec path performs the same semantic work, or the exec-path scope reduction is documented explicitly in the command and data-model so it is not a silent gap.
 - The `merge-permissions` single-format limitation is recorded (here) as the trigger for a future per-format merge primitive if that path becomes hot — not built speculatively.
 

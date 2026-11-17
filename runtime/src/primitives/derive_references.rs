@@ -228,7 +228,10 @@ pub fn bound(repo: &Path, derived: Derived) -> Result<DeriveReferencesResult> {
 /// cannot be read or the rewrite cannot be persisted,
 /// [`super::PrimitiveError::Toml`] when the config does not parse and
 /// [`super::PrimitiveError::InvalidServiceEntry`] when a `[services.<alias>]`
-/// entry's `repo` or `path` is absent or empty, both naming the file, and
+/// entry's `repo` or `path` is absent or empty, both naming the file; a
+/// reachable service checkout whose own project config cannot be read or
+/// parsed, or whose `[paths] specs-root` is invalid, halts the call the same
+/// way (`load_registry`); and
 /// [`super::PrimitiveError::Git`] when a
 /// repository contains the project but its index or status cannot be read —
 /// the listing of which specs to derive then has no answer, and guessing one

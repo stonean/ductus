@@ -35,7 +35,7 @@ Adding `--into` to `/ductus:fold` instead was considered and rejected: fold's en
 
 ### Moving the content first
 
-**Merge the content into the target first, run this command second, and commit the two together.** Merging means body edits to the target and a `git mv` into it for each scenario or data model it is to hold. A moved file leaves every link to it dangling — the source's own links to `scenarios/{slug}.md`, and every inbound `../{source}/scenarios/{slug}.md` — until step 4 re-points the inbound ones and step 5 removes the source's, and the pre-commit hook's `check-corpus-links` refuses a commit holding a dangling link. So a move committed on its own is refused, and it lands in the consolidation's commit.
+**Merge the content into the target first, run this command second, and commit the two together.** Merging means body edits to the target and a move into it (`mv`, then `git add -A -- {source} {destination}`, which stages the rename; `/ductus:configure` denies `git mv`) for each scenario or data model it is to hold. A moved file leaves every link to it dangling — the source's own links to `scenarios/{slug}.md`, and every inbound `../{source}/scenarios/{slug}.md` — until step 4 re-points the inbound ones and step 5 removes the source's, and the pre-commit hook's `check-corpus-links` refuses a commit holding a dangling link. So a move committed on its own is refused, and it lands in the consolidation's commit.
 
 There are two ways to look at the work before the removal lands:
 

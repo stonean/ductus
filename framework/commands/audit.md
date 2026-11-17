@@ -30,7 +30,8 @@ See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-s
 
 **Where a named section lives.** This command's reference is `.ductus/reference/audit.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there. When a step points at one, invoke `read-section` with that path and every section the step names, in one call, rather than reading the whole file.
 
-1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. `run-generator` is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), so invoke it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`; `ductus exec` dispatches it in-process. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
+<!-- audit:ignore-promotion -->
+1. Invoke run-generator against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. run-generator is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), and the `ductus exec` walker binds no `script` for it, so the host runs it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 
 ## Boundary with `/ductus:analyze`
 

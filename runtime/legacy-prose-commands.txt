@@ -32,5 +32,9 @@
 framework/commands/amend.md
 framework/commands/help.md
 
+# Host-run: the one primitive its procedure names, run-generator, is run by the
+# host through the CLI, since the walker binds no `script` for it (spec 022 task 45)
+framework/commands/audit.md
+
 # Reference prose
 framework/bootstrap/ductus-procedure.md

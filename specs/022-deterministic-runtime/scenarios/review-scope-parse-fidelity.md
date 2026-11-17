@@ -12,7 +12,7 @@ Found by running the command against `017-derive-dont-ask` while preparing that 
 
 **The plan-affected set carried junk.** 017's `## Affected Files` section holds eleven tables, one per area. `parse_affected_files` cleared its `saw_header` flag only at an H2 boundary, so after the first separator row the flag stayed set and every later table's `| File | Action |` header was read as a data row — the literal word `File`, eight times. Cells carrying a qualifier after the path (`` `constitution.md` (root) ``) fared no better: trimming stray backticks off the whole cell kept the trailing prose, yielding `constitution.md` (root)` as a "path".
 
-That would be cosmetic if the scope rule ignored it, but the rule is *whichever set is larger*, and the inflated set won — so the review scoped ~50 files that mostly do not exist and missed the ones the work actually changed.
+That would be cosmetic if the scope rule ignored it, but the rule then was *whichever set is larger*, and the inflated set won (the scope is now their union, as the Edge Cases say) — so the review scoped ~50 files that mostly do not exist and missed the ones the work actually changed.
 
 **Captured issues counted comment lines.** The list was every line the inbox diff added. Restoring the shipped `<!-- Rules: … -->` guidance block reported roughly thirty captured issues, one per comment line, including the bare `-` lines inside it.
 

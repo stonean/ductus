@@ -35,7 +35,7 @@ existence probe yielding both the path to read and the name to render.
 Both primitives resolve once and carry the name forward with the parsed
 content:
 
-- `discover_rule_files::load_ductus_toml` returns `(DuctusToml, &'static str)`;
+- `discover_rule_files::load_ductus_toml` returns `(DuctusToml, Vec<UnknownKey>, &'static str, PathBuf)`;
   the name flows into `apply_disabled_filter` instead of a second probe.
 - `dashboard::load_config` returns `(DashboardConfig, &'static str)`; the name
   is carried into the pipeline view's model as `config_name`, which the

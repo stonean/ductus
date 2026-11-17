@@ -58,7 +58,7 @@ The hardcoded path is a runtime-only concern.
 - **`.ductus/config.toml` missing or `[host]` block absent.** `project` defaults to the repo directory basename, and `cli_config_dir`, named neither in the session file nor in `[host]`, defaults to `.claude`.
 - **`[host]` values disagree with the actual on-disk layout.** The lookup misses and the existing "command file not found" error fires, listing every candidate path tried (so the user can see the mismatch). No silent fallback to legacy hardcoded paths — fail loud.
 - **An adopter migrates from one host to another (Claude → Pi or vice versa).** `cli-config-dir` is per-contributor and lives in the gitignored session file — see `cli-config-dir-per-contributor`.
-- **Project name contains characters that aren't filesystem-safe.** Out of scope here — `{project}` is already constrained by the bootstrap to lowercase ASCII per the existing template-substitution contract. The runtime can trust it.
+- **A `project` or `cli-config-dir` that is not one path component.** `Host::load` refuses a value that is empty, `.` or `..`, or holds `/`, `\` or NUL, with `InvalidPath` naming the setting and the file it came from, since command files' paths are built from both (`BE-INPUT-004`; task 40). Within one component, `{project}` is still constrained by the bootstrap to lowercase ASCII per the template-substitution contract.
 - **The framework's source repo.** Its `.ductus/config.toml` sets `[host] project = "ductus"`, and the first candidate (`framework/commands/<name>.md`) wins every lookup there, so the installed candidates are exercised by the fixtures rather than by this repository.
 
 ## Open Questions

@@ -1172,7 +1172,6 @@ mod tests {
             "plan",
             "specify",
             "review",
-            "audit",
             "link",
             "prune",
             "clarify",

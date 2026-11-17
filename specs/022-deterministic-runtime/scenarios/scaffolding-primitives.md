@@ -20,7 +20,7 @@ The 2026-07-11 coverage review found four clusters of deterministic scaffold wor
 - A new `create-feature` primitive scaffolds the feature directory (behavior: `ductus create-feature --help`); specify.md invokes it and the LLM fills the body via `writeSpecBody` as today.
 - A new `append-inbox` primitive appends an inbox bullet (behavior: `ductus append-inbox --help`); `/{project}:log` is its only caller. Since 058, `/{project}:implement` records an out-of-spec finding as a disposition task, and the bootstrap security audit writes nothing.
 - plan.md and specify.md approval gates invoke `gate-confirm`. `gen-spec-deps.sh` is retired into the `derive-dependencies` primitive, which the command files invoke directly (067's `adopter-generator-promotion`); `run-generator` remains for generators that stay scripts.
-- All new primitives are wired at every site (schema Args/Result, primitive module, mod.rs, MCP server, PRIMITIVE_NAMES, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entries, regenerated configure permission blocks) per the AGENTS.md six-site rule.
+- All new primitives are wired at every site (schema Args/Result, primitive module, mod.rs, MCP server, PRIMITIVE_NAMES, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entries, regenerated configure permission blocks) per `docs/developing-ductus.md` §Adding or removing a runtime primitive.
 
 ## Edge Cases
 
