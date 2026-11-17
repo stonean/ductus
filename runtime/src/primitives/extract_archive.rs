@@ -1006,6 +1006,30 @@ mod tests {
         assert!(!repo.path().join(".claude").exists(), "nothing was written");
     }
 
+    /// A dest that contains the working directory is refused as one inside it
+    /// is: the archive's own `proj/` entries would land in the project (spec
+    /// 022 task 43, O31). The project lies under a staging root, as a
+    /// checkout under `/tmp` does.
+    #[test]
+    fn a_dest_containing_the_working_directory_is_refused() {
+        let staging = tempfile::tempdir().unwrap();
+        let dest = staging.path().join("x");
+        let repo = dest.join("proj");
+        fs::create_dir_all(&repo).unwrap();
+        let args = ExtractArchiveArgs {
+            archive: staging.path().join("a.tgz").to_string_lossy().into_owned(),
+            dest: dest.to_string_lossy().into_owned(),
+            format: None,
+        };
+        let err = run(&args, &repo).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, path }
+                if reason.contains("working directory") && path.ends_with('x')),
+            "{err:?}"
+        );
+        assert!(!repo.join(".claude").exists(), "nothing was written");
+    }
+
     #[test]
     fn an_input_archive_inside_the_working_directory_is_read() {
         // The exclusion is on the write destination only: reading an input

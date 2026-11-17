@@ -623,6 +623,34 @@ mod tests {
         assert!(victim.exists(), "no file outside the repo may be removed");
     }
 
+    /// A link inside the cleanup directory is neither removed nor followed, by
+    /// either walk: a linked file is not a file to remove, and a linked
+    /// directory's contents are not collected, so a stale-looking file
+    /// beyond a link is untouched (`BE-INPUT-004`; spec 022 task 43's
+    /// containment audit of `collect_entries`).
+    #[cfg(unix)]
+    #[test]
+    fn a_link_inside_the_directory_is_not_followed_by_either_walk() {
+        for recursive in [true, false] {
+            let tmp = tempfile::tempdir().unwrap();
+            let outside = tempfile::tempdir().unwrap();
+            touch(&outside.path().join("beyond.md"));
+            let dir = tmp.path().join("cmds");
+            touch(&dir.join("stale.md"));
+            std::os::unix::fs::symlink(outside.path(), dir.join("linked-dir")).unwrap();
+            std::os::unix::fs::symlink(outside.path().join("beyond.md"), dir.join("link.md"))
+                .unwrap();
+            let args = args_for(&dir, &[], &[], recursive, None);
+            let result = run(&args, tmp.path()).unwrap();
+            assert_eq!(result.removed, vec!["stale.md"], "recursive: {recursive}");
+            assert!(outside.path().join("beyond.md").exists());
+            assert!(
+                dir.join("link.md").symlink_metadata().is_ok(),
+                "the linked file stays"
+            );
+        }
+    }
+
     #[test]
     fn regex_metacharacter_inside_glob_is_treated_as_a_literal() {
         // A `[` in the glob is escaped, not interpreted as a regex

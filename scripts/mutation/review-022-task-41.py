@@ -196,4 +196,32 @@ MUTATIONS = [
         '            let contained = true;',
         'interpreter::payload::tests::fold_scenarios_read_nothing_outside_the_project',
     ),
+    (
+        'M26 a scope path leaving the project is dropped without a word',
+        'src/interpreter/payload.rs',
+        '            Contained::Outside => refused.push(path),',
+        '            Contained::Outside => {}',
+        'interpreter::payload::tests::a_refused_scope_or_rule_path_is_named_in_the_request',
+    ),
+    (
+        'M27 a rule file leaving the project is dropped without a word',
+        'src/interpreter/payload.rs',
+        '            Contained::Outside => refused.push(rel),',
+        '            Contained::Outside => {}',
+        'interpreter::payload::tests::a_refused_scope_or_rule_path_is_named_in_the_request',
+    ),
+    (
+        'M28 a request that refused nothing carries an empty unexaminable list',
+        'src/schema/extensions.rs',
+        '    #[serde(default, skip_serializing_if = "Vec::is_empty")]\n    pub unexaminable: Vec<String>,',
+        '    #[serde(default)]\n    pub unexaminable: Vec<String>,',
+        'interpreter::payload::tests::a_refused_scope_or_rule_path_is_named_in_the_request',
+    ),
+    (
+        'M29 performReview moves no refusals past the bound',
+        'src/interpreter/payload.rs',
+        '            "passes-run",\n            "unexaminable",\n',
+        '            "passes-run",\n',
+        'interpreter::payload::tests::refused_paths_move_to_the_lists_file_with_their_count',
+    ),
 ]

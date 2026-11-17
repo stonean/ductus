@@ -27,8 +27,9 @@ The judgments and the tests that hold them:
       (filter pointer). M6-M8 are retired ids and stay unused.
 
 `check_no_protected` has no judgment of its own to mutate: it delegates to
-`check_destination` (every base, the links, the followback) and swallows only
-the config-directory-row refusal, so its protected judgment is M1/M2 above and
+`check_destination`'s judgment (every base, the links, the followback) under a
+scope that skips only the config-directory-row verdict (task 43's
+`review-022-task-43.py` M6 and M7), so its protected judgment is M1/M2 above and
 its MCP/settings-file judgment is task 11's `destination-checks.py`. The
 `merge_permissions` tests (`a_protected_path_is_refused`, the cwd-inside-a-
 protected-directory case, the root-file-link case, `a_config_dir_settings_file_stays_allowed`)

@@ -362,6 +362,16 @@ pub struct PerformReviewRequest {
     /// here. Empty when the walker names none.
     #[serde(default)]
     pub passes_run: Vec<String>,
+    /// What the request could not examine, one entry per path: a `scope` or
+    /// rule-file path that leaves the project, which is never read
+    /// (`scope-outside-project: {path}`, `rule-file-outside-project: {path}`).
+    /// Empty in the ordinary case and omitted from the wire when empty, as
+    /// `constitution-excerpts-unexaminable` is for `writeCode`, so a pass
+    /// cannot read a scope with files missing from it as the whole scope
+    /// (`QUAL-CLAIM-001`). A path that is missing or unreadable is not named:
+    /// it is a file the scope lists and the disk lacks.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unexaminable: Vec<String>,
     /// `path` when the request is past the read size and the host reads each
     /// `scope-files` and `rule-files` entry's `path` itself; absent when the
     /// contents are inline.
@@ -1474,6 +1484,7 @@ mod tests {
                 pass: "security".into(),
             }],
             passes_run: vec!["security".into()],
+            unexaminable: vec![],
             content_form: None,
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();

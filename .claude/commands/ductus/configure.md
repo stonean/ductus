@@ -42,14 +42,11 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
    **Git commands:**
    - `Bash(git add *)`
-   - `Bash(git commit *)`
-   - `Bash(git push *)`
    - `Bash(git status *)`
 
    **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: a `Bash(git -C <wildcard> status <wildcard>)` shape lets that leading wildcard span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly this over-broadening reason. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
 
    **Utility:**
-   - `Bash(gh api *)`
    - `Bash(command -v *)`
 
    **Build / lint:**
@@ -57,7 +54,6 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
 
    **Hooks and generators (ductus's pre-commit pipeline):**
    - `Bash(git config --get core.hooksPath)`
-   - `Bash(git config --unset core.hooksPath)`
 
    **Runtime MCP tools (`mcp__ductus__*` — generated from `framework/runtime-tools.txt`):**
 
@@ -203,6 +199,12 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Bash(chmod +x *)`
    - `Bash(git config core.hooksPath *)`
    - `Bash(curl *)`
+
+   **Entries no framework step runs** (dropped from the canonical set by spec 022 task 43, the owner's answer of 2026-11-17, from its review; a search of `framework/commands`, `framework/reference`, `framework/bootstrap`, `framework/migrations` and `framework/templates` finds no step running any of them). `git push` writes a remote, and its `--receive-pack` option names a program git runs; `gh api` writes to GitHub with the operator's credentials through its method flag; `git commit` runs the project's hooks; and `git config --unset core.hooksPath` changes which hooks run. A host prompts for each, and a run that needs one is the operator's to approve:
+   - `Bash(git commit *)`
+   - `Bash(git push *)`
+   - `Bash(gh api *)`
+   - `Bash(git config --unset core.hooksPath)`
 
    **Why this list lives here and not in a `/ductus` migration.** The registry in `framework/migrations.toml` is the framework's usual home for adopter-side cleanup, and it is the wrong mechanism for this one. Its `[migrations].last_applied` marker lives in the **committed** `.ductus/config.toml`, while this file is **per-contributor and gitignored** — so the first teammate to run `/ductus` would mark the entry applied for the whole repo and every other teammate would keep the retired entries forever. `/ductus` also never writes the full permission set (it seeds only the bootstrap entries and directs the operator here). This command has neither problem: it is the sole owner of this file, it runs per-contributor, and it is idempotent, so retirement simply happens on the next run for each person who runs it.
 

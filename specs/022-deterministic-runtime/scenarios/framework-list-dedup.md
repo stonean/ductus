@@ -51,7 +51,7 @@ This mirrors the `ask-consolidation` scenario's precedent of landing more than o
 - **`merge-managed-block` — duplicate appears multiple times outside the marker.** All adopter-area duplicates of a canonical line are removed, not just the first. The canonical block remains the single source of that entry.
 - **`merge-managed-block` — duplicate line appears in two separate managed blocks.** Out of scope. The primitive supports one managed block per file per marker; the cross-boundary scan only considers the single block's contents against everything outside it.
 - **`merge-managed-block` — adopter line with trailing whitespace differing from canonical.** Treated as distinct (exact string-equality on trimmed line content; trailing whitespace inside the trim doesn't apply, but a difference in pattern body — even one space — is preserved).
-- **Concurrent writers.** Both primitives' atomic-rename semantics guarantee no partial-write state on disk; concurrent invocations resolve last-writer-wins with file-system-atomicity for the rename. Neither primitive holds a lock.
+- **Concurrent writers.** Both primitives' atomic-rename semantics guarantee no partial-write state on disk; each primitive re-reads its file just before the rename and refuses with a changed-since-read error naming the file, writing nothing, when it changed (or appeared) since the read, so the other writer's change stands and a re-run lands this one (BE-TXN-002; plan, Compare before persist). Neither holds a lock of its own.
 
 ## Open Questions
 

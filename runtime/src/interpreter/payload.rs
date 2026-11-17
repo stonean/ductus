@@ -468,7 +468,10 @@ pub(crate) fn passes_run(procedure: &crate::schema::procedure::Procedure) -> Vec
 /// not loaded or its pass is not in `passes-run` (spec 020, scenario
 /// `review-reports-a-defect-under-its-owner`).
 /// Missing/unreadable files are skipped rather than erroring — the pass
-/// reviews what it can read. The typed prefix leads (cache-anchor order:
+/// reviews what it can read. A scope or rule path that leaves the project is
+/// never read and is named in `unexaminable` (`scope-outside-project: …`,
+/// `rule-file-outside-project: …`), so the pass cannot take what it was given
+/// for the whole scope. The typed prefix leads (cache-anchor order:
 /// `scope-files` is stable across passes); legacy context fields follow for
 /// hosts that already parse them.
 fn build_perform_review_request(
@@ -479,8 +482,17 @@ fn build_perform_review_request(
     let pass = pass_from_step_prose(step_prose)
         .map(str::to_string)
         .unwrap_or_default();
-    let scope_files = load_scope_files(context, repo);
-    let all_rule_files = load_rule_files(context, repo);
+    let (scope_files, scope_refused) = load_scope_files(context, repo);
+    let (all_rule_files, rules_refused) = load_rule_files(context, repo);
+    let unexaminable = scope_refused
+        .into_iter()
+        .map(|path| format!("scope-outside-project: {path}"))
+        .chain(
+            rules_refused
+                .into_iter()
+                .map(|path| format!("rule-file-outside-project: {path}")),
+        )
+        .collect();
     let loaded_rule_files = all_rule_files
         .iter()
         .map(|file| LoadedReviewRuleFile {
@@ -500,6 +512,7 @@ fn build_perform_review_request(
         pass,
         loaded_rule_files,
         passes_run,
+        unexaminable,
         content_form: None,
     };
     // The inline form names no rule file's path: the host has the content.
@@ -536,6 +549,7 @@ fn build_perform_review_request(
             "rule-files",
             "loaded-rule-files",
             "passes-run",
+            "unexaminable",
         ],
         Some(typed_keys(&typed)),
     )
@@ -593,26 +607,30 @@ fn refuse_outside(
 /// is canonicalized and confined to the repo root before it is opened — an
 /// absolute or traversing entry is skipped, never read into the review
 /// payload. Missing and unreadable paths are likewise skipped (best-effort).
-fn load_scope_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewScopeFile> {
+fn load_scope_files(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> (Vec<ReviewScopeFile>, Vec<String>) {
     let Ok(canon_repo) = repo.canonicalize() else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
-    string_array(context, "scope")
-        .into_iter()
-        .filter_map(
-            |path| match classify_contained(&canon_repo, Path::new(&path)) {
-                Contained::Inside(abs) => {
-                    std::fs::read_to_string(&abs)
-                        .ok()
-                        .map(|content| ReviewScopeFile {
-                            path,
-                            content: Some(content),
-                        })
+    let mut files = Vec::new();
+    let mut refused = Vec::new();
+    for path in string_array(context, "scope") {
+        match classify_contained(&canon_repo, Path::new(&path)) {
+            Contained::Inside(abs) => {
+                if let Ok(content) = std::fs::read_to_string(&abs) {
+                    files.push(ReviewScopeFile {
+                        path,
+                        content: Some(content),
+                    });
                 }
-                Contained::Missing | Contained::Outside => None,
-            },
-        )
-        .collect()
+            }
+            Contained::Missing => {}
+            Contained::Outside => refused.push(path),
+        }
+    }
+    (files, refused)
 }
 
 /// Give a result past the read size back the lists it moved to a file, so
@@ -697,42 +715,46 @@ pub(super) fn restore_lists(
 /// Load the pass's `selected` rule basenames (from `discover-rule-files`)
 /// under `rules-dir` into `ReviewRuleFile` records. Unreadable files are
 /// skipped.
-fn load_rule_files(context: &Map<String, Value>, repo: &Path) -> Vec<ReviewRuleFile> {
+fn load_rule_files(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> (Vec<ReviewRuleFile>, Vec<String>) {
     let rules_dir = context
         .get("rules-dir")
         .and_then(Value::as_str)
         .unwrap_or_default();
     let Ok(canon_repo) = repo.canonicalize() else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     // `rules-dir` and `selected` come from `discover-rule-files` (a directory
     // walk of trusted basenames), but the same BE-INPUT-004 containment check
     // is applied defensively so the reader cannot escape the repo regardless.
-    string_array(context, "selected")
-        .into_iter()
-        .filter_map(|name| {
-            // The path the request names is repo-relative and joined with `/`
-            // on every platform, as `scope-files` paths are; `Path::join`
-            // would give a `\` on Windows.
-            let rel = if rules_dir.is_empty() {
-                name.clone()
-            } else {
-                format!("{}/{name}", rules_dir.trim_end_matches('/'))
-            };
-            match classify_contained(&canon_repo, Path::new(&rel)) {
-                Contained::Inside(abs) => {
-                    std::fs::read_to_string(&abs)
-                        .ok()
-                        .map(|content| ReviewRuleFile {
-                            name,
-                            content: Some(content),
-                            path: Some(rel),
-                        })
+    let mut files = Vec::new();
+    let mut refused = Vec::new();
+    for name in string_array(context, "selected") {
+        // The path the request names is repo-relative and joined with `/`
+        // on every platform, as `scope-files` paths are; `Path::join`
+        // would give a `\` on Windows.
+        let rel = if rules_dir.is_empty() {
+            name.clone()
+        } else {
+            format!("{}/{name}", rules_dir.trim_end_matches('/'))
+        };
+        match classify_contained(&canon_repo, Path::new(&rel)) {
+            Contained::Inside(abs) => {
+                if let Ok(content) = std::fs::read_to_string(&abs) {
+                    files.push(ReviewRuleFile {
+                        name,
+                        content: Some(content),
+                        path: Some(rel),
+                    });
                 }
-                Contained::Missing | Contained::Outside => None,
             }
-        })
-        .collect()
+            Contained::Missing => {}
+            Contained::Outside => refused.push(rel),
+        }
+    }
+    (files, refused)
 }
 
 /// Read a context key as a `Vec<String>`, dropping non-string members.
@@ -3575,6 +3597,7 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .into_owned();
+        let abs_secret_name = abs_secret.clone();
 
         let mut ctx = Map::new();
         ctx.insert(
@@ -3587,7 +3610,15 @@ mod tests {
             ]),
         );
 
-        let files = load_scope_files(&ctx, &repo);
+        let (files, refused) = load_scope_files(&ctx, &repo);
+        assert_eq!(
+            refused,
+            ["../secret.txt".to_string(), "abs".to_string()].map(|p| if p == "abs" {
+                abs_secret_name.clone()
+            } else {
+                p
+            })
+        );
         assert_eq!(files.len(), 1, "only the in-repo scope file is read");
         assert_eq!(files[0].path, "src/in.rs");
         assert_eq!(files[0].content.as_deref(), Some("fn a() {}"));
@@ -3627,7 +3658,7 @@ mod tests {
                 "modified-since": [],
             })
         );
-        let files = load_scope_files(result.as_object().unwrap(), tmp.path());
+        let (files, _) = load_scope_files(result.as_object().unwrap(), tmp.path());
         let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, ["src/a.rs", "src/b.rs"]);
     }
@@ -5506,5 +5537,67 @@ mod tests {
             .map(|scenario| (scenario.slug.as_str(), scenario.section.as_str()))
             .collect();
         assert_eq!(shown, [("in", "Inside"), ("out", "")]);
+    }
+
+    /// A project at `outer/repo` with one scope file and one rule file, and an
+    /// existing file of each kind outside it for a path to reach.
+    fn refused_paths_fixture() -> (tempfile::TempDir, PathBuf, Map<String, Value>) {
+        let outer = tempdir().unwrap();
+        let repo = outer.path().join("repo");
+        fs::create_dir_all(repo.join("src")).unwrap();
+        fs::create_dir_all(repo.join("framework/rules")).unwrap();
+        fs::write(repo.join("src/in.rs"), "fn a() {}").unwrap();
+        fs::write(repo.join("framework/rules/quality-cross.md"), "# Rules\n").unwrap();
+        fs::write(outer.path().join("outside.txt"), "outside").unwrap();
+        fs::write(outer.path().join("escape.md"), "# Escape\n").unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("rules-dir".into(), Value::String("framework/rules".into()));
+        ctx.insert(
+            "selected".into(),
+            serde_json::json!(["quality-cross.md", "../../../escape.md"]),
+        );
+        ctx.insert(
+            "scope".into(),
+            serde_json::json!(["src/in.rs", "../outside.txt", "src/absent.rs"]),
+        );
+        (outer, repo, ctx)
+    }
+
+    /// A `scope` or rule-file path that leaves the project is never read and is
+    /// named in the request's `unexaminable`, by path, with each reader's own
+    /// label; a path that is merely missing is not (spec 022 task 41).
+    #[test]
+    fn a_refused_scope_or_rule_path_is_named_in_the_request() {
+        let (_outer, repo, ctx) = refused_paths_fixture();
+        let value = build_perform_review_request(&ctx, &repo, "security pass").unwrap();
+        assert_eq!(
+            value["unexaminable"],
+            serde_json::json!([
+                "scope-outside-project: ../outside.txt",
+                "rule-file-outside-project: framework/rules/../../../escape.md",
+            ])
+        );
+        assert_eq!(value["scope-files"].as_array().unwrap().len(), 1);
+        // A request that refused nothing carries no such field.
+        let (clean, mut ctx) = review_rules_fixture();
+        ctx.insert("scope".into(), serde_json::json!(["absent.rs"]));
+        let value = build_perform_review_request(&ctx, clean.path(), "security pass").unwrap();
+        assert!(value.get("unexaminable").is_none(), "{value}");
+    }
+
+    /// Past the bound the refusals move to the lists file with their count
+    /// inline, like every list the request carries.
+    #[test]
+    fn refused_paths_move_to_the_lists_file_with_their_count() {
+        let (_outer, repo, ctx) = refused_paths_fixture();
+        set_read_size(&repo, "100");
+        let value = build_perform_review_request(&ctx, &repo, "security pass").unwrap();
+        assert!(value.get("unexaminable").is_none(), "{value}");
+        assert_eq!(value["unexaminable-count"], 2);
+        let moved = request_lists(&repo, &value);
+        assert_eq!(
+            moved["unexaminable"][0],
+            "scope-outside-project: ../outside.txt"
+        );
     }
 }

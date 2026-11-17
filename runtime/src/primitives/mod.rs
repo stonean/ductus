@@ -2214,7 +2214,11 @@ pub fn load_cli_json<T: serde::de::DeserializeOwned>(
 /// by the project's own files, so the primitive would write them (a granting
 /// `.claude/settings.local.json`, say) with no project bound and no host
 /// prompt. This refuses a destination that resolves inside the working
-/// directory, closing that write.
+/// directory, closing that write. A destination that *contains* the working
+/// directory is refused too: with the project under a staging root,
+/// `extract-archive --dest <root>/x` for a project at `<root>/x/proj` and an
+/// archive holding `proj/.claude/settings.local.json` wrote the project's own
+/// file (spec 022 task 43, O31).
 ///
 /// `/ductus` is untouched in every normal temp configuration: it extracts
 /// into `{tempdir}` (a fresh `mktemp -d -t` directory) and writes every
@@ -2236,7 +2240,8 @@ pub fn load_cli_json<T: serde::de::DeserializeOwned>(
 /// # Errors
 ///
 /// As [`validate_in_temp_dir`]; additionally [`PrimitiveError::InvalidPath`]
-/// when the staging path resolves inside the working directory, and
+/// when the staging path resolves inside the working directory or contains
+/// it, and
 /// [`PrimitiveError::Io`] when `repo` cannot be resolved.
 pub(crate) fn validate_staging_outside(repo: &Path, path_arg: &str) -> Result<PathBuf> {
     let resolved = validate_in_temp_dir(path_arg)?;
@@ -2245,11 +2250,11 @@ pub(crate) fn validate_staging_outside(repo: &Path, path_arg: &str) -> Result<Pa
         path: resolved.clone(),
         source,
     })?;
-    if canonical.starts_with(&canonical_repo) {
+    if canonical.starts_with(&canonical_repo) || canonical_repo.starts_with(&canonical) {
         return Err(PrimitiveError::InvalidPath {
             path: path_arg.into(),
-            reason: "resolves inside the working directory; an archive staging path must lie \
-                     outside the project"
+            reason: "resolves inside or above the working directory; an archive staging path \
+                     must lie outside the project and not contain it"
                 .into(),
         });
     }

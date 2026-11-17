@@ -482,6 +482,21 @@ its version and date.
   one has). The rule load propagates a project config it cannot parse and a
   feature that leaves the project, so the first assessment step of an `/analyze`
   walk halts instead of judging every rule against a feature with no record.
+  `performReview` gains `unexaminable`, after `passes-run` and omitted when
+  empty, naming each scope path (`scope-outside-project: {path}`) and rule file
+  (`rule-file-outside-project: {path}`) that leaves the project and so was not
+  read, where the request used to drop them silently; past the read size it
+  moves to the lists file with `unexaminable-count` inline. A scope path missing
+  from disk is still skipped, as before.
+
+- **Claude's canonical allow set retires four entries no framework step runs
+  (spec 022 task 43; 022's review of 2026-11-17, owner decision).**
+  `Bash(git push *)`, `Bash(gh api *)`, `Bash(git commit *)` and
+  `Bash(git config --unset core.hooksPath)` leave `CANONICAL_ALLOW_STATIC`,
+  which now holds 12, and join `RETIRED_ALLOW`, which now holds 31, so
+  `/configure` revokes them from an existing settings file, and a canonical
+  `merge-permissions` call passing one in `allow` is refused as a conflicting
+  revoke.
 
 - **A `prune-tasks` or `prune-plan` result carries `form` and `lists-file`
   once, and a file-form walk deserializes back (spec 041's review).** The two
@@ -1318,6 +1333,15 @@ its version and date.
 
 ### Fixed
 
+- **`merge-permissions` refuses a settings path whose link under a config
+  directory leads into a protected one, and an archive's staging path may not
+  contain the working directory (spec 022 task 43; 022's review of 2026-11-17,
+  `BE-INPUT-004`).** `check_no_protected` let a config-directory path pass by
+  ending the whole judgment there, so the landing and links-lead forms were
+  never judged: `.claude/sub/pre-commit`, with `sub` a link to `.git/hooks`,
+  was written. Every judgment now runs, and only the config-directory verdict
+  is skipped. `extract-archive` and `fetch-archive` refuse a `dest` that
+  contains the working directory, as they already refused one inside it.
 - **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
   from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
   check before the marker was stripped, so it was written as an empty bullet

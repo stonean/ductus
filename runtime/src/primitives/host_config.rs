@@ -244,6 +244,30 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// [`PrimitiveError::Io`] when the project root or the destination cannot be
 /// resolved.
 pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result<Option<HostRow>> {
+    judge_destination(repo, dest, shown, Scope::Everything)
+}
+
+/// What [`judge_destination`] refuses.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    /// Every destination in a host's configuration but the rows
+    /// ([`check_destination`]).
+    Everything,
+    /// The protected set and the MCP and settings files alone: a path under a
+    /// config directory that is not a row is judged on its other names and
+    /// refused for no other reason ([`check_no_protected`]).
+    ProtectedOnly,
+}
+
+/// [`check_destination`]'s judgment, with `scope` saying which refusals stand.
+/// Every judgment runs under either scope: a refusal a scope lets pass skips
+/// that one verdict, never the judgments after it.
+fn judge_destination(
+    repo: &Path,
+    dest: &Path,
+    shown: &str,
+    scope: Scope,
+) -> Result<Option<HostRow>> {
     let resolve = |p: &Path| {
         resolve_symlinks(p).map_err(|source| PrimitiveError::Io {
             path: p.into(),
@@ -270,11 +294,11 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
     }
     for (base, canonical_base) in &bases {
         if let Some(names) = given_names(base, canonical_base, dest) {
-            rows.extend(judge_names(&names, shown)?);
+            rows.extend(judge_names(&names, shown, scope)?);
         }
-        rows.extend(judge(base, canonical_base, &landing, shown)?);
+        rows.extend(judge(base, canonical_base, &landing, shown, scope)?);
         if let Some(leads) = &leads {
-            rows.extend(judge(base, canonical_base, leads, shown)?);
+            rows.extend(judge(base, canonical_base, leads, shown, scope)?);
         }
     }
     if !above.is_empty() {
@@ -286,7 +310,11 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
                 .and_then(|leads| strip_folded(leads, &canonical_repo)),
         ];
         for names in under_root.into_iter().flatten() {
-            rows.extend(judge_names(&[above.as_slice(), &names].concat(), shown)?);
+            rows.extend(judge_names(
+                &[above.as_slice(), &names].concat(),
+                shown,
+                scope,
+            )?);
         }
     }
     Ok(rows.first().copied())
@@ -358,35 +386,26 @@ pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Res
 /// legitimately (via `/configure`), so it is held off the protected set
 /// alone, not off the config directories.
 ///
-/// It delegates to [`check_destination`] so it inherits the full judgment —
-/// every base (the working directory *and* the outermost git work tree above
-/// it, which is what catches a working directory that is itself a protected
-/// subdirectory), the as-given/landing/links-lead forms, and the root-file
-/// link-followback — and keeps only the one allowance: a config-directory
-/// non-row refusal (the `settings.local.json` case) is swallowed, while a
-/// protected directory or file (task 20), an MCP/settings file (task 11), and
-/// any I/O error propagate. A `/ductus` row ([`HostRow`]) and a neutral path
-/// are both allowed.
+/// It runs [`check_destination`]'s whole judgment under
+/// [`Scope::ProtectedOnly`], so it inherits every base (the working directory
+/// *and* the outermost git work tree above it, which is what catches a
+/// working directory that is itself a protected subdirectory), the
+/// as-given/landing/links-lead forms, and the root-file link-followback. The
+/// one allowance is a config-directory path that is not a row (the
+/// `settings.local.json` case): that verdict is skipped where it arises and
+/// every other judgment still runs, so `.claude/sub/pre-commit` with `sub` a
+/// link to `../.git/hooks` is refused by the landing and links-lead judgments
+/// the as-given one no longer ends (spec 022 task 43, O30). A protected
+/// directory or file (task 20), an MCP/settings file (task 11), and any I/O
+/// error propagate; a `/ductus` row ([`HostRow`]) and a neutral path are both
+/// allowed.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidPath`] for a destination in the protected set or
 /// an MCP/settings file; [`PrimitiveError::Io`] when a path cannot be resolved.
 pub(crate) fn check_no_protected(repo: &Path, dest: &Path, shown: &str) -> Result<()> {
-    match check_destination(repo, dest, shown) {
-        Ok(_) => Ok(()),
-        // The config-directory non-row refusal alone is allowed here —
-        // `merge-permissions` writes `settings.local.json` under a config
-        // directory. `refuse` is the only refusal naming "configuration
-        // directory `"; `refuse_file`, `refuse_protected_file` and
-        // `refuse_protected_dir` do not, so they (and `Io`) propagate.
-        Err(PrimitiveError::InvalidPath { reason, .. })
-            if reason.contains("configuration directory `") =>
-        {
-            Ok(())
-        }
-        Err(other) => Err(other),
-    }
+    judge_destination(repo, dest, shown, Scope::ProtectedOnly).map(|_| ())
 }
 
 /// `dest`'s names under the project root as written: what follows the
@@ -453,7 +472,13 @@ fn lexical_names(rel: &Path) -> Option<Vec<String>> {
 }
 
 /// A resolved path's verdict, as [`check_destination`] describes.
-fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result<Option<HostRow>> {
+fn judge(
+    repo: &Path,
+    canonical_repo: &Path,
+    path: &Path,
+    shown: &str,
+    scope: Scope,
+) -> Result<Option<HostRow>> {
     let Some(names) = strip_folded(path, canonical_repo) else {
         return Ok(None);
     };
@@ -480,7 +505,10 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
             continue;
         }
         if let Some(rest) = strip_folded(path, &linked) {
-            return judge_under(dir, layout, &rest, shown);
+            let verdict = judge_under(dir, layout, &rest, shown, scope)?;
+            if verdict.is_some() || scope == Scope::Everything {
+                return Ok(verdict);
+            }
         }
     }
     for &file in CONFIG_FILES.iter().chain(OTHER_TOOL_FILES) {
@@ -497,12 +525,12 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
     // `.claude` a link to divert `/ductus`'s own writes, whereas a project
     // whose `.git` or `.cargo` is itself a link (a write to the target then
     // read through it) is a case the host itself does not guard and is left.
-    judge_names(&names, shown)
+    judge_names(&names, shown, scope)
 }
 
 /// The verdict on a path's names under the project root: an MCP or settings
 /// file, or a config directory with the row under it.
-fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
+fn judge_names(names: &[String], shown: &str, scope: Scope) -> Result<Option<HostRow>> {
     if let Some(last) = names.last()
         && let Some(&file) = CONFIG_FILES
             .iter()
@@ -533,7 +561,10 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
             return Err(refuse_other_tool_dir(shown, dir));
         }
         if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| folded == *dir) {
-            return judge_under(dir, layout, &names[depth + 1..], shown);
+            let verdict = judge_under(dir, layout, &names[depth + 1..], shown, scope)?;
+            if verdict.is_some() || scope == Scope::Everything {
+                return Ok(verdict);
+            }
         }
     }
     Ok(None)
@@ -576,13 +607,21 @@ fn dir_sequence_in(
 /// works on files there" (code.claude.com/docs/en/skills). A name that is
 /// not a config directory's changes no verdict, since a config directory is
 /// matched at any depth and a config file only as the last name.
-fn judge_under(dir: &str, layout: Layout, rest: &[String], shown: &str) -> Result<Option<HostRow>> {
+fn judge_under(
+    dir: &str,
+    layout: Layout,
+    rest: &[String],
+    shown: &str,
+    scope: Scope,
+) -> Result<Option<HostRow>> {
     if dir == ".claude" && rest.len() > 2 && fold(&rest[0]) == "worktrees" {
-        return judge_names(&rest[1..], shown);
+        return judge_names(&rest[1..], shown, scope);
     }
-    row(layout, rest)
-        .map(Some)
-        .ok_or_else(|| refuse(shown, dir))
+    match row(layout, rest) {
+        Some(found) => Ok(Some(found)),
+        None if scope == Scope::ProtectedOnly => Ok(None),
+        None => Err(refuse(shown, dir)),
+    }
 }
 
 /// `path` less `prefix`, compared component by component after [`fold`]:
@@ -2214,5 +2253,33 @@ mod tests {
             assert!(PROTECTED_FILES.contains(&file), "{file}");
         }
         assert!(!PROTECTED_FILES.contains(&".mcp.json"));
+    }
+
+    /// A refusal [`check_no_protected`] lets pass ends only its own verdict:
+    /// `.claude/sub/pre-commit`, `sub` a link to `.git/hooks`, is a
+    /// config-directory path as given, which the call allows, and a protected
+    /// one where it lands, which it refuses (spec 022 task 43, O30).
+    #[cfg(unix)]
+    #[test]
+    fn a_config_directory_verdict_the_call_allows_does_not_end_the_judgment() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::os::unix::fs::symlink("../.git/hooks", repo.join(".claude/sub")).unwrap();
+        let through = repo.join(".claude/sub/pre-commit");
+        // The whole check stops at the config-directory refusal, which is why
+        // the call cannot lean on it.
+        assert!(matches!(
+            check_destination(repo, &through, "x"),
+            Err(PrimitiveError::InvalidPath { ref reason, .. }) if reason.contains("configuration directory")
+        ));
+        let err = check_no_protected(repo, &through, ".claude/sub/pre-commit").unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. } if reason.contains("task 20")),
+            "{err:?}"
+        );
+        // The allowance itself stands: a non-row under a config directory.
+        check_no_protected(repo, &repo.join(".claude/settings.local.json"), "s").unwrap();
     }
 }

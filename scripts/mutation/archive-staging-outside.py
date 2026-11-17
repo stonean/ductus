@@ -31,8 +31,8 @@ MUTATIONS = [
     (
         'M1 outside-working-directory check removed (a staging dest inside the project passes)',
         'src/primitives/mod.rs',
-        '    if canonical.starts_with(&canonical_repo) {\n        return Err(PrimitiveError::InvalidPath {',
-        '    if false {\n        return Err(PrimitiveError::InvalidPath {',
+        '    if canonical.starts_with(&canonical_repo) || canonical_repo.starts_with(&canonical) {\n        return Err(PrimitiveError::InvalidPath {',
+        '    if canonical_repo.starts_with(&canonical) {\n        return Err(PrimitiveError::InvalidPath {',
         'a_dest_inside_the_working_directory_is_refused an_output_inside_the_working_directory_is_refused',
     ),
 ]

@@ -189,14 +189,10 @@ const CANONICAL_ALLOW_STATIC: &[&str] = &[
     "WebSearch",
     "Bash(ls *)",
     "Bash(git add *)",
-    "Bash(git commit *)",
-    "Bash(git push *)",
     "Bash(git status *)",
-    "Bash(gh api *)",
     "Bash(command -v *)",
     "Bash(npx markdownlint-cli2 *)",
     "Bash(git config --get core.hooksPath)",
-    "Bash(git config --unset core.hooksPath)",
 ];
 
 /// Claude's canonical `permissions.deny` set, step 3 of
@@ -257,6 +253,10 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "Bash(chmod +x *)",
     "Bash(git config core.hooksPath *)",
     "Bash(curl *)",
+    "Bash(git commit *)",
+    "Bash(git push *)",
+    "Bash(gh api *)",
+    "Bash(git config --unset core.hooksPath)",
 ];
 
 /// [`canonical_allow`] in the order the canonical call appends missing
@@ -1531,6 +1531,10 @@ mod tests {
             "Bash(chmod +x *)",
             "Bash(git config core.hooksPath *)",
             "Bash(curl *)",
+            "Bash(git commit *)",
+            "Bash(git push *)",
+            "Bash(gh api *)",
+            "Bash(git config --unset core.hooksPath)",
         ] {
             assert!(!canonical.contains(entry), "{entry} is still granted");
             assert!(RETIRED_ALLOW.contains(&entry), "{entry} is not retired");
@@ -1539,6 +1543,25 @@ mod tests {
                 "{entry} passes the ceiling"
             );
         }
+    }
+
+    /// The canonical non-MCP set holds twelve entries and the retired set
+    /// thirty-one, the four retired from the canonical set by spec 022 task 43
+    /// last in step 4's order: a regrown set, or a retirement dropped from
+    /// either, changes a count.
+    #[test]
+    fn the_sets_hold_the_counts_task_43_left() {
+        assert_eq!(CANONICAL_ALLOW_STATIC.len(), 12);
+        assert_eq!(RETIRED_ALLOW.len(), 31);
+        assert_eq!(
+            &RETIRED_ALLOW[27..],
+            [
+                "Bash(git commit *)",
+                "Bash(git push *)",
+                "Bash(gh api *)",
+                "Bash(git config --unset core.hooksPath)",
+            ]
+        );
     }
 
     /// A project named `acme`, its spec root `root` when one is given.
@@ -1735,6 +1758,29 @@ mod tests {
             );
             assert!(!tmp.path().join(path).exists(), "{path}: nothing written");
         }
+    }
+
+    /// A link under a config directory does not carry the write past the
+    /// protected set: `.claude/sub` linked to `.git/hooks` is a
+    /// config-directory path as given, which this primitive allows, and the
+    /// protected `.git/hooks` where it lands, which it refuses before any write
+    /// (spec 022 task 43, O30).
+    #[cfg(unix)]
+    #[test]
+    fn a_link_under_a_config_directory_into_a_protected_one_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        git2::Repository::init(tmp.path()).unwrap();
+        std::fs::create_dir_all(tmp.path().join(".claude")).unwrap();
+        std::os::unix::fs::symlink("../.git/hooks", tmp.path().join(".claude/sub")).unwrap();
+        let err = run(&args(".claude/sub/pre-commit", &["Edit"], &[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. } if reason.contains("task 20")),
+            "{err:?}"
+        );
+        assert!(
+            !tmp.path().join(".git/hooks/pre-commit").exists(),
+            "nothing written"
+        );
     }
 
     /// A config-directory settings file stays allowed — `merge-permissions`'
