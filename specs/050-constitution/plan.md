@@ -496,7 +496,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 
 ### A citation names no line number
 
-§grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, so `path:line` no longer reads as allowed (AC24). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and `066-audit-records-and-the-completion-gate` makes removing a line suffix a mechanical edit. The plan command and the plan and clarify references point at the bullet instead of restating it.
+§grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, and bars a line number in a spec, plan, data model, research file, scenario or task list, so `path:line` no longer reads as allowed there (AC24). A chat report or a review finding's line range is outside that list (owner decision, 2026-11-18). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and `066-audit-records-and-the-completion-gate` makes removing a line suffix a mechanical edit. The plan command and the plan and clarify references point at the bullet instead of restating it.
 
 - **This repository's sweep splits by what a citation's line already names** (owner decisions, 2026-11-17). Where it names the symbol, heading or phrase, the suffix is stripped, in a commit holding nothing else. Otherwise the citation is rewritten by hand to name what it pointed at in the commit that wrote it, read with `git blame` and `git show`, and so is each prose line reference.
 - **Each `done` spec a rewrite reopens**, as `classify-spec-edit` judges it, moves to `in-progress` with `set-status` and closes again after its own analysis.
