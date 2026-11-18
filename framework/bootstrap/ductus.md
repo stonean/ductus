@@ -29,9 +29,8 @@ The same `ductus.md` supports every agent the framework knows about. The set of 
 
 - **Pre-run Migrations** at step 3a, after step 3 extracts the archive and before step 4's first manifest pass. They read `framework/migrations.toml` from the archive, and convert what an earlier release left behind before this release's files land.
 - The **Frontmatter Migration** at step 3b, so the corpus is converted before this release's files are written.
-- Hook Installation's **Migration from spec-017 hook** at the start of step 4a, before that step's call writes the two hook files.
 - The **Security Audit (brownfield)** at step 4c, directly after step 4's Shared Files pass.
-- The rest of **Hook Installation** at step 4e, directly after step 4's Per-Agent Scaffolding passes.
+- **Hook Installation** at step 4e, directly after step 4's Per-Agent Scaffolding passes.
 - **Post-Scaffolding Output** at step 11.
 
 4c and 4e run before step 5, so a halt in steps 5–9 skips neither (spec 056, scenario `the-walker-places-every-archive-half-section`).
@@ -45,11 +44,11 @@ The same `ductus.md` supports every agent the framework knows about. The set of 
    - **3b.** The **Frontmatter Migration**, from the archive half.
 
 4. Invoke `apply-manifest` (MCP: `apply-manifest`) with the host-built manifest entries and the pinned list: once for the **Shared Files** entries, then once per selected agent for that agent's **Per-Agent Scaffolding** entries, with `cli-config-dir` in the substitutions map set to that agent's `config_dir` — a call takes one substitutions map, so one call for every agent would give each agent's files another agent's config dir. The primitive walks each entry and applies its strategy: `update` for the rows **Shared Files** and **Per-Agent Scaffolding** list as update, `create` for the rows listed as create, and `create` as well for the two rows **Shared Files** lists as skip, AGENTS.md and CLAUDE.md — `create` writes only when the destination is absent, which is what skip means there, and substitutes the templates' placeholders (`{project-name}`, `{One-line project description.}`, `{project}`), which `skip-if-conflict` would leave literal, so no row uses that strategy. It short-circuits on the pinned list and returns aggregate counts the host surfaces in the completion message, and names in `modes-kept` each unchanged destination whose mode it could not set to the source's (another user's file, or one flagged immutable), which the host names in the completion message too. These calls replace the per-file update / create / skip loops described below. An agent with no other Per-Agent entry needs no call of its own. Walk this step as its sub-steps, in this order, so every section it runs has a numbered place:
-   - **4a.** Hook Installation's **Migration from spec-017 hook**, from the archive half, then the **Shared Files** call. The migration splits a legacy `.githooks/pre-commit` only while `.githooks/ductus-pre-commit` is absent, and this call writes that file.
+   - **4a.** The **Shared Files** call.
    - **4b.** **Shared constitution imports**, then **Memory routing**, the two merges **Shared Files** lists after its manifest rows; with 4a they are the Shared Files pass.
    - **4c.** **Security Audit (brownfield)**, from the archive half, directly after the Shared Files pass: its trigger reads which rule files 4a created.
    - **4d.** One call per selected agent for its **Per-Agent Scaffolding** entries.
-   - **4e.** The rest of **Hook Installation**, from the archive half, directly after the last 4d call and before step 5 begins.
+   - **4e.** **Hook Installation**, from the archive half, directly after the last 4d call and before step 5 begins.
 
 5. Invoke `merge-managed-block` (MCP: `merge-managed-block`) against `.gitignore` with `marker-style: "line-prefix"` and `marker: "ductus"` to install or update the framework-managed block (the `.claude/`, `.pi/`, `.ductus-cache/`, etc. lines). First-run creates the file; subsequent runs update only the managed block — the `# ductus` line through the end of the canonical block, past the blank lines between its subsections (§Shared Files **.gitignore** step 3) — then remove adopter-area copies of the block's patterns (step 4 there), preserving the rest of the file byte-for-byte. Replaces the inline `grep` check described for the `.gitignore` merge step.
 

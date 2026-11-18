@@ -54,8 +54,8 @@
 # a ductus command.
 #
 # This file is overwritten by /ductus unless listed in .ductus/config.toml
-# `pinned.files`. The `# managed-by: ductus` sentinel above is how /ductus
-# detects that the file is one it owns.
+# `pinned.files`. The `# managed-by: ductus` line above tells a reader the file
+# is ductus's; /ductus places it by its manifest row, not by that line.
 
 set -euo pipefail
 shopt -s nullglob

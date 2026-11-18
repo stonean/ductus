@@ -15,10 +15,10 @@ section: "What the run reads, and when"
 - `framework/bootstrap/ductus.md` §Instructions names, for each of Pre-run Migrations, Frontmatter Migration, Security Audit (brownfield) and Hook Installation, the numbered step it runs at or the two steps it runs between, so every host walks the run in one order.
 - Pre-run Migrations run after step 3 extracts the archive and before step 4's first `apply-manifest` pass: they read their registry from the archive, and they convert what an earlier release left behind before this release's files are written over it.
 - The Frontmatter Migration runs after Pre-run Migrations and before step 4's Shared Files pass, converting the spec corpus before this release's files land.
-- The Security Audit runs directly after step 4's Shared Files pass, and Hook Installation directly after step 4's Per-Agent Scaffolding passes, both before step 5, as their own sections require. Hook Installation's Migration from spec-017 hook is the exception, as its subsection requires: it runs at the start of 4a, since 4a's Shared Files call writes the `.githooks/ductus-pre-commit` its trigger needs absent.
+- The Security Audit runs directly after step 4's Shared Files pass, and Hook Installation directly after step 4's Per-Agent Scaffolding passes, both before step 5, as their own sections require.
 - The stale-branch list's disclaimer points at those placements.
 - Step 3 is walked as lettered sub-steps after the extraction: 3a, Pre-run Migrations; 3b, the Frontmatter Migration.
-- Step 4 is walked as lettered sub-steps, 4a to 4e: the spec-017 hook migration, then the Shared Files call; Shared constitution imports and Memory routing; the Security Audit; the Per-Agent calls; the rest of Hook Installation.
+- Step 4 is walked as lettered sub-steps, 4a to 4e: the Shared Files call; Shared constitution imports and Memory routing; the Security Audit; the Per-Agent calls; Hook Installation.
 - Step 11 renders Post-Scaffolding Output, and Pre-run Migrations' step 1 applies its duplicate-id guard, so every section and subsection the run walks has a numbered place of its own (owner, 2026-11-17).
 
 ## Edge Cases
