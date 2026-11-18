@@ -126,7 +126,7 @@ Rationale does not move as one class. (`specs/inbox.md` puts it at 17–25% of t
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/bootstrap/ductus.md` contains no step that requires the framework archive, and every step it does contain resolves within it — including both executable forward-dependencies named in §The boundary.
+- [x] AC1: `framework/bootstrap/ductus.md` contains no step that runs before extraction and requires the framework archive, and every such step resolves within it — including both executable forward-dependencies named in §The boundary. The steps after extraction read the archive by design: step 4's `apply-manifest` passes, and each archive-half section at the place its **Where the archive half's sections run** list gives it.
 - [x] AC2: The archive half ships under `framework/bootstrap/`, is reachable from the extracted tree by the path the installed half names, and appears in no manifest that writes into an adopter's agent directory.
 - [x] AC3: `install.sh` places only the installed half, for every one of its agent arms, and its frontmatter-delimiter payload check still passes against it. It had four arms when this shipped, and has two, `claude` and `pi`, since `b1d319f1` dropped the others.
 - [x] AC4: The `ductus` self-install step writes only the installed half, at each layout's install path, and the Post-Write Integrity Check's body assertion holds against it for every layout.
@@ -135,8 +135,8 @@ Rationale does not move as one class. (`specs/inbox.md` puts it at 17–25% of t
 - [x] AC7: `adopter_destinations` in `check_artifacts.rs` still derives the same non-empty destination set from `framework/bootstrap/ductus.md` after the split as before it, verified by probe in both directions, and no `runtime/` source file changes.
 - [x] AC8: Every consumer listed in §What the split does not reach still resolves its subject from `framework/bootstrap/ductus.md` after the split, each verified by running the family rather than by reading the assignment; any consumer whose subject does move is re-pointed and still reports a finding on an absent subject rather than treating an empty extraction as agreement.
 - [x] AC9: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
-- [x] AC10: The whole local gate passes: `npx markdownlint-cli2`, the six `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings`, and `cargo test --release --locked`.
-- [x] AC11: The reduction to the installed half is stated in the plan from a measurement taken **after** the split, against the 146,953-byte pre-split file, rather than from this spec's estimate.
+- [x] AC10: The whole local gate passes: `npx markdownlint-cli2`, the `scripts/lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings`, and `cargo test --release --locked`.
+- [x] AC11: The reduction to the installed half is stated in the plan from a measurement taken **after** the split, against the 146,953-byte pre-split file, rather than from this spec's estimate. **Met, then moved to the commit record:** 0e3a9c56 stated it in the plan, 146,953 to 110,417 bytes, a 24.9% cut (`git show ca85c8b8:framework/bootstrap/ductus.md | wc -c` gives 110,417), and 063e50ea's prune moved it to that commit's record, since verification evidence belongs to the commit (§plan-phase), so the plan no longer states it.
 
 ## Open Questions
 
