@@ -140,7 +140,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
 - **Each setting has one source beside its default, and a bad value fails before any work.** The source, when given, wins over the default constant, the standard order (`CFG-ENV-007`). For `--share-bytes` and `--cell-bytes` it is the flag; for the three variables, the environment. The types and checks (`CFG-ENV-005`, `CFG-ENV-008`):
   - `ANALYZE_TIMEOUT_SECONDS` is a whole number of seconds from `MIN_TIMEOUT_SECONDS` to `MAX_TIMEOUT_SECONDS`.
   - `ANALYZE_WORK` is a path that must resolve inside the system temp directory.
-  - `DUCTUS_BIN` is a path, which a call that cannot run it reports.
+  - `DUCTUS_BIN` is the path, or a name on `PATH`, of an executable file.
   - Each flag is a whole number of bytes of at least `MIN_BUDGET_BYTES`.
 
   Each is parsed and checked when the script starts, never coerced to its default. A value that fails exits 2, naming the setting, the value and the bound.

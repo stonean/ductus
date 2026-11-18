@@ -42,7 +42,9 @@ Coverage:
      by construction
   P. record.py refuses when git config names no user.email
   R. a call that runs past ANALYZE_TIMEOUT_SECONDS is stopped, exit 2
-  S. a malformed setting or feature name exits 2 and creates no directory
+  S. a malformed setting or feature name exits 2 and creates no directory,
+     and a DUCTUS_BIN naming no executable exits 2 before detection clears
+     the last run's results
   T. check.py fails a design subject added after the split
   U. an integrity item step 15 did not check is recorded as
      integrity-not-checked, which sets restricted
@@ -68,7 +70,7 @@ Coverage:
   AI. split.py refuses detection older than an untracked file added, or
      a tracked file edited, outside the feature
   AJ. split.py exits 2 on a budget flag that is not a whole number of at
-     least 1, naming the flag, the value and the bound
+     least 1, naming the flag, the value and the bound, and takes 1
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty
@@ -463,12 +465,15 @@ def s(p, name):
     r2 = p.run("detect.py", F, ANALYZE_TIMEOUT_SECONDS="0")
     r3 = p.run("detect.py", F, ANALYZE_WORK="/")
     r4 = p.run("detect.py", F, ANALYZE_TIMEOUT_SECONDS="99999999")
+    r5 = p.run("detect.py", F, DUCTUS_BIN=os.path.join(p.base, "no-such-ductus"))
+    kept = os.path.exists(os.path.join(p.work, "det", "meta.json"))
     check_(name, r1.returncode == 2 and "not a feature directory name" in r1.stderr
            and not os.path.exists(os.path.join(tmp, "specs"))
            and r2.returncode == 2 and "whole number from 1 to 86400" in r2.stderr
            and r3.returncode == 2 and "ANALYZE_WORK" in r3.stderr
-           and r4.returncode == 2 and "whole number from 1 to 86400" in r4.stderr,
-           r1.stderr + r2.stderr + r3.stderr + r4.stderr)
+           and r4.returncode == 2 and "whole number from 1 to 86400" in r4.stderr
+           and r5.returncode == 2 and "DUCTUS_BIN" in r5.stderr and kept,
+           r1.stderr + r2.stderr + r3.stderr + r4.stderr + r5.stderr)
 
 
 def u(p, name):
@@ -638,9 +643,11 @@ def ai(p, name):
 def aj(p, name):
     r1 = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"), "--share-bytes", "0")
     r2 = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"), "--cell-bytes", "lots")
+    r3 = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"),
+               "--share-bytes", "1", "--cell-bytes", "1")
     check_(name, r1.returncode == 2 and "--share-bytes is '0'; it takes a whole number of at least 1" in r1.stderr
-           and r2.returncode == 2 and "--cell-bytes is 'lots'; it takes a whole number of at least 1" in r2.stderr,
-           r1.stderr + r2.stderr)
+           and r2.returncode == 2 and "--cell-bytes is 'lots'; it takes a whole number of at least 1" in r2.stderr
+           and r3.returncode == 0, r1.stderr + r2.stderr + r3.stderr)
 
 
 def z(name):

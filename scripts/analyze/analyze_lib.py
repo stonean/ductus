@@ -8,8 +8,9 @@ variables of its own are read once, when a script starts, and listed in
 docs/runtime.md's inventory, an empty value counting as unset; TMPDIR is
 read beside them, as the system temp directory the CLI also reads:
 
-- DUCTUS_BIN, the runtime binary, default DEFAULT_BIN;
-- ANALYZE_WORK, the work directory, default $TMPDIR/ductus-analyze/<feature>,
+- DUCTUS_BIN, the runtime binary, default DEFAULT_BIN, which must name an
+  executable file;
+- ANALYZE_WORK, the work directory, default $TMPDIR/WORK_DIR_NAME/<feature>,
   which must resolve inside the system temp directory;
 - ANALYZE_TIMEOUT_SECONDS, how long each runtime or git call may run before
   it is stopped, default DEFAULT_TIMEOUT_SECONDS, a whole number from
@@ -23,12 +24,14 @@ call ran out of time, or the script itself failed. A failure is never a pass.
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import traceback
 
 DEFAULT_BIN = "runtime/target/release/ductus"
+WORK_DIR_NAME = "ductus-analyze"
 DEFAULT_TIMEOUT_SECONDS = 600
 MIN_TIMEOUT_SECONDS = 1
 MAX_TIMEOUT_SECONDS = 86_400
@@ -77,7 +80,13 @@ def _settle():
         if os.path.commonpath([work, temp]) != temp:
             raise Unreadable(f"ANALYZE_WORK is {_ENV['ANALYZE_WORK']}, outside the system temp directory "
                              f"{temp}, which the CLI reads --*-json files from")
-    _SETTINGS.update(binary=_ENV["DUCTUS_BIN"] or DEFAULT_BIN, timeout=timeout, temp=temp, work=work)
+    binary = _ENV["DUCTUS_BIN"] or DEFAULT_BIN
+    found = shutil.which(binary) if os.sep not in binary else binary
+    if not found or not os.path.isfile(found) or not os.access(found, os.X_OK):
+        named = "DUCTUS_BIN" if _ENV["DUCTUS_BIN"] else "DUCTUS_BIN's default"
+        raise Unreadable(f"{named} is {binary!r}, which names no executable file; build the runtime "
+                         "(cd runtime && cargo build --release) or set DUCTUS_BIN")
+    _SETTINGS.update(binary=binary, timeout=timeout, temp=temp, work=work)
 
 
 def main(fn):
@@ -142,7 +151,7 @@ feature_dir = valid_feature
 
 def work_dir(feature):
     valid_feature(feature)
-    w = _SETTINGS["work"] or os.path.join(_SETTINGS["temp"], "ductus-analyze", feature)
+    w = _SETTINGS["work"] or os.path.join(_SETTINGS["temp"], WORK_DIR_NAME, feature)
     os.makedirs(w, exist_ok=True)
     return w
 
