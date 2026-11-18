@@ -287,7 +287,7 @@ Tag scheme is `ductus-v<MAJOR>.<MINOR>.<PATCH>`, one tag per release, carrying t
 
 ### README placement: root `README.md` Runtime section
 
-The runtime section is `## The runtime` in the root `README.md`. It says what the runtime is, that `/ductus` acquires it rather than the adopter installing it, how the per-machine store and the per-project pointer relate, and that it is required, and it points at `docs/runtime.md` for the operational detail.
+The runtime section is `## The runtime` in the root `README.md`. It says what the runtime is, that `/ductus` acquires it rather than the adopter installing it, how the per-machine store and the per-project pointer relate, and that it is required, and it points at `docs/runtime.md` for the operational detail. It sits in the root README because that is where an adopter first meets the framework, so the runtime being required is said before anything asks them to run it; the operational detail lives once, in `docs/runtime.md`, so the README never restates it.
 
 ### Bootstrap completion-message pointer
 
