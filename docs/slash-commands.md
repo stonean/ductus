@@ -32,7 +32,7 @@ The spec reaches `done` once every task and acceptance criterion is checked and 
 
 ### `/review` — `review.md`, and a hold on `done` while violations stand
 
-**Reach for it before you call a feature done.** It audits the code against the project's rule files across five dimensions: security, reuse, quality, efficiency, and simplicity.
+**Reach for it before you call a feature done.** It audits the code against the project's rule files across five dimensions: security, reuse, quality, efficiency, and simplicity. It also judges every acceptance criterion against the code, wherever that code lies, and ticks or unticks each to match, so `/implement`'s completion gate judges none.
 
 Before it writes its final record, an independent agent re-reads each round of fixes the review made, unless it changed only markdown in the spec's own directory other than `analysis.md`, its scenarios and its data model, from a brief the runtime derives from the repository. The loop ends once nothing changes after a re-read that finds no MUST or SHOULD, or waits for you after two that do; a round you decline to have re-read is recorded with your reason, and one with neither holds `done` ([§Fix-round loop](../framework/reference/review.md#fix-round-loop)).
 

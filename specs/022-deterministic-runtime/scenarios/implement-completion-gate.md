@@ -4,6 +4,8 @@ section: "Follow-on scenarios"
 
 # Implement-completion-gate
 
+> **Changed by 066's task 27** (scenario `criteria-are-verified-in-review`): the criteria steps below moved to `/ductus:review`, whose criteria step judges every criterion and ticks or unticks each; `/ductus:implement`'s completion gate now tallies tasks, checks cross-spec impact, runs `check-review-gate`, which blocks `unticked-criterion`, and asks before `set-status`.
+
 ## Context
 
 `/ductus:implement`'s numbered procedure covers the per-task loop, but the entire completion gate exists only as markdown-only prose with no numbered steps and no primitives: the all-tasks-complete tally, the all-acceptance-criteria tally, scenario-task completeness, the `review.last-run`/`review.blocking` gate reads and halt messages, the cross-spec `git diff` filter, and the final in-progress→done `set-status`. The LLM re-walks all of it on every run that reaches completion — the last minutes-long mechanical stretch on the pipeline's hottest command — and it orphans `mark-criterion`, which is fully wired and tested but referenced by zero command prose (the 2026-07-11 coverage review's top finding).

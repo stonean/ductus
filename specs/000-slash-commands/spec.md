@@ -1,6 +1,6 @@
 ---
 title: "000-slash-commands — spec"
-status: done
+status: in-progress
 dependencies: []
 tags: [commands, pipeline, templates]
 next-criterion: 16
@@ -10,6 +10,8 @@ cross-spec-impact: [014-reclarify-backedge]
 # 000 — Slash Command Templates
 
 Generic, project-agnostic slash command templates that operationalize the `ductus` development pipeline. The sources live in `framework/commands/`, and `/ductus` installs them into each adopted agent's command location, substituting the project name and the agent's config directory.
+
+> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md)'s scenario `criteria-are-verified-in-review` moved criterion verification from `/{project}:implement`'s completion gate into `/{project}:review`'s criteria step; the scenarios `validation-gates` and `criterion-route-after-draft` say so.
 
 ## Problem
 

@@ -6,7 +6,7 @@ section: "Command Set"
 
 ## Context
 
-Acceptance criteria are the surface `/{project}:implement`'s completion gate verifies semantically — the gate walks each one and marks it at verification time. A criterion that does not exist is a behavior the gate never checks, so a spec can pass its gate on a list that omits work the spec actually shipped.
+Acceptance criteria are the surface `/{project}:review`'s criteria step verifies semantically — it judges each one and marks it at verification time, and `/{project}:implement`'s completion gate holds `done` while one stands unticked. A criterion that does not exist is a behavior no review checks, so a spec can pass its gate on a list that omits work the spec actually shipped.
 
 Criteria are authored at `/{project}:specify` and refined at `/{project}:clarify`. After that, no command writes one:
 
@@ -22,7 +22,7 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
 
 - A command route exists for adding an acceptance criterion to a spec past `draft`, without reverting the spec to `draft` to reach it.
 - The route does not require the spec to carry an open question, and does not manufacture one to unlock a back-edge.
-- A criterion added this way lands unchecked. Marking it is the completion gate's job, at verification time — a route that wrote it pre-checked would assert a verification that never ran.
+- A criterion added this way lands unchecked. Marking it is `/{project}:review`'s criteria step's job, at verification time — a route that wrote it pre-checked would assert a verification that never ran.
 - On a `done` spec the route either takes the documented back-edge or refuses and names the command that does; it does not silently edit a `done` spec's body.
 
 ## Edge Cases

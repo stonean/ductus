@@ -923,7 +923,7 @@ Response payload:
 
 ### `verifyCriteria` (follow-on)
 
-Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario: `/ductus:implement`'s completion gate sends one request carrying every acceptance criterion, and the LLM judges each criterion against the implementation — the verification stays semantic while the surrounding tallies and checkbox flips stay mechanical. Each `met: true` verdict drives one `mark-criterion` call; a `met: false` verdict leaves its checkbox unchecked and is reported, never batch-marked.
+Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario, and since 066's task 27 (its scenario `criteria-are-verified-in-review`) sent by `/ductus:review`'s criteria step, its step 7.2, rather than `/ductus:implement`'s completion gate: one request carrying every acceptance criterion, whatever the review's window holds, and the LLM judges each criterion against the code — the verification stays semantic while the checkbox flips stay mechanical. Each verdict drives one `mark-criterion` call setting its checkbox to the verdict, ticked when met and unticked when not, and on `ductus exec` the verdicts are `write-review`'s `criteria`; never batch-marked.
 
 Request payload:
 
@@ -951,7 +951,7 @@ Response payload:
 }
 ```
 
-`results` carries one verdict per criterion. `note` is optional prose surfaced in the completion report — a failing criterion's note explains the failure; a missing verdict for a criterion is treated as not met (the gate only flips criteria the response affirmatively confirms).
+`results` carries one verdict per criterion. `note` is optional prose surfaced in the completion report — a failing criterion's note explains the failure; a criterion with no verdict is not marked and stays unjudged, which keeps a review owed.
 
 ## Versioning of these schemas
 

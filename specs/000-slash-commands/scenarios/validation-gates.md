@@ -18,7 +18,7 @@ Additionally, the `analyze` command exists for on-demand auditing but its checks
 
 - When marking a task as complete in `tasks.md`, update the checkbox from `- [ ]` to `- [x]`.
 - Nested checkboxes within a task (sub-items) should each be marked individually as they are completed.
-- During the completion phase, verify each acceptance criterion in the spec file (`spec.md`). Mark each passing criterion `- [x]` in the file.
+- Before the completion phase, `/{project}:review`'s criteria step verifies each acceptance criterion in the spec file (`spec.md`) and sets its checkbox to the verdict; the completion phase verifies none, and holds `done` while one stands unticked.
 - Checkboxes are updated at the time of verification, not deferred to the end.
 - Only mark a checkbox as complete when the item has been explicitly verified — do not batch-mark items without verification.
 
