@@ -1,20 +1,21 @@
 ---
 spec: 060-exec-analyze-assesses-each-loaded-rule
-last-run: 2026-11-15T16:57:16Z
-analyzed-against: 21c538312a6aac030868045c22aea7be41726e04
+last-run: 2026-11-18T18:47:45Z
+analyzed-against: 76d5449ec6bd987b1e195b0479d971b3db4429ac
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 3
+unexamined: 2
 analyzed-digest:
-  plan.md: b94d0ad93cf00d4b3817cfb5da2958d5bcf62ba35136f976941c666c856910b7
-  review.md: f6a95e9897f57b48b04036bdd998b89067c357a1f40f8d5501a537164f522605
+  plan.md: 1b71bf0f0c4d5e4f831cdb12b8b55e3c68977c80d3d0115e331a3795a0093123
+  review.md: 212fbcad0c20495a3725cdf152cb95c16a5b27a3e9a3b63d6c7edd35b20332a7
   scenarios/an-assessment-sees-the-loaded-rule-files.md: 7a1341466362f69527aecd8d09472a6d9ba5ec6d9db5e30a0e316814fae06007
   scenarios/an-assessment-sees-the-rule-it-asks-about.md: 03489f5510e4b9cf5f38194f6a0e8ab6ffcff7272359914c991129ba72a9b70f
-  spec.md: 13b973f6ab42dede45ff45c50d0bb713f54235b83aa2d8551905e82499f45929
-  tasks.md: 4dcfb11e96f7cdba2b779046a97437b7b892a81a0e1816b235bc5521927d6522
+  scenarios/rule-judging-runs-from-repo-scripts.md: 19aaa6a8d61cbcfb40306a9c46c2e264d1d61d35b1b322bf38686e7abc93cd96
+  spec.md: 36c10fe0d8fed3f7c83441ef040a90daa8e0683e8918e358851f5d8d5058d6f5
+  tasks.md: e0bba6cc86e3687c9b3bbfa635cecb5c15940a7880f95bb6c5df734c8f589d4b
 unexamined-by-reason:
-  ships-to-adopter: 3
+  ships-to-adopter: 2
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
   api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
@@ -31,30 +32,34 @@ rule-digest:
 rule-verdicts:
   BE-ERR-002: {verdict: addressed, cite: "spec.md#Edge Cases"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#One request per rule of the step's tier"}
+  BE-INPUT-002: {verdict: addressed, cite: "plan.md#One rule-section parser, sharing check-rule-ids' heading grammar"}
+  BE-INPUT-003: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The walker loads the rule set once, on the first assessment step"}
-  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "plan.md#One request per rule of the step's tier", message: "The per-rule request stream (up to 192 requests, each carrying the whole spec-content and an unbounded Verification) commits to no maximum size or count; the plan only measures it and accepts the cost."}
-  CFG-CONST-001: {verdict: addressed, cite: "plan.md#One rule-section parser, sharing check-rule-ids' heading grammar"}
+  BE-INPUT-008: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#One request per rule of the step's tier"}
+  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-CONST-003: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-CONST-004: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-001: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-004: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-005: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-007: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
+  CFG-ENV-008: {verdict: addressed, cite: "plan.md#This repository's host runs its rule judging from `scripts/analyze/`"}
 blocking: false
 dispositions:
-  fixed: 1
-  deferred: 1
+  fixed: 6
+  deferred: 0
   waived: 0
   undispositioned: 0
-decisions:
-  - key: "rule-assessment — BE-PAYLOAD-001: The per-rule request stream (up to 192 requests, each carrying the whole spec-content and an unbounded Verification) commits to no maximum size or count; the plan only measures it and accepts the cost."
-    outcome: deferred
-    target: specs/022-deterministic-runtime/tasks.md
-    task: "36"
-    reason: the exec extension request shapes are 022's protocol; the owner deferred this finding to 022 task 36 (2026-11-15)
-    decided-at: 2026-11-15T16:57:16Z
-    decided-by: andy@stone.dev
 ---
 
 # Analysis — 060-exec-analyze-assesses-each-loaded-rule
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 3 unexamined target(s). Dispositions: 1 fixed, 1 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 6 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -70,7 +75,7 @@ decisions:
 
 ## Deferred to other specs
 
-- rule-assessment — BE-PAYLOAD-001: The per-rule request stream (up to 192 requests, each carrying the whole spec-content and an unbounded Verification) commits to no maximum size or count; the plan only measures it and accepts the cost. — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **deferred** to `specs/022-deterministic-runtime/tasks.md` task 36
+*None.*
 
 ## Contradictions
 
@@ -78,8 +83,13 @@ decisions:
 
 ## Unexamined targets
 
-- ships-to-adopter: 3
+- ships-to-adopter: 2
 
 ## Fixed in this run
 
-- grounding — Edge Cases' "This repository's rule files carry no deprecated rule" is a descriptive absence claim with no command, query or citation — `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — **fixed** (decided by the rule)
+- grounding — Trade-offs, 'Round trips and payload': 'Each request puts `spec-content` before `rule`' is stated as fact about the request's field order with no citation to the type or symbol that fixes it (§Grounding (advisory)). — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — BE-INPUT-003: The scripts shell out to the runtime and git with a feature argument and env settings, but the plan names no safe-invocation mechanism (argument vector, no shell string). — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — CFG-ENV-005: ANALYZE_TIMEOUT_SECONDS has a stated upper bound (MAX_TIMEOUT_SECONDS) but the plan names no startup range check whose error names the setting, offending value and violated bound. — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — CFG-ENV-007: Settings with a flag (--cell-bytes) or env var plus a default constant state no resolution order and no confirmation that it follows flag > environment > default. — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — CFG-ENV-008: The plan names no type for DUCTUS_BIN, ANALYZE_WORK or ANALYZE_TIMEOUT_SECONDS and commits to no startup parse that fails fast on a present but malformed value. — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — BE-PAYLOAD-001: the plan stated no size bound for the per-rule assessSpecQuality request stream, which AGENTS.md says the rule reaches on the ductus exec protocol — `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — **fixed** (decided by the rule)
