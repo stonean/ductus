@@ -166,7 +166,7 @@ Suggested fix per finding: edit the line to name the file that carries the conte
 
 At every status, `check-artifacts` reports each citation of a path by line number in a spec's `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` or scenarios, which §grounding's *Cite what you consulted* forbids: the line drifts as the code moves, and chasing it stales the analysis.
 
-- **A citation is a `:N`, `:N-M` or `:N:C` suffix, or a `#LN` anchor, after a path** that holds a `/` or ends in a source or text extension the runtime lists, as `check-artifacts --help` states, or an inline code span holding only such a suffix, a line number set apart from its file. A host and port (`db.internal:5432`) and a URL's host are not citations. A prose reference ("lines 100-103") is not detected.
+- **A citation is a `:N`, `:N-M` or `:N:C` suffix, or a `#LN` or `#LN-LM` anchor, after a path** ending in an extension, one the runtime lists when the path holds no `/`, as `check-artifacts --help` states, or an inline code span holding only such a suffix, a line number set apart from its file. A host and port (`db.internal:5432`) and a URL's host are not citations. A prose reference ("lines 100-103") is not detected.
 - **Scope:** inline code spans are read, and HTML comments too; a fenced block and a blockquote are skipped. `review.md` and `analysis.md` are not read, since each is regenerated and pinned to the commit it ran against. Nothing is grandfathered and no history is read.
 
 Suggested fix per finding: name the symbol, test, heading or a quoted phrase the line pointed at, found at the commit that wrote the citation, and drop the line number.

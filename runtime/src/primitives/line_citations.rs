@@ -93,24 +93,67 @@ pub(crate) fn find(line: &str) -> Vec<Citation> {
 /// decision, 2026-11-17). [`strip`] leaves these alone: removing one deletes a span, which
 /// is no suffix strip.
 pub(crate) fn find_set_apart(line: &str) -> Vec<Range<usize>> {
-    let mut found = Vec::new();
-    let mut rest = 0;
-    while let Some(open) = line[rest..].find('`').map(|offset| rest + offset) {
-        let Some(close) = line[open + 1..].find('`').map(|offset| open + 1 + offset) else {
-            break;
-        };
-        let content = &line[open + 1..close];
-        let whole = match content.as_bytes().first() {
-            Some(b':') => colon_suffix_end(content, 0),
-            Some(b'#') => anchor_suffix_end(content, 0),
-            _ => None,
-        };
-        if whole == Some(content.len()) {
-            found.push(open + 1..close);
+    code_spans(line)
+        .into_iter()
+        .filter(|span| {
+            let content = &line[span.clone()];
+            let whole = match content.as_bytes().first() {
+                Some(b':') => colon_suffix_end(content, 0),
+                Some(b'#') => anchor_suffix_end(content, 0),
+                _ => None,
+            };
+            whole == Some(content.len())
+        })
+        .collect()
+}
+
+/// Each inline code span in `line`, by the range of its content, as Markdown reads one:
+/// a run of backticks, then the text up to the next run of exactly as many, with one space
+/// taken off each end when the text both begins and ends with one and is not all spaces.
+/// A run that no run of its length closes is literal text (067 AC5).
+fn code_spans(line: &str) -> Vec<Range<usize>> {
+    let bytes = line.as_bytes();
+    let run_at = |at: usize| bytes[at..].iter().take_while(|&&byte| byte == b'`').count();
+    let mut spans = Vec::new();
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] != b'`' {
+            at += 1;
+            continue;
         }
-        rest = close + 1;
+        let width = run_at(at);
+        let start = at + width;
+        let mut close = start;
+        let mut end = None;
+        while close < bytes.len() {
+            if bytes[close] != b'`' {
+                close += 1;
+                continue;
+            }
+            let run = run_at(close);
+            if run == width {
+                end = Some(close);
+                break;
+            }
+            close += run;
+        }
+        let Some(end) = end else {
+            at = start;
+            continue;
+        };
+        let text = &line[start..end];
+        let padded = text.len() >= 2
+            && text.starts_with(' ')
+            && text.ends_with(' ')
+            && !text.bytes().all(|byte| byte == b' ');
+        spans.push(if padded {
+            start + 1..end - 1
+        } else {
+            start..end
+        });
+        at = end + width;
     }
-    found
+    spans
 }
 
 /// `text` with every citation's suffix removed, each path left in place. Borrowed when it
@@ -401,6 +444,18 @@ mod tests {
             "`/ductus:review`",
             "no span :12",
         ] {
+            assert!(find_set_apart(line).is_empty(), "{line}");
+        }
+    }
+
+    /// A code span of any backtick run is read, as Markdown reads one, its padding
+    /// spaces taken off, and a run no run of its length closes is literal (067 AC5).
+    #[test]
+    fn a_set_apart_suffix_in_a_longer_backtick_run_is_found() {
+        assert_eq!(set_apart("see ``:12`` and ``#L4``"), vec![":12", "#L4"]);
+        assert_eq!(set_apart("`` :12 ``"), vec![":12"]);
+        assert_eq!(set_apart("`:3` then ```:5```"), vec![":3", ":5"]);
+        for line in ["``a`:3``", "``:12`", "`` ``", "```:12``"] {
             assert!(find_set_apart(line).is_empty(), "{line}");
         }
     }

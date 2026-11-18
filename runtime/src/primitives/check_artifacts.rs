@@ -6884,6 +6884,46 @@ mod tests {
         assert_eq!(cited, vec!["src/a.rs:12", ":388"], "{found:?}");
     }
 
+    /// An artifact the family cannot read is recorded as every family records one: a
+    /// skipped target below `done` and a blocking finding at `done`, never passed over as
+    /// clean (067 AC5, task 37). `research.md` is read by this family alone.
+    #[test]
+    fn an_unreadable_artifact_is_recorded_by_the_line_number_family() {
+        for (status, at_done) in [("in-progress", false), ("done", true)] {
+            let tmp = tempdir().unwrap();
+            let repo = tmp.path();
+            write(
+                repo,
+                &format!("specs/{FEATURE}/spec.md"),
+                &format!("---\nstatus: {status}\ndependencies: []\n---\n\n# Demo\n"),
+            );
+            fs::write(
+                repo.join(format!("specs/{FEATURE}/research.md")),
+                [0xff, 0xfe, 0xfd],
+            )
+            .unwrap();
+            let result = compute(&args(), repo).unwrap();
+            let research = format!("specs/{FEATURE}/research.md");
+            let skipped = result.skipped.iter().any(|target| {
+                target.family == LINE_CITATION_FAMILY
+                    && target.reason == "artifact-unreadable"
+                    && target.path == research
+            });
+            let blocked = result.findings.iter().any(|finding| {
+                finding.family == LINE_CITATION_FAMILY
+                    && finding.severity == AnalyzeSeverity::Blocking
+                    && finding.path == research
+            });
+            assert_eq!(
+                (skipped, blocked),
+                (!at_done, at_done),
+                "{status}: {:?} {:?}",
+                result.skipped,
+                result.findings
+            );
+        }
+    }
+
     /// The rule holds at every status, so the family is not status-gated.
     #[test]
     fn a_line_number_citation_is_reported_at_every_status() {

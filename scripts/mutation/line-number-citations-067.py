@@ -81,8 +81,29 @@ MUTATIONS = [
     (
         'M10 a set-apart span is never found',
         'src/primitives/line_citations.rs',
-        '        if whole == Some(content.len()) {\n            found.push(open + 1..close);\n        }\n',
-        '        let _ = whole;\n',
+        '            whole == Some(content.len())\n',
+        '            let _ = whole;\n            false\n',
         'primitives::line_citations::tests::a_line_number_set_apart_from_its_file_is_found primitives::check_artifacts::tests::a_line_number_set_apart_from_its_file_is_reported',
+    ),
+    (
+        'M11 every code span is one backtick wide',
+        'src/primitives/line_citations.rs',
+        '        let width = run_at(at);\n',
+        '        let width = 1;\n',
+        'primitives::line_citations::tests::a_set_apart_suffix_in_a_longer_backtick_run_is_found',
+    ),
+    (
+        'M12 a code span keeps its padding spaces',
+        'src/primitives/line_citations.rs',
+        '        spans.push(if padded {\n            start + 1..end - 1\n        } else {\n            start..end\n        });\n',
+        '        let _ = padded;\n        spans.push(start..end);\n',
+        'primitives::line_citations::tests::a_set_apart_suffix_in_a_longer_backtick_run_is_found',
+    ),
+    (
+        'M13 an artifact the family cannot read is passed over',
+        'src/primitives/check_artifacts.rs',
+        '            record_unreadable_artifact(findings, skipped, LINE_CITATION_FAMILY, status, citing);\n',
+        '            let _ = citing;\n',
+        'primitives::check_artifacts::tests::an_unreadable_artifact_is_recorded_by_the_line_number_family',
     ),
 ]
