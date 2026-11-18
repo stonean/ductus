@@ -71,4 +71,18 @@ MUTATIONS = [
         '    if !matches!(status, "in-progress" | "done") {\n        return;\n    }\n    for artifact in citation_artifacts(feature_dir, outward) {\n',
         'primitives::check_artifacts::tests::a_line_number_citation_is_reported_at_every_status',
     ),
+    (
+        'M9 a line number set apart from its file is not reported',
+        'src/primitives/check_artifacts.rs',
+        '                .chain(line_citations::find_set_apart(line));\n',
+        ';\n',
+        'primitives::check_artifacts::tests::a_line_number_set_apart_from_its_file_is_reported',
+    ),
+    (
+        'M10 a set-apart span is never found',
+        'src/primitives/line_citations.rs',
+        '        if whole == Some(content.len()) {\n            found.push(open + 1..close);\n        }\n',
+        '        let _ = whole;\n',
+        'primitives::line_citations::tests::a_line_number_set_apart_from_its_file_is_found primitives::check_artifacts::tests::a_line_number_set_apart_from_its_file_is_reported',
+    ),
 ]

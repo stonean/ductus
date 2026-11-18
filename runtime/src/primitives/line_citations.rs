@@ -14,6 +14,9 @@
 //!   match;
 //! - `#LN` or `#LN-LM`, a link's line anchor.
 //!
+//! [`find_set_apart`] reads a third form, which only the check reports: an inline code
+//! span holding nothing but such a suffix, a line number set apart from its file.
+//!
 //! The token must hold a `/` or end in an extension from [`EXTENSIONS`], so a host and
 //! port such as `db.internal:5432` is not a citation (owner decision, 2026-11-17). A host
 //! whose last label is also a listed extension (`docs.rs:443`) still reads as one: no list
@@ -80,6 +83,32 @@ pub(crate) fn find(line: &str) -> Vec<Citation> {
             });
             at = end;
         }
+    }
+    found
+}
+
+/// Each inline code span in `line` whose whole content is a line-number suffix set apart
+/// from its file, as in `` `a.rs:12`, `:388` ``, by the range of the span's content. The
+/// path-token reading of [`find`] cannot see one, since no path precedes it (owner
+/// decision, 2026-11-17). [`strip`] leaves these alone: removing one deletes a span, which
+/// is no suffix strip.
+pub(crate) fn find_set_apart(line: &str) -> Vec<Range<usize>> {
+    let mut found = Vec::new();
+    let mut rest = 0;
+    while let Some(open) = line[rest..].find('`').map(|offset| rest + offset) {
+        let Some(close) = line[open + 1..].find('`').map(|offset| open + 1 + offset) else {
+            break;
+        };
+        let content = &line[open + 1..close];
+        let whole = match content.as_bytes().first() {
+            Some(b':') => colon_suffix_end(content, 0),
+            Some(b'#') => anchor_suffix_end(content, 0),
+            _ => None,
+        };
+        if whole == Some(content.len()) {
+            found.push(open + 1..close);
+        }
+        rest = close + 1;
     }
     found
 }
@@ -251,6 +280,38 @@ mod tests {
     #[test]
     fn text_without_a_citation_is_borrowed() {
         assert!(matches!(strip("db.internal:5432\n"), Cow::Borrowed(_)));
+    }
+
+    /// The set-apart spans `find_set_apart` reports in `line`, as text.
+    fn set_apart(line: &str) -> Vec<&str> {
+        find_set_apart(line)
+            .into_iter()
+            .map(|span| &line[span])
+            .collect()
+    }
+
+    #[test]
+    fn a_line_number_set_apart_from_its_file_is_found() {
+        assert_eq!(
+            set_apart("`a.rs:12`, `:388`, `:12-30`, `:1–4`, `:7:2` and `#L3`."),
+            vec![":388", ":12-30", ":1–4", ":7:2", "#L3"]
+        );
+        for line in [
+            "`:x`",
+            "`a:12`",
+            "`:8080x`",
+            "`::`",
+            "an unclosed `:12",
+            "`/ductus:review`",
+            "no span :12",
+        ] {
+            assert!(find_set_apart(line).is_empty(), "{line}");
+        }
+    }
+
+    #[test]
+    fn stripping_leaves_a_set_apart_span() {
+        assert_eq!(strip("`a.rs:1`, `:2`\n"), "`a.rs`, `:2`\n");
     }
 
     #[test]

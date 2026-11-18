@@ -2719,14 +2719,18 @@ fn check_line_number_citations(
             if (scanner.skip(line) && scanner.in_fence()) || line.trim_start().starts_with('>') {
                 continue;
             }
-            for citation in line_citations::find(line) {
+            let cited = line_citations::find(line)
+                .into_iter()
+                .map(|citation| citation.path_start..citation.suffix.end)
+                .chain(line_citations::find_set_apart(line));
+            for span in cited {
                 findings.push(ArtifactFinding {
                     family: LINE_CITATION_FAMILY.into(),
                     severity: AnalyzeSeverity::Blocking,
                     message: format!(
                         "line {}: `{}` cites a line by number, which drifts as the code moves; name the symbol, test, heading or a quoted phrase it points at instead (§grounding)",
                         index + 1,
-                        &line[citation.path_start..citation.suffix.end]
+                        &line[span]
                     ),
                     path: citing.clone(),
                 });
@@ -6859,6 +6863,25 @@ mod tests {
         let found = citation_findings(&compute(&args(), repo).unwrap());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].1.contains("`src/b.rs:4`"), "{found:?}");
+    }
+
+    /// A line number set apart from its file in its own code span is reported
+    /// too, since it is as much a line citation as one attached to its path.
+    #[test]
+    fn a_line_number_set_apart_from_its_file_is_reported() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\nSee `src/a.rs:12` and `:388`.\n",
+        );
+        let found = citation_findings(&compute(&args(), repo).unwrap());
+        let cited: Vec<&str> = found
+            .iter()
+            .map(|(_, message)| message.split('`').nth(1).unwrap())
+            .collect();
+        assert_eq!(cited, vec!["src/a.rs:12", ":388"], "{found:?}");
     }
 
     /// The rule holds at every status, so the family is not status-gated.
