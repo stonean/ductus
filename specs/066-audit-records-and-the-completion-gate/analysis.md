@@ -1,15 +1,15 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-16T13:54:28Z
-analyzed-against: 7ba38698b07cf4a05c9907e02fb1cdf473195c86
+last-run: 2026-11-18T02:12:23Z
+analyzed-against: 87ac26bfdf54efb2ae603cc79e668ca03b876687
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 9
 analyzed-digest:
-  data-model.md: 3f4ad82314fc938bc24fc39aa9faad7e788c76a12e2c45bf6a2906f2fa9982ab
-  plan.md: 5cf6928613498b59a3aca9b72f3e176031da77e3ef03145b362561f7246603a9
-  review.md: 71ac5b9178a4d734c7a34ee8fe7a06834734d07caf92db9dec26436f960e3c80
+  data-model.md: 0dfad555e49515b76f6cafc1f2b3b9f1bb6d17cb6ee2c78bf6d8d606812fc38e
+  plan.md: 1415327728911d261212234d52e1ebf896c2094d0169736a798b488bc20ed65c
+  review.md: 815a7e8e1f3dab8ec9a6b56bb098765ab58fd19947a0bad9c1ab5dfa5300e1b0
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -35,8 +35,8 @@ analyzed-digest:
   scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: e01a4ef9684b13d0b2ec683b49b75699e36b908ebf911391937f6b6c9a6f1e46
-  tasks.md: 07f3c393f54fd47dbeba9b2423e64b8ff1d8d4aa867e723076c8963e157a0542
+  spec.md: d934ce2636756013a7c582d09dc139f587963f98c3d402b30bf36e6d9f370342
+  tasks.md: 458333b0918151dc1c0bbbc89d2465ab6c01e605d295e79a228fb8ec8806844b
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
@@ -54,19 +54,22 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
-  BE-ERR-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-002: {verdict: addressed, cite: "scenarios/the-fix-round-loop-is-recorded-and-gated.md#Behavior"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-ERR-002: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-INPUT-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
+  BE-INPUT-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-INPUT-011: {verdict: addressed, cite: "scenarios/process-waivers-notices-flatten-stored-text.md#Behavior"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  BE-RACE-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
+  CFG-CONST-003: {verdict: addressed, cite: "scenarios/a-renamed-file-contributes-its-rewrites.md#Behavior"}
 blocking: false
 dispositions:
   fixed: 0
