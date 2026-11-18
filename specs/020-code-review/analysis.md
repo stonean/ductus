@@ -1,13 +1,13 @@
 ---
 spec: 020-code-review
-last-run: 2026-11-15T17:43:45Z
-analyzed-against: 1f658b89f5cfd4f79be6a65e0a6005c21e373065
+last-run: 2026-11-18T12:49:35Z
+analyzed-against: 9cae484cf4b41ad6e9d3de3eb4d6fe675cc1e551
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
+advisory: 5
 unexamined: 3
 analyzed-digest:
-  data-model.md: a0ee875255692f13e34ea20dd9c584189028c2912e7888bc58f7b62557d0efeb
+  data-model.md: dd0185afb594539949dbb1e9155a6bc3d2f25f7d19e086d6d4d646d8b6dfa149
   plan.md: 436808aa63c62c4e75fae30ac7a332e3574663108c0859fb8e369ca8b10be877
   review.md: 829fdd861ef36fcbdfa06afd3a6ccf11662cc7c9afefd2a66e030cd8a992fc29
   scenarios/every-loaded-rule-file-has-a-pass.md: 4e31f3bd59ad2c2145b8cb24ceaf8561580ffab2ad3143de1087f65b5109a0f3
@@ -36,15 +36,14 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#CI template stays minimal", message: "The plan adds a step to framework/templates/ci/adopter-generators.yml (CI configuration) and commits to no automated vulnerability scan on dependency-set changes."}
-  BE-PAYLOAD-001: {verdict: finding, tier: must, at: "plan.md#Rule files map to passes in one compiled table, and the reference states it in prose a test holds to it", message: "performReview request lists rule-files and loaded-rule-files are bounded by no stated maximum or lists-file path (only process-waivers' lists are bounded in plan.md)"}
   CFG-ENV-001: {verdict: addressed, cite: "data-model.md#`.ductus/config.toml [review]` section"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#`.ductus/config.toml` follows the shared-database convention"}
   CFG-ENV-012: {verdict: finding, tier: should, at: "data-model.md#`.ductus/config.toml [review]` section", message: "The new [review] section is declared open-schema but the design does not state how its loader treats an unrecognized key (fail startup or warn by name)."}
 blocking: false
 dispositions:
   fixed: 0
-  deferred: 1
-  waived: 3
+  deferred: 0
+  waived: 5
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-DEPS-007: The plan adds a step to framework/templates/ci/adopter-generators.yml (CI configuration) and commits to no automated vulnerability scan on dependency-set changes."
@@ -57,25 +56,28 @@ decisions:
     reason: "advisory and no chore: the loader behavior the rule asks for exists where it is owned. runtime/src/schema/config_keys.rs registers [review]'s keys, and every reader of the section, discover-rule-files among them, warns by name on each key outside it ('unknown config key: [review] … — this version of ductus does not read it'), per spec 019's scenario an-unknown-config-key-is-named and 022's config-readers-name-unknown-keys; a warning rather than a failure is the rule's own multi-version case, since teammates' ductus versions read one committed file"
     decided-at: 2026-11-15T17:43:45Z
     decided-by: andy@stone.dev
-  - key: "rule-assessment — BE-PAYLOAD-001: performReview request lists rule-files and loaded-rule-files are bounded by no stated maximum or lists-file path (only process-waivers' lists are bounded in plan.md)"
-    outcome: deferred
-    target: specs/022-deterministic-runtime/tasks.md
-    task: "36"
-    reason: the exec extension request shapes are 022's protocol; the owner deferred this finding to 022 task 36, widened to name performReview's request (2026-11-15)
-    decided-at: 2026-11-15T17:43:45Z
-    decided-by: andy@stone.dev
   - key: grounding — Resolved Question 'MUST waivers and second sign-off' states as fact that 'Ductus has no runtime that could verify a second value belongs to a different person' with no citation or assumption marker; the runtime (spec 022) now exists and the claim is not substantiated
     outcome: waived
     reason: "advisory and no chore: what the decision turns on still holds. A second frontmatter value is self-asserted, and nothing the runtime (spec 022) reads, frontmatter or git's configured user.email for decided-by, attests that it names a different person, so the requirement would still be performative; the real second review stays at merge"
     decided-at: 2026-11-15T17:43:45Z
     decided-by: andy@stone.dev
+  - key: "grounding — plan.md Frontmatter review: block decision states /ductus:analyze's drift check tolerates review.last-run: null until done as current behavior with no source cited"
+    outcome: waived
+    reason: "the paragraph is the decision as taken, under the section's lead 'Reversed by 057', which states the current design: no block in the templates and the record in review.md; a decision record is not a claim about the tree today"
+    decided-at: 2026-11-18T12:49:35Z
+    decided-by: rule
+  - key: grounding — spec.md Motivation states 'nothing checks whether the code that landed satisfies the spec' about the existing system with no citation
+    outcome: waived
+    reason: the Motivation states the gap this spec was written to close, and /ductus:review, this spec's own deliverable, is the check that closed it; it records why the spec exists, not a claim about the tree today
+    decided-at: 2026-11-18T12:49:35Z
+    decided-by: rule
 ---
 
 # Analysis — 020-code-review
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 1 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -89,11 +91,13 @@ decisions:
 
 - rule-assessment — BE-DEPS-007: The plan adds a step to framework/templates/ci/adopter-generators.yml (CI configuration) and commits to no automated vulnerability scan on dependency-set changes. — `specs/020-code-review/plan.md` — **waived**: advisory and no chore: 020's CI work adds the audit-record gate step to framework/templates/ci/adopter-generators.yml, which runs the already-installed ductus runtime and installs nothing, so no dependency set changes; cargo audit runs in runtime.yml on every runtime/** change (as 026's analysis waived the same finding)
 - rule-assessment — CFG-ENV-012: The new [review] section is declared open-schema but the design does not state how its loader treats an unrecognized key (fail startup or warn by name). — `specs/020-code-review/data-model.md` — **waived**: advisory and no chore: the loader behavior the rule asks for exists where it is owned. runtime/src/schema/config_keys.rs registers [review]'s keys, and every reader of the section, discover-rule-files among them, warns by name on each key outside it ('unknown config key: [review] … — this version of ductus does not read it'), per spec 019's scenario an-unknown-config-key-is-named and 022's config-readers-name-unknown-keys; a warning rather than a failure is the rule's own multi-version case, since teammates' ductus versions read one committed file
-- grounding — Resolved Question 'MUST waivers and second sign-off' states as fact that 'Ductus has no runtime that could verify a second value belongs to a different person' with no citation or assumption marker; the runtime (spec 022) now exists and the claim is not substantiated — `specs/020-code-review/spec.md` — **waived**: advisory and no chore: what the decision turns on still holds. A second frontmatter value is self-asserted, and nothing the runtime (spec 022) reads, frontmatter or git's configured user.email for decided-by, attests that it names a different person, so the requirement would still be performative; the real second review stays at merge
+- grounding — spec.md Resolved Questions states 'Ductus has no runtime that could verify a second value' as fact about the existing system, uncited (a runtime now exists per 022) — `specs/020-code-review/spec.md` — **waived**: advisory and no chore: what the decision turns on still holds. A second frontmatter value is self-asserted, and nothing the runtime (spec 022) reads, frontmatter or git's configured user.email for decided-by, attests that it names a different person, so the requirement would still be performative; the real second review stays at merge
+- grounding — plan.md Frontmatter review: block decision states /ductus:analyze's drift check tolerates review.last-run: null until done as current behavior with no source cited — `specs/020-code-review/plan.md` — **waived**: the paragraph is the decision as taken, under the section's lead 'Reversed by 057', which states the current design: no block in the templates and the record in review.md; a decision record is not a claim about the tree today (decided by the rule)
+- grounding — spec.md Motivation states 'nothing checks whether the code that landed satisfies the spec' about the existing system with no citation — `specs/020-code-review/spec.md` — **waived**: the Motivation states the gap this spec was written to close, and /ductus:review, this spec's own deliverable, is the check that closed it; it records why the spec exists, not a claim about the tree today (decided by the rule)
 
 ## Deferred to other specs
 
-- rule-assessment — BE-PAYLOAD-001: performReview request lists rule-files and loaded-rule-files are bounded by no stated maximum or lists-file path (only process-waivers' lists are bounded in plan.md) — `specs/020-code-review/plan.md` — **deferred** to `specs/022-deterministic-runtime/tasks.md` task 36
+*None.*
 
 ## Contradictions
 
