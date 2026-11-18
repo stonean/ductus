@@ -1,18 +1,18 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-18T20:59:29Z
-analyzed-against: 0397127a3c691620d6f3564c02c8cb8202cbc5f3
+last-run: 2026-11-18T22:50:19Z
+analyzed-against: fba832e81c36da0596436e9aa903280c0509bbcd
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 43
 analyzed-digest:
-  plan.md: 3e33d28ad836f7ce04127dba0461a2575b417762158e3214584de9a7e430559c
+  plan.md: 073a53bba0905d29e9305eb57049b3c0a86f29c950c3b8ddee8317d0043792be
   review.md: 6cbf7058cfb52c13ea478679cac17810da971bcd678888a9b9d1a2480469d529
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 4d4a93fd968898006fa4780beb8088e48616ed1ceae54574ac38a3a02ad9583b
   scenarios/families-follow-the-command-reference-split.md: b15323a687a50e807ee49ff7af93447c01f19102d833870155aef792e2125371
-  scenarios/family-10-migration-coverage.md: 9712b6a8af8f605d5cbee490633a18d7a727f7f50607fa7860eae1fed88fac35
+  scenarios/family-10-migration-coverage.md: a535ac8c1e4dce26084c03066fc88978f0668f05e15f3600d87dbb6bf85ecf9a
   scenarios/family-17-contract-binding.md: 1ab3dfbc5c53ca5ab082b587a299b1951c8dd3c3e29148db5ed3a5df50903faf
   scenarios/family-18-marker-list-parity.md: 296f55313954ec984b5260945b92639d15b8458f707f90e94e0bd1bbc0f052c0
   scenarios/family-22-adopter-shell-behavior.md: 995c7c45e1918732b886e1174e5b627161bdd3c42ea824a4cbce7b04b70e02ff
@@ -30,7 +30,7 @@ analyzed-digest:
   scenarios/host-namespace-parity.md: e8a67c95e2e596cf9a231bbfa26545c4beee96af1a043fd83608899e16087790
   scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
   scenarios/readme-command-parity.md: 899fdc8ebb306541496892772ec4540b4be968aed55ee366c87185cdcc5304b6
-  spec.md: b06249aee927d360d65cdf5a60a799aaa87acf679d71dfd4b36110f340a588e4
+  spec.md: 8004fa3202742f54227d651b14c0a663f9b9b6beab9423244f3ed7874c7353a3
   tasks.md: e2c71bb4ef7aadd29dfbf42eb4bbce549aea67fea36d6f6ab44e6e16e5efc460
 unexamined-by-reason:
   never-existed: 4
@@ -51,17 +51,16 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-INPUT-003: {verdict: addressed, cite: "plan.md#Shell-first orchestration via `run-generator`"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/family-34-step-reference-integrity.md#Edge Cases"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "scenarios/family-28-audit-family-registry-parity.md#Edge Cases"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "scenarios/family-27-done-spec-unchecked-criteria.md#Behavior"}
   QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/link-check-consolidation.md#Edge Cases"}
   QUAL-GROUND-001: {verdict: addressed, cite: "scenarios/family-17-contract-binding.md#Behavior"}
   QUAL-STUB-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
   QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 7
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -71,7 +70,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 43 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 43 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -102,4 +101,10 @@ dispositions:
 
 ## Fixed in this run
 
-- grounding — Resolved Questions, CI integration: 'The PR workflow has no `paths:` filter' was stated as current workflow behavior with no citation of its trigger block (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
+- grounding — Motivation said the pre-v0.1.0 review passes surfaced ~30 of 45 findings as framework-level drift, with no source or method (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
+- grounding — AC17 said the family exited 0 over 514 files, with no source for the count (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
+- grounding — AC24 said a spec rename rots 32 shipped citations, with no source for the figure or its population (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
+- grounding — The shell-first orchestration decision said run-generator already spawns with --dry-run and captures stdout, stderr and exit, with no file-and-symbol citation (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+- grounding — Section 9 and AC11 said runtime/legacy-prose-commands.txt names amend.md and help.md today, though it lists audit.md too, as host-run since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
+- grounding — The Overview, the procedure-shape section and the Affected Files rows said audit.md ships parseable and leaves the allowlist, though it has been legacy prose to the parser since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+- grounding — The shell-first decision said the /audit procedure is parseable with one numbered step per family, and check zero said /audit invokes the nine scripts via run-generator, though the host runs one step over run-all.sh since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
