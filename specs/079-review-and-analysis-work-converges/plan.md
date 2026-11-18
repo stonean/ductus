@@ -6,7 +6,7 @@ Implements [079 — Review and analysis work converges](spec.md).
 
 A shared commit-attribution helper gives the review window, scope, fix rounds and `diff-cross-spec` one answer to whose change a commit is. Two new primitives decide from history and from a diff what a person used to judge: `measure-reopenings` reports the outcome, and `classify-spec-edit` says whether an edit reopens. The review and analyze commands stop asking about non-gating observations. Each primitive gets one compiled description, the constitution makes the binary the source of its rules, and the references shrink last, so the cuts cannot hold up the changes that end the cycle.
 
-`specs/system.md`, `specs/events.md` and `specs/errors.md` do not exist in this repository, so there is nothing to conflict with there. This spec declares no dependencies.
+`specs/events.md` and `specs/errors.md` do not exist in this repository, and `specs/system.md` states only the runtime's network facts, which this plan touches nowhere, so there is nothing to conflict with there. This spec declares no dependencies.
 
 ## Technical Decisions
 
