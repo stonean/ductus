@@ -1,7 +1,7 @@
 ---
 spec: 056-bootstrap-archive-boundary-split
-last-run: 2026-11-18T20:52:43Z
-reviewed-against: 91d162e438e3032d6e3e7e860d7fd51d60eb9be3
+last-run: 2026-11-18T21:04:48Z
+reviewed-against: 51eddfe1d2b1696e99d8393b24889412a7a1eaec
 diff-base: e0c220d47c0f3212cf9219964278afb88546aa9e
 must-violations: 0
 should-violations: 0
@@ -21,14 +21,18 @@ unread:
 excluded: 1059
 contract-breaks: 0
 skipped-passes: []
-fix-rounds-open: true
+fix-rounds: 2
+re-reads: 1
+diff-checked: 1
+not-re-read: 0
+budget-stop: false
 reviewed-digest:
   scenarios/the-walker-places-every-archive-half-section.md: 317f5c421d25c4ee588bde505b22fbbf9629fef0880857e9e5b73f3f066de7d5
 blocking: false
 dispositions:
   fixed: 9
   deferred: 0
-  waived: 6
+  waived: 7
   undispositioned: 0
 decisions:
   - key: "convention: the Layout-derived row label `Command/skill path` names the skill layout the dropped hosts used — `framework/bootstrap/ductus.md`"
@@ -61,6 +65,11 @@ decisions:
     reason: it is the pipeline's own rule machinery, a decision for 008's owner; 022's record stores the same waiver
     decided-at: 2026-11-18T20:52:43Z
     decided-by: rule
+  - key: "other: 050's plan Affected Files table carries two `AGENTS.md` rows, the line-citation pointer and the promoted-entries rewrite — `specs/050-constitution/plan.md`"
+    outcome: waived
+    reason: each row records a separate change 050 made to AGENTS.md, so merging them is cosmetic and changes no claim
+    decided-at: 2026-11-18T21:04:48Z
+    decided-by: rule
 ---
 
 # Review — 056-bootstrap-archive-boundary-split
@@ -68,6 +77,8 @@ decisions:
 ## Summary
 
 One set of five passes read the union of the shared bootstrap window's five scopes (003, 007, 012, 027 and 056) at e32a52ff, in four parts; the rules part read discover-rule-files' 178,208-byte Statements projection, all twelve rule files. They found no MUST and no SHOULD at high confidence. Of two low-confidence QUAL-CLAIM-001 SHOULDs, the first no longer fires, by part 3's re-run over the fixes, and the second, a running agent outside the selection never compared, was fixed in cfb348b8 and is recorded for 007 as an observation. Of this spec's 21 scope entries the passes read 12 whole. Unread or read in part: `framework/bootstrap/govern.md` (compared byte for byte with ductus.md (cmp), not read); `framework/bootstrap/hooks/ductus-pre-commit` (entered the scope with 0e33dc54, after the passes; the fix round re-reads its change); `framework/rules/api-backend.md` (74f6361c's hunks only); `framework/rules/configuration-cross.md` (74f6361c's hunks only); `framework/rules/security-backend.md` (74f6361c's hunks only); `framework/rules/security-frontend.md` (74f6361c's hunks only); `runtime/src/main.rs` (its window hunks only); `runtime/src/schema/config_keys.rs` (a host fix read by no pass); `runtime/src/schema/primitives.rs` (its window hunks only). AGENTS.md was read from part 4's session context rather than opened in the run, and part 3's mutant of runtime/src/main.rs was not run. 003 task 7's batched scratch-adopter run (565260ca) then exercised the fixes and found three defects, each fixed before its boxes were ticked: a language read from the config halted without naming its setting (CFG-ENV-008, 613d5eb7); Collect Project Inputs could prompt before a given value's halt (23e7c288); and the spec-017 hook migration's trigger matched no hook any release shipped, so the migration was retired (owner decision, 0e33dc54). Its two findings outside these specs are 003 task 8: one deferred to 022 task 53, one fixed in 7b4fff37. The fix rounds re-read every change since this run's fix-round base.
+
+2 fix round(s): 1 re-read, 1 diff-checked, 0 exempt, 0 not re-read.
 
 ## MUST violations (blocking)
 
@@ -106,6 +117,7 @@ One set of five passes read the union of the shared bootstrap window's five scop
 - other: the walker scenario's Context said steps 1-10 name none of the sections — `specs/056-bootstrap-archive-boundary-split/scenarios/the-walker-places-every-archive-half-section.md` — **fixed** (decided by the rule)
 - other: the placement list claimed every section of the archive half has a place — `framework/bootstrap/ductus.md` — **fixed** (decided by the rule)
 - convention: CFG-ENV-006's yield to BE-ERR-001 carries no load condition — `framework/rules/configuration-cross.md` — **waived**: it is the pipeline's own rule machinery, a decision for 008's owner; 022's record stores the same waiver (decided by the rule)
+- other: 050's plan Affected Files table carries two `AGENTS.md` rows, the line-citation pointer and the promoted-entries rewrite — `specs/050-constitution/plan.md` — **waived**: each row records a separate change 050 made to AGENTS.md, so merging them is cosmetic and changes no claim (decided by the rule)
 
 ## Skipped passes
 
@@ -645,11 +657,11 @@ One set of five passes read the union of the shared bootstrap window's five scop
 - `specs/012-multi-agent-govern/tasks.md` — 000-slash-commands, 001-system-spec-templates, 002-project-scaffolding, 003-bootstrap-automation, 006-bug-workflow, 007-govern-workflow, 008-security-rules, 009-scenario-targeting, 010-agent-autonomy, 011-brownfield-process, 012-multi-agent-govern, 013-text-first-artifacts, 014-reclarify-backedge, 015-tarball-fetch, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 019-config-decisions, 020-code-review, 021-runtime-boundary, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 033-rule-surface-setting, 034-performance-backend-rules, 035-groom-session-target, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 073-decided-rule-departures-are-recorded, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed, 082-rule-assessments-converge-across-runs
 - `specs/013-text-first-artifacts/analysis.md` — 013-text-first-artifacts, 058-findings-route-at-discovery
 - `specs/013-text-first-artifacts/data-model.md` — 013-text-first-artifacts, 058-findings-route-at-discovery
-- `specs/013-text-first-artifacts/plan.md` — 013-text-first-artifacts, 058-findings-route-at-discovery
+- `specs/013-text-first-artifacts/plan.md` — 013-text-first-artifacts, 026-framework-self-audit, 058-findings-route-at-discovery
 - `specs/013-text-first-artifacts/review.md` — 013-text-first-artifacts, 058-findings-route-at-discovery
 - `specs/013-text-first-artifacts/scenarios/criterion-identifiers.md` — 008-security-rules, 013-text-first-artifacts, 016-cross-cutting-rules, 017-derive-dont-ask, 020-code-review, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 026-framework-self-audit, 027-bootstrap-migration-registry, 033-rule-surface-setting, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 065-configurable-source-repository, 067-analyze-and-audit-checks, 068-api-backend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency
 - `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md` — 007-govern-workflow, 008-security-rules, 013-text-first-artifacts, 017-derive-dont-ask, 022-deterministic-runtime, 034-performance-backend-rules, 037-observability-backend-rules, 060-exec-analyze-assesses-each-loaded-rule, 068-api-backend-rules, 070-performance-frontend-rules
-- `specs/013-text-first-artifacts/spec.md` — 013-text-first-artifacts, 058-findings-route-at-discovery
+- `specs/013-text-first-artifacts/spec.md` — 013-text-first-artifacts, 026-framework-self-audit, 058-findings-route-at-discovery
 - `specs/013-text-first-artifacts/tasks.md` — 000-slash-commands, 001-system-spec-templates, 002-project-scaffolding, 003-bootstrap-automation, 006-bug-workflow, 007-govern-workflow, 008-security-rules, 009-scenario-targeting, 010-agent-autonomy, 011-brownfield-process, 012-multi-agent-govern, 013-text-first-artifacts, 014-reclarify-backedge, 015-tarball-fetch, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 019-config-decisions, 020-code-review, 021-runtime-boundary, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 033-rule-surface-setting, 034-performance-backend-rules, 035-groom-session-target, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 073-decided-rule-departures-are-recorded, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed, 082-rule-assessments-converge-across-runs
 - `specs/014-reclarify-backedge/analysis.md` — 014-reclarify-backedge
 - `specs/014-reclarify-backedge/plan.md` — 014-reclarify-backedge, 023-govern-refinement
@@ -785,7 +797,7 @@ One set of five passes read the union of the shared bootstrap window's five scop
 - `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md` — 003-bootstrap-automation, 008-security-rules, 017-derive-dont-ask, 020-code-review, 022-deterministic-runtime, 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 047-analyze-findings-durability, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 077-security-cross-rules, 079-review-and-analysis-work-converges
 - `specs/026-framework-self-audit/scenarios/host-namespace-parity.md` — 026-framework-self-audit
 - `specs/026-framework-self-audit/scenarios/readme-command-parity.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 000-slash-commands, 002-project-scaffolding, 003-bootstrap-automation, 007-govern-workflow, 010-agent-autonomy, 011-brownfield-process, 014-reclarify-backedge, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 020-code-review, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 032, 033-rule-surface-setting, 035-groom-session-target, 036-quality-cross-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 041-task-pruning, 043-workflows-sunset, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed
+- `specs/026-framework-self-audit/spec.md` — 000-slash-commands, 002-project-scaffolding, 003-bootstrap-automation, 007-govern-workflow, 010-agent-autonomy, 011-brownfield-process, 013-text-first-artifacts, 014-reclarify-backedge, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 020-code-review, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 032, 033-rule-surface-setting, 035-groom-session-target, 036-quality-cross-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 041-task-pruning, 043-workflows-sunset, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed
 - `specs/026-framework-self-audit/tasks.md` — 000-slash-commands, 001-system-spec-templates, 002-project-scaffolding, 003-bootstrap-automation, 006-bug-workflow, 007-govern-workflow, 008-security-rules, 009-scenario-targeting, 010-agent-autonomy, 011-brownfield-process, 012-multi-agent-govern, 013-text-first-artifacts, 014-reclarify-backedge, 015-tarball-fetch, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 019-config-decisions, 020-code-review, 021-runtime-boundary, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 032, 033-rule-surface-setting, 034-performance-backend-rules, 035-groom-session-target, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 073-decided-rule-departures-are-recorded, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed, 082-rule-assessments-converge-across-runs
 - `specs/027-bootstrap-migration-registry/plan.md` — 000-slash-commands, 002-project-scaffolding, 003-bootstrap-automation, 007-govern-workflow, 008-security-rules, 010-agent-autonomy, 013-text-first-artifacts, 014-reclarify-backedge, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 020-code-review, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 033-rule-surface-setting, 036-quality-cross-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency
 - `specs/027-bootstrap-migration-registry/review.md` — 027-bootstrap-migration-registry
@@ -1172,6 +1184,128 @@ One set of five passes read the union of the shared bootstrap window's five scop
 - `specs/082-rule-assessments-converge-across-runs/tasks.md` — 000-slash-commands, 001-system-spec-templates, 002-project-scaffolding, 003-bootstrap-automation, 006-bug-workflow, 007-govern-workflow, 008-security-rules, 009-scenario-targeting, 010-agent-autonomy, 011-brownfield-process, 012-multi-agent-govern, 013-text-first-artifacts, 014-reclarify-backedge, 015-tarball-fetch, 016-cross-cutting-rules, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 019-config-decisions, 020-code-review, 021-runtime-boundary, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out, 026-framework-self-audit, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 030-cross-service-references, 033-rule-surface-setting, 034-performance-backend-rules, 035-groom-session-target, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 040-configurable-specs-dir, 041-task-pruning, 042-consolidate-govern-per-project-files-under-govern-directory, 043-workflows-sunset, 044-relocate-constitution-under-govern-directory, 045-decision-state-drift-detection, 046-scenario-open-question-visibility, 047-analyze-findings-durability, 048-govern-acquired-runtime, 049-rename-govern-to-ductus, 050-constitution, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 054-remove-supersession, 055-shared-constitution, 057-analyze-artifact-and-record-relocation, 058-findings-route-at-discovery, 059-project-in-a-repository-subdirectory, 060-exec-analyze-assesses-each-loaded-rule, 061-updates-track-the-latest-release-tag, 062-concurrent-session-targets, 063-oversized-artifacts-warn-with-a-fix, 064-pi-host-support, 065-configurable-source-repository, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 071-command-reference-split, 072-governing-documents-stay-within-one-read, 073-decided-rule-departures-are-recorded, 075-agents-md-holds-what-every-session-needs, 076-waived-and-deferred-findings-are-distinct-dispositions, 077-security-cross-rules, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency, 081-reviews-and-checks-follow-what-changed, 082-rule-assessments-converge-across-runs
 - `specs/inbox.md` — 006-bug-workflow, 022-deterministic-runtime, 058-findings-route-at-discovery
 - `specs/system.md` — 022-deterministic-runtime
+- `.claude/commands/ductus/analyze.md` — left out of fix round 1
+- `.claude/commands/ductus/plan.md` — left out of fix round 1
+- `.ductus/reference/analyze.md` — left out of fix round 1
+- `.ductus/reference/clarify.md` — left out of fix round 1
+- `.ductus/reference/implement.md` — left out of fix round 1
+- `.ductus/reference/plan.md` — left out of fix round 1
+- `.github/workflows/framework-checks.yml` — left out of fix round 1
+- `.github/workflows/runtime.yml` — left out of fix round 1
+- `.pi/prompts/ductus-analyze.md` — left out of fix round 1
+- `.pi/prompts/ductus-plan.md` — left out of fix round 1
+- `AGENTS.md` — left out of fix round 1
+- `CHANGELOG.md` — left out of fix round 1
+- `docs/analyze.md` — left out of fix round 1
+- `docs/developing-ductus.md` — left out of fix round 1
+- `docs/runtime.md` — left out of fix round 1
+- `framework/commands/analyze.md` — left out of fix round 1
+- `framework/commands/plan.md` — left out of fix round 1
+- `framework/constitution.md` — left out of fix round 1
+- `framework/migrations.toml` — left out of fix round 1
+- `framework/migrations/gitignore-marker-rename.md` — left out of fix round 1
+- `framework/migrations/governance-config-rename.md` — left out of fix round 1
+- `framework/migrations/rule-files-relocate.md` — left out of fix round 1
+- `framework/migrations/spec-and-plan-sunset.md` — left out of fix round 1
+- `framework/migrations/substitute-seed-placeholders.md` — left out of fix round 1
+- `framework/migrations/workflows-sunset.md` — left out of fix round 1
+- `framework/reference/analyze.md` — left out of fix round 1
+- `framework/reference/clarify.md` — left out of fix round 1
+- `framework/reference/implement.md` — left out of fix round 1
+- `framework/reference/plan.md` — left out of fix round 1
+- `runtime/src/primitives/analyze_subjects.rs` — left out of fix round 1
+- `runtime/src/primitives/check_artifacts.rs` — left out of fix round 1
+- `runtime/src/primitives/classify_spec_edit.rs` — left out of fix round 1
+- `runtime/src/primitives/line_citations.rs` — left out of fix round 1
+- `runtime/src/primitives/mechanical_sweep.rs` — left out of fix round 1
+- `runtime/src/primitives/mod.rs` — left out of fix round 1
+- `runtime/src/primitives/write_analysis.rs` — left out of fix round 1
+- `runtime/src/schema/descriptions.rs` — left out of fix round 1
+- `runtime/src/schema/primitives.rs` — left out of fix round 1
+- `runtime/tests/fixtures/ductus-basic/project/framework/skills/old-skill.md` — left out of fix round 1
+- `scripts/analyze/analyze_lib.py` — left out of fix round 1
+- `scripts/analyze/briefs.py` — left out of fix round 1
+- `scripts/analyze/check.py` — left out of fix round 1
+- `scripts/analyze/combine.py` — left out of fix round 1
+- `scripts/analyze/detect.py` — left out of fix round 1
+- `scripts/analyze/judge-brief.md` — left out of fix round 1
+- `scripts/analyze/record.py` — left out of fix round 1
+- `scripts/analyze/split.py` — left out of fix round 1
+- `scripts/analyze/step15-brief.md` — left out of fix round 1
+- `scripts/audit/template-alignment.sh` — left out of fix round 1
+- `scripts/lint-release-ordering.sh` — left out of fix round 1
+- `scripts/mutation/line-citation-strip-066.py` — left out of fix round 1
+- `scripts/mutation/line-number-citations-067.py` — left out of fix round 1
+- `scripts/mutation/outward-link-reads-067.py` — left out of fix round 1
+- `scripts/mutation/reopen-measure.py` — left out of fix round 1
+- `scripts/npm-audit-allowed.json` — left out of fix round 1
+- `scripts/tests/test-analyze-scripts.py` — left out of fix round 1
+- `scripts/tests/test-lint-release-ordering.sh` — left out of fix round 1
+- `specs/003-bootstrap-automation/plan.md` — left out of fix round 1
+- `specs/003-bootstrap-automation/review.md` — left out of fix round 1
+- `specs/003-bootstrap-automation/scenarios/a-language-with-no-template-of-its-name.md` — left out of fix round 1
+- `specs/007-govern-workflow/review.md` — left out of fix round 1
+- `specs/008-security-rules/analysis.md` — left out of fix round 1
+- `specs/008-security-rules/plan.md` — left out of fix round 1
+- `specs/008-security-rules/spec.md` — left out of fix round 1
+- `specs/010-agent-autonomy/plan.md` — left out of fix round 1
+- `specs/010-agent-autonomy/spec.md` — left out of fix round 1
+- `specs/012-multi-agent-govern/data-model.md` — left out of fix round 1
+- `specs/012-multi-agent-govern/review.md` — left out of fix round 1
+- `specs/012-multi-agent-govern/scenarios/a-dropped-hosts-leftover-tree-is-named.md` — left out of fix round 1
+- `specs/012-multi-agent-govern/scenarios/settings-template-bash-allowlist.md` — left out of fix round 1
+- `specs/012-multi-agent-govern/spec.md` — left out of fix round 1
+- `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md` — left out of fix round 1
+- `specs/013-text-first-artifacts/spec.md` — left out of fix round 1
+- `specs/020-code-review/analysis.md` — left out of fix round 1
+- `specs/022-deterministic-runtime/analysis.md` — left out of fix round 1
+- `specs/022-deterministic-runtime/plan.md` — left out of fix round 1
+- `specs/022-deterministic-runtime/scenarios/every-mcp-argument-has-a-cli-form.md` — left out of fix round 1
+- `specs/022-deterministic-runtime/spec.md` — left out of fix round 1
+- `specs/023-govern-refinement/analysis.md` — left out of fix round 1
+- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` — left out of fix round 1
+- `specs/026-framework-self-audit/spec.md` — left out of fix round 1
+- `specs/027-bootstrap-migration-registry/review.md` — left out of fix round 1
+- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md` — left out of fix round 1
+- `specs/027-bootstrap-migration-registry/spec.md` — left out of fix round 1
+- `specs/037-observability-backend-rules/spec.md` — left out of fix round 1
+- `specs/039-reliability-backend-rules/plan.md` — left out of fix round 1
+- `specs/039-reliability-backend-rules/spec.md` — left out of fix round 1
+- `specs/040-configurable-specs-dir/analysis.md` — left out of fix round 1
+- `specs/040-configurable-specs-dir/plan.md` — left out of fix round 1
+- `specs/040-configurable-specs-dir/spec.md` — left out of fix round 1
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/analysis.md` — left out of fix round 1
+- `specs/045-decision-state-drift-detection/analysis.md` — left out of fix round 1
+- `specs/050-constitution/analysis.md` — left out of fix round 1
+- `specs/050-constitution/review.md` — left out of fix round 1
+- `specs/050-constitution/scenarios/a-retired-filename-leaves-a-decision-record.md` — left out of fix round 1
+- `specs/050-constitution/scenarios/adopter-practices-classified-for-promotion.md` — left out of fix round 1
+- `specs/050-constitution/scenarios/succinctness-is-a-guiding-principle.md` — left out of fix round 1
+- `specs/050-constitution/scenarios/the-constitution-fits-one-read.md` — left out of fix round 1
+- `specs/050-constitution/spec.md` — left out of fix round 1
+- `specs/050-constitution/tasks.md` — left out of fix round 1
+- `specs/051-branch-scoped-spec-numbering/analysis.md` — left out of fix round 1
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md` — left out of fix round 1
+- `specs/060-exec-analyze-assesses-each-loaded-rule/analysis.md` — left out of fix round 1
+- `specs/060-exec-analyze-assesses-each-loaded-rule/review.md` — left out of fix round 1
+- `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/rule-judging-runs-from-repo-scripts.md` — left out of fix round 1
+- `specs/060-exec-analyze-assesses-each-loaded-rule/tasks.md` — left out of fix round 1
+- `specs/062-concurrent-session-targets/analysis.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/analysis.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/data-model.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/plan.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/review.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/spec.md` — left out of fix round 1
+- `specs/066-audit-records-and-the-completion-gate/tasks.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/analysis.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/data-model.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/plan.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/review.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/spec.md` — left out of fix round 1
+- `specs/067-analyze-and-audit-checks/tasks.md` — left out of fix round 1
+- `specs/079-review-and-analysis-work-converges/analysis.md` — left out of fix round 1
+- `specs/079-review-and-analysis-work-converges/plan.md` — left out of fix round 1
+- `specs/080-deterministic-runtime-efficiency/analysis.md` — left out of fix round 1
 
 ## Unexamined governance
 
