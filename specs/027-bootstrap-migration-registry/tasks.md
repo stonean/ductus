@@ -35,7 +35,7 @@ Implemented in `364c330b` (landed on `main` 2026-11-12), and verified by the scr
 
 ## 18. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
 
-- [ ] An upgrade whose project keeps its own root `constitution.md` ends with Post-Scaffolding Output carrying `constitution-relocate`'s declined line and each other line its migrations reported (c061c1f0)
-- [ ] A first adoption that stopped before step 4 runs no migration on its re-run (8be4f935)
+- [x] An upgrade whose project keeps its own root `constitution.md` ends with Post-Scaffolding Output carrying `constitution-relocate`'s declined line and each other line its migrations reported (c061c1f0)
+- [x] A first adoption that stopped before step 4 runs no migration on its re-run (8be4f935)
 
 - **Done when**: the batched run 003's matching task names shows each outcome, which the commit ticking this task states; a defect it finds is fixed first

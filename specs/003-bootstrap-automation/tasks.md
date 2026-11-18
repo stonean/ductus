@@ -18,8 +18,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
 
-- [ ] A first adoption naming `TypeScript, JavaScript` appends GitHub's Node template once, which records the run evidence the step requires of the `JavaScript → Node` map entry (the window review's contract break on 1fa264dc)
-- [ ] A `[project] languages` value holding `/` halts the run at Collect Project Inputs, and one holding `#` or a space reaches the fetch percent-encoded (1fa264dc, cfb348b8)
+- [x] A first adoption naming `TypeScript, JavaScript` appends GitHub's Node template once, which records the run evidence the step requires of the `JavaScript → Node` map entry (the window review's contract break on 1fa264dc)
+- [x] A `[project] languages` value holding `/` halts the run at Collect Project Inputs, and one holding `#` or a space reaches the fetch percent-encoded (1fa264dc, cfb348b8)
 
 - **Done when**: one batched run, per `docs/developing-ductus.md` §Exercising an installer change without a push, shows each outcome, which the commit ticking this task states; a defect it finds is fixed first, and the review of the shared window is written after
 

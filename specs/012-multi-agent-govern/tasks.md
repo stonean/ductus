@@ -23,6 +23,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 14. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
 
-- [ ] A first run whose project holds only a dropped host's tree (`.agents/`), and an `--agents=claude` run beside one, each print the leftover-tree line (0030b255)
+- [x] A first run whose project holds only a dropped host's tree (`.agents/`), and an `--agents=claude` run beside one, each print the leftover-tree line (0030b255)
 
 - **Done when**: the batched run 003's matching task names shows the outcome, which the commit ticking this task states; a defect it finds is fixed first

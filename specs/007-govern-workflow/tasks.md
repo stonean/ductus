@@ -27,7 +27,7 @@ Implemented in `02bbda81` (landed on `main` 2026-11-12), and verified by the scr
 
 ## 9. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
 
-- [ ] A `--ref` first adoption with specs of its own that stops at the self-update abort re-runs as a first adoption: no migration offered, and the first-run steps printed (8be4f935, cfb348b8)
-- [ ] A run whose `--agents=` leaves out the running agent prints that agent's `ductus.md not compared` line (cfb348b8)
+- [x] A `--ref` first adoption with specs of its own that stops at the self-update abort re-runs as a first adoption: no migration offered, and the first-run steps printed (8be4f935, cfb348b8)
+- [x] A run whose `--agents=` leaves out the running agent prints that agent's `ductus.md not compared` line (cfb348b8)
 
 - **Done when**: the batched run 003's matching task names shows each outcome, which the commit ticking this task states; a defect it finds is fixed first
