@@ -16,9 +16,9 @@ Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifa
 
 ### Shell-first orchestration via `run-generator`
 
-The `/audit` command procedure is parseable per spec 022's conventions — numbered steps, backtick-quoted primitive names. Each family check appears as a numbered step that invokes `run-generator` with the corresponding shell script path. The runtime's `run-generator` primitive already handles spawn-with-`--dry-run`, capture stdout/stderr/exit, and reports `drift: true` on non-zero exit (extended for `/audit` to also report drift on stdout content even when exit is 0, so a script that prints findings but returns 0 still surfaces).
+The `/audit` command procedure is parseable per spec 022's conventions — numbered steps, backtick-quoted primitive names. Each family check appears as a numbered step that invokes `run-generator` with the corresponding shell script path. The runtime's `run-generator` primitive already spawns the script with `--dry-run`, captures its stdout, stderr and exit status, and reports `drift: true` on a non-zero exit (`runtime/src/primitives/run_generator.rs`).
 
-**Never extended:** `run-generator` reports drift on a non-zero exit alone (`runtime/src/primitives/run_generator.rs`), and a family script exits `1` whenever it prints a finding, which is what surfaces it.
+**It needs no extension for `/audit`:** `run-generator` reports drift on a non-zero exit alone, and a family script exits `1` whenever it prints a finding, which is what surfaces it.
 
 Why not add new `/audit`-specific primitives:
 
