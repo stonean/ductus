@@ -716,7 +716,7 @@ fn descriptions_hold_the_review_gate_details_066_points_at() {
         ),
         (
             descriptions::CHECK_REVIEW_GATE,
-            "owing no review (specs 079 and 081)",
+            "owing no review unless such a criterion stands (specs 079 and 081; 066 task 27)",
         ),
         (
             descriptions::CHECK_REVIEW_GATE,

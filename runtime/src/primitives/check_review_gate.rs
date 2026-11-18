@@ -316,14 +316,18 @@ fn review_half_block(
     }
     // Read from the record, so a window that cannot be read does not pass it.
     if !review.open_findings.is_empty() {
-        return Err(review_owed_block(&review.open_findings, project));
+        return Err(review_owed_block(&review.open_findings, &[], project));
     }
     let window = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: feature.to_string(),
         since: None,
     };
     match crate::primitives::compute_review_scope::compute(&window, repo) {
-        Ok(scope) if scope.review_owed => Err(review_owed_block(&scope.owed_by, project)),
+        Ok(scope) if scope.review_owed => Err(review_owed_block(
+            &scope.owed_by,
+            &scope.criteria_owing,
+            project,
+        )),
         Ok(_) => Ok(None),
         Err(error) => Ok(Some(error.to_string())),
     }
@@ -384,15 +388,30 @@ fn analyze_half_block(
 /// when none has run in it (a changed scenario or data model owes an analysis, spec
 /// 081). Its window moves only at the
 /// commit holding a finished review's record, so a review just run clears this once
-/// that record is committed.
-fn review_owed_block(owed_by: &[String], project: &str) -> Verdict {
+/// that record is committed. An acceptance criterion no review judged met with its
+/// current text owes one whatever the window holds, and is named beside the paths
+/// (066 task 27).
+fn review_owed_block(owed_by: &[String], criteria_owing: &[String], project: &str) -> Verdict {
+    let criteria = format!(
+        "the acceptance criteria no review judged met with their current text: {}",
+        criteria_owing.join(", ")
+    );
+    let owed = match (owed_by.is_empty(), criteria_owing.is_empty()) {
+        (true, false) => criteria,
+        (false, false) => format!(
+            "what changed since the last one or what it left open: {}; and {criteria}",
+            render_paths(owed_by)
+        ),
+        _ => format!(
+            "what changed since the last one or what it left open: {}",
+            render_paths(owed_by)
+        ),
+    };
     Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewOwed),
         message: Some(format!(
-            "blocked: a review is owed for what changed since the last one or what it left \
-             open: {} — run /{project}:review and commit its record",
-            render_paths(owed_by)
+            "blocked: a review is owed for {owed} — run /{project}:review and commit its record"
         )),
         guidance: Some(format!(
             "A review's window moves only at the commit holding its record, so a review that \
@@ -2929,9 +2948,11 @@ mod tests {
     }
 
     /// A criterion ticked and another unticked through `mark-criterion` after
-    /// the analysis leave it current, so the gate passes; rewording a
-    /// criterion is any other `spec.md` edit, and stales it (066 scenario
-    /// `checkbox-state-is-outside-the-analysis-digest`).
+    /// the analysis leave it current; rewording a criterion is any other
+    /// `spec.md` edit, and stales it (066 scenario
+    /// `checkbox-state-is-outside-the-analysis-digest`). Read at the analysis
+    /// freshness the gate applies, since since 066's task 27 an unticked or
+    /// unjudged criterion stops the gate at a review check first.
     #[test]
     fn a_criterion_tick_leaves_the_analysis_current_and_another_spec_edit_stales_it() {
         use crate::primitives::mark_criterion;
@@ -2960,8 +2981,19 @@ mod tests {
             .unwrap();
             assert_ne!(flipped.previous, checked, "{label} was not flipped");
         }
-        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "a tick staled the analysis: {result:?}");
+        let freshness = || {
+            let record = crate::primitives::load_analyze_record(&tmp.path().join("specs/007-gate"));
+            crate::primitives::analyze_subjects::analyze_freshness(
+                tmp.path(),
+                "specs/007-gate",
+                record.as_present(),
+            )
+        };
+        assert!(
+            matches!(freshness(), RecordFreshness::Current { .. }),
+            "a tick staled the analysis: {:?}",
+            freshness()
+        );
 
         let ticked = fs::read_to_string(&spec).unwrap();
         fs::write(
@@ -2969,9 +3001,12 @@ mod tests {
             ticked.replace("AC1: First.", "AC1: First, reworded."),
         )
         .unwrap();
-        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
-        assert!(result.message.unwrap().contains("spec.md"));
+        match freshness() {
+            RecordFreshness::Stale { paths, .. } => {
+                assert!(paths.iter().any(|p| p.contains("spec.md")), "{paths:?}");
+            }
+            other => panic!("a reworded criterion left the analysis {other:?}"),
+        }
     }
 
     /// Every record written before the digest existed. It does not block — a
@@ -3961,6 +3996,48 @@ mod tests {
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
         assert!(result.message.unwrap().contains("src/uncommitted.rs"));
         assert!(result.guidance.unwrap().contains("commit"));
+    }
+
+    /// A ticked criterion no review judged met owes a review, and the block names it;
+    /// a review recording it met clears that block (066 task 27).
+    #[test]
+    fn a_criterion_no_review_judged_owes_a_review_and_is_named() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        let spec = repo.join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(
+            &spec,
+            format!("{text}\n## Acceptance Criteria\n\n- [x] AC1: One holds.\n"),
+        )
+        .unwrap();
+        git_commit_all(repo, "status(007): reopen");
+        let result = gate(repo);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
+        let message = result.message.unwrap();
+        assert!(
+            message
+                .contains("acceptance criteria no review judged met with their current text: AC1"),
+            "{message}"
+        );
+        crate::primitives::write_review::run(
+            &crate::schema::primitives::WriteReviewArgs {
+                feature: "007-gate".into(),
+                reviewed_at: "2026-10-02T00:00:00Z".into(),
+                reviewed_against: "abc123".into(),
+                examined: Some(1),
+                criteria: Some(vec![crate::schema::primitives::CriterionVerdict {
+                    label: Some("AC1".into()),
+                    met: true,
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+            repo,
+        )
+        .unwrap();
+        assert_ne!(gate(repo).blocked_by, Some(ReviewGateBlock::ReviewOwed));
     }
 
     /// Every review check comes before the analyze checks, so none of them names an

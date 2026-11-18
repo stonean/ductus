@@ -113,7 +113,7 @@ Scenario `criteria-are-verified-in-review` moves the pipeline's only check of co
 | `AGENTS.md` | Modify | The pre-done verification ordering entry retired, since review now verifies (task 27) |
 | `framework/reference/review.md` | Modify | What the criteria step reads and how the subagent runs it (task 27) |
 | `framework/commands/implement.md` | Modify | The completion gate without its criteria steps (task 27) |
-| `framework/reference/implement.md` | Modify | §Completion gate without criterion verification (task 27) |
+| `framework/reference/implement.md` | Modify | §Completion gate (after all tasks) without criterion verification (task 27) |
 | `runtime/src/interpreter/payload.rs` | Modify | The `verifyCriteria` request built for `/{project}:review` (task 27) |
 | `runtime/tests/golden/*.jsonl` | Modify | The implement and review walks re-blessed (task 27) |
 | `scripts/mutation/criteria-in-review-066.py` | Create | The mutation list proving each criteria behavior (task 27) |

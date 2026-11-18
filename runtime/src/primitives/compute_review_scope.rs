@@ -66,6 +66,8 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         plan_affected_count: scope.plan_affected.len(),
         deleted_count: scope.deleted.len(),
         excluded_count: excluded.len(),
+        criteria_owing_count: scope.criteria_owing.len(),
+        criteria_owing: scope.criteria_owing.clone(),
         scope: Some(scope.scope.clone()),
         modified_since: Some(scope.modified_since.clone()),
         plan_affected: Some(scope.plan_affected.clone()),
@@ -80,6 +82,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         "plan-affected": scope.plan_affected,
         "deleted": scope.deleted,
         "excluded": excluded,
+        "criteria-owing": scope.criteria_owing,
     });
     if let Some(file) =
         super::bounded_lists::place(repo, "compute-review-scope", &args.feature, &result, &lists)?
@@ -90,6 +93,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         result.plan_affected = None;
         result.deleted = None;
         result.excluded = None;
+        result.criteria_owing = Vec::new();
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -108,6 +112,8 @@ pub(crate) struct ReviewScope {
     /// The changed paths, and those the last review left open, that make a review
     /// owed, which `check-review-gate` names.
     pub(crate) owed_by: Vec<String>,
+    /// See [`ComputeReviewScopeResult::criteria_owing`].
+    pub(crate) criteria_owing: Vec<String>,
     /// See [`ComputeReviewScopeResult::scope`].
     pub(crate) scope: Vec<String>,
     /// See [`ComputeReviewScopeResult::modified_since`].
@@ -252,20 +258,30 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         .as_present()
         .filter(|record| record.last_run.is_some());
     // A stale digest no longer holds the record: a changed contract owes an
-    // analysis, and a review only for code (spec 081).
-    let review_owed = run.is_none_or(holds_done_until_reviewed) || !owed_by.is_empty();
+    // analysis, and a review only for code (spec 081) or a criterion (066 task 27).
+    let criteria_owing =
+        super::criterion_verdicts::owing_in(&feature_dir.join("spec.md"), record.as_present())?;
+    let review_owed = owes_a_review(run, &owed_by, &criteria_owing);
 
     Ok(ReviewScope {
         diff_base,
         base_source,
         review_owed,
         owed_by,
+        criteria_owing,
         scope: scope.into_iter().collect(),
         modified_since,
         plan_affected,
         deleted: deleted.into_iter().collect(),
         excluded,
     })
+}
+
+/// Whether a review is owed: no run recorded, or one holding what only a review
+/// clears, a path that owes one, or a criterion no review judged met with its
+/// current text (066 task 27).
+fn owes_a_review(run: Option<&ReviewBlock>, owed_by: &[String], criteria_owing: &[String]) -> bool {
+    run.is_none_or(holds_done_until_reviewed) || !owed_by.is_empty() || !criteria_owing.is_empty()
 }
 
 /// The paths that make a review owed, whatever else the record holds: each in scope, or
@@ -3399,6 +3415,95 @@ mod tests {
     /// A spec reopened by `edit`, with a clean review record from before the reopen.
     fn reopened_with_a_record(edit: &str) -> ReviewScope {
         reopened_with(DISPOSITIONS, edit)
+    }
+
+    /// A spec whose Acceptance Criteria section is `criteria`, reopened by a plan
+    /// edit alone, under a clean review record carrying `fields` (066 task 27).
+    fn reopened_with_criteria(criteria: &str, fields: &str) -> ReviewScope {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let with = |status: &str| format!("{}\n## Acceptance Criteria\n\n{criteria}", spec(status));
+        write(&tmp.path().join("specs/001-x/spec.md"), &with("done"));
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(&format!("{DISPOSITIONS}{fields}"), "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "chore: seed");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &with("in-progress"),
+        );
+        write(&tmp.path().join("specs/001-x/plan.md"), "edited\n");
+        commit_all(&repo, "docs(001): the reopening's edit");
+        x(&tmp)
+    }
+
+    /// A record's `criteria-verdicts` holding each of `texts` judged met.
+    fn verdicts_for(texts: &[(&str, Option<&str>)]) -> String {
+        let mut rows = String::from("criteria-verdicts:\n");
+        for (text, label) in texts {
+            let criterion = crate::schema::primitives::AcceptanceCriterion {
+                checked: true,
+                text: (*text).to_string(),
+                label: label.map(str::to_string),
+            };
+            let digest = crate::primitives::criterion_verdicts::digest(&criterion);
+            rows.push_str("  - digest: ");
+            rows.push_str(&digest);
+            rows.push('\n');
+        }
+        rows
+    }
+
+    /// A window of artifacts alone owes no review while each criterion is ticked and
+    /// judged met with its current text, and owes one while any is unticked, reworded
+    /// since its verdict, or under a record from before the field, naming each.
+    #[test]
+    fn an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged() {
+        let judged = verdicts_for(&[("AC1: One holds.", Some("AC1"))]);
+        let clean = reopened_with_criteria("- [x] AC1: One holds.\n", &judged);
+        assert!(!clean.review_owed, "{:?}", clean.owed_by);
+        assert_eq!(clean.criteria_owing, Vec::<String>::new());
+        for (criteria, fields, owing) in [
+            (
+                "- [x] AC1: One holds.\n- [ ] AC2: Two holds.\n",
+                judged.as_str(),
+                "AC2",
+            ),
+            ("- [x] AC1: One holds now.\n", judged.as_str(), "AC1"),
+            ("- [x] AC1: One holds.\n", "", "AC1"),
+        ] {
+            let scope = reopened_with_criteria(criteria, fields);
+            assert!(scope.review_owed, "{criteria}");
+            assert_eq!(scope.criteria_owing, [owing], "{criteria}");
+            assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
+        }
+    }
+
+    /// The result names each owing criterion and its count, and leaves both out when
+    /// none owes a review.
+    #[test]
+    fn the_result_names_each_criterion_owing_a_review() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &format!(
+                "{}\n## Acceptance Criteria\n\n- [ ] AC1: One.\n",
+                spec("in-progress")
+            ),
+        );
+        commit_all(&repo, "chore: seed");
+        let value = serde_json::to_value(run(&args("001-x", None), tmp.path()).unwrap()).unwrap();
+        assert_eq!(value["criteria-owing"], serde_json::json!(["AC1"]));
+        assert_eq!(value["criteria-owing-count"], 1);
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        let value = serde_json::to_value(run(&args("001-x", None), tmp.path()).unwrap()).unwrap();
+        assert!(value.get("criteria-owing").is_none(), "{value}");
+        assert!(value.get("criteria-owing-count").is_none(), "{value}");
     }
 
     /// A spec reopened by `edit`, with a review record carrying `fields`.

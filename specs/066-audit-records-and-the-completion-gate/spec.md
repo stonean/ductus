@@ -2,7 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime]
 next-criterion: 7
-cross-spec-impact: [020-code-review, 079-review-and-analysis-work-converges]
+cross-spec-impact: [020-code-review, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
 ---
 
 # 066 — Audit Records and the Completion Gate

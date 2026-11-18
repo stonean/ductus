@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [079-review-and-analysis-work-converges]
 cross-spec-impact: [020-code-review, 026-framework-self-audit, 047-analyze-findings-durability, 050-constitution, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges]
 next-criterion: 15
@@ -34,6 +34,8 @@ Specs reached `done` slowly because reviews and checks were owed for changes out
 - **The checks follow the change.** A change confined to the project's artifacts owes the artifact checks, and no build, automated test, code lint or code CI. This is the constitution's blast-radius rule made concrete, and it ships to adopters.
 - **The adopter gets it.** The changes land in what a `ductus-v<version>` release ships.
 
+> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md)'s scenario `criteria-are-verified-in-review` owes a review while `spec.md` holds an unticked criterion, or a ticked one whose current text the last review did not judge met, whatever the window holds, so a window of artifacts alone can owe one; AC1 and AC8 say so.
+
 ## Edge Cases
 
 - **A commit names one spec and edits another's directory.** The named spec reviews its code. The other spec owes an analysis for its own files, and a review only for what else is in its window.
@@ -47,14 +49,14 @@ Specs reached `done` slowly because reviews and checks were owed for changes out
 
 ## Acceptance Criteria
 
-- [x] AC1: A reopening whose window changed the spec's own scenarios or data model, and nothing outside the project's artifacts, has `compute-review-scope` report `review-owed: false`, provided the review record holds nothing only a review clears.
+- [x] AC1: A reopening whose window changed the spec's own scenarios or data model, and nothing outside the project's artifacts, has `compute-review-scope` report `review-owed: false`, provided the review record holds nothing only a review clears. **Superseded in part (spec 066, task 27):** and provided `spec.md` holds no unticked criterion and no ticked one whose current text the last review did not judge met.
 - [x] AC2: In that case `check-review-gate` blocks on no review check, `review is stale` included, and holds `done` only on the analysis. A fixture proves both directions: a contract-only change passes the review checks, and a change to a path outside the artifacts still blocks on a review.
 - [x] AC3: `check-review-freshness` and the framework self-audit's Family 19, which asked only whether a `done` spec's contracts still matched its review's digest, are retired. `scripts/audit/run-all.sh` registers no Family 19, the runtime serves no `check-review-freshness`, and `merge-permissions` revokes its allow entry from an adopter's settings.
 - [x] AC4: `framework/constitution.md` states the division (`/{project}:review` for code, `/{project}:analyze` for the project's artifacts) and the check-selection rule. `framework/reference/review.md` no longer says a scenario or data-model edit stales a review.
 - [x] AC5: 079's Resolved Questions on scenario edits and on attribution record the 2026-11-11 changes and point here, as do its AC4 annotation naming a stale digest and its AC6 rule for a commit several specs claim.
 - [x] AC6: A push to this repository whose changes are confined to the project's artifacts compiles no Rust in CI when a runtime built from the same runtime sources is cached, and each run that compiles says why. `runtime.yml` still does not run for such a push. `AGENTS.md`'s local-checks rule asks for no build and no code workflow for such a change.
 - [x] AC7: Every change this spec makes to how the pipeline behaves lands in what a `ductus-v<version>` release ships: the runtime, `framework/commands/`, `framework/reference/`, `framework/constitution.md` and `framework/bootstrap/`. None lands only in this repository's `AGENTS.md`, `scripts/` or workflows. Cutting the release is the owner's step once 081 is `done`.
-- [x] AC8: `compute-review-scope` treats each path in the project's artifacts (the configured spec root, `.ductus/`, `AGENTS.md`, `CLAUDE.md`) as no code. A window holding only such paths reports `review-owed: false` when the record holds nothing only a review clears. This holds under a configured `specs-root` and in a project inside a repository subdirectory, each proven by a fixture.
+- [x] AC8: `compute-review-scope` treats each path in the project's artifacts (the configured spec root, `.ductus/`, `AGENTS.md`, `CLAUDE.md`) as no code. A window holding only such paths reports `review-owed: false` when the record holds nothing only a review clears. This holds under a configured `specs-root` and in a project inside a repository subdirectory, each proven by a fixture. **Superseded in part (spec 066, task 27):** such a window still owes a review while `spec.md` holds an unticked criterion, or a ticked one whose current text the last review did not judge met.
 - [x] AC9: Of a commit whose subject names a spec, `compute-review-scope` puts the paths outside every spec directory in the scope of the named specs only. A spec the subject does not name, and whose directory the commit touched, gets only its own directory's paths. A fixture proves both directions.
 - [x] AC10: A commit whose subject names no spec is attributed as before this spec, but for the credit below. A code-only commit naming no spec and touching no spec directory stays in the scope of a spec whose window holds it, and makes a review owed there, until a committed review states that it read the commit's paths; a fixture proves it.
 - [x] AC11: `compute-review-scope`'s compiled description and `framework/reference/review.md` §Window and coverage state the attribution rule and the artifact set above.

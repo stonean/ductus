@@ -1201,6 +1201,15 @@ pub struct ComputeReviewScopeResult {
     pub deleted_count: usize,
     /// Entries in `excluded`, in either form.
     pub excluded_count: usize,
+    /// Entries in `criteria-owing`, in either form; absent when zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub criteria_owing_count: usize,
+    /// Each acceptance criterion that keeps a review owed whatever the window
+    /// holds (066 task 27): unticked, or ticked with no verdict in the record
+    /// for its current text, by label, or `#{index}` for one with none, in body
+    /// order. Absent when none, and in the file form.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub criteria_owing: Vec<String>,
     /// The review scope: the paths of a commit that belongs to the spec alone
     /// or to no spec; of a commit several specs claim, those in the spec's
     /// directory or its plan's Affected Files, and a path in none of their plans
