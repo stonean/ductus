@@ -3,7 +3,7 @@
 #
 # Verifies framework/migrations.toml is internally consistent with the
 # adjacent framework/migrations/*.md procedure files, with CHANGELOG.md's
-# archived entries and with current framework/ state. Five checks:
+# archived entries and with current framework/ state. Its checks:
 #
 #   10a no-orphan-procedure-files: every framework/migrations/*.md has a
 #       matching TOML entry whose procedure_file points at it.
@@ -31,7 +31,12 @@
 #       registry, its procedure appended to CHANGELOG.md with its target
 #       paths, and its procedure file deleted, in one commit (spec 027 AC13,
 #       AC14). Nothing else prompts that archival, which five entries missed
-#       for up to 49 minor releases.
+#       for up to 49 minor releases. A version or sunset_after that is no
+#       MAJOR.MINOR.PATCH release is a finding too, with that value's remedy.
+#   10f no-duplicate-ids: no id names two entries. Pre-run Migrations'
+#       duplicate-id guard aborts on one, yet 10a and 10c read the registry
+#       by procedure file and 10d keys it by id, so each passed it (spec 027
+#       AC25).
 #
 # Requires `python3` (standard on developer macOS / CI Ubuntu) for TOML
 # parsing — Python 3.11+ ships with `tomllib`.
@@ -356,7 +361,7 @@ def release(text):
 raw = open("version", encoding="utf-8").read().strip()
 current = release(raw)
 if current is None:
-    print("FINDING\tversion holds " + repr(raw) + ", not a MAJOR.MINOR.PATCH release, so 10e cannot compare")
+    print("VERSION\tversion holds " + repr(raw) + ", not a MAJOR.MINOR.PATCH release, so 10e cannot compare")
 else:
     with open(os.environ["REGISTRY"], "rb") as f:
         entries = tomllib.load(f).get("migrations", [])
@@ -367,7 +372,7 @@ else:
         compared += 1
         sunset = release(str(m["sunset_after"]))
         if sunset is None:
-            print("FINDING\t[[migrations]] entry " + repr(m.get("id", "")) + " has sunset_after " + repr(m["sunset_after"]) + ", not a MAJOR.MINOR.PATCH release")
+            print("MALFORMED\t[[migrations]] entry " + repr(m.get("id", "")) + " has sunset_after " + repr(m["sunset_after"]) + ", not a MAJOR.MINOR.PATCH release")
         elif current >= sunset:
             print("FINDING\t[[migrations]] entry " + repr(m.get("id", "")) + " is past its sunset_after " + str(m["sunset_after"]) + " (version " + raw + "), so Pre-run Migrations already skips it")
     print("COVERAGE\t" + str(compared) + " entries with a sunset_after compared with version " + raw)
@@ -378,10 +383,36 @@ PY
   fi
   while IFS=$'\t' read -r kind msg; do
     case "$kind" in
+      VERSION) emit "version" "$msg" "write the release this repository ships, as MAJOR.MINOR.PATCH, to the version file" ;;
+      MALFORMED) emit "$REGISTRY" "$msg" "set the entry's sunset_after to a MAJOR.MINOR.PATCH release, or remove the key" ;;
       FINDING) emit "$REGISTRY" "$msg" "archive it: remove the entry, append its procedure and **Target paths:** to CHANGELOG.md's Archived migrations, and delete its procedure file, in one commit (spec 027 AC13, AC14)" ;;
       COVERAGE) echo "migration-coverage | 10e examined: $msg" >&2 ;;
     esac
   done <<< "$SUNSET_OUT"
 fi
+
+# 10f no-duplicate-ids: each id names one entry. An entry with no id is not a
+# duplicate of another, and is left to the checks that read its other fields.
+DUPLICATE_OUT=$(REGISTRY="$REGISTRY" python3 <<'PY'
+import collections, os, tomllib
+
+with open(os.environ["REGISTRY"], "rb") as f:
+    entries = tomllib.load(f).get("migrations", [])
+counts = collections.Counter(m["id"] for m in entries if m.get("id"))
+for id_, n in sorted(counts.items()):
+    if n > 1:
+        print("FINDING\t[[migrations]] id " + repr(id_) + " names " + str(n) + " entries, so Pre-run Migrations' duplicate-id guard aborts the batch")
+print("COVERAGE\t" + str(len(entries)) + " entries, " + str(len(counts)) + " distinct ids")
+PY
+)
+if [ -z "$DUPLICATE_OUT" ]; then
+  emit "$REGISTRY" "10f produced no output: the duplicate-id comparison could not run" "re-run with python3 3.11+"
+fi
+while IFS=$'\t' read -r kind msg; do
+  case "$kind" in
+    FINDING) emit "$REGISTRY" "$msg" "give each entry its own id and procedure file, or remove the duplicate" ;;
+    COVERAGE) echo "migration-coverage | 10f examined: $msg" >&2 ;;
+  esac
+done <<< "$DUPLICATE_OUT"
 
 exit "$drift"

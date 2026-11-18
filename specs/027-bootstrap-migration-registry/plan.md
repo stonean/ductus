@@ -144,7 +144,7 @@ When the release reaches an entry's `sunset_after` (current ductus ≥ `sunset_a
 
 ### Family 10 design (`scripts/audit/migration-coverage.sh`)
 
-Shell script under the existing `scripts/audit/` directory. Follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only. Five checks, of which the sketch below shows the first three; the script's header states all five. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17):
+Shell script under the existing `scripts/audit/` directory. Follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only. The sketch below shows the first three checks; the script's header states every one. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17); 10f (task 19) fails an `id` two entries share:
 
 ```bash
 # 10a no-orphan-procedure-files
@@ -202,7 +202,7 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 | --- | --- | --- |
 | `framework/migrations.toml` | Create | Registry; back-filled with six entries |
 | `framework/bootstrap/ductus.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.ductus/config.toml` `[migrations]` section to the §Project Configuration schema |
-| `scripts/audit/migration-coverage.sh` | Create | Family 10 — its five checks, 10a to 10e |
+| `scripts/audit/migration-coverage.sh` | Create | Family 10 — its checks, 10a to 10f |
 | `scripts/tests/test-migration-coverage.sh` | Create | Cases for 10d, 10e and 10b's archived half, each failing when its check is removed |
 | `scripts/audit/run-all.sh` | Modify | Append Family 10 invocation |
 | `framework/commands/audit.md` | Modify | Append step for Family 10 in the Markdown-only reference |

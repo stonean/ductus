@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Test surface for scripts/audit/migration-coverage.sh checks 10d, 10e and
-# 10b's archived half (Family 10).
+# Test surface for scripts/audit/migration-coverage.sh checks 10d, 10e, 10f
+# and 10b's archived half (Family 10).
 #
 # 10d holds the registry's ordering key, (introduced_in, id), against the order
 # entries were added: Pre-run Migrations runs only entries after an adopter's
@@ -30,13 +30,18 @@
 #   K. 10e: an entry at or past its sunset_after fails, naming it; one whose
 #      sunset_after is still ahead passes, with a coverage line
 #   L. 10e: no version file, or one that is no release, fails rather than
-#      passing
+#      passing, and the second names the version file and its remedy rather
+#      than an archival
 #   M. 10b's archived half: an archived entry whose framework/ target path
 #      still exists fails, one with no **Target paths:** line fails, and one
 #      whose paths are gone passes, with a coverage line
 #   N. 10b's archived half: a **Target paths:** line naming no backticked path
 #      fails, and a CHANGELOG.md with no Archived migrations section fails
 #      rather than reading as an empty archive
+#   O. 10f: an id two entries share fails, naming it, though 10a, 10c and 10d
+#      each pass it, with a coverage line
+#   P. 10e: an entry whose sunset_after is no release fails with a remedy for
+#      that value rather than an archival
 #
 # Every fixture holds a version file (0.59.0), since 10e reads it.
 #
@@ -257,6 +262,13 @@ expect "L: no version file fails rather than passing" 1 "10e cannot run: no vers
 printf 'main\n' > "$dir/version"
 run_check "$dir"
 expect "L: a version that is no release fails" 1 "version holds 'main', not a MAJOR.MINOR.PATCH release"
+expect "L: that finding names the version file and its remedy" 1 \
+  "^migration-coverage \| version \| version holds 'main'[^|]*\| write the release"
+if printf '%s' "$out" | grep -q 'archive it'; then
+  fail "L: a malformed version was given the archival remedy: $out"
+else
+  pass "L: a malformed version is not given the archival remedy"
+fi
 
 dir="$(make_repo m)"
 entry "$dir" alpha 0.60.0
@@ -323,6 +335,42 @@ printf '# CHANGELOG\n\n## Retired migrations\n\n### moved (introduced 0.2.0, sun
 run_check "$dir"
 expect "N: a CHANGELOG.md with no Archived migrations section fails" 1 \
   "CHANGELOG.md holds no '## Archived migrations' section"
+
+# 10f: Pre-run Migrations' guard aborts on an id two entries share, but the
+# other checks read the registry by procedure file or by id and pass it: both
+# entries name one existing procedure file (10a, 10c), and 10d keys entries by
+# id, so the second replaces the first (spec 027 AC25).
+dir="$(make_repo o)"
+entry "$dir" alpha 0.60.0
+printf '[[migrations]]\nid = "alpha"\nintroduced_in = "0.60.1"\nsummary = "s"\ntarget_paths = ["adopter/x"]\nprocedure_file = "framework/migrations/alpha.md"\n\n' \
+  >> "$dir/framework/migrations.toml"
+entry "$dir" beta 0.60.0
+commit "$dir"
+run_check "$dir"
+expect "O: an id two entries share fails, naming it" 1 \
+  "^migration-coverage \| framework/migrations.toml \| \[\[migrations\]\] id 'alpha' names 2 entries"
+if printf '%s' "$out" | grep -q "'beta'"; then
+  fail "O: an id one entry holds was reported: $out"
+else
+  pass "O: an id one entry holds passes"
+fi
+if printf '%s' "$err" | grep -q '10f examined: 3 entries, 2 distinct ids'; then
+  pass "O: the coverage line counts entries and distinct ids"
+else
+  fail "O: 10f coverage line missing or wrong: $err"
+fi
+
+dir="$(make_repo p)"
+sunset_entry "$dir" bad-sunset 0.58.0 soon
+commit "$dir"
+run_check "$dir"
+expect "P: a sunset_after that is no release fails, naming the entry" 1 \
+  "entry 'bad-sunset' has sunset_after 'soon', not a MAJOR.MINOR.PATCH release[^|]*\| set the entry's sunset_after"
+if printf '%s' "$out" | grep -q 'archive it'; then
+  fail "P: a malformed sunset_after was given the archival remedy: $out"
+else
+  pass "P: a malformed sunset_after is not given the archival remedy"
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

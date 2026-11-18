@@ -78,7 +78,12 @@ If the active config file's `[migrations].last_applied` references an `id` that 
 
 ### Duplicate-id and reference-integrity guard
 
-If `framework/migrations.toml` contains two entries with the same `id`, or if any entry's `procedure_file` references a path that doesn't exist in the fetched archive, abort the loop before applying anything with a clear error. `/audit`'s Family 10 (`scripts/audit/migration-coverage.sh`) catches these at maintainer time; this guard is the runtime safety net.
+If `framework/migrations.toml` contains two entries with the same `id`, or if any entry's `procedure_file` references a path that doesn't exist in the fetched archive, abort the loop before applying anything, with one line for each entry that fails:
+
+- `migration {id}: duplicate id in framework/migrations.toml` for an `id` two entries share;
+- `migration {id}: procedure file missing from archive` for a `procedure_file` the archive lacks.
+
+`last_applied` keeps its prior value, since nothing ran. `/audit`'s Family 10 (`scripts/audit/migration-coverage.sh`, its 10f and 10c) catches these at maintainer time; this guard is the runtime safety net.
 
 ## Frontmatter Migration
 
