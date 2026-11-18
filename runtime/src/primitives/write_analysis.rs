@@ -116,8 +116,8 @@ pub(crate) const UNEXAMINED_REASONS: &[&str] = &[
     "artifact-unreadable",
 ];
 
-/// Refuse an `unexamined-by-reason` reason outside [`UNEXAMINED_REASONS`], before any read
-/// or write, on every path that reaches the writer.
+/// Refuse an `unexamined-by-reason` reason outside [`UNEXAMINED_REASONS`], before the spec
+/// or its record is read or written, on every path that reaches the writer.
 fn refuse_unknown_reasons(args: &WriteAnalysisArgs) -> Result<()> {
     match args
         .unexamined_by_reason
