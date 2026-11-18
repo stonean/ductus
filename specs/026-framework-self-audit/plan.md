@@ -16,7 +16,7 @@ Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifa
 
 ### Shell-first orchestration via `run-generator`
 
-The `/audit` command procedure is parseable per spec 022's conventions — numbered steps, backtick-quoted primitive names. Each family check appears as a numbered step that invokes `run-generator` with the corresponding shell script path. The runtime's `run-generator` primitive already spawns the script with `--dry-run`, captures its stdout, stderr and exit status, and reports `drift: true` on a non-zero exit (`runtime/src/primitives/run_generator.rs`).
+The `/audit` command procedure was planned as parseable per spec 022's conventions, each family check a numbered step invoking `run-generator` with its script; as it runs, it is one step, over `scripts/audit/run-all.sh`, which the host runs through the CLI (the Overview's note). The runtime's `run-generator` primitive already spawns the script with `--dry-run`, captures its stdout, stderr and exit status, and reports `drift: true` on a non-zero exit (`runtime/src/primitives/run_generator.rs`).
 
 **It needs no extension for `/audit`:** `run-generator` reports drift on a non-zero exit alone, and a family script exits `1` whenever it prints a finding, which is what surfaces it.
 
@@ -33,7 +33,7 @@ Why not a single monolithic `scripts/audit.sh`:
 
 ### Check zero: generator/lint precondition pass
 
-Before any family check fires, `/audit` invokes nine scripts in order via `run-generator`. The order matters because some checks read generator outputs:
+Before any family check fires, `scripts/audit/check-zero.sh`, the first thing `run-all.sh` runs, runs nine scripts in order. The order matters because some checks read generator outputs:
 
 1. `ductus derive-dependencies` (first, so other checks see fresh `dependencies:` fields)
 2. `ductus derive-references`
