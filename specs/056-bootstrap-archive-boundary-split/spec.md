@@ -71,7 +71,7 @@ So what an adopter curls, installs, loads into context, and byte-compares was pr
 
 Exactly **two** executable forward-dependencies cross the original boundary, both on the pre-flight stale-write path, and both resolve inside the installed half under this assignment. Every other forward reference is **narrative** — an ordering note, a deferred-output pointer, a "described in `§X`" — measured at 38 occurrences across 13 distinct targets, of which `§Closing restart` alone accounts for 11. None is a step the installed half executes.
 
-### Why the cut is 26%, not the ~40% this was scoped at
+### Why the walk moves 26%, not the ~40% this was scoped at
 
 `specs/inbox.md` estimated ~40%. Walking the boundary section by section against what each step actually reads gives 26.3%. The whole difference is two sections that read as post-boundary and are not:
 
