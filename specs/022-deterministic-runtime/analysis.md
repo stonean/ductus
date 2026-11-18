@@ -1,14 +1,14 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-17T20:06:33Z
-analyzed-against: 991f1f9a265becb1cccd2ff8ea1b32258d15a192
+last-run: 2026-11-18T13:21:12Z
+analyzed-against: 027cc14bba9d50d1b0c994b8cf7f3f2db8e6fb03
 hard-fail: 0
 blocking-findings: 0
-advisory: 19
-unexamined: 67
+advisory: 12
+unexamined: 70
 analyzed-digest:
   data-model.md: 7ec795f721c05faeb74e015f56730c9ef5fcebe81d6bf5f1641e621b4ec176b8
-  plan.md: 65ad6b42485e27485ddfc74213f42397f074ade133387c5bfdfef4219ba62d9f
+  plan.md: fb60f064c4676921594a2095b46d1d4097bcb1d15e397b44f1a54d9d1e3578ad
   review.md: d77fe7d046ba64b6cff538325beac8ca6260026ff457d74e517377d4b6afa9b9
   scenarios/a-closed-stdout-is-a-quiet-exit.md: ef3db93cc91fecfca53ab67300605cbdf3823c916fe6f1131933740434ad0ca5
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: f3c4072fc69ebfa829d92ae21c7043b7e3aa2a4be3db175b7df56204882e6fb4
@@ -25,11 +25,11 @@ analyzed-digest:
   scenarios/check-stuck-tasks-md-advancement.md: aaabecc62d10bbdde0c532dadc61cde5fa6b88e3792680389b26eb8b4b95d5b7
   scenarios/clarify-command-acceleration.md: 5f2a753c0a3aeffc1883225f19d7a352053bd8ef6968adb2c381312cec907a31
   scenarios/cli-config-dir-per-contributor.md: adc1a63bfb7c786e70a81a303b64cc19c974a91035fcb288a59ef149dda1e268
-  scenarios/commands-dir-parameterization.md: f7cb45048600cd51dfe3c245ac61a689589486c28153999700581624ee6ac6bb
+  scenarios/commands-dir-parameterization.md: 9e170f99b9d80d6b3657af6f3f14b14dde362cab2b1b05733c78a33939b47422
   scenarios/config-readers-name-unknown-keys.md: 569aec4b2acbb964f737bb9499a4fecc7dfc1807aad5a4db0ad360d4da6e5fff
   scenarios/config-resolution-single-probe.md: a487eec0a7cce706acd911511115140073284ca5b35409ec24cf4f2546b38724
   scenarios/config-sourced-paths-and-the-traversal-boundary.md: 3ed48e5af4e6a0ca019f9f7ae961771a01e94e595c02ae7c614258b42d777873
-  scenarios/constitution-excerpts-as-skill-resources.md: 672e58e225993a12b8a332a642a918322967fe3c8a3679ffa06aa654788ddc69
+  scenarios/constitution-excerpts-as-skill-resources.md: 62db8c3df16cc2a63874257438f6854b56139542c39e4ef086d914a1bd3ca144
   scenarios/coverage-expansion-primitives.md: 8fbe190c64b21c9f0edf92d764bdf9138d4f122830eea60df726d526859578d6
   scenarios/coverage-residue-cleanup.md: 0c6315ac8f0f041f624b0a389bbfca855d9886bb06703cef4ee5ffd513770d17
   scenarios/criterion-label-assignment.md: 57e455a91d0b76c6a3a5bdea80288300c246d00d53425730be88896e89c25305
@@ -38,7 +38,7 @@ analyzed-digest:
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
   scenarios/every-mcp-argument-has-a-cli-form.md: 409a34b5a138642d023dc7f0a0b864013f053c84b02620f9bcb16fda20cbc4ef
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
-  scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
+  scenarios/exec-clarify-asks-each-open-question.md: 74ce986d0d56e4b6fc7c59254c7f3c3caca4e0ca0075324cb0ed4b9b62ce56b5
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
   scenarios/fetch-archive-bounds-the-whole-download.md: cb908fbcee4bdcb1f8701c2a678fd472716b4e8e2e61172200324af7abb05379
   scenarios/fetch-archive-dns-rebinding.md: e876d9e0d27d6757b024b9f9ff885f8cb0baa56d5886939cae487a591d362af8
@@ -50,7 +50,7 @@ analyzed-digest:
   scenarios/implement-completion-gate.md: 0c466759ae195e7131a5a7838f7f6f0403d42baa6f98de596af9e32aa481285e
   scenarios/installed-files-are-not-group-writable.md: 3a29eb614d5bd804698622713e8d18e29d8b68f3030d342a4e1f1be30c276cc4
   scenarios/lint-markdown-lints-only-what-it-is-given.md: 92efe81c7326ae4daa08f1f40596afe6221a30433a45ccc7998ab5fadff28ddf
-  scenarios/lint-markdown-tool-resolution.md: 06ec661f04cfabf19e7950adfb86d3db440ba48cd4ec8095c34897e0a96d1986
+  scenarios/lint-markdown-tool-resolution.md: cd31a4ffe41cfe711aab173131d8f4acfbe6c3e58e7f20cdc20b123e67929b8b
   scenarios/mark-task-backtick-headings.md: a405d3e4b08ef15de8037541c05a93f70a5553f4a72407b917aed4e50ba20507
   scenarios/mark-task-untick-symmetry.md: 0b04c0e1f2091244701f75c435884cb0857a2be728eac41f84fbe41c8df92fb0
   scenarios/mcp-arg-unknown-field-strictness.md: 57c17fb05d72b8f47f64140fc0d8ba6df0c0b8f757282e41d1036aa222309a1b
@@ -71,9 +71,9 @@ analyzed-digest:
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: dd72b20cb886ee804141895d169ebb90eb5c548df260fb02cb1643dd2a6f777a
   scenarios/scaffolding-primitives.md: c3495b99e2f440822fed57cb08ba0cd668e9093fd786ad37e616a8508417c699
-  scenarios/scenario-open-question-signal.md: b731886b9aa7affab0a231d595f4ed422cb9a566dc1c4c31faf03c33f0674227
+  scenarios/scenario-open-question-signal.md: 58fb1c80f5dacc4e4d2fb3619de1b626363283f71ed460910c10ac80f0ecfd65
   scenarios/scenario-question-parser-fix.md: bdcaf5f9bb7d0ff795d6e3a6a5045a79afc63b55d8ce4b3331f807c337bf2ada
-  scenarios/severity-is-a-closed-set-not-a-string.md: 8b6ca46ef55c4f6b12420786ebae219f5aa4f2a2878c85d042098f5674013d2e
+  scenarios/severity-is-a-closed-set-not-a-string.md: 7d4117f33967854643809967cfc29533bf8c3ab2d636b25257b2e609af254a9f
   scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
   scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
   scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
@@ -86,14 +86,14 @@ analyzed-digest:
   scenarios/write-boundary-path-normalization.md: aea2703ee38d7a2ab5806444dd12f99370bfee540bafd8935c9f20d43bd86dee
   scenarios/write-session-primitive.md: 56779f1f97b3622d04b44e61e3c05653afa8f3010014f0699b3f234a630f7db5
   scenarios/writecode-boundary-derivation.md: 44bbce7e22a35dd58048811c3441f633e2e14f37e48dcdeac089c42276a639cd
-  scenarios/writecode-payload-bundling.md: 196c9d5ee60f7afe918bf0308e9276bcb8b224c80a2f80beacc44b474b39e195
-  scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
+  scenarios/writecode-payload-bundling.md: 67ff8bc041fb432fc23e51e8a03c06362582f0361b91dec48dd31869e5a53965
+  scenarios/writecode-payload-canonicalize-paths.md: 5fbee954d81763f8940bff780e84ec8a35b87b213fbffd8fada16477ca7f7c8e
   spec.md: 9ff2245166d6c1a0630b8424b10ca93bcc36490f237206338ad23d55148334ee
-  tasks.md: 3554845d81a365bbe9249c9b873e569168c0c451fd332e864170d68aefaceb62
+  tasks.md: c519e9481ac5701336c0ebd248dd8ee01af9ac1799a8a90ff4b85baa07c275c3
 unexamined-by-reason:
   never-existed: 15
   not-a-live-claim: 5
-  root-absent: 42
+  root-absent: 45
   ships-to-adopter: 5
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
@@ -109,13 +109,13 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-ASYNC-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
+  BE-ASYNC-001: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
   BE-AUTHZ-004: {verdict: addressed, cite: "plan.md#Agent reach: what ductus installs grants only what its steps need"}
-  BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#Primitive request/response schemas"}
-  BE-COMPAT-001: {verdict: addressed, cite: "data-model.md#Versioning of these schemas"}
-  BE-COND-001: {verdict: addressed, cite: "data-model.md#`set-status` — update spec frontmatter status field"}
+  BE-AUTHZ-007: {verdict: addressed, cite: "scenarios/mcp-arg-unknown-field-strictness.md#Mcp-arg-unknown-field-strictness"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-COORD-002: {verdict: addressed, cite: "plan.md#Release workflow"}
   BE-DATA-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
+  BE-DATA-003: {verdict: addressed, cite: "plan.md#Dependency selection"}
   BE-DATA-011: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   BE-DEPS-001: {verdict: addressed, cite: "plan.md#Dependency pinning, provenance, and upgrades"}
   BE-DEPS-002: {verdict: addressed, cite: "plan.md#Dependency pinning, provenance, and upgrades"}
@@ -126,58 +126,53 @@ rule-verdicts:
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#Outbound (runtime → host) messages"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#Outbound (runtime → host) messages"}
   BE-ERR-005: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Extension-point schemas (initial release)"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Primitive request/response schemas"}
   BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Severity tiers — three closed sets, not one"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#Trade-offs"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
+  BE-INPUT-006: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   BE-INPUT-007: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   BE-INPUT-008: {verdict: addressed, cite: "plan.md#Dependency selection"}
-  BE-INPUT-011: {verdict: addressed, cite: "plan.md#Dependency selection"}
+  BE-INPUT-011: {verdict: addressed, cite: "scenarios/the-constitutions-registry-validates-its-values.md#Behavior"}
   BE-INPUT-016: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-LOCK-002: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-LOG-002: {verdict: addressed, cite: "plan.md#Dependency selection"}
+  BE-LOG-005: {verdict: addressed, cite: "data-model.md#Notes"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
   BE-PAYLOAD-002: {verdict: addressed, cite: "data-model.md#`read-spec` — parse spec frontmatter and body sections"}
   BE-PAYLOAD-004: {verdict: finding, tier: should, at: "plan.md#`fetch-archive` transport", message: "fetch-archive reads a body up to MAX_FETCH_BYTES (256 MiB) whole into memory, and the plan states its size cap and deadline but neither a streamed body nor a named chunk size"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
   BE-RACE-002: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
-  BE-RACE-003: {verdict: addressed, cite: "plan.md#Compare before persist"}
-  BE-REPR-001: {verdict: addressed, cite: "data-model.md#Notes"}
-  BE-REPR-002: {verdict: addressed, cite: "spec.md#Resolved Questions"}
+  BE-RACE-003: {verdict: addressed, cite: "scenarios/ask-consolidation.md#Edge Cases"}
   BE-RETRY-001: {verdict: addressed, cite: "plan.md#Release workflow"}
+  BE-RETRY-002: {verdict: addressed, cite: "plan.md#Release workflow"}
   BE-RETRY-003: {verdict: addressed, cite: "plan.md#Release workflow"}
-  BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#Project layout: single Rust crate at `runtime/`"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
-  BE-TIMEOUT-002: {verdict: addressed, cite: "plan.md#`runtime.yml` CI workflow"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#Compare before persist"}
-  CFG-CONST-001: {verdict: addressed, cite: "data-model.md#Per-project file resolution"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Trade-offs"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#Compare before persist"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
-  CFG-CONST-004: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
-  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
-  CFG-ENV-003: {verdict: addressed, cite: "scenarios/the-constitutions-registry-validates-its-values.md#Behavior"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-004: {verdict: addressed, cite: "plan.md#Release workflow"}
   CFG-ENV-006: {verdict: addressed, cite: "plan.md#Dependency selection"}
   CFG-ENV-007: {verdict: addressed, cite: "data-model.md#Per-project file resolution"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-009: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-012: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "plan.md#CLI surface shape"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "data-model.md#`writeCode`"}
   QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/numbered-heading-grammar-single-source.md#Edge Cases"}
-  QUAL-GROUND-001: {verdict: addressed, cite: "plan.md#`framework/runtime-tools.txt` is the manifest"}
-  QUAL-STUB-001: {verdict: addressed, cite: "scenarios/review-exec-wiring.md#Behavior"}
   QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
   SEC-DEPS-001: {verdict: addressed, cite: "plan.md#`runtime.yml` CI workflow"}
   SEC-LOG-001: {verdict: addressed, cite: "plan.md#Dependency selection"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 1
   deferred: 0
-  waived: 19
-  undispositioned: 0
+  waived: 11
+  undispositioned: 1
 decisions:
   - key: grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today
     outcome: waived
@@ -204,24 +199,9 @@ decisions:
     reason: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
     decided-at: 2026-10-01T18:58:23Z
     decided-by: andy@stone.dev
-  - key: grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own
-    outcome: waived
-    reason: a scope statement in the Trade-offs entry recording the reqwest dependency's adoption; runtime/Cargo.toml is cited, and the plan's fetch-archive transport section names the path
-    decided-at: 2026-10-15T16:54:50Z
-    decided-by: andy@stone.dev
   - key: grounding — plan.md says tokio is required by rmcp
     outcome: waived
     reason: rationale for a dependency choice, the same class as the stored rmcp discard
-    decided-at: 2026-10-15T16:54:50Z
-    decided-by: andy@stone.dev
-  - key: grounding — plan.md says pulldown-cmark provides byte offsets
-    outcome: waived
-    reason: rationale for the parser choice, the same class as the stored pulldown-cmark discard
-    decided-at: 2026-10-15T16:54:50Z
-    decided-by: andy@stone.dev
-  - key: grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly
-    outcome: waived
-    reason: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
     decided-at: 2026-10-15T16:54:50Z
     decided-by: andy@stone.dev
   - key: scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history
@@ -234,31 +214,6 @@ decisions:
     reason: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
     decided-at: 2026-10-16T02:59:11Z
     decided-by: andy@stone.dev
-  - key: grounding — spec.md's Implementation language answer says Rust gives the smallest static binary and the fastest cold start and Go builds faster, uncited
-    outcome: waived
-    reason: rationale for the 2026-05 implementation-language decision, recorded in a Resolved Question, the same class as the stored rmcp waiver
-    decided-at: 2026-11-17T19:34:20Z
-    decided-by: rule
-  - key: grounding — plan.md's Dependency selection says serde_norway reads a YAML tag as at most an enum variant or a Value::Tagged node and runs no code, uncited
-    outcome: waived
-    reason: rationale for a dependency choice, the same class as the stored tokio and pulldown-cmark waivers
-    decided-at: 2026-11-17T19:34:20Z
-    decided-by: rule
-  - key: grounding — plan.md's runtime.yml section says actions/setup-node downloaded Node from a branch-read manifest with no checksum check, uncited
-    outcome: waived
-    reason: the observation that motivated pinning that install, stated as the pin's rationale, the same class as the stored POSIX-rename waiver
-    decided-at: 2026-11-17T19:34:20Z
-    decided-by: rule
-  - key: grounding — plan.md's Agent reach says APFS finds a name under its case-converted and its composed and decomposed Unicode spellings, uncited
-    outcome: waived
-    reason: a property of the platform the name comparison rests on, stated as rationale, the same class as the stored POSIX-rename waiver; fold in runtime/src/primitives/host_config.rs and its tests hold the comparison
-    decided-at: 2026-11-17T19:34:20Z
-    decided-by: rule
-  - key: grounding — plan.md's npm advisories bullet says the lint tooling globs only patterns this repository writes, uncited
-    outcome: waived
-    reason: the rationale for the listed exception, which scripts/npm-audit-allowed.json records as the entry's own reason, naming the globs and the staged paths it rests on; lint-markdown's parenthesis refusal, which the same sentence names, is the code
-    decided-at: 2026-11-17T19:34:20Z
-    decided-by: rule
   - key: artifact-size — `specs/022-deterministic-runtime/plan.md` is 102424 bytes, 3 read pages at the 50000-byte read size
     outcome: waived
     reason: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did
@@ -280,7 +235,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 19 advisory; not blocking. 67 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 19 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 12 advisory; not blocking. 70 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 11 waived, 1 undispositioned. An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.
 
 ## Hard failures
 
@@ -292,25 +247,18 @@ decisions:
 
 ## Advisory findings
 
-- grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
-- grounding — spec.md says 11 of 13 analyze check sections are mechanical — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
-- grounding — spec.md and plan.md call rmcp the reference MCP SDK — `specs/022-deterministic-runtime/spec.md` — **waived**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
-- grounding — plan.md says POSIX rename is atomic and Windows rename is weaker — `specs/022-deterministic-runtime/plan.md` — **waived**: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
-- grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
-- grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own — `specs/022-deterministic-runtime/plan.md` — **waived**: a scope statement in the Trade-offs entry recording the reqwest dependency's adoption; runtime/Cargo.toml is cited, and the plan's fetch-archive transport section names the path
-- grounding — plan.md says tokio is required by rmcp — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a dependency choice, the same class as the stored rmcp discard
-- grounding — plan.md says pulldown-cmark provides byte offsets — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for the parser choice, the same class as the stored pulldown-cmark discard
-- grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly — `specs/022-deterministic-runtime/spec.md` — **waived**: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
+- artifact-size — `specs/022-deterministic-runtime/plan.md` is 102676 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/plan.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
+- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 62552 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
 - scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history; append the task that implements it — `specs/022-deterministic-runtime/scenarios/done-when-authoring-forms.md` — **waived**: written after the fact for behavior shipped in the same commit (959d897d, fix(022): recognize all done-when authoring forms in read-tasks); implemented and tested, read_tasks.rs recognizes_all_done_when_authoring_forms (operator decision, 2026-10-16)
 - scenario-consistency — scenario scenario-question-parser-fix.md has no task in tasks.md and never had one in its history; append the task that implements it — `specs/022-deterministic-runtime/scenarios/scenario-question-parser-fix.md` — **waived**: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
-- grounding — spec.md's Implementation language answer says Rust gives the smallest static binary and the fastest cold start and Go builds faster, uncited — `specs/022-deterministic-runtime/spec.md` — **waived**: rationale for the 2026-05 implementation-language decision, recorded in a Resolved Question, the same class as the stored rmcp waiver (decided by the rule)
-- grounding — plan.md's Dependency selection says serde_norway reads a YAML tag as at most an enum variant or a Value::Tagged node and runs no code, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a dependency choice, the same class as the stored tokio and pulldown-cmark waivers (decided by the rule)
-- grounding — plan.md's runtime.yml section says actions/setup-node downloaded Node from a branch-read manifest with no checksum check, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: the observation that motivated pinning that install, stated as the pin's rationale, the same class as the stored POSIX-rename waiver (decided by the rule)
-- grounding — plan.md's Agent reach says APFS finds a name under its case-converted and its composed and decomposed Unicode spellings, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: a property of the platform the name comparison rests on, stated as rationale, the same class as the stored POSIX-rename waiver; fold in runtime/src/primitives/host_config.rs and its tests hold the comparison (decided by the rule)
-- grounding — plan.md's npm advisories bullet says the lint tooling globs only patterns this repository writes, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: the rationale for the listed exception, which scripts/npm-audit-allowed.json records as the entry's own reason, naming the globs and the staged paths it rests on; lint-markdown's parenthesis refusal, which the same sentence names, is the code (decided by the rule)
-- artifact-size — `specs/022-deterministic-runtime/plan.md` is 102424 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/plan.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
-- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 62552 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
 - rule-assessment — BE-PAYLOAD-004: fetch-archive reads a body up to MAX_FETCH_BYTES (256 MiB) whole into memory, and the plan states its size cap and deadline but neither a streamed body nor a named chunk size — `specs/022-deterministic-runtime/plan.md` — **waived**: the rule guards per-request memory in a service holding many bodies at once; the runtime is one local process fetching one release archive (about 6 MB) per bootstrap run, and MAX_FETCH_BYTES caps the one buffer it holds (decided by the rule)
+- grounding — spec.md Motivation states a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time, with no source — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
+- grounding — spec.md Motivation states 11 of 13 analyze check sections are mechanical, with no source — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
+- grounding — spec.md Implementation language calls rmcp the most mature MCP SDK and the reference implementation, uncited — `specs/022-deterministic-runtime/spec.md` — **waived**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
+- grounding — plan.md Dependency selection says tokio is required by rmcp, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a dependency choice, the same class as the stored rmcp discard
+- grounding — plan.md Known limitations says which pulldown-cmark extensions are off by default, uncited — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
+- grounding — plan.md Known limitations says Windows rename can leave a partial tempfile on crash, uncited beside the POSIX rename claim — `specs/022-deterministic-runtime/plan.md` — **waived**: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
+- grounding — plan.md Dependency selection says pulldown-cmark is correct on edge cases, uncited — `specs/022-deterministic-runtime/plan.md` — **undispositioned**
 
 ## Deferred to other specs
 
@@ -324,9 +272,9 @@ decisions:
 
 - never-existed: 15
 - not-a-live-claim: 5
-- root-absent: 42
+- root-absent: 45
 - ships-to-adopter: 5
 
 ## Fixed in this run
 
-*None.*
+- plan-consistency — plan.md Technical Decision README placement: root README.md Runtime section states what the section holds but gives no rationale for the placement — `specs/022-deterministic-runtime/plan.md` — **fixed**
