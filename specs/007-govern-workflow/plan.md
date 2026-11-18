@@ -41,6 +41,14 @@ For each primary language, fetch from `https://raw.githubusercontent.com/github/
 
 This is the approach 003 decided for the `.gitignore` merge it owns, inherited rather than decided again here: the shipped template stays minimal, with no language-specific patterns, and each project gets its languages' patterns from GitHub's collection at bootstrap (`002-project-scaffolding` Resolved Questions, *Gitignore and language patterns*), never bundled into the framework archive (`015-tarball-fetch`). A failed fetch does not abort because AC6 holds every individual fetch to that, as the spec's File Fetching section does for an entry missing from the archive.
 
+### Every fetch is bounded
+
+No fetch this command makes waits unboundedly on GitHub (BE-TIMEOUT-001). The per-language `.gitignore` fetch above and the self-update check's fetch of the upstream `ductus.md` (scenario `ductus-self-update-precheck`) each run under `curl --connect-timeout {connect-timeout} --max-time {request-timeout}`, the two named values `framework/bootstrap/ductus.md` defines under **Derived paths**, 10 and 60 seconds (§Shared Files' **.gitignore** merge step 5, and the **Self-update check**'s **Small fetch**). The framework archive is `fetch-archive`'s, bounded by its `FETCH_TIMEOUT` and `FETCH_DEADLINE` constants (`runtime/src/primitives/fetch_archive.rs`). 003's plan states the same bound for the merge it owns.
+
+### Paths built from the inputs are contained
+
+The project name and the spec-root name become path components of what the run writes, `{cli-config-dir}/commands/{project}/` and the files under the spec root among them. The character rules the spec's Inputs section and `validate_specs_root` (`runtime/src/schema/paths.rs`) apply are not what contains them (BE-INPUT-004). The manifest writes are `apply-manifest`'s, `framework/bootstrap/ductus.md` Instructions step 4, and **Slash command cleanup**'s removals are `enforce-manifest`'s, step 8. Each refuses, before any filesystem operation, a path that is absolute, carries a `..` component, or passes through a symbolic link resolving outside its canonical root (`validate_contained` in `runtime/src/primitives/mod.rs`). A refusal stands: the run halts and never falls back to the step's shell specification, which carries none of those screens (`ductus.md` **State A — runtime live this session**; scenario `state-a-deterministic-path-forcing` of `029-bootstrap-runtime-autowire`). Only a step whose primitive cannot run at all falls back to that specification, for that step alone, as the same section says.
+
 ## Affected Files
 
 | File | Action | Purpose |
