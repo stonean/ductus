@@ -154,7 +154,9 @@ order is stated — together with the fact that nothing enforces it.
 Adopter-neutral wording is what separates **universal** from **borderline**. A
 rule may cite a runtime primitive, because every adopter has the runtime. A
 rule that cites `scripts/audit/` cannot be promoted as written, because that
-directory is this repository's own and never ships. The same test, applied to a
+directory is this repository's own and never ships: the **Shared Files**
+manifest in `framework/bootstrap/ductus.md` names no `scripts/` path. The same
+test, applied to a
 narrower population, is what separates **shared** from **project-only**.
 
 One destination sits outside the table, because it turns on a rule's
