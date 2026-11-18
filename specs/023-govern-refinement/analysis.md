@@ -1,23 +1,24 @@
 ---
 spec: 023-govern-refinement
-last-run: 2026-11-15T14:58:00Z
-analyzed-against: ab6a3c8b1c8c8cbc3b7f2ace787ed592de8d6270
+last-run: 2026-11-18T12:49:36Z
+analyzed-against: 9cae484cf4b41ad6e9d3de3eb4d6fe675cc1e551
 hard-fail: 0
 blocking-findings: 0
-advisory: 4
-unexamined: 32
+advisory: 5
+unexamined: 35
 analyzed-digest:
-  plan.md: c3372c698a452bc94b6c00ccb6a0e28e803a82192ba4331214540ae618c9f48f
+  plan.md: 575b36a531cdbdb4e4a00d373a2a7b59dc6a20cf88a320ba4c6d6fcae3a92784
   review.md: cfbe5d046e077c070a9ae160c124c7a605cd43690815f0d1b623f75c5d6f8d93
   scenarios/configure-dedup-permissions.md: bf3690f13886de1650ad52685c636082dbb34e89028f6f81a674e6206d843a41
   scenarios/configure-inert-write-path-entries.md: b57cb8cfbe2da0696b5c8f82dcb1406602fdd8aadd55a491923d6ccf319c8cbb
-  scenarios/configure-permission-pattern-safety.md: d394e4f64f6fe145459d5568850479a2f1f3ba1a48e0bf5546844870163aa79f
+  scenarios/configure-permission-pattern-safety.md: 0c1881bbf82925e4971fbcda5394b24219befcd4a8c6185602c94b5717fe8387
   scenarios/configure-retires-formerly-canonical-entries.md: 0edf0a2eeed43837628c59de7c539e2ce1119fd9ab088066baf5b46a8d2eccca
-  scenarios/extend-existing-scenario-task.md: 1a0b674ce341509402b4a598e791bbed510e2f758be5e646786683340927155a
-  scenarios/living-specs.md: 6410062310a49c5f895b61a518bc482372ca10a790dcefb92f84cfb4ddc97c9e
-  spec.md: 4c632bc460b1be49aed21d12458d17ceb70af6940831accc6f9e1e20a2e702b0
-  tasks.md: aef6ef5b8ca40ac2325f1a9cc8f5b655c5820def933bcf681c96639541bee610
+  scenarios/extend-existing-scenario-task.md: 70df3af27fc39ca140538dbe470a13112dc0ca007913b4f07bb2baf9dbb617e6
+  scenarios/living-specs.md: 0331b227b72b54edbcb383f8f27c994505d62ab792c6a1d58272c210297d7feb
+  spec.md: e6759bad462fc10559605437d49c9b179bbd3741fc6becb9ec75a3dda0ce10b3
+  tasks.md: 63c0438b1a50935e4f831bfe5d863db6be0ca48d878c35e137c258ed454f7f5b
 unexamined-by-reason:
+  anchor-target-unjudgeable: 3
   never-existed: 1
   not-a-live-claim: 23
   root-absent: 8
@@ -31,11 +32,12 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
+  BE-ERR-002: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
@@ -43,22 +45,17 @@ rule-verdicts:
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
   BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
-  BE-TXN-002: {verdict: finding, tier: must, at: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third", message: "append-task reads tasks.md, numbers the new task and renames the whole file over it with no lost-update guard, so two concurrent calls lose one task; guard deferred to 022 task 35, not yet done"}
+  BE-TXN-002: {verdict: addressed, cite: "plan.md#Phase sequencing — invariant first, runtime primitives second, command consolidation third"}
 blocking: false
 dispositions:
-  fixed: 4
-  deferred: 1
-  waived: 4
+  fixed: 0
+  deferred: 0
+  waived: 5
   undispositioned: 0
 decisions:
   - key: grounding — plan.md states that scripts/gen-help-tables.sh's existing splice logic handles marker renames without code changes, citing no line of the script
     outcome: waived
     reason: a design-time claim about a script this spec's task 13 then changed and ran in sync; grounding it means reading the script, which this command does not do, so it is no chore
-    decided-at: 2026-11-07T23:45:39Z
-    decided-by: rule
-  - key: grounding — spec.md states that GitHub Spec Kit assigns /analyze the artifact-consistency role and that its name has become the emerging-standard term, citing no source
-    outcome: waived
-    reason: a claim about an outside project's naming, given as the rename's motivation; grounding it means fetching that project, which this command does not do, and the rename stands on its own
     decided-at: 2026-11-07T23:45:39Z
     decided-by: rule
   - key: "body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: \"2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/analyze.md` (the renamed `validate.md` itself), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`.\""
@@ -71,20 +68,23 @@ decisions:
     reason: the plan row records the path as it stood when 023 was delivered; the owner's 2026-11-12 decision in 98be4f19 (retire(003) task 6) keeps 023's plan rows naming the retired template as record, never gating
     decided-at: 2026-11-14T02:04:28Z
     decided-by: rule
-  - key: "rule-assessment — BE-TXN-002: append-task reads tasks.md, numbers the new task and renames the whole file over it with no lost-update guard, so two concurrent calls lose one task; guard deferred to 022 task 35, not yet done"
-    outcome: deferred
-    target: specs/022-deterministic-runtime/tasks.md
-    task: "35"
-    reason: the owner deferred it (2026-11-14) to 022, whose ask-consolidation scenario specifies append-task; task 35 guards the read-modify-write and corrects the scenario's claim that the second writer's persist fails
-    decided-at: 2026-11-15T14:58:00Z
-    decided-by: andy@stone.dev
+  - key: grounding — spec.md AC12/AC34 state as fact that Claude Code matches file permissions against Edit rules only and warns on Write(path) at session start, with no primary-source citation
+    outcome: waived
+    reason: a claim about Claude Code's permission matching, an external host's behavior the spec relies on; grounding it needs the host's documentation fetched and read, so the fix is not mechanical, and the advisory holds nothing
+    decided-at: 2026-11-18T12:49:36Z
+    decided-by: rule
+  - key: grounding — spec.md Section 6 asserts an allow entry for an unregistered MCP tool is a no-op, uncited
+    outcome: waived
+    reason: a claim about Claude Code's permission matching, an external host's behavior the spec relies on; grounding it needs the host's documentation fetched and read, so the fix is not mechanical, and the advisory holds nothing
+    decided-at: 2026-11-18T12:49:36Z
+    decided-by: rule
 ---
 
 # Analysis — 023-govern-refinement
 
 ## Summary
 
-0 hard-fail, 0 blocking, 4 advisory; not blocking. 32 unexamined target(s). Dispositions: 4 fixed, 1 deferred, 4 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 35 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -96,14 +96,15 @@ decisions:
 
 ## Advisory findings
 
-- grounding — plan.md states that scripts/gen-help-tables.sh's existing splice logic handles marker renames without code changes, citing no line of the script — `specs/023-govern-refinement/plan.md` — **waived**: a design-time claim about a script this spec's task 13 then changed and ran in sync; grounding it means reading the script, which this command does not do, so it is no chore
-- grounding — spec.md states that GitHub Spec Kit assigns /analyze the artifact-consistency role and that its name has become the emerging-standard term, citing no source — `specs/023-govern-refinement/spec.md` — **waived**: a claim about an outside project's naming, given as the rename's motivation; grounding it means fetching that project, which this command does not do, and the rename stands on its own
-- body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: "2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/analyze.md` (the renamed `validate.md` itself), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`." — `specs/023-govern-refinement/plan.md` — **waived**: the plan row records the path as it stood when 023 was delivered; the owner's 2026-11-12 decision in 98be4f19 (retire(003) task 6) keeps 023's plan rows naming the retired template as record, never gating
-- body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: "| `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list (line 26). |" — `specs/023-govern-refinement/plan.md` — **waived**: the plan row records the path as it stood when 023 was delivered; the owner's 2026-11-12 decision in 98be4f19 (retire(003) task 6) keeps 023's plan rows naming the retired template as record, never gating
+- body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: "2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/analyze.md` (the renamed `validate.md` itself), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`." — `specs/023-govern-refinement/plan.md` — **waived**: the plan row records the path as it stood when 023 was delivered; the owner's 2026-11-12 decision in 98be4f19 (retire(003) task 6) keeps 023's plan rows naming the retired template as record, never gating (decided by the rule)
+- body-path-existence — names `framework/templates/project/project-readme.md`, which existed in this repository and no longer resolves: "| `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list. |" — `specs/023-govern-refinement/plan.md` — **waived**: the plan row records the path as it stood when 023 was delivered; the owner's 2026-11-12 decision in 98be4f19 (retire(003) task 6) keeps 023's plan rows naming the retired template as record, never gating (decided by the rule)
+- grounding — plan.md Help-tables section asserts the generator's existing splice logic handles marker renames without code changes, uncited — `specs/023-govern-refinement/plan.md` — **waived**: a design-time claim about a script this spec's task 13 then changed and ran in sync; grounding it means reading the script, which this command does not do, so it is no chore (decided by the rule)
+- grounding — spec.md AC12/AC34 state as fact that Claude Code matches file permissions against Edit rules only and warns on Write(path) at session start, with no primary-source citation — `specs/023-govern-refinement/spec.md` — **waived**: a claim about Claude Code's permission matching, an external host's behavior the spec relies on; grounding it needs the host's documentation fetched and read, so the fix is not mechanical, and the advisory holds nothing (decided by the rule)
+- grounding — spec.md Section 6 asserts an allow entry for an unregistered MCP tool is a no-op, uncited — `specs/023-govern-refinement/spec.md` — **waived**: a claim about Claude Code's permission matching, an external host's behavior the spec relies on; grounding it needs the host's documentation fetched and read, so the fix is not mechanical, and the advisory holds nothing (decided by the rule)
 
 ## Deferred to other specs
 
-- rule-assessment — BE-TXN-002: append-task reads tasks.md, numbers the new task and renames the whole file over it with no lost-update guard, so two concurrent calls lose one task; guard deferred to 022 task 35, not yet done — `specs/023-govern-refinement/plan.md` — **deferred** to `specs/022-deterministic-runtime/tasks.md` task 35
+*None.*
 
 ## Contradictions
 
@@ -111,13 +112,11 @@ decisions:
 
 ## Unexamined targets
 
+- anchor-target-unjudgeable: 3
 - never-existed: 1
 - not-a-live-claim: 23
 - root-absent: 8
 
 ## Fixed in this run
 
-- rule-assessment — BE-SCHEMA-002: plan adds create-scenario and append-task MCP tools and AC37 changes merge-permissions, but names no single source the tool schema derives from — `specs/023-govern-refinement/plan.md` — **fixed**
-- rule-assessment — BE-COMPAT-001: AC37 adds a revoke argument, ConflictingRevoke refusal and allow-revoked result to the existing merge-permissions tool and no artifact classifies the change additive or breaking — `specs/023-govern-refinement/spec.md` — **fixed**
-- rule-assessment — BE-RACE-003: create-scenario refuses on an existing slug and append-task computes the next number from tasks.md, but no mechanism makes check and act atomic (atomic file write is not exclusive create) and repeat-harmlessness is not stated — `specs/023-govern-refinement/spec.md` — **fixed**
-- rule-assessment — BE-PAYLOAD-001: AC37/AC38 have merge-permissions return removed-entry and ConflictingRevoke overlap lists, and plan.md commits to no maximum or bound for them (bound is only implicit in the closed retired list). — `specs/023-govern-refinement/spec.md` — **fixed**
+*None.*
