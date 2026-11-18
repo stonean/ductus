@@ -1,24 +1,24 @@
 ---
 spec: 050-constitution
-last-run: 2026-11-16T01:15:29Z
-analyzed-against: 529cba720419c86a4af3c4f666cef64537ae0acd
+last-run: 2026-11-18T12:37:25Z
+analyzed-against: f2fed41d67f55c2858c80f5240fc62384571b059
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
-unexamined: 5
+advisory: 4
+unexamined: 6
 analyzed-digest:
-  plan.md: ee92a64fe9bd3a56a2d855ffa37ca2698566725a1210af2c6aacb3711e78a080
-  review.md: eb2eb7fab6f9507f5802819d86397c2944a36ec2ac53e1ac6bdf308da48037ab
+  plan.md: 5a629fbbf5fc61239b1c5fd8b81390039287872b7a91f925cb688a7adc38f43e
+  review.md: 1737b132936c455f22a828431ffc3b3dd2f33c1573ab6cedad33e397da1775a0
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 87a0dcce92143a717ff19e0ecc570e9262f7afaf42ac764fe43b197c6a7e48fa
   scenarios/a-declared-cross-spec-impact-gates-done.md: 1f802a9ed0562b74fddc7984c9ff6d89d0d4c9a46d02138b874928381d03f92f
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a
   scenarios/a-partial-read-is-not-a-read.md: 078952ab7a67edeb949dd30d5f1bc0e0ef91904c467980f1e5547aab145e82f0
   scenarios/a-project-command-is-run-not-reproduced.md: 82eb4ccfa37346e02b05e32e802f5ec528a633801407a32e43ff678921329ce6
   scenarios/a-retired-feature-leaves-no-spec.md: bcaaa454287a16ca7494d06e7269110989191e4e84791e9f868a7bc6378e4a2e
-  scenarios/a-retired-filename-leaves-a-decision-record.md: 340a75a4d36010f0c4410e8d2c64b5407fae4d046d8ac60e0012ee787a3daf22
+  scenarios/a-retired-filename-leaves-a-decision-record.md: 721239305aed86b463cf047871ce4699a8018862115a51ee56c9ee8a24146685
   scenarios/a-review-may-precede-its-commit.md: b3b90fcf6f0f8d06c9db96e873c657370fda86e2a15e450d34bcf3735d259163
   scenarios/a-status-commit-holds-only-the-transition.md: 2f164ce212508e7f3b82508543157b868e8533fd15f977497d2ab569ec89f79e
-  scenarios/adopter-practices-classified-for-promotion.md: 984ffc7703761a3cbaaf9dd0fc81bc16f73e2b6c54c5d7276f4f14dbd4fa5caf
+  scenarios/adopter-practices-classified-for-promotion.md: 315e58b11bba6467db539dc98b514c08ff68176cdf5a0e82f77d9ed378310c47
   scenarios/agents-md-holds-only-what-every-session-needs.md: d98998ffcc8ddc321ef97b6e3b80fc2b6a523f82357d00b778a576b0790a8c68
   scenarios/an-answer-is-applied-as-chosen.md: ddccff2f13211a718842fd0954bc8e2e446eb99ad8fe6c60ebc9f87f2704f5fc
   scenarios/artifacts-are-as-short-as-their-required-content.md: 9cdb9568fd92e7ad24a1d213924733f31266809d9dabe97daf22fe8847044cc6
@@ -26,16 +26,16 @@ analyzed-digest:
   scenarios/decisions-go-to-the-owner-one-at-a-time.md: 91dd288f71c59a081c23f8b380218cc89924859727e52885a88cf491c5465060
   scenarios/findings-route-by-scope.md: 482085721b560cc87fe3772936aca0668694e63c58c4d2093d70ae337ad1223c
   scenarios/governance-is-multi-source.md: 40078aa4ec14c45487493e4bfe67b026c95bb28377e2626e0ac4876f68cb183f
-  scenarios/knowledge-routes-by-population-not-by-kind.md: ddb9ecc8cde18bafa290113a04720e215075908f5ceda4871b645649cd258c37
+  scenarios/knowledge-routes-by-population-not-by-kind.md: 4de854f76c0fb8ff44b853543ece6d3b97f96994d4c62fa3b2358da7a477f689
   scenarios/memory-routing-lives-in-agents-md.md: c17eda6a37465999c1ceb21a224b1a5e85f3ea49a7112214f21178249783bd16
   scenarios/report-outcomes-not-edits.md: caf13342d7fe0a5af4108024cf424ab921030c896f0743307cf5111be2e163ab
   scenarios/reports-end-with-the-remaining-work.md: 816e498bb2ba5bd9bfa42682cad814955af57b5af656669754cdcec5c7dbdc3d
-  scenarios/succinctness-is-a-guiding-principle.md: 0add8ffa6a5138990694f9f377178e5f54a38e8669ab0eeae044bbf4015a509f
-  scenarios/the-constitution-fits-one-read.md: 89d0a8cbc7b56f99341a160da39ed2b3d2d702c9798c3a0dc215372ef1f334de
+  scenarios/the-constitution-fits-one-read.md: 26c63cbf857a23a360fe4f887c62eccf2abcdf33763bce25fa973d4ae0605840
   scenarios/the-constitution-states-rules-not-stories.md: 691e5ea78b7012fd9f9a8114f20632d7852d5c319f54e3951b2ebaed65c013bc
-  spec.md: f191d797c5d5499c8ca4819f285fce5d4ecd1c6d1948693eea5720dcc4d014f4
-  tasks.md: abcfe737c38b3294caa4ec92f19c9465b12ef8d589688f7970b8cbd998fda642
+  spec.md: a2c813c873f3618114c68bd6b81a3ea81d9f7bdb052317974e62c9a62d841257
+  tasks.md: d6608122b7009bd5139cde1cc43d3aa957c582d255fab375153a02d55cdd22e3
 unexamined-by-reason:
+  not-a-live-claim: 1
   root-absent: 3
   ships-to-adopter: 2
 rule-digest:
@@ -55,8 +55,8 @@ blocking: false
 dispositions:
   fixed: 1
   deferred: 0
-  waived: 3
-  undispositioned: 0
+  waived: 2
+  undispositioned: 2
 decisions:
   - key: plan-record — plan.md §Classification is outside the design record
     outcome: waived
@@ -68,18 +68,13 @@ decisions:
     reason: the excess is the §Classification table, AC1's verdict record that the promotion-coverage audit reads, and the per-section byte measurement the-constitution-fits-one-read requires
     decided-at: 2026-10-28T18:52:10Z
     decided-by: andy@stone.dev
-  - key: grounding — Two plan.md claims about existing code are located by bare file:line ranges (`framework/bootstrap/ductus.md:771`, `append_task.rs:94-118`) rather than file and symbol, which section Grounding / Cite what you consulted asks for
-    outcome: waived
-    reason: Each citation also names what it locates (the Shared Files manifest row; the scenario-slug and title dedup), so the claim is sourced and re-derivable; AGENTS.md treats a path:line citation in a spec body as provenance, not a live claim, and a sweep of them is not owed.
-    decided-at: 2026-11-16T01:15:29Z
-    decided-by: rule
 ---
 
 # Analysis — 050-constitution
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 5 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 6 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 2 waived, 2 undispositioned. An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.
 
 ## Hard failures
 
@@ -91,9 +86,10 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Two plan.md claims about existing code are located by bare file:line ranges (`framework/bootstrap/ductus.md:771`, `append_task.rs:94-118`) rather than file and symbol, which section Grounding / Cite what you consulted asks for — `specs/050-constitution/plan.md` — **waived**: Each citation also names what it locates (the Shared Files manifest row; the scenario-slug and title dedup), so the claim is sourced and re-derivable; AGENTS.md treats a path:line citation in a spec body as provenance, not a live claim, and a sweep of them is not owed. (decided by the rule)
-- artifact-size — `specs/050-constitution/plan.md` is 62550 bytes, 2 read pages at the 50000-byte read size — `specs/050-constitution/plan.md` — **waived**: the excess is the §Classification table, AC1's verdict record that the promotion-coverage audit reads, and the per-section byte measurement the-constitution-fits-one-read requires
 - plan-record — plan.md §Classification is outside the design record — `specs/050-constitution/plan.md` — **waived**: the section is 050's AC1 verdict table, one promotion verdict per AGENTS.md rule-bearing entry, which the promotion-coverage audit reads; it is deliberately part of this plan's design, the case analyze.md names a Classification for
+- artifact-size — `specs/050-constitution/plan.md` is 64397 bytes, 2 read pages at the 50000-byte read size — `specs/050-constitution/plan.md` — **waived**: the excess is the §Classification table, AC1's verdict record that the promotion-coverage audit reads, and the per-section byte measurement the-constitution-fits-one-read requires
+- grounding — spec.md Criterion verification states the criterion-path-existence family only proves a path resolves and that no deterministic check can close that half, as fact about check-artifacts, with no symbol, test or command cited — `specs/050-constitution/spec.md` — **undispositioned**
+- grounding — plan.md Trade-offs says plans are not durable contracts, so nothing gates on this table staying accurate, asserting what the gates read with no citation — `specs/050-constitution/plan.md` — **undispositioned**
 
 ## Deferred to other specs
 
@@ -105,9 +101,10 @@ decisions:
 
 ## Unexamined targets
 
+- not-a-live-claim: 1
 - root-absent: 3
 - ships-to-adopter: 2
 
 ## Fixed in this run
 
-- grounding — Criterion verification section says adopters 'get the same `done`-only scoping', a descriptive claim about check-artifacts the same section's previous paragraph (and AC6) says 067 retired (it now examines in-progress specs too) — `specs/050-constitution/spec.md` — **fixed** (decided by the rule)
+- grounding — spec.md §Classification says scripts/audit/ is this repository's own and never ships, with no citation of the manifest that decides what ships — `specs/050-constitution/spec.md` — **fixed**
