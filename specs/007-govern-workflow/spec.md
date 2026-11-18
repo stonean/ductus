@@ -1,6 +1,6 @@
 ---
 title: "007-govern-workflow — spec"
-status: in-progress
+status: done
 dependencies: [003-bootstrap-automation]
 tags: [bootstrap, commands]
 next-criterion: 15
