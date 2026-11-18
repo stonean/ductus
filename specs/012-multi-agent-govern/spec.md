@@ -60,7 +60,7 @@ Session state is not per agent: every adopter keeps it at `.ductus/session.toml`
 Per-agent native conventions are preserved:
 
 - **Claude Code** uses `permissions.allow`/`permissions.deny` arrays, and reads `CLAUDE.md`, which is written from `framework/templates/project/claude-md.md` if missing.
-- **Pi** has no permission-gating settings, so its `settings_template` is empty, and it reads `AGENTS.md` natively — no second rules file is needed (the Agent Registry's `pi` row in `framework/bootstrap/ductus.md`, verified by spec 064's §Verified Pi Layout).
+- **Pi** has no permission-gating settings, so its `settings_template` is empty, and it reads `AGENTS.md` natively — no second rules file is needed (the Agent Registry's `pi` row in `framework/bootstrap/ductus.md`, verified by `specs/064-pi-host-support/spec.md` §Verified Pi Layout).
 
 ## Shared Files
 
