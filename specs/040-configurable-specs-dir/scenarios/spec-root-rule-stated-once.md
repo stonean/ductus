@@ -16,11 +16,11 @@ because a note was the mechanism that made the markdown-only path substitute cor
 The result is the state AC11 set out to avoid, reached by a different route. The same
 rule is now restated verbatim in seven places:
 
-- `framework/constitution.md:118` — the canonical statement.
-- `framework/commands/specify.md:60`, `log.md:28`, `groom.md:27`, `review.md:114`,
-  `amend.md:42`, `implement.md:94` — six near-identical ~55-word blockquotes.
+- `framework/constitution.md`'s Spec Phase paragraph beginning "The top-level directory name" — the canonical statement.
+- `framework/commands/specify.md`, `log.md`, `groom.md`, `review.md`,
+  `amend.md`, `implement.md` — six near-identical ~55-word **Spec-root resolution.** blockquotes.
 
-(`framework/bootstrap/ductus.md:1129` also carries it, and is a different case — see
+(`framework/bootstrap/ductus.md`'s paragraph beginning "Throughout this command, every `specs/…` destination" also carries it, and is a different case — see
 Edge Cases.)
 
 That is what [§drift-prevention](../../../framework/constitution.md#drift-prevention)
@@ -52,7 +52,7 @@ cross-cutting rule ("constitution loaded by `/{project}:target` — do not re-re
 
 Three changes:
 
-- **The canonical statement becomes imperative.** `constitution.md:118` currently
+- **The canonical statement becomes imperative.** `constitution.md`'s paragraph beginning "The top-level directory name" currently
   *describes* runtime behavior ("wherever a command or the runtime constructs a path
   under it, it resolves `[paths] specs-root`"). A description of what the runtime does is
   not an instruction to the host, which is precisely why six command files grew one. The
@@ -83,7 +83,7 @@ the shipped artifacts match their sources.
 
 ## Edge Cases
 
-- **The bootstrap keeps its own note.** `framework/bootstrap/ductus.md:1129` is not a
+- **The bootstrap keeps its own note.** `framework/bootstrap/ductus.md`'s paragraph beginning "Throughout this command, every `specs/…` destination" is not a
   redundant restatement: `/ductus` is what scaffolds the constitution, so it runs in
   sessions where no constitution is loaded and none may yet exist on disk. It cannot
   reference a canonical source that is not there. Its note stays — the one file where the

@@ -26,7 +26,7 @@ dispositions:
 
 ```yaml
 decisions:
-  - key: "grounding — plan.md cites runtime/src/foo.rs:12, which does not exist"
+  - key: "grounding — plan.md cites runtime/src/foo.rs, which does not exist"
     outcome: deferred
     target: specs/031-some-feature/tasks.md
     task: "7"

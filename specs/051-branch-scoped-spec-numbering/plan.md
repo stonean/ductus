@@ -12,17 +12,17 @@ The feature divides cleanly into three phases, each independently useful and eac
 
 Phase 1 alone makes branch-scoped specs usable, with fold-back performed by hand; phases 2 and 3 mechanize the discharge. The phases are sequenced this way because phase 3's writes depend on phase 2's field, which depends on phase 1's grammar.
 
-The governing constraint throughout: the three-digit convention is enforced in exactly one predicate, and every corpus-reading surface goes through it. Widening that one place is what makes branch-scoped directories visible everywhere at once; adding a second copy of the rule anywhere is how these generators drifted before (`runtime/src/primitives/mod.rs:1449`).
+The governing constraint throughout: the three-digit convention is enforced in exactly one predicate, and every corpus-reading surface goes through it. Widening that one place is what makes branch-scoped directories visible everywhere at once; adding a second copy of the rule anywhere is how these generators drifted before (`runtime/src/primitives/mod.rs`'s `is_spec_path`).
 
 ## Technical Decisions
 
 ### One directory-form parse, replacing the boolean predicate
 
-`is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) is a byte scan asserting three ASCII digits then `-`, and `feature_number` (`:1438`) parses the first three bytes independently of it. Both are replaced by a single `parse_feature_dir(name) -> Option<FeatureForm>` returning either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` becomes `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
+`is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) is a byte scan asserting three ASCII digits then `-`, and `feature_number` parses the first three bytes independently of it. Both are replaced by a single `parse_feature_dir(name) -> Option<FeatureForm>` returning either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` becomes `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
 
 Two consequences are the point of doing it this way rather than adding a second predicate:
 
-- `list_feature_dirs` (`:1582`) and `is_spec_path` (`:1454`) are the only filesystem entry points, so both directory forms become visible to `dashboard`, `resolve-feature`, `create-feature`, `derive-dependencies`, and `derive-references` in one change (AC5, AC15).
+- `list_feature_dirs` and `is_spec_path` are the only filesystem entry points, so both directory forms become visible to `dashboard`, `resolve-feature`, `create-feature`, `derive-dependencies`, and `derive-references` in one change (AC5, AC15).
 - The `1234.1-slug` → `123` misparse disappears by construction: a branch-scoped form has no sequential number to return, so no caller can read one from it (AC16). Before this spec `feature_number` answered `Some(123)` for that directory, and `resolve-feature` matched on exactly that value.
 
 The parse is a hand-rolled scan rather than a regex, matching the style of the predicate it replaces. `regex` is already a dependency (`runtime/Cargo.toml:30`), so this is a consistency choice, not an availability one.
@@ -36,8 +36,8 @@ The parse is a hand-rolled scan rather than a regex, matching the style of the p
 Branch-scoped creation is `create-feature` with `branch-id` supplied, not a second primitive. A separate `create-branch-feature` would duplicate slug derivation, template resolution, the atomic mode-preserving copy, and the already-exists refusal — and would put the two numbering rules in two places, which is the drift this plan is otherwise avoiding.
 
 - `branch-id` absent → the existing code path, byte-for-byte (AC4).
-- `branch-id` present → sanitized through `derive_slug` (`runtime/src/primitives/create_feature.rs:96`), which lowercases ASCII alphanumerics and collapses every other run to a single hyphen, yielding the `validate_slug` grammar directly (AC9, AC10). An identifier sanitizing to empty is refused through the existing `InvalidArgument` path that already refuses an empty derived slug (`:41`), before any directory is created (AC26).
-- The counter is `max + 1` over the parsed `BranchScoped` forms whose identifier matches, mirroring `next_feature_number`'s `max + 1` (`:117`) — the two counters are the same rule over two filters (AC8).
+- `branch-id` present → sanitized through `derive_slug` (`runtime/src/primitives/create_feature.rs:96`), which lowercases ASCII alphanumerics and collapses every other run to a single hyphen, yielding the `validate_slug` grammar directly (AC9, AC10). An identifier sanitizing to empty is refused through the existing `InvalidArgument` path that already refuses an empty derived slug, before any directory is created (AC26).
+- The counter is `max + 1` over the parsed `BranchScoped` forms whose identifier matches, mirroring `next_feature_number`'s `max + 1` — the two counters are the same rule over two filters (AC8).
 - The existing-directory refusal (`created: false`) is inherited, and concurrent creation of one name is safe because the directory is claimed atomically: both callers compute the same number, `claim_feature_dir` (`runtime/src/primitives/create_feature.rs`) makes it with `std::fs::create_dir`, which the operating system refuses with `AlreadyExists` for every caller but the first, and the loser returns `created: false` rather than writing over the winner's `spec.md` (AC27, `BE-RACE-003`). Two different names created at that moment under one identifier both succeed, with the same number.
 - `fold-into` is a second optional argument, written into the new spec's frontmatter (below).
 - Every feature name these primitives open, create or remove passes the lexical screen, then canonicalization and whole-component containment, before it is touched, as 022's `specs/022-deterministic-runtime/plan.md` §Path arguments: a lexical screen, then canonical containment states for every feature-argument site (`BE-INPUT-004`): `rewrite-spec-links`' `from` and `to` and `retire-feature`'s `feature` and `fold-target` through `validate_feature_argument`, and `create-feature`'s derived directory through `validate_feature_contained`, since it does not exist yet to walk. `create-feature`'s `fold-into` is never opened: `parse_feature_dir` checks its shape and it is written into the frontmatter as text.
@@ -50,9 +50,9 @@ The sanitized identifier is returned in the result so the calling command can ec
 
 `folds-into: {feature}` on the branch-scoped spec, written at creation and **required** there: `create-feature` refuses branch-scoped creation without a target. A branch-scoped spec exists in order to be folded, so the field is never absent from one, and no renumbering path exists in code — a spec that should stand on its own is renamed by hand with the key removed.
 
-This is safe against every existing frontmatter writer because none of them re-serializes the block — each splices its own line and leaves the rest byte-identical: `set-status` edits the `status:` line at a recorded offset (`runtime/src/primitives/set_status.rs`), `derive-dependencies` splices only the `dependencies:` key and any block-form continuation (`runtime/src/primitives/derive_dependencies.rs:207`), and `label-criteria` rewrites or inserts only `next-criterion:` (`runtime/src/primitives/label_criteria.rs:256`). So the key survives every generator untouched (AC19).
+This is safe against every existing frontmatter writer because none of them re-serializes the block — each splices its own line and leaves the rest byte-identical: `set-status` edits the `status:` line at a recorded offset (`runtime/src/primitives/set_status.rs`), `derive-dependencies` splices only the `dependencies:` key and any block-form continuation (`runtime/src/primitives/derive_dependencies.rs`'s `splice_dependencies`), and `label-criteria` rewrites or inserts only `next-criterion:` (`runtime/src/primitives/label_criteria.rs`'s `render`). So the key survives every generator untouched (AC19).
 
-It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checked only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`, `:91`) and does not reject unknown keys, so the key needed no carve-out to be accepted; what it does gain is the shape check below.
+It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checked only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`) and does not reject unknown keys, so the key needed no carve-out to be accepted; what it does gain is the shape check below.
 
 **Validation checks shape, not resolvability.** The target routinely names a spec the declaring branch cannot see — a branch-scoped spec exists *because* upstream diverged, and the spec it folds into normally lives on that upstream branch, sometimes created there after this branch forked. A check requiring a resolvable target would fire on the feature's normal case, and could not see the tree that would satisfy it in any event. So the check is: `folds-into`, when present, parses as a sequential feature name (AC32) — which also forbids chaining a branch-scoped spec into another branch-scoped spec — and an unresolvable target is never a finding before the merge (AC31). Existence is enforced at fold-back by `retire-feature`, which is the first moment the two trees are joined and the only moment the answer matters (AC28).
 
@@ -62,7 +62,7 @@ It is deliberately *not* an inline body link: `derive-dependencies` harvests sib
 
 ### Fold-back is a command over deterministic primitives
 
-`/ductus:fold` follows `/ductus:groom`'s shape: a semantic extension point decides, per branch-scoped spec, whether its content becomes a body edit or a scenario on the upstream spec, and primitives perform every write. The new extension point is distinct from `routeInboxItem` — that vocabulary is a closed five-route set for inbox items (`runtime/src/interpreter/payload.rs:540`) and does not describe this choice. That set answers *where in the corpus does this work belong*; a fold has already been told where, by `folds-into`, and widening the inbox vocabulary would break the closedness its other callers depend on.
+`/ductus:fold` follows `/ductus:groom`'s shape: a semantic extension point decides, per branch-scoped spec, whether its content becomes a body edit or a scenario on the upstream spec, and primitives perform every write. The new extension point is distinct from `routeInboxItem` — that vocabulary is a closed five-route set for inbox items (`runtime/src/interpreter/payload.rs`'s `INBOX_ROUTES`) and does not describe this choice. That set answers *where in the corpus does this work belong*; a fold has already been told where, by `folds-into`, and widening the inbox vocabulary would break the closedness its other callers depend on.
 
 Four new primitives carry the deterministic half; the rest is existing ones (`create-scenario`, `append-task`, `set-status`, `read-spec`):
 
@@ -79,7 +79,7 @@ Fold-back processes one branch-scoped spec at a time (AC29): each spec's fold co
 
 After retiring the directory, `/ductus:fold` re-points every session in the working tree that named the folded spec at the upstream spec, through `retarget-sessions` (spec 062); without it every follow-on command in those sessions lands on a path that is gone. The source spec's own scenarios cross over on *either* route — the route decides the body's shape, never its scenarios'.
 
-`check-orphaned-references` is the verifier, not the repair path. Its report-don't-repair stance rests on a migration knowing only its own hop (`runtime/src/primitives/check_orphaned_references.rs:8`, `:16`); fold-back knows both endpoints, so it rewrites and the check confirms the result is clean (AC22).
+`check-orphaned-references` is the verifier, not the repair path. Its report-don't-repair stance rests on a migration knowing only its own hop (`runtime/src/primitives/check_orphaned_references.rs:8`); fold-back knows both endpoints, so it rewrites and the check confirms the result is clean (AC22).
 
 ### Reopening the upstream spec uses the existing back-edge
 
@@ -91,8 +91,8 @@ Folding into a `done` spec calls `set-status` with `from: done, to: in-progress`
 
 Adding a directory form and a command touches the framework's own registries, and the audit families check exactly these agreements:
 
-- `framework/constitution.md` §numbering (`:676`) states both forms; §spec-lifecycle (`:135`) records that a branch-scoped spec is a staging form discharged by fold-back (AC17).
-- `framework/commands/fold.md` is the new command source. It must parse under the procedure parser, which asserts every command's step numbering (`runtime/src/parser/mod.rs:1165`), and its name joins that test's command list.
+- `framework/constitution.md` §numbering states both forms; §spec-lifecycle records that a branch-scoped spec is a staging form discharged by fold-back (AC17).
+- `framework/commands/fold.md` is the new command source. It must parse under the procedure parser, which asserts every command's step numbering (`runtime/src/parser/mod.rs`'s `rewritten_command_files_parse_with_document_step_numbers` test), and its name joins that test's command list.
 - `framework/runtime-tools.txt` gains the four new primitive names — `runtime/tests/mcp.rs` holds the manifest set-equal to the tools the server serves, and `scripts/lint-tool-coverage.sh` requires a command naming one to carry the §runtime-host-integration pointer.
 - Installer and help surfaces: `scripts/gen-help-tables.sh`, `scripts/gen-claude-commands.sh`, and the bootstrap manifests under `framework/bootstrap/`, checked by `scripts/audit/installer-command-parity.sh` and `installer-registry-parity.sh`. `framework/bootstrap/govern.md` is held byte-identical to `ductus.md` by audit Family 21, so the `fold.md` installer row was copied across, and any future manifest edit needs the same.
 
@@ -132,7 +132,7 @@ Adding a directory form and a command touches the framework's own registries, an
 ### Considered and rejected
 
 - **A `create-branch-feature` sibling primitive** — rejected for duplicating slug derivation, template resolution, the atomic copy, and the already-exists refusal, and for putting the two numbering rules in two places.
-- **A second membership predicate alongside `is_feature_slug`** — rejected for the same reason the shell generators were consolidated: a duplicated membership rule is how they drifted (`runtime/src/primitives/mod.rs:1449`).
+- **A second membership predicate alongside `is_feature_slug`** — rejected for the same reason the shell generators were consolidated: a duplicated membership rule is how they drifted (`runtime/src/primitives/mod.rs`'s `is_spec_path`).
 - **Preferring one directory form when an identifier matches both** — rejected in favour of the existing `Ambiguous` outcome. A silent preference is a wrong answer the operator cannot see.
 - **A run-spanning transaction for fold-back** — rejected: the runtime provides per-file atomic writes (`write_atomic_bytes`, `runtime/src/primitives/mod.rs`), not multi-file transactions, and per-spec recovery by re-running is both achievable and sufficient, since a spec is the unit an operator would retry.
 - Alternatives rejected during clarification — a committed mode setting, a git-history or persisted-file monotonic counter, a body link as the fold target, a redirect stub, manual fold-back, and rejecting non-conforming identifiers — are recorded with their reasoning in the spec's Resolved Questions and are not restated here.

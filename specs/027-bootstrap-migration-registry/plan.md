@@ -107,7 +107,7 @@ On confirm: for each entry in filter order:
 
 The loop runs **before** the existing `## Workflow recommendation` section (since some legacy migrations affect workflows the recommendation flow then reads). It runs **after** the `## Project Configuration` section (so `.ductus/config.toml` is already loaded).
 
-The two legacy-cleanup sub-sections inside `## Workflow recommendation` (lines 570 and 586) are deleted entirely — their work is now done by the registry-driven loop earlier in the procedure. The `enforce-manifest` invocation at line 36 keeps its other duties (slash-command manifest enforcement) but loses its legacy-cleanup roles (those move to the registry).
+The two legacy-cleanup sub-sections inside `## Workflow recommendation` (the "Legacy `skills/` directory cleanup" subsection and the "Legacy workflow cleanup" item) are deleted entirely — their work is now done by the registry-driven loop earlier in the procedure. The `enforce-manifest` invocation at line 36 keeps its other duties (slash-command manifest enforcement) but loses its legacy-cleanup roles (those move to the registry).
 
 ### SemVer comparison (no new primitive)
 

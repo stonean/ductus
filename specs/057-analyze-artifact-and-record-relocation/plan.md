@@ -19,29 +19,28 @@ both are decided against below.
 
 ### The constitution moves first, and it declares more than it relocates
 
-`framework/constitution.md`'s spec-file frontmatter table (lines 520-527) lists
+`framework/constitution.md`'s spec-file frontmatter table lists
 `status`, `dependencies`, `references`, `next-criterion`, and
 `cross-spec-impact`. `review:` and `analyze:` are **not there** — they have been
-riding the Open-schema rule at line 533, "additional fields … permitted and
+riding the Open-schema rule, "additional fields … permitted and
 ignored by uninterested consumers." Two gate-bearing records, undeclared.
 
 So AC21 is not a relocation within the document; it is a first declaration. The
 Frontmatter Schema section gains a **record schema** subsection naming the
 owning artifact for each record and the fields it carries, and the spec-file
-table stays at the five fields it already had. Line 562 fixes the order: "Schema
+table stays at the five fields it already had. The *Schema follows the constitution* principle fixes the order: "Schema
 changes ship through the constitution; the runtime MUST update to match. The
 constitution MUST NOT import runtime types."
 
 ### `ReviewBlock` and `AnalyzeBlock` keep their shape and change their owner
 
-`runtime/src/schema/primitives.rs:33` (`ReviewBlock`) and `:109`
-(`AnalyzeBlock`) are already standalone types. The change is where they are
-deserialized from: `Frontmatter` (`:697`) loses its `review` and `analyze`
+`runtime/src/schema/primitives.rs:33` (`ReviewBlock`) and
+`AnalyzeBlock` are already standalone types. The change is where they are
+deserialized from: `Frontmatter` loses its `review` and `analyze`
 fields, and each record is parsed from its own artifact's frontmatter.
 
-`check_review_gate.rs` reads `frontmatter.review` at line 134 and
-`frontmatter.analyze` at line 183, both from a single `spec.md` deserialize at
-line 85. It gains one read per artifact. That is the whole reader change in the
+`check_review_gate.rs` reads `frontmatter.review` and
+`frontmatter.analyze`, both from a single `spec.md` deserialize. It gains one read per artifact. That is the whole reader change in the
 gate; the branch logic downstream of those two bindings is untouched, which is
 what makes AC4's differential check a real check rather than a restatement.
 
@@ -193,8 +192,8 @@ breaks every reader in one compile. The first task breakdown put that removal
 early and asked each following task to pass `cargo test` — unreachable, because
 the tree does not build again until the last of them lands.
 
-Two call sites made it worse than a red tree. `process_waivers.rs:65` and
-`invalidate_review.rs:94` parse their own minimal frontmatter structs rather
+Two call sites made it worse than a red tree. `process_waivers.rs`'s `SpecFrontmatter` and
+`invalidate_review.rs`'s `SpecReviewFm` (at `a2a69873`) parse their own minimal frontmatter structs rather
 than `Frontmatter`, so they would have kept compiling, found no `review:` block,
 and behaved as though every spec had zero waivers — a waiver losing its
 structural existence, which is the precise shape of the 031 failure this spec is
@@ -260,7 +259,7 @@ one. AC4's differential check is what makes the difference visible.
 principle 3, and the 700-criteria precedent that produced it.
 
 **Limitation: adopters must re-copy the CI template by hand.** `/ductus` does not
-install CI files (`framework/templates/ci/adopter-generators.yml:20`), so AC18's
+install CI files (`framework/templates/ci/adopter-generators.yml`'s header comment, "CI files are not auto-installed by /ductus", at `a2a69873`), so AC18's
 detection can only *tell* an adopter their copy is stale. An adopter who ignores
 it keeps a step that passes vacuously — the failure this change is removing,
 surviving in the one place the framework cannot reach.

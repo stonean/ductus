@@ -288,9 +288,9 @@ own session file, so the two compose.
 - **Is `cli-config-dir` per process as well?** No. It stays the
   per-contributor agent choice in the shared session file. It is written only
   by `/ductus`, never by a target write, and the runtime reads it
-  (`runtime/src/host.rs:86`) for one purpose: choosing which agent's installed
-  command files to read, in `ductus exec` (`runtime/src/main.rs:485`), in the
-  interpreter payload (`runtime/src/interpreter/payload.rs:1155`), in
+  (`runtime/src/host.rs`'s `Host::load`) for one purpose: choosing which agent's installed
+  command files to read, in `ductus exec` (`runtime/src/main.rs`'s `run_exec`), in the
+  interpreter payload (`runtime/src/interpreter/payload.rs`'s `locate_command_file`), in
   `render-help` and in `target`'s up-front tool list, each through
   `Host::command_file_candidates`. This
   spec is about targets, and the case a per-process value would serve, two

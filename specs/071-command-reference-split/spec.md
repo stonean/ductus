@@ -220,7 +220,7 @@ Checked 2026-10-25 by reading each consumer.
   Those three were in the subject, so no count showed them; measured over the
   19 command and bootstrap files at `e6b43796`, `references-out-of-subject`
   went from 83 to 80, the three leaving it being the same form outside
-  Instructions (`groom.md:19`, `implement.md:39` and `:50`).
+  Instructions (`groom.md`'s Scope Boundaries bullet "This command grooms inbox items", `implement.md`'s Flags bullet "Spec edits, plan edits, or new tasks discovered mid-implement" and its Scope Boundaries bullet "Nothing is written to `specs/inbox.md`").
 
 ### Checks that would silently stop covering the moved text
 

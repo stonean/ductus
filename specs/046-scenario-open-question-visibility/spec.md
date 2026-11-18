@@ -14,7 +14,7 @@ A scenario exists to organize information — to keep `spec.md` from becoming on
 
 **Before this feature**, every signal that answered *"does this spec have unresolved questions?"* read the spec body only, so scenario-scoped questions were invisible wherever it mattered:
 
-- `read-spec` derived its open-question count from the spec body, with nothing unioned in from `scenarios/*.md` (`runtime/src/primitives/read_spec.rs:43`).
+- `read-spec` derived its open-question count from the spec body, with nothing unioned in from `scenarios/*.md` (`runtime/src/primitives/read_spec.rs`'s `open_questions` derivation in `run`).
 - `/{project}:target` read a scenario file only when a scenario was explicitly targeted, so a feature-level target never saw them (`framework/commands/target.md`, step 6).
 - `/{project}:status` loaded scenario detail only for the session-targeted scenario; per-spec rows carried a scenario *count* and nothing about their questions (`runtime/src/primitives/dashboard.rs`, `load_scenario_detail`).
 - `check-artifacts` had no family for them, so `/{project}:analyze` stayed silent (four families, none covering scenario questions).

@@ -90,7 +90,7 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Workflow | 71 | Re-open a done spec via set-status when… | pointer | §spec-lifecycle |
 | Workflow | 72 | Add a rule to its surface's home spec vi… | pointer | §rules (second Rules heading, #rules-1) |
 | Workflow | 73 | Route shared runtime work to its owning… | trimmed | project-only; owner decision; per-spec primitive lists cut (owner specs name them) |
-| Workflow | 74 | A canonical table living on a done spec… | pointer | §spec-lifecycle (release-gate cost reported by review-freshness.sh:497) |
+| Workflow | 74 | A canonical table living on a done spec… | pointer | §spec-lifecycle (release-gate cost reported by review-freshness.sh's "done spec's review is stale" finding (at `4eebe91a`)) |
 | Workflow | 75 | Backtick a primitive in an ## Instructio… | trimmed | project-only; parity goldens cover only some commands; incident account cut |
 | Workflow | 76 | Do not invoke cargo build twice in one s… | trimmed | project-only; incident account cut |
 | Workflow | 77 | The local gate is the whole CI surface,… | pointer | §grounding |
@@ -129,17 +129,17 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Gotchas | 114 | Pi has no MCP client — its tool surface… | trimmed | project-only; harness header cites this entry; PR #5 incident account cut |
 | Gotchas | 116 | After changing runtime source, verify th… | trimmed | project-only; spec 054/055 incident accounts cut |
 | Gotchas | 117 | framework/commands/help.md is generated… | trimmed | project-only; hook regenerates silently, nothing reports it; incident cut |
-| Gotchas | 118 | Registering a runtime primitive is five… | trimmed | project-only; absorbs L133; runtime/src/parser/mod.rs:993 cites AGENTS.md Gotchas |
+| Gotchas | 118 | Registering a runtime primitive is five… | trimmed | project-only; absorbs L133; runtime/src/parser/mod.rs's `PRIMITIVE_NAMES` divergence assertion cites AGENTS.md Gotchas |
 | Gotchas | 119 | check-artifacts' skipped array names tar… | trimmed | project-only; path corrected to framework/reference/analyze.md; incident cut |
 | Gotchas | 120 | Use npx markdownlint-cli2 to run markdow… | trimmed | project-only; unchanged |
-| Gotchas | 121 | A prose-only edit to framework/commands/… | moved | runtime/tests/parity.rs:933 |
+| Gotchas | 121 | A prose-only edit to framework/commands/… | moved | runtime/tests/parity.rs's "stream mismatch" assertion |
 | Gotchas | 122 | An assessSpecQuality step's prose choose… | trimmed | project-only; nothing pins analyze.md step tiers; incident cut |
 | Gotchas | 123 | Two extension points fan out in the exec… | trimmed | project-only; test-authoring rule, no check; incident cut |
 | Gotchas | 124 | The command generator substitutes {proje… | trimmed | project-only; gov-rename history cut |
 | Gotchas | 125 | An edit to framework/commands/.md is inv… | trimmed | project-only; runtime/MCP half duplicates L116; incident cut |
-| Gotchas | 126 | The pre-commit hook regenerates the comm… | moved | .github/workflows/generators.yml:72 |
+| Gotchas | 126 | The pre-commit hook regenerates the comm… | moved | .github/workflows/generators.yml's "Generator outputs are out of date" error |
 | Gotchas | 127 | The pre-commit hook lints and tests the… | trimmed | project-only; failure is clippy output, no repo line names it; incident cut |
-| Gotchas | 128 | The generator rule has no exceptions — e… | moved | scripts/gen-claude-commands.sh:173 |
+| Gotchas | 128 | The generator rule has no exceptions — e… | moved | scripts/gen-claude-commands.sh's "orphan in DEST" message |
 | Gotchas | 129 | Never git add -A / git add . in this rep… | pointer | §text-first-artifacts |
 | Gotchas | 130 | The two frontmatter derivations are runt… | pointer | §runtime-boundary (frontmatter schema also names both primitives) |
 | Gotchas | 131 | write_atomic_bytes (the create-then-rena… | trimmed | project-only; corrected: a rewrite now keeps its prior mode; incident cut |
@@ -149,12 +149,12 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Gotchas | 135 | <!-- audit:ignore-promotion --> silences… | trimmed | project-only; parser half of Workflow L75; incident cut |
 | Gotchas | 137 | A markdown link in a spec body creates a… | pointer | §text-first-artifacts |
 | Gotchas | 138 | create-scenario appends its own Open/Res… | pointer | §scenarios |
-| Gotchas | 139 | A version bump needs one build without -… | moved | scripts/audit/check-zero.sh:43-44 (names fix); parity-rebuild tail obsolete |
+| Gotchas | 139 | A version bump needs one build without -… | moved | scripts/audit/check-zero.sh's "cargo build --release --locked failed" finding (names fix); parity-rebuild tail obsolete |
 | Gotchas | 140 | Never write a literal ductus-vX.Y.Z into… | trimmed | project-only; 022 inbox-row incident cut; BLESS caution from L139 kept here |
 | Gotchas | 142 | Gitignored adopter state survives a git… | trimmed | project-only; 048 AC10 incident account cut |
 | Gotchas | 143 | This repo's dogfooded copy of an adopter… | trimmed | project-only; 048/013 adopter-run incident cut |
 | Gotchas | 144 | A spec's review diff base moves forward… | pointer | §implement-phase |
-| Gotchas | 145 | An apostrophe anywhere in an /audit fami… | moved | .github/workflows/framework-checks.yml:196 (shellcheck SC1011); comment proposed |
+| Gotchas | 145 | An apostrophe anywhere in an /audit fami… | moved | .github/workflows/framework-checks.yml's `xargs shellcheck -S warning` step (shellcheck SC1011); comment proposed |
 | Gotchas | 146 | Replacing a hand-rolled predicate with a… | pointer | QUAL-DELEG-001 (framework/rules/quality-cross.md carries the trust-context point) |
 | Gotchas | 147 | remove-inbox-item takes the bullet text,… | pointer | §brownfield-inbox |
 | Gotchas | 148 | A scenario's link to a sibling spec need… | pointer | §text-first-artifacts (hook check-corpus-links also reports it, names fix) |
@@ -163,14 +163,14 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Gotchas | 150 | An unquoted parameter does not word-spli… | trimmed | project-only; fixed check-rule-ids bug story and routing lesson cut |
 | Gotchas | 151 | A word starting with = is a command look… | trimmed | project-only; handoff-note history cut |
 | Gotchas | 152 | A colon after a parameter is a zsh modif… | trimmed | project-only; 025 recovery incident cut |
-| Gotchas | 153 | check-orphaned-references used to report… | deleted | obsolete: fixed in ductus-v0.49.4 (check_artifacts.rs:1560); findings: 0 |
+| Gotchas | 153 | check-orphaned-references used to report… | deleted | obsolete: fixed in ductus-v0.49.4 (check_artifacts.rs's `ships_to_adopter`); findings: 0 |
 | Gotchas | 154 | compute-review-scope and diff-cross-spec… | pointer | §grounding (review.md step 1 states the failed-call branch) |
 | Gotchas | 155 | In a set -e script, [ test ] && cmd as t… | trimmed | project-only; hook and gen-configure-mcp incident history cut |
 | Gotchas | 156 | A feature directory is not necessarily N… | trimmed | project-only (Rust half of §numbering); 051 incident cut |
 | Gotchas | 157 | clap expands {n} in a doc comment as a n… | trimmed | project-only; create-feature incident cut |
 | Gotchas | 158 | Verify that a recorded decision still ho… | trimmed | project-only; 003/000/017 accounts cut (universal: promotion candidate) |
 | Gotchas | 159 | "Record" spans five destinations in this… | pointer | §pipeline-boundaries; the count is dropped from the lead, since the section states none, and 050's row is re-keyed |
-| Gotchas | 160 | Editing framework/commands/implement.md… | moved | runtime/tests/parity.rs:933 (CI runtime.yml); message fix proposed; dup of L121 |
+| Gotchas | 160 | Editing framework/commands/implement.md… | moved | runtime/tests/parity.rs's "stream mismatch" assertion (CI runtime.yml); message fix proposed; dup of L121 |
 | Gotchas | 161 | Mutating code to prove a test fails: run… | trimmed | project-only; dated timings and harness history cut |
 | Gotchas | 162 | The .govern.toml residue, and what it me… | pointer | §drift-prevention; lead was a story, replaced by the constitution's own lead |
 | Gotchas | 163 | Piping a gate command's output replaces… | pointer | §grounding |

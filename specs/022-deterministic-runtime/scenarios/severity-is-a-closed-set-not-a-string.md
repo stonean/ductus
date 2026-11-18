@@ -6,15 +6,15 @@ section: "Follow-on scenarios"
 
 ## Context
 
-Every finding the runtime produces carries `severity` as a bare `String`: `ReviewFinding` (`schema/primitives.rs:417`), `FrontmatterFinding` (`:1313`) and `ArtifactFinding` (`:3669`). The tiers themselves are spelled as inline literals — 16 occurrences in `check_artifacts.rs`, 15 in `validate_frontmatter.rs`, 3 in `schema/extensions.rs`, 2 in `schema/primitives.rs` — with no constant, no enum, and no validation on deserialize. The doc comments name the legal values; nothing enforces them.
+Every finding the runtime produces carries `severity` as a bare `String`: `ReviewFinding`, `FrontmatterFinding` and `ArtifactFinding` (all in `schema/primitives.rs`). The tiers themselves are spelled as inline literals — 16 occurrences in `check_artifacts.rs`, 15 in `validate_frontmatter.rs`, 3 in `schema/extensions.rs`, 2 in `schema/primitives.rs` — with no constant, no enum, and no validation on deserialize. The doc comments name the legal values; nothing enforces them.
 
 **The field holds three different closed sets under one type**, not the two this scenario was first written against — a count corrected while implementing it, by reading every `severity` field rather than the two the grooming pass had measured. `ReviewFinding` uses `must` / `should`. `FrontmatterFinding` and `ArtifactFinding` use `hard-fail` / `blocking` / `advisory` / `informational`. And `AssessSpecQualityRule` / `AssessSpecQualityFinding` carry a *rule* tier — `must` / `should` / `info`, plus the empty string that `severity_from_step_prose` returns when a step's prose names no tier. All five share a name and a `String`, so nothing prevents a value from one vocabulary being emitted into another.
 
-**On the review side the failure direction is permissive, which is what makes this more than hygiene.** `write_review.rs:118-128` buckets findings with the severity test *last* in an if/else chain whose `else` is the catch-all:
+**On the review side the failure direction is permissive, which is what makes this more than hygiene.** `write_review.rs`'s `run` buckets findings with the severity test *last* in an if/else chain whose `else` is the catch-all:
 
 - a finding is `waived` if a waiver matches, else `low` if confidence is low, else `must` if `severity` equals `"must"` case-insensitively, **else `should`**.
 
-`blocking` is then `must_n > 0` (`:130`). So any severity string that is not exactly `"must"` — a typo, a trailing space, a value borrowed from the analyze vocabulary — is silently filed as a SHOULD, `blocking` is written `false`, and the spec passes `check-review-gate`'s MUST check. `finding_rank` (`:402`) derives its ordering from the identical test, so a misspelled MUST also *loses* cross-pass dedup to a correctly-spelled SHOULD, and the surviving copy is the weaker one.
+`blocking` is then `must_n > 0`. So any severity string that is not exactly `"must"` — a typo, a trailing space, a value borrowed from the analyze vocabulary — is silently filed as a SHOULD, `blocking` is written `false`, and the spec passes `check-review-gate`'s MUST check. `finding_rank` derives its ordering from the identical test, so a misspelled MUST also *loses* cross-pass dedup to a correctly-spelled SHOULD, and the surviving copy is the weaker one.
 
 The reachable path is not a source typo. `findings` is `write-review`'s argument, supplied by the host from the `performReview` extension point — the severity string is written freehand by an LLM into JSON on every review run. An unvalidated permissive default sits directly on the path that gates `done`.
 

@@ -19,16 +19,16 @@ A finding takes one of three dispositions: fixed, deferred or waived. The consti
 
 ### The runtime renames, reading the old names only from disk
 
-- `DispositionOutcome` and `DecisionOutcome` (`runtime/src/schema/primitives.rs:159`, `:196`) become `Deferred` and `Waived`.
+- `DispositionOutcome` and `DecisionOutcome` (`runtime/src/schema/primitives.rs:159`) become `Deferred` and `Waived`.
 - `Dispositions` (`runtime/src/schema/primitives.rs:141`) renames its fields to `deferred` and `waived`, with `#[serde(alias = "routed")]` and `#[serde(alias = "discarded")]`. Every field stays required, so a defaulted count still cannot read as decided.
 - `RawDecision::to_ref` (`runtime/src/primitives/decisions.rs:68`) accepts `routed` and `discarded` as the new outcomes.
 - `covering_key` (`runtime/src/primitives/check_artifact_size.rs:189`) accepts `waived` and `discarded`.
-- `render_dispositions` (`runtime/src/primitives/decisions.rs:203`) and `disposition_suffix` (`:216`) emit only the new names (AC14).
+- `render_dispositions` (`runtime/src/primitives/decisions.rs:203`) and `disposition_suffix` emit only the new names (AC14).
 - Host inputs take no alias: command files and the runtime ship in lockstep, so an input alias would be code no caller reaches.
 
 ### A deferral's companion is a target, a work item, or both
 
-`require_companion` (`runtime/src/primitives/decisions.rs:105`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` (`:176`) stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it flattens today, so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
+`require_companion` (`runtime/src/primitives/decisions.rs:105`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it flattens today, so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
 
 ### A review violation's deferral is a stored decision, not a new list
 
@@ -40,10 +40,10 @@ A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisio
 
 A deferral releases a gating finding as `framework/reference/review.md` §Deferrals states (data model, *Release and lapse*).
 
-- `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs:165`), and renders it under Deferred findings.
-- `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs:127`). The host-supplied gross counts still bound the itemized findings (`:329`).
+- `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs`'s `waiver_reason` test, in the bucketing loop of `run` (now `sort_findings`; at `a76c99e8`)), and renders it under Deferred findings.
+- `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs:127`). The host-supplied gross counts still bound the itemized findings (`write_analysis.rs`'s `itemized[slot] > tier_count` check).
 - A non-releasing deferral of a gating finding stays counted, and its decision carries the derived `gating: true`.
-- `check-review-gate`'s outstanding-findings block (`runtime/src/primitives/check_review_gate.rs:318`) names each such decision with its work reference (AC16). Its guidance (`:354`) names deferral as the fix-later exit.
+- `check-review-gate`'s outstanding-findings block (`runtime/src/primitives/check_review_gate.rs`'s `disposition_block`) names each such decision with its work reference (AC16). Its guidance (`disposition_block`'s "Fix each outstanding finding") names deferral as the fix-later exit.
 
 ### Lapse is a `process-decisions` classification
 
@@ -61,7 +61,7 @@ For a violation, a `--defer` that replaces a stored waiver anchor passes it in `
 
 ### The waiver example loses its work reference
 
-`framework/reference/review.md:726` drops `ticket` from its example open-schema waiver fields (AC6). `framework/reference/review.md` §Waivers gains a pointer to deferral as the fix-later path.
+`framework/reference/review.md`'s *Malformed and duplicate waivers* section drops `ticket` from its example open-schema waiver fields (AC6). `framework/reference/review.md` §Waivers gains a pointer to deferral as the fix-later path.
 
 ### The sweep is by meaning, over the declared live-artifact set
 

@@ -140,7 +140,7 @@ Worked example — 026's AC5 (AC18), after `531e3ea` and `3ff65445` deleted both
 | `framework/workflows/registry.json` | yes | no → finding |
 | `scripts/audit/registry-equivalence.sh` | yes | no → finding |
 
-Rejected by the grammar, and why each exclusion is load-bearing in this repo: `/{project}:analyze` (leading `/`, `{`, `:`), `https://example.com/x` (`:`), `runtime/src/primitives/mod.rs:841` (`:`), `specs/*/spec.md` (`*`), `--exclude=a/b` (leading `-`), `scenarios/` (no internal separator), `scripts/…` (non-ASCII), `specs/NNN-feature/review.md` (`NNN`).
+Rejected by the grammar, and why each exclusion is load-bearing in this repo: `/{project}:analyze` (leading `/`, `{`, `:`), `https://example.com/x` (`:`), `<file>:<line>` (`:`), `specs/*/spec.md` (`*`), `--exclude=a/b` (leading `-`), `scenarios/` (no internal separator), `scripts/…` (non-ASCII), `specs/NNN-feature/review.md` (`NNN`).
 
 ### A criterion asserting a path was never created
 

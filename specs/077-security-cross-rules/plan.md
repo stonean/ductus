@@ -11,7 +11,7 @@ Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC
 - **Re-point every yield and Statement** that names them, and sweep every live citation.
 - **Ship the file**: the manifest row, `docs/rules.md`, the README, and `runtime/CHANGELOG.md`'s `## [Unreleased]` section.
 
-No runtime behaviour changes; one corpus test is added (§Verification). The rule-ID regexes in `runtime/src/primitives/check_rule_ids.rs:103` and `runtime/src/primitives/rule_sections.rs:77` already accept any two-to-five-letter prefix.
+No runtime behaviour changes; one corpus test is added (§Verification). The rule-ID regexes in `runtime/src/primitives/check_rule_ids.rs`'s `citation_regex` and `runtime/src/primitives/rule_sections.rs`'s `heading_id_regex` already accept any two-to-five-letter prefix.
 
 ## Technical Decisions
 
@@ -23,7 +23,7 @@ There are three registration sites, and each must agree.
 - **`scripts/lint-rule-ids.sh`**'s `id_re` lists `SEC` beside `BE`, `FE`, `CFG` and `QUAL`, the source comment above it names 077's data-model, and the malformed-heading message lists `SEC`.
 - **The analyze reference** lists 077's data-model beside 008's and 017's in item 1. 008's `specs/008-security-rules/data-model.md` (§Rule ID format, the paragraph after the category table) names `security-cross.md`'s `SEC` prefix beside `CFG` and `QUAL`.
 
-`security-cross.md`'s header declares the format and its categories, as `quality-cross.md`'s does (`framework/rules/quality-cross.md:3`).
+`security-cross.md`'s header declares the format and its categories, as `quality-cross.md`'s does (`framework/rules/quality-cross.md`'s header paragraph).
 
 ### `SEC-LOG-001` states its own value set
 
@@ -83,7 +83,7 @@ These keep the old ID, because they record what was decided or measured: 008's `
 
 ### Distribution
 
-- `framework/bootstrap/ductus.md` gains the row `framework/rules/security-cross.md` → `specs/rules/security-cross.md`, between `security-backend.md`'s and `security-frontend.md`'s. The surface filter keeps every `*-cross.md` entry unconditionally (line 836), so every shape installs it.
+- `framework/bootstrap/ductus.md` gains the row `framework/rules/security-cross.md` → `specs/rules/security-cross.md`, between `security-backend.md`'s and `security-frontend.md`'s. The surface filter keeps every `*-cross.md` entry unconditionally (its **Rule-file surface filter** paragraph), so every shape installs it.
 - `docs/rules.md`'s "What ships" table gains a row.
 - `README.md`'s security bullet (line 52) names the cross-surface file.
 - `framework/bootstrap/ductus-procedure.md`'s §Security Audit (brownfield) triggers on a newly created `security-cross.md` as on either surface file, loads it, and checks each loaded file's IDs, `SEC-{CATEGORY}-{NNN}` among them, against the format `/{project}:analyze` reads for that file (owner, 2026-11-03, recorded on task 11), so the upgrade that installs it previews its rules' gaps on a project's existing specs; its §Per-rule check applies each rule to a spec as `/{project}:analyze` does, its trigger, commitment, flags and set-asides judged against the spec's `spec.md`, `plan.md`, `data-model.md` and scenarios together, with each cross-spec file the spec or a rule's Verification refers to, one finding per spec and rule (owner, 2026-11-03, recorded on task 11), and honours a yield wherever its Verification states one, judging a load condition against every rule file installed under `specs/rules/`, so a case it yields to a rule in an installed file is left to that rule, as `/{project}:analyze` leaves it: the audit reports the case under the owner's ID when it newly created the owner's file too, and not at all when that file was already installed, on an upgrade or a surface added alike (owner, 2026-11-02, two calls, recorded on task 8). An owner outside the security rule files, in a file the manifest pass newly created, has its file loaded with the same integrity checks and is applied to that case alone, as `/{project}:analyze` applies it — its whole Verification judged, whether or not the spec meets the yielding rule's commitment — so the case is reported under its ID where the yielding rule's trigger fires too and `/{project}:analyze` reports it (owner, 2026-11-03, recorded on task 11). A change under `framework/bootstrap/` is verified by a real adopter bootstrap (tasks 10 and 11).

@@ -22,8 +22,8 @@ rewritten. The feature is a read of local disk plus a report.
 `runtime/src/primitives/resolve_references.rs:94` (`load_services`) is the model:
 it resolves the config path through `paths::config_path(repo)`, treats an absent
 file as an empty registry, and maps a malformed one to `PrimitiveError::Toml`.
-`classify` (`:107`) then resolves the checkout with `resolve_path(repo, &service.path)`
-— `..` is permitted, documented at `:121-124` as "a sibling checkout is the normal
+`classify` then resolves the checkout with `resolve_path(repo, &service.path)`
+— `..` is permitted, documented as "a sibling checkout is the normal
 case (`path = "../api"`), and this is machine-local config, not an LLM-supplied
 path" — and treats `!checkout.is_dir()` as `NotCheckedOut` rather than an error.
 
@@ -48,7 +48,7 @@ the same entries to load the same documents in the same order on any machine —
 order delivers that, while config order would not survive a TOML reformat and hash-map
 traversal order is not stable at all.
 
-**Wiring spans eight sites, not two** (`AGENTS.md:99`). `AGENTS.md` then named
+**Wiring spans eight sites, not two** (`AGENTS.md`'s "A new `ductus` runtime primitive wires into more than" gotcha). `AGENTS.md` then named
 `parser/mod.rs` for `PRIMITIVE_NAMES`, but that constant is *defined from*
 `PRIMITIVE_REGISTRY` (`runtime/src/schema/registry.rs:16`), which is the single
 source feeding both it and the server's `tool_names`, the registry less
@@ -95,7 +95,7 @@ preservation of everything outside the block without a second mechanism.
 
 `framework/bootstrap/ductus.md` §Project Configuration validates each entry when it reads the config:
 alias is a bare TOML key, `repo` is URL-shaped, `path` is non-empty. A `path` that
-does not resolve is a **warning**, never a rejection — `framework/commands/link.md:65`
+does not resolve is a **warning**, never a rejection — `framework/commands/link.md`'s **path** bullet
 settles that shape for `[services]` and the spec adopts it.
 
 No `/ductus:link`-style command is added. Registration is a hand-edit plus `/ductus`
@@ -110,7 +110,7 @@ by `cp framework/bootstrap/ductus.md framework/bootstrap/govern.md`.
 
 ### Editing `target.md` stales a parity golden
 
-Per `AGENTS.md:116`, `stage_fixture` copies `framework/commands/<cmd>.md` into the
+Per `AGENTS.md`'s "Editing `framework/commands/implement.md` stales the `implement-basic` parity golden" gotcha, `stage_fixture` copies `framework/commands/<cmd>.md` into the
 fixture tree before its first commit, so editing a command source changes that tree's
 shas and the `implement-basic` golden records them. After the `target.md` edit, re-run
 `cargo test --release --locked --test parity`, re-bless if it fails, and verify the

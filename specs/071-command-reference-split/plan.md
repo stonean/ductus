@@ -192,7 +192,7 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   `X's step N`: the pointer rewrite puts such references into `implement.md`'s
   Instructions, which would otherwise resolve against implement's own steps.
 - **Doc comments** that place the reference in `analyze.md`
-  (`check_artifacts.rs:9`, and the `ArtifactFinding` doc comment in
+  (`check_artifacts.rs`'s module doc comment, and the `ArtifactFinding` doc comment in
   `schema/primitives.rs`) and the `check-step-references` description
   (`mcp/server.rs`, `schema/primitives.rs`) are corrected.
 

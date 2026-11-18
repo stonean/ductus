@@ -10,7 +10,7 @@ Implements [070 — Performance rules (frontend)](spec.md).
 
 ### The header states the severity posture (AC11)
 
-The header gains the posture sentence from Resolved Questions in the form its siblings use, "A rule is **MUST** only when …" (line 3 of `framework/rules/concurrency-backend.md`, `performance-backend.md`, `reliability-backend.md` and `api-backend.md`). It names where a rule is **SHOULD**, as `api-backend.md`'s does, since Resolved Questions states that case too. The sentence: a rule is MUST only when its absence blocks a user regardless of scale, such as text left invisible, rendering held by a parser-blocking script, or the main content's image deferred, or leaves the page without the budgets and real-user measurement the other rules answer to, and SHOULD where it is one means among others toward a budget. It sits after the design-time sentence, and the header stays one paragraph.
+The header gains the posture sentence from Resolved Questions in the form its siblings use, "A rule is **MUST** only when …" (the header of `framework/rules/concurrency-backend.md`, `performance-backend.md`, `reliability-backend.md` and `api-backend.md`). It names where a rule is **SHOULD**, as `api-backend.md`'s does, since Resolved Questions states that case too. The sentence: a rule is MUST only when its absence blocks a user regardless of scale, such as text left invisible, rendering held by a parser-blocking script, or the main content's image deferred, or leaves the page without the budgets and real-user measurement the other rules answer to, and SHOULD where it is one means among others toward a budget. It sits after the design-time sentence, and the header stays one paragraph.
 
 ### Five rules move to SHOULD under their IDs (AC11)
 
@@ -44,7 +44,7 @@ Task 3 can rewrite rule text, so the walk follows it. The method for each criter
 - **AC3's schema**: the corpus test, plus a read of each rule's heading, Statement, Verification and Source.
 - **AC5, AC6**: a read of each MUST Statement and Verification, and of `FE-BUNDLE-001`.
 - **AC7, AC8**: `check-rule-ids` against every file in `framework/rules/`, a read of each cited rule, and `BE-CACHE-004`'s deferral in `performance-backend.md`.
-- **AC9**: the manifest row (`framework/bootstrap/ductus.md:875`), plus `discover-rule-files` under `frontend`.
+- **AC9**: the manifest row (`framework/bootstrap/ductus.md`'s `framework/rules/performance-frontend.md` row), plus `discover-rule-files` under `frontend`.
 - **AC10**: a grep of `framework/constitution.md`.
 
 A check that fails is fixed inside that task, since it is inside this spec.

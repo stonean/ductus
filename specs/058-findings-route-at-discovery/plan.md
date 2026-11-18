@@ -40,7 +40,7 @@ fixed field set:
 
 - `render_report` writes the frontmatter at
   `runtime/src/primitives/write_review.rs:477-523` and writes the file with
-  `write_atomic` at `:222`.
+  `write_atomic`.
 - `render_analysis` does the same at
   `runtime/src/primitives/write_analysis.rs:195-225`.
 
@@ -51,10 +51,10 @@ rather than riding along as unknown keys.
 
 **`dispositions:` is a typed field, and its absence has a meaning.** It is
 `Option<Dispositions>` on `ReviewBlock` (`runtime/src/schema/primitives.rs:35`)
-and `AnalyzeBlock` (`:136`). `None` means the record predates 058.
+and `AnalyzeBlock`. `None` means the record predates 058.
 `Some(zeros)` means a run that found nothing. The two states must never
 collapse, the same rule `examined: Option<u32>` already follows
-(`primitives.rs:90-95`). Neither struct denies unknown fields, nor does any primitive's `Args` struct, and `runtime/src/mcp/server.rs:131` explains why. So a
+(`primitives.rs:90-95`). Neither struct denies unknown fields, nor does any primitive's `Args` struct, and `runtime/src/mcp/server.rs` (the doc comment beginning "No primitive `Args` struct sets `#[serde(deny_unknown_fields)]`") explains why. So a
 record that still carries `captured-issues` parses unchanged. The full shapes
 are in [data-model.md](data-model.md).
 
@@ -66,7 +66,7 @@ are in [data-model.md](data-model.md).
 `read_recorded_waivers` becomes a thin wrapper over it. Open-schema extras on
 an entry are preserved with the `RawWaiverFull` pattern: a
 `#[serde(flatten)] extra` map, re-rendered verbatim
-(`write_review.rs:872-906`, `:967-981`).
+(`write_review.rs`'s `render_extra_field` and `RawWaiverFull`).
 
 ### A new read-only primitive, `process-decisions`, classifies stored decisions before the host proposes
 
@@ -77,7 +77,7 @@ not wait for it: `/{project}:review` calls `process-waivers` at step 8, before
 `write-review` at step 11 (`framework/commands/review.md`, §Instructions).
 
 `process-decisions` mirrors `process-waivers`
-(`runtime/src/primitives/process_waivers.rs:70-120`):
+(`runtime/src/primitives/process_waivers.rs`'s `run`):
 
 - **Args:**
   - `feature`;
@@ -137,7 +137,7 @@ replaces the stored entry.
 
 The key is `{family} — {message}` for analyze findings. The old capture key's
 leading `{category}` is host-assigned and exists only in prose
-(`framework/commands/analyze.md:76`); `ArtifactFinding` carries no category
+(`framework/commands/analyze.md`, the "Capture the findings (host responsibility)" step, at `5a1d410b`); `ArtifactFinding` carries no category
 field (`primitives.rs:3664-3683`). For review observations the key is the
 observation's rendered line, as `observation_line` builds it
 (`write_review.rs:361-369`). Because observation text is the reviewer's own
@@ -148,14 +148,13 @@ to reproduce.
 ### `write-review` stops capturing and starts recording dispositions
 
 - **Remove the write-through.** Delete `capture_observations`
-  (`write_review.rs:332-356`), its call before the report write (`:209-216`),
-  `inbox_bullet_text` (`:376-381`), the `observations_captured` result field
-  (`primitives.rs:590`), and `inbox_standing` from the result (`:240`;
-  `primitives.rs:623`).
+  (`write_review.rs:332-356`), its call before the report write,
+  `inbox_bullet_text`, the `observations_captured` result field
+  (`primitives.rs:590`), and `inbox_standing` from the result (`primitives.rs:623`).
 - **Remove the captured-issues window.** Delete `WriteReviewArgs.captured_issues`
   (`primitives.rs:529`), the `captured-issues:` frontmatter line
   (`write_review.rs:492`), and the `## Captured issues` section with
-  `render_captured` (`:562-565`, `:661-679`). `invalidate-review` nulls
+  `render_captured`. `invalidate-review` nulls
   `dispositions:` with the run's other counts, and keeps nulling
   `captured-issues` for the pre-058 records that still carry it. Its
   keep-every-other-key rule already preserves `decisions:`.
@@ -170,7 +169,7 @@ to reproduce.
   `WriteReviewArgs` gains `expired-decisions` and `decided-by`, per
   the `process-decisions` decision above.
 
-  `render_observations` (`:681-695`) renders the outcome and its target or
+  `render_observations` renders the outcome and its target or
   reason beside each observation. The `dispositions:` map is computed from the
   observations; the caller never supplies it.
 - **An empty scope still records.** Observations on an empty-scope run are
@@ -202,7 +201,7 @@ With capture gone, the writer has to be given the findings.
   path no host supplies them, so the walker tallies them from its own
   detection steps as it dispatches each, by the tier the step assigns
   (`runtime/src/interpreter/analyze_tally.rs`). The existing dispatch of
-  `write-analysis` (`runtime/tests/golden/analyze-basic.jsonl:15`) bound none,
+  `write-analysis` (`runtime/tests/golden/analyze-basic.jsonl`'s "dispatching primitive `write-analysis`" progress record) bound none,
   so every exec record read 0/0/0 whatever detection found; 058's second review
   found it (QUAL-CLAIM-001). `undispositioned` is computed as the live tier
   total minus the live findings that carry a `deferred` or `waived` outcome.
@@ -219,9 +218,9 @@ With capture gone, the writer has to be given the findings.
   - a tier count above its itemized findings renders a
     `{n} finding(s) not itemized` line, so the body cannot understate what the
     frontmatter counts;
-  - the "Findings route to the inbox" Summary sentence (`:234`) and the inbox
-    pointer in `tier_line` (`:266`) go;
-  - checkbox stripping (`render_captured_plain`, `:289-313`) carries over to
+  - the "Findings route to the inbox" Summary sentence and the inbox
+    pointer in `tier_line` go;
+  - checkbox stripping (`render_captured_plain`) carries over to
     the new renderer, so 057's AC13 still holds.
 
 ### The inbox windows and the standing row leave the review and implement primitives
@@ -229,12 +228,10 @@ With capture gone, the writer has to be given the findings.
 - **`compute-review-scope`:** drop `captured_issues` from
   `ComputeReviewScopeResult` (`primitives.rs:402`), along with `diff_since`,
   `inbox_in_worktree`, and `inbox_at`
-  (`runtime/src/primitives/compute_review_scope.rs:80-85`, `:108`,
-  `:134-206`).
+  (`runtime/src/primitives/compute_review_scope.rs:80-85`).
 - **`diff-cross-spec`:** drop `inbox_additions` and `inbox_standing`
-  (`runtime/src/primitives/diff_cross_spec.rs:66`, `:71`, `:96-106`,
-  `:128-148`, `:155-156`; `primitives.rs:3500`, `:3509`). **Keep** the
-  exclusion of `inbox.md` from `cross_spec_paths` (`diff_cross_spec.rs:120`):
+  (`runtime/src/primitives/diff_cross_spec.rs:66`; `primitives.rs:3500`). **Keep** the
+  exclusion of `inbox.md` from `cross_spec_paths` (`diff_cross_spec.rs`'s `s != inbox_rel` filter):
   editing a manual todo is not a cross-spec impact.
 - **`inbox_standing::standing`** (`runtime/src/primitives/inbox_standing.rs:37`)
   survives, with `dashboard` as its only caller.
@@ -247,8 +244,8 @@ Rationale: with no pass able to append to the inbox, these windows have nothing 
 The view gains an `Inbox:` line, rendered at this spec by `render_callouts`
 (`runtime/src/primitives/dashboard.rs:191-309`) and since spec 080 by the
 pipeline view's `inbox_line`. Today the four state strings exist only in command prose
-(`framework/commands/implement.md:93-96`, `framework/commands/review.md:780-783`),
-and `dashboard` never reads the inbox (`review.md:767-768`). Rendering them in
+(`framework/commands/implement.md`'s "The standing backlog" paragraph and `framework/commands/review.md`'s "The `inbox` row" section, both at `5a1d410b`),
+and `dashboard` never reads the inbox (`review.md`'s "does not read the inbox", at `5a1d410b`). Rendering them in
 `dashboard` makes the row deterministic and covers it with `status.md`'s
 strict-stdout parity golden. The row is rendered on every run: outstanding with
 the oldest item's date, outstanding with age undeterminable, clean, or no file.
@@ -277,14 +274,14 @@ Two new `ReviewGateBlock` variants (the enum is at `primitives.rs:3129`):
 
 Blocking on a missing field departs from the existing precedent, where a record
 that predates a field is `Undeterminable` and rides a notice on a passing gate
-(`check_review_gate.rs:203-215`; `primitives.rs:63-74`). The departure is the
+(`check_review_gate.rs`, the comment beginning "The gate passes. Before saying so"; `primitives.rs`, the doc comment on `ReviewBlock.reviewed_digest`). The departure is the
 decision Resolved Question 5 made. It matches the gate's own refusal of a
 grandfather clause for the analyze record (`check_review_gate.rs:269-274`).
 
 Two stale doc comments are corrected while the gate is being edited: `run`'s
-"all six block reasons" (`:48-49`) and the module doc (`:5-14`). The gate order
-restated in `framework/commands/implement.md:83` and `:150-176`, and in the MCP
-description (`runtime/src/mcp/server.rs:793-794`), gains the two checks.
+"all six block reasons" and the module doc. The gate order
+restated in `framework/commands/implement.md`'s step "Invoke `check-review-gate` against the feature" and its "Pre-done gate" item (at `5a1d410b`), and in the MCP
+description (the `description` attribute of `check-review-gate` in `runtime/src/mcp/server.rs`, at `5a1d410b`), gains the two checks.
 
 ### A new `disposition-drift` family, rather than a new condition inside analyze-state drift
 
@@ -320,7 +317,7 @@ doc on `CheckArtifactsResult.findings` is corrected in passing.
 
 ### `append-task` gains an opt-in title dedup, so disposition tasks stay idempotent
 
-`append-task` dedups only on a scenario slug (`append_task.rs:85-103`). A
+`append-task` dedups only on a scenario slug (`append_task.rs`'s "Dedup guard" comment in `run`). A
 slug-less body appends every time, by design (`a_slugless_body_still_appends_every_time`).
 A disposition task has no scenario to point at, so a re-run of an interrupted
 `/{project}:implement` would append the same finding twice. That would break the
@@ -360,8 +357,8 @@ keys are per-finding.
 Routing reuses the existing `routeInboxItem` extension point
 (`runtime/src/schema/extensions.rs:314-379`), with the finding's text as
 `item_text`. The five-route vocabulary is unchanged. Only the docs on
-`InboxRoute::Chore` ("stays in the inbox", `:370`) and `InboxRoute::Discard`
-(`:372`) are rewritten, to describe the chore being fixed and the item being
+`InboxRoute::Chore` ("stays in the inbox") and `InboxRoute::Discard`
+are rewritten, to describe the chore being fixed and the item being
 removed.
 
 - **`analyze.md`:**
@@ -372,7 +369,7 @@ removed.
   - The `write-analysis` step, now step 19, passes `findings`,
     `expired-decisions`, and `decided-by` instead of `captured-issues`.
   - The Purpose, Scope Boundaries, frontmatter description, and
-    the Finding capture (durability) section (`:365-403`) are rewritten to match.
+    the Finding capture (durability) section are rewritten to match.
   - The renumbering moves the `write-analysis` dispatch, so
     `analyze-basic.jsonl` is re-blessed.
 - **`review.md`:**
@@ -380,40 +377,40 @@ removed.
     `write-review`, which moves to step 11 and passes dispositioned
     observations, `expired-decisions`, and `decided-by`. The step move is
     pinned by `runtime/tests/review_command.rs`, which is updated with it.
-  - The Captured issues and Observations' write-through sections (`:412-473`), and
-    The inbox row section (`:763-806`) are replaced.
+  - The Captured issues and Observations' write-through sections, and
+    The inbox row section are replaced.
 - **`implement.md`:**
-  - Walk step 5 (`:132`) appends a disposition task through `append-task`
+  - Walk step 5 ("Route an incidental issue by scope") appends a disposition task through `append-task`
     with `dedup-title`.
-  - Steps 7, 13, and 15 (`:68`, `:81`, `:86-99`) drop the window and the
+  - Steps 7, 13, and 15 drop the window and the
     standing row, and list the pending disposition tasks instead.
-  - The markdown-only gate step 6 (`:186`) follows.
-  - The inbox write-boundary carve-out (`:50`) goes.
-- **`amend.md`:** the chore guard and its routing row (`:149`, `:218`, `:234`)
+  - The markdown-only gate step 6 follows.
+  - The inbox write-boundary carve-out goes.
+- **`amend.md`:** the chore guard ("Is this a chore rather than a spec addition?"), its routing row ("chore (scenario-route guard)") and its chore reply ("That's general maintenance, not a spec addition")
   fix the chore instead of redirecting to `/{project}:log`.
 - **`groom.md`:** the one surviving "leave it in the inbox" line for a chore
-  (`:72`) contradicts step 8 (`:49`) and is corrected. The five routes are
+  contradicts step 8 and is corrected. The five routes are
   unchanged.
 - **`log.md`**, **`help.md`**, and **`status.md`:** `status.md` gains the inbox
-  row. `help.md:125` describes the inbox as manual capture.
+  row. `help.md`'s "Inbox" entry describes the inbox as manual capture.
 
 ### The constitution states the rule once, and every command points at it
 
 - **§design-principles** (`framework/constitution.md:52`) drops "an inbox item"
   from the second disposition.
-- **§grounding** (`:108`) routes an implementation-time assumption to a task or
+- **§grounding** routes an implementation-time assumption to a task or
   an open question.
-- **§bug-handling** (`:302`) says a chore found by a run is fixed in that run,
+- **§bug-handling** says a chore found by a run is fixed in that run,
   and a chore logged by hand lives in the inbox until it is done.
 - **§brownfield-inbox:**
-  - `:444-458` is rewritten to describe manual capture, which also resolves the
-    `:449` contradiction ("leaves it in place") with `:456`;
-  - `#### Automatic issue capture` (`:461-472`) is replaced by
+  - The opening of §brownfield-inbox ("A `specs/inbox.md` file is the project's capture queue" through "the incidental-capture role is ongoing") is rewritten to describe manual capture, which also resolves the
+    contradiction between "Items are recorded with `/log` (manual) or captured automatically" ("leaves it in place") and "When an item routes to a chore, fix it";
+  - `#### Automatic issue capture` is replaced by
     `#### Finding dispositions`, the three-disposition rule with the scope
     tiers, the disposition task, persisted decisions, and the gate.
-- **The Frontmatter Schema rows** (`:552`, `:574`) replace `captured-issues`
+- **The Frontmatter Schema rows** replace `captured-issues`
   with `dispositions` and `decisions`.
-- **§pipeline-boundaries** (`:752`) kept "an inbox item" as a destination,
+- **§pipeline-boundaries** kept "an inbox item" as a destination,
   but named `/{project}:log` as its only producer; since `050-constitution`'s
   cut to one read, §brownfield-inbox names it.
 
@@ -422,7 +419,7 @@ Rationale: §design-principles itself listed an inbox item as a disposition the 
 ### The inbox template changes, and a migration carries its guidance to existing adopters
 
 `specs/inbox.md` is installed with strategy `create`
-(`framework/bootstrap/ductus.md:670-677`; `runtime/src/primitives/apply_manifest.rs:16-17`),
+(`framework/bootstrap/ductus.md`'s "Project-specific shared files (strategy: create)" table; `runtime/src/primitives/apply_manifest.rs`'s module-doc entry "**create**: substitute placeholders, write only when the destination is absent"),
 and no migration targets it. So an adopter keeps whatever header it first
 received.
 
@@ -463,10 +460,10 @@ received.
 
 In `framework/bootstrap/ductus-procedure.md`:
 
-- The Writing findings to the inbox and Deduplication sections (`:209-223`) are removed.
-- `framework/bootstrap/ductus-procedure.md` §Audit summary (`:225-227`) and §Security audit summary (`:369-381`) print
+- The Writing findings to the inbox and Deduplication sections are removed.
+- `framework/bootstrap/ductus-procedure.md` §Audit summary and §Security audit summary print
   each finding with its spec and a pointer to `/{project}:analyze`.
-- The trigger (`:179-182`) and rule loading are unchanged.
+- The trigger ("Run the audit only when **both** conditions hold") and rule loading are unchanged.
 - `ductus.md` carries no capture prose, so its Family 21 byte-identity with
   `govern.md` is unaffected.
 
@@ -514,7 +511,7 @@ by the old binary would carry no map and would fail AC29 at the next gate.
 
 The bump is `0.52.1` → `0.53.0`, a minor release: primitive result schemas
 lose fields, a primitive is added, and the gate blocks on new conditions. The
-version goes in the repo-root `version` file, `runtime/Cargo.toml:3`, and a
+version goes in the repo-root `version` file, `runtime/Cargo.toml`'s `version`, and a
 `runtime/CHANGELOG.md` section. `Cargo.lock` is refreshed by one build without
 `--locked`. Family 20 checks that they agree. The changelog section covers
 every runtime change this release carries, not only 058's (tasks 1–48): 022's
@@ -523,8 +520,8 @@ owed to another tree no longer holding `done`. The tag `ductus-v0.53.0` is
 cut after 058, 022, and 051 are all `done`, following the `AGENTS.md` release
 entry. The new
 primitive joins `framework/runtime-tools.txt`, whose parity with the registry
-is asserted by `runtime/tests/mcp.rs:109-119`. The configure permission list
-gains it too (`framework/bootstrap/configure/claude.md:119-120`).
+is asserted by `runtime/tests/mcp.rs`'s `lists_every_manifest_tool_and_canonical_set`. The configure permission list
+gains it too (`framework/bootstrap/configure/claude.md`'s allow list, beside its `mcp__ductus__append-inbox` and `mcp__ductus__remove-inbox-item` entries at `5a1d410b`).
 
 ## Affected Files
 

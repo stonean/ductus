@@ -10,7 +10,7 @@
 | `.ductus/sessions/.gitignore` | `*` | The first process to hold the session lock, when absent (`scenarios/first-writers-create-the-ignore-file-once.md`) |
 
 The shared default's keys and field order are unchanged
-(`runtime/src/primitives/write_session.rs:219-235`): `feature`, `path`,
+(`runtime/src/primitives/write_session.rs`'s `SessionRecord`, at `25c946ea`): `feature`, `path`,
 `scenario`, `scenario-path`, `set-at`, `cli-config-dir`, all optional.
 
 ## Sessions on different specs

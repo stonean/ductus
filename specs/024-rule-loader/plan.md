@@ -63,7 +63,7 @@ Wiring: a new step in `.github/workflows/framework-checks.yml`, alongside the ex
 
 ### Constitution edit
 
-`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, names the runtime warning as the adopter-side safety net. Its two inline references to `framework/rules/configuration.md` (lines 173 and 179) are renamed to `framework/rules/configuration-cross.md`. No anchor changes, no cascading reference updates.
+`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, names the runtime warning as the adopter-side safety net. Its two inline references to `framework/rules/configuration.md` (under `#### Constants and configuration` and `#### Environment variables`) are renamed to `framework/rules/configuration-cross.md`. No anchor changes, no cascading reference updates.
 
 ### `AGENTS.md` fallback narrowed (not removed)
 
@@ -81,9 +81,9 @@ This drops the "depend on author diligence" failure mode for files inside `frame
 | `framework/rules/configuration.md` → `framework/rules/configuration-cross.md` | Rename | Conform to closed-suffix policy; rule IDs unchanged |
 | `framework/constitution.md` | Edit | Add §rules `#### Filename suffix` subsection; update two `configuration.md` refs |
 | `framework/commands/review.md` | Edit | Rewrite the Behavior section's step 5 + Load rules for suffix discovery; add `loading rule files:` notice; rewrite Notes for adopters |
-| `framework/commands/analyze.md` | Edit | Apply shared suffix discovery; remove the closed list at lines 137–141; clarify "no stack filtering" |
-| `framework/commands/implement.md` | Edit | Update §Scope Boundaries reference at line 49 |
-| `framework/commands/groom.md` | Edit | Update `specs/configuration.md` reference at line 43 |
+| `framework/commands/analyze.md` | Edit | Apply shared suffix discovery; remove the closed list of `specs/security-backend.md`, `specs/security-frontend.md` and `specs/configuration.md`; clarify "no stack filtering" |
+| `framework/commands/implement.md` | Edit | Update §Scope Boundaries' `framework/rules/configuration.md` reference |
+| `framework/commands/groom.md` | Edit | Update `specs/configuration.md` reference in the "If a loaded rule file already covers the domain" bullet |
 | `framework/bootstrap/ductus.md` | Edit | Update bootstrap map source/destination; add one-pass migration for `specs/configuration.md` → `specs/rules/configuration-cross.md` |
 | `specs/README.md` | Edit | Record rename under the "Past Renames" section |
 | `scripts/lint-rule-filenames.sh` | Create | Closed-suffix lint, exits non-zero on any `framework/rules/*.md` without a valid suffix |

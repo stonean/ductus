@@ -36,7 +36,7 @@ Three findings, because three repairs differ:
 ## Edge Cases
 
 - **A `{placeholder}` URL.** The installer's release-download URLs carry `{pin}` and `{triple}`. These are documented shapes rather than pointers and are excluded by construction.
-- **Trailing punctuation, fragments, and queries.** A URL ending a sentence absorbs the period; a `#L12` or `#anchor` is not part of the path. Both are stripped before the existence test, and the path is percent-decoded, so a target with an escaped character resolves rather than reporting falsely.
+- **Trailing punctuation, fragments, and queries.** A URL ending a sentence absorbs the period; a line fragment (`#L<n>`) or `#anchor` is not part of the path. Both are stripped before the existence test, and the path is percent-decoded, so a target with an escaped character resolves rather than reporting falsely.
 - **Generated command copies.** Not a subject. They carry whatever their source carries and the repair is a ductus release, not an edit there — the line Families 26 and 34 already draw.
 - **An empty markdown corpus** is a finding: a scan that enumerated nothing must not exit like one that enumerated everything.
 - **Zero URLs is *not* a finding.** A repository citing nothing absolutely is legitimately clean. The URL count on stderr is what keeps that from reading the same as an extraction that silently stopped matching — the one number separating "every self-referencing URL resolves" from "the regex no longer matches any", which otherwise exit identically.

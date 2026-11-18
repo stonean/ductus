@@ -10,7 +10,7 @@ Implements [068 — Backend API contract rules](spec.md).
 
 ### The header states the severity posture and the `ERRENV` reach (AC12, AC15)
 
-The header gains the posture sentence from the spec's *Severity posture*, in the form its siblings use: "A rule is **MUST** only when …; the rest are **SHOULD**" (`framework/rules/concurrency-backend.md`, `performance-backend.md` and `reliability-backend.md`, line 3 of each). It sits after the design-time sentence, and the header stays one paragraph. The `ERRENV` entry in the category declaration says the category governs a resource-oriented HTTP API. The reach sentence says an RPC protocol carried over HTTP counts, for `ERRENV`, as an API that is not an HTTP API, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s. Each `ERRENV` Statement names a resource-oriented HTTP API as its subject, which AC15 asks of the Statements themselves. `security-backend.md` does not change: `BE-ERR-002`'s Verification already reaches "an HTTP API or one that is not, such as a gRPC or JSON-RPC service" (`framework/rules/security-backend.md:637`), and `BE-ERR-004`'s Verification reaches "an API that is not an HTTP API" (`:653`).
+The header gains the posture sentence from the spec's *Severity posture*, in the form its siblings use: "A rule is **MUST** only when …; the rest are **SHOULD**" (`framework/rules/concurrency-backend.md`, `performance-backend.md` and `reliability-backend.md`, the header paragraph of each). It sits after the design-time sentence, and the header stays one paragraph. The `ERRENV` entry in the category declaration says the category governs a resource-oriented HTTP API. The reach sentence says an RPC protocol carried over HTTP counts, for `ERRENV`, as an API that is not an HTTP API, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s. Each `ERRENV` Statement names a resource-oriented HTTP API as its subject, which AC15 asks of the Statements themselves. `security-backend.md` does not change: `BE-ERR-002`'s Verification already reaches "an HTTP API or one that is not, such as a gRPC or JSON-RPC service" (`framework/rules/security-backend.md:637`), and `BE-ERR-004`'s Verification reaches "an API that is not an HTTP API".
 
 ### Three rules take the tier the posture gives them (AC12)
 
@@ -50,7 +50,7 @@ AC4 can rewrite rule text, so the walk follows it. The method for each criterion
 - **AC3**: the corpus test, plus a read of each rule's heading, Statement and Verification.
 - **AC5, AC6, AC8, AC9**: a read of each rule against the spec.
 - **AC7**: `check-rule-ids`, plus a read of each cited rule and of every other rule file's citations into this one.
-- **AC10**: the manifest row (`framework/bootstrap/ductus.md:870`), plus `discover-rule-files` under `backend`.
+- **AC10**: the manifest row (`framework/bootstrap/ductus.md`, the `framework/rules/api-backend.md` row), plus `discover-rule-files` under `backend`.
 - **AC11**: a grep of `framework/constitution.md`.
 
 A check that fails is fixed inside that task, since it is inside this spec.

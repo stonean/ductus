@@ -23,23 +23,23 @@ Every path the procedure deletes is built from values screened before it runs (`
 
 ### Archive per 027's sunset flow
 
-`skills-to-workflows` and `workflow-filename-rename` leave `framework/migrations.toml`; their procedure-file text is appended to root `CHANGELOG.md` under `## Archived migrations` with headings naming id, `introduced_in`, and `sunset_after` (027 acceptance criterion, `specs/027-bootstrap-migration-registry/spec.md:99`), replacing the *"None yet"* placeholder; the two `framework/migrations/*.md` files are deleted. The registry's stale-reference behavior (`framework/bootstrap/ductus.md` §Pre-run Migrations) already defines what happens when an adopter's `last_applied` names an archived id — no new mechanism needed.
+`skills-to-workflows` and `workflow-filename-rename` leave `framework/migrations.toml`; their procedure-file text is appended to root `CHANGELOG.md` under `## Archived migrations` with headings naming id, `introduced_in`, and `sunset_after` (027 acceptance criterion, `specs/027-bootstrap-migration-registry/spec.md`'s criterion beginning "An entry whose `sunset_after` is older than or equal to"), replacing the *"None yet"* placeholder; the two `framework/migrations/*.md` files are deleted. The registry's stale-reference behavior (`framework/bootstrap/ductus.md` §Pre-run Migrations) already defines what happens when an adopter's `last_applied` names an archived id — no new mechanism needed.
 
 ### `framework/bootstrap/ductus.md` surgery
 
 Grounded inventory of every feature reference (line numbers pre-edit):
 
-- `:798-879` — the entire **### Workflow recommendation** section (including the Tech Stack table parsing at `:806-830`, which has no consumer outside the trigger matching — clarify Q5).
-- `:647` — the `framework/workflows/registry.json` → `workflows/registry.json` Shared Files manifest row.
-- `:442-475` — the `[workflows]` block in the config schema and the `workflows.declined_categories` documentation paragraph.
-- `:24` — "per-category workflow prompts (Workflow recommendation, step 8)" in the procedural-fidelity preamble.
-- `:36` — `[workflows]` in the managed-block preserve list.
-- `:40` — the enforce-manifest note's "legacy `skills/` directory, post-005 workflow filename rename" example (reword to a generic pointer at Pre-run Migrations).
-- `:385` — `[workflows].declined_categories` in the write-policy enumeration.
-- `:513` — "and the workflow-recommendation flow" in the manifest-entry scope sentence.
-- `:733`, `:735` — the per-layout "skip **### Workflow recommendation**" instructions.
+- The entire **### Workflow recommendation** section (including the Tech Stack table parsing, which has no consumer outside the trigger matching — clarify Q5).
+- The `framework/workflows/registry.json` → `workflows/registry.json` Shared Files manifest row.
+- The `[workflows]` block in the config schema and the `workflows.declined_categories` documentation paragraph.
+- "per-category workflow prompts (Workflow recommendation, step 8)" in the procedural-fidelity preamble.
+- `[workflows]` in the managed-block preserve list.
+- The enforce-manifest note's "legacy `skills/` directory, post-005 workflow filename rename" example (reword to a generic pointer at Pre-run Migrations).
+- `[workflows].declined_categories` in the write-policy enumeration.
+- "and the workflow-recommendation flow" in the manifest-entry scope sentence.
+- The per-layout "skip **### Workflow recommendation**" instructions.
 
-Generic uses of the word (`:30` "tar -xzf workflow", `:1072` "fits your workflow") stay.
+Generic uses of the word ("tar -xzf workflow", "fits your workflow") stay.
 
 ### Constitution edits
 
@@ -50,15 +50,15 @@ There is no root `constitution.md` to sync (verified absent; the AGENTS.md proje
 
 ### Command-source and template rewording
 
-- `framework/commands/groom.md` `:49`, `:82`: "the project's lint/format/test workflows cover the common cases" → "the project's lint/format/test tooling covers the common cases" (same meaning, no feature reference; placeholders untouched).
-- `framework/commands/link.md` `:71`: drop `[workflows]` from the illustrative preserve list (the list is explicitly non-exhaustive, so removal is safe).
-- `framework/templates/project/agents.md` `:74-79`: the Skills comment's disambiguation against "this repo's `framework/workflows/`" is removed; the Skills description stands alone.
+- `framework/commands/groom.md`: "the project's lint/format/test workflows cover the common cases" → "the project's lint/format/test tooling covers the common cases" (same meaning, no feature reference; placeholders untouched).
+- `framework/commands/link.md`: drop `[workflows]` from the illustrative preserve list (the list is explicitly non-exhaustive, so removal is safe).
+- `framework/templates/project/agents.md`: the Skills comment's disambiguation against "this repo's `framework/workflows/`" is removed; the Skills description stands alone.
 - Regenerate `.claude/commands/ductus/*.md` via `scripts/gen-claude-commands.sh` (the pre-commit hook path) after source edits.
 
 ### Runtime: comment-only code changes, version bump, no golden re-bless for the version
 
 - `runtime/src/schema/paths.rs:109`: drop `[workflows]` from the host-driven config-writes enumeration in the doc comment.
-- `runtime/src/primitives/enforce_manifest.rs:8`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md` at `:273-296`, the `workflows` temp dir at `:394`) are arbitrary test data with no feature coupling — left as-is, as is the `ductus-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
+- `runtime/src/primitives/enforce_manifest.rs:8`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md`, the `workflows` temp dir) are arbitrary test data with no feature coupling — left as-is, as is the `ductus-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
 - `runtime/Cargo.toml` `0.22.0` → `0.23.0` + a `runtime/CHANGELOG.md` 0.23.0 section. Parity goldens store the version as `{{runtime-version}}` — no re-bless for the bump (AGENTS.md rule; refresh `runtime/target/release/ductus` instead). If a parity golden embeds changed `groom.md` step text, that specific golden is re-blessed intentionally as a content change — never to absorb a version delta.
 
 ### Sibling done-spec annotations (mechanical-class, no back-edge)

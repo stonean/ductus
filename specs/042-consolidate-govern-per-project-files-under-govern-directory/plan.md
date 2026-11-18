@@ -26,13 +26,13 @@ fn config_path(repo: &Path) -> PathBuf
 fn session_path(repo: &Path) -> PathBuf
 ```
 
-Both encode **new-if-exists-else-legacy**, so a split state (both present) resolves to `.ductus/` (new-wins). The config resolver replaces the six ad-hoc reads: `host.rs::load_host_block` (`runtime/src/host.rs:95-108`), `schema/paths.rs::Paths::load_configured` (`runtime/src/schema/paths.rs:110-140`), `primitives/resolve_references.rs::load_services` (`:96-97`), `primitives/dashboard.rs::load_review_state` (`:483-508`), `primitives/discover_rule_files.rs::load_ductus_toml` (`:336-337`), and the `run_exec` walker seed in `runtime/src/main.rs` (currently a literal at `:362`). The session resolver is consumed by the readers — `dashboard.rs::load_session_target` (`:534-558`), `host.rs::load_session_cli_config_dir` (`:114-118`), and the exec walker seed (`main.rs:353-367`).
+Both encode **new-if-exists-else-legacy**, so a split state (both present) resolves to `.ductus/` (new-wins). The config resolver replaces the six ad-hoc reads: `host.rs::load_host_block` (`runtime/src/host.rs:95-108`), `schema/paths.rs::Paths::load_configured` (`runtime/src/schema/paths.rs:110-140`), `primitives/resolve_references.rs::load_services`, `primitives/dashboard.rs::load_review_state`, `primitives/discover_rule_files.rs::load_ductus_toml`, and the `run_exec` walker seed in `runtime/src/main.rs` (currently the literal `.govern.session.toml`). The session resolver is consumed by the readers — `dashboard.rs::load_session_target`, `host.rs::load_session_cli_config_dir`, and the exec walker seed (`main.rs`'s `run_exec`).
 
 One resolver per file (not a fallback re-implemented per call site) keeps the fallback and the "new-wins" rule in one place — the drift-prevention discipline applied to code. This edits existing path construction plus adds two helpers; it introduces **no new primitive**, so the new-primitive wiring checklist (schema/parser/interpreter/main/server/`runtime-tools.txt`) does not apply.
 
 ### Session constant + compile-time guards move to the new path
 
-`SESSION_FILE` (`runtime/src/primitives/write_session.rs:39`) becomes `.ductus/session.toml`. Because `migrate-session-file` writes its destination as that constant (`runtime/src/primitives/migrate_session_file.rs:25,49,66,96`), the older `session-file-consolidate` migration then lands an ancient adopter's per-agent JSON **directly** at `.ductus/session.toml` — no root-path staging (spec Resolved Questions). The literal-asserting guards and tests move to the new value: the compile-time guard `migrate_session_file.rs:345` and result assertion `:189`; `write_session.rs:361,429`; `host.rs:262,275,292`.
+`SESSION_FILE` (`runtime/src/primitives/write_session.rs:39`) becomes `.ductus/session.toml`. Because `migrate-session-file` writes its destination as that constant (`runtime/src/primitives/migrate_session_file.rs`'s `dest: SESSION_FILE.into()`), the older `session-file-consolidate` migration then lands an ancient adopter's per-agent JSON **directly** at `.ductus/session.toml` — no root-path staging (spec Resolved Questions). The literal-asserting guards and tests move to the new value: the compile-time guard in `migrate_session_file.rs`'s `target_dest_matches_write_session_constant` and result assertion in `no_legacy_file_is_idempotent_noop`; `write_session.rs`'s `writes_canonical_shape_without_scenario` and `writes_at_repo_root_regardless_of_project_name`; `host.rs`'s `session_cli_config_dir_overrides_legacy_govern_toml`, `session_cli_config_dir_used_when_no_legacy_block` and `malformed_session_falls_back_to_legacy_then_default` (at `790ebd9d`).
 
 ### Write policy — the `/ductus` migration is the sole cutover
 
@@ -56,7 +56,7 @@ The shipped template `framework/templates/project/gitignore` changes its session
 
 ### Config/session doc + canonical-source updates
 
-Path references in prose move to `.ductus/…` as a uniform token substitution (constitution mechanical-edit rule — no back-edge on the touched done specs). Sites: the constitution's canonical-sources table + `§concurrent-features` session-state paragraph (`:569`) + `[services]`/`[paths]`/`[review]` mentions; `AGENTS.md` (the session-file permission note and the `.govern.toml`-as-shared-DB rule); `README.md` (`.govern.toml` schema mentions). The pipeline command bodies that read config/session (`link`, `review`, `analyze`, `status`, `specify`, `groom`, `target`, `amend`, `implement`, `prune`, `plan`, `clarify`, `help`) update their path prose to `.ductus/…`; the runtime does the actual resolution.
+Path references in prose move to `.ductus/…` as a uniform token substitution (constitution mechanical-edit rule — no back-edge on the touched done specs). Sites: the constitution's canonical-sources table + `§concurrent-features` session-state paragraph + `[services]`/`[paths]`/`[review]` mentions; `AGENTS.md` (the session-file permission note and the `.govern.toml`-as-shared-DB rule); `README.md` (`.govern.toml` schema mentions). The pipeline command bodies that read config/session (`link`, `review`, `analyze`, `status`, `specify`, `groom`, `target`, `amend`, `implement`, `prune`, `plan`, `clarify`, `help`) update their path prose to `.ductus/…`; the runtime does the actual resolution.
 
 ### Dogfooding + fixtures
 
@@ -68,7 +68,7 @@ The feature relocates files and adds path resolvers — no domain entity or data
 
 ### Test strategy
 
-Runtime unit tests for both resolvers (new-only, legacy-only, both-present→new, neither→default). Parity/fixture suites move to the new layout and stay green; one legacy-layout fixture proves fallback. A migration test proves converge-on-collision (identical→silent remove, divergent→warn+remove) and idempotency. Audit scripts `fixture-session-shape.sh` (`:53` `find -name .govern.session.toml`), `consolidation-pair.sh`, and `migration-coverage.sh` update to the new paths and pass. The ductus-repo pre-commit generators and full `/ductus:*` cycle run without path errors on the dogfooded layout.
+Runtime unit tests for both resolvers (new-only, legacy-only, both-present→new, neither→default). Parity/fixture suites move to the new layout and stay green; one legacy-layout fixture proves fallback. A migration test proves converge-on-collision (identical→silent remove, divergent→warn+remove) and idempotency. Audit scripts `fixture-session-shape.sh` (`find -name .govern.session.toml`), `consolidation-pair.sh`, and `migration-coverage.sh` update to the new paths and pass. The ductus-repo pre-commit generators and full `/ductus:*` cycle run without path errors on the dogfooded layout.
 
 ## Affected Files
 
@@ -83,7 +83,7 @@ Runtime unit tests for both resolvers (new-only, legacy-only, both-present→new
 | `runtime/src/primitives/dashboard.rs` | Modify | Session + review reads via resolvers |
 | `runtime/src/primitives/resolve_references.rs` | Modify | `[services]` read via `config_path` |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | `[rules]`/`[review]` read via `config_path` |
-| `runtime/src/main.rs` | Modify | Exec walker seed via resolvers (replace `:362` literal) |
+| `runtime/src/main.rs` | Modify | Exec walker seed via resolvers (replace the `.govern.session.toml` literal) |
 | `runtime/tests/fixtures/*/` | Modify | Move fixtures to `.ductus/{session,config}.toml`; add legacy-layout fixture |
 | `runtime/tests/{parity.rs,exec_subprocess.rs,specs_root_override.rs,cross_service.rs}` | Modify | Literal path updates |
 | `framework/migrations.toml` | Modify | Add `govern-dir-consolidate` entry |

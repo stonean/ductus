@@ -16,7 +16,7 @@ Everything lands inside the existing `check-artifacts` primitive. No new primiti
 
 ### Two families inside `check-artifacts`, not a new primitive
 
-`check-artifacts` runs its families in one `run` that appends to a single `Vec<ArtifactFinding>` (`runtime/src/primitives/check_artifacts.rs:92-128`); 046 added `scenario-open-questions` through exactly this path (`check_artifacts.rs:370-397`). Two more are appended the same way, named `link-adjacent-drift` and `criterion-path-existence` to match the existing kebab-case family names.
+`check-artifacts` runs its families in one `run` that appends to a single `Vec<ArtifactFinding>` (`run` in `runtime/src/primitives/check_artifacts.rs`); 046 added `scenario-open-questions` through exactly this path (`check_scenario_open_questions` in `check_artifacts.rs`). Two more are appended the same way, named `link-adjacent-drift` and `criterion-path-existence` to match the existing kebab-case family names.
 
 Consequence worth stating because it inverts the usual expectation: the primitive-registration sites `docs/developing-ductus.md` lists (§Adding or removing a runtime primitive) need no change. `check-artifacts` is already registered: `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`, its subcommand in `runtime/src/main.rs`, its tool in `runtime/src/mcp/server.rs`, its `dispatch_primitive` arm in `runtime/src/interpreter/mod.rs`, and `framework/runtime-tools.txt` (each found by `grep -n 'check-artifacts\|CheckArtifacts'` at `ab2ad085`). Nothing new is registered anywhere.
 
@@ -24,7 +24,7 @@ Consequence worth stating because it inverts the usual expectation: the primitiv
 
 This spec owns the **requirement** — what drift means, that the constitution obliges the sweep, and the acceptance criteria. It does not own the primitive that carries it.
 
-The precedent is exact and recent. 046 added the fifth `check-artifacts` family and routed every primitive-level change into **scenarios under 022-deterministic-runtime**, keeping only its constitution amendments and its acceptance criteria (`specs/046-scenario-open-question-visibility/spec.md:87-101`; the scenario is `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`). It is not merely a convention either: `check-artifacts`' compiled description (`CHECK_ARTIFACTS` in `runtime/src/schema/descriptions.rs`) names its families and 067's data model (`specs/067-analyze-and-audit-checks/data-model.md`) records them with their tiers, so a new family has to be recorded in both whatever else happens. Leaving either at five while the primitive ships seven would be the same defect class this spec exists to detect.
+The precedent is exact and recent. 046 added the fifth `check-artifacts` family and routed every primitive-level change into **scenarios under 022-deterministic-runtime**, keeping only its constitution amendments and its acceptance criteria (`specs/046-scenario-open-question-visibility/spec.md`'s `## Implementation ownership`; the scenario is `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`). It is not merely a convention either: `check-artifacts`' compiled description (`CHECK_ARTIFACTS` in `runtime/src/schema/descriptions.rs`) names its families and 067's data model (`specs/067-analyze-and-audit-checks/data-model.md`) records them with their tiers, so a new family has to be recorded in both whatever else happens. Leaving either at five while the primitive ships seven would be the same defect class this spec exists to detect.
 
 Four scenarios under 067-analyze-and-audit-checks, which owns the analyze checks' contracts, carry it, each back-linking here per §cross-spec-impact:
 
@@ -60,7 +60,7 @@ The scanned unit is the enclosing block-level element (AC12). A new `pub(crate)`
 
 ### The inline-code exemption reuses the existing CommonMark span helper
 
-`inline_code_spans` (`runtime/src/primitives/mod.rs:901-932`) already implements the CommonMark equal-length-backtick-run rule, and `find_outside_code` (`:938-954`) uses it to make comment delimiters inert inside code font. Both are private to `mod.rs`; this change promotes `inline_code_spans` to `pub(crate)` with no behavior change.
+`inline_code_spans` (`runtime/src/primitives/mod.rs:901-932`) already implements the CommonMark equal-length-backtick-run rule, and `find_outside_code` uses it to make comment delimiters inert inside code font. Both are private to `mod.rs`; this change promotes `inline_code_spans` to `pub(crate)` with no behavior change.
 
 The two families then sit on opposite sides of the same computation, which is the cleanest statement of why they are two families:
 
@@ -79,9 +79,9 @@ A block emits **one finding per link**, not one per tell. `does not exist yet` m
 
 AC9 forbids escalating an unknown to a defect: a link whose target state cannot be read produces no finding. Left there, the family would emit zero findings both when it examined every link and found nothing and when it could not read a single target — the exact shape `QUAL-CLAIM-001` forbids (`framework/rules/quality-cross.md:39`).
 
-`CheckArtifactsResult` therefore gains a `skipped: Vec<SkippedTarget>` field recording `{family, reason, path}` for every target a family could not examine. The rule's own Verification names "a `skipped` list" among the explicitly compliant shapes (`quality-cross.md:43`), so this is the sanctioned form rather than an invention.
+`CheckArtifactsResult` therefore gains a `skipped: Vec<SkippedTarget>` field recording `{family, reason, path}` for every target a family could not examine. The rule's own Verification names "a `skipped` list" among the explicitly compliant shapes (`QUAL-CLAIM-001` in `quality-cross.md`), so this is the sanctioned form rather than an invention.
 
-`clean` keeps its existing meaning — no findings — so no existing consumer changes. The host renders `skipped` in the report's **Informational** tier, which is where `analyze.md:169-174` already puts cross-service unknowns (`unregistered`, `not-checked-out`, `status-unreadable`): informational, not a finding. Same contract, second surface.
+`clean` keeps its existing meaning — no findings — so no existing consumer changes. The host renders `skipped` in the report's **Informational** tier, which is where `analyze.md`'s `### Cross-service references (advisory)` section (at `03f12efc`) already puts cross-service unknowns (`unregistered`, `not-checked-out`, `status-unreadable`): informational, not a finding. Same contract, second surface.
 
 ### Path extraction reads code spans only
 
@@ -93,13 +93,13 @@ The Behavior section reads "including paths inside inline code spans"; this plan
 
 ### Which artifacts the link-adjacent check scans
 
-Exactly AC6's set: `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`. Scenario enumeration reuses `list_scenario_files` (already used at `check_artifacts.rs:253`) so the `.md` match stays case-insensitive and the scanned set matches the one `dashboard` counts.
+Exactly AC6's set: `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`. Scenario enumeration reuses `list_scenario_files` (already used by `scenario_slugs` in `check_artifacts.rs`, at `03f12efc`) so the `.md` match stays case-insensitive and the scanned set matches the one `dashboard` counts.
 
 `review.md` is deliberately excluded. A review record is pinned to its `reviewed-against` sha and describes the state at that commit, so prose there is correct-as-written and would generate systematic false positives — the one artifact where staleness is the format, not a defect. `data-model.md` is excluded as structure rather than narrative; it is the cheapest additive extension if evidence ever appears.
 
 ### The path-existence family reads through `read-spec`
 
-Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each entry carrying `checked` and `text`), not from a second hand-rolled section walker. `check-artifacts` already delegates task parsing to `read_tasks` (`check_artifacts.rs:96-105`) and scenario questions to `read_spec::collect_scenario_open_questions` (`:377`) for exactly this reason — the module docs state the no-hand-rolled-parsers constraint at `check_artifacts.rs:45-48`. Scope is `## Acceptance Criteria` only, of `in-progress` and `done` specs (AC16; widened from `done` alone by 067's `status-gated-families-are-not-silent`).
+Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each entry carrying `checked` and `text`), not from a second hand-rolled section walker. `check-artifacts` already delegates task parsing to `read_tasks` (`check_artifacts.rs:96-105`) and scenario questions to `read_spec::collect_scenario_open_questions` for exactly this reason — the module docs state the no-hand-rolled-parsers constraint in `check_artifacts.rs`'s module docs. Scope is `## Acceptance Criteria` only, of `in-progress` and `done` specs (AC16; widened from `done` alone by 067's `status-gated-families-are-not-silent`).
 
 ### What the families read, and how much they return
 
@@ -121,7 +121,7 @@ The subsection names neither the checks nor `analyze.md`, because §drift-preven
 
 The change touches `runtime/`, so it is not landed until a tag ships it (AGENTS.md §Workflow). `runtime/Cargo.toml` goes `0.25.0` → `0.26.0` — minor, because the families are new behavior and `skipped` is an additive schema field — with a matching `runtime/CHANGELOG.md` section, then `git tag gvrn-v0.26.0` and push.
 
-No golden re-bless. `runtime/tests/golden/analyze-basic.jsonl` records `progress` / `llm-request` / `complete` envelopes only — no primitive payload (17 lines at `ab2ad085`: 15 `progress`, one `llm-request`, one `complete`, read by parsing each line's JSON) — so new families change nothing in it, and the fixture spec `runtime/tests/fixtures/analyze-basic/specs/003-analyze/spec.md` is at `status: clarified` (its line 2), below both path families' `in-progress` scope. `BLESS=1` stays untouched either way, per the standing prohibition.
+No golden re-bless. `runtime/tests/golden/analyze-basic.jsonl` records `progress` / `llm-request` / `complete` envelopes only — no primitive payload (17 lines at `ab2ad085`: 15 `progress`, one `llm-request`, one `complete`, read by parsing each line's JSON) — so new families change nothing in it, and the fixture spec `runtime/tests/fixtures/analyze-basic/specs/003-analyze/spec.md` is at `status: clarified` (its frontmatter), below both path families' `in-progress` scope. `BLESS=1` stays untouched either way, per the standing prohibition.
 
 ## Affected Files
 

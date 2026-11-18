@@ -15,7 +15,7 @@ Sibling primitives already do this correctly, each having solved it independentl
 - `create_feature::stamp_fold_target` detects `\r\n` in the template and joins with the ending it found (`runtime/src/primitives/create_feature.rs:206`).
 - `derive_references` picks its `line_ending` the same way (`runtime/src/primitives/derive_references.rs:398`).
 
-And `check_stuck` carries CRLF regression tests recording that a hand-rolled splitter missing the `\r\n` close fence was a real defect (`runtime/src/primitives/check_stuck.rs:215`, `:351`). The convention is established. `rewrite-spec-links` is the writer that was *reported* as departing from it; it is not the only one (see Behavior).
+And `check_stuck` carries CRLF regression tests recording that a hand-rolled splitter missing the `\r\n` close fence was a real defect (`runtime/src/primitives/check_stuck.rs`'s "hand-rolled predecessor" comment and its `spec_crlf` test helper, at `d8cd1639`). The convention is established. `rewrite-spec-links` is the writer that was *reported* as departing from it; it is not the only one (see Behavior).
 
 The runtime's CI runs on three platforms, so this is not hypothetical — but it is invisible to a repository whose files are already LF, which is why it survived review of the primitive itself and was found only by comparing it against its siblings.
 

@@ -158,7 +158,7 @@ Each finding under MUST/SHOULD/Low-confidence sections:
 ```markdown
 ### MUST: <rule-id> — <one-line summary>
 
-- **File**: `path/to/file.ts:42-55`
+- **File**: `path/to/file.ts:<start-line>-<end-line>`
 - **Rule**: <verbatim rule text from framework/rules/...>
 - **Finding**: <one to three sentences>
 - **Auto-fixable**: yes | no

@@ -61,7 +61,7 @@ rather than merely absent."* The fetch sites never caught up with the audit.
   `<owner>/<repo>` slug comes from the framework-archive fetch URL in
   `framework/bootstrap/ductus.md` (`codeload.github.com/…/tar.gz/`), and its
   pattern unwraps the `${DUCTUS_REPO:-…}` default, so the slug it derives is
-  still the canonical one (`scripts/audit/self-url-resolution.sh:85-87`). A fork
+  still the canonical one (`scripts/audit/self-url-resolution.sh`, its `repo_slug` assignment). A fork
   that changed the *default* would change the slug it derives — which is
   correct behavior (the fork's identity is the fork's archive URL), not a
   broken audit.

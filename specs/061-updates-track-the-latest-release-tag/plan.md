@@ -8,7 +8,7 @@ The change is almost entirely in the bootstrap's pre-flight and in the installer
 
 The installer gains the same flag and the same latest-release resolution. It becomes a release asset, uploaded by the job that already owns the release upload.
 
-The runtime needs no behavior change. `fetch-archive` already takes any URL (`runtime/src/schema/primitives.rs:2468`), and `extract-archive` already returns every extracted path (`runtime/src/schema/primitives.rs:2446`). The one runtime edit is a doc comment. The release that ships this spec is nonetheless required, because the spec's first resolved question makes a release the only way a framework change reaches default-source adopters.
+The runtime needs no behavior change. `fetch-archive` already takes any URL (`runtime/src/schema/primitives.rs`'s `FetchArchiveArgs`), and `extract-archive` already returns every extracted path (`runtime/src/schema/primitives.rs`'s `ExtractArchiveResult`). The one runtime edit is a doc comment. The release that ships this spec is nonetheless required, because the spec's first resolved question makes a release the only way a framework change reaches default-source adopters.
 
 The rest is the prose-claim sweep and the discharge of nine declared cross-spec impacts, one reopen cycle each.
 
@@ -36,7 +36,7 @@ The new subsection sits between the `{tempdir}` creation and **ductus runtime de
 
 ### The ref is recorded after acquisition, before the self-update check
 
-`--ref=main` or a tag is written as a `# ductus (source)` line-prefix managed block. A key in `[source]` other than `ref` is reported by name and never halts, as the bootstrap's §Project Configuration rule for unknown keys says (spec 019's `CFG-ENV-012` decision; `runtime/src/schema/config_keys.rs` registers `[source]` with `ref` alone). The block holds a `[source]` table in the active config file, written with `merge-managed-block`, as the `[host]` block is (`framework/bootstrap/ductus.md`, §Instructions step 6). The primitive appends a new block at the end of the file (`runtime/src/primitives/merge_managed_block.rs:28`). A trailing TOML table cannot capture another table's keys, so appending is safe.
+`--ref=main` or a tag is written as a `# ductus (source)` line-prefix managed block. A key in `[source]` other than `ref` is reported by name and never halts, as the bootstrap's §Project Configuration rule for unknown keys says (spec 019's `CFG-ENV-012` decision; `runtime/src/schema/config_keys.rs` registers `[source]` with `ref` alone). The block holds a `[source]` table in the active config file, written with `merge-managed-block`, as the `[host]` block is (`framework/bootstrap/ductus.md`, §Instructions step 6). The primitive appends a new block at the end of the file (`runtime/src/primitives/merge_managed_block.rs`, its module doc's "**inserted**" outcome). A trailing TOML table cannot capture another table's keys, so appending is safe.
 
 The write happens right after **ductus runtime detection**, because that is the first point at which the primitive is reachable in both states: over MCP in State A, and through `{pointer-path}` in State B. It happens before the **Self-update check**. The self-update's stale path aborts pre-flight, and the re-run that follows must read the choice from the record. Otherwise it would resolve the default and replace the bootstrap again, which is the flip-flop the spec's persistence answer exists to prevent.
 
@@ -132,7 +132,7 @@ Both of the installer's requests, the `latest` redirect's headers and the bootst
 - **README.** Both one-liners become `curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases/latest/download/install.sh | sh`. `-L` follows GitHub's redirect to its asset host, in the user's shell: two `302`s, to `releases/download/<tag>/<asset>` and then to `release-assets.githubusercontent.com` (probed 2026-09-28, spec, installer Resolved Question). *Installing (per agent)* describes the release default and `--ref`.
 - **`CLAUDE.md` and the `AGENTS.md` Workflow entry.** They keep *commit directly to `main`*, with the reason restated: releases are cut from `main` by tag.
 - **The `AGENTS.md` release entry (AC15).** It states that a framework-only change reaches default-source adopters at the next `ductus-v*` release and bumps like any other release. Its *the commit is what breaks them* paragraph is restated too. The pin is now read at the resolved ref, so a version bump on `main` ahead of its tag halts only projects on `--ref=main`. A default-source project reads a pin from a release that was created only after its asset set was complete.
-- **Family 36** (`scripts/audit/self-url-resolution.sh`) derives the repository slug from a `github.com/<owner>/<repo>/archive/` URL in the bootstrap (lines 80–90), and its comment restates *live-on-main*. The derivation moves to the `codeload.github.com/<owner>/<repo>/tar.gz/` form the bootstrap actually fetches, the comment is restated, and the family's line in `framework/commands/audit.md` follows.
+- **Family 36** (`scripts/audit/self-url-resolution.sh`) derives the repository slug from a `github.com/<owner>/<repo>/archive/` URL in the bootstrap (its `repo_slug` derivation), and its comment restates *live-on-main*. The derivation moves to the `codeload.github.com/<owner>/<repo>/tar.gz/` form the bootstrap actually fetches, the comment is restated, and the family's line in `framework/commands/audit.md` follows.
 - **Family 21.** `framework/bootstrap/govern.md` stays byte-identical to `ductus.md`, as Family 21 requires (`scripts/audit/transitional-bootstrap-parity.sh`). Old `/govern` installs still fetch it from `main`: that URL is compiled into bootstraps already installed, so it is out of this spec's reach. They then run the new bootstrap, which defaults to the latest release.
 
 ### Rollout: the bootstrap reaches `origin` only together with its release
@@ -150,19 +150,19 @@ Each of 003, 007, 015, 023, 026, 029, 048, 050 and 056 follows the 060-to-022 pr
 
 The corrections, from the 2026-09-28 sweep:
 
-- **003**: `curl-sh-installer` scenario lines 15 and 17.
-- **007**: `ductus-self-update-precheck` line 23.
-- **015**: spec lines 36, 39, 49, 51 and 61. Its Resolved Question deferring ref pinning is marked adopted (§drift-prevention, Decision resolution).
+- **003**: `curl-sh-installer` scenario's `install.sh` fetch bullet and its "It fetches `framework/bootstrap/ductus.md` from `main`" bullet.
+- **007**: `ductus-self-update-precheck`'s bullet comparing the extracted `ductus.md` against the installed one.
+- **015**: spec's `refs/heads/main` codeload URL, its redirect explanation, the `{tempdir}/ductus-main/` framework-root step, the fetch-failure abort and the `{tempdir}/ductus-main/{source-path}` step. Its Resolved Question deferring ref pinning is marked adopted (§drift-prevention, Decision resolution).
 - **023**: the read-fallback Resolved Question's premise, noted as superseded. The decision itself stands.
-- **026**: `family-36-self-url-resolution` line 24.
-- **029**: `archive-fetch-direct-codeload` lines 9, 16 and 20.
+- **026**: `family-36-self-url-resolution`'s "`main` URLs are resolved" bullet.
+- **029**: `archive-fetch-direct-codeload`'s opening paragraph ("029's State B wires ductus"), its `curl` command on the `codeload.github.com` URL and its "The direct URL returns the archive with no redirect" paragraph.
 - **048**:
-  - spec line 59, and the *Version currency* cost the spec's store answer restates;
-  - data-model line 18;
-  - `pin-is-readable-when-acquisition-needs-it` lines 12 and 48;
+  - spec's "The version comes from the repo-root `version` file" bullet, and the *Version currency* cost the spec's store answer restates;
+  - data-model's "Read by" row;
+  - `pin-is-readable-when-acquisition-needs-it`'s `{staging-dir}/ductus-main/version` halt passage and its `raw.githubusercontent.com/stonean/ductus/main/version` passage;
   - the release asset set, which gains the installer.
-- **050**: the Resolved Question at spec line 228.
-- **056**: spec line 147.
+- **050**: the spec's Resolved Question "Does a constitution-only change need a version bump?".
+- **056**: the spec's Resolved Question "What is the archive half named, and how does the installed half address it?".
 
 The hits in these specs' `plan.md` and `tasks.md` are design records of how the work was done at the time. They stay, unless a line states current behavior as a present-tense fact, in which case it is corrected in the same reopen.
 

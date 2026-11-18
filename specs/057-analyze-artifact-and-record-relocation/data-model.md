@@ -1,8 +1,8 @@
 # 057 — Analyze artifact and record relocation Data Model
 
 The two audit records, at their new homes. Field shapes are carried over from
-`runtime/src/schema/primitives.rs` — `ReviewBlock` at line 33, `AnalyzeBlock` at
-line 109 — with the changes each table's Notes section names.
+`runtime/src/schema/primitives.rs` — `ReviewBlock` and `AnalyzeBlock`
+— with the changes each table's Notes section names.
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
 > Both records dropped `captured-issues` and gained a `dispositions:` map and a

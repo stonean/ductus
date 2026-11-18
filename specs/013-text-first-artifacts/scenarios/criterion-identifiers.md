@@ -15,7 +15,7 @@ Position is not just unreadable, it is unstable. Inserting a criterion shifts th
 
 The framework already solved this shape once for a different artifact. Rule IDs are permanent: `specs/008-security-rules/data-model.md` states an ID is never renumbered once assigned, even if the rule moves within its file or is deprecated. Criteria have the same need — stable reference across edits — and none of the machinery.
 
-Two specs solved it by hand, and then the practice lapsed. `017-derive-dont-ask` labels all 24 of its criteria `AC1:`–`AC24:`, and `018-adopter-owned-pre-commit` labels all 13 of its own; `specs/018-adopter-owned-pre-commit/spec.md:108` makes a cross-spec reference to "017 AC24" that resolves correctly because the target is labelled. The convention works, is readable in the raw markdown, and survives a copy-paste. What it lacks is any mechanism: nothing assigns, validates, or resolves those labels, so specs 019 onward simply stopped writing them — 660 of the repository's 697 criteria are unlabelled.
+Two specs solved it by hand, and then the practice lapsed. `017-derive-dont-ask` labels all 24 of its criteria `AC1:`–`AC24:`, and `018-adopter-owned-pre-commit` labels all 13 of its own; `specs/018-adopter-owned-pre-commit/spec.md`'s "CI safety net (017 AC24)" bullet makes a cross-spec reference to "017 AC24" that resolves correctly because the target is labelled. The convention works, is readable in the raw markdown, and survives a copy-paste. What it lacks is any mechanism: nothing assigns, validates, or resolves those labels, so specs 019 onward simply stopped writing them — 660 of the repository's 697 criteria are unlabelled.
 
 ## Behavior
 
@@ -49,7 +49,7 @@ Two specs solved it by hand, and then the practice lapsed. `017-derive-dont-ask`
 
 **What is the identifier's form and who assigns it?**
 
-Form: `- [ ] AC{n}: <criterion text>` — an in-band label, visible where the criterion is read and intact when the line is copied into a review comment or commit message. This is the form `specs/018-adopter-owned-pre-commit/spec.md:126-135` already uses, so the convention has a working precedent rather than being invented here.
+Form: `- [ ] AC{n}: <criterion text>` — an in-band label, visible where the criterion is read and intact when the line is copied into a review comment or commit message. This is the form `specs/018-adopter-owned-pre-commit/spec.md`'s `## Acceptance Criteria` already uses, so the convention has a working precedent rather than being invented here.
 
 Assignment: **the runtime**, through one idempotent labelling pass rather than at append time. A primitive scans a spec's Acceptance Criteria, leaves every already-labelled entry untouched, and assigns `max(existing) + 1` in body order to any entry that lacks a label — counting retired labels so a number is never reused — returning the assignments it made. The derivation is the one `append-task` already performs for an in-band `## N.` heading; only the invocation shape differs.
 
@@ -92,7 +92,7 @@ The sweep itself is arithmetic — number in body order from `AC1:`, inserting t
 
 Two properties the sweep must preserve:
 
-- **Existing labels are never renumbered.** `017`'s `AC1`–`AC24` and `018`'s thirteen stay as authored. Renumbering them would break `specs/018-adopter-owned-pre-commit/spec.md:108`'s working cross-spec reference to "017 AC24" — the one thing the hand-rolled convention has already bought.
+- **Existing labels are never renumbered.** `017`'s `AC1`–`AC24` and `018`'s thirteen stay as authored. Renumbering them would break `specs/018-adopter-owned-pre-commit/spec.md`'s "CI safety net (017 AC24)" bullet's working cross-spec reference to "017 AC24" — the one thing the hand-rolled convention has already bought.
 - **Body-order numbering makes existing count-derived references correct by construction**, wherever the list has not changed since the reference was written. Anyone who wrote "criterion 12" derived it by counting body order, which is exactly what the backfill assigns. Where a criterion was inserted or removed since, that reference was already wrong and the backfill neither fixes nor worsens it.
 
 Delivery is the migration registry ([027 — Bootstrap migration registry](../../027-bootstrap-migration-registry/spec.md), `framework/migrations.toml`), which already exists to push one-shot artifact migrations to adopter projects on their next `/ductus` run. Without it this repo would be labelled while every adopting project stayed unlabelled — a two-tier corpus at the ecosystem level instead of the spec level, which is the same defect the going-forward-only option was rejected for.

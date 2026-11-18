@@ -8,7 +8,7 @@ section: "5–6. /configure canonical allow-set"
 
 Spec 023 §§5–6 defined *what* `/configure` puts in the canonical allow-set — explicit per-path entries for ductus-owned state files (§5) and an unconditional MCP-tool block sourced from `framework/runtime-tools.txt` (§6). The sibling scenario `configure-dedup-permissions` added *how many* copies of each entry may exist. Neither says anything about the **shape** of an individual pattern, and one shape is unsafe.
 
-Seven entries in `framework/bootstrap/configure/claude.md` (lines 51–57, mirrored into the generated `.claude/commands/ductus/configure.md`) place the wildcard *before* the git subcommand:
+Seven entries in `framework/bootstrap/configure/claude.md` (its **Git commands targeting another working tree** list, mirrored into the generated `.claude/commands/ductus/configure.md`) place the wildcard *before* the git subcommand:
 
 ```text
 Bash(git -C * add *)      Bash(git -C * commit *)   Bash(git -C * push *)
@@ -20,14 +20,14 @@ Claude Code's permission matcher lets that leading `*` span inserted options, no
 
 `claude.md` is the only configure file that carries a permission set, and so the sole file affected: Pi has no permission file.
 
-The deny-side `git -C *` entries (`claude.md:147-152`) are **not** affected: an over-broad *denial* only refuses more, so the same wildcard is safe there and must stay as-is.
+The deny-side `git -C *` entries (`claude.md`'s six deny entries, `Bash(git -C * mv *)` through `Bash(git -C * clean -fd *)`) are **not** affected: an over-broad *denial* only refuses more, so the same wildcard is safe there and must stay as-is.
 
 ## Behavior
 
 - The canonical allow-set gains a shape invariant: **no allow pattern may place a wildcard before the subcommand and option region of the command it approves.** A wildcard is permitted only after the subcommand (`Bash(git status *)`), where it can no longer introduce an option that changes what executes.
 - The seven `Bash(git -C * <sub> *)` allow entries are removed from `framework/bootstrap/configure/claude.md` §§5–6. `git -C` invocations fall through to the host's normal Ask prompt.
 - The removal is stated as a rationale comment alongside the remaining git entries, so a future editor re-adding a `-C` variant reads why it was dropped rather than re-deriving it from a startup warning.
-- The deny-side `git -C *` entries at `claude.md:147-152` are explicitly retained and documented as intentionally broad: denial over-matching is strictly safer, and narrowing them would weaken the guard.
+- The deny-side `git -C *` entries in `claude.md` (`Bash(git -C * mv *)` through `Bash(git -C * clean -fd *)`) are explicitly retained and documented as intentionally broad: denial over-matching is strictly safer, and narrowing them would weaken the guard.
 - `.claude/commands/ductus/configure.md` follows from the source rewrite via the normal command generator (the pre-commit hook on `framework/bootstrap/configure/claude.md`, spec 017 row 11); no separate edit.
 - ~~`/ductus:configure` does not retroactively strip an unsafe pattern already present in an adopter's `settings.local.json` — §§5–6 add entries and `configure-dedup-permissions` removes exact-match duplicates; neither route rewrites a non-canonical entry an adopter owns. Adopters configured before this change keep the seven rules until they remove them, and their host's startup warning is what surfaces it.~~ **Superseded** by [`configure-retires-formerly-canonical-entries`](configure-retires-formerly-canonical-entries.md) (AC36–AC38): the command now retires these seven entries from an adopter's file, via an explicit retired-entries list passed to `merge-permissions` as `revoke`. The reasoning above still holds for entries an adopter **owns** — retirement matches only what the framework itself once shipped — but seven of these approve arbitrary execution with no prompt, and leaving a security hole installed with a startup warning as the sole remedy put the repair on the adopter indefinitely. The bullet is kept rather than deleted: it is the record of what shipped.
 - `/ductus:audit` gains a check that fails when any `configure/*.md` canonical allow-set contains a wildcard-before-subcommand pattern, so the class cannot silently return through a future edit to a `configure/*.md` file.

@@ -38,7 +38,7 @@ The address is `{tempdir}/ductus-main/framework/bootstrap/ductus-procedure.md` (
 
 ### The archive half is reference prose, and is allowlisted as such
 
-`scripts/lint-procedure-parseability.sh:80` globs `framework/bootstrap/*.md`, so the new file is in its scope automatically. Probed in both directions: a bootstrap-shaped file carrying frontmatter but no `## Instructions` returns exit 2 — `legacy prose — no parseable Instructions section` — which fails the lint unless the file is listed in `runtime/legacy-prose-commands.txt`.
+`scripts/lint-procedure-parseability.sh` (its `command_files` array) globs `framework/bootstrap/*.md`, so the new file is in its scope automatically. Probed in both directions: a bootstrap-shaped file carrying frontmatter but no `## Instructions` returns exit 2 — `legacy prose — no parseable Instructions section` — which fails the lint unless the file is listed in `runtime/legacy-prose-commands.txt`.
 
 Allowlisting is correct rather than expedient. `ductus exec ductus` walks `§Instructions`, which stays installed; nothing dispatches from the archive half, so it genuinely is prose. Manufacturing an `## Instructions` section to score exit 0 would also oblige `check_step_references.rs`'s `BOOTSTRAP_FILES` to gain the file — turning a `framework/` change into a `runtime/` one with a version bump and a `ductus-v` tag.
 
@@ -68,7 +68,7 @@ Ten consumers were classified in the spec. Task 5 re-earns that classification b
 | `runtime/legacy-prose-commands.txt` | Modify | Allowlist the archive half; correct the header's `framework/commands/*.md`-only claim |
 | `specs/056-bootstrap-archive-boundary-split/plan.md` | Modify | Record the post-split measurement (AC11) |
 
-Not changed, and each checked rather than assumed: every `scripts/audit/*.sh`, every `runtime/src/**` file, `install.sh`, `README.md`, and `docs/shared-constitution.md`. The three prose anchors into this file (`README.md:239`, `README.md:306`, `docs/shared-constitution.md:169`) resolve to `#project-configuration` and `#agent-registry`, both of which stay installed.
+Not changed, and each checked rather than assumed: every `scripts/audit/*.sh`, every `runtime/src/**` file, `install.sh`, `README.md`, and `docs/shared-constitution.md`. The three prose anchors into this file (`README.md`'s "`/ductus` also maintains `[host]`" paragraph, `README.md`'s "currently distributes to four AI coding agents" paragraph (as at `a345df4d`), `docs/shared-constitution.md`'s "A malformed entry halts" section) resolve to `#project-configuration` and `#agent-registry`, both of which stay installed.
 
 ## Trade-offs
 

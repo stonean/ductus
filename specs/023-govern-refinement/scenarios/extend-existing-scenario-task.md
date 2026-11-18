@@ -53,9 +53,9 @@ So a scenario whose requirement is *extended* rather than created has no route t
 
 `/{project}:clarify` was rejected as the owner. Its scope boundary confines it to resolving questions and forbids planning or implementation work, and it cannot tell a resolution that introduces new behavior from one that confirms existing behavior — most resolutions add no task, so it would have to ask every time. More decisively, the trigger is broader than clarify: a scenario gains behavior when a contributor edits the file directly, with no clarify session involved. A clarify-owned route would not cover that path.
 
-The reconcile shape also subsumes the two narrower entry points considered first — the slug-conflict prompt offering "extend" (`framework/commands/amend.md:111`) and a scenario-targeted declarative input routing to extend instead of the forced question route (`:25`, status table `:180`). Both required the contributor to already know a task was missing; the reconcile pass finds it for them.
+The reconcile shape also subsumes the two narrower entry points considered first — the slug-conflict prompt offering "extend" (`framework/commands/amend.md:111`) and a scenario-targeted declarative input routing to extend instead of the forced question route (the status table's Scenario row). Both required the contributor to already know a task was missing; the reconcile pass finds it for them.
 
-Its home is the existing **Re-open precondition** (`framework/commands/amend.md:47-68`), which already fires on a no-argument invocation against a `done` spec and already inspects the feature directory for an on-disk delta. Today it offers only a status flip and appends no task (status table, `:179`). This route extends it rather than adding a section beside it.
+Its home is the existing **Re-open precondition** (`framework/commands/amend.md:47-68`), which already fires on a no-argument invocation against a `done` spec and already inspects the feature directory for an on-disk delta. Today it offers only a status flip and appends no task (the status table's Spec `done` row). This route extends it rather than adding a section beside it.
 
 Two constraints bound the work:
 

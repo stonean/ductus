@@ -45,7 +45,7 @@ Critically, the generator lands **before** the two new primitives are appended t
 
 One pass over every command source under `framework/commands/`. The sweep replaces three patterns: "Check for `spec.md` first, then `spec-and-plan.md`" → "Use `spec.md`."; "If the spec file is `spec-and-plan.md` (lightweight track), [branch]" → delete the branch; any prose referencing the lightweight track concept → delete or rewrite without the concept.
 
-Constitution edit deletes §lightweight-track wholesale (lines around 181-194), removes the `spec-and-plan.md` row from the frontmatter schema table (§text-first-artifacts, line 369), and drops references in §spec-phase. §brownfield-process step 1 rewrites to point at `/specify` with sparse-AC guidance per the resolved question.
+Constitution edit deletes §lightweight-track wholesale, removes the `spec-and-plan.md` row from the frontmatter schema table (§text-first-artifacts), and drops references in §spec-phase. §brownfield-process step 1 rewrites to point at `/specify` with sparse-AC guidance per the resolved question.
 
 Rationale: the spec drops the track entirely (its section 1), so no reference to it may survive, and §drift-prevention's *no dead references* rule puts every reference in the same change; one pass over the command sources and the constitution together does both.
 
@@ -72,7 +72,7 @@ The §brownfield-process anchor name is preserved (no cascading anchor reference
 
 ### `/capture` deletion strategy
 
-`framework/commands/capture.md` is deleted. The Claude-commands generator (`scripts/gen-claude-commands.sh:44-55`) already prunes obsolete `.claude/commands/ductus/*.md` files; deletion of the source flows through automatically on the next pre-commit. No manual `.claude/commands/ductus/capture.md` removal needed.
+`framework/commands/capture.md` is deleted. The Claude-commands generator (`scripts/gen-claude-commands.sh`'s "Prune any .md files in DEST" loop) already prunes obsolete `.claude/commands/ductus/*.md` files; deletion of the source flows through automatically on the next pre-commit. No manual `.claude/commands/ductus/capture.md` removal needed.
 
 `/specify` absorbs the brownfield use case by accepting sparse acceptance criteria as valid. The spec template already documents "At least one concrete, testable criterion is required before `/{project}:clarify` will advance the spec" — that gate stays. A brownfield-adopter who runs `/specify` with no AC lands at `draft` and can advance later as real work fills the section.
 
@@ -103,11 +103,11 @@ The rename ships alongside a description tightening on both commands so `/help` 
 - `/analyze`: `Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Read-only.`
 - `/review`: `Audit code against rules — security, reuse, quality, efficiency, simplicity. Writes review.md; blocks done on MUST violations.`
 
-`scripts/gen-help-tables.sh` reads `description:` frontmatter directly (see the `read_description` function at lines 39-59) so the help.md tables update automatically on the next generator run. No script changes needed beyond what the rename already requires.
+`scripts/gen-help-tables.sh` reads `description:` frontmatter directly (see the `read_description` function) so the help.md tables update automatically on the next generator run. No script changes needed beyond what the rename already requires.
 
 ### Help-tables generator update
 
-`scripts/gen-help-tables.sh` currently builds five tables. The `elaborate_table` (lines 100-103) lists `/amend` and `/elaborate`; the `brownfield_table` (lines 105-109) lists `/capture`, `/log`, `/groom`. Changes:
+`scripts/gen-help-tables.sh` currently builds five tables. The `elaborate_table` lists `/amend` and `/elaborate`; the `brownfield_table` lists `/capture`, `/log`, `/groom`. Changes:
 
 - Rename marker `commands-elaborate` → `commands-refine` in the generator and in `framework/commands/help.md`.
 - Drop the `/elaborate` row from the refine table; the table becomes a single-row table with `/amend` only.
@@ -157,10 +157,10 @@ The changelog entry accompanying the paired runtime and framework release docume
 | `scripts/gen-configure-mcp.sh` | Create | New generator: emits MCP allow-list into the configure source from `runtime-tools.txt`. |
 | `.githooks/pre-commit` | Modify | Wire `gen-configure-mcp.sh` into the hook. |
 | `README.md` | Modify | Remove `/capture`, `/elaborate`, and lightweight-track references; update Slash Commands tables; drop `spec-and-plan.md` from templates table. |
-| `AGENTS.md` | Modify | Drop `spec-and-plan` from the framework templates list (line 17). |
+| `AGENTS.md` | Modify | Drop `spec-and-plan` from the framework templates list. |
 | `specs/README.md` | Modify | Remove the "Lightweight track detection" bullet from §Design Decisions (active-design statement being undone); add a "Past Renames" note recording `/validate → /analyze`. |
-| `framework/templates/project/agents.md` | Modify | Drop `spec-and-plan` from the templates list (line 43) and remove the `spec-and-plan.md` row from the templates description (line 46). |
-| `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list (line 26). |
+| `framework/templates/project/agents.md` | Modify | Drop `spec-and-plan` from the templates list and remove the `spec-and-plan.md` row from the templates description. |
+| `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list. |
 | `framework/bootstrap/ductus.md` | Modify | Add migration check for `spec-and-plan.md` files (see Phase B task 14); sweep all `spec-and-plan` and deleted-verb references (lines ~296, 311, 384, 442, 479, 481) including manifest entries for `capture.md`, `elaborate.md`, and `spec-and-plan.md`. |
 | `specs/023-govern-refinement/tasks.md` | Create | Task breakdown. |
 

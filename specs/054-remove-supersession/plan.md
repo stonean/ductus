@@ -12,7 +12,7 @@ Nothing new is built. There is no migration, no replacement command, and no new 
 
 ### Corpus first, framework second
 
-The 053 → 052 consolidation runs before any command source is edited. `/{project}:consolidate` reads `consolidate.md`'s own procedure to know what to do, and step 3 of that procedure enumerates `supersedes:` edges across the corpus — a step this change deletes. Running the consolidation while the command is still coherent avoids driving a half-rewritten procedure, and the step is a no-op in practice because no spec carries a `supersedes:` key (verified: the only occurrence in the tree is an illustrative example inside `specs/053-supersession-reconciliation/data-model.md:8`).
+The 053 → 052 consolidation runs before any command source is edited. `/{project}:consolidate` reads `consolidate.md`'s own procedure to know what to do, and step 3 of that procedure enumerates `supersedes:` edges across the corpus — a step this change deletes. Running the consolidation while the command is still coherent avoids driving a half-rewritten procedure, and the step is a no-op in practice because no spec carries a `supersedes:` key (verified: the only occurrence in the tree is an illustrative example inside `specs/052-spec-supersession-and-consolidation/data-model.md` (its example frontmatter `supersedes: [005-workflows, 019-config-decisions]`, at `ec078af2`)).
 
 **`/{project}:consolidate` migrates no content**, which is what makes this cheap. It re-points every inbound body link and removes the directory; it does not copy 053's prose into 052. So "053 is consolidated into 052" means 053 stops existing and its pointers land on 052 — not that 052 absorbs text this change would immediately delete. `consolidate.md`'s own scope note is explicit that the command does not verify the target covers what the source said, and deliberately does not try.
 
@@ -46,7 +46,7 @@ The revised AC16 is a negative requirement and the plan honors it as one: no `fr
 
 ### The sweep is one uniform commit
 
-§drift-prevention makes the name sweep a mechanical edit — `done` specs stay `done` — but only while the diff stays uniform. The `` `/specify --supersedes` `` worked example appears in three places (`scripts/audit/readme-command-parity.sh:46`, `scripts/audit/README.md:73`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md:13`) and is replaced by a surviving flag in a single substitution across all three, landing on its own rather than bundled into the broader rewrite. `/specify --fold-into` is the replacement: it is a flag on the same command, inside a wider code span, so it exercises the exact matching property the example exists to illustrate.
+§drift-prevention makes the name sweep a mechanical edit — `done` specs stay `done` — but only while the diff stays uniform. The `` `/specify --supersedes` `` worked example appears in three places (`scripts/audit/readme-command-parity.sh` (its comment on the bare token), `scripts/audit/README.md` (its Family 33 entry), and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md` (its "Family 33 recognizes a documented command" bullet)) and is replaced by a surviving flag in a single substitution across all three, landing on its own rather than bundled into the broader rewrite. `/specify --fold-into` is the replacement: it is a flag on the same command, inside a wider code span, so it exercises the exact matching property the example exists to illustrate.
 
 Ordinary-English uses of the verb were left alone — the pre-commit hooks, `framework/rules/security-backend.md`'s CSP note (since removed, by `1598b87a`), and `review.md`'s report-regeneration line (since moved to `framework/reference/review.md`) named no capability, and rewriting them would have been the non-uniform diff the rule warns about.
 
@@ -54,7 +54,7 @@ Ordinary-English uses of the verb were left alone — the pre-commit hooks, `fra
 
 Three excisions, one of which is not a deletion. `§supersession-annotations` goes whole, including its `<!-- §supersession-annotations -->` anchor comment. The `supersedes` row leaves the spec frontmatter schema table. The criterion-level bullet in `§spec-requirements` goes — and it is the one that carries a cross-reference (`This is the criterion-level case of the rule below (§supersession-annotations)`), so removing the section without removing the bullet strands the anchor that `check-corpus-links` will then report.
 
-`runtime/src/schema/primitives.rs:1707` also cites the anchor in a doc comment, but on a type this change removes, so it leaves with its type.
+`runtime/src/schema/primitives.rs`'s `WriteSupersessionAnnotationArgs::criterion` doc comment also cites the anchor in a doc comment, but on a type this change removes, so it leaves with its type.
 
 ## Affected Files
 

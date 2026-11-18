@@ -15,14 +15,14 @@ The confirmed ones, each verified against the file:
 - `log.md:33` passes a literal `specs/inbox.md` to `lint-markdown`, after
   `append-inbox` wrote `{specs-root}/inbox.md` — so the lint targets a file the
   append did not touch.
-- `log.md:42` creates a stray `specs/inbox.md` on the markdown-only path.
-- `groom.md:30` checks for and reads a hardcoded `specs/inbox.md`, and **no
+- `log.md`'s "If `specs/inbox.md` does not exist, create it" step creates a stray `specs/inbox.md` on the markdown-only path.
+- `groom.md`'s "Check if `specs/inbox.md` exists" step checks for and reads a hardcoded `specs/inbox.md`, and **no
   primitive owns that read**, so both paths carry the literal and `/groom`
   reports "No inbox file found" under a renamed root.
 - `review.md:382` diffs `git diff <diff-base>..HEAD -- specs/inbox.md`.
 - `amend.md:60` runs `git status --porcelain -- specs/{feature}/…`.
 - `implement.md:105` runs `git log --oneline -- specs/{feature}/tasks.md`, and
-  `implement.md:97`, `:98`, `:133`, `:136` read or diff literals alongside it.
+  `implement.md`'s `tasks.md` read, `plan.md` read, **Task tally** and **Cross-spec impact check** steps read or diff literals alongside it.
 
 The root cause is a misapplied boundary rather than an oversight per site.
 AC11 says "no other prose is parameterized", and that was read as covering
@@ -34,7 +34,7 @@ a file tool, or a primitive argument is the defect, because nothing between the
 prose and the filesystem resolves it.
 
 The fix pattern already exists in the corpus and was simply never propagated.
-`specify.md:60` carries a one-line note:
+`specify.md`'s **Spec-root resolution.** blockquote carries a one-line note:
 
 > **Spec-root resolution.** Every `specs/…` path below is written under the
 > configured `[paths] specs-root` (default `specs`; spec 040).
@@ -52,7 +52,7 @@ Every command file that **acts on** a spec-root path resolves it, by one of two
 means, chosen per site rather than applied uniformly:
 
 - **The blanket note**, where the command's own prose is the instruction the
-  host follows: the `specify.md:60` note verbatim, placed once near the top of
+  host follows: the `specify.md` **Spec-root resolution.** note verbatim, placed once near the top of
   the Instructions section. This covers the markdown-only path, which is where
   most of these sites live. **Superseded by the sibling scenario.**
   [`spec-root-rule-stated-once`](spec-root-rule-stated-once.md) found that

@@ -14,11 +14,11 @@ The critical path is the parser fix. Everything else reads the count the parser 
 
 ### The parser fix is a prerequisite, not a parallel task
 
-`parse_open_questions` (`runtime/src/primitives/read_spec.rs:141`) walks `section_lines`, which is not comment- or fence-aware; the acceptance-criteria parser at `read_spec.rs:110` walks `section_line_indices`, which is. Verified by scaffolding a spec from `framework/templates/spec/spec.md` and calling `read-spec`: `acceptance-criteria` returned `[]` while `open-questions` returned the template's three commented-out examples.
+`parse_open_questions` (`runtime/src/primitives/read_spec.rs:141`) walks `section_lines`, which is not comment- or fence-aware; the acceptance-criteria parser (`parse_checkboxes` in `read_spec.rs`) walks `section_line_indices`, which is. Verified by scaffolding a spec from `framework/templates/spec/spec.md` and calling `read-spec`: `acceptance-criteria` returned `[]` while `open-questions` returned the template's three commented-out examples.
 
 Under this feature a phantom question blocks `done`, so the fix must land before any consumer reads the count. It is task 1, and no other task starts until it is green.
 
-The placeholder guard (`read_spec.rs:168`) widens in the same change: it currently exact-matches `*None — all resolved.*`, while `create_scenario.rs:69` emits `*None — captured during scenario authoring.*`. Both become members of a skip set.
+The placeholder guard (`push_question` in `read_spec.rs`) widens in the same change: it currently exact-matches `*None — all resolved.*`, while `create_scenario.rs:69` emits `*None — captured during scenario authoring.*`. Both become members of a skip set.
 
 **Blast radius.** `parse_open_questions` is `pub(crate)` and shared with `append-question`'s dedup, so the fix changes both readers at once — which is the point: they must agree. Existing specs whose Open Questions sections contain no commented-out bullets see no change in reported count.
 
@@ -36,7 +36,7 @@ This is a strictly additive change to a closed enum and its message set — no n
 
 ### Detection mirrors review-state drift exactly
 
-`check-artifacts` gains a `scenario-open-questions` family alongside its existing four (`check_artifacts.rs:139,159,224,320`). It is blocking on a `done` spec and advisory otherwise, and `--fix` reverts `done → in-progress` through `set-status` with the same non-silent notice the review-state-drift revert emits.
+`check-artifacts` gains a `scenario-open-questions` family alongside its existing four (`check_artifacts.rs`'s `artifact-completeness`, `task-consistency`, `scenario-consistency` and `review-state-drift` families). It is blocking on a `done` spec and advisory otherwise, and `--fix` reverts `done → in-progress` through `set-status` with the same non-silent notice the review-state-drift revert emits.
 
 No grandfather clause, unlike review-state drift. An absent `review:` block genuinely marks a spec as predating its feature; an unresolved scenario question is a present-tense defect whenever it arrived.
 
@@ -46,11 +46,11 @@ The dashboard already carries the two shapes needed: a Next Action override and 
 
 ### No `data-model.md` for this feature
 
-The schema changes are primitive request/response shapes, whose canonical source is [022's data-model](../022-deterministic-runtime/data-model.md) — `read-spec` at its line 128, `check-review-gate` at 498, `check-artifacts` at 598, `dashboard` at 408. Restating them here would create a second source for one fact, which §drift-prevention forbids. The 022 scenarios update those sections in place.
+The schema changes are primitive request/response shapes, whose canonical source is [022's data-model](../022-deterministic-runtime/data-model.md) — the `read-spec`, `check-review-gate`, `check-artifacts` and `dashboard` sections. Restating them here would create a second source for one fact, which §drift-prevention forbids. The 022 scenarios update those sections in place.
 
 ### Constitution amendments stay with this spec
 
-`§spec-lifecycle`'s `done` row (`framework/constitution.md:113`) and `§readiness-check`'s "All open questions are resolved" (`:174`) both currently read as spec-body-only. They are amended here, not in 022 — 022 owns the runtime, not the lifecycle definition.
+`§spec-lifecycle`'s `done` row (`framework/constitution.md:113`) and `§readiness-check`'s "All open questions are resolved" both currently read as spec-body-only. They are amended here, not in 022 — 022 owns the runtime, not the lifecycle definition.
 
 ## Affected Files
 

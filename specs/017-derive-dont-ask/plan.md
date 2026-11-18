@@ -18,7 +18,7 @@ Alternative considered: generator with section markers — rejected because the 
 
 ### `--fix` mode removed entirely from `/validate`
 
-Per spec Q1: checkboxes are flipped only by `/implement` (which marks parents and sub-items together at verification, `framework/commands/implement.md:91, 99`) and by `/clarify` (which moves resolved questions section-to-section). Hand-implementation that bypasses `/implement` is treated as out-of-framework — no fix-up tool ships for it. Combined with the title-field removal, `--fix` mode has nothing to do, so the entire flag is deleted from `/validate`.
+Per spec Q1: checkboxes are flipped only by `/implement` (which marks parents and sub-items together at verification, `framework/commands/implement.md`, "including nested sub-item checkboxes" and "Walk through each acceptance criterion from the spec", at `7e390d3c`) and by `/clarify` (which moves resolved questions section-to-section). Hand-implementation that bypasses `/implement` is treated as out-of-framework — no fix-up tool ships for it. Combined with the title-field removal, `--fix` mode has nothing to do, so the entire flag is deleted from `/validate`.
 
 ### Body inline links are authoritative for `dependencies`
 

@@ -41,7 +41,7 @@ default syntax is the one canonical spelling.
 `scripts/audit/self-url-resolution.sh` derives the slug from the archive URL in
 `ductus.md` with a regex over `codeload.github.com/<owner>/<repo>/tar.gz/`,
 extended to unwrap the `${DUCTUS_REPO:-…}` default
-(`scripts/audit/self-url-resolution.sh:85-87`). Because the default remains the
+(`scripts/audit/self-url-resolution.sh`, its `repo_slug` assignment). Because the default remains the
 literal `stonean/ductus` in the committed text, the derived slug is unchanged. A fork that changes the default
 changes the URL the family derives from — the family's own stated design.
 

@@ -24,7 +24,7 @@ the session file. `amend`, `analyze`, `clarify`, `fold`, `implement`, `plan`,
 `prune`, `review` and `target` all instructed "Read `.ductus/session.toml`" or
 "use the session target from `.ductus/session.toml`" (for example
 `framework/commands/clarify.md:22`, `framework/commands/implement.md:98`,
-`framework/commands/target.md:29`). Only writes went through a primitive
+`framework/commands/target.md`'s no-argument step). Only writes went through a primitive
 (`write-session`). A host read cannot be made per-process: the identity is an
 environment variable, and the host could read it only by the model running a
 shell command before every command, which is the diligence dependency the
@@ -44,9 +44,9 @@ notices and the expiry sweep. It is called by `write-session`,
 spec 080 `render-status` and `ductus hook status`, which read the process's
 identity for the view, and for its time helpers and `IDLE_EXPIRY` by
 `measure-reopenings` and the exec walker. Before this spec the read logic existed twice, in `dashboard`
-(`runtime/src/primitives/dashboard.rs:737-761`) and in the exec seed
-(`runtime/src/main.rs:523-535`), and the write logic once more in
-`runtime/src/primitives/write_session.rs:59-123`. Pin-on-first-resolution
+(`runtime/src/primitives/dashboard.rs`'s `load_session_target`) and in the exec seed
+(`runtime/src/main.rs`'s `run_exec`, "Seed the walker context"), and the write logic once more in
+`runtime/src/primitives/write_session.rs`'s `run_with_now`. Pin-on-first-resolution
 and once-only notices only hold if every reader follows the same rule, so
 duplicated read logic would reproduce the defect this spec removes.
 
@@ -63,7 +63,7 @@ invalid `DUCTUS_SESSION` fails each call that asks for the identity, naming the
 variable, rather than stopping the process at startup, so a session setting
 cannot take down the MCP server's other tools.
 Tests then pass identities directly instead of mutating process environment,
-which is `unsafe` in edition 2024 (`runtime/Cargo.toml:4`) and racy across
+which is `unsafe` in edition 2024 (`runtime/Cargo.toml`'s `edition = "2024"`) and racy across
 parallel tests. `identity_from_env` itself takes a lookup closure, so the
 Claude Code rule (AC13) is unit-testable with an injected environment.
 
@@ -125,10 +125,10 @@ containment. 022's task 34 routes every open through `validate_contained`
 
 **Per-process targets need the `.ductus/` layout.** When the active session
 file is a legacy tier (`.govern/session.toml` or the root
-`.govern.session.toml`, `runtime/src/schema/paths.rs:69-73`), the core treats
+`.govern.session.toml`, `runtime/src/schema/paths.rs`'s `LEGACY_DIR_SESSION_FILE` and `LEGACY_SESSION_FILE`), the core treats
 the process as unidentified. Otherwise it would create `.ductus/` state while
 a legacy file lingers, which 042's cutover rule forbids
-(`runtime/src/schema/paths.rs:159-164`). A legacy layout exists only until the
+(`runtime/src/schema/paths.rs`'s `session_path_for_write`). A legacy layout exists only until the
 next `/ductus` run migrates it (`framework/migrations/govern-dir-consolidate.md`
 step 3, then `framework/migrations/ductus-rename.md` step 2).
 
@@ -186,7 +186,7 @@ where it came from, and any notices. Under the lock:
 - **No identity:** the core reads the default and returns
   `source: "default"`. It writes nothing. A malformed default is an
   operational error naming the file, as `dashboard` already treats it
-  (`runtime/src/primitives/dashboard.rs:743-746`, test at `:1262`).
+  (`runtime/src/primitives/dashboard.rs`'s `load_session_target`, test `malformed_session_toml_is_operational_error`).
 - **Identity, own file present:**
   - A **cleared** file returns `source: "cleared"` and no target (AC20).
   - Otherwise it returns `source: "own"` and the target.
@@ -210,7 +210,7 @@ command.
 
 ### `write-session`: own file plus default
 
-The existing three write shapes stay (`runtime/src/primitives/write_session.rs:74-110`):
+The existing three write shapes stay (`runtime/src/primitives/write_session.rs`'s `run_with_now`, the "Merge semantics, in precedence order" comment at `25c946ea`):
 
 - **Target write:**
   - The core writes the default exactly as today, preserving `cli-config-dir`
@@ -232,7 +232,7 @@ The existing three write shapes stay (`runtime/src/primitives/write_session.rs:7
     tree. Leaving it set would let a restarted agent resurrect a target its
     operator just cleared.
 - **Host-config write:** default only, unchanged. `/ductus` records
-  `cli-config-dir` this way (`framework/bootstrap/ductus.md:40`).
+  `cli-config-dir` this way (`framework/bootstrap/ductus.md`'s "Record the per-contributor agent identity" step).
 
 After a target or clear write, the core runs the expiry sweep. It deletes
 per-process files whose `used-at` is more than seven days old, never the
@@ -278,13 +278,13 @@ auditable place.
   and rejected (task 12): `dashboard` is also called for data —
   `scripts/audit/lib.sh` enumerates the corpus with it — and every such call
   pinned the caller's session and would consume its notices unseen.
-- **Exec seed:** `runtime/src/main.rs:523-535` seeds from the core's peek when
+- **Exec seed:** `runtime/src/main.rs`'s `run_exec` seeds from the core's peek when
   the process has a record of its own, and otherwise from the shared default
   read leniently as before this spec, so `ductus exec` from an agent's shell
   tool carries that agent's identity (AC23). **Superseded in part by 022's task
   12** (2026-11-10): the shared default is read strictly too, so one that does
   not parse halts the walk with an error naming the file. The retarget exceptions in
-  `runtime/src/interpreter/mod.rs:303-316` are unchanged, because they govern
+  `runtime/src/interpreter/mod.rs`'s `merge_primitive_result` are unchanged, because they govern
   which keys a walk may overwrite, not where the seed came from.
 
 Every list a session tool returns — `write-session`'s `peers`, `expired`,
@@ -300,8 +300,7 @@ the sweep leaves a session file it cannot parse.
 ### Gitignore: two layers
 
 `/.ductus/sessions/` is added to the framework-managed block in
-`framework/templates/project/gitignore` (beside `/.ductus/session.toml`,
-line 31) and to this repository's `.gitignore` (line 10), satisfying AC7.
+`framework/templates/project/gitignore` (beside `/.ductus/session.toml` entry) and to this repository's `.gitignore` (beside its same entry), satisfying AC7.
 `/ductus` installs that block with `merge-managed-block`
 (`framework/bootstrap/ductus.md:36`), so adopters receive it on their next
 run with no migration.
