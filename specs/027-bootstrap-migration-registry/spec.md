@@ -55,7 +55,7 @@ The Pre-run Migrations section in `framework/bootstrap/ductus.md` is replaced by
 2. Reads `.ductus/config.toml` `[migrations].last_applied`.
 3. For each registry entry newer than `last_applied`, executes the entry's procedure (declarative step or referenced markdown).
 4. Updates `.ductus/config.toml` `[migrations].last_applied` to the newest entry id.
-5. Reports each applied migration in the post-scaffolding summary using the entry's `summary` field.
+5. Reports in the post-scaffolding summary each line an applied entry's procedure emits, its summary line among them, verbatim and in order; the registry's `summary` field describes the entry and is not printed.
 
 Entries past their `sunset_after` version are excluded from this loop entirely — they live in the adopter changelog only.
 
@@ -80,10 +80,10 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 ### Registry shape
 
 - [x] AC1: `framework/migrations.toml` exists with one `[[migrations]]` array-of-tables entry per active convention removal. Each entry carries the fields: `id` (slug), `introduced_in` (SemVer string), `sunset_after` (SemVer string or omitted), `summary` (one-line string), `target_paths` (array of strings), `procedure_file` (path string).
-- [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/ductus.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename.
+- [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/ductus.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename. — **superseded by AC14's archival**: all six are now in CHANGELOG.md's Archived migrations, `skills-to-workflows` and `workflow-filename-rename` by 2fcb5f93 and the other four by c061c1f0, so none is still registered
 - [x] AC3: Each back-filled entry's `introduced_in` matches the ductus version (or framework commit) where the removal actually shipped, derived from `git log` at registry-introduction time.
 - [x] AC4: Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform).
-- [x] AC5: Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced.
+- [x] AC5: Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced. — **superseded by AC14's archival** for all six: archiving an entry moves its procedure into CHANGELOG.md and deletes the file
 
 ### Adopter state
 
@@ -96,7 +96,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 - [x] AC10: `framework/bootstrap/ductus.md` Pre-run Migrations section is replaced by a single procedure that iterates the registry; no per-migration prose blocks remain in `ductus.md`.
 - [x] AC11: When pending migrations exist, bootstrap emits a single batch prompt listing each pending entry by `id` and `introduced_in`, then asks `Apply now? (Y/n)`. Decline emits a warning summary and makes no filesystem changes.
-- [x] AC12: The post-scaffolding summary lists each applied migration by its `summary` field. Entries with no work to do (target artifact absent) emit nothing — the procedure file's per-entry idempotency check is invariant.
+- [x] AC12: The post-scaffolding summary lists each applied migration by its `summary` field — **narrowed**: it carries the lines each applied entry's procedure emits, its summary line among them, verbatim and in order (`framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output), not the registry's `summary` field. Entries with no work to do (target artifact absent) emit nothing — the procedure file's per-entry idempotency check is invariant.
 
 ### Sunset and archive
 

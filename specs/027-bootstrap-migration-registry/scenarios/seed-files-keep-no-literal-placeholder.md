@@ -11,7 +11,7 @@ Through `ductus-v0.59.11`, bootstrap step 4 mapped the `skip` rows for `AGENTS.m
 ## Behavior
 
 - **A migration fills the substitution keys left literal in the two seed files.** In `AGENTS.md` and `CLAUDE.md`, each remaining `{project-name}` becomes `[project] name`, each `{One-line project description.}` becomes `[project] description`, and each `{project}` becomes `[host] project`, the three keys step 4 substitutes into those templates. It reports each file it changed and how many tokens it filled; an absent file, or one holding none, is left alone with nothing printed.
-- **Only those three keys.** The templates also carry `{name}`, `{slug}` and `{NNN-feature-name}` as documentation, which the bootstrap never substitutes; the migration leaves every other brace-delimited token alone.
+- **Only those three keys.** The 0.59.0 templates also carried `{name}`, `{slug}` and `{NNN-feature-name}` as documentation (the current `AGENTS.md` template carries `{name}` only), which the bootstrap never substitutes; the migration leaves every other brace-delimited token alone.
 - **It runs for every adopter crossing 0.60.0.** Its `introduced_in` is `0.60.0` and its id sorts after `strip-inbox-guidance`, so a `--ref=main` adopter that already applied the other 0.60.0 entries runs it too.
 
 Decided by the owner on 2026-11-16, over a closing-summary report of the literals and over a waiver.

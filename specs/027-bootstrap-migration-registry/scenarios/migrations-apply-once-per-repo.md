@@ -32,7 +32,7 @@ A second constraint compounded it for that target: `/ductus` never writes the fu
 
 - A migration that only *reads* per-contributor state to decide a repo-shared edit is unaffected — the marker is correct, because the repo-shared edit does happen once.
 - "Per-contributor" means what the framework's own layout guarantees (gitignored by the shipped `.gitignore`), not whatever an individual adopter has chosen to ignore locally.
-- `{config_dir}/commands/` is **not** per-contributor despite living under `.claude/`: the shipped `.gitignore` excepts it (`!.claude/commands/`) so slash commands stay tracked. `workflows-sunset`, which targets that directory, is a repo-shared migration.
+- `{config_dir}/commands/` is **not** per-contributor despite living under `.claude/`: the shipped `.gitignore` excepts it (`!.claude/commands/`) so slash commands stay tracked. `workflows-sunset`, which targeted that directory, was a repo-shared migration, since archived to CHANGELOG.md (c061c1f0).
 - An adopter working alone sees no difference — the marker and the per-contributor file belong to the same person — which is exactly why this class of defect survives testing and reaches teams only.
 
 ## Open Questions
