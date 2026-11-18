@@ -28,6 +28,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added the `waived` verdict to `rule-verdicts`, the `waived` and `waived-count` result fields and the `## Waived rules` body section of `write-analysis`, and derives departure waivers in `write-review` and expires them in `process-waivers`. Its data model carries the shapes.
 >
 > **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md) added reasons to the analysis record's closed set of unexamined reasons, each listed with its class in [data-model.md](data-model.md): its path families now run at `in-progress` and say when they do not run, its reference, integrity and decision-reason checks name what they could not judge, and a path that leaves the project is its own reason.
+>
+> **Signpost:** [050 — Constitution](../050-constitution/spec.md)'s AC24 forbids a line-number citation in a spec artifact; AC6 here makes removing a citation's line suffix a mechanical edit, so the strips of 050's sweep reopened no spec on their own.
 
 ## Motivation
 
