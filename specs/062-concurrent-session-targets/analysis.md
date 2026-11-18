@@ -1,18 +1,18 @@
 ---
 spec: 062-concurrent-session-targets
-last-run: 2026-11-14T17:38:26Z
-analyzed-against: 46668bfb8f4f2667cb1e10a9558c95245e2b950c
+last-run: 2026-11-18T13:07:02Z
+analyzed-against: d793782d76f6450f20e84d63c4a25e9770a9a4e8
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
+advisory: 0
 unexamined: 2
 analyzed-digest:
-  data-model.md: 0f1edd3db663df560a438fd4d43607e39f4c1a3f9339b29203638dd3c21b96a9
-  plan.md: 9d232e4abd9260c276543f05014f9b447fc082935c1c69592e04bec11bc7065f
+  data-model.md: 18dc633f1739c9f32b632d67921378c8d2225a39e257076c8ad9cc88b45d6c9f
+  plan.md: c9f6780af99ce78a368818f00e05ae31e3f0deb7b3ad3732e742f858b915b2d1
   review.md: 8fcb169d49bab581eb6fa0db348689ed3fd72eaf75bf8119333cafffd3428554
   scenarios/first-writers-create-the-ignore-file-once.md: 150b95396db7f7e774f4da1726618b953070531f1810c4272a5c080f7e47c0b8
-  spec.md: 4300a10626518bb7f758c08ef4bf1d4a96d90cb1663a29c1edefe4b9449ce73f
-  tasks.md: d206ce917d4e0734ab8dc0daa2f6c7bc1418ac275c97c06554c807a20731afc3
+  spec.md: 61277a4c97121bf594664e9d94a640099fbdc7a7b1d7f37d166f160e021ae262
+  tasks.md: 0470763b7f991104538c90010af84e0df993f61bffc87490a10cf3cdc6a9e6e3
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
@@ -25,71 +25,44 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "data-model.md#`write-session` result additions"}
-  BE-ERR-002: {verdict: addressed, cite: "data-model.md#`retarget-sessions`"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#Identity"}
-  BE-INPUT-002: {verdict: addressed, cite: "plan.md#Identity"}
-  BE-INPUT-004: {verdict: finding, tier: must, at: "plan.md#Storage: confine each process to its own file", message: "Session files open under a sanitized identity and a fixed default name with no canonical containment (validate_contained); the plan itself states the gap, deferred to 022 task 34."}
-  BE-INPUT-008: {verdict: addressed, cite: "plan.md#Storage: confine each process to its own file"}
+  BE-INPUT-002: {verdict: addressed, cite: "spec.md#Process identity"}
+  BE-INPUT-004: {verdict: addressed, cite: "plan.md#Storage: confine each process to its own file"}
+  BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Per-process record: `.ductus/sessions/{key}.toml`"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#`dashboard` and the exec seed"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-RACE-002: {verdict: addressed, cite: "plan.md#Storage: confine each process to its own file"}
-  BE-RACE-003: {verdict: addressed, cite: "scenarios/first-writers-create-the-ignore-file-once.md#Behavior"}
-  BE-REPR-001: {verdict: addressed, cite: "plan.md#`write-session`: own file plus default"}
-  BE-REPR-002: {verdict: finding, tier: should, at: "data-model.md#`write-session` result additions", message: "New tool fields (seen-peers, last-used, session-identity) follow kebab-case but no casing convention is declared in specs/system.md (file absent)."}
+  BE-RACE-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-RETRY-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-RETRY-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
-  BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#Affected Files"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#`write-session`: own file plus default"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#One session core, four callers"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
+  CFG-CONST-004: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   CFG-ENV-001: {verdict: addressed, cite: "plan.md#One session core, four callers"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
   CFG-ENV-007: {verdict: addressed, cite: "plan.md#Identity"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#One session core, four callers"}
 blocking: false
 dispositions:
-  fixed: 1
-  deferred: 1
-  waived: 3
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
-decisions:
-  - key: grounding — plan.md says the lock poll's jitter comes from the standard library's randomly seeded hasher, with no source
-    outcome: waived
-    reason: a claim about the Rust standard library, not about the system 062 changes, whose grounding needs a documentation fetch this run did not make; the jitter's behavior is held by the session-lock-backoff mutants, not by this sentence
-    decided-at: 2026-11-10T02:08:31Z
-    decided-by: rule
-  - key: "rule-assessment — BE-INPUT-004: Session files open under a sanitized identity and a fixed default name with no canonical containment (validate_contained); the plan itself states the gap, deferred to 022 task 34."
-    outcome: deferred
-    target: specs/022-deterministic-runtime/tasks.md
-    task: "34"
-    reason: the owner deferred it (2026-11-14) to 022, whose plan's Path arguments section is the containment contract and leaves the session files out of the sites that open a path; task 34 routes every open through validate_contained
-    decided-at: 2026-11-14T17:38:26Z
-    decided-by: andy@stone.dev
-  - key: "rule-assessment — BE-REPR-002: New tool fields (seen-peers, last-used, session-identity) follow kebab-case but no casing convention is declared in specs/system.md (file absent)."
-    outcome: waived
-    reason: "the new fields follow one convention, kebab-case, and this project declares none: it has no specs/system.md"
-    decided-at: 2026-11-14T17:38:26Z
-    decided-by: rule
-  - key: grounding — spec.md Motivation states which commands wrote the session file as a side effect (specify, groom, amend's scenario route, fold, consolidate) with no file-and-symbol citation
-    outcome: waived
-    reason: history motivating the behavior this spec replaces; it governs no behavior, and the command sources are the authority for what each writes
-    decided-at: 2026-11-14T17:38:26Z
-    decided-by: rule
 ---
 
 # Analysis — 062-concurrent-session-targets
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 1 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -101,13 +74,11 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-REPR-002: New tool fields (seen-peers, last-used, session-identity) follow kebab-case but no casing convention is declared in specs/system.md (file absent). — `specs/062-concurrent-session-targets/data-model.md` — **waived**: the new fields follow one convention, kebab-case, and this project declares none: it has no specs/system.md (decided by the rule)
-- grounding — plan.md says the lock poll's jitter comes from the standard library's randomly seeded hasher, with no source — `specs/062-concurrent-session-targets/plan.md` — **waived**: a claim about the Rust standard library, not about the system 062 changes, whose grounding needs a documentation fetch this run did not make; the jitter's behavior is held by the session-lock-backoff mutants, not by this sentence
-- grounding — spec.md Motivation states which commands wrote the session file as a side effect (specify, groom, amend's scenario route, fold, consolidate) with no file-and-symbol citation — `specs/062-concurrent-session-targets/spec.md` — **waived**: history motivating the behavior this spec replaces; it governs no behavior, and the command sources are the authority for what each writes (decided by the rule)
+*None.*
 
 ## Deferred to other specs
 
-- rule-assessment — BE-INPUT-004: Session files open under a sanitized identity and a fixed default name with no canonical containment (validate_contained); the plan itself states the gap, deferred to 022 task 34. — `specs/062-concurrent-session-targets/plan.md` — **deferred** to `specs/022-deterministic-runtime/tasks.md` task 34
+*None.*
 
 ## Contradictions
 
@@ -119,4 +90,4 @@ decisions:
 
 ## Fixed in this run
 
-- plan-consistency — plan.md Technical Decision 'Command files' (line 310) states what changes but carries no rationale of its own — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+*None.*
