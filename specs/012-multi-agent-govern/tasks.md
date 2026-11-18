@@ -1,6 +1,6 @@
 ---
 title: "012-multi-agent-govern — tasks"
-next-task: 14
+next-task: 15
 ---
 
 # 012 — Multi-Agent Ductus Tasks
@@ -20,3 +20,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Verify it in task 12's scratch-adopter run on a subject carrying a dropped host's tree, and state the line it printed in the closing commit
 
 - **Done when**: 012 records the requirement, both bootstrap copies print the notice for each of the five paths when no registry row names them and stay silent otherwise, and a scratch-adopter run shows it
+
+## 14. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
+
+- [ ] A first run whose project holds only a dropped host's tree (`.agents/`), and an `--agents=claude` run beside one, each print the leftover-tree line (0030b255)
+
+- **Done when**: the batched run 003's matching task names shows the outcome, which the commit ticking this task states; a defect it finds is fixed first

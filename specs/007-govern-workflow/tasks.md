@@ -1,6 +1,6 @@
 ---
 title: "007-govern-workflow — tasks"
-next-task: 9
+next-task: 10
 ---
 
 # 007 — Ductus Command Tasks
@@ -24,3 +24,10 @@ Implemented in `02bbda81` (landed on `main` 2026-11-12), and verified by the scr
 - [x] Verify with a scratch-adopter bootstrap: a two-agent project upgraded with `install.sh claude --ref=main`, the other agent's copy stale, runs through in one session. Deferred from 080's task 29, which found the abort in task 11's upgrade run (owner, 2026-11-09)
 
 - **Done when**: a multi-agent upgrade whose running agent's copy is current, with another selected agent's stale, completes in one session, and the scenario says so.
+
+## 9. Exercise the shared bootstrap window's review fixes in a scratch-adopter bootstrap
+
+- [ ] A `--ref` first adoption with specs of its own that stops at the self-update abort re-runs as a first adoption: no migration offered, and the first-run steps printed (8be4f935, cfb348b8)
+- [ ] A run whose `--agents=` leaves out the running agent prints that agent's `ductus.md not compared` line (cfb348b8)
+
+- **Done when**: the batched run 003's matching task names shows each outcome, which the commit ticking this task states; a defect it finds is fixed first
