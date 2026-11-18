@@ -1,6 +1,6 @@
 ---
 title: "008-security-rules — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow]
 tags: [security, format]
 next-criterion: 29
