@@ -39,6 +39,8 @@ The ductus file contains manifest tables (**Shared Files**, **Per-Agent Scaffold
 
 For each primary language, fetch from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore` and append below a comment header. Failures are reported but don't abort.
 
+This is the approach 003 decided for the `.gitignore` merge it owns, inherited rather than decided again here: the shipped template stays minimal, with no language-specific patterns, and each project gets its languages' patterns from GitHub's collection at bootstrap (`002-project-scaffolding` Resolved Questions, *Gitignore and language patterns*), never bundled into the framework archive (`015-tarball-fetch`). A failed fetch does not abort because AC6 holds every individual fetch to that, as the spec's File Fetching section does for an entry missing from the archive.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -71,7 +73,7 @@ The ductus command could do `.claude/` → another CLI's directory replacement a
 
 ### Considered: separate command template directories per CLI
 
-Maintaining one command template directory per CLI. Rejected — the commands are identical except for path prefixes. Duplicating them would create drift. The placeholder approach keeps one source of truth.
+Maintaining one command template directory per CLI. Rejected — the commands are identical except for path prefixes: every layout installs the same `framework/commands/*.md` sources, substituting only `{project}` and `{cli-config-dir}` (`framework/bootstrap/ductus.md` §Per-Agent Scaffolding, the Pi layout's **Prompt templates**). Duplicating them would create drift. The placeholder approach keeps one source of truth.
 
 ## Open Questions Resolved
 
