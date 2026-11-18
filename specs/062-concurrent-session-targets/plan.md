@@ -117,11 +117,11 @@ The new paths are constants in `runtime/src/schema/paths.rs` beside
 `runtime-hardcoded-paths` (`scripts/audit/runtime-hardcoded-paths.sh`) holds
 the runtime to declaring paths there.
 
-Opening these files does not yet refuse a symbolic link that leaves the
-project: the core builds each path from the sanitized identity under
-`SESSIONS_DIR` and the shared default's fixed name, and states no canonical
-containment. 022's task 34 routes every open through `validate_contained`
-(`BE-INPUT-004`, deferred there by the owner, 2026-11-14).
+Opening these files refuses a symbolic link that leaves the project: the
+core builds each path from the sanitized identity under `SESSIONS_DIR` and
+the shared default's fixed name, and 022's task 34 routes every open through
+`validate_contained` (`BE-INPUT-004`, deferred there by the owner on
+2026-11-14 and since delivered).
 
 **Per-process targets need the `.ductus/` layout.** When the active session
 file is a legacy tier (`.govern/session.toml` or the root
