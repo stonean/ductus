@@ -24,7 +24,7 @@ Running the pipeline on that logic does the work with the wrong rules. A manifes
 - For each **stale** agent, the fetched copy is written over the installed file the comparison read, and the write is checked for integrity. Placeholders stay literal, as in every installed copy of the bootstrap.
 - A stale **running agent** (the agent whose session executes the bootstrap) then stops the run at the pre-flight abort, before inputs are collected, so no answer the user types is discarded. The notice names the source and lists the stale agents updated, and asks the user to start a new session and re-run the command they can actually invoke. Every section past the pre-flight phase is skipped.
 - A stale agent that is **not** the running agent never stops the run: its copy is overwritten, the post-scaffolding output reports it among the agents updated, and the run continues. The notice never says the running session uses older instructions when the running copy matched upstream.
-- A **pinned-divergent** agent never stops the run. The post-scaffolding output carries one advisory line for it — `{agent}: ductus.md pinned, upstream has changed` — and only while the pinned copy actually differs from upstream.
+- A **pinned-divergent** agent never stops the run. The post-scaffolding output carries one advisory line for it — `{agent}: ductus.md pinned, upstream has changed.` — and only while the pinned copy actually differs from upstream.
 - On the next run in a new session, the freshly written copy is what loads, the check records **current**, and the run proceeds.
 
 ## Edge Cases
