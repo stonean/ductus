@@ -150,7 +150,7 @@ The installed bootstrap stays in each agent's command directory after the run, a
 - **`.gitignore` merge dedup** — the managed block is found by its `# ductus` line and replaced, never appended twice, and a managed pattern copied outside the block is removed.
 - **A source file missing from the archive** — the command warns and continues with the remaining entries.
 - **Empty `$ARGUMENTS`** — no project name provided. The command prompts for each missing input once the pre-flight phase has passed, unless an earlier run persisted it.
-- **Invalid project name** — uppercase, spaces, or special characters. The command rejects with a clear error: "Project name must be lowercase, alphanumeric, and hyphens only."
+- **Invalid project name** — uppercase, spaces, or special characters. An entered name is rejected with "Project name must be lowercase, alphanumeric, and hyphens only." and asked for again; one from the command argument or the config file halts the run, naming its source and the value (`CFG-ENV-008`).
 - **Command directory doesn't exist** — the agent's command directory (e.g., `.claude/commands/`) may not exist yet. The command creates intermediate directories as needed.
 
 ## Acceptance Criteria
