@@ -52,7 +52,7 @@ Implemented in `364c330b` (landed on `main` 2026-11-12), and verified by the scr
 
 ## 20. Exercise task 19's guard text in a scratch-adopter bootstrap
 
-- [ ] AGENTS.md asks a scratch-adopter bootstrap of every `framework/bootstrap/` change, and 6bb984b0 changed `framework/bootstrap/ductus-procedure.md` §Duplicate-id and reference-integrity guard. The run reads that half from the fetched archive, so it runs after the change is pushed, with `--ref=main`, batched with 029 task 17's run
-- [ ] The run's Pre-run Migrations applies the guard at step 1 and passes the real registry, and the run completes as before
+- [x] AGENTS.md asks a scratch-adopter bootstrap of every `framework/bootstrap/` change, and 6bb984b0 changed `framework/bootstrap/ductus-procedure.md` §Duplicate-id and reference-integrity guard. The run reads that half from the fetched archive, so it runs after the change is pushed, with `--ref=main`, batched with 029 task 17's run
+- [x] The run's Pre-run Migrations applies the guard at step 1 and passes the real registry, and the run completes as before
 
 - **Done when**: the batched run 029 task 17's matching item names shows the guard passing and the run completing, which the commit ticking this task states; a defect it finds is fixed first
