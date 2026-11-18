@@ -14,7 +14,7 @@ The work is mostly textual: editing markdown source files. There is no library t
 
 ### Frontmatter format
 
-Standard YAML frontmatter — `---` delimiter line, YAML key-value block, `---` delimiter line, blank line, then the markdown body. No alternative format (TOML, JSON, custom) considered: YAML is the universal PKM convention (Quartz, Obsidian, Logseq, MkDocs, Hugo, Jekyll, Eleventy all expect it), and keeping with the convention is the entire point of opting into ecosystem compatibility.
+Standard YAML frontmatter — `---` delimiter line, YAML key-value block, `---` delimiter line, blank line, then the markdown body. No alternative format (TOML, JSON, custom) considered: YAML is the universal PKM convention (Quartz, Obsidian, Logseq, MkDocs, Hugo, Jekyll, Eleventy all expect it: an assumption from each tool's documentation when this plan was written, not re-verified since), and keeping with the convention is the entire point of opting into ecosystem compatibility.
 
 Example (specs):
 
@@ -153,7 +153,7 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 ### Known limitations
 
 - **Tag fragmentation risk.** Free-form tags can drift (`cli` vs. `commands` vs. `slash-commands`). The starter vocabulary in the constitution and the sibling-spec autocomplete in `/ductus:specify` mitigate but don't enforce. Accepted because rigid taxonomy adds ceremony without proportional value.
-- **Single-commit migration diff.** Adopters with many specs see one large diff when `/ductus` runs the migration. Accepted because git review tools handle this fine, atomicity is a feature, and the alternative (multi-commit migration) requires the bootstrap to make multiple commits in the user's repo, which is out of scope for governance.
+- **Single-commit migration diff.** Adopters with many specs see one large diff when `/ductus` runs the migration. Accepted because ordinary git review tools show one large diff well enough (an assumption, not measured), atomicity is a feature, and the alternative (multi-commit migration) requires the bootstrap to make multiple commits in the user's repo, which is out of scope for governance.
 - **Scenario non-spec-ref metadata is preserved as-is.** Migration converts `**spec-ref:**` to frontmatter but leaves any other bold-prefix patterns in scenario bodies untouched (there are no other recognized scenario fields today). If projects have invented scenario metadata conventions, those stay in body prose unchanged.
 - **No automated test for ductus.md migration.** The migration step is markdown instructions executed by the agent, not code. Verification is manual: run on a test fixture (a copy of a brownfield project's `specs/`) and confirm the diff. Tracked as a task.
 
