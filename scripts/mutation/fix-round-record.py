@@ -192,11 +192,11 @@ MUTATIONS = [
         'M25 an invalidated record keeps its round waivers',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "round-waivers",\n',
         ],
         [
-            '    const SCALARS: [&str; 23] = [',
+            '    const SCALARS: [&str; 27] = [',
             '',
         ],
         'invalidate_review::tests::the_fix_round_fields_go_with_the_run',
@@ -205,11 +205,11 @@ MUTATIONS = [
         'M26 an invalidated record keeps its un-re-read count',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "not-re-read",\n',
         ],
         [
-            '    const SCALARS: [&str; 23] = [',
+            '    const SCALARS: [&str; 27] = [',
             '',
         ],
         'invalidate_review::tests::the_fix_round_fields_go_with_the_run',
@@ -218,11 +218,11 @@ MUTATIONS = [
         'M27 an invalidated record keeps its excluded count',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "excluded",\n',
         ],
         [
-            '    const SCALARS: [&str; 23] = [',
+            '    const SCALARS: [&str; 27] = [',
             '',
         ],
         'invalidate_review::tests::a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay',
@@ -231,11 +231,11 @@ MUTATIONS = [
         'M28 an invalidated record keeps its broken contracts',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "contract-breaks",\n',
         ],
         [
-            '    const SCALARS: [&str; 23] = [',
+            '    const SCALARS: [&str; 27] = [',
             '',
         ],
         'invalidate_review::tests::a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay',
@@ -244,11 +244,11 @@ MUTATIONS = [
         'M29 an invalidated record keeps its open mark',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "fix-rounds-open",\n',
         ],
         [
-            '    const SCALARS: [&str; 23] = [',
+            '    const SCALARS: [&str; 27] = [',
             '',
         ],
         'invalidate_review::tests::a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay',
@@ -257,11 +257,11 @@ MUTATIONS = [
         'M30 an invalidated record drops what it left open',
         'src/primitives/invalidate_review.rs',
         [
-            '    const SCALARS: [&str; 24] = [',
+            '    const SCALARS: [&str; 28] = [',
             '        "excluded",\n',
         ],
         [
-            '    const SCALARS: [&str; 25] = [',
+            '    const SCALARS: [&str; 29] = [',
             '        "excluded",\n        "open-findings",\n',
         ],
         'invalidate_review::tests::a_runs_excluded_count_breaks_and_open_mark_go_and_its_open_findings_stay',

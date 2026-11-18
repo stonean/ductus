@@ -144,7 +144,7 @@ MUTATIONS = [
     ),
     (
         "M19 a criterion's label is compared",
-        'src/primitives/classify_spec_edit.rs',
+        'src/primitives/criterion_verdicts.rs',
         'unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)',
         'unlabelled.map_or_else(|| criterion.text.clone(), |_| criterion.text.clone())',
         'classify_spec_edit::tests::labelling_is_a_correction',

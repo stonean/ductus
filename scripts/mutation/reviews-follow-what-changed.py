@@ -75,8 +75,8 @@ MUTATIONS = [
     (
         'M8 a stale digest holds the record again',
         'src/primitives/compute_review_scope.rs',
-        'let review_owed = run.is_none_or(holds_done_until_reviewed) || !owed_by.is_empty();',
-        'let review_owed = run.is_none_or(|record| holds_done_until_reviewed(record) || matches!(review_freshness(repo, &rel_dir, Some(record)), RecordFreshness::Stale { .. })) || !owed_by.is_empty();',
+        'let review_owed = owes_a_review(run, &owed_by, &criteria_owing);',
+        'let review_owed = run.is_none_or(|record| holds_done_until_reviewed(record) || matches!(review_freshness(repo, &rel_dir, Some(record)), RecordFreshness::Stale { .. })) || !owed_by.is_empty() || !criteria_owing.is_empty();',
         'compute_review_scope::tests::a_stale_digest_puts_its_contract_in_scope_and_owes_no_review compute_review_scope::tests::a_stale_digest_whose_contract_is_gone_owes_no_review compute_review_scope::tests::a_contract_changed_before_the_window_joins_the_scope',
     ),
     # -- attribution of a named commit --------------------------------------

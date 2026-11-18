@@ -295,8 +295,8 @@ MUTATIONS = [
     (
         'M44 a spec with no record owes no review',
         'src/primitives/compute_review_scope.rs',
-        'let review_owed = run.is_none_or(holds_done_until_reviewed)',
-        'let review_owed = run.is_some_and(holds_done_until_reviewed)',
+        'run.is_none_or(holds_done_until_reviewed) || !owed_by.is_empty() || !criteria_owing.is_empty()',
+        'run.is_some_and(holds_done_until_reviewed) || !owed_by.is_empty() || !criteria_owing.is_empty()',
         'compute_review_scope::tests::a_review_is_owed_with_no_record_whatever_the_window_holds',
     ),
     (
@@ -848,7 +848,7 @@ MUTATIONS = [
     (
         'M126 the gate does not read review-owed',
         'src/primitives/check_review_gate.rs',
-        '        Ok(scope) if scope.review_owed => Err(review_owed_block(&scope.owed_by, project)),\n',
+        '        Ok(scope) if scope.review_owed => Err(review_owed_block(\n            &scope.owed_by,\n            &scope.criteria_owing,\n            project,\n        )),\n',
         '',
         'check_review_gate::tests::a_reopening_that_changed_code_takes_one_review_then_one_analysis',
     ),
