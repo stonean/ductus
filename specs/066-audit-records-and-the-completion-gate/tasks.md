@@ -43,6 +43,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 27. Criteria are verified in review, and the completion gate makes no semantic judgment (scenario criteria-are-verified-in-review)
 
-- [ ] Implement the behavior described in `scenarios/criteria-are-verified-in-review.md`
+The design is the plan's *Criteria are judged in review, and the gate judges nothing*; the subtasks run in order (owner approval, 2026-11-18).
 
-- **Done when**: the scenario's described behavior is correctly implemented and tested.
+- [ ] (a) Record: `write-review` takes `criteria`, one verdict per criterion by label or index, reads the criteria from `spec.md`, and derives `criteria-judged`, `criteria-met`, `criteria-not-met` and `criteria-verdicts`; a not-met verdict sets `blocking`, and a verdict addressing a criterion `spec.md` lacks is refused. Tests with mutants; 066's data model and `WRITE_REVIEW`; the constitution's review record table; 020's data model gains the fields, which reopens 020, with a signpost back to 066
+- [ ] (b) Owed: `compute-review-scope` reads `review-owed: true` while `spec.md` holds an unticked criterion, or a ticked one whose digest is not among the record's `criteria-verdicts`, whatever the window holds, and names each in `criteria-owing`. Tests with mutants, an artifact-only window and a record without the field among them; 066's data model and `COMPUTE_REVIEW_SCOPE`; 079's AC4 and 081's AC1 and AC8 annotated, which reopens both
+- [ ] (c) Gate: `check-review-gate` blocks `unticked-criterion` directly after `unchecked-task`. Tests with mutants; 066's data model's check list and `CHECK_REVIEW_GATE`
+- [ ] (d) Commands: `framework/commands/review.md` gains the criteria step (`verifyCriteria`, then `mark-criterion` with `checked` set to each verdict) and writes `spec.md`'s criterion ticks; `framework/commands/implement.md` loses its criteria steps; both references follow; the `verifyCriteria` request is built for the review walk and the goldens are re-blessed; a fixture shows a ticked criterion that the code outside the window contradicts unticked with the record blocking, and the same fixture passing once corrected
+- [ ] (e) Sweep: §implement-phase in `framework/constitution.md`; `AGENTS.md`'s pre-done verification ordering entry retired; 000's `validation-gates` and `criterion-route-after-draft` scenarios, which reopens 000; 013's `criterion-identifiers` context; 022's `implement-completion-gate` scenario and data model; 060's plan and 050's prose; each affected spec in `cross-spec-impact:` with a signpost back to 066
+- [ ] (f) Each new behavior has a test its mutant turns red, listed in `scripts/mutation/criteria-in-review-066.py`; the whole `cargo test` and every push workflow's steps pass
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested, each new behavior proven by a test its mutant turns red; the whole `cargo test` passes; and 066's next review reads the change.

@@ -63,6 +63,19 @@ Rejected: an extension-free definition, which would make removing a port from a 
 
 **`BE-COMPAT-001`:** a call that recorded an unknown reason now fails, naming the argument `unexamined-by-reason`, **breaking** for such a caller; every reason the exec walker and `/{project}:analyze`'s steps supply is in the set. It ships with the pending minor bump.
 
+### Criteria are judged in review, and the gate judges nothing (task 27)
+
+Scenario `criteria-are-verified-in-review` moves the pipeline's only check of code against acceptance criteria from `/{project}:implement`'s completion gate into `/{project}:review` (owner approval, 2026-11-18).
+
+- **A criteria step beside the five passes, not a sixth pass.** `/{project}:review` runs `verifyCriteria` after its passes, in the same subagent, over every criterion of the spec, reading the code a criterion's claim names wherever it lies; the scope and its window are unchanged. A dimension-restricting flag restricts the passes only. Rejected: a sixth pass, which would falsify the 24 live claims of "five passes" or "five dimensions" outside the review records, 020's AC12 and AC16 among them, for no behavior the step lacks.
+- **The verdict writes the tick.** Each verdict drives one `mark-criterion` call with `checked` set to `met`, so review ticks a met criterion and unticks a not-met one; the exec walker's `mark-criterion` binding already reads `llm:verifyCriteria` that way. `/{project}:review`'s Scope Boundaries add `spec.md`'s criterion checkboxes to what it writes.
+- **`write-review` records the verdicts.** It takes `criteria`, one verdict per criterion addressed by label or index, reads the criteria from `spec.md` itself, and derives `criteria-judged`, `criteria-met`, `criteria-not-met` (each not-met criterion's label) and `criteria-verdicts` (each met criterion's label and the sha256 of its text, tick and label normalized). A not-met verdict sets `blocking`, so `holds_done_until_reviewed` holds the record and the next window does not move; a verdict addressing a criterion `spec.md` lacks is refused.
+- **`review-owed` reads the criteria.** `compute-review-scope` reads `review-owed: true` while `spec.md` holds an unticked criterion, or a ticked one whose digest is not among the record's `criteria-verdicts`, whatever the window holds, and names each in `criteria-owing`. A record without `criteria-verdicts` holds no verdict, so a spec's first reopening after this lands owes a review.
+- **The gate checks ticks deterministically.** `check-review-gate` blocks `unticked-criterion` directly after `unchecked-task`, reading the criteria through the parser `read-spec` shares.
+- **`/{project}:implement`'s completion gate loses its criteria steps** (`read-spec`, `verifyCriteria` and `mark-criterion`); `verifyCriteria`'s request and response shapes are unchanged and move with the step to review.
+
+**`BE-COMPAT-001`:** breaking: `check-review-gate`'s `blocked-by` gains `unticked-criterion`; `ductus exec implement` no longer sends `verifyCriteria`, and `ductus exec review` does; `review-owed` reads true where it read false. Additive: `write-review`'s `criteria` argument and the record's four fields, and `compute-review-scope`'s `criteria-owing`. It ships with the pending minor bump.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -86,15 +99,24 @@ Rejected: an extension-free definition, which would make removing a port from a 
 | `runtime/src/primitives/check_artifacts.rs` | Specify | The cross-spec-impact-drift message that names an affected spec read through a link out (task 23) |
 | `runtime/src/schema/descriptions.rs` | Specify | `WRITE_REVIEW`'s and `WRITE_ANALYSIS`' statement of the guard (task 24), `CLASSIFY_SPEC_EDIT`'s statement of the strip (tasks 25 and 26), and `WRITE_ANALYSIS`' of the closed reason set (task 26) |
 | `.github/workflows/runtime.yml` | Modify | Triggers on 066's data model, whose reason table a test holds the runtime's list to (task 26) |
-| `framework/commands/review.md` | Specify | Step 11 says what a `changed-since-read` refusal means and to re-run the write (task 24) |
+| `framework/commands/review.md` | Modify | Step 11 says what a `changed-since-read` refusal means and to re-run the write (task 24); the criteria step, and the criterion ticks it writes (task 27) |
 | `framework/commands/analyze.md` | Specify | Step 21 says the same for `write-analysis` (task 24) |
 | `runtime/tests/line_ending_discipline.rs` | Specify | The two writers' line-ending exemptions follow their write calls onto the guard (task 24; 022 task 38 widens the subject to guarded writes) |
 | `scripts/mutation/compare-and-set-066.py` | Create | The mutation list proving each record write refuses a record changed since its read (task 24) |
 | `scripts/mutation/gate-cross-spec-containment.py` | Create | The mutation list proving the gate contains each path it builds from a cross-spec-impact slug (task 23) |
 | `runtime/src/primitives/line_citations.rs` | Create | The one definition of a line-number citation, and its strip (task 25) |
 | `runtime/src/primitives/classify_spec_edit.rs` | Modify | Criteria and open questions compared with their citations stripped (task 25) |
-| `framework/constitution.md` | Modify | §spec-lifecycle names the strip beside mechanical cases (a) and (b) (task 25) |
+| `framework/constitution.md` | Modify | §spec-lifecycle names the strip beside mechanical cases (a) and (b) (task 25); §implement-phase places criterion verification in review, and the review record table gains the criteria fields (task 27) |
 | `scripts/mutation/line-citation-strip-066.py` | Create | The mutation list proving a strip is mechanical and nothing else becomes so (task 25) |
+| `runtime/src/schema/extensions.rs` | Modify | `verifyCriteria`'s docs name `/{project}:review` as its sender (task 27) |
+| `runtime/src/interpreter/mod.rs` | Modify | The `mark-criterion` binding's docs name the review walk (task 27) |
+| `AGENTS.md` | Modify | The pre-done verification ordering entry retired, since review now verifies (task 27) |
+| `framework/reference/review.md` | Modify | What the criteria step reads and how the subagent runs it (task 27) |
+| `framework/commands/implement.md` | Modify | The completion gate without its criteria steps (task 27) |
+| `framework/reference/implement.md` | Modify | §Completion gate without criterion verification (task 27) |
+| `runtime/src/interpreter/payload.rs` | Modify | The `verifyCriteria` request built for `/{project}:review` (task 27) |
+| `runtime/tests/golden/*.jsonl` | Modify | The implement and review walks re-blessed (task 27) |
+| `scripts/mutation/criteria-in-review-066.py` | Create | The mutation list proving each criteria behavior (task 27) |
 
 ## Data Model
 
