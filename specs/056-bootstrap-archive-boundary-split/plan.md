@@ -66,7 +66,7 @@ Ten consumers were classified in the spec. Task 5 re-earns that classification b
 | `framework/bootstrap/ductus.md` | Modify | Excise five blocks; add one `## The archive half` pointer; repair prose the move falsifies |
 | `framework/bootstrap/govern.md` | Modify | `cp` of the post-split `ductus.md` (Family 21) |
 | `runtime/legacy-prose-commands.txt` | Modify | Allowlist the archive half; correct the header's `framework/commands/*.md`-only claim |
-| `specs/056-bootstrap-archive-boundary-split/plan.md` | Modify | Record the post-split measurement (AC11) |
+| `specs/056-bootstrap-archive-boundary-split/plan.md` | Modify | Record the post-split measurement (AC11), which 063e50ea's prune later moved to the commit record |
 
 Not changed, and each checked rather than assumed: every `scripts/audit/*.sh`, every `runtime/src/**` file, `install.sh`, `README.md`, and `docs/shared-constitution.md`. The three prose anchors into this file (`README.md`'s "`/ductus` also maintains `[host]`" paragraph, `README.md`'s "currently distributes to four AI coding agents" paragraph (as at `a345df4d`), `docs/shared-constitution.md`'s "A malformed entry halts" section) resolve to `#project-configuration` and `#agent-registry`, both of which stay installed.
 
