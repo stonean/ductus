@@ -35,6 +35,7 @@ MAX_TIMEOUT_SECONDS = 86_400
 LONG_LINE = 2000
 DEFAULT_SHARE_BYTES = 135_000
 DEFAULT_CELL_BYTES = 480_000
+MIN_BUDGET_BYTES = 1
 CORE_SUBJECTS = ("spec.md", "plan.md", "data-model.md")
 # framework/reference/analyze.md, Unexamined targets: the reasons excluded by
 # construction. Every other reason is a target the run could not read, which

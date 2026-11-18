@@ -82,6 +82,19 @@ def long_lines(path):
         return [n for n, line in enumerate(f, 1) if len(line.rstrip("\n")) > lib.LONG_LINE]
 
 
+def budget_flag(args, flag):
+    """The flag's value as a whole number of at least lib.MIN_BUDGET_BYTES;
+    anything else exits 2 naming the flag, the value and the bound."""
+    raw = args[flag]
+    try:
+        n = int(raw)
+    except ValueError:
+        n = None
+    if n is None or n < lib.MIN_BUDGET_BYTES:
+        raise lib.Unreadable(f"{flag} is {raw!r}; it takes a whole number of at least {lib.MIN_BUDGET_BYTES}")
+    return n
+
+
 def run(argv):
     args = {"--share-bytes": str(lib.DEFAULT_SHARE_BYTES), "--cell-bytes": str(lib.DEFAULT_CELL_BYTES),
             "--rules-json": None}
@@ -93,12 +106,7 @@ def run(argv):
             raise lib.Unreadable(f"unknown or valueless option {rest[0]}")
         args[rest[0]] = rest[1]
         rest = rest[2:]
-    try:
-        share_bytes, cell_bytes = int(args["--share-bytes"]), int(args["--cell-bytes"])
-    except ValueError as e:
-        raise lib.Unreadable(f"--share-bytes and --cell-bytes take integers: {e}") from e
-    if share_bytes < 1 or cell_bytes < 1:
-        raise lib.Unreadable("--share-bytes and --cell-bytes take a whole number of at least 1")
+    share_bytes, cell_bytes = budget_flag(args, "--share-bytes"), budget_flag(args, "--cell-bytes")
     d = lib.feature_dir(feature)
     w = lib.work_dir(feature)
     lib.check_detection_current(feature, os.path.join(w, "det"))

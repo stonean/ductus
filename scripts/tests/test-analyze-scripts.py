@@ -67,6 +67,8 @@ Coverage:
      site the scripts read strictly
   AI. split.py refuses detection older than an untracked file added, or
      a tracked file edited, outside the feature
+  AJ. split.py exits 2 on a budget flag that is not a whole number of at
+     least 1, naming the flag, the value and the bound
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty
@@ -633,6 +635,14 @@ def ai(p, name):
            and r2.returncode == 1 and "working tree" in r2.stderr, r.stderr + r2.stderr)
 
 
+def aj(p, name):
+    r1 = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"), "--share-bytes", "0")
+    r2 = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"), "--cell-bytes", "lots")
+    check_(name, r1.returncode == 2 and "--share-bytes is '0'; it takes a whole number of at least 1" in r1.stderr
+           and r2.returncode == 2 and "--cell-bytes is 'lots'; it takes a whole number of at least 1" in r2.stderr,
+           r1.stderr + r2.stderr)
+
+
 def z(name):
     """detect.py through record.py --write against the real release binary,
     in a fixture project holding one rule file and an unfolded staging spec."""
@@ -676,6 +686,9 @@ def z(name):
         steps.append(run("split.py", F))
         steps.append(run("briefs.py", F))
         work = os.path.join(base, "work")
+        if any(x.returncode for x in steps):
+            fail(name, "".join(f"[{i} exit {x.returncode}] {x.stderr[-600:]}" for i, x in enumerate(steps)))
+            return
         m = json.load(open(os.path.join(work, "manifest.json")))
         time.sleep(1.1)
         for c in m["cells"]:
@@ -757,6 +770,7 @@ def main():
     case("AG. split.py refuses detection older than an edit or a commit", ag)
     case("AH. record.py and split.py exit 2 on a result missing what the runtime writes", ah)
     case("AI. split.py refuses detection older than an untracked file", ai)
+    case("AJ. split.py names the flag, value and bound of a bad budget", aj)
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)
