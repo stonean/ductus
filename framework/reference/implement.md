@@ -21,7 +21,7 @@ When `check-stuck` (step 3) reports stuck, surface the cycle to the user with th
 
 - **At setup:** read only the spec, plan, tasks, and scenario file (if targeted). Do NOT read `system.md`, `events.md`, `errors.md`, or source code yet.
 - **Per task:** read only the source files relevant to that task from the plan's affected files list.
-- **At completion:** tally the `tasks.md` checkboxes (primitive: `read-tasks`) and re-read the acceptance criteria from the spec (primitive: `read-spec`) to verify. Do NOT re-read the full plan.
+- **At completion:** tally the `tasks.md` checkboxes (primitive: `read-tasks`). The criteria are `/{project}:review`'s to verify, so none is re-read here. Do NOT re-read the full plan.
 
 ## Walk through tasks (per task, in order)
 
@@ -48,13 +48,11 @@ When `check-stuck` (step 3) reports stuck, surface the cycle to the user with th
 
 ## Completion gate (after all tasks)
 
-Same order as Instructions steps 9–16, which carry the procedure; these items hold what they leave out.
+Same order as Instructions steps 9–13, which carry the procedure; these items hold what they leave out.
 
-1. **Task tally**: step 9. If any checkbox remains unchecked, the gate ends there, before criteria verification. The tally reads numbered tasks, and step 14's gate blocks on a box under any heading.
-2. **Load acceptance criteria**: step 10.
-3. **Verify each criterion**: steps 11 and 12, one criterion at a time, by running its behavior on an input, including one its tests do not name, since a test's name proves only that the test exists.
-4. **Cross-spec impact check**: step 13. This detects the cross-spec update you **made**; the one you **owe** is the `cross-spec-impact:` declaration the pre-done gate checks in step 5. An empty result here says nothing about that: the two answer opposite questions.
-5. **Pre-done gate** (primitive: `check-review-gate`, step 14; the name is historical, since it gates both `/{project}:review` and `/{project}:analyze`). Its description states the checks in order, first failure wins, and each blocked result carries that check's canonical message and guidance: halt with them and do not propose the transition. A markdown-lint block also carries `violations`: report each one.
+1. **Task tally**: step 9. If any checkbox remains unchecked, the gate ends there. The tally reads numbered tasks, and step 11's gate blocks on a box under any heading.
+2. **Cross-spec impact check**: step 10. This detects the cross-spec update you **made**; the one you **owe** is the `cross-spec-impact:` declaration the pre-done gate checks in step 3. An empty result here says nothing about that: the two answer opposite questions.
+3. **Pre-done gate** (primitive: `check-review-gate`, step 11; the name is historical, since it gates both `/{project}:review` and `/{project}:analyze`). It judges no criterion: `/{project}:review`'s criteria step judges and ticks each, and the gate blocks `unticked-criterion` while one stands unticked, and `review-owed` while one is not judged met with its current text. Its description states the checks in order, first failure wins, and each blocked result carries that check's canonical message and guidance: halt with them and do not propose the transition. A markdown-lint block also carries `violations`: report each one.
 
    A spec already at `status: done` returns `not gated`, deliberately **not** `passed: true`: a gate reporting a pass for a spec it did not examine could be read as authorizing a transition that has already happened. Nothing is owed; changing what the spec requires means reopening it first through `/{project}:amend`.
 
@@ -66,5 +64,5 @@ Same order as Instructions steps 9–16, which carry the procedure; these items 
 
    **Of the findings, only a gating one holds `done`** (§brownfield-inbox, Finding dispositions): an undispositioned advisory finding or observation stays recorded and does not block, while a record with no `dispositions:` map blocks, since absence is not zero, and a broken contract the record lists in `open-findings` blocks, since it counts as gating. A record still carrying `fix-rounds-open: true` was cut off before its last write, and a fix round that needed a re-read and has neither one nor a reason in `round-waivers` holds `done` too: both are answered by re-running `/{project}:review`.
 
-6. **Approve the transition**: step 15.
-7. **Set `done`**: step 16.
+4. **Approve the transition**: step 12.
+5. **Set `done`**: step 13.

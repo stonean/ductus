@@ -2,7 +2,8 @@
 //!
 //! Parses the shipped `framework/commands/review.md` and asserts it walks the
 //! review-runtime-acceleration procedure end-to-end: `compute-review-scope` →
-//! `discover-rule-files` → five `performReview` passes → `process-waivers` →
+//! `discover-rule-files` → five `performReview` passes → the criteria step
+//! (`read-spec`, `verifyCriteria`, `mark-criterion`; 066 task 27) → `process-waivers` →
 //! two host-responsibility steps (process decisions, fix and route; spec 058)
 //! → `write-review` → a third, the fix-round loop (spec 078). The three are
 //! prose the exec walker no-ops by design, which
@@ -59,6 +60,9 @@ fn review_command_parses_to_the_expected_procedure() {
         ("5", "extension:performReview"),
         ("6", "extension:performReview"),
         ("7", "extension:performReview"),
+        ("7.1", "primitive:read-spec"),
+        ("7.2", "extension:verifyCriteria"),
+        ("7.3", "primitive:mark-criterion"),
         ("8", "primitive:process-waivers"),
         ("9", "prose"),
         ("10", "prose"),

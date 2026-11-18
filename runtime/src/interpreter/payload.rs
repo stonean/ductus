@@ -191,7 +191,7 @@ impl PayloadError {
 ///   spec its `folds-into` names (see [`build_route_fold_request`]). Typed
 ///   shape only.
 /// - `verifyCriteria` — builds [`VerifyCriteriaRequest`] from the spec
-///   resolved via `path`/`feature` and the completion gate's merged
+///   resolved via `path`/`feature` and the review's merged
 ///   `acceptance-criteria` result (see
 ///   [`build_verify_criteria_request`]). Typed shape only.
 /// - any other identifier — [`PayloadError::UnknownExtension`]; the raw
@@ -1321,8 +1321,8 @@ fn read_spec_status(repo: &Path, rel: &str) -> String {
     crate::primitives::frontmatter_status(&content, &repo.join(rel)).unwrap_or_default()
 }
 
-/// Build the `verifyCriteria` request for `/ductus:implement`'s completion
-/// gate. Typed shape only, mirroring `askClarifyQuestion` — no legacy
+/// Build the `verifyCriteria` request for `/{project}:review`'s criteria
+/// step (066 task 27). Typed shape only, mirroring `askClarifyQuestion` — no legacy
 /// context dump:
 ///
 /// - `spec-path` / `spec-content` — the spec under verification,
@@ -1330,7 +1330,7 @@ fn read_spec_status(repo: &Path, rel: &str) -> String {
 ///   (BE-INPUT-004); content empty when missing. Past the read size the
 ///   content is absent and `content-form` is `path`.
 /// - `criteria` — the merged `acceptance-criteria` result of the
-///   completion gate's `read-spec` step, indexed in body order (the same
+///   review's `read-spec` step (its step 7.1), indexed in body order (the same
 ///   0-based addressing `mark-criterion` consumes). Empty when the
 ///   context carries no criteria — the typed shape is always present.
 fn build_verify_criteria_request(

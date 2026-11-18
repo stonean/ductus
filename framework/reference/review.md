@@ -92,7 +92,7 @@ Load these inputs inline as the authoritative review criteria:
 - The rules of any rule file outside the rule-file directory (e.g., `docs/rules/internal-api.md`)
   referenced from `AGENTS.md`, passed as step 2's `extra-files` — see [Notes for adopters](#notes-for-adopters)
 - `AGENTS.md` `Code Style`, `Testing`, `Gotchas`, and `Boundaries` sections
-- The target spec's acceptance criteria and any `scenarios/*.md` files
+- The target spec's acceptance criteria, each judged by the criteria step (**§Criteria step**), and any `scenarios/*.md` files
 
 These are the **only** sources of normative rules for the review. Do not
 introduce review criteria from outside the project.
@@ -112,20 +112,20 @@ A Statement whose Verification is a design-time commitment is applied by its pas
 
 ## Run review passes
 
-Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines: a stale claim the window left alone otherwise surfaces at the completion gate's criterion check, and its correction then stales the analysis. When a flag restricts dimensions (`--security`,
+Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines, as the criteria step judges every criterion: a stale claim the window left alone otherwise waits for a review that reads its file. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
 produced. A pass's finding, or a reviewer's claim, is checked against the tree before it is recorded; break things only in a clone while reviewers read.
 
 ### Passes in a subagent
 
-The passes read every loaded rule file and every in-scope file, which in the host's own context every later call of the session would read again. So a host that can start a subagent (Claude Code's Agent tool) runs steps 3 to 7 in one fresh subagent, and one that cannot (Pi) runs them itself. Brief it with the feature, the run's scope (`compute-review-scope`'s `scope`, or the file its `lists-file` names), the rule files step 2 loaded, any dimension-restricting flag, this section, §Load rules (which maps each loaded rule file to its pass), the five pass sections below, the **Observations** rules under §Write `review.md` (what an observation is and how it is dispositioned), and the shapes `write-review` takes for `findings` and `observations`. The subagent reads each rule file and each in-scope file whole, the remainder of any read a tool cut short included, and returns as its last message:
+The passes read every loaded rule file and every in-scope file, which in the host's own context every later call of the session would read again. So a host that can start a subagent (Claude Code's Agent tool) runs steps 3 to 7.2 in one fresh subagent, and one that cannot (Pi) runs them itself. Brief it with the feature, the run's scope (`compute-review-scope`'s `scope`, or the file its `lists-file` names), the rule files step 2 loaded, any dimension-restricting flag, this section, **§Criteria step**, §Load rules (which maps each loaded rule file to its pass), the five pass sections below, the **Observations** rules under §Write `review.md` (what an observation is and how it is dispositioned), and the shapes `write-review` takes for `findings` and `observations`. The subagent reads each rule file and each in-scope file whole, the remainder of any read a tool cut short included, and returns as its last message:
 
-- the findings and the observations as JSON in `write-review`'s shapes;
+- the findings and the observations as JSON in `write-review`'s shapes, and the criterion verdicts in its `criteria` shape, with each criterion it could not judge and why;
 - each in-scope file it read, and each it did not, with why;
 - for each rule file, the bytes it read against the file's size, and each pass that did not run.
 
-The host checks the hand-back before using it, as it checks any reviewer's claim. A file read short, a rule file read below its size, or a pass that did not run is named in the Summary and kept out of `examined`, or the subagent is asked to finish; it never reads as a clean result (§design-principles). The host then continues at step 8 with what it was handed, opening a file itself only to check or fix a finding. Under `ductus exec` the walker asks for each pass in turn.
+The host checks the hand-back before using it, as it checks any reviewer's claim. A file read short, a rule file read below its size, or a pass that did not run is named in the Summary and kept out of `examined`, or the subagent is asked to finish; it never reads as a clean result (§design-principles). The host then continues at step 7.3 with what it was handed, opening a file itself only to check or fix a finding. Under `ductus exec` the walker asks for each pass in turn.
 
 ### Security pass
 
@@ -186,6 +186,15 @@ Identify overengineering: premature abstraction, unnecessary indirection,
 configuration that could be a constant, branches that are dead under the
 current spec. Severity is SHOULD. If a simpler form is mechanically derivable,
 mark the finding `auto-fixable`.
+
+## Criteria step
+
+Steps 7.1 to 7.3 judge every acceptance criterion of the spec, whatever the window holds (066's scenario `criteria-are-verified-in-review`): the criteria are the spec's contract, and the window only says what changed, so a criterion whose code no reopening touched is judged too.
+
+- **A verdict per criterion, read against the code.** Read the code a criterion's claim names, in scope or not, and drive it where it can be driven: a test's name proves only that the test exists. A met verdict's `note` is its evidence, the path and symbol and the test that proves it; a not-met verdict's says what fails. A criterion that cannot be judged, for want of code, a test or a fetched source, gets no verdict and is named in the Summary: it is never ticked, and a review stays owed while it is not judged met.
+- **The verdict writes the tick.** Step 7.3 ticks a met criterion and unticks a not-met one, and `write-review` records the counts, each not-met criterion and each met one's digest (`criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts`; 066's data model). A not-met verdict sets `blocking`.
+- **A not-met criterion is fixed or corrected, never waived or deferred.** It clears when the code is fixed and a review judges it met, or when the criterion is corrected or moved to the spec that owns the work (§implement-phase). The gate holds `done` while it stands unticked, so a waiver or a deferral would release nothing.
+- **A review is owed while a criterion is unjudged.** `compute-review-scope` reads `review-owed: true` while `spec.md` holds an unticked criterion, or a ticked one the last review did not judge met with its current text, and names each in `criteria-owing`; the completion gate judges none.
 
 ## Write `review.md`
 
@@ -402,10 +411,10 @@ The window a review reads and the coverage counts it records, as `/{project}:rev
 - **A spec's review window starts where the last review of this reopening finished.** `compute-review-scope` holds the rule, and `base-source` says which start it took. A run that recorded a skipped pass or a budget stop, or whose record the gate holds until a review runs, does not move the start, so stopping early leaves nothing permanently unread and a re-run reads again what a finding names. Do not narrow a wide window by overriding the base unless it is genuinely wider than the change under review, and record the base used and why in the Summary. The opposite gap does call for an override: a fix committed before the reopen that records it lies outside the window, so record the reopen before making the fix, or, when the fix has already landed, set the base to the commit before it.
 - **A review reads its own spec's change, and the record names the rest.** A commit whose subject names a spec has its code reviewed by the specs it names, and a spec it claims only by touching that spec's directory reads that directory's files and nothing else (spec 081). A commit naming no spec keeps 079's rule: one touching no spec directory stays in every window that holds it, until a committed review states it read the commit's paths, and a path in another spec's directory is that spec's unless this spec's plan names it. A path left out is named under **Excluded from scope**; `compute-review-scope`'s description holds the whole rule. Uncommitted work stays, as nothing can attribute it: `git worktree` isolates sessions. A plan entry unchanged in the window stays on the spec's first review, where it may mean missing work, and what the last record lists as open, or its digest says changed, stays on any review, whoever last changed it.
 - **`unread` names the scope entries the passes did not read, and another spec's window takes each entry it leaves out as read.** Pass `[]` only when every entry was read: an entry opened in part, or one you are confident about by other means, is unread, as it is uncounted in `examined`. A commit naming no spec and touching no spec directory is credited in every other window once a record committed there, whose window holds the commit and which recorded no skipped pass, budget stop or open fix-round loop, leaves its path out of `unread`; the credited path is excluded under the reading spec, and a record without the field credits nothing (spec 081).
-- **A reopening that changed no code owes an analysis and no review.** Code is every path outside the project's artifacts: the spec root, `.ductus/`, `AGENTS.md` and `CLAUDE.md` (spec 081). So an edit to the spec's own scenarios or data model, or to another spec's directory, owes no review. `compute-review-scope` reports it as `review-owed: false`. The gate reads it: true holds `done` ahead of every analyze check until a review's record is committed, and false passes the earlier record, unless that record holds `done` until a review runs, which then is owed. A review run anyway is allowed, only not owed.
+- **A reopening that changed no code owes an analysis and no review, unless a criterion owes one.** An unticked criterion, or a ticked one the last review did not judge met with its current text, owes a review whatever the window holds (**§Criteria step**). Code is every path outside the project's artifacts: the spec root, `.ductus/`, `AGENTS.md` and `CLAUDE.md` (spec 081). So an edit to the spec's own scenarios or data model, or to another spec's directory, owes no review. `compute-review-scope` reports it as `review-owed: false`. The gate reads it: true holds `done` ahead of every analyze check until a review's record is committed, and false passes the earlier record, unless that record holds `done` until a review runs, which then is owed. A review run anyway is allowed, only not owed.
 - **A review record written before the record gained its coverage and digest fields is unexamined, not clean.** Without `examined` and `scope`, a review that read nothing is byte-identical to one that read everything; without the durable-contract digest, a review that runs cannot tell which contracts changed since that record. Nothing backfills these fields: treat such a record as unread and re-run the review, which writes them truthfully only if the passes read the scope. The gap comes in several shapes, so read the record before pricing the work.
 - **A spec with no recorded `in-progress` transition derives an empty diff base, and the review's denominator collapses to zero.** On a first review scope resolution still returns the plan's affected files, so the record reads as files examined over a scope of zero. Pass the current commit as the base: the window is then empty by construction, and numerator and denominator agree. The same answer fits a recorded transition whose base is simply old; measure both before choosing, and say in the Summary which base was passed and why.
-- **A corpus-wide sweep of spec artifacts owes no review.** A sweep confined to spec bodies, plans, tasks, scenarios and data models owes each spec it touches an analysis, and a review only where it also changes code (spec 081). Measure a sweep's reopens first: an edit to a `done` spec's scenario or data model still reopens it (§spec-lifecycle).
+- **A corpus-wide sweep of spec artifacts owes no review.** A sweep confined to spec bodies, plans, tasks, scenarios and data models owes each spec it touches an analysis, and a review only where it also changes code (spec 081) or adds, rewords or unticks a criterion (**§Criteria step**). Measure a sweep's reopens first: an edit to a `done` spec's scenario or data model still reopens it (§spec-lifecycle).
 - **The review's denominator is derived at write time, so a count measured earlier and typed into the Summary can contradict the record it is written into.** No check compares the two. Read the returned counts against every number the Summary states, and re-run with corrected prose when they differ; the call is idempotent.
 - **`scope` counts entries, not files.** On a first review it holds the plan's Affected Files entries as written. A pattern such as `src/handlers/*.ts` is one entry however many files it matches, so a Summary that counts files says how its count reconciles with `scope`; `examined` equal to `scope` means fully examined only when no entry is a pattern.
 
@@ -417,11 +426,12 @@ diligence (§design-principles):
 
 1. **`/{project}:implement`** — before marking `status: done`, its `check-review-gate`
    runs every check in a fixed order, first failure wins; what the host does with
-   each is step 5 of **§Completion gate (after all tasks)** in `.ductus/reference/implement.md`. A missing or null `last-run`, or **no `review.md` at
+   each is step 3 of **§Completion gate (after all tasks)** in `.ductus/reference/implement.md`. A missing or null `last-run`, or **no `review.md` at
    all**, the never-run state, halts with
    `blocked: spec has not been reviewed — run /{project}:review before completing`.
    Only `blocking: true` halts with the MUST-violations message and its resolve,
-   waive or defer guidance, whose `held by deferral` suffix names each deferral
+   waive or defer guidance, naming instead each criterion the review judged not
+   met, which a waiver or a deferral does not release (**§Criteria step**), whose `held by deferral` suffix names each deferral
    the record marks `gating: true`, one that releases nothing ([Deferrals](#deferrals)).
 
 2. **`/{project}:analyze`** — adds a check to its existing audit: if the spec's

@@ -6,8 +6,8 @@
 //! `writeSpecBody`), `performReview`, and the follow-on points —
 //! `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship
 //! ahead of their scenarios per the extension-request-hygiene scenario,
-//! `verifyCriteria`, the implement-completion-gate scenario's
-//! criterion-verification seam, and `routeFold`, `/{project}:fold`'s
+//! `verifyCriteria`, `/{project}:review`'s criteria step (066's scenario
+//! `criteria-are-verified-in-review`), and `routeFold`, `/{project}:fold`'s
 //! body-edit-or-scenario decision (spec 051). The runtime emits these as the `request`
 //! field of `llm-request` envelopes and validates incoming `llm-response`
 //! payloads against them.
@@ -681,10 +681,11 @@ pub struct VerifyCriterion {
     pub checked: bool,
 }
 
-/// Request payload for `verifyCriteria` (implement-completion-gate
-/// scenario): `/ductus:implement`'s completion gate sends one request
-/// carrying every acceptance criterion; the LLM judges each criterion
-/// against the implementation — the verification stays semantic.
+/// Request payload for `verifyCriteria` (066 scenario
+/// `criteria-are-verified-in-review`): `/{project}:review`'s criteria step
+/// sends one request carrying every acceptance criterion, whatever the
+/// review's window holds; the LLM judges each criterion against the code
+/// that implements it — the verification stays semantic.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct VerifyCriteriaRequest {
@@ -716,9 +717,9 @@ pub struct VerifyCriterionResult {
 }
 
 /// Response payload for `verifyCriteria` — one verdict per criterion.
-/// Each `met: true` verdict drives one `mark-criterion` call; a
-/// `met: false` verdict leaves its checkbox unchecked and is reported,
-/// never batch-marked.
+/// Each verdict drives one `mark-criterion` call setting its checkbox to
+/// the verdict, ticked when met and unticked when not, and the verdicts are
+/// `write-review`'s `criteria` argument (066 task 27).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct VerifyCriteriaResponse {

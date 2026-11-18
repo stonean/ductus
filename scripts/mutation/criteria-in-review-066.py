@@ -135,4 +135,32 @@ MUTATIONS = [
         '            .filter(|_| true)\n',
         'primitives::check_review_gate::tests::an_unticked_criterion_holds_done_after_an_unchecked_task',
     ),
+    (
+        'M18 the exec walk marks only the seeded criterion',
+        'src/interpreter/mod.rs',
+        '        return mark_each_verdict(verify, &bindings, repo);\n',
+        '        let _ = verify;\n',
+        'interpreter::tests::mark_criterion_applies_every_verdict_both_ways interpreter::tests::the_review_walk_judges_every_criterion_and_writes_its_tick',
+    ),
+    (
+        'M19 every verdict ticks its criterion, met or not',
+        'src/interpreter/mod.rs',
+        '            checked: verdict.met,\n',
+        '            checked: true,\n',
+        'interpreter::tests::mark_criterion_applies_every_verdict_both_ways interpreter::tests::the_review_walk_judges_every_criterion_and_writes_its_tick interpreter::tests::mark_criterion_skips_flip_when_verdict_not_met',
+    ),
+    (
+        "M20 the exec walk's write-review receives no verdicts",
+        'src/interpreter/mod.rs',
+        '        bindings.insert("criteria".into(), results);\n',
+        '        let _ = results;\n',
+        'interpreter::tests::the_review_walk_judges_every_criterion_and_writes_its_tick',
+    ),
+    (
+        'M21 a record blocking only through a not-met criterion is called MUST violations',
+        'src/primitives/check_review_gate.rs',
+        '        (0, false) => format!("the review judged acceptance criteria not met: {criteria}"),\n',
+        '        (0, false) => format!("spec has 0 MUST violation(s)"),\n',
+        'primitives::check_review_gate::tests::a_not_met_criterion_blocks_by_name_not_as_must_violations',
+    ),
 ]

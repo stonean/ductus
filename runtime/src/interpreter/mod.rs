@@ -69,7 +69,8 @@ use crate::io::{read_envelope, write_envelope};
 use crate::primitives;
 use crate::primitives::rule_verdicts::Currency;
 use crate::schema::extensions::{
-    self, AssessSpecQualityRule, PerformReviewResponse, ValidationError, WriteCodeResponse,
+    self, AssessSpecQualityRule, PerformReviewResponse, ValidationError, VerifyCriteriaResponse,
+    WriteCodeResponse,
 };
 use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
@@ -1182,23 +1183,30 @@ fn dispatch_primitive(
     {
         bindings.insert("markers-path".into(), Value::String(constitution.into()));
     }
-    // Exec-path binding for `mark-criterion`: `/ductus:implement`'s completion
-    // gate seeds `criterion-index`/`checked: true`, but the checkbox flip
-    // must honor the `verifyCriteria` verdict the host returned first — only
-    // a criterion the LLM affirmatively confirmed `met: true` may be checked
-    // (data-model §verifyCriteria). When a `llm:verifyCriteria` response is in
-    // context, rebind `checked` to that verdict for the seeded index: a
-    // `met: false` or absent verdict rebinds `checked` to `false`, so the
-    // dispatch is a no-op (an already-unchecked criterion stays unchecked) and
-    // an unconfirmed criterion is never marked. With no verifyCriteria response
-    // present the seeded `checked` stands, so direct MCP/CLI calls and other
-    // commands are unaffected.
+    // Exec-path fan-out for `mark-criterion`: `/{project}:review`'s criteria
+    // step returns one verdict per criterion, and each sets its criterion's
+    // checkbox, ticked when met and unticked when not, addressed by the
+    // 0-based index its request listed, so only a verdict marks a criterion
+    // and one with none is left as it is (066 task 27; data-model
+    // §verifyCriteria). With no `verifyCriteria` response the seeded
+    // arguments stand, so direct MCP/CLI calls and other commands are
+    // unaffected.
     if name == "mark-criterion"
-        && let Some(met) = bindings
-            .get("llm:verifyCriteria")
-            .map(|verify| criterion_verified_met(verify, bindings.get("criterion-index")))
+        && let Some(verify) = bindings.get("llm:verifyCriteria")
     {
-        bindings.insert("checked".into(), Value::Bool(met));
+        return mark_each_verdict(verify, &bindings, repo);
+    }
+    // Exec-path binding for `write-review`: the criteria step's verdicts are
+    // its `criteria` argument, each addressed by the index its request listed
+    // (066 task 27).
+    if name == "write-review"
+        && !bindings.contains_key("criteria")
+        && let Some(results) = bindings
+            .get("llm:verifyCriteria")
+            .and_then(|verify| verify.get("results"))
+            .cloned()
+    {
+        bindings.insert("criteria".into(), results);
     }
     let value = Value::Object(bindings);
     macro_rules! call {
@@ -1376,23 +1384,33 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) -> primit
     Ok(())
 }
 
-/// Whether a `verifyCriteria` response affirmatively confirms the criterion
-/// at `criterion_index` as `met: true`. A missing/non-numeric index, a
-/// missing `results` array, an absent verdict for the index, or an explicit
-/// `met: false` all yield `false` — the completion gate flips only criteria
-/// the response confirms (data-model §verifyCriteria).
-fn criterion_verified_met(verify: &Value, criterion_index: Option<&Value>) -> bool {
-    let Some(index) = criterion_index.and_then(Value::as_u64) else {
-        return false;
-    };
-    let Some(results) = verify.get("results").and_then(Value::as_array) else {
-        return false;
-    };
-    results
-        .iter()
-        .find(|entry| entry.get("index").and_then(Value::as_u64) == Some(index))
-        .and_then(|entry| entry.get("met").and_then(Value::as_bool))
-        .unwrap_or(false)
+/// Set each criterion's checkbox to its `verifyCriteria` verdict, one
+/// `mark-criterion` call per verdict, and report every call's result under
+/// `criteria-marked` (066 task 27).
+fn mark_each_verdict(
+    verify: &Value,
+    bindings: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, DispatchError> {
+    let verdicts: VerifyCriteriaResponse =
+        serde_json::from_value(verify.clone()).map_err(DispatchError::BadArgs)?;
+    let feature = bindings
+        .get("feature")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let mut marked = Vec::new();
+    for verdict in verdicts.results {
+        let args = MarkCriterionArgs {
+            feature: feature.clone(),
+            criterion_index: usize::try_from(verdict.index).ok(),
+            label: None,
+            checked: verdict.met,
+        };
+        let result = primitives::mark_criterion::run(&args, repo)?;
+        marked.push(serde_json::to_value(result).unwrap_or(Value::Null));
+    }
+    Ok(serde_json::json!({ "criteria-marked": marked }))
 }
 
 #[cfg(test)]
@@ -1817,6 +1835,105 @@ mod tests {
                 .contains("blocking:"),
             "the spec carries no review record"
         );
+    }
+
+    /// The review walk's criteria step (066 task 27, scenario
+    /// `criteria-are-verified-in-review`): with nothing in the review's scope,
+    /// the `verifyCriteria` request still carries every criterion, so one whose
+    /// code the window does not hold is judged; a not-met verdict on a ticked
+    /// criterion unticks it and makes the record blocking, and the same
+    /// criterion judged met once the code is corrected is ticked again and
+    /// the record clears.
+    #[test]
+    fn the_review_walk_judges_every_criterion_and_writes_its_tick() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n\n## Acceptance Criteria\n\n\
+             - [x] AC1: The limit is never below the safety bound.\n",
+        )
+        .unwrap();
+        let step = |number: u32, name: &str| Step::Primitive {
+            number: StepNumber(vec![7, number]),
+            name: name.into(),
+            prose: String::new(),
+            location: loc(),
+        };
+        let procedure = Procedure {
+            command: "review".into(),
+            steps: vec![
+                step(0, "read-spec"),
+                Step::Extension {
+                    number: StepNumber(vec![7, 1]),
+                    identifier: "verifyCriteria".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+                step(2, "mark-criterion"),
+                Step::Primitive {
+                    number: StepNumber(vec![11]),
+                    name: "write-review".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+            ],
+        };
+        let walk = |met: bool| {
+            let responses = format!(
+                "{{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{{\"results\":[{{\"index\":0,\"met\":{met},\"note\":\"src/limits.rs `floor`\"}}]}}}}\n"
+            );
+            let mut context = Map::new();
+            context.insert("feature".into(), Value::String("001-x".into()));
+            context.insert(
+                "reviewed-at".into(),
+                Value::String("2026-11-18T00:00:00Z".into()),
+            );
+            context.insert("reviewed-against".into(), Value::String("abc1234".into()));
+            context.insert("diff-base".into(), Value::String(String::new()));
+            context.insert("empty-scope".into(), Value::Bool(true));
+            let mut reader = Cursor::new(responses);
+            let mut writer: Vec<u8> = Vec::new();
+            let mut walker = Walker::new(
+                &procedure,
+                tmp.path().to_path_buf(),
+                context,
+                &mut reader,
+                &mut writer,
+            )
+            .unwrap();
+            assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+            String::from_utf8(writer).unwrap()
+        };
+
+        let stream = walk(false);
+        let request = stream
+            .lines()
+            .find(|line| line.contains("\"verifyCriteria\""))
+            .expect("a verifyCriteria request");
+        assert!(
+            request.contains("The limit is never below the safety bound."),
+            "every criterion is judged whatever the scope holds: {request}"
+        );
+        let spec = std::fs::read_to_string(dir.join("spec.md")).unwrap();
+        assert!(
+            spec.contains("- [ ] AC1: The limit"),
+            "a not-met criterion is unticked: {spec}"
+        );
+        let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
+        assert!(review.contains("blocking: true"), "{review}");
+        assert!(review.contains("criteria-not-met:\n  - AC1"), "{review}");
+
+        walk(true);
+        let spec = std::fs::read_to_string(dir.join("spec.md")).unwrap();
+        assert!(
+            spec.contains("- [x] AC1: The limit"),
+            "a met criterion is ticked: {spec}"
+        );
+        let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
+        assert!(review.contains("blocking: false"), "{review}");
+        assert!(review.contains("criteria-met: 1"), "{review}");
     }
 
     /// An exec run has no operator to disposition an observation, and a pass
@@ -3697,28 +3814,6 @@ mod tests {
 
     // --- FIX 2: verifyCriteria verdict gates the mark-criterion flip --------
 
-    #[test]
-    fn criterion_verified_met_reads_verdict_for_seeded_index() {
-        let verify = serde_json::json!({
-            "results": [
-                { "index": 0, "met": true },
-                { "index": 1, "met": false },
-            ]
-        });
-        let idx = |n: u64| Value::from(n);
-        assert!(criterion_verified_met(&verify, Some(&idx(0))));
-        assert!(!criterion_verified_met(&verify, Some(&idx(1))));
-        // Absent verdict for the index → not met.
-        assert!(!criterion_verified_met(&verify, Some(&idx(2))));
-        // Missing index argument → not met.
-        assert!(!criterion_verified_met(&verify, None));
-        // No `results` array → not met.
-        assert!(!criterion_verified_met(
-            &serde_json::json!({}),
-            Some(&idx(0))
-        ));
-    }
-
     fn spec_repo_with_one_unchecked_criterion() -> tempfile::TempDir {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("specs/feat");
@@ -3750,7 +3845,7 @@ mod tests {
         })));
         let result = dispatch_primitive("mark-criterion", &context, tmp.path()).unwrap();
         assert_eq!(
-            result["current"],
+            result["criteria-marked"][0]["current"],
             Value::Bool(false),
             "an unconfirmed criterion is left unchecked despite the seeded checked:true"
         );
@@ -3768,9 +3863,36 @@ mod tests {
             "results": [ { "index": 0, "met": true } ]
         })));
         let result = dispatch_primitive("mark-criterion", &context, tmp.path()).unwrap();
-        assert_eq!(result["current"], Value::Bool(true));
+        assert_eq!(result["criteria-marked"][0]["current"], Value::Bool(true));
         let on_disk = std::fs::read_to_string(tmp.path().join("specs/feat/spec.md")).unwrap();
         assert!(on_disk.contains("- [x] Only criterion."), "{on_disk}");
+    }
+
+    /// Each verdict sets its own criterion's checkbox, a not-met one unticking
+    /// a ticked criterion and a met one ticking an unticked one, whatever index
+    /// the session seeded, and a criterion with no verdict is left as it is
+    /// (066 task 27).
+    #[test]
+    fn mark_criterion_applies_every_verdict_both_ways() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("specs/feat");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# feat\n\n## Acceptance Criteria\n\n\
+             - [x] AC1: One.\n- [ ] AC2: Two.\n- [x] AC3: Three.\n",
+        )
+        .unwrap();
+        let context = mark_criterion_context(Some(serde_json::json!({
+            "results": [ { "index": 0, "met": false }, { "index": 1, "met": true } ]
+        })));
+        let result = dispatch_primitive("mark-criterion", &context, tmp.path()).unwrap();
+        assert_eq!(result["criteria-marked"].as_array().map(Vec::len), Some(2));
+        let on_disk = std::fs::read_to_string(dir.join("spec.md")).unwrap();
+        assert!(
+            on_disk.contains("- [ ] AC1: One.\n- [x] AC2: Two.\n- [x] AC3: Three."),
+            "{on_disk}"
+        );
     }
 
     #[test]

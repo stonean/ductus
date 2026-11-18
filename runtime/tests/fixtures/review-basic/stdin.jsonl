@@ -3,3 +3,4 @@
 {"type":"llm-response","request-id":"req-3","response":{"findings":[]}}
 {"type":"llm-response","request-id":"req-4","response":{"findings":[]}}
 {"type":"llm-response","request-id":"req-5","response":{"findings":[]}}
+{"type":"llm-response","request-id":"req-6","response":{"results":[{"index":0,"met":true,"note":"the walk reaches every step"},{"index":1,"met":true,"note":"each performReview request carries the scope"}]}}

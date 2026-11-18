@@ -226,6 +226,7 @@ pub(crate) fn run_with_lint(
     if review.blocking {
         return Ok(must_violations_block(
             review.must_violations,
+            &review.criteria_not_met,
             &feature_dir,
             &rel_dir,
             &project,
@@ -512,29 +513,49 @@ fn disposition_block(
 /// deferral that holds `done` in `review.md` too, since a MUST whose deferral
 /// releases nothing stops the gate here and never reaches the gating-finding
 /// check (spec 076).
+/// Gate check 5: the record blocks, through its MUST violations or a criterion its
+/// review judged not met (066 task 27), each named.
 fn must_violations_block(
     must_violations: u32,
+    criteria_not_met: &[String],
     feature_dir: &Path,
     rel_dir: &str,
     project: &str,
 ) -> Verdict {
+    let criteria = criteria_not_met.join(", ");
+    let blocked = match (must_violations, criteria_not_met.is_empty()) {
+        (_, true) => format!("spec has {must_violations} MUST violation(s)"),
+        (0, false) => format!("the review judged acceptance criteria not met: {criteria}"),
+        (_, false) => format!(
+            "spec has {must_violations} MUST violation(s), and the review judged acceptance \
+             criteria not met: {criteria}"
+        ),
+    };
+    let mut guidance = format!(
+        "Resolve the violations and re-run /{project}:review, run \
+         /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding, \
+         or defer each to pipeline work on another spec \
+         (/{project}:review --defer <rule-id> --target <path>), whose gate then holds it."
+    );
+    if !criteria_not_met.is_empty() {
+        guidance.push_str(
+            " A criterion judged not met clears when the code is fixed and a review judges it \
+             met, or when the criterion is corrected or moved to the spec that owns the work; a \
+             waiver or a deferral releases nothing.",
+        );
+    }
     Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::MustViolations),
         message: Some(format!(
-            "blocked: spec has {must_violations} MUST violation(s) — see {rel_dir}/review.md{}",
+            "blocked: {blocked} — see {rel_dir}/review.md{}",
             held_by_deferral(
                 feature_dir,
                 rel_dir,
                 &[crate::primitives::REVIEW_RECORD_FILE]
             ),
         )),
-        guidance: Some(format!(
-            "Resolve the violations and re-run /{project}:review, run \
-             /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding, \
-             or defer each to pipeline work on another spec \
-             (/{project}:review --defer <rule-id> --target <path>), whose gate then holds it."
-        )),
+        guidance: Some(guidance),
         violations: vec![],
         cross_spec_impact: vec![],
         analyze_stale_paths: None,
@@ -4042,6 +4063,54 @@ mod tests {
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
         assert!(result.message.unwrap().contains("src/uncommitted.rs"));
         assert!(result.guidance.unwrap().contains("commit"));
+    }
+
+    /// A record blocking only through a criterion its review judged not met, the
+    /// criterion ticked again by hand, names the criterion where it blocks, never
+    /// MUST violations it does not hold (066 task 27).
+    #[test]
+    fn a_not_met_criterion_blocks_by_name_not_as_must_violations() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        let spec = repo.join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(
+            &spec,
+            format!("{text}\n## Acceptance Criteria\n\n- [x] AC1: One holds.\n"),
+        )
+        .unwrap();
+        git_commit_all(repo, "status(007): reopen");
+        crate::primitives::write_review::run(
+            &crate::schema::primitives::WriteReviewArgs {
+                feature: "007-gate".into(),
+                reviewed_at: "2026-10-02T00:00:00Z".into(),
+                reviewed_against: "abc123".into(),
+                examined: Some(1),
+                criteria: Some(vec![crate::schema::primitives::CriterionVerdict {
+                    label: Some("AC1".into()),
+                    met: false,
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+            repo,
+        )
+        .unwrap();
+        let result = gate(repo);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::MustViolations));
+        let message = result.message.unwrap();
+        assert!(
+            message.contains("the review judged acceptance criteria not met: AC1"),
+            "{message}"
+        );
+        assert!(!message.contains("MUST violation"), "{message}");
+        assert!(
+            result
+                .guidance
+                .unwrap()
+                .contains("a waiver or a deferral releases nothing")
+        );
     }
 
     /// An unticked criterion holds `done` with its own block, named by label or
