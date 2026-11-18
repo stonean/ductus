@@ -1,16 +1,16 @@
 ---
 spec: 067-analyze-and-audit-checks
-last-run: 2026-11-16T13:33:46Z
-analyzed-against: d73853833929b3547623a759e38d2e6014775db6
+last-run: 2026-11-18T03:05:20Z
+analyzed-against: 0f69a61b076dfe433f8d13c8d907adff16423a6f
 hard-fail: 0
 blocking-findings: 0
-advisory: 5
-unexamined: 58
+advisory: 4
+unexamined: 57
 analyzed-digest:
-  data-model.md: 11fa84637254ce8e79adb43a72f7e016e89b3794ca8ac26079adee5d88e93318
-  plan.md: 7eeca4cee91f691d3345bcdd10e9813c45e594d637d2a6ca80775116467aae53
-  review.md: 3a4e43c0cda87362aeabab92bd5520ac6bc81c7f800fd99e01548df49232c384
-  scenarios/a-record-cites-a-removed-rule.md: 23bf46c125b0bb16377fcd9958126aa15633ac01e77db6219a4dd3d7303d1627
+  data-model.md: dc423389548141d67554f1bfd29e4ac69833154f5ace0d89b3f763dd430dc1dc
+  plan.md: bbb32155720615274f56778e845e2d15dc60c9ff5a1bdf7b26caa5813a712caa
+  review.md: 6ceff664e69779487135bc9ee7a087488bbd1ee187aaded7298776b8f8f129fe
+  scenarios/a-record-cites-a-removed-rule.md: 20b5adcfb587c0ad32b99376a81f772f92a2e31fd040d1948712a4039dc74474
   scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: 73b4360b8740a08f023125fdae8fe14b859bc2ac7e60a8a39642ea51e3d08d1a
   scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md: 596fd2546524b3b353e1c077e85e496a3be0d52b44fec54480808571a36c6569
   scenarios/adopter-corpus-link-integrity.md: 5d5aca644cf0573708948c8030ddd1fb161ff263ca1c67af46fb38da30a9b35e
@@ -47,14 +47,14 @@ analyzed-digest:
   scenarios/spec-integrity-and-plan-consistency-are-run.md: d6f36ae1fdf21bd78aa8aadbdbcc44ec6a4a8d1e8649583085e522bbdc916893
   scenarios/status-gated-families-are-not-silent.md: 1833246fc09413e940f018c8201286f35ca0ae386a567e7c52c8eac53c7d4059
   scenarios/the-promotion-coverage-line.md: 0d91757bfa43a8311441fd9d1319714c3756e192f0cb6c2dc22bfb35b245d48f
-  scenarios/traverse-deps-cycle-check.md: 1561f174e00dc527d05a0f585b4b893807836a2f78df4b111eb258b89abf4a60
-  spec.md: f2b61ac5eebabfc5242b23ef2dc6a46b1c32446d1216b860a0ed20571ea55848
-  tasks.md: e45941774c6f1451a5ca970138cffe867e27b5468ec060be5347bf1248111b00
+  scenarios/traverse-deps-cycle-check.md: b752045f0614cbba344c7164ccd7e10d76a16b4a39dc28e9ce19d5da83d219c2
+  spec.md: da4b2397714427197394ad1eb3bee08701f10e16479eb1b9dcab5b761db22348
+  tasks.md: a8024e9ec0a2743958903ba7e7044e5dfedd95db502d3e1565593705eae8d0e1
 unexamined-by-reason:
   never-existed: 14
   not-a-live-claim: 15
   root-absent: 20
-  ships-to-adopter: 9
+  ships-to-adopter: 8
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
   api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
@@ -70,22 +70,23 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Primitive interface changes, classified under `BE-COMPAT-001`"}
-  BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#Affected Files", message: "Tasks 34 and 35 added framework-checks.yml steps (w) and (z) (commit 7f40a52e), yet the plan names no CI change and commits to no automated vulnerability scan on dependency-set changes."}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "plan.md#`check-artifacts` walks the feature directory and skips an outward link"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-INPUT-002: {verdict: addressed, cite: "scenarios/sibling-link-grammar-is-the-shared-one.md#Behavior"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#A path that leaves the project is `outside-project`, not `root-absent`"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-LOCK-002: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`check-artifacts` — deterministic artifact-check families for one feature"}
+  BE-RACE-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
+  BE-RACE-003: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   deferred: 0
-  waived: 5
+  waived: 4
   undispositioned: 0
 decisions:
   - key: "body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: \"- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root, and the **historical** roots `.govern/`, `scripts/gen-` and `scripts/lib/`, since the orphan a migration leaves carries the root before the move (scenario [`orphaned-reference-historical-roots`](scenarios/orphaned-reference-historical-roots.md)). `matched-prefixes` bounds a clean result by scope, as `examined` bounds it by subject.\""
@@ -98,11 +99,6 @@ decisions:
     reason: "Correct by design: the scenario explains why the historical roots are the prefixes `scripts/gen-` and `scripts/lib/`; naming a retired root is its subject. Operator-approved discard (2026-10-16)."
     decided-at: 2026-10-16T19:13:57Z
     decided-by: andy@stone.dev
-  - key: "rule-assessment — BE-DEPS-007: Tasks 34 and 35 added framework-checks.yml steps (w) and (z) (commit 7f40a52e), yet the plan names no CI change and commits to no automated vulnerability scan on dependency-set changes."
-    outcome: waived
-    reason: "067's plan and tasks change no dependency manifest or lockfile: tasks 34 and 35 added two test-running steps, (w) and (z), to framework-checks.yml (`7f40a52e`), which alter no dependency set, so there is no dependency change for a scan to run on. The scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's `audit` job runs `cargo audit` on any push touching `runtime/**`), and where it runs is the project's choice under the rule's Not-flagged clause."
-    decided-at: 2026-11-16T13:33:46Z
-    decided-by: rule
   - key: grounding — plan.md states as fact that nothing in the runtime classifies skip reasons, so no code beyond the two sites changes, with no file-and-symbol, command or query behind it
     outcome: waived
     reason: A negative claim about existing code that scopes task 30's landed two-site change (`05838d8c`, cited in the plan's interface table); the surrounding section is cited by symbol, and settling it needs a code search, which is no mechanical chore.
@@ -119,7 +115,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 58 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 57 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -131,11 +127,10 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-DEPS-007: Tasks 34 and 35 added framework-checks.yml steps (w) and (z) (commit 7f40a52e), yet the plan names no CI change and commits to no automated vulnerability scan on dependency-set changes. — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: 067's plan and tasks change no dependency manifest or lockfile: tasks 34 and 35 added two test-running steps, (w) and (z), to framework-checks.yml (`7f40a52e`), which alter no dependency set, so there is no dependency change for a scan to run on. The scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's `audit` job runs `cargo audit` on any push touching `runtime/**`), and where it runs is the project's choice under the rule's Not-flagged clause. (decided by the rule)
-- grounding — plan.md states as fact that nothing in the runtime classifies skip reasons, so no code beyond the two sites changes, with no file-and-symbol, command or query behind it — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: A negative claim about existing code that scopes task 30's landed two-site change (`05838d8c`, cited in the plan's interface table); the surrounding section is cited by symbol, and settling it needs a code search, which is no mechanical chore. (decided by the rule)
 - body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: "- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root, and the **historical** roots `.govern/`, `scripts/gen-` and `scripts/lib/`, since the orphan a migration leaves carries the root before the move (scenario [`orphaned-reference-historical-roots`](scenarios/orphaned-reference-historical-roots.md)). `matched-prefixes` bounds a clean result by scope, as `examined` bounds it by subject." — `specs/067-analyze-and-audit-checks/data-model.md` — **waived**: Correct by design: `scripts/lib/` is named as a historical prefix root the orphaned-reference check matches on purpose, not as a file that should exist. Operator-approved discard (2026-10-16).
 - body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: "**The pre-042 entries are prefixes, not a directory.** `scripts/gen-` and `scripts/lib/` rather than `scripts/`, because the framework owned those and never the whole directory. A `scripts/` root would make every unresolved adopter script a finding — noise this check must not produce, and the reason the current-roots list was scoped in the first place." — `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-historical-roots.md` — **waived**: Correct by design: the scenario explains why the historical roots are the prefixes `scripts/gen-` and `scripts/lib/`; naming a retired root is its subject. Operator-approved discard (2026-10-16).
-- grounding — plan.md states as fact that steps 16-21 of analyze are 'cited by number' by the runtime's walker, the references and the done specs' plans, with no file, symbol or command cited (two places: step 15 decision and integrity-split decision) — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: The sentence gives the reason a design choice (no new analyze step) was made; the landed tasks 23 and 28 are cited by commit in the plan's interface table, and grounding the claim needs a search for step-number citations, which is no mechanical chore. (decided by the rule)
+- grounding — plan.md states as fact that nothing in the runtime classifies skip reasons, so no code beyond the two sites changes, with no file-and-symbol, command or query behind it — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: A negative claim about existing code that scopes task 30's landed two-site change (`05838d8c`, cited in the plan's interface table); the surrounding section is cited by symbol, and settling it needs a code search, which is no mechanical chore. (decided by the rule)
+- grounding — plan.md states as fact that steps 16-21 of analyze are cited by number by the runtime's walker, the references and the done specs' plans, with no file, symbol or command cited — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: The sentence gives the reason a design choice (no new analyze step) was made; the landed tasks 23 and 28 are cited by commit in the plan's interface table, and grounding the claim needs a search for step-number citations, which is no mechanical chore. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -150,9 +145,8 @@ decisions:
 - never-existed: 14
 - not-a-live-claim: 15
 - root-absent: 20
-- ships-to-adopter: 9
+- ships-to-adopter: 8
 
 ## Fixed in this run
 
-- rule-assessment — BE-PAYLOAD-001: check-corpus-links (`broken`, `examined`, `skipped`) and check-artifacts (`findings`, `skipped`) return lists with no stated bound, no `form`/`lists-file` commitment and no pointer to 080's Bounded results, while every sibling primitive in this data model commits to one; 080's research measured check-corpus-links at 147,494 bytes — `specs/067-analyze-and-audit-checks/data-model.md` — **fixed**
-- plan-consistency — plan.md's Data Model section lists the primitives data-model.md defines but omits `read-deprecation-labels`, which data-model.md has a section for and the plan's Affected Files lists — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+*None.*
