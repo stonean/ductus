@@ -1,15 +1,15 @@
 ---
 spec: 080-deterministic-runtime-efficiency
-last-run: 2026-11-16T14:32:18Z
-analyzed-against: 6be0fc3932d19f70b73c27984f3c37cb1a849ced
+last-run: 2026-11-18T13:09:38Z
+analyzed-against: 828a18f540096640b96f627b69a48290a5fd27c4
 hard-fail: 0
 blocking-findings: 0
-advisory: 23
+advisory: 6
 unexamined: 5
 analyzed-digest:
   data-model.md: 8d6d914d57d77dc1dd020c6209abeb647abc79a4708a0e97cbb83a40b7329d08
-  plan.md: d80249b89df93828c652638eecd368263ce83d7f6b3cb8d6d819f42aa94fc858
-  research.md: f3fe9bd9319dc4dfd1f6da663e2457cb44018560d0e6491e80422c0985d8981e
+  plan.md: 661bd835dd1174efdc4792f9494ae4a9b87d264002bc47ef53a21b5213495b80
+  research.md: 8cb129845003758f3a835b5701b0ac0f4beaeb5cb4addec9488fccfe2553e56b
   review.md: d24d1b1b5b45da035d96d943eef1762ed9e8ecec3daeac23a01441600cee254b
   scenarios/configure-types-no-permission-entries.md: 6c764c4d44c20f0b7d88582dbd52de2d9c1efd915080813f41eb858e16ca7313
   scenarios/groom-derives-routing-candidates.md: 516690b45261a38cad315305e8b1ca19fa51a072137a7bfbb1a12c9217fe42da
@@ -18,7 +18,7 @@ analyzed-digest:
   scenarios/reference-reads-follow-the-cited-sections.md: 66a004c23e55c8e1a4823a5fa13370220af42c42563194fc693c7067998d9c5f
   scenarios/rules-load-without-shell-reads.md: 052d22a0ed61649128bdada4bf6cef556aba1568aa64f6d6055eb5dbe84b92dd
   scenarios/the-search-goes-out-with-the-first-call.md: fb2cfb2453ca185c97d8fd9e81daad0c09fe92280d925c2ee2b52d6273dc000e
-  spec.md: b4025f1a33fa00ad95a9e47944ba77c131368b49f4700e4ff8a5c647eedda539
+  spec.md: 61f91589c1a6bfc443089ea6d22bc509480f4d7391738d96cbc4e32fb3d08d9d
   tasks.md: b14364f15f2d5f8adcaaaaa237f2087859ec979637e65122dcad45c7b9b5d81e
 unexamined-by-reason:
   never-existed: 1
@@ -39,29 +39,31 @@ rule-digest:
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#`render-status` serves the view, and `dashboard` stops carrying it"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
-  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Bounded results"}
+  BE-INPUT-002: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Reference sections are read through `read-section`"}
   BE-INPUT-008: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-INPUT-011: {verdict: addressed, cite: "plan.md#One view model, two renderings, one bound"}
-  BE-LOCK-001: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "spec.md#Bounded tool results"}
+  BE-PAYLOAD-002: {verdict: addressed, cite: "plan.md#Rules reach the model through `discover-rule-files`"}
+  BE-RACE-003: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
   BE-TXN-002: {verdict: waived, reason: "concurrent `/{project}:configure` runs read-modify-write the per-contributor `settings.local.json` through `merge-status-hook` with no version check or lock, so one run's hook entry can be lost; both merges are idempotent, so the next run restores it, and a lock would serialize a file two runs rarely share (Edge Cases; owner, 2026-11-14)", decided-by: "andy@stone.dev", decided-at: "2026-11-14T17:31:43Z"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#`merge-status-hook` installs the hook and gates it on the version"}
-  CFG-CONST-003: {verdict: addressed, cite: "plan.md#A `claude -p` harness records each command's cost"}
+  CFG-CONST-003: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
   CFG-CONST-004: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
   CFG-ENV-001: {verdict: addressed, cite: "plan.md#Claude Code's hook runs `ductus hook status`, a host surface, not a primitive"}
-  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
   CFG-ENV-004: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
   CFG-ENV-005: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
+  CFG-ENV-007: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#Tool loading derives from each command's parsed steps"}
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
-  waived: 23
+  waived: 6
   undispositioned: 0
 decisions:
   - key: artifact-size — `specs/080-deterministic-runtime-efficiency/plan.md` is 63372 bytes, 2 read pages at the 50000-byte read size
@@ -69,42 +71,7 @@ decisions:
     reason: plan.md is 080's design record, grown by this analysis's rule commitments; its finished Affected Files rows are trimmed with /ductus:prune once 080 is done.
     decided-at: 2026-11-11T00:26:02Z
     decided-by: rule
-  - key: grounding — spec.md says Claude Code transcripts are removed after `cleanupPeriodDays`, 30 days by default, naming no source
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — spec.md says `MessageDisplay` transforms only assistant text and a `systemMessage` without a block lets the prompt reach the model, naming no source
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — spec.md says Claude Code reads only user, project and local settings, naming no source
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — spec.md says the output schemas never reach the model, naming no source
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — spec.md says Claude Code cuts an upfront-loaded tool's description at 4,096 characters against 16,384 through tool search, naming no source
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
   - key: grounding — plan.md says the parser ends `## Instructions` at its first sub-heading, citing no path or symbol
-    outcome: waived
-    reason: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says rmcp 3.9.0's `Tool.meta` serializes as `_meta`, naming no source
-    outcome: waived
-    reason: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says `apply-manifest` holds both roots inside the directory it runs in, citing no source
     outcome: waived
     reason: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
     decided-at: 2026-11-11T00:26:02Z
@@ -114,70 +81,20 @@ decisions:
     reason: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore.
     decided-at: 2026-11-11T00:26:02Z
     decided-by: rule
-  - key: grounding — plan.md says implement, review and analyze walk groom's decision tree and derive no routing candidates, citing none of those commands
-    outcome: waived
-    reason: A design note on other commands whose re-sourcing needs reading their sources, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says implement runs five bounded primitives in one walk, citing neither the command nor a walk
-    outcome: waived
-    reason: A design note on another command whose re-sourcing needs reading its source or a walk, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says no command, walker step or script read read-spec's `review` and `analyze`, naming no search
-    outcome: waived
-    reason: A design note whose re-sourcing needs a corpus search outside analyze's scope, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says the first tool the steps name is not the first call in review, implement or groom, citing neither the commands nor a run
-    outcome: waived
-    reason: A design note on other commands whose re-sourcing needs reading their sources or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says the allow side already ignores a pinned configure copy's edits, citing no code or test
-    outcome: waived
-    reason: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
-  - key: grounding — plan.md says an omitted list and an empty one arrive alike over MCP, naming no source
-    outcome: waived
-    reason: A protocol and library behavior whose re-sourcing needs their documentation or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T00:26:02Z
-    decided-by: rule
   - key: grounding — plan.md (Trade-offs, Renaming merge-status-hook) says the name is in 28 live files (115 occurrences, 7 specs), with no command or method for the count
     outcome: waived
     reason: "advisory and no chore: a count of where the name occurs, which a grep of the name across the live-artifact set re-derives; the trade-off rejects the rename on the adopters' permission entries it would retire, which the count does not carry"
     decided-at: 2026-11-14T02:14:06Z
     decided-by: rule
-  - key: grounding — plan.md 'Bound (AC24)' states fixture-corpus sizes (1,701 planned specs naming 1,498 specs against 515 by rows; a 279,572-byte view file against dashboard's 791,817 bytes) with no method or pointer to research.md
+  - key: decision-reasons — plan.md Trade-offs rejects renaming merge-status-hook for the sweep it would start (28 files, 7 specs) and the adopter permission entries it would retire
     outcome: waived
-    reason: Figures are measurements of this spec's own generated fixture corpus, which scripts/measure-result-sizes.sh and the AC24 test reproduce; they carry no research.md pointer in the plan, but they are not claims about a system outside the spec's own work, and no gate reads them.
-    decided-at: 2026-11-15T02:10:11Z
+    reason: "the reason beside the sweep is a result for adopters: every permission entry for the old name would stop matching and need retiring, so the decision does not rest on the work in this repository alone"
+    decided-at: 2026-11-18T13:09:38Z
     decided-by: rule
-  - key: grounding — spec.md Edge Cases states 'Collapsing took the 77-spec table from 7,625 to 4,271 characters' with no source, command or method
+  - key: decision-reasons — plan.md Trade-offs rejects one file per reference section for the pointer, manifest, anchor and audit changes and the adopter migration it would start
     outcome: waived
-    reason: A measurement of the view's own collapse step, dated by the surrounding owner decisions (2026-11-08, 2026-11-10); the criterion it illustrates (AC24) is checked by a test, so the figure is illustration, not a contract, and no gate reads it.
-    decided-at: 2026-11-15T02:10:11Z
-    decided-by: rule
-  - key: grounding — plan.md (Bound (AC24)) says the view would pass the read size at about 660 unresolved questions on this repository's slugs, with no per-line size or method for the estimate
-    outcome: waived
-    reason: A derived estimate of the view's own cut behavior, illustrating the decision to cut question lines (owner, 2026-11-10); AC24's test, not the figure, checks the bound, and no gate reads it.
-    decided-at: 2026-11-16T14:12:27Z
-    decided-by: rule
-  - key: grounding — plan.md (Trade-offs, Leaving every body search to the model) states the failed round's three greps cost 6.99 s and 3 of 7 model requests, with no pointer to research.md
-    outcome: waived
-    reason: A measurement from the cost round that scenario groom-derives-routing-candidates cites to research.md R6; the plan omits the pointer but the figure is a rejected option's illustration, and no gate reads it.
-    decided-at: 2026-11-16T14:12:27Z
-    decided-by: rule
-  - key: grounding — plan.md (Corpus-growing results, Consumers) states the sweep reached '12 command sources and 5 references' and 'the 8 branches' with no command or method for the counts
-    outcome: waived
-    reason: A count of the sweep's own targets, owner-decided 2026-11-08 and re-derivable by grepping the lists-file wording across framework/; it is no claim about a system outside the spec's work and no gate reads it.
-    decided-at: 2026-11-16T14:32:18Z
-    decided-by: rule
-  - key: grounding — plan.md (Help answers through the status surfaces, ductus hook help) states the help copy holds 'five pipe tables (28 lines, the longest 480 characters)' with no method or pointer
-    outcome: waived
-    reason: A measurement of the generated help copy, re-derivable by reading it, offered to explain why the guide shows as markdown source in a terminal; the criterion it illustrates is checked by the hook's tests, and no gate reads the figure.
-    decided-at: 2026-11-16T14:32:18Z
+    reason: an owner decision (2026-11-09) recorded with its cost to adopters, a migration each would run, beside the changes here; re-deciding it is the owner's, and the advisory proves no defect
+    decided-at: 2026-11-18T13:09:38Z
     decided-by: rule
 ---
 
@@ -185,7 +102,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 23 advisory; not blocking. 5 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 23 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 6 advisory; not blocking. 5 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 6 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -197,29 +114,12 @@ decisions:
 
 ## Advisory findings
 
-- grounding — grounding — Resolved Questions (measuring a command) still says transcripts are removed after cleanupPeriodDays, 30 days by default, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — grounding — Resolved Questions (block presentation) still says MessageDisplay transforms only assistant text and a systemMessage without a block lets the prompt reach the model, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — grounding — Resolved Questions (older releases) still says Claude Code reads only user, project and local settings, naming no source — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — grounding — Resolved Questions (alwaysLoad) still says the output schemas never reach the model, naming no source; plan.md's method-trap bullet repeats it — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — grounding — Resolved Questions (alwaysLoad, Constraint) still says Claude Code cuts an upfront-loaded description at 4,096 characters against 16,384 through tool search, naming no source; plan.md cites it back to the spec only — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A host behavior whose re-sourcing needs the host's documentation or a run, which is research rather than a chore.
-- grounding — grounding — Tool loading still says the parser ends ## Instructions at its first sub-heading, citing no path or symbol in that sentence — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
-- grounding — grounding — Always loaded still says rmcp 3.9.0's Tool.meta serializes as _meta, naming no source for the serialization (the server.rs citation covers the post-processing only) — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore.
-- grounding — grounding — Batched (This repo's copies) still says apply-manifest holds both roots inside the directory it runs in, citing no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
-- grounding — grounding — Help answers through the status surfaces still says clap otherwise generates ductus hook help itself, naming no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore.
-- grounding — grounding — groom derives its routing candidates still says implement, review and analyze walk groom's decision tree and derive no routing candidates, citing none of those commands — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on other commands whose re-sourcing needs reading their sources, which is research rather than a chore.
-- grounding — grounding — Corpus-growing results (The walker) still says implement runs five bounded primitives in one walk, citing neither the command nor a walk — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on another command whose re-sourcing needs reading its source or a walk, which is research rather than a chore.
-- grounding — grounding — Corpus-growing results (read-spec) still says no command, walker step or script read read-spec's review and analyze, naming no search — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note whose re-sourcing needs a corpus search outside analyze's scope, which is research rather than a chore.
-- grounding — grounding — Trade-offs (Naming the command's first call) still says the first tool the steps name is not the first call in review, implement or groom, citing neither the commands nor a run — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on other commands whose re-sourcing needs reading their sources or a run, which is research rather than a chore.
-- grounding — grounding — Trade-offs (Reading configure's sets from its installed copy) still says the allow side already ignores a pinned configure copy's edits, citing no code or test — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore.
-- grounding — grounding — Trade-offs (Making the canonical sets the default) still says an omitted list and an empty one arrive alike over MCP, naming no source — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A protocol and library behavior whose re-sourcing needs their documentation or a run, which is research rather than a chore.
-- grounding — grounding — Trade-offs (Renaming merge-status-hook) still says the name is in 28 live files (115 occurrences, 7 specs), with no command or method for the count — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: advisory and no chore: a count of where the name occurs, which a grep of the name across the live-artifact set re-derives; the trade-off rejects the rename on the adopters' permission entries it would retire, which the count does not carry
-- grounding — grounding — One view model (Bound (AC24)) still states fixture-corpus sizes (1,701 planned specs naming 1,498 against 515 by rows; a 279,572-byte view file against dashboard's 791,817 bytes) with no method or pointer to research.md — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: Figures are measurements of this spec's own generated fixture corpus, which scripts/measure-result-sizes.sh and the AC24 test reproduce; they carry no research.md pointer in the plan, but they are not claims about a system outside the spec's own work, and no gate reads them.
-- grounding — grounding — Edge Cases still states 'Collapsing took the 77-spec table from 7,625 to 4,271 characters' with no source, command or method — `specs/080-deterministic-runtime-efficiency/spec.md` — **waived**: A measurement of the view's own collapse step, dated by the surrounding owner decisions (2026-11-08, 2026-11-10); the criterion it illustrates (AC24) is checked by a test, so the figure is illustration, not a contract, and no gate reads it.
-- grounding — grounding — One view model (Bound (AC24)) still says the view would pass the read size at about 660 unresolved questions on this repository's slugs, with no per-line size or method — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A derived estimate of the view's own cut behavior, illustrating the decision to cut question lines (owner, 2026-11-10); AC24's test, not the figure, checks the bound, and no gate reads it.
-- grounding — grounding — Trade-offs (Leaving every body search to the model) still states the failed round's three greps cost 6.99 s and 3 of 7 model requests, with no pointer to research.md — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A measurement from the cost round that scenario groom-derives-routing-candidates cites to research.md R6; the plan omits the pointer but the figure is a rejected option's illustration, and no gate reads it.
-- grounding — plan.md (Corpus-growing results, Consumers) states the sweep reached '12 command sources and 5 references' and 'the 8 branches' with no command or method for the counts — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A count of the sweep's own targets, owner-decided 2026-11-08 and re-derivable by grepping the lists-file wording across framework/; it is no claim about a system outside the spec's work and no gate reads it. (decided by the rule)
-- grounding — plan.md (Help answers through the status surfaces, ductus hook help) states the help copy holds 'five pipe tables (28 lines, the longest 480 characters)' with no method or pointer — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A measurement of the generated help copy, re-derivable by reading it, offered to explain why the guide shows as markdown source in a terminal; the criterion it illustrates is checked by the hook's tests, and no gate reads the figure. (decided by the rule)
-- artifact-size — `specs/080-deterministic-runtime-efficiency/plan.md` is 62662 bytes, 2 read pages at the 50000-byte read size — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: plan.md is 080's design record, grown by this analysis's rule commitments; its finished Affected Files rows are trimmed with /ductus:prune once 080 is done.
+- artifact-size — `specs/080-deterministic-runtime-efficiency/plan.md` is 62994 bytes, 2 read pages at the 50000-byte read size — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: plan.md is 080's design record, grown by this analysis's rule commitments; its finished Affected Files rows are trimmed with /ductus:prune once 080 is done. (decided by the rule)
+- grounding — plan.md says the parser ends the Instructions section at its first sub-heading, so amend parses as legacy prose, with no source cited — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A design note on repository code whose re-sourcing needs a source read outside analyze's scope, which is research rather than a chore. (decided by the rule)
+- grounding — plan.md says clap generates ductus hook help itself, with no source cited — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: A library behavior whose re-sourcing needs the library's documentation or source, which is research rather than a chore. (decided by the rule)
+- grounding — plan.md says merge-status-hook is in 28 live files, 115 occurrences, 7 specs, with no query cited — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: advisory and no chore: a count of where the name occurs, which a grep of the name across the live-artifact set re-derives; the trade-off rejects the rename on the adopters' permission entries it would retire, which the count does not carry (decided by the rule)
+- decision-reasons — plan.md Trade-offs rejects renaming merge-status-hook for the sweep it would start (28 files, 7 specs) and the adopter permission entries it would retire — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: the reason beside the sweep is a result for adopters: every permission entry for the old name would stop matching and need retiring, so the decision does not rest on the work in this repository alone (decided by the rule)
+- decision-reasons — plan.md Trade-offs rejects one file per reference section for the pointer, manifest, anchor and audit changes and the adopter migration it would start — `specs/080-deterministic-runtime-efficiency/plan.md` — **waived**: an owner decision (2026-11-09) recorded with its cost to adopters, a migration each would run, beside the changes here; re-deciding it is the owner's, and the advisory proves no defect (decided by the rule)
 
 ## Deferred to other specs
 
@@ -240,4 +140,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — CFG-CONST-004: DUCTUS_GEN_TIMEOUT_SECONDS has a valid range (positive whole number) but the plan names no constant for its bound beside DEFAULT_GEN_TIMEOUT_SECONDS — `specs/080-deterministic-runtime-efficiency/plan.md` — **fixed**
+*None.*
