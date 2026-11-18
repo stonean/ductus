@@ -16,18 +16,13 @@ The load-bearing invariant is **default-`specs` everywhere**: an adopter who nev
 
 ### Config schema: `[paths] specs-root`, default `specs`
 
-A new TOML table `[paths]` carries a scalar key `specs-root`. Resolution rule everywhere: read the key; when absent or empty, fall back to `specs`. The key is documented in this spec's body — per the project convention that `.ductus/config.toml` is a shared adopter-side database whose new "tables" are documented in the adding spec, not signposted onto the prior `.ductus/config.toml` specs (`017`/`019`). Well-formedness (non-empty, single segment, no separators, no `..`, no leading slash) is validated when `/ductus` writes the value.
+A new TOML table `[paths]` carries a scalar key `specs-root`. Resolution rule everywhere: read the key; when absent or empty, resolve to the named default `DEFAULT_SPECS_ROOT` (`specs`, in `runtime/src/schema/paths.rs`). The key is documented in this spec's body — per the project convention that `.ductus/config.toml` is a shared adopter-side database whose new "tables" are documented in the adding spec, not signposted onto the prior `.ductus/config.toml` specs (`017`/`019`). Well-formedness (non-empty, single segment, no separators, no `..`, no leading slash) is one predicate, `validate_specs_root`, which `/ductus` applies when it writes the value and the runtime applies on every load: a value it rejects halts the call with `InvalidSpecsRoot` naming the file and the value, never falling back to the default (`CFG-ENV-008`). An unrecognized key in `[paths]` is warned by name through `config_keys::warn_unknown_keys` (`CFG-ENV-012`). A path built from the configured name is opened only after canonical containment: `validate_feature_contained` resolves `{root}/{feature}` and refuses one that leaves the project, through a symbolic link included, and the config file is itself read through `contained_file` (`BE-INPUT-004`).
 
 ### One shared runtime resolver
 
-Add a single helper in the runtime's config/schema layer (the same layer that already parses `[services]` and `[rules]`):
+A single helper in the runtime's config/schema layer, beside the `[services]` reader in `runtime/src/schema/services.rs`, resolves the spec root: `specs_dir(base)` in `runtime/src/schema/paths.rs` returns the directory under `base` through `Paths::load`, or the load error the Config schema decision names.
 
-```rust
-// resolve the spec-root directory name for `repo`, defaulting to "specs"
-fn specs_root(repo: &Path) -> PathBuf  // reads [paths] specs-root from <repo>/.ductus/config.toml
-```
-
-Every `repo.join("specs")` site is rewritten to `repo.join(specs_root(repo))`. From the discovery sweep, the sites are: `primitives/{read_spec, set_status, mark_task, mark_criterion, read_tasks, traverse_deps, check_stuck, derive_boundary, resolve_references, dashboard}.rs` and `interpreter/payload.rs`. Full-path primitives (`write_session`, `lint_markdown`, `substitute_templates`) are untouched because the host bakes the resolved root into the path argument they receive.
+Every `repo.join("specs")` site is rewritten to `specs_dir(repo)`. From the discovery sweep, the sites are: `primitives/{read_spec, set_status, mark_task, mark_criterion, read_tasks, traverse_deps, check_stuck, derive_boundary, resolve_references, dashboard}.rs` and `interpreter/payload.rs`. Full-path primitives (`write_session`, `lint_markdown`, `substitute_templates`) are untouched because the host bakes the resolved root into the path argument they receive.
 
 One resolver (not a `.ductus/config.toml` read duplicated per primitive) keeps the default and the parsing in one place — the drift-prevention discipline applied to code. This is an edit to existing primitives' path construction plus a config-read helper; it does **not** add a new primitive, so the new-primitive wiring checklist (schema/parser/interpreter/main/server/`runtime-tools.txt`) does not apply.
 
@@ -65,7 +60,7 @@ Default-`specs` means every existing test, fixture, and golden file keeps passin
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/schema/` (config layer) | Modify | Parse `[paths] specs-root`; add shared `specs_root(repo)` resolver (default `specs`) |
+| `runtime/src/schema/` (config layer) | Modify | Parse `[paths] specs-root`; add shared `specs_dir` resolver (default `DEFAULT_SPECS_ROOT`, `specs`) |
 | `runtime/src/primitives/read_spec.rs` | Modify | Resolve root instead of `repo.join("specs")` |
 | `runtime/src/primitives/set_status.rs` | Modify | Resolve root |
 | `runtime/src/primitives/mark_task.rs` | Modify | Resolve root |
