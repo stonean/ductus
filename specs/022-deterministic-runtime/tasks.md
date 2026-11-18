@@ -1,5 +1,5 @@
 ---
-next-task: 53
+next-task: 54
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -197,3 +197,11 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 - [x] A mutant drops `::1` from `LOOPBACK_NO_PROXY` and the test turns red (`scripts/mutation/fetch-archive-loopback-http.py` M7)
 
 - **Done when**: removing `::1` from `LOOPBACK_NO_PROXY` fails a test, proven by M7; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change.
+
+## 53. Each `--{name}-json` flag's help states its JSON's shape (scenario every-mcp-argument-has-a-cli-form)
+
+- [ ] Implement the Behavior `scenarios/every-mcp-argument-has-a-cli-form.md` gained on 2026-11-18: each `--{name}-json` flag's `--help` states its argument's shape, rendered from the schema the MCP tool publishes, nested types included
+- [ ] No subcommand's `--help` prints a developer note, a rustdoc path link or a serde attribute, and a test fails on the first that does and on a JSON flag whose help omits its shape
+- [ ] Deferred here from 003 task 8 (owner, 2026-11-18), which 003 task 7's scratch-adopter run F3 surfaced
+
+- **Done when**: every `--{name}-json` flag's help states its argument's shape from the tool's schema, the test turns red when one omits it or any help holds a developer note, proven by a mutant; `cargo fmt --check`, clippy and the whole `cargo test` pass; and 022's next review reads the change
