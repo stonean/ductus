@@ -1,5 +1,5 @@
 ---
-next-task: 26
+next-task: 27
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -31,3 +31,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Each new behavior has a mutant its test kills, listed in `scripts/mutation/line-citation-strip-066.py`
 
 - **Done when**: A commit that only strips line-number citations reads mechanical to `classify-spec-edit`, current to the analysis freshness and unchanged to `compute-review-scope`, proven by tests their mutants turn red; nothing else becomes mechanical; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 26. A partial strip is mechanical, and the unexamined reasons are a closed set (AC6, AC2; owner decisions 2026-11-18, from 066's pre-done check)
+
+- [x] `line_citations` gains a test of whether one text is another with a non-empty subset of its citation suffixes removed and nothing else changed, and `mechanical_sweep`'s `pair_run` and `classify_spec_edit`'s `same_items` read a line or item through it, so removing one citation beside a kept one is mechanical in every form, an anchor and an en-dash range included, in a scenario, plan or data model and in a criterion or open question; the pre-done check drove an anchor stripped beside a kept citation as a reopen
+- [x] `write-analysis` refuses an `unexamined-by-reason` reason outside the closed set the data model's table names, on the CLI and the MCP paths, from one runtime list a test holds equal to that table; the pre-done check recorded `bogus-reason=2`
+- [x] 066's plan and data model state both, and `CLASSIFY_SPEC_EDIT` and `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs` where they state the rule
+- [x] Each new behavior has a test its mutant turns red, listed in `scripts/mutation/line-citation-strip-066.py`
+
+- **Done when**: A partial strip reads mechanical to classify-spec-edit and current to the analysis freshness, an unknown reason is refused, each proven by a test its mutant turns red; the whole `cargo test` passes; and 066's next review reads the change.

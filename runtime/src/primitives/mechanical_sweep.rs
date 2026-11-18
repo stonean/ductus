@@ -372,7 +372,9 @@ fn flush(
 /// not a pure substitution (see the module docs' conditions 1 and 2).
 ///
 /// A removed line-number citation is no rewrite (066 AC6): a line whose only
-/// change strips one, an anchor or a range included, adds nothing. A token
+/// change strips one or more, each kept or stripped on its own
+/// ([`line_citations::strips_to`]), an anchor or a range included, adds
+/// nothing. A token
 /// whose only change strips one is skipped, so beside another change on the
 /// line a `:N`, `:N-M` or `:N:C` strip, which stays one token, is judged on
 /// that change alone, while an anchor or an en-dash range splits into tokens
@@ -384,7 +386,7 @@ fn pair_run(old_run: &[&str], new_run: &[&str]) -> Option<BTreeSet<Pair>> {
     }
     let mut pairs = BTreeSet::new();
     for (old_line, new_line) in old_run.iter().zip(new_run.iter()) {
-        if line_citations::strip(old_line) == *new_line {
+        if line_citations::strips_to(old_line, new_line) {
             continue;
         }
         let old_toks = tokenize(old_line);
@@ -500,6 +502,21 @@ mod tests {
             ("x [a](a.rs#L3-L9) y", "x [a](a.rs) y"),
             ("x.rs:1–4 y", "x.rs y"),
             ("a.rs:1 and specs/b/plan.md:2", "a.rs and specs/b/plan.md"),
+        ] {
+            assert_eq!(pairs(&[old], &[new]).unwrap(), Vec::<Pair>::new(), "{old}");
+        }
+    }
+
+    /// One citation stripped beside another kept is no rewrite, an anchor and an
+    /// en-dash range included, which split into tokens (066 AC6).
+    #[test]
+    fn a_strip_beside_a_kept_citation_is_no_rewrite() {
+        for (old, new) in [
+            (
+                "See docs/w.md#L10 and a/b.rs:3 here.",
+                "See docs/w.md and a/b.rs:3 here.",
+            ),
+            ("y.md:3–9 and a.rs:1", "y.md and a.rs:1"),
         ] {
             assert_eq!(pairs(&[old], &[new]).unwrap(), Vec::<Pair>::new(), "{old}");
         }

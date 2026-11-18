@@ -38,6 +38,10 @@ on:
       # prune_tasks.rs each read a shipped spec template, the shape their
       # primitive parses or resets to, so an edit to one is an edit to theirs.
       - 'framework/templates/spec/*.md'
+      # src/primitives/write_analysis.rs holds its closed list of unexamined
+      # reasons equal to this data model's table (spec 066 task 26), so an
+      # edit to the table is an edit to its subject.
+      - 'specs/066-audit-records-and-the-completion-gate/data-model.md'
       # src/primitives/prune_project.rs compiles in a copy of three project
       # templates and its compiled_templates_match_the_framework test holds
       # each copy to its file, so an edit to one is an edit to its subject.
@@ -97,6 +101,7 @@ on:
       - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'
       - 'framework/templates/spec/*.md'
+      - 'specs/066-audit-records-and-the-completion-gate/data-model.md'
       - 'framework/templates/project/system.md'
       - 'framework/templates/project/events.md'
       - 'framework/templates/project/errors.md'

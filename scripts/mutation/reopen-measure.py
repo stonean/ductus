@@ -782,8 +782,8 @@ MUTATIONS = [
     (
         'M116 an untick compares with its label',
         'src/primitives/classify_spec_edit.rs',
-        '.any(|criterion| !criterion.checked && ticked.contains(&criterion_text(criterion)))',
-        '.any(|criterion| !criterion.checked && ticked.contains(&criterion.text))',
+        '        .filter(|criterion| !criterion.checked)\n        .map(criterion_text)\n',
+        '        .filter(|criterion| !criterion.checked)\n        .map(|criterion| criterion.text.clone())\n',
         'classify_spec_edit::tests::an_untick_reopens',
     ),
     (

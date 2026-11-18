@@ -267,8 +267,9 @@ fn spec_reasons(
 }
 
 /// Whether `now` says what `base` said, item for item, an item whose only change strips
-/// a line-number citation counting as unchanged (066 AC6). Only the base side is
-/// stripped, so a citation added or renumbered is still a change. Exact matches are
+/// one or more of its line-number citations, each on its own
+/// ([`line_citations::strips_to`]), counting as unchanged (066 AC6). Only the base side
+/// is stripped, so a citation added or renumbered is still a change. Exact matches are
 /// taken first, so an item kept as it was is never spent on a stripped one.
 fn same_items(base: &[String], now: &[String]) -> bool {
     if base.len() != now.len() {
@@ -288,10 +289,9 @@ fn same_items(base: &[String], now: &[String]) -> bool {
         }
     }
     changed.into_iter().all(|item| {
-        let stripped = line_citations::strip(item);
         unmatched
             .iter()
-            .position(|candidate| *candidate == stripped)
+            .position(|candidate| line_citations::strips_to(item, candidate))
             .map(|at| unmatched.swap_remove(at))
             .is_some()
     })
@@ -319,21 +319,23 @@ fn criterion_text(criterion: &AcceptanceCriterion) -> String {
     unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)
 }
 
-/// Whether a criterion ticked at the base is unticked now, its text read with and without
-/// its line-number citations, so a strip does not hide an untick.
+/// Whether a criterion ticked at the base is unticked now, its text read as it was or
+/// with some of its line-number citations stripped, so a strip does not hide an untick.
 fn unticks_a_criterion(base: &str, now: &str) -> bool {
-    let ticked: BTreeSet<String> = parse_checkboxes(base, "Acceptance Criteria")
+    let ticked: Vec<String> = parse_checkboxes(base, "Acceptance Criteria")
         .iter()
         .filter(|criterion| criterion.checked)
         .map(criterion_text)
-        .flat_map(|text| {
-            let stripped = line_citations::strip(&text).into_owned();
-            [text, stripped]
-        })
         .collect();
     parse_checkboxes(now, "Acceptance Criteria")
         .iter()
-        .any(|criterion| !criterion.checked && ticked.contains(&criterion_text(criterion)))
+        .filter(|criterion| !criterion.checked)
+        .map(criterion_text)
+        .any(|text| {
+            ticked
+                .iter()
+                .any(|was| *was == text || line_citations::strips_to(was, &text))
+        })
 }
 
 /// What the open questions say, sorted.
@@ -665,6 +667,23 @@ mod tests {
             &SPEC.replace("First thing.", "First thing, at `a.rs`."),
         );
         assert_correction(&root);
+    }
+
+    /// A criterion with one citation stripped and another kept is unchanged, and
+    /// unticking it beside that strip still reopens (066 AC6).
+    #[test]
+    fn a_partial_strip_in_a_criterion_is_a_correction() {
+        let cited = SPEC.replace("First thing.", "First thing, at `a.rs:12` and `b.md#L3`.");
+        let (_dir, root) = committed(&[("spec.md", &cited)]);
+        let partial = cited.replace("`b.md#L3`", "`b.md`");
+        edit(&root, "spec.md", &partial);
+        assert_correction(&root);
+        edit(
+            &root,
+            "spec.md",
+            &partial.replace("- [x] AC1:", "- [ ] AC1:"),
+        );
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
     }
 
     /// An open question whose only change strips a citation is unchanged, and one

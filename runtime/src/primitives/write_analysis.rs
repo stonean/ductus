@@ -81,6 +81,60 @@ pub(crate) const REASON_RULE_FILE_UNREADABLE: &str = "rule-file-unreadable";
 /// record shape.
 pub(crate) const REASON_UNCLASSIFIED: &str = "unclassified";
 
+/// The closed set of `unexamined-by-reason` reasons a caller may supply: the three
+/// classes of 066's data model table, which a test holds this list equal to. A reason
+/// outside it falls in no class, so a reader could not tell a gap from an exclusion
+/// (owner decision, 2026-11-18). The two the writer derives from the
+/// `[constitutions]` registry are not in it, since they are never accepted.
+pub(crate) const UNEXAMINED_REASONS: &[&str] = &[
+    // Excluded by construction.
+    "not-a-live-claim",
+    "ships-to-adopter",
+    "root-absent",
+    "never-existed",
+    "gitignored",
+    "status-gated",
+    "anchor-target-unjudgeable",
+    // Could not be read.
+    "target-missing",
+    "target-unparseable",
+    "no-readable-state",
+    "outside-project",
+    "referrer-unreadable",
+    "anchor-target-unreadable",
+    "rule-citations-not-checked",
+    "rule-not-installed",
+    REASON_RULE_ASSESSMENTS_NOT_CHECKED,
+    REASON_RULE_FILE_UNREADABLE,
+    REASON_UNCLASSIFIED,
+    "references-not-checked",
+    "applicable-rules-not-checked",
+    "grounding-not-checked",
+    "integrity-not-checked",
+    "decision-reasons-not-checked",
+    // The spec's own artifact.
+    "artifact-unreadable",
+];
+
+/// Refuse an `unexamined-by-reason` reason outside [`UNEXAMINED_REASONS`], before any read
+/// or write, on every path that reaches the writer.
+fn refuse_unknown_reasons(args: &WriteAnalysisArgs) -> Result<()> {
+    match args
+        .unexamined_by_reason
+        .iter()
+        .find(|(reason, _)| !UNEXAMINED_REASONS.contains(&reason.as_str()))
+    {
+        Some((reason, _)) => Err(invalid(
+            "unexamined-by-reason",
+            &format!(
+                "'{}' is not a reason of the closed set in 066's data model",
+                single_line(reason)
+            ),
+        )),
+        None => Ok(()),
+    }
+}
+
 /// Refuse the record while implementation is open, but for the work this run's own deferrals
 /// add to its spec (spec 079).
 fn refuse_while_implementation_is_open(
@@ -114,8 +168,9 @@ fn refuse_while_implementation_is_open(
 ///   is in a `tasks.md` that is no feature's; when it waives
 ///   a `hard-fail` or `blocking` finding; when the
 ///   findings contradict the tier counts, when two findings sharing a key are
-///   given different outcomes, or when a new decision has no `decided-by` —
-///   each before any write.
+///   given different outcomes, when a new decision has no `decided-by`, or when an
+///   `unexamined-by-reason` reason is outside [`UNEXAMINED_REASONS`] — each before any
+///   write.
 /// - [`PrimitiveError::InvalidArgument`] on `feature` while the spec's `tasks.md` holds an
 ///   unchecked box outside a task this run's own deferrals name (spec 079).
 /// - [`PrimitiveError::Io`] when `spec.md`, the spec's `tasks.md`, the prior `analysis.md` or
@@ -158,6 +213,7 @@ fn run_between(
             feature: args.feature.clone(),
         });
     }
+    refuse_unknown_reasons(args)?;
 
     // The record as this run first reads it, before any helper reads its
     // lists: the write below renames over it only while it still holds these
@@ -229,9 +285,7 @@ fn run_between(
         args.unexamined_by_reason
             .iter()
             .fold(BTreeMap::new(), |mut acc, (reason, count)| {
-                // Keyed as rendered, so two reasons that flatten to one line
-                // are one entry rather than a duplicate YAML key.
-                *acc.entry(single_line(reason)).or_default() += *count;
+                *acc.entry(reason.clone()).or_default() += *count;
                 acc
             });
     // A bare total names no breakdown, so it is recorded under its own
@@ -2024,30 +2078,96 @@ mod tests {
     }
 
     #[test]
-    fn a_reason_or_scalar_that_would_not_read_back_is_quoted() {
+    fn a_scalar_that_would_not_read_back_is_quoted() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
         let mut hostile = args();
-        hostile.analyzed_against = "abc status: done".into();
-        hostile.unexamined_by_reason = vec![
-            ("root-absent\nblocking: false".into(), 1),
-            ("a: b".into(), 2),
-            ("# not a comment".into(), 1),
-        ];
+        hostile.analyzed_against = "abc status: done\nblocking: false".into();
         run(&hostile, tmp.path()).unwrap();
         let report = analysis_md(&tmp);
         let (fm, _) = split_frontmatter(&report, Path::new("analysis.md")).unwrap();
         let parsed: serde_norway::Value =
             serde_norway::from_str(fm).expect("the record reads back");
-        assert_eq!(parsed["analyzed-against"], "abc status: done");
+        assert_eq!(
+            parsed["analyzed-against"],
+            "abc status: done blocking: false"
+        );
         assert_eq!(parsed["blocking"], false);
-        let reasons = &parsed["unexamined-by-reason"];
-        assert_eq!(reasons["root-absent blocking: false"], 1, "{fm}");
-        assert_eq!(reasons["a: b"], 2, "{fm}");
-        assert_eq!(reasons["# not a comment"], 1, "{fm}");
         // The newline injected no key of its own.
         assert_eq!(fm.matches("blocking: false").count(), 2, "{fm}");
         // And the next run reads the record it left.
         run(&args(), tmp.path()).unwrap();
+    }
+
+    /// A reason outside the closed set falls in no class, so it is refused before
+    /// anything is written, a hostile one included (owner decision, 2026-11-18).
+    #[test]
+    fn a_reason_outside_the_closed_set_is_refused() {
+        for reason in [
+            "bogus-reason",
+            "root-absent\nblocking: false",
+            "constitution-unresolved",
+        ] {
+            let tmp = spec_repo("status: in-progress\ndependencies: []");
+            let mut a = args();
+            a.unexamined_by_reason = vec![("root-absent".into(), 1), (reason.into(), 2)];
+            let error = run(&a, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "unexamined-by-reason"),
+                "{reason:?}: {error}"
+            );
+            assert!(
+                !tmp.path()
+                    .join("specs/042-demo")
+                    .join(crate::primitives::ANALYSIS_RECORD_FILE)
+                    .exists(),
+                "{reason:?}"
+            );
+        }
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let mut a = args();
+        a.unexamined_by_reason = UNEXAMINED_REASONS
+            .iter()
+            .map(|reason| ((*reason).to_string(), 1))
+            .collect();
+        run(&a, tmp.path()).unwrap();
+    }
+
+    /// The runtime's list is the data model's table, every reason of its three
+    /// classes and no other, so neither drifts from the other.
+    #[test]
+    fn the_reason_list_is_the_data_models_table() {
+        let model = fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../specs/066-audit-records-and-the-completion-gate/data-model.md"),
+        )
+        .unwrap();
+        let start = model
+            .find("| class | reasons | response |")
+            .expect("the reason table");
+        let table: BTreeSet<String> = model[start..]
+            .lines()
+            .skip(2)
+            .take_while(|line| line.starts_with('|'))
+            .flat_map(|row| {
+                let reasons = row.split('|').nth(2).unwrap_or_default();
+                reasons
+                    .split('`')
+                    .skip(1)
+                    .step_by(2)
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        let list: BTreeSet<String> = UNEXAMINED_REASONS
+            .iter()
+            .map(|reason| (*reason).to_string())
+            .collect();
+        assert_eq!(
+            list.len(),
+            UNEXAMINED_REASONS.len(),
+            "a reason listed twice"
+        );
+        assert_eq!(list, table);
     }
 
     #[test]
@@ -2123,25 +2243,6 @@ mod tests {
                 "ships-to-adopter"
             ]
         );
-    }
-
-    /// Reasons are folded by the key they render as, so two that flatten to
-    /// one line are one entry, never a duplicate key the next reader refuses.
-    #[test]
-    fn reasons_that_flatten_alike_are_one_entry() {
-        let tmp = spec_repo("status: in-progress\ndependencies: []");
-        let result = run(
-            &WriteAnalysisArgs {
-                unexamined_by_reason: vec![("a\nb".into(), 1), ("a b".into(), 2)],
-                ..args()
-            },
-            tmp.path(),
-        )
-        .unwrap();
-        assert_eq!(result.unexamined, 3);
-        let spec = analysis_md(&tmp);
-        assert_eq!(spec.matches("  a b:").count(), 1, "{spec}");
-        assert!(spec.contains("  a b: 3"), "{spec}");
     }
 
     /// The breakdown is the authority: a total a caller can contradict is a

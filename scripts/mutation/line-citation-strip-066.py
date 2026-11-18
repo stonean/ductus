@@ -1,8 +1,10 @@
-"""Mutation list for spec 066 task 25 (AC6): a removed line-number citation is a
+"""Mutation list for spec 066 tasks 25 and 26 (AC6, AC2): a removed line-number citation is a
 mechanical edit, through the one definition in
 `runtime/src/primitives/line_citations.rs` that `mechanical_sweep` and
-`classify-spec-edit` read, and nothing else becomes mechanical. Each mutation
-widens or drops one part of that rule; a test kills each.
+`classify-spec-edit` read, each citation on a line stripped or kept on its
+own, and nothing else becomes mechanical; and `write-analysis` refuses an
+unexamined reason outside the data model's closed set. Each mutation widens or
+drops one part of those rules; a test kills each.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/line-citation-strip-066.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -19,7 +21,7 @@ MUTATIONS = [
     (
         'M1 a line whose only change strips a citation is judged token by token',
         'src/primitives/mechanical_sweep.rs',
-        '        if line_citations::strip(old_line) == *new_line {\n            continue;\n        }\n',
+        '        if line_citations::strips_to(old_line, new_line) {\n            continue;\n        }\n',
         '',
         'primitives::mechanical_sweep::tests::a_stripped_citation_is_no_rewrite primitives::analyze_subjects::tests::a_strip_only_commit_leaves_the_records_current primitives::classify_spec_edit::tests::a_citation_stripped_from_a_scenario_is_mechanical',
     ),
@@ -61,22 +63,22 @@ MUTATIONS = [
     (
         'M7 a criterion whose only change strips a citation is a changed criterion',
         'src/primitives/classify_spec_edit.rs',
-        '            .position(|candidate| *candidate == stripped)\n',
+        '            .position(|candidate| line_citations::strips_to(item, candidate))\n',
         '            .position(|candidate| *candidate == item.as_str())\n',
         'primitives::classify_spec_edit::tests::a_citation_stripped_from_a_criterion_is_a_correction',
     ),
     (
         'M8 both sides of a criterion are stripped, so an added citation is no change',
         'src/primitives/classify_spec_edit.rs',
-        '            .position(|candidate| *candidate == stripped)\n',
-        '            .position(|candidate| line_citations::strip(candidate) == stripped)\n',
+        '            .position(|candidate| line_citations::strips_to(item, candidate))\n',
+        '            .position(|candidate| line_citations::strip(candidate) == line_citations::strip(item))\n',
         'primitives::classify_spec_edit::tests::a_citation_added_to_a_criterion_reopens',
     ),
     (
         'M9 a strip hides an untick',
         'src/primitives/classify_spec_edit.rs',
-        '            [text, stripped]\n',
-        '            [text.clone(), text]\n',
+        '                .any(|was| *was == text || line_citations::strips_to(was, &text))\n',
+        '                .any(|was| *was == text)\n',
         'primitives::classify_spec_edit::tests::a_strip_does_not_hide_an_untick',
     ),
     (
@@ -141,5 +143,33 @@ MUTATIONS = [
         '        let text = text.replace("\\r\\n", "\\n");\n',
         '        let text = text.to_string();\n',
         'primitives::analyze_subjects::tests::converted_line_endings_over_a_committed_strip_keep_the_exemption',
+    ),
+    (
+        'M19 only stripping every citation on a line is a strip',
+        'src/primitives/line_citations.rs',
+        '    aligns(old, new, &citations, 0, 0)\n',
+        '    strip(old) == new\n',
+        'primitives::line_citations::tests::a_strip_of_some_citations_is_a_strip primitives::mechanical_sweep::tests::a_strip_beside_a_kept_citation_is_no_rewrite primitives::classify_spec_edit::tests::a_partial_strip_in_a_criterion_is_a_correction',
+    ),
+    (
+        'M20 a citation cannot be kept beside a stripped one',
+        'src/primitives/line_citations.rs',
+        '    kept || aligns(old, new, rest, first.suffix.end, new_at)\n',
+        '    let _ = kept;\n    aligns(old, new, rest, first.suffix.end, new_at)\n',
+        'primitives::line_citations::tests::a_strip_of_some_citations_is_a_strip',
+    ),
+    (
+        'M21 no bound on the citations tried one by one',
+        'src/primitives/line_citations.rs',
+        '    if citations.len() > MAX_ONE_BY_ONE {\n        return strip(old) == new;\n    }\n',
+        '',
+        'primitives::line_citations::tests::past_the_bound_only_a_whole_strip_counts',
+    ),
+    (
+        'M22 a reason outside the closed set is recorded',
+        'src/primitives/write_analysis.rs',
+        '    refuse_unknown_reasons(args)?;\n',
+        '',
+        'primitives::write_analysis::tests::a_reason_outside_the_closed_set_is_refused',
     ),
 ]

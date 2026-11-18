@@ -137,6 +137,51 @@ pub(crate) fn strip(text: &str) -> Cow<'_, str> {
     stripped.map_or(Cow::Borrowed(text), Cow::Owned)
 }
 
+/// The most citations on one line [`strips_to`] tries one by one, keeping or stripping
+/// each; past it only stripping every one counts, which bounds the search at
+/// `2^MAX_ONE_BY_ONE` alignments.
+const MAX_ONE_BY_ONE: usize = 12;
+
+/// Whether `new` is `old` with the suffixes of one or more of its citations removed and
+/// nothing else changed, each citation kept or stripped on its own (066 AC6), so removing
+/// one beside a kept one is a strip, an anchor or an en-dash range included. A citation
+/// renumbered, moved or added, and any other change, is not.
+pub(crate) fn strips_to(old: &str, new: &str) -> bool {
+    if old == new {
+        return false;
+    }
+    let citations = find(old);
+    if citations.is_empty() {
+        return false;
+    }
+    if citations.len() > MAX_ONE_BY_ONE {
+        return strip(old) == new;
+    }
+    aligns(old, new, &citations, 0, 0)
+}
+
+/// Whether `old[old_at..]` becomes `new[new_at..]` with each of `citations`' suffixes
+/// either kept as it is or removed.
+fn aligns(old: &str, new: &str, citations: &[Citation], old_at: usize, new_at: usize) -> bool {
+    let Some((first, rest)) = citations.split_first() else {
+        return new.get(new_at..) == old.get(old_at..);
+    };
+    let before = &old[old_at..first.suffix.start];
+    if !new
+        .get(new_at..)
+        .is_some_and(|tail| tail.starts_with(before))
+    {
+        return false;
+    }
+    let new_at = new_at + before.len();
+    let suffix = &old[first.suffix.clone()];
+    let kept = new
+        .get(new_at..)
+        .is_some_and(|tail| tail.starts_with(suffix))
+        && aligns(old, new, rest, first.suffix.end, new_at + suffix.len());
+    kept || aligns(old, new, rest, first.suffix.end, new_at)
+}
+
 /// A byte a path token is made of: `[A-Za-z0-9_./-]`.
 fn is_path_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b'/' | b'-')
@@ -275,6 +320,57 @@ mod tests {
             strip("see `a.rs:12` and [b](b.md#L3).\nno citation\nx.rs:1–4\n"),
             "see `a.rs` and [b](b.md).\nno citation\nx.rs\n"
         );
+    }
+
+    /// Any subset of a line's citations may be stripped, each on its own; a
+    /// citation renumbered, moved or added, or any other change, is no strip.
+    #[test]
+    fn a_strip_of_some_citations_is_a_strip() {
+        for (old, new) in [
+            (
+                "See docs/w.md#L10 and a/b.rs:3 here.",
+                "See docs/w.md and a/b.rs:3 here.",
+            ),
+            ("y.md:3–9 and a.rs:1", "y.md and a.rs:1"),
+            ("a.rs:1 b.rs:2", "a.rs:1 b.rs"),
+            ("a.rs:1 b.rs:2", "a.rs b.rs"),
+            ("[w](w.md#L10-L20), `q.md#L3`", "[w](w.md), `q.md#L3`"),
+        ] {
+            assert!(strips_to(old, new), "{old} -> {new}");
+        }
+        for (old, new) in [
+            ("a.rs:12 b.rs:3", "a.rs:3 b.rs"),
+            ("a.rs:12", "a.rs:14"),
+            ("a.rs:12", "a.rs:12"),
+            ("a.rs", "a.rs:12"),
+            ("a.rs:12 then x", "a.rs then y"),
+            ("db.internal:5432", "db.internal"),
+        ] {
+            assert!(!strips_to(old, new), "{old} -> {new}");
+        }
+    }
+
+    /// Past the bound on citations tried one by one, only stripping every one is a
+    /// strip, so the search stays bounded.
+    #[test]
+    fn past_the_bound_only_a_whole_strip_counts() {
+        let line = |count: usize, cited: bool| {
+            (0..count)
+                .map(|n| {
+                    if cited {
+                        format!("f{n}.rs:{n}")
+                    } else {
+                        format!("f{n}.rs")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        let old = line(MAX_ONE_BY_ONE + 1, true);
+        assert!(strips_to(&old, &line(MAX_ONE_BY_ONE + 1, false)));
+        assert!(!strips_to(&old, &old.replacen("f0.rs:0", "f0.rs", 1)));
+        let within = line(MAX_ONE_BY_ONE, true);
+        assert!(strips_to(&within, &within.replacen("f0.rs:0", "f0.rs", 1)));
     }
 
     #[test]
