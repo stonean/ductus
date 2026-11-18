@@ -155,8 +155,15 @@ fn invalidated_record(
     // 058, but a record written before then still carries it until its next
     // review. The fix-round fields go too (spec 078): they are that run's
     // outcomes, and a round waiver, unlike a finding's, names a round of that
-    // run, so it outlives it as a waiver of nothing.
-    const SCALARS: [&str; 24] = [
+    // run, so it outlives it as a waiver of nothing. The criteria fields go as
+    // well (066 task 27): left beside `last-run: null`, `criteria-verdicts`
+    // would credit criteria with a judgement the record says never happened,
+    // while a not-met criterion stays unticked in `spec.md`.
+    const SCALARS: [&str; 28] = [
+        "criteria-judged",
+        "criteria-met",
+        "criteria-not-met",
+        "criteria-verdicts",
         "excluded",
         "contract-breaks",
         "fix-rounds-open",
@@ -319,7 +326,9 @@ mod tests {
         fs::write(
             tmp.path().join("specs/050-alpha/review.md"),
             "---\nspec: 050-alpha\nlast-run: 2026-08-01T00:00:00Z\nmust-violations: 0\nblocking: false\n\
-             excluded: 2\ncontract-breaks: 1\nfix-rounds-open: true\nopen-findings:\n  - src/b.rs\n---\n\n# Review — 050-alpha\n",
+             excluded: 2\ncontract-breaks: 1\nfix-rounds-open: true\nopen-findings:\n  - src/b.rs\n\
+             criteria-judged: 2\ncriteria-met: 1\ncriteria-not-met:\n  - AC2\n\
+             criteria-verdicts:\n  - label: AC1\n    digest: abc\n---\n\n# Review — 050-alpha\n",
         )
         .unwrap();
         run(&args("050-alpha"), tmp.path()).unwrap();
@@ -327,6 +336,7 @@ mod tests {
         assert!(!record.contains("excluded:"), "{record}");
         assert!(!record.contains("contract-breaks:"), "{record}");
         assert!(!record.contains("fix-rounds-open:"), "{record}");
+        assert!(!record.contains("criteria-"), "{record}");
         assert!(record.contains("open-findings:\n  - src/b.rs"), "{record}");
     }
 

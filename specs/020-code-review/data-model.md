@@ -118,10 +118,11 @@ decisions:                           # omitted entirely when empty
 | `skipped-passes` | list of strings | yes | Empty when no flag restricts dimensions. Permitted values: `security`, `reuse`, `quality`, `efficiency`, `simplicity`. |
 | `reviewed-digest` | map of path → sha256 | yes | Per-path digest of the spec's **durable contracts** (`scenarios/*.md` and `data-model.md`) as the run read them. What freshness is computed from. Always written, empty map included — *digest taken over a spec with no durable contracts* must stay distinct from *pre-digest record*, which reports freshness as undeterminable rather than current. Added by 022. |
 | `reviewed-unreadable` | list of strings | no | Durable contracts that exist but could not be read, recorded rather than digested as empty. Omitted when none. |
-| `blocking` | boolean | yes | MUST equal `must-violations > 0`. Derived by `write-review`, never accepted from the caller. Read by `/ductus:implement`, `/ductus:analyze`, the CI template. |
+| `blocking` | boolean | yes | MUST equal `must-violations > 0`, or since 066's task 27 `criteria-not-met` holding a criterion. Derived by `write-review`, never accepted from the caller. Read by `/ductus:implement`, `/ductus:analyze`, the CI template. |
 | `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058; 076 renamed `routed` and `discarded`, still read from an older record. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema above is open per §text-first-artifacts. |
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop`, `round-waivers` | integers, a boolean, a list | no | The fix-round loop's outcome, derived by `write-review` and absent when the run stated nothing about its fixes. Defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md). |
+| `criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts` | integer, integer, list, list | no | The criteria step's verdicts, defined in [066's data model](../066-audit-records-and-the-completion-gate/data-model.md) and absent when the run judged no criterion. |
 | `excluded`, `contract-breaks`, `open-findings`, `fix-rounds-open` | integer, integer, list, boolean | no | Defined in [079's data model](../079-review-and-analysis-work-converges/data-model.md). `excluded` and `contract-breaks` are written on every run; `open-findings` and `fix-rounds-open` only when set. |
 | `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
@@ -134,9 +135,9 @@ decisions:                           # omitted entirely when empty
 
 ### Body sections (in order)
 
-Rendered wholesale on every run; each section is always present and reads
-`*None.*` when empty, so a section's absence is a defect rather than a clean
-result.
+Rendered wholesale on every run; each section but `## Acceptance criteria` is
+always present and reads `*None.*` when empty, so a section's absence is a
+defect rather than a clean result.
 
 | Section | When emitted |
 | --- | --- |
@@ -146,6 +147,7 @@ result.
 | `## Low-confidence findings` | Always (empty when none) |
 | `## Waived findings` | Always (empty when none) |
 | `## Deferred findings` | Always (empty when none). MUST and SHOULD violations their deferral releases (076), each with its work; they leave the counts. Added by 076 |
+| `## Acceptance criteria` | Only when the run judged criteria: each judged criterion, met or not met, with its note. Added by 066's task 27 |
 | `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
 | `## Skipped passes` | Always (empty when none) |
 | `## Excluded from scope` | Always (`*None.*` when none). Each path the scope left to another spec, with the specs that claimed it, and each path a fix round left out. Added by 079 |

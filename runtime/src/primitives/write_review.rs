@@ -19,6 +19,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::compute_review_scope::RunScope;
+use crate::primitives::criterion_verdicts;
 use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::departures::Attribution;
 use crate::primitives::{
@@ -27,9 +28,10 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ConstitutionOutcome, DecisionOutcome, DecisionRef, DispositionOutcome, Dispositions, FixRound,
-    FixRoundCheck, ListsForm, ReReadOutcome, RecordFreshness, ReviewFinding, ReviewObservation,
-    RoundWaiver, WriteReviewArgs, WriteReviewResult,
+    ConstitutionOutcome, CriterionVerdict, CriterionVerdictRecord, DecisionOutcome, DecisionRef,
+    DispositionOutcome, Dispositions, FixRound, FixRoundCheck, ListsForm, ReReadOutcome,
+    RecordFreshness, ReviewFinding, ReviewObservation, RoundWaiver, WriteReviewArgs,
+    WriteReviewResult,
 };
 use crate::schema::severity::ReviewSeverity;
 
@@ -549,7 +551,6 @@ fn run_between(
     let should_n = u32::try_from(should.len()).unwrap_or(u32::MAX);
     let low_n = u32::try_from(low.len()).unwrap_or(u32::MAX);
     let waived_n = u32::try_from(waived.len()).unwrap_or(u32::MAX);
-    let blocking = must_n > 0;
 
     // Read and validate every input before the write: a malformed spec
     // (missing frontmatter, YAML parse failure) must halt before review.md
@@ -578,20 +579,10 @@ fn run_between(
     // is unknown (spec 022 task 12).
     let governance_section = render_unexamined_governance(repo);
     // Resolve the surviving waivers BEFORE the render: the report carries them.
-    // Validate the spec's frontmatter before anything is written.
-    //
-    // This parse used to happen as a by-product of reading waivers out of the
-    // spec. With the waivers moved to `review.md` (spec 057 task 5) nothing
-    // else needs it, so it is deliberate now — and it has to be: without it a
-    // spec whose frontmatter will not parse receives a `review.md` recording a
-    // clean run, which is the inversion the halt exists to prevent. The
-    // scenario primitive-robustness-hardening pins it.
-    let (spec_fm_text, _) = split_frontmatter(&spec_content, &spec_path)?;
-    let _: crate::schema::primitives::Frontmatter =
-        serde_norway::from_str(spec_fm_text).map_err(|source| PrimitiveError::Yaml {
-            path: spec_path.clone(),
-            source,
-        })?;
+    let criteria = validated_criteria(args, &spec_content, &spec_path)?;
+    // A not-met criterion blocks as a MUST violation does: the spec cannot
+    // close while one stands (066 task 27).
+    let blocking = must_n > 0 || criteria.as_ref().is_some_and(|c| !c.not_met.is_empty());
     let mut surviving = waivers.surviving;
     surviving.extend(waivers.entries);
     let dispositions = count_dispositions(&args.observations);
@@ -630,6 +621,7 @@ fn run_between(
             fix_rounds: loop_record.as_ref(),
             excluded: &excluded,
             open_findings: &open_findings,
+            criteria: criteria.as_ref(),
         },
         &contracts,
     );
@@ -674,6 +666,9 @@ fn run_between(
         scope,
         malformed_departures: waivers.malformed,
         superseded_deferrals: waivers.superseded.into_iter().map(|s| s.notice).collect(),
+        criteria_judged: criteria.as_ref().map(|c| c.judged),
+        criteria_met: criteria.as_ref().map(|c| c.met),
+        criteria_not_met: criteria.as_ref().map(CriteriaRecord::not_met_count),
         ..WriteReviewResult::default()
     };
     bound_lists(result, repo, &args.feature)
@@ -1392,6 +1387,223 @@ struct Record<'a> {
     excluded: &'a BTreeMap<String, Vec<String>>,
     /// Each file the record leaves open; see [`open_findings`].
     open_findings: &'a [String],
+    /// The criteria step's verdicts; `None` when the run passed none, which
+    /// writes no criteria field.
+    criteria: Option<&'a CriteriaRecord>,
+}
+
+/// The criteria step's verdicts as the record keeps them (066 task 27).
+struct CriteriaRecord {
+    judged: u32,
+    met: u32,
+    /// Each criterion judged not met, by name, in body order.
+    not_met: Vec<String>,
+    /// Each criterion judged met, by label and digest, in body order.
+    verdicts: Vec<CriterionVerdictRecord>,
+    /// Each judged criterion's name, verdict and note, in body order.
+    lines: Vec<(String, bool, Option<String>)>,
+}
+
+impl CriteriaRecord {
+    /// How many criteria the run judged not met.
+    fn not_met_count(&self) -> u32 {
+        u32::try_from(self.not_met.len()).unwrap_or(u32::MAX)
+    }
+}
+
+/// Validate the spec's frontmatter before anything is written, then resolve
+/// the run's criteria verdicts against its body ([`criteria_record`]).
+///
+/// The parse used to happen as a by-product of reading waivers out of the
+/// spec. With the waivers moved to `review.md` (spec 057 task 5) nothing else
+/// needs it, so it is deliberate now — and it has to be: without it a spec
+/// whose frontmatter will not parse receives a `review.md` recording a clean
+/// run, which is the inversion the halt exists to prevent. The scenario
+/// primitive-robustness-hardening pins it.
+fn validated_criteria(
+    args: &WriteReviewArgs,
+    spec_content: &str,
+    spec_path: &Path,
+) -> Result<Option<CriteriaRecord>> {
+    let (spec_fm_text, spec_body) = split_frontmatter(spec_content, spec_path)?;
+    let _: crate::schema::primitives::Frontmatter =
+        serde_norway::from_str(spec_fm_text).map_err(|source| PrimitiveError::Yaml {
+            path: spec_path.to_path_buf(),
+            source,
+        })?;
+    criteria_record(args, spec_body)
+}
+
+/// Resolve the run's `criteria` verdicts against `spec.md`'s acceptance
+/// criteria, or `None` when it passed none. A verdict naming its criterion by
+/// both label and index or by neither, one addressing no criterion of the
+/// spec, and a second verdict on one criterion are refused, as is a note
+/// spanning lines, which would break the report's list.
+fn criteria_record(args: &WriteReviewArgs, spec_body: &str) -> Result<Option<CriteriaRecord>> {
+    let Some(verdicts) = args.criteria.as_deref() else {
+        return Ok(None);
+    };
+    let criteria = super::read_spec::parse_checkboxes(spec_body, "Acceptance Criteria");
+    let invalid = |idx: usize, reason: String| PrimitiveError::InvalidArgument {
+        primitive: "write-review".into(),
+        argument: format!("criteria[{idx}]"),
+        reason,
+    };
+    let mut judged: BTreeMap<usize, &CriterionVerdict> = BTreeMap::new();
+    for (idx, verdict) in verdicts.iter().enumerate() {
+        let position = match (verdict.label.as_deref(), verdict.index) {
+            (Some(label), None) => criteria
+                .iter()
+                .position(|criterion| criterion.label.as_deref() == Some(label))
+                .ok_or_else(|| {
+                    invalid(idx, format!("spec.md holds no criterion labelled {label}"))
+                })?,
+            (None, Some(index)) => usize::try_from(index)
+                .ok()
+                .filter(|position| *position < criteria.len())
+                .ok_or_else(|| {
+                    invalid(
+                        idx,
+                        format!(
+                            "spec.md holds {} criteria, so none has index {index}",
+                            criteria.len()
+                        ),
+                    )
+                })?,
+            _ => {
+                return Err(invalid(
+                    idx,
+                    "a verdict names its criterion by exactly one of label and index".into(),
+                ));
+            }
+        };
+        if let Some(note) = verdict.note.as_deref() {
+            super::validate_single_line("write-review", &format!("criteria[{idx}].note"), note)?;
+        }
+        if judged.insert(position, verdict).is_some() {
+            let name = criterion_verdicts::name(&criteria[position], position);
+            return Err(invalid(idx, format!("criterion {name} is judged twice")));
+        }
+    }
+    let mut record = CriteriaRecord {
+        judged: u32::try_from(judged.len()).unwrap_or(u32::MAX),
+        met: 0,
+        not_met: Vec::new(),
+        verdicts: Vec::new(),
+        lines: Vec::new(),
+    };
+    for (position, verdict) in judged {
+        let criterion = &criteria[position];
+        let name = criterion_verdicts::name(criterion, position);
+        if verdict.met {
+            record.met = record.met.saturating_add(1);
+            record.verdicts.push(CriterionVerdictRecord {
+                label: criterion.label.clone(),
+                digest: criterion_verdicts::digest(criterion),
+            });
+        } else {
+            record.not_met.push(name.clone());
+        }
+        record.lines.push((name, verdict.met, verdict.note.clone()));
+    }
+    Ok(Some(record))
+}
+
+/// `reviewed-digest`, always written, an empty map included, so "digest
+/// taken over a spec with no durable contracts" stays distinct from a
+/// pre-digest record; and `reviewed-unreadable`, when a contract could not be
+/// read.
+fn render_contracts(
+    fm: &mut String,
+    contracts: &crate::primitives::analyze_subjects::SubjectDigest,
+) {
+    if contracts.digests.is_empty() {
+        let _ = writeln!(fm, "reviewed-digest: {{}}");
+    } else {
+        let _ = writeln!(fm, "reviewed-digest:");
+        for (path, digest) in &contracts.digests {
+            let _ = writeln!(fm, "  {path}: {digest}");
+        }
+    }
+    if !contracts.unreadable.is_empty() {
+        let _ = writeln!(fm, "reviewed-unreadable:");
+        for path in &contracts.unreadable {
+            let _ = writeln!(fm, "  - {path}");
+        }
+    }
+}
+
+/// The criteria fields, absent when the run judged none: the counts, each
+/// not-met criterion, and the digest of each met one (066 task 27).
+fn render_criteria(fm: &mut String, criteria: Option<&CriteriaRecord>) {
+    let Some(criteria) = criteria else {
+        return;
+    };
+    let _ = writeln!(fm, "criteria-judged: {}", criteria.judged);
+    let _ = writeln!(fm, "criteria-met: {}", criteria.met);
+    if !criteria.not_met.is_empty() {
+        let _ = writeln!(fm, "criteria-not-met:");
+        for name in &criteria.not_met {
+            let _ = writeln!(fm, "  - {}", yaml_string(name));
+        }
+    }
+    if criteria.verdicts.is_empty() {
+        let _ = writeln!(fm, "criteria-verdicts: []");
+    } else {
+        let _ = writeln!(fm, "criteria-verdicts:");
+        for verdict in &criteria.verdicts {
+            match &verdict.label {
+                Some(label) => {
+                    let _ = writeln!(fm, "  - label: {}", yaml_string(label));
+                    let _ = writeln!(fm, "    digest: {}", verdict.digest);
+                }
+                None => {
+                    let _ = writeln!(fm, "  - digest: {}", verdict.digest);
+                }
+            }
+        }
+    }
+}
+
+/// The report's `## Acceptance criteria` list, one line per judged criterion.
+fn render_criteria_section(criteria: &CriteriaRecord) -> String {
+    if criteria.lines.is_empty() {
+        return "*No criterion was judged.*".to_string();
+    }
+    criteria
+        .lines
+        .iter()
+        .map(|(name, met, note)| {
+            let verdict = if *met { "met" } else { "**not met**" };
+            match note
+                .as_deref()
+                .map(str::trim)
+                .filter(|note| !note.is_empty())
+            {
+                Some(note) => format!("- {name} — {verdict}: {note}"),
+                None => format!("- {name} — {verdict}"),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The Summary's sentence on the criteria step.
+fn criteria_summary(criteria: &CriteriaRecord) -> String {
+    let mut line = format!(
+        "{} of {} acceptance criteria judged met",
+        criteria.met, criteria.judged
+    );
+    if criteria.not_met.is_empty() {
+        line.push('.');
+    } else {
+        let _ = write!(
+            line,
+            "; not met, holding `done`: {}.",
+            criteria.not_met.join(", ")
+        );
+    }
+    line
 }
 
 /// The `unread` list, absent when the run stated nothing and `[]` when its
@@ -1483,20 +1695,8 @@ fn render_report(
     // durable contracts" stays distinct from "pre-digest record"), `blocking`
     // is still derived rather than accepted, and waivers still carry their
     // adopter-authored extras verbatim.
-    if contracts.digests.is_empty() {
-        let _ = writeln!(fm, "reviewed-digest: {{}}");
-    } else {
-        let _ = writeln!(fm, "reviewed-digest:");
-        for (path, digest) in &contracts.digests {
-            let _ = writeln!(fm, "  {path}: {digest}");
-        }
-    }
-    if !contracts.unreadable.is_empty() {
-        let _ = writeln!(fm, "reviewed-unreadable:");
-        for path in &contracts.unreadable {
-            let _ = writeln!(fm, "  - {path}");
-        }
-    }
+    render_contracts(&mut fm, contracts);
+    render_criteria(&mut fm, record.criteria);
     let _ = writeln!(fm, "blocking: {blocking}");
     decisions::render_dispositions(&mut fm, record.dispositions);
     render_waivers_at(&mut fm, record.waivers, "");
@@ -1505,7 +1705,7 @@ fn render_report(
 
     let summary = report_summary(args, buckets, blocking, record);
 
-    let sections = [
+    let mut sections = vec![
         format!("# Review — {feature}"),
         format!("## Summary\n\n{summary}"),
         format!(
@@ -1545,6 +1745,17 @@ fn render_report(
         ),
         format!("## Unexamined governance\n\n{governance_section}"),
     ];
+    // After the violations, as the other judged result; absent when the run
+    // judged no criterion, so a record without the step reads as before.
+    if let Some(criteria) = record.criteria {
+        sections.insert(
+            7,
+            format!(
+                "## Acceptance criteria\n\n{}",
+                render_criteria_section(criteria)
+            ),
+        );
+    }
 
     format!("{fm}\n\n{}\n", sections.join("\n\n"))
 }
@@ -1565,10 +1776,14 @@ fn report_summary(
     record: &Record<'_>,
 ) -> String {
     if let Some(summary) = args.summary.as_deref().filter(|s| !s.trim().is_empty()) {
-        return match record.fix_rounds {
+        let mut summary = match record.fix_rounds {
             Some(loop_record) => format!("{}\n\n{}", summary.trim_end(), loop_summary(loop_record)),
             None => summary.to_string(),
         };
+        if let Some(criteria) = record.criteria {
+            let _ = write!(summary, "\n\n{}", criteria_summary(criteria));
+        }
+        return summary;
     }
     let mut summary = generate_summary(
         args,
@@ -1590,6 +1805,10 @@ fn report_summary(
             record.excluded.len()
         );
     }
+    if let Some(criteria) = record.criteria {
+        summary.push(' ');
+        summary.push_str(&criteria_summary(criteria));
+    }
     summary
 }
 
@@ -1610,9 +1829,12 @@ fn generate_summary(
         } else {
             ""
         };
+        // Blocking only through a not-met criterion, which the criteria step
+        // judges whatever the window holds (066 task 27).
+        let blocking = if blocking { "yes" } else { "no" };
         return format!(
             "Review scope is empty — no file changed in this review's window. \
-             Zero findings across all passes; blocking: no.{held}"
+             Zero findings across all passes; blocking: {blocking}.{held}"
         );
     }
     let mut summary = format!(
@@ -6388,6 +6610,180 @@ mod tests {
                 .unwrap()
                 .contains("2026-07-03T12:00:00Z")
         );
+    }
+
+    // -- the criteria step's verdicts (066 task 27) ---------------------------
+
+    /// A spec with two labelled criteria and one the labelling pass has not
+    /// reached.
+    fn criteria_repo() -> TempDir {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        fs::write(
+            tmp.path().join("specs/001-x/spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# 001\n\n\
+             ## Acceptance Criteria\n\n- [x] AC1: One holds.\n- [x] AC2: Two holds.\n\
+             - [ ] Three holds.\n",
+        )
+        .unwrap();
+        tmp
+    }
+
+    fn verdict(label: Option<&str>, index: Option<u32>, met: bool) -> CriterionVerdict {
+        CriterionVerdict {
+            label: label.map(str::to_string),
+            index,
+            met,
+            note: Some(format!("judged {met}")),
+        }
+    }
+
+    fn criterion(
+        text: &str,
+        label: Option<&str>,
+    ) -> crate::schema::primitives::AcceptanceCriterion {
+        crate::schema::primitives::AcceptanceCriterion {
+            checked: true,
+            text: text.into(),
+            label: label.map(str::to_string),
+        }
+    }
+
+    /// Each verdict is recorded: the counts, the not-met criterion by label,
+    /// and each met one by its digest, label or not; a not-met verdict sets
+    /// `blocking` with no violation; the report lists every verdict and the
+    /// Summary names the not-met one.
+    #[test]
+    fn criteria_verdicts_are_recorded_and_a_not_met_one_blocks() {
+        let tmp = criteria_repo();
+        let mut args = base_args("001-x");
+        args.criteria = Some(vec![
+            verdict(Some("AC1"), None, true),
+            verdict(Some("AC2"), None, false),
+            verdict(None, Some(2), true),
+        ]);
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            (
+                result.criteria_judged,
+                result.criteria_met,
+                result.criteria_not_met
+            ),
+            (Some(3), Some(2), Some(1))
+        );
+        assert!(result.blocking, "a not-met criterion blocks");
+        assert_eq!(result.must_violations, 0);
+        let record = record_of(&tmp);
+        assert!(record.blocking);
+        assert_eq!(
+            (record.criteria_judged, record.criteria_met),
+            (Some(3), Some(2))
+        );
+        assert_eq!(record.criteria_not_met, vec!["AC2".to_string()]);
+        assert_eq!(
+            record.criteria_verdicts,
+            Some(vec![
+                CriterionVerdictRecord {
+                    label: Some("AC1".into()),
+                    digest: criterion_verdicts::digest(&criterion("AC1: One holds.", Some("AC1"))),
+                },
+                CriterionVerdictRecord {
+                    label: None,
+                    digest: criterion_verdicts::digest(&criterion("Three holds.", None)),
+                },
+            ])
+        );
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("## Acceptance criteria\n\n- AC1 — met: judged true\n"));
+        assert!(report.contains("- AC2 — **not met**: judged false\n- #2 — met"));
+        assert!(
+            report.contains("2 of 3 acceptance criteria judged met; not met, holding `done`: AC2."),
+            "{report}"
+        );
+    }
+
+    /// Every criterion met leaves the record non-blocking.
+    #[test]
+    fn criteria_all_met_leave_the_record_non_blocking() {
+        let tmp = criteria_repo();
+        let mut args = base_args("001-x");
+        args.criteria = Some(vec![
+            verdict(Some("AC1"), None, true),
+            verdict(Some("AC2"), None, true),
+        ]);
+        let result = run(&args, tmp.path()).unwrap();
+        assert!(!result.blocking);
+        let record = record_of(&tmp);
+        assert!(!record.blocking);
+        assert_eq!(record.criteria_not_met, Vec::<String>::new());
+        assert_eq!(record.criteria_verdicts.map(|v| v.len()), Some(2));
+    }
+
+    /// A run that passes no criteria writes no criteria field and no section,
+    /// so a record from before the step reads as it did.
+    #[test]
+    fn a_run_without_criteria_writes_no_criteria_field() {
+        let tmp = criteria_repo();
+        let result = run(&base_args("001-x"), tmp.path()).unwrap();
+        assert_eq!(result.criteria_judged, None);
+        let record = record_of(&tmp);
+        assert_eq!(
+            (record.criteria_judged, record.criteria_verdicts),
+            (None, None)
+        );
+        let report = review_md(&tmp, "001-x");
+        assert!(!report.contains("criteria-"), "{report}");
+        assert!(!report.contains("## Acceptance criteria"));
+    }
+
+    /// An empty window still records a not-met criterion as blocking, and its
+    /// generated Summary says so.
+    #[test]
+    fn an_empty_scope_reads_blocking_from_a_not_met_criterion() {
+        let tmp = criteria_repo();
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        args.criteria = Some(vec![verdict(Some("AC2"), None, false)]);
+        assert!(run(&args, tmp.path()).unwrap().blocking);
+        assert!(
+            review_md(&tmp, "001-x").contains("Zero findings across all passes; blocking: yes.")
+        );
+    }
+
+    /// A verdict addressing no criterion, by both label and index or by
+    /// neither, a second verdict on one criterion, and a note spanning lines
+    /// are refused before anything is written.
+    #[test]
+    fn a_verdict_that_addresses_no_criterion_once_is_refused() {
+        for (case, criteria) in [
+            ("unknown label", vec![verdict(Some("AC9"), None, true)]),
+            ("index past the list", vec![verdict(None, Some(3), true)]),
+            ("both", vec![verdict(Some("AC1"), Some(0), true)]),
+            ("neither", vec![verdict(None, None, true)]),
+            (
+                "twice",
+                vec![
+                    verdict(Some("AC1"), None, true),
+                    verdict(None, Some(0), false),
+                ],
+            ),
+            (
+                "multi-line note",
+                vec![CriterionVerdict {
+                    note: Some("one\n## two".into()),
+                    ..verdict(Some("AC1"), None, true)
+                }],
+            ),
+        ] {
+            let tmp = criteria_repo();
+            let mut args = base_args("001-x");
+            args.criteria = Some(criteria);
+            let err = run(&args, tmp.path()).expect_err(case);
+            assert!(err.to_string().contains("criteria["), "{case}: {err}");
+            assert!(
+                !tmp.path().join("specs/001-x/review.md").exists(),
+                "{case} wrote a record"
+            );
+        }
     }
 }
 

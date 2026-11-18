@@ -1,6 +1,6 @@
 ---
 spec: 020-code-review
-status: done
+status: in-progress
 dependencies: []
 cross-spec-impact: [066-audit-records-and-the-completion-gate]
 next-criterion: 17
@@ -255,6 +255,8 @@ it was the copy every gate actually read.
 > counted, carries `gating: true`, and still holds `done`. The `dispositions:` map counts
 > `deferred` and `waived` where it counted `routed` and `discarded`.
 > [data-model.md](data-model.md) records both.
+>
+> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md) added the criteria step's verdicts to the record, `criteria-judged`, `criteria-met`, `criteria-not-met` and `criteria-verdicts`, and a not-met criterion sets `blocking`, so `blocking` is no longer `must-violations > 0` alone. [data-model.md](data-model.md) records the fields.
 
 When any waiver's `file` no longer exists or `rule` is no longer triggered
 at that location, the waiver is dropped on the next `/ductus:review` run and

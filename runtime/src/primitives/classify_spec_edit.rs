@@ -308,15 +308,10 @@ fn criterion_texts(body: &str) -> Vec<String> {
     texts
 }
 
-/// A criterion's text without its `AC{n}:` label.
+/// A criterion's text without its `AC{n}:` label, as a review's verdict keys
+/// it (`criterion_verdicts::text`).
 fn criterion_text(criterion: &AcceptanceCriterion) -> String {
-    let unlabelled = criterion
-        .label
-        .as_deref()
-        .and_then(|label| criterion.text.strip_prefix(label))
-        .and_then(|rest| rest.strip_prefix(':'))
-        .map(str::trim_start);
-    unlabelled.map_or_else(|| criterion.text.clone(), str::to_string)
+    super::criterion_verdicts::text(criterion)
 }
 
 /// Whether a criterion ticked at the base is unticked now, its text read as it was or

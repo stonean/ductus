@@ -175,6 +175,56 @@ pub struct ReviewBlock {
     /// such field is an older one or a `ductus exec` run, which has no loop.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fix_rounds_open: Option<bool>,
+    /// How many acceptance criteria the run's criteria step judged (066 task
+    /// 27). `None` on a record whose run judged none, every record from before
+    /// the field among them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_judged: Option<u32>,
+    /// How many of those it judged met.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_met: Option<u32>,
+    /// The label of each criterion it judged not met, or `#{index}` for one
+    /// with no label. A not-met criterion sets `blocking`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub criteria_not_met: Vec<String>,
+    /// Each criterion it judged met, by the digest of its text with the tick
+    /// and label normalized (`criterion_verdicts::digest`). `None` when the run
+    /// judged none, so a criterion ticked before the field has no verdict.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_verdicts: Option<Vec<CriterionVerdictRecord>>,
+}
+
+/// One criterion a review judged met, as its record keeps it (066 task 27):
+/// the digest of its text, which decides whether the verdict still holds, and
+/// its label for a reader, absent for a criterion with none.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CriterionVerdictRecord {
+    /// The criterion's `AC{n}` label, when it carries one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// Lowercase-hex sha256 of the criterion's text, tick and label removed.
+    pub digest: String,
+}
+
+/// One acceptance criterion's verdict from `/{project}:review`'s criteria
+/// step, as `write-review` takes it (066 task 27). Exactly one of `label` and
+/// `index` addresses the criterion.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CriterionVerdict {
+    /// The criterion's `AC{n}` label. Preferred: it survives an insertion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// The criterion's 0-based position in body order, for one with no label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    /// Whether the code meets the criterion.
+    pub met: bool,
+    /// The evidence for a met verdict or the reason for a not-met one,
+    /// rendered in the report.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// The waiver of a fix round that was not re-read (spec 078): the operator's
@@ -1827,6 +1877,21 @@ pub struct WriteReviewArgs {
     #[serde(default)]
     #[arg(long)]
     pub loop_open: bool,
+    /// The criteria step's verdicts, one per acceptance criterion the run
+    /// judged (066 task 27). The primitive reads the criteria from `spec.md`
+    /// and records the counts, each not-met criterion, and the digest of each
+    /// met one; a not-met verdict sets `blocking`. `None` records no criteria
+    /// fields. A verdict addressing no criterion of the spec, or addressing one
+    /// another verdict addresses, is refused. On the CLI, `--criteria-json FILE`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(skip)]
+    pub criteria: Option<Vec<CriterionVerdict>>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `criteria` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as `unread-json` is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub criteria_json: Option<String>,
 }
 
 /// Result for `write-review`.
@@ -1918,6 +1983,15 @@ pub struct WriteReviewResult {
     /// Entries in `superseded-deferrals`, in either form.
     #[serde(default)]
     pub superseded_deferrals_count: usize,
+    /// The criteria the run judged, as recorded; absent when it passed none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_judged: Option<u32>,
+    /// The criteria it judged met; absent when it passed none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_met: Option<u32>,
+    /// The criteria it judged not met; absent when it passed none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criteria_not_met: Option<u32>,
 }
 
 // -- write-analysis ----------------------------------------------------------

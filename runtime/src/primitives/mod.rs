@@ -39,6 +39,7 @@ pub mod compute_review_scope;
 pub mod create_feature;
 pub mod create_plan_artifacts;
 pub mod create_scenario;
+pub(crate) mod criterion_verdicts;
 pub mod dashboard;
 pub(crate) mod decisions;
 pub mod departures;
