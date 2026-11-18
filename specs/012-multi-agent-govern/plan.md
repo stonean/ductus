@@ -72,7 +72,7 @@ If the agent cannot infer its own path (CLI doesn't expose it), the prompt itera
 
 ### Per-agent scaffolding loop
 
-For each selected agent, run these steps with registry values substituted:
+One pass per selected agent, because each agent's files take that agent's own registry values, and a substitutions map carries one `cli-config-dir`; one pass for every agent would give each agent's files another agent's config dir, the reason `framework/bootstrap/ductus.md` step 4 gives for one `apply-manifest` call per agent. For each selected agent, run these steps with registry values substituted:
 
 1. Resolve `{cli-config-dir}` to the agent's `config_dir`.
 2. Process the slash-command manifest into `{config_dir}/commands/{project}/`. Substitute `{project}` and `{cli-config-dir}` in each copied file.
@@ -106,7 +106,7 @@ The CLAUDE.md "Ductus File Parity" rule disappears — there is only one ductus 
 
 ### 007's signpost note
 
-`specs/007-govern-workflow/spec.md` already has a signpost from 011 at the top. Add a second signpost paragraph below it pointing to 012, marking the multi-file design as superseded. 007 keeps its `done` status — its work shipped, and 012 carries forward the new design.
+`specs/007-govern-workflow/spec.md` already has a signpost from 011 at the top (its opening **Note** names `011-brownfield-process`). Add a second signpost paragraph below it pointing to 012, marking the multi-file design as superseded. 007 keeps its `done` status — its work shipped, and 012 carries forward the new design.
 
 ## Affected Files
 

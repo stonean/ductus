@@ -60,7 +60,7 @@ Session state is not per agent: every adopter keeps it at `.ductus/session.toml`
 Per-agent native conventions are preserved:
 
 - **Claude Code** uses `permissions.allow`/`permissions.deny` arrays, and reads `CLAUDE.md`, which is written from `framework/templates/project/claude-md.md` if missing.
-- **Pi** has no permission-gating settings, so its `settings_template` is empty, and it reads `AGENTS.md` natively — no second rules file is needed.
+- **Pi** has no permission-gating settings, so its `settings_template` is empty, and it reads `AGENTS.md` natively — no second rules file is needed (the Agent Registry's `pi` row in `framework/bootstrap/ductus.md`, verified by spec 064's §Verified Pi Layout).
 
 ## Shared Files
 
@@ -90,7 +90,7 @@ Shared files are unaffected by which agents are selected on re-runs.
 
 Projects scaffolded under 007's per-CLI model moved to the unified command in three steps, in April 2026:
 
-1. **Replace the installed bootstrap by hand.** A per-CLI file could not update itself to the unified one, because its own fetch manifest named its per-CLI source, which the unification removed from the repo. Users fetched the unified file over the installed one with a one-time `curl`.
+1. **Replace the installed bootstrap by hand.** A per-CLI file could not update itself to the unified one, because its own fetch manifest named its per-CLI source, which the unification (24ca5a6c) removed from the repo. Users fetched the unified file over the installed one with a one-time `curl`.
 2. **Run `/ductus`** in a new session, so the unified file loaded. Detection pre-selected whichever agent's directory existed, and the user could add agents in the same run. Scaffolding overwrote the project's per-agent permission command with the agent's own source (the manifest's `update` strategy).
 3. **Run the permission command** in each adopted agent.
 

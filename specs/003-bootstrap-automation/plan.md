@@ -20,7 +20,7 @@ Each command template in `framework/commands/` is copied to `.claude/commands/du
 
 ### Session file path
 
-Standard commands reference `.ductus/session.toml` for session state.
+Standard commands reference `.ductus/session.toml` for session state, because it is the one session-state path every adopter shares: project-name-agnostic, gitignored and per-contributor, and written by the runtime's `write-session` (`framework/bootstrap/ductus.md` §Session state). The retired `.govern.session.toml` survives only as the legacy fallback AC2 names.
 
 ## Affected Files
 
@@ -40,7 +40,7 @@ Standard commands reference `.ductus/session.toml` for session state.
 
 ### Considered: generating standard commands dynamically from templates
 
-Rejected here, and **later adopted** — recorded per [§drift-prevention](../../framework/constitution.md#drift-prevention)'s *Decision resolution* rule, which fires when a previously-rejected option is taken up. The rejection rested on two premises that did not hold: that copying with replacement stays simple, and that this repo's project name is fixed. The command set grew from ten to sixteen, and 049 renamed the project to `ductus`, so hand-copied files drifted from the templates they came from. `scripts/gen-claude-commands.sh` now globs `framework/commands/*.md`, substitutes `{project}` and `{cli-config-dir}`, writes `.claude/commands/ductus/`, and deletes any file whose source is gone; the pre-commit hook runs it, and `/ductus:audit`'s check-zero precondition fails on a stale copy.
+Rejected here, and **later adopted** — recorded per [§drift-prevention](../../framework/constitution.md#drift-prevention)'s *Decision resolution* rule, which fires when a previously-rejected option is taken up. The rejection rested on two premises that did not hold: that copying with replacement stays simple, and that this repo's project name is fixed. The command set grew from the ten AC1 records to the seventeen `framework/commands/*.md` files present at 69af11a7, which recorded this reversal, and spec 049 (`049-rename-govern-to-ductus`) renamed the project to `ductus`, so hand-copied files drifted from the templates they came from. `scripts/gen-claude-commands.sh` now globs `framework/commands/*.md`, substitutes `{project}` and `{cli-config-dir}`, writes `.claude/commands/ductus/`, and deletes any file whose source is gone; the pre-commit hook runs it (`.githooks/pre-commit`), and `/ductus:audit`'s check-zero precondition, `scripts/audit/check-zero.sh`, fails on a stale copy.
 
 ### Considered: a single `/ductus:work` command instead of ten standard commands
 
