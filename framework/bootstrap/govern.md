@@ -604,6 +604,8 @@ Validate the project name, whichever source gave it: it must be lowercase, alpha
 
 Validate each primary language, entered or read from `[project] languages`, before it is used: it may hold only letters, digits, spaces and `+`, `#`, `.` and `-`. The **.gitignore** merge's step 5 puts the value into a fetch URL's path and a `# {Language}` header, so a `/`, `%` or `\` would let it name another path on that host. An entered value holding anything else is rejected with "Language `{value}` may hold only letters, digits, spaces and + # . -." and asked for again. A value read from the config file halts the run, as an invalid `[rules] surfaces` does, naming the setting and the value (`CFG-ENV-008`): `/ductus: invalid [project] languages member "<value>" — a language may hold only letters, digits, spaces and + # . -`.
 
+Validate every value `$ARGUMENTS` or the config file gives, for all five inputs, before prompting for any missing one, so a halt never discards an answer typed in this run.
+
 ## Project Configuration
 
 `.ductus/config.toml` is the project's configuration and persisted-decisions store. Readers fall back through the earlier locations while it is absent — `.govern/config.toml` (042-era) then the repo root `.govern.toml` (pre-042) — and the newest existing file wins when more than one is present (specs 042, 049). If the file exists, read it before processing the file manifest. The file is optional — if it does not exist, use default behavior for every key. If the file exists but is malformed (TOML parse error), abort the run with a clear error rather than silently proceeding.
