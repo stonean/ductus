@@ -667,6 +667,18 @@ mod tests {
         assert_correction(&root);
     }
 
+    /// An open question whose only change strips a citation is unchanged, and one
+    /// whose citation is renumbered still reopens (066 AC6).
+    #[test]
+    fn a_citation_stripped_from_an_open_question_is_a_correction() {
+        let asked = SPEC.replace("*None — all resolved.*", "- Should `a.rs:12` change?");
+        let (_dir, root) = committed(&[("spec.md", &asked)]);
+        edit(&root, "spec.md", &asked.replace("`a.rs:12`", "`a.rs`"));
+        assert_correction(&root);
+        edit(&root, "spec.md", &asked.replace("`a.rs:12`", "`a.rs:14`"));
+        assert_reopens(&root, &[SpecEditReason::OpenQuestion]);
+    }
+
     /// Only the removed side is stripped, so a citation added to a criterion is a change.
     #[test]
     fn a_citation_added_to_a_criterion_reopens() {

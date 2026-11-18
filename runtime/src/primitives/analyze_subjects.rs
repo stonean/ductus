@@ -316,7 +316,7 @@ pub(crate) fn freshness_of(
         changed.insert(format!("{rel_dir}/{path}"));
     }
 
-    let changed = exempt_renames(repo, &analyzed_against, changed);
+    let changed = exempt_renames(repo, rel_dir, &analyzed_against, changed);
     if changed.is_empty() {
         return RecordFreshness::Current {
             last_run,
@@ -344,8 +344,16 @@ pub(crate) fn freshness_of(
 /// counterpart — the exemption cannot run and every candidate is **kept**.
 /// Reporting a rename as stale over-reports; dropping a real change under
 /// cover of an exemption that never ran would not.
+///
+/// The index describes committed trees and the candidates the working tree, so
+/// a candidate whose working tree differs from its `HEAD` blob in what the
+/// digest sees is kept too: an edit left uncommitted on top of a committed
+/// sweep is a change the index never saw (066's review of AC6). A criterion's
+/// tick is not what the digest sees, and a line ending a checkout converts is
+/// compared alike ([`uncommitted_change_digested`]).
 fn exempt_renames(
     repo: &Path,
+    rel_dir: &str,
     analyzed_against: &str,
     candidates: BTreeSet<String>,
 ) -> BTreeSet<String> {
@@ -373,10 +381,53 @@ fn exempt_renames(
     };
     let index =
         crate::primitives::mechanical_sweep::SweepIndex::build(repository, &base_tree, &head_tree);
+    let spec = format!("{rel_dir}/spec.md");
     candidates
         .into_iter()
-        .filter(|path| index.changed_beyond_spelling(&project.to_git(path)))
+        .filter(|path| {
+            let git_path = project.to_git(path);
+            let is_spec = *path == spec;
+            uncommitted_change_digested(
+                repository,
+                &head_tree,
+                &git_path,
+                &repo.join(path),
+                is_spec,
+            ) || index.changed_beyond_spelling(&git_path)
+        })
         .collect()
+}
+
+/// Whether the file at `on_disk` differs from its blob at `HEAD` in what a subject
+/// digest covers: line endings are compared alike, as a checkout that converts them
+/// leaves them, and `spec.md`'s criterion ticks normalized, as [`subject_digest`]
+/// normalizes them, so a tick left uncommitted over a committed sweep keeps the
+/// exemption. A file `HEAD` does not hold as text, or that cannot be read, differs.
+fn uncommitted_change_digested(
+    repository: &git2::Repository,
+    head_tree: &git2::Tree<'_>,
+    git_path: &str,
+    on_disk: &Path,
+    is_spec: bool,
+) -> bool {
+    let at_head = head_tree
+        .get_path(Path::new(git_path))
+        .and_then(|entry| entry.to_object(repository))
+        .and_then(|object| object.peel_to_blob())
+        .ok()
+        .and_then(|blob| String::from_utf8(blob.content().to_vec()).ok());
+    let (Some(at_head), Ok(now)) = (at_head, read_text(on_disk)) else {
+        return true;
+    };
+    let digested = |text: &str| {
+        let text = text.replace("\r\n", "\n");
+        if is_spec {
+            without_criterion_ticks(&text)
+        } else {
+            text
+        }
+    };
+    digested(&at_head) != digested(&now)
 }
 
 /// The freshness of a spec's `analyze:` record.
@@ -1156,6 +1207,111 @@ mod tests {
                 "{reviewed:?}"
             );
         }
+    }
+
+    /// A committed strip exempts only what it committed: an edit left
+    /// uncommitted on top of it, which the sweep index never saw, stales both
+    /// records (066's review of AC6).
+    #[test]
+    fn an_uncommitted_edit_over_a_committed_strip_still_stales() {
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let (repository, project) = git_fixture::subdirectory_project(tmp.path());
+        let dir = project.join("specs/001-x");
+        seed(&dir, "");
+        let scenario = dir.join("scenarios/a.md");
+        let body = "# A\n\nAs `a.rs:12` shows, the timeout is 30s.\n";
+        git_fixture::write(&scenario, body);
+        let base = git_fixture::commit_all(&repository, "base").to_string();
+        let analyze = AnalyzeBlock {
+            last_run: Some("2026-11-18T00:00:00Z".into()),
+            analyzed_against: Some(base.clone()),
+            analyzed_digest: subject_digest(&dir, is_analyze_subject).digests,
+            ..AnalyzeBlock::default()
+        };
+        let review = crate::schema::primitives::ReviewBlock {
+            last_run: Some("2026-11-18T00:00:00Z".into()),
+            reviewed_against: Some(base),
+            reviewed_digest: Some(subject_digest(&dir, is_review_contract).digests),
+            ..crate::schema::primitives::ReviewBlock::default()
+        };
+        let stripped = body.replace("a.rs:12", "a.rs");
+        git_fixture::write(&scenario, &stripped);
+        git_fixture::commit_all(&repository, "strip");
+        git_fixture::write(&scenario, &stripped.replace("30s", "60s"));
+        let expected = vec!["specs/001-x/scenarios/a.md".to_string()];
+        match analyze_freshness(&project, "specs/001-x", Some(&analyze)) {
+            RecordFreshness::Stale { paths, .. } => assert_eq!(paths, expected),
+            other => panic!("expected stale, got {other:?}"),
+        }
+        match review_freshness(&project, "specs/001-x", Some(&review)) {
+            RecordFreshness::Stale { paths, .. } => assert_eq!(paths, expected),
+            other => panic!("expected stale, got {other:?}"),
+        }
+    }
+
+    /// What the digest does not see stays outside the check: a criterion ticked,
+    /// uncommitted, over a committed strip leaves the analysis current (066
+    /// scenario `checkbox-state-is-outside-the-analysis-digest`).
+    #[test]
+    fn a_tick_left_uncommitted_over_a_committed_strip_keeps_the_analysis_current() {
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let (repository, project) = git_fixture::subdirectory_project(tmp.path());
+        let dir = project.join("specs/001-x");
+        seed(&dir, "");
+        let spec = dir.join("spec.md");
+        let body = "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n\n\
+            ## Acceptance Criteria\n\n- [ ] AC1: As `a.rs:12` shows.\n";
+        git_fixture::write(&spec, body);
+        let base = git_fixture::commit_all(&repository, "base").to_string();
+        let analyze = AnalyzeBlock {
+            last_run: Some("2026-11-18T00:00:00Z".into()),
+            analyzed_against: Some(base),
+            analyzed_digest: subject_digest(&dir, is_analyze_subject).digests,
+            ..AnalyzeBlock::default()
+        };
+        let stripped = body.replace("a.rs:12", "a.rs");
+        git_fixture::write(&spec, &stripped);
+        git_fixture::commit_all(&repository, "strip");
+        git_fixture::write(&spec, &stripped.replace("- [ ] AC1", "- [x] AC1"));
+        let result = analyze_freshness(&project, "specs/001-x", Some(&analyze));
+        assert!(
+            matches!(result, RecordFreshness::Current { .. }),
+            "{result:?}"
+        );
+    }
+
+    /// A checkout that converts line endings holds CRLF where `HEAD` holds LF, and
+    /// that is no uncommitted change: the analysis read the CRLF file, a strip was
+    /// committed, and the stripped file on disk keeps the exemption.
+    #[test]
+    fn converted_line_endings_over_a_committed_strip_keep_the_exemption() {
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let (repository, project) = git_fixture::subdirectory_project(tmp.path());
+        let dir = project.join("specs/001-x");
+        seed(&dir, "");
+        let scenario = dir.join("scenarios/a.md");
+        let body = "# A\n\nAs `a.rs:12` shows, the timeout is 30s.\n";
+        git_fixture::write(&scenario, body);
+        let base = git_fixture::commit_all(&repository, "base").to_string();
+        git_fixture::write(&scenario, &body.replace('\n', "\r\n"));
+        let analyze = AnalyzeBlock {
+            last_run: Some("2026-11-18T00:00:00Z".into()),
+            analyzed_against: Some(base),
+            analyzed_digest: subject_digest(&dir, is_analyze_subject).digests,
+            ..AnalyzeBlock::default()
+        };
+        let stripped = body.replace("a.rs:12", "a.rs");
+        git_fixture::write(&scenario, &stripped);
+        git_fixture::commit_all(&repository, "strip");
+        git_fixture::write(&scenario, &stripped.replace('\n', "\r\n"));
+        let result = analyze_freshness(&project, "specs/001-x", Some(&analyze));
+        assert!(
+            matches!(result, RecordFreshness::Current { .. }),
+            "{result:?}"
+        );
     }
 
     /// The reach failure, not the read failure — the one that used to be

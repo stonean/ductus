@@ -372,10 +372,12 @@ fn flush(
 /// not a pure substitution (see the module docs' conditions 1 and 2).
 ///
 /// A removed line-number citation is no rewrite (066 AC6): a line whose only
-/// change strips one, an anchor or a range included, adds nothing, and a
-/// token whose only change strips one is skipped, so a line holding another
-/// change is judged on that change alone. Only the removed side is stripped,
-/// so adding or renumbering a citation is still a rewrite.
+/// change strips one, an anchor or a range included, adds nothing. A token
+/// whose only change strips one is skipped, so beside another change on the
+/// line a `:N`, `:N-M` or `:N:C` strip, which stays one token, is judged on
+/// that change alone, while an anchor or an en-dash range splits into tokens
+/// and makes the line structural. Only the removed side is stripped, so
+/// adding or renumbering a citation is still a rewrite.
 fn pair_run(old_run: &[&str], new_run: &[&str]) -> Option<BTreeSet<Pair>> {
     if old_run.len() != new_run.len() || old_run.is_empty() {
         return None;

@@ -17,10 +17,10 @@
 //! [`find_set_apart`] reads a third form, which only the check reports: an inline code
 //! span holding nothing but such a suffix, a line number set apart from its file.
 //!
-//! The token must hold a `/` or end in an extension from [`EXTENSIONS`], so a host and
-//! port such as `db.internal:5432` is not a citation (owner decision, 2026-11-17). A host
-//! whose last label is also a listed extension (`docs.rs:443`) still reads as one: no list
-//! tells a crate-docs host from a Rust file.
+//! The token must end in an extension, one from [`EXTENSIONS`] when it holds no `/`, so a
+//! host and port such as `db.internal:5432` is not a citation (owner decision,
+//! 2026-11-17). A host whose last label is also a listed extension (`docs.rs:443`) still
+//! reads as one: no list tells a crate-docs host from a Rust file.
 
 use std::borrow::Cow;
 use std::ops::Range;
