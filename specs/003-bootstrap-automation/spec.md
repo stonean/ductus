@@ -88,8 +88,8 @@ Before scaffolding, verify the target directory does not already exist. If it do
 
 - [x] AC1: Every command template is copied to `.claude/commands/ductus/` with `{project}` replaced by this repo's namespace, `ductus`. The set was ten when this spec shipped and has grown since (see the Note above); `scripts/gen-claude-commands.sh` globs `framework/commands/`, so it tracks the set rather than a fixed list, and the criterion carries no count for the same reason
 - [x] AC2: Commands reference `.ductus/session.toml` for session state, and `.govern.session.toml` survives only as the legacy fallback `target.md` still resolves
-- [x] AC3: Pipeline gates enforce status transitions (draft → clarified → planned → done)
-- [x] AC4: Dependency checks enforced via AGENTS.md boundary rule
+- [x] AC3: Pipeline gates enforce status transitions (draft → clarified → planned → done) — narrowed: the chain has since gained `in-progress` between `planned` and `done` (constitution §spec-lifecycle)
+- [x] AC4: Dependency checks enforced via AGENTS.md boundary rule — **superseded**: since 3fc76b7a the rule survives only as a commented example in `framework/templates/project/agents.md`, and `traverse-deps` checks dependency readiness at `/ductus:clarify` step 5 and `/ductus:analyze` step 3
 
 ### /ductus:init
 
