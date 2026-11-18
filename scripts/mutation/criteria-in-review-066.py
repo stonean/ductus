@@ -121,4 +121,18 @@ MUTATIONS = [
         '        criteria_owing: Vec::new(),\n',
         'primitives::compute_review_scope::tests::the_result_names_each_criterion_owing_a_review',
     ),
+    (
+        'M16 an unticked criterion does not hold done',
+        'src/primitives/check_review_gate.rs',
+        '    if let Some(blocked) = unticked_criterion_block(body, &rel_dir, &project) {\n        return Ok(blocked);\n    }\n',
+        '',
+        'primitives::check_review_gate::tests::an_unticked_criterion_holds_done_after_an_unchecked_task',
+    ),
+    (
+        'M17 the gate counts a ticked criterion as unticked',
+        'src/primitives/check_review_gate.rs',
+        '            .filter(|(_, criterion)| !criterion.checked)\n',
+        '            .filter(|_| true)\n',
+        'primitives::check_review_gate::tests::an_unticked_criterion_holds_done_after_an_unchecked_task',
+    ),
 ]

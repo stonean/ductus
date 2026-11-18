@@ -140,7 +140,7 @@ pub(crate) fn run_with_lint(
     // order did change.
     let spec_path = feature_dir.join("spec.md");
     let content = read_text(&spec_path)?;
-    let (fm_text, _body) = split_frontmatter(&content, &spec_path)?;
+    let (fm_text, body) = split_frontmatter(&content, &spec_path)?;
     let frontmatter: Frontmatter =
         serde_norway::from_str(fm_text).map_err(|source| PrimitiveError::Yaml {
             path: spec_path.clone(),
@@ -175,6 +175,11 @@ pub(crate) fn run_with_lint(
     // whatever its review says, and `/{project}:implement`'s count is only a step a host
     // follows, which sees no box outside a numbered task (spec 079).
     if let Some(blocked) = unchecked_task_block(&feature_dir, &rel_dir)? {
+        return Ok(blocked);
+    }
+    // Nor is a criterion left unticked: only a review ticks one, so the gate judges
+    // none and holds `done` while one stands (066 task 27).
+    if let Some(blocked) = unticked_criterion_block(body, &rel_dir, &project) {
         return Ok(blocked);
     }
 
@@ -1384,6 +1389,47 @@ fn unchecked_task_block(feature_dir: &Path, rel_dir: &str) -> Result<Option<Verd
         cross_spec_impact: vec![],
         analyze_stale_paths: None,
     }))
+}
+
+/// Gate check 2's third part: `spec.md`'s body holds an unticked acceptance
+/// criterion (066 task 27), named by label or `#{index}`.
+fn unticked_criterion_block(body: &str, rel_dir: &str, project: &str) -> Option<Verdict> {
+    let unticked: Vec<String> =
+        crate::primitives::read_spec::parse_checkboxes(body, "Acceptance Criteria")
+            .iter()
+            .enumerate()
+            .filter(|(_, criterion)| !criterion.checked)
+            .map(|(index, criterion)| crate::primitives::criterion_verdicts::name(criterion, index))
+            .collect();
+    if unticked.is_empty() {
+        return None;
+    }
+    let noun = if unticked.len() == 1 {
+        "criterion"
+    } else {
+        "criteria"
+    };
+    Some(Verdict {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::UntickedCriterion),
+        message: Some(format!(
+            "blocked: {rel_dir}/spec.md holds {} unticked acceptance {noun}: {} — run \
+             /{project}:review, which judges each",
+            unticked.len(),
+            unticked.join(", ")
+        )),
+        guidance: Some(
+            "Only a review ticks a criterion: it judges every criterion against the code, \
+             wherever its code lies, ticks one met and unticks one not met. A not-met criterion \
+             clears when the code is fixed and a review judges it met, or when the criterion is \
+             corrected or moved to the spec that owns the work; a waiver or a deferral releases \
+             nothing."
+                .to_string(),
+        ),
+        violations: vec![],
+        cross_spec_impact: vec![],
+        analyze_stale_paths: None,
+    })
 }
 
 /// The scenario-open-questions gate check: `Some(blocked)` when any
@@ -3996,6 +4042,52 @@ mod tests {
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewOwed));
         assert!(result.message.unwrap().contains("src/uncommitted.rs"));
         assert!(result.guidance.unwrap().contains("commit"));
+    }
+
+    /// An unticked criterion holds `done` with its own block, named by label or
+    /// position, after an unchecked task; every criterion ticked moves past it
+    /// (066 task 27).
+    #[test]
+    fn an_unticked_criterion_holds_done_after_an_unchecked_task() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        seed_reopened(repo);
+        let spec = repo.join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        let with = |criteria: &str| format!("{text}\n## Acceptance Criteria\n\n{criteria}");
+        fs::write(
+            &spec,
+            with("- [x] AC1: One.\n- [ ] AC2: Two.\n- [ ] Three.\n"),
+        )
+        .unwrap();
+        git_commit_all(repo, "status(007): reopen");
+        let result = gate(repo);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::UntickedCriterion));
+        let message = result.message.unwrap();
+        assert!(
+            message.contains("holds 2 unticked acceptance criteria: AC2, #2"),
+            "{message}"
+        );
+        assert!(
+            result
+                .guidance
+                .unwrap()
+                .contains("a waiver or a deferral releases nothing")
+        );
+
+        fs::write(
+            repo.join("specs/007-gate/tasks.md"),
+            "# Tasks\n\n## 1. Work\n\n- [ ] Do it\n",
+        )
+        .unwrap();
+        assert_eq!(gate(repo).blocked_by, Some(ReviewGateBlock::UncheckedTask));
+        fs::remove_file(repo.join("specs/007-gate/tasks.md")).unwrap();
+
+        fs::write(&spec, with("- [x] AC1: One.\n")).unwrap();
+        assert_ne!(
+            gate(repo).blocked_by,
+            Some(ReviewGateBlock::UntickedCriterion)
+        );
     }
 
     /// A ticked criterion no review judged met owes a review, and the block names it;

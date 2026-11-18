@@ -720,6 +720,10 @@ fn descriptions_hold_the_review_gate_details_066_points_at() {
         ),
         (
             descriptions::CHECK_REVIEW_GATE,
+            "an unticked acceptance criterion in spec.md, each named by its label or #index",
+        ),
+        (
+            descriptions::CHECK_REVIEW_GATE,
             "the gate never blocks on reviewed-digest or on an advisory analyze finding",
         ),
         (

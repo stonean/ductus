@@ -6603,6 +6603,10 @@ pub enum ReviewGateBlock {
     /// comment: `done` says the work is complete, and a box on a `done` spec is what
     /// reopens one, so the two cannot both stand (spec 079).
     UncheckedTask,
+    /// `spec.md` holds an unticked acceptance criterion: only a review ticks a
+    /// criterion, judging it against the code, so the gate judges none and holds
+    /// `done` while one stands (066 task 27).
+    UntickedCriterion,
     /// The spec declares `cross-spec-impact` entries that are not yet
     /// discharged — the affected spec does not link back to this one — or
     /// that name no feature directory, or that name the declaring spec
