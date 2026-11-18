@@ -39,7 +39,7 @@ longer one. Apply longest-first:
 **The must-not-touch list is the load-bearing half.** Five classes survive verbatim; a sweep
 that misses any one of them ships a lie or breaks an adopter:
 
-- **Legacy path constants.** `runtime/src/schema/paths.rs:46` (`LEGACY_CONFIG_FILE =
+- **Legacy path constants.** `runtime/src/schema/paths.rs` (`LEGACY_CONFIG_FILE =
   ".govern.toml"`) and `:56` (`LEGACY_SESSION_FILE = ".govern.session.toml"`) name files that
   exist in adopter checkouts right now. Rewriting them silently drops the pre-042 fallback.
   `.govern/config.toml` and `.govern/session.toml` join them as a middle tier (see below)
@@ -117,9 +117,9 @@ naming `/ductus`.
 
 ### `[host] project` default and the basename fallback
 
-Grounded in `runtime/src/host.rs:38` (`FALLBACK_PROJECT = "gov"`),
+Grounded in `runtime/src/host.rs` (`FALLBACK_PROJECT = "gov"`),
 `runtime/src/host.rs`'s `defaults` (project defaults to the repo directory basename), and
-`scripts/gen-claude-commands.sh:39` (`PROJECT="gov"`). All three become `ductus`.
+`scripts/gen-claude-commands.sh` (`PROJECT="gov"`). All three become `ductus`.
 
 This repo's own `.govern/config.toml` pins `project = "gov"` with a comment explaining that the
 basename fallback would otherwise yield `govern`. After the rename the checkout basename *is*

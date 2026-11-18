@@ -8,8 +8,8 @@ section: "Follow-on scenarios"
 
 The runtime resolves command files at two callsites that both hardcode `.claude/commands/ductus/`:
 
-- `runtime/src/main.rs:209-220` — `run_exec`'s candidate list for `ductus exec <command>`. The middle entry is `repo.join(".claude/commands/gov").join(format!("{command}.md"))`.
-- `runtime/src/interpreter/payload.rs:378-390` — `locate_command_file`, used during anchor extraction (resolving `Reference: §<anchor>` lines under the `## Scope Boundaries` section of a command file). Same middle-entry shape.
+- `runtime/src/main.rs` — `run_exec`'s candidate list for `ductus exec <command>`. The middle entry is `repo.join(".claude/commands/gov").join(format!("{command}.md"))`.
+- `runtime/src/interpreter/payload.rs` — `locate_command_file`, used during anchor extraction (resolving `Reference: §<anchor>` lines under the `## Scope Boundaries` section of a command file). Same middle-entry shape.
 
 Both paths bake in two assumptions that hold in this repo but break for adopters:
 

@@ -12,16 +12,16 @@ files still name the literal.
 
 The confirmed ones, each verified against the file:
 
-- `log.md:33` passes a literal `specs/inbox.md` to `lint-markdown`, after
+- `log.md` passes a literal `specs/inbox.md` to `lint-markdown`, after
   `append-inbox` wrote `{specs-root}/inbox.md` — so the lint targets a file the
   append did not touch.
 - `log.md`'s "If `specs/inbox.md` does not exist, create it" step creates a stray `specs/inbox.md` on the markdown-only path.
 - `groom.md`'s "Check if `specs/inbox.md` exists" step checks for and reads a hardcoded `specs/inbox.md`, and **no
   primitive owns that read**, so both paths carry the literal and `/groom`
   reports "No inbox file found" under a renamed root.
-- `review.md:382` diffs `git diff <diff-base>..HEAD -- specs/inbox.md`.
-- `amend.md:60` runs `git status --porcelain -- specs/{feature}/…`.
-- `implement.md:105` runs `git log --oneline -- specs/{feature}/tasks.md`, and
+- `review.md` diffs `git diff <diff-base>..HEAD -- specs/inbox.md`.
+- `amend.md` runs `git status --porcelain -- specs/{feature}/…`.
+- `implement.md` runs `git log --oneline -- specs/{feature}/tasks.md`, and
   `implement.md`'s `tasks.md` read, `plan.md` read, **Task tally** and **Cross-spec impact check** steps read or diff literals alongside it.
 
 The root cause is a misapplied boundary rather than an oversight per site.
@@ -39,7 +39,7 @@ The fix pattern already exists in the corpus and was simply never propagated.
 > **Spec-root resolution.** Every `specs/…` path below is written under the
 > configured `[paths] specs-root` (default `specs`; spec 040).
 
-It is the only command file that has it, which is why `specify.md:119`'s bare
+It is the only command file that has it, which is why `specify.md`'s bare
 `Create specs/{NNN-feature-name}/` is already correct while the same shape
 elsewhere is not.
 

@@ -42,7 +42,7 @@ The address is `{tempdir}/ductus-main/framework/bootstrap/ductus-procedure.md` (
 
 Allowlisting is correct rather than expedient. `ductus exec ductus` walks `§Instructions`, which stays installed; nothing dispatches from the archive half, so it genuinely is prose. Manufacturing an `## Instructions` section to score exit 0 would also oblige `check_step_references.rs`'s `BOOTSTRAP_FILES` to gain the file — turning a `framework/` change into a `runtime/` one with a version bump and a `ductus-v` tag.
 
-`runtime/legacy-prose-commands.txt` is listed under `exclude` in `runtime/Cargo.toml:10-15` and is referenced from no `runtime/src/**` file and no `build.rs`, so it is neither compiled into the binary nor published in the crate. Editing it changes nothing an adopter receives — hence no version bump. It **is** in `framework-checks.yml`'s path filter and under `runtime/**` for `runtime.yml`, so the commit runs the full cargo suite in the pre-commit hook and both workflows in CI.
+`runtime/legacy-prose-commands.txt` is listed under `exclude` in `runtime/Cargo.toml` and is referenced from no `runtime/src/**` file and no `build.rs`, so it is neither compiled into the binary nor published in the crate. Editing it changes nothing an adopter receives — hence no version bump. It **is** in `framework-checks.yml`'s path filter and under `runtime/**` for `runtime.yml`, so the commit runs the full cargo suite in the pre-commit hook and both workflows in CI.
 
 ### The allowlist header is corrected in the same change
 

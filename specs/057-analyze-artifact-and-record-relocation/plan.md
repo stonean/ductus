@@ -34,7 +34,7 @@ constitution MUST NOT import runtime types."
 
 ### `ReviewBlock` and `AnalyzeBlock` keep their shape and change their owner
 
-`runtime/src/schema/primitives.rs:33` (`ReviewBlock`) and
+`runtime/src/schema/primitives.rs` (`ReviewBlock`) and
 `AnalyzeBlock` are already standalone types. The change is where they are
 deserialized from: `Frontmatter` loses its `review` and `analyze`
 fields, and each record is parsed from its own artifact's frontmatter.
@@ -47,7 +47,7 @@ what makes AC4's differential check a real check rather than a restatement.
 ### One timestamp name: `last-run` on both records
 
 The two records spell the same instant differently today —
-`check_review_agreement.rs:50` names it: "The timestamp is the one pair spelled
+`check_review_agreement.rs` names it: "The timestamp is the one pair spelled
 differently on each side (`last-run` / `reviewed-at`), so pairs are keyed by
 meaning, not by name." That primitive exists to reconcile the pair; with the
 pair gone, the naming should not survive it.
@@ -64,7 +64,7 @@ These are the two places a behavior change could ride along, and they are
 decided differently.
 
 **The analyze exclusion moves, and simplifies.** `AnalyzeBlock::analyzed_digest`
-(`primitives.rs:129-132`) digests `spec.md` "with its own `analyze:` block
+(`primitives.rs`) digests `spec.md` "with its own `analyze:` block
 excised, because this record is written after the subjects are read and a digest
 covering it could never match." With the record in `analysis.md`, the excision
 moves there and `spec.md` is digested **whole** — the block-surgery path for
@@ -82,7 +82,7 @@ nothing reads its body. AC7 then holds unconditionally rather than
 when-the-body-happens-not-to-change. Tracked as task 24.
 
 **The review exclusion stays, and its rationale is annotated as lapsed.**
-`ReviewBlock::reviewed_digest` (`primitives.rs:52-55`) excludes `review.md` and
+`ReviewBlock::reviewed_digest` (`primitives.rs`) excludes `review.md` and
 `spec.md` because "`write-review` touches both, so counting them would stale
 every review the instant it was recorded." After AC3, `write-review` no longer
 touches `spec.md` — so the stated reason lapses for that half. **The set is not
@@ -158,9 +158,9 @@ itself changing body prose is not this migration and must halt.
 
 ### The CI step borrows Family 37's baseline, because that predicate cannot go vacuous
 
-`framework/templates/ci/adopter-generators.yml:111` skips a spec when
+`framework/templates/ci/adopter-generators.yml` skips a spec when
 `grep -q '^review:'` fails — a predicate this relocation makes true of every
-spec. `scripts/audit/analyze-record-backlog.sh:38-46` already solves the shape:
+spec. `scripts/audit/analyze-record-backlog.sh` already solves the shape:
 the backlog is held against a committed high-water mark
 (`scripts/audit/analyze-record-baseline.txt`), "at or below it: clean … above
 it: a finding, because the backlog **cannot legitimately grow**." The CI step

@@ -73,7 +73,7 @@ reduces the number of places the *caveat* is repeated, not the number of places 
 default appears.
 
 Full parameterization stays rejected, for the reason 040 already recorded and this
-scenario does not reopen: `CLAUDE.md:3` imports `framework/constitution.md` directly and
+scenario does not reopen: `CLAUDE.md` imports `framework/constitution.md` directly and
 this repo carries no installed `.ductus/constitution.md`, so `{specs-root}` placeholders
 would permanently degrade ductus's own governance document to serve a key most adopters
 never set.
@@ -98,7 +98,7 @@ the shipped artifacts match their sources.
   and belongs in its own scenario.
 - **Deleting a note is not deleting a resolution.** The blockquotes are host guidance,
   not resolution logic. Every site the sibling scenario rewrote to name the resolved root
-  as a literal *argument* — `log.md`'s `lint-markdown` target, `groom.md:32`'s inbox read
+  as a literal *argument* — `log.md`'s `lint-markdown` target, `groom.md`'s inbox read
   — is left exactly as it stands. This scenario removes duplicated guidance, never a
   resolved path.
 - **Reducing restatement must not reintroduce silent defaults.** The acceptance is that a

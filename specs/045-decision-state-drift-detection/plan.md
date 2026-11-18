@@ -56,11 +56,11 @@ The scanned unit is the enclosing block-level element (AC12). A new `pub(crate)`
 - any other maximal run of non-blank, non-heading lines is a **paragraph**;
 - a line whose trimmed form starts with `>` is a **blockquote** line and is dropped entirely.
 
-`SkipScanner` (`runtime/src/primitives/mod.rs:841-894`) already tracks `in_fence` and `in_comment` and skips their delimiter lines, so the first two exempt contexts are free — the splitter feeds every line through it and drops what it reports. The blockquote exemption is added **in the splitter, not in `SkipScanner`**. That is deliberate: `SkipScanner` is shared by the `tasks.md` parsers (`read_tasks`, `mark_task`, `prune_tasks`, `iter_task_numbers_at_levels` at `mod.rs:963-983`), and teaching it to skip blockquotes would silently change how every one of them reads a quoted task line. The spec's phrasing — the first two "fall out of the existing `SkipScanner`", the last two "are added" — is satisfied by adding them at the check, and the narrower change is the safe one.
+`SkipScanner` (`runtime/src/primitives/mod.rs`) already tracks `in_fence` and `in_comment` and skips their delimiter lines, so the first two exempt contexts are free — the splitter feeds every line through it and drops what it reports. The blockquote exemption is added **in the splitter, not in `SkipScanner`**. That is deliberate: `SkipScanner` is shared by the `tasks.md` parsers (`read_tasks`, `mark_task`, `prune_tasks`, `iter_task_numbers_at_levels` at `mod.rs`), and teaching it to skip blockquotes would silently change how every one of them reads a quoted task line. The spec's phrasing — the first two "fall out of the existing `SkipScanner`", the last two "are added" — is satisfied by adding them at the check, and the narrower change is the safe one.
 
 ### The inline-code exemption reuses the existing CommonMark span helper
 
-`inline_code_spans` (`runtime/src/primitives/mod.rs:901-932`) already implements the CommonMark equal-length-backtick-run rule, and `find_outside_code` uses it to make comment delimiters inert inside code font. Both are private to `mod.rs`; this change promotes `inline_code_spans` to `pub(crate)` with no behavior change.
+`inline_code_spans` (`runtime/src/primitives/mod.rs`) already implements the CommonMark equal-length-backtick-run rule, and `find_outside_code` uses it to make comment delimiters inert inside code font. Both are private to `mod.rs`; this change promotes `inline_code_spans` to `pub(crate)` with no behavior change.
 
 The two families then sit on opposite sides of the same computation, which is the cleanest statement of why they are two families:
 
@@ -77,7 +77,7 @@ A block emits **one finding per link**, not one per tell. `does not exist yet` m
 
 ### An unreadable target produces no finding, but is not silent
 
-AC9 forbids escalating an unknown to a defect: a link whose target state cannot be read produces no finding. Left there, the family would emit zero findings both when it examined every link and found nothing and when it could not read a single target — the exact shape `QUAL-CLAIM-001` forbids (`framework/rules/quality-cross.md:39`).
+AC9 forbids escalating an unknown to a defect: a link whose target state cannot be read produces no finding. Left there, the family would emit zero findings both when it examined every link and found nothing and when it could not read a single target — the exact shape `QUAL-CLAIM-001` forbids (`framework/rules/quality-cross.md`).
 
 `CheckArtifactsResult` therefore gains a `skipped: Vec<SkippedTarget>` field recording `{family, reason, path}` for every target a family could not examine. The rule's own Verification names "a `skipped` list" among the explicitly compliant shapes (`QUAL-CLAIM-001` in `quality-cross.md`), so this is the sanctioned form rather than an invention.
 
@@ -99,7 +99,7 @@ Exactly AC6's set: `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`. Scena
 
 ### The path-existence family reads through `read-spec`
 
-Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each entry carrying `checked` and `text`), not from a second hand-rolled section walker. `check-artifacts` already delegates task parsing to `read_tasks` (`check_artifacts.rs:96-105`) and scenario questions to `read_spec::collect_scenario_open_questions` for exactly this reason — the module docs state the no-hand-rolled-parsers constraint in `check_artifacts.rs`'s module docs. Scope is `## Acceptance Criteria` only, of `in-progress` and `done` specs (AC16; widened from `done` alone by 067's `status-gated-families-are-not-silent`).
+Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each entry carrying `checked` and `text`), not from a second hand-rolled section walker. `check-artifacts` already delegates task parsing to `read_tasks` (`check_artifacts.rs`) and scenario questions to `read_spec::collect_scenario_open_questions` for exactly this reason — the module docs state the no-hand-rolled-parsers constraint in `check_artifacts.rs`'s module docs. Scope is `## Acceptance Criteria` only, of `in-progress` and `done` specs (AC16; widened from `done` alone by 067's `status-gated-families-are-not-silent`).
 
 ### What the families read, and how much they return
 

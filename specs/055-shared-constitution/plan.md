@@ -19,7 +19,7 @@ rewritten. The feature is a read of local disk plus a report.
 
 ### The registry reader is `load_services` with a different table name
 
-`runtime/src/primitives/resolve_references.rs:94` (`load_services`) is the model:
+`runtime/src/primitives/resolve_references.rs` (`load_services`) is the model:
 it resolves the config path through `paths::config_path(repo)`, treats an absent
 file as an empty registry, and maps a malformed one to `PrimitiveError::Toml`.
 `classify` then resolves the checkout with `resolve_path(repo, &service.path)`
@@ -50,7 +50,7 @@ traversal order is not stable at all.
 
 **Wiring spans eight sites, not two** (`AGENTS.md`'s "A new `ductus` runtime primitive wires into more than" gotcha). `AGENTS.md` then named
 `parser/mod.rs` for `PRIMITIVE_NAMES`, but that constant is *defined from*
-`PRIMITIVE_REGISTRY` (`runtime/src/schema/registry.rs:16`), which is the single
+`PRIMITIVE_REGISTRY` (`runtime/src/schema/registry.rs`), which is the single
 source feeding both it and the server's `tool_names`, the registry less
 `CLI_ONLY_PRIMITIVES` — so the registry is the site and the parser needs no edit. The set: `runtime/src/schema/constitutions.rs` (new,
 modelled on `services.rs`) plus its `pub mod` in `schema/mod.rs`;
@@ -99,7 +99,7 @@ does not resolve is a **warning**, never a rejection — `framework/commands/lin
 settles that shape for `[services]` and the spec adopts it.
 
 No `/ductus:link`-style command is added. Registration is a hand-edit plus `/ductus`
-validation, which is what `link.md:25` already says for the analogous case
+validation, which is what `link.md` already says for the analogous case
 ("Removal and edits of an existing entry stay hand-edits to `.ductus/config.toml`").
 
 ### Both bootstrap twins take every edit

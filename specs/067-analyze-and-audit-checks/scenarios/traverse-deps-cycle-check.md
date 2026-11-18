@@ -6,7 +6,7 @@ section: "Frontmatter, dependency, anchor and rule checks"
 
 ## Context
 
-Spec 022 declares the `traverse-deps` primitive (spec.md:76) as "verify spec dependencies exist as directories and have compatible status." Today the primitive checks (a) existence of each declared dependency directory and (b) status compatibility along single edges, but it does not check the dep graph for acyclicity. `/{project}:analyze` consumes `traverse-deps` (analyze.md's step 3, "Invoke `traverse-deps`") and inherits that gap — a graph with a cycle passes `traverse-deps` and `/{project}:analyze` reports no finding.
+Spec 022 declares the `traverse-deps` primitive (spec.md) as "verify spec dependencies exist as directories and have compatible status." Today the primitive checks (a) existence of each declared dependency directory and (b) status compatibility along single edges, but it does not check the dep graph for acyclicity. `/{project}:analyze` consumes `traverse-deps` (analyze.md's step 3, "Invoke `traverse-deps`") and inherits that gap — a graph with a cycle passes `traverse-deps` and `/{project}:analyze` reports no finding.
 
 The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive-dont-ask/scenarios/detect-dependency-cycles.md) — `gen-spec-deps.sh` will fail when its generated graph has a cycle, blocking the commit. That covers the common case (cycle introduced during normal author flow). It does *not* cover:
 

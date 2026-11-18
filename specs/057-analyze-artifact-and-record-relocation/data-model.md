@@ -145,7 +145,7 @@ refusal carried in an `Ok` result could be mistaken for it.
 | `review` | **removed** |
 | `analyze` | **removed** |
 
-**Notes.** `Frontmatter` at `primitives.rs:697` loses two `Option<…>` fields. The
+**Notes.** `Frontmatter` at `primitives.rs` loses two `Option<…>` fields. The
 open-schema rule means a residual block in an unmigrated tree deserializes
 harmlessly — which is why AC6 makes `validate-frontmatter` report it explicitly
 rather than relying on the type to reject it.

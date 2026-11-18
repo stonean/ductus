@@ -16,7 +16,7 @@ The runtime changes ship in a patch release, `0.54.1`. The hook, procedure, and 
 
 The runtime has twelve production call sites that open a repository. Measured by `grep -rn "Repository::discover\|Repository::open"` over `runtime/src`, excluding test modules, they are in `interpreter/payload.rs`, `mod.rs` (three), and `check_stuck`, `check_artifacts`, `diff_cross_spec`, `derive_boundary`, `analyze_subjects`, `check_corpus_links`, `compute_review_scope`, and `inbox_standing`. No reader shells out to `git`. Ten of the twelve are this spec's. `compute_review_scope` and `inbox_standing` are 058's fixes.
 
-Each reader today repeats one of two mistakes. The `discover` sites join a project-relative path into a lookup that git keys from the work tree. The `open` sites (`list_tracked_specs`, `list_untracked_specs` and `list_staged_specs` in `mod.rs`, `collect_tracked_markdown` in `check_corpus_links.rs`) do not search upward at all (git2 0.21 documents `open` as "at `path`" and `discover` as "at or above `path`"). The fix is one type in `runtime/src/primitives/mod.rs`, beside `workdir_prefix` (`mod.rs:1362`):
+Each reader today repeats one of two mistakes. The `discover` sites join a project-relative path into a lookup that git keys from the work tree. The `open` sites (`list_tracked_specs`, `list_untracked_specs` and `list_staged_specs` in `mod.rs`, `collect_tracked_markdown` in `check_corpus_links.rs`) do not search upward at all (git2 0.21 documents `open` as "at `path`" and `discover` as "at or above `path`"). The fix is one type in `runtime/src/primitives/mod.rs`, beside `workdir_prefix` (`mod.rs`):
 
 ```rust
 /// A repository opened for a project, with the project's path from its work tree.
@@ -37,21 +37,21 @@ impl ProjectRepository {
 }
 ```
 
-The prefix is built exactly as `compute_review_scope`'s private `history_prefix` builds it (`compute_review_scope.rs:138-149`), component by component with `/`, so it is right on every platform. `history_prefix` is deleted and `compute_review_scope` uses the helper.
+The prefix is built exactly as `compute_review_scope`'s private `history_prefix` builds it (`compute_review_scope.rs`), component by component with `/`, so it is right on every platform. `history_prefix` is deleted and `compute_review_scope` uses the helper.
 
 ### An unresolvable project path is the no-repository case, not the root
 
-`workdir_prefix` returns `None` when the repository has no work tree, the project cannot be canonicalized, or the project lies outside the work tree (`mod.rs:1353-1356`). After a successful discovery that happens only for a bare repository or under a `core.worktree` override; discovery does not read `GIT_DIR` or `GIT_WORK_TREE`, which libgit2 consults only when a repository is opened from the environment (`repository.c`, the `use_env` branch). `history_prefix` reads it as an empty prefix ("reads history from the root as before", `compute_review_scope.rs:140-141`), which silently finds no history. The spec's edge case chooses the no-repository path instead. `discover` returns an error in that case, so each reader takes the branch it already takes with no repository. Every one of those branches is already distinguishable from a clean result:
+`workdir_prefix` returns `None` when the repository has no work tree, the project cannot be canonicalized, or the project lies outside the work tree (`mod.rs`). After a successful discovery that happens only for a bare repository or under a `core.worktree` override; discovery does not read `GIT_DIR` or `GIT_WORK_TREE`, which libgit2 consults only when a repository is opened from the environment (`repository.c`, the `use_env` branch). `history_prefix` reads it as an empty prefix ("reads history from the root as before", `compute_review_scope.rs`), which silently finds no history. The spec's edge case chooses the no-repository path instead. `discover` returns an error in that case, so each reader takes the branch it already takes with no repository. Every one of those branches is already distinguishable from a clean result:
 
 | Reader | No-repository branch today |
 | --- | --- |
 | `check-stuck`, `diff-cross-spec`, `derive-boundary`, `compute-review-scope` | `PrimitiveError::Git` through `?` |
 | `check-artifacts` scenario-to-task walk | `None`, which suppresses every finding by design (`check_artifacts.rs`'s `ever_tasked_slugs`) |
-| rename exemption (`exempt_renames`) | keeps every candidate, reporting stale (`analyze_subjects.rs:290-294`) |
+| rename exemption (`exempt_renames`) | keeps every candidate, reporting stale (`analyze_subjects.rs`) |
 | exec payload gitignore guard | no repository, so no gitignore refusal; the basename secret check and the containment check still run |
-| `list_tracked_specs` | the worktree walk (`mod.rs:2205-2214`) |
+| `list_tracked_specs` | the worktree walk (`mod.rs`) |
 | `list_untracked_specs`, `list_staged_specs` | empty |
-| `check-corpus-links --scope repository` | `guidance`, never a clean verdict (`check_corpus_links.rs:77-91`) |
+| `check-corpus-links --scope repository` | `guidance`, never a clean verdict (`check_corpus_links.rs`) |
 
 `compute_review_scope` changes behavior in that one case, from reading history at the root to an error. This is deliberate. The two callers would otherwise disagree about the same condition, and the old answer was the silent one.
 
@@ -59,16 +59,16 @@ The prefix is built exactly as `compute_review_scope`'s private `history_prefix`
 
 | Reader | In (`to_git`) | Out (`to_project`) |
 | --- | --- | --- |
-| `check_stuck.rs:41-45` | `spec_rel`, `tasks_rel` | — |
+| `check_stuck.rs` | `spec_rel`, `tasks_rel` | — |
 | `ever_tasked_slugs` in `check_artifacts.rs` | the `tasks.md` history path | — |
-| `diff_cross_spec.rs:55-106` | `spec_prefix` for `first_commit_for_prefix`, and the diff pathspec, matched literally | every diff path, before it is matched against the project-relative spec root, feature directory and inbox; a path outside the project is dropped |
-| `derive_boundary.rs:45-95` | `spec_prefix` for `first_commit_for_prefix` and the own-directory skip | every changed path before `zone_glob`; a path outside the project is dropped |
+| `diff_cross_spec.rs` | `spec_prefix` for `first_commit_for_prefix`, and the diff pathspec, matched literally | every diff path, before it is matched against the project-relative spec root, feature directory and inbox; a path outside the project is dropped |
+| `derive_boundary.rs` | `spec_prefix` for `first_commit_for_prefix` and the own-directory skip | every changed path before `zone_glob`; a path outside the project is dropped |
 | `exempt_renames` in `analyze_subjects.rs` | each candidate before `changed_beyond_spelling` | — (candidates stay project-relative in the result) |
 | `payload.rs` (the `is_gitignored` call) | the canonical path of each Affected Files entry, named from the project root, before `status_should_ignore` — the file read, not the plan's spelling of it | — |
-| `list_tracked_specs` (`mod.rs:2193`) | — | each index entry before `is_spec_path` |
-| `list_untracked_specs` (`mod.rs:2227`) | the status pathspec, matched literally | each status entry before `is_spec_path` |
-| `list_staged_specs` (`mod.rs:2266`) | the delta pathspec, matched literally | each delta path before `is_spec_path` |
-| `collect_tracked_markdown` (`check_corpus_links.rs:132`) | — | each index entry before `repo.join`; a path outside the project is skipped |
+| `list_tracked_specs` (`mod.rs`) | — | each index entry before `is_spec_path` |
+| `list_untracked_specs` (`mod.rs`) | the status pathspec, matched literally | each status entry before `is_spec_path` |
+| `list_staged_specs` (`mod.rs`) | the delta pathspec, matched literally | each delta path before `is_spec_path` |
+| `collect_tracked_markdown` (`check_corpus_links.rs`) | — | each index entry before `repo.join`; a path outside the project is skipped |
 
 A pathspec carrying the project's path from the work tree is matched literally (`disable_pathspec_match`): that path may hold `*`, `?` or `[`, which as a glob would match no file, and the empty result would read as clean. A found repository whose index or status cannot be read is an error for every spec listing, never the worktree walk or an empty list.
 
@@ -109,7 +109,7 @@ The outer stub, `framework/bootstrap/hooks/pre-commit`, invokes the inner hook b
 
 Cases 2 and 5 are guarded by one precondition. If `{project}/.githooks/pre-commit` exists and still invokes `./.githooks/ductus-pre-commit` (the pre-059 stub line) while `P` is non-empty, wiring is skipped. The warning names the line to replace. The outer file is adopter-owned (`create` strategy), so `/ductus` never edits it, and wiring it as it stands would make every commit fail on a path that does not exist.
 
-The manual integration snippet names the inner hook by its path from the work-tree root, `./{P}.githooks/ductus-pre-commit`, since hook runners run there. Every agent's bootstrap settings already allow `git rev-parse *` (`framework/bootstrap/ductus.md` §Agent Registry's `settings_template` column). The `core.hooksPath` write prompts once on a subdirectory project's first `/ductus`: `git config core.hooksPath *` covered the new value (`framework/bootstrap/configure/claude.md:66`) until 022 task 18 retired it on 2026-11-12, and the seed grants only the root's exact `git config core.hooksPath .githooks` (`specs/022-deterministic-runtime/plan.md` §Agent reach: what ductus installs grants only what its steps need).
+The manual integration snippet names the inner hook by its path from the work-tree root, `./{P}.githooks/ductus-pre-commit`, since hook runners run there. Every agent's bootstrap settings already allow `git rev-parse *` (`framework/bootstrap/ductus.md` §Agent Registry's `settings_template` column). The `core.hooksPath` write prompts once on a subdirectory project's first `/ductus`: `git config core.hooksPath *` covered the new value (`framework/bootstrap/configure/claude.md`) until 022 task 18 retired it on 2026-11-12, and the seed grants only the root's exact `git config core.hooksPath .githooks` (`specs/022-deterministic-runtime/plan.md` §Agent reach: what ductus installs grants only what its steps need).
 
 ### Family 22 drives the hook from the work-tree root
 
@@ -125,7 +125,7 @@ The manual integration snippet names the inner hook by its path from the work-tr
 
 ### Release
 
-The bump is `0.54.0` → `0.54.1`, a patch. The runtime changes are bug fixes; no primitive's arguments or result schema change, and `check-corpus-links` changes only its guidance text. The version goes in `version`, `runtime/Cargo.toml:3`, and a `runtime/CHANGELOG.md` section, and `runtime/Cargo.lock` is refreshed by one build without `--locked`. Audit Family 20 checks that they agree. The tag `ductus-v0.54.1` is cut after 059 and 018 are `done`, following the `AGENTS.md` release entry. No primitive is added, so `framework/runtime-tools.txt` and the configure permission lists are unchanged.
+The bump is `0.54.0` → `0.54.1`, a patch. The runtime changes are bug fixes; no primitive's arguments or result schema change, and `check-corpus-links` changes only its guidance text. The version goes in `version`, `runtime/Cargo.toml`, and a `runtime/CHANGELOG.md` section, and `runtime/Cargo.lock` is refreshed by one build without `--locked`. Audit Family 20 checks that they agree. The tag `ductus-v0.54.1` is cut after 059 and 018 are `done`, following the `AGENTS.md` release entry. No primitive is added, so `framework/runtime-tools.txt` and the configure permission lists are unchanged.
 
 The MCP tools answer with the binary the session started on, so no review or analysis of 059 runs against the MCP server until it is running a binary built after the runtime tasks.
 
@@ -158,7 +158,7 @@ The MCP tools answer with the binary the session started on, so no review or ana
 - **Reading an unresolvable prefix as empty, rejected.** It keeps `history_prefix`'s behavior, but its answer is "no history," which is the silent wrong answer this spec removes.
 - **Finding the hook's project by searching upward for `.ductus/`, rejected.** The file's own location is exact and needs no search. Searching could stop at a nested project's `.ductus/`.
 - **Wiring a pre-059 outer stub anyway, rejected.** Every commit would then fail on a path that does not exist until the adopter edits the file. Skipping follows the ladder's existing precedent for conflicts. The cost is that the hook stays unwired until the adopter replaces the line and re-runs `/ductus`, and the warning is the only signal of that.
-- **`inbox_standing`'s `workdir_relative` stays as it is.** It canonicalizes the inbox file's parent so a symlinked inbox is blamed under its own name (`inbox_standing.rs:182-188`), which is a different subject from the project root, and its `None` is already the undeterminable state.
+- **`inbox_standing`'s `workdir_relative` stays as it is.** It canonicalizes the inbox file's parent so a symlinked inbox is blamed under its own name (`inbox_standing.rs`), which is a different subject from the project root, and its `None` is already the undeterminable state.
 - **Limitation: one hooks path per repository.** A second ductus project in the same repository is warned, not wired (`specs/059-project-in-a-repository-subdirectory/spec.md` §Edge Cases). Running several projects' hooks from one `core.hooksPath` is not attempted.
 - **Limitation: a hook reached through a symlink placed elsewhere resolves the link's directory.** The snippet invokes the inner hook by its real path, so the supported paths do not go through a link.
 - **Not swept: spec 017's install ladder** (`specs/017-derive-dont-ask/spec.md`, the Resolved Questions entry "`/ductus` manages the adopter hook on every install/update run"). It describes the pre-018 ladder, stale since 018 replaced it, and 059 makes nothing in it newly false at the root.

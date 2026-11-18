@@ -14,11 +14,11 @@ The critical path is the parser fix. Everything else reads the count the parser 
 
 ### The parser fix is a prerequisite, not a parallel task
 
-`parse_open_questions` (`runtime/src/primitives/read_spec.rs:141`) walks `section_lines`, which is not comment- or fence-aware; the acceptance-criteria parser (`parse_checkboxes` in `read_spec.rs`) walks `section_line_indices`, which is. Verified by scaffolding a spec from `framework/templates/spec/spec.md` and calling `read-spec`: `acceptance-criteria` returned `[]` while `open-questions` returned the template's three commented-out examples.
+`parse_open_questions` (`runtime/src/primitives/read_spec.rs`) walks `section_lines`, which is not comment- or fence-aware; the acceptance-criteria parser (`parse_checkboxes` in `read_spec.rs`) walks `section_line_indices`, which is. Verified by scaffolding a spec from `framework/templates/spec/spec.md` and calling `read-spec`: `acceptance-criteria` returned `[]` while `open-questions` returned the template's three commented-out examples.
 
 Under this feature a phantom question blocks `done`, so the fix must land before any consumer reads the count. It is task 1, and no other task starts until it is green.
 
-The placeholder guard (`push_question` in `read_spec.rs`) widens in the same change: it currently exact-matches `*None — all resolved.*`, while `create_scenario.rs:69` emits `*None — captured during scenario authoring.*`. Both become members of a skip set.
+The placeholder guard (`push_question` in `read_spec.rs`) widens in the same change: it currently exact-matches `*None — all resolved.*`, while `create_scenario.rs` emits `*None — captured during scenario authoring.*`. Both become members of a skip set.
 
 **Blast radius.** `parse_open_questions` is `pub(crate)` and shared with `append-question`'s dedup, so the fix changes both readers at once — which is the point: they must agree. Existing specs whose Open Questions sections contain no commented-out bullets see no change in reported count.
 
@@ -50,7 +50,7 @@ The schema changes are primitive request/response shapes, whose canonical source
 
 ### Constitution amendments stay with this spec
 
-`§spec-lifecycle`'s `done` row (`framework/constitution.md:113`) and `§readiness-check`'s "All open questions are resolved" both currently read as spec-body-only. They are amended here, not in 022 — 022 owns the runtime, not the lifecycle definition.
+`§spec-lifecycle`'s `done` row (`framework/constitution.md`) and `§readiness-check`'s "All open questions are resolved" both currently read as spec-body-only. They are amended here, not in 022 — 022 owns the runtime, not the lifecycle definition.
 
 ## Affected Files
 

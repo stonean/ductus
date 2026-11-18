@@ -81,7 +81,7 @@ blockquote at the head of `## Instructions`: its markdown-only reference is
 with no heading in the command is there. This resolves the inbound citations
 in other specs (`analyze.md`'s Rules section, `review.md`'s Notes for adopters section) in two
 hops, as `ductus.md`'s `## The archive half` does for 056
-(`framework/bootstrap/ductus.md:798-813`). The four commands with no reference
+(`framework/bootstrap/ductus.md`). The four commands with no reference
 get no line.
 
 ### Prose the move falsifies
@@ -184,7 +184,7 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   empty where `framework/bootstrap/ductus.md` is absent, which is every
   adopter, so the rule engages only in a framework checkout. That is the same
   discriminator `adopter_destinations` uses
-  (`runtime/src/primitives/check_artifacts.rs:1370-1377`), but this map reads
+  (`runtime/src/primitives/check_artifacts.rs`), but this map reads
   the Shared Files section alone and keeps each row's source, which
   `manifest_destinations` discards.
 - **`check-step-references`.** A `step N of §X` reference numbers a step of a

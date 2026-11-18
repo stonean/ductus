@@ -10,7 +10,7 @@ Implements [068 — Backend API contract rules](spec.md).
 
 ### The header states the severity posture and the `ERRENV` reach (AC12, AC15)
 
-The header gains the posture sentence from the spec's *Severity posture*, in the form its siblings use: "A rule is **MUST** only when …; the rest are **SHOULD**" (`framework/rules/concurrency-backend.md`, `performance-backend.md` and `reliability-backend.md`, the header paragraph of each). It sits after the design-time sentence, and the header stays one paragraph. The `ERRENV` entry in the category declaration says the category governs a resource-oriented HTTP API. The reach sentence says an RPC protocol carried over HTTP counts, for `ERRENV`, as an API that is not an HTTP API, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s. Each `ERRENV` Statement names a resource-oriented HTTP API as its subject, which AC15 asks of the Statements themselves. `security-backend.md` does not change: `BE-ERR-002`'s Verification already reaches "an HTTP API or one that is not, such as a gRPC or JSON-RPC service" (`framework/rules/security-backend.md:637`), and `BE-ERR-004`'s Verification reaches "an API that is not an HTTP API".
+The header gains the posture sentence from the spec's *Severity posture*, in the form its siblings use: "A rule is **MUST** only when …; the rest are **SHOULD**" (`framework/rules/concurrency-backend.md`, `performance-backend.md` and `reliability-backend.md`, the header paragraph of each). It sits after the design-time sentence, and the header stays one paragraph. The `ERRENV` entry in the category declaration says the category governs a resource-oriented HTTP API. The reach sentence says an RPC protocol carried over HTTP counts, for `ERRENV`, as an API that is not an HTTP API, whose errors are `security-backend.md` `BE-ERR-002`'s and `BE-ERR-004`'s. Each `ERRENV` Statement names a resource-oriented HTTP API as its subject, which AC15 asks of the Statements themselves. `security-backend.md` does not change: `BE-ERR-002`'s Verification already reaches "an HTTP API or one that is not, such as a gRPC or JSON-RPC service" (`framework/rules/security-backend.md`), and `BE-ERR-004`'s Verification reaches "an API that is not an HTTP API".
 
 ### Three rules take the tier the posture gives them (AC12)
 
@@ -23,7 +23,7 @@ No other artifact states these rules' tiers. Outside this spec and the rule file
 - 008's scenario `a-statement-carries-one-obligation-keyword` names "the SHOULD rule" that `BE-PAGE-001`'s 2026-09-27 split produced. That is a record of the split, and it stays true of it.
 - 063's `analysis.md` stores the owner's `discarded` decision on a `BE-REPR-003` finding (2026-10-20). A person's stored decision wins whatever the tier, so that record needs no edit.
 
-A tier change is proved by `no_shipped_statement_mixes_tiers` (`runtime/src/primitives/rule_sections.rs:449`), which every task that edits a Statement runs.
+A tier change is proved by `no_shipped_statement_mixes_tiers` (`runtime/src/primitives/rule_sections.rs`), which every task that edits a Statement runs.
 
 ### A declared versionless strategy (AC13)
 

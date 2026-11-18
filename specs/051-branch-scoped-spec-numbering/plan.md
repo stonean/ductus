@@ -18,16 +18,16 @@ The governing constraint throughout: the three-digit convention is enforced in e
 
 ### One directory-form parse, replacing the boolean predicate
 
-`is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) is a byte scan asserting three ASCII digits then `-`, and `feature_number` parses the first three bytes independently of it. Both are replaced by a single `parse_feature_dir(name) -> Option<FeatureForm>` returning either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` becomes `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
+`is_feature_slug` (`runtime/src/primitives/mod.rs`) is a byte scan asserting three ASCII digits then `-`, and `feature_number` parses the first three bytes independently of it. Both are replaced by a single `parse_feature_dir(name) -> Option<FeatureForm>` returning either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` becomes `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
 
 Two consequences are the point of doing it this way rather than adding a second predicate:
 
 - `list_feature_dirs` and `is_spec_path` are the only filesystem entry points, so both directory forms become visible to `dashboard`, `resolve-feature`, `create-feature`, `derive-dependencies`, and `derive-references` in one change (AC5, AC15).
 - The `1234.1-slug` → `123` misparse disappears by construction: a branch-scoped form has no sequential number to return, so no caller can read one from it (AC16). Before this spec `feature_number` answered `Some(123)` for that directory, and `resolve-feature` matched on exactly that value.
 
-The parse is a hand-rolled scan rather than a regex, matching the style of the predicate it replaces. `regex` is already a dependency (`runtime/Cargo.toml:30`), so this is a consistency choice, not an availability one.
+The parse is a hand-rolled scan rather than a regex, matching the style of the predicate it replaces. `regex` is already a dependency (`runtime/Cargo.toml`), so this is a consistency choice, not an availability one.
 
-**Grammar.** `{identifier}.{n}-{slug}`, where `identifier` and `slug` both match `^[a-z0-9]+(?:-[a-z0-9]+)*$` — the form `validate_slug` enforces (`runtime/src/primitives/mod.rs:882`) — and `n` is a positive integer with no leading zeros. The parse splits on the **first** `.`, which is unambiguous because the identifier is sanitized to a grammar that excludes `.` (AC11). A name containing no `.` takes the sequential path unchanged.
+**Grammar.** `{identifier}.{n}-{slug}`, where `identifier` and `slug` both match `^[a-z0-9]+(?:-[a-z0-9]+)*$` — the form `validate_slug` enforces (`runtime/src/primitives/mod.rs`) — and `n` is a positive integer with no leading zeros. The parse splits on the **first** `.`, which is unambiguous because the identifier is sanitized to a grammar that excludes `.` (AC11). A name containing no `.` takes the sequential path unchanged.
 
 **The sequential form is three digits or more, with no padding beyond the minimum.** `1000-slug` is a feature directory; `0500-a` is not. Keeping the name/number mapping injective is the reason, not tidiness: two spellings of 500 would make `next_feature_number` and `resolve-feature` disagree.
 
@@ -36,7 +36,7 @@ The parse is a hand-rolled scan rather than a regex, matching the style of the p
 Branch-scoped creation is `create-feature` with `branch-id` supplied, not a second primitive. A separate `create-branch-feature` would duplicate slug derivation, template resolution, the atomic mode-preserving copy, and the already-exists refusal — and would put the two numbering rules in two places, which is the drift this plan is otherwise avoiding.
 
 - `branch-id` absent → the existing code path, byte-for-byte (AC4).
-- `branch-id` present → sanitized through `derive_slug` (`runtime/src/primitives/create_feature.rs:96`), which lowercases ASCII alphanumerics and collapses every other run to a single hyphen, yielding the `validate_slug` grammar directly (AC9, AC10). An identifier sanitizing to empty is refused through the existing `InvalidArgument` path that already refuses an empty derived slug, before any directory is created (AC26).
+- `branch-id` present → sanitized through `derive_slug` (`runtime/src/primitives/create_feature.rs`), which lowercases ASCII alphanumerics and collapses every other run to a single hyphen, yielding the `validate_slug` grammar directly (AC9, AC10). An identifier sanitizing to empty is refused through the existing `InvalidArgument` path that already refuses an empty derived slug, before any directory is created (AC26).
 - The counter is `max + 1` over the parsed `BranchScoped` forms whose identifier matches, mirroring `next_feature_number`'s `max + 1` — the two counters are the same rule over two filters (AC8).
 - The existing-directory refusal (`created: false`) is inherited, and concurrent creation of one name is safe because the directory is claimed atomically: both callers compute the same number, `claim_feature_dir` (`runtime/src/primitives/create_feature.rs`) makes it with `std::fs::create_dir`, which the operating system refuses with `AlreadyExists` for every caller but the first, and the loser returns `created: false` rather than writing over the winner's `spec.md` (AC27, `BE-RACE-003`). Two different names created at that moment under one identifier both succeed, with the same number.
 - `fold-into` is a second optional argument, written into the new spec's frontmatter (below).
@@ -52,7 +52,7 @@ The sanitized identifier is returned in the result so the calling command can ec
 
 This is safe against every existing frontmatter writer because none of them re-serializes the block — each splices its own line and leaves the rest byte-identical: `set-status` edits the `status:` line at a recorded offset (`runtime/src/primitives/set_status.rs`), `derive-dependencies` splices only the `dependencies:` key and any block-form continuation (`runtime/src/primitives/derive_dependencies.rs`'s `splice_dependencies`), and `label-criteria` rewrites or inserts only `next-criterion:` (`runtime/src/primitives/label_criteria.rs`'s `render`). So the key survives every generator untouched (AC19).
 
-It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checked only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`) and does not reject unknown keys, so the key needed no carve-out to be accepted; what it does gain is the shape check below.
+It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checked only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs`) and does not reject unknown keys, so the key needed no carve-out to be accepted; what it does gain is the shape check below.
 
 **Validation checks shape, not resolvability.** The target routinely names a spec the declaring branch cannot see — a branch-scoped spec exists *because* upstream diverged, and the spec it folds into normally lives on that upstream branch, sometimes created there after this branch forked. A check requiring a resolvable target would fire on the feature's normal case, and could not see the tree that would satisfy it in any event. So the check is: `folds-into`, when present, parses as a sequential feature name (AC32) — which also forbids chaining a branch-scoped spec into another branch-scoped spec — and an unresolvable target is never a finding before the merge (AC31). Existence is enforced at fold-back by `retire-feature`, which is the first moment the two trees are joined and the only moment the answer matters (AC28).
 
@@ -79,7 +79,7 @@ Fold-back processes one branch-scoped spec at a time (AC29): each spec's fold co
 
 After retiring the directory, `/ductus:fold` re-points every session in the working tree that named the folded spec at the upstream spec, through `retarget-sessions` (spec 062); without it every follow-on command in those sessions lands on a path that is gone. The source spec's own scenarios cross over on *either* route — the route decides the body's shape, never its scenarios'.
 
-`check-orphaned-references` is the verifier, not the repair path. Its report-don't-repair stance rests on a migration knowing only its own hop (`runtime/src/primitives/check_orphaned_references.rs:8`); fold-back knows both endpoints, so it rewrites and the check confirms the result is clean (AC22).
+`check-orphaned-references` is the verifier, not the repair path. Its report-don't-repair stance rests on a migration knowing only its own hop (`runtime/src/primitives/check_orphaned_references.rs`); fold-back knows both endpoints, so it rewrites and the check confirms the result is clean (AC22).
 
 ### Reopening the upstream spec uses the existing back-edge
 

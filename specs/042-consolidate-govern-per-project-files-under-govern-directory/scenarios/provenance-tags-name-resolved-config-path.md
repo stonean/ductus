@@ -8,8 +8,8 @@ section: "Config file: `.ductus/config.toml`"
 
 Spec 042 moved per-project config to `.ductus/config.toml`, with the legacy root `.govern.toml` retained only as a read fallback. Two runtime-emitted display literals still hardcode the legacy filename in their disabled-rule-file provenance tags:
 
-- `discover_rule_files.rs:273` — `disabled-rule-file: … (.govern.toml)`
-- `dashboard.rs:234` — `disabled rule files: {N} (.govern.toml) — …`
+- `discover_rule_files.rs` — `disabled-rule-file: … (.govern.toml)`
+- `dashboard.rs` — `disabled rule files: {N} (.govern.toml) — …`
 
 Both literals are mirrored verbatim in the command docs — `review.md`'s `disabled-rule-file: <filename> — <reason>` line and `status.md`'s step 3 `disabled rule files: {N}` callout (at `2b32d415`) — under the doc↔runtime message-parity contract, so a doc-only edit (or a runtime-only edit) breaks parity.
 

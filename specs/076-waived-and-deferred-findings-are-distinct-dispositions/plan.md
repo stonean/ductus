@@ -12,23 +12,23 @@ A finding takes one of three dispositions: fixed, deferred or waived. The consti
 
 §brownfield-inbox, Finding dispositions (`framework/constitution.md`, the *Three dispositions* bullet) becomes Fixed / Deferred / Waived and carries both definitions, including the question meaning of *deferred* (AC1, AC9). The other constitution lines point at it rather than restate it:
 
-- §design-principles (`framework/constitution.md:49`) lists a waiver under *decide it is out of scope and record the decision with its reason*, no longer under *record it where the pipeline will surface it again* (AC2).
-- §spec-requirements (`framework/constitution.md:136`) cites the definition for a question deferred with its trigger (AC9).
-- §implement-phase (`framework/constitution.md:213`) says a SHOULD is addressed only when fixed, waived with its rationale, or deferred to another spec.
-- The *only a gating one holds `done`* bullet (`framework/constitution.md:298`) says an analyze hard-fail or blocking finding is fixed or deferred, and review MUST and SHOULD violations are fixed, deferred or waived.
+- §design-principles (`framework/constitution.md`) lists a waiver under *decide it is out of scope and record the decision with its reason*, no longer under *record it where the pipeline will surface it again* (AC2).
+- §spec-requirements (`framework/constitution.md`) cites the definition for a question deferred with its trigger (AC9).
+- §implement-phase (`framework/constitution.md`) says a SHOULD is addressed only when fixed, waived with its rationale, or deferred to another spec.
+- The *only a gating one holds `done`* bullet (`framework/constitution.md`) says an analyze hard-fail or blocking finding is fixed or deferred, and review MUST and SHOULD violations are fixed, deferred or waived.
 
 ### The runtime renames, reading the old names only from disk
 
-- `DispositionOutcome` and `DecisionOutcome` (`runtime/src/schema/primitives.rs:159`) become `Deferred` and `Waived`.
-- `Dispositions` (`runtime/src/schema/primitives.rs:141`) renames its fields to `deferred` and `waived`, with `#[serde(alias = "routed")]` and `#[serde(alias = "discarded")]`. Every field stays required, so a defaulted count still cannot read as decided.
-- `RawDecision::to_ref` (`runtime/src/primitives/decisions.rs:68`) accepts `routed` and `discarded` as the new outcomes.
-- `covering_key` (`runtime/src/primitives/check_artifact_size.rs:189`) accepts `waived` and `discarded`.
-- `render_dispositions` (`runtime/src/primitives/decisions.rs:203`) and `disposition_suffix` emit only the new names (AC14).
+- `DispositionOutcome` and `DecisionOutcome` (`runtime/src/schema/primitives.rs`) become `Deferred` and `Waived`.
+- `Dispositions` (`runtime/src/schema/primitives.rs`) renames its fields to `deferred` and `waived`, with `#[serde(alias = "routed")]` and `#[serde(alias = "discarded")]`. Every field stays required, so a defaulted count still cannot read as decided.
+- `RawDecision::to_ref` (`runtime/src/primitives/decisions.rs`) accepts `routed` and `discarded` as the new outcomes.
+- `covering_key` (`runtime/src/primitives/check_artifact_size.rs`) accepts `waived` and `discarded`.
+- `render_dispositions` (`runtime/src/primitives/decisions.rs`) and `disposition_suffix` emit only the new names (AC14).
 - Host inputs take no alias: command files and the runtime ship in lockstep, so an input alias would be code no caller reaches.
 
 ### A deferral's companion is a target, a work item, or both
 
-`require_companion` (`runtime/src/primitives/decisions.rs:105`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it flattens today, so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
+`require_companion` (`runtime/src/primitives/decisions.rs`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it flattens today, so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
 
 ### A review violation's deferral is a stored decision, not a new list
 
@@ -41,7 +41,7 @@ A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisio
 A deferral releases a gating finding as `framework/reference/review.md` §Deferrals states (data model, *Release and lapse*).
 
 - `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs`'s `waiver_reason` test, in the bucketing loop of `run` (now `sort_findings`; at `a76c99e8`)), and renders it under Deferred findings.
-- `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs:127`). The host-supplied gross counts still bound the itemized findings (`write_analysis.rs`'s `itemized[slot] > tier_count` check).
+- `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs`). The host-supplied gross counts still bound the itemized findings (`write_analysis.rs`'s `itemized[slot] > tier_count` check).
 - A non-releasing deferral of a gating finding stays counted, and its decision carries the derived `gating: true`.
 - `check-review-gate`'s outstanding-findings block (`runtime/src/primitives/check_review_gate.rs`'s `disposition_block`) names each such decision with its work reference (AC16). Its guidance (`disposition_block`'s "Fix each outstanding finding") names deferral as the fix-later exit.
 
@@ -51,7 +51,7 @@ A deferral releases a gating finding as `framework/reference/review.md` §Deferr
 
 An unreadable target is matched as stored, with a notice, so a check that could not run never looks like a lapse or a hold.
 
-`prune-tasks` has no renumbering step (`runtime/src/primitives/prune_tasks.rs`: no `renumber` hit), and `append-task` numbers past the highest present and past the `next-task:` counter `prune-tasks` writes when it removes a section (`AppendTaskResult.task_number`, `runtime/src/schema/primitives.rs:2753`; spec 041's data model, *The `next-task:` counter*). So a task number names one task for its life.
+`prune-tasks` has no renumbering step (`runtime/src/primitives/prune_tasks.rs`: no `renumber` hit), and `append-task` numbers past the highest present and past the `next-task:` counter `prune-tasks` writes when it removes a section (`AppendTaskResult.task_number`, `runtime/src/schema/primitives.rs`; spec 041's data model, *The `next-task:` counter*). So a task number names one task for its life.
 
 ### One disposition per finding goes through the existing drop lists
 

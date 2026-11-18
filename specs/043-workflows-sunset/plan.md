@@ -10,7 +10,7 @@ Delete the workflows feature in one coordinated pass: remove `framework/workflow
 
 ### Migration entry: one `workflows-sunset` entry, exact-set deletion
 
-`framework/migrations.toml` gains one entry with `introduced_in = "0.23.0"` (next minor over the current `runtime/Cargo.toml:3` `version = "0.22.0"`) and `sunset_after = "0.25.0"` (the uniform +2-minors window, 027's back-fill convention). Its procedure file `framework/migrations/workflows-sunset.md` follows the shape of the subsumed procedures (idempotency check → per-file pinned check → delete → summary line, as the archived `workflow-filename-rename` entry in `CHANGELOG.md` shows):
+`framework/migrations.toml` gains one entry with `introduced_in = "0.23.0"` (next minor over the current `runtime/Cargo.toml` `version = "0.22.0"`) and `sunset_after = "0.25.0"` (the uniform +2-minors window, 027's back-fill convention). Its procedure file `framework/migrations/workflows-sunset.md` follows the shape of the subsumed procedures (idempotency check → per-file pinned check → delete → summary line, as the archived `workflow-filename-rename` entry in `CHANGELOG.md` shows):
 
 1. Exact-set deletion in `{config_dir}/commands/{project}/workflows/` of the 22 known names — 13 current (`black.md`, `eslint.md`, `gofmt.md`, `golangci-lint.md`, `gotest.md`, `prettier.md`, `pytest.md`, `rails-migrate.md`, `rspec.md`, `rubocop.md`, `ruff.md`, `rufo.md`, `vitest.md`) + 9 legacy `{category}-{language}-{tool}.md` names (the set enumerated in `workflow-filename-rename`); remove the directory only when empty afterward.
 2. Recursive deletion of a remaining `{config_dir}/commands/{project}/skills/` directory (subsumed from `skills-to-workflows`, including its pinned-directory check).
@@ -43,8 +43,8 @@ Generic uses of the word ("tar -xzf workflow", "fits your workflow") stay.
 
 ### Constitution edits
 
-- Canonical-source map: drop the `Workflow registry | framework/workflows/registry.json` row (`framework/constitution.md:506`).
-- §runtime-boundary eligibility criterion 2(b) (`framework/constitution.md:471`): "implemented as a bash script invoked by `ductus` workflows" — the phrase reads as the feature post-removal; reword to "implemented as a bash script the framework invokes (pre-commit hooks, generators, CI)". Meaning unchanged; the criterion never depended on the workflows feature.
+- Canonical-source map: drop the `Workflow registry | framework/workflows/registry.json` row (`framework/constitution.md`).
+- §runtime-boundary eligibility criterion 2(b) (`framework/constitution.md`): "implemented as a bash script invoked by `ductus` workflows" — the phrase reads as the feature post-removal; reword to "implemented as a bash script the framework invokes (pre-commit hooks, generators, CI)". Meaning unchanged; the criterion never depended on the workflows feature.
 
 There is no root `constitution.md` to sync (verified absent; the AGENTS.md project-structure note claiming one is pre-existing drift, out of scope).
 
@@ -57,8 +57,8 @@ There is no root `constitution.md` to sync (verified absent; the AGENTS.md proje
 
 ### Runtime: comment-only code changes, version bump, no golden re-bless for the version
 
-- `runtime/src/schema/paths.rs:109`: drop `[workflows]` from the host-driven config-writes enumeration in the doc comment.
-- `runtime/src/primitives/enforce_manifest.rs:8`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md`, the `workflows` temp dir) are arbitrary test data with no feature coupling — left as-is, as is the `ductus-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
+- `runtime/src/schema/paths.rs`: drop `[workflows]` from the host-driven config-writes enumeration in the doc comment.
+- `runtime/src/primitives/enforce_manifest.rs`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md`, the `workflows` temp dir) are arbitrary test data with no feature coupling — left as-is, as is the `ductus-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
 - `runtime/Cargo.toml` `0.22.0` → `0.23.0` + a `runtime/CHANGELOG.md` 0.23.0 section. Parity goldens store the version as `{{runtime-version}}` — no re-bless for the bump (AGENTS.md rule; refresh `runtime/target/release/ductus` instead). If a parity golden embeds changed `groom.md` step text, that specific golden is re-blessed intentionally as a content change — never to absorb a version delta.
 
 ### Sibling done-spec annotations (mechanical-class, no back-edge)

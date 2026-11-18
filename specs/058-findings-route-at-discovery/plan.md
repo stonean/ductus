@@ -39,28 +39,28 @@ the count; it reads the gating counts the records already carry.
 fixed field set:
 
 - `render_report` writes the frontmatter at
-  `runtime/src/primitives/write_review.rs:477-523` and writes the file with
+  `runtime/src/primitives/write_review.rs` and writes the file with
   `write_atomic`.
 - `render_analysis` does the same at
-  `runtime/src/primitives/write_analysis.rs:195-225`.
+  `runtime/src/primitives/write_analysis.rs`.
 
-`framework/commands/review.md:482-483` already warns against inventing
+`framework/commands/review.md` already warns against inventing
 disposition fields for exactly this reason: `write-review` "would drop them on
 the next run". So `dispositions:` and `decisions:` join each writer's fixed set
 rather than riding along as unknown keys.
 
 **`dispositions:` is a typed field, and its absence has a meaning.** It is
-`Option<Dispositions>` on `ReviewBlock` (`runtime/src/schema/primitives.rs:35`)
+`Option<Dispositions>` on `ReviewBlock` (`runtime/src/schema/primitives.rs`)
 and `AnalyzeBlock`. `None` means the record predates 058.
 `Some(zeros)` means a run that found nothing. The two states must never
 collapse, the same rule `examined: Option<u32>` already follows
-(`primitives.rs:90-95`). Neither struct denies unknown fields, nor does any primitive's `Args` struct, and `runtime/src/mcp/server.rs` (the doc comment beginning "No primitive `Args` struct sets `#[serde(deny_unknown_fields)]`") explains why. So a
+(`primitives.rs`). Neither struct denies unknown fields, nor does any primitive's `Args` struct, and `runtime/src/mcp/server.rs` (the doc comment beginning "No primitive `Args` struct sets `#[serde(deny_unknown_fields)]`") explains why. So a
 record that still carries `captured-issues` parses unchanged. The full shapes
 are in [data-model.md](data-model.md).
 
 **`decisions:` is read the way waivers are read.** Waivers live outside
 `ReviewBlock` and are read by `read_recorded_waivers`
-(`runtime/src/primitives/mod.rs:614-635`). That reader is hard-wired to
+(`runtime/src/primitives/mod.rs`). That reader is hard-wired to
 `review.md`'s `waivers:` key. It generalizes to a file-and-key reader,
 `read_recorded_list`, so both records can read `decisions:`, and
 `read_recorded_waivers` becomes a thin wrapper over it. Open-schema extras on
@@ -110,13 +110,13 @@ not wait for it: `/{project}:review` calls `process-waivers` at step 8, before
   arguments* section of `specs/022-deterministic-runtime/plan.md` states.
 
 Both rules match `framework/reference/review.md` §Malformed and duplicate waivers
-(`framework/commands/review.md:703-722`).
+(`framework/commands/review.md`).
 
 The writers then take:
 
 - `expired-decisions`, applied the way `expired_waivers` is (the
-  `WriteReviewArgs` field at `primitives.rs:522-524`, pruned by
-  `surviving_waivers` at `write_review.rs:797-803`);
+  `WriteReviewArgs` field at `primitives.rs`, pruned by
+  `surviving_waivers` at `write_review.rs`);
 - `decided-by`, the author `--waive` already supplies for waivers
   (`git config user.email`).
 
@@ -138,9 +138,9 @@ replaces the stored entry.
 The key is `{family} — {message}` for analyze findings. The old capture key's
 leading `{category}` is host-assigned and exists only in prose
 (`framework/commands/analyze.md`, the "Capture the findings (host responsibility)" step, at `5a1d410b`); `ArtifactFinding` carries no category
-field (`primitives.rs:3664-3683`). For review observations the key is the
+field (`primitives.rs`). For review observations the key is the
 observation's rendered line, as `observation_line` builds it
-(`write_review.rs:361-369`). Because observation text is the reviewer's own
+(`write_review.rs`). Because observation text is the reviewer's own
 wording, the host matches a new observation against `process-decisions`'
 stored entries and passes the matched key back, rather than trusting the text
 to reproduce.
@@ -148,18 +148,18 @@ to reproduce.
 ### `write-review` stops capturing and starts recording dispositions
 
 - **Remove the write-through.** Delete `capture_observations`
-  (`write_review.rs:332-356`), its call before the report write,
+  (`write_review.rs`), its call before the report write,
   `inbox_bullet_text`, the `observations_captured` result field
-  (`primitives.rs:590`), and `inbox_standing` from the result (`primitives.rs:623`).
+  (`primitives.rs`), and `inbox_standing` from the result (`primitives.rs`).
 - **Remove the captured-issues window.** Delete `WriteReviewArgs.captured_issues`
-  (`primitives.rs:529`), the `captured-issues:` frontmatter line
-  (`write_review.rs:492`), and the `## Captured issues` section with
+  (`primitives.rs`), the `captured-issues:` frontmatter line
+  (`write_review.rs`), and the `## Captured issues` section with
   `render_captured`. `invalidate-review` nulls
   `dispositions:` with the run's other counts, and keeps nulling
   `captured-issues` for the pre-058 records that still carry it. Its
   keep-every-other-key rule already preserves `decisions:`.
 - **Observations carry their disposition.** `ReviewObservation`
-  (`primitives.rs:459-468`) gains:
+  (`primitives.rs`) gains:
   - `disposition`, a `Disposition`: an outcome (`DispositionOutcome`:
     `fixed`, `deferred`, `waived`, or `undispositioned`, defaulting to
     `undispositioned`), plus a deferral's work (`target`, `task`, `work-item`; 076) and a `reason` for a
@@ -188,7 +188,7 @@ exists: see the 057 data model,
 [057 — analyze artifact and record relocation](../057-analyze-artifact-and-record-relocation/spec.md).
 With capture gone, the writer has to be given the findings.
 
-- `WriteAnalysisArgs.captured_issues` (`primitives.rs:720`) is replaced by
+- `WriteAnalysisArgs.captured_issues` (`primitives.rs`) is replaced by
   `findings`, a list of `AnalysisFinding`. Each entry carries `tier` (an
   `AnalysisTier`), `family`, `message`, `path`, `live`, and a `Disposition`
   shaped as above. The list covers both passes: findings fixed in the run
@@ -212,7 +212,7 @@ With capture gone, the writer has to be given the findings.
 - **AC30 is enforced in the writer.** A `waived` outcome on a `hard-fail` or
   `blocking` finding is a validation error, raised before any write.
 - **The body skeleton:**
-  - `## Captured issues` (`write_analysis.rs:253-257`) becomes
+  - `## Captured issues` (`write_analysis.rs`) becomes
     `## Fixed in this run`;
   - each tier section lists its live findings with their dispositions;
   - a tier count above its itemized findings renders a
@@ -226,23 +226,23 @@ With capture gone, the writer has to be given the findings.
 ### The inbox windows and the standing row leave the review and implement primitives
 
 - **`compute-review-scope`:** drop `captured_issues` from
-  `ComputeReviewScopeResult` (`primitives.rs:402`), along with `diff_since`,
+  `ComputeReviewScopeResult` (`primitives.rs`), along with `diff_since`,
   `inbox_in_worktree`, and `inbox_at`
-  (`runtime/src/primitives/compute_review_scope.rs:80-85`).
+  (`runtime/src/primitives/compute_review_scope.rs`).
 - **`diff-cross-spec`:** drop `inbox_additions` and `inbox_standing`
-  (`runtime/src/primitives/diff_cross_spec.rs:66`; `primitives.rs:3500`). **Keep** the
+  (`runtime/src/primitives/diff_cross_spec.rs`; `primitives.rs`). **Keep** the
   exclusion of `inbox.md` from `cross_spec_paths` (`diff_cross_spec.rs`'s `s != inbox_rel` filter):
   editing a manual todo is not a cross-spec impact.
-- **`inbox_standing::standing`** (`runtime/src/primitives/inbox_standing.rs:37`)
+- **`inbox_standing::standing`** (`runtime/src/primitives/inbox_standing.rs`)
   survives, with `dashboard` as its only caller.
 
 Rationale: with no pass able to append to the inbox, these windows have nothing left to compute, and the standing count is a project-wide count of logged todos, so it belongs in `/{project}:status` rather than in one spec's review or implement output (the spec's Resolved Question *Where does the standing inbox count go?*; AC10).
 
 ### `/{project}:status` renders the standing row, and the runtime now renders its strings
 
-`DashboardResult` (`primitives.rs:1604-1624`) gains `inbox-standing`.
+`DashboardResult` (`primitives.rs`) gains `inbox-standing`.
 The view gains an `Inbox:` line, rendered at this spec by `render_callouts`
-(`runtime/src/primitives/dashboard.rs:191-309`) and since spec 080 by the
+(`runtime/src/primitives/dashboard.rs`) and since spec 080 by the
 pipeline view's `inbox_line`. Today the four state strings exist only in command prose
 (`framework/commands/implement.md`'s "The standing backlog" paragraph and `framework/commands/review.md`'s "The `inbox` row" section, both at `5a1d410b`),
 and `dashboard` never reads the inbox (`review.md`'s "does not read the inbox", at `5a1d410b`). Rendering them in
@@ -250,7 +250,7 @@ and `dashboard` never reads the inbox (`review.md`'s "does not read the inbox", 
 strict-stdout parity golden. The row is rendered on every run: outstanding with
 the oldest item's date, outstanding with age undeterminable, clean, or no file.
 The `InboxStanding.state` doc still says "three states"
-(`primitives.rs:3554`); it is corrected in passing.
+(`primitives.rs`); it is corrected in passing.
 
 ### The gate gains two blocks per record, predates before count
 
@@ -266,7 +266,7 @@ The second reads the gating counts since scenario
 A missing map comes first, because a count from a record that predates the
 field means nothing.
 
-Two new `ReviewGateBlock` variants (the enum is at `primitives.rs:3129`):
+Two new `ReviewGateBlock` variants (the enum is at `primitives.rs`):
 
 - **`record-predates-dispositions`** names the record and the command to re-run.
 - **`undispositioned-findings`** names the count per record and the command to
@@ -276,7 +276,7 @@ Blocking on a missing field departs from the existing precedent, where a record
 that predates a field is `Undeterminable` and rides a notice on a passing gate
 (`check_review_gate.rs`, the comment beginning "The gate passes. Before saying so"; `primitives.rs`, the doc comment on `ReviewBlock.reviewed_digest`). The departure is the
 decision Resolved Question 5 made. It matches the gate's own refusal of a
-grandfather clause for the analyze record (`check_review_gate.rs:269-274`).
+grandfather clause for the analyze record (`check_review_gate.rs`).
 
 Two stale doc comments are corrected while the gate is being edited: `run`'s
 "all six block reasons" and the module doc. The gate order
@@ -324,7 +324,7 @@ A disposition task has no scenario to point at, so a re-run of an interrupted
 "Re-capture is idempotent" rule the constitution stated until `1f045b12` (058
 task 12) removed it, a guarantee this spec carries forward rather than drops.
 
-`AppendTaskArgs` (`primitives.rs:2364-2415`) gains `dedup-title: bool`, default
+`AppendTaskArgs` (`primitives.rs`) gains `dedup-title: bool`, default
 `false`. When set, an existing **pending** section with an identical title
 and identical checkbox items returns its number with `appended: false`. A spent section with the same title
 does not match, because the same finding surfacing again after being
@@ -355,7 +355,7 @@ tallies, record everything undispositioned (AC26).
 keys are per-finding.
 
 Routing reuses the existing `routeInboxItem` extension point
-(`runtime/src/schema/extensions.rs:314-379`), with the finding's text as
+(`runtime/src/schema/extensions.rs`), with the finding's text as
 `item_text`. The five-route vocabulary is unchanged. Only the docs on
 `InboxRoute::Chore` ("stays in the inbox") and `InboxRoute::Discard`
 are rewritten, to describe the chore being fixed and the item being
@@ -396,7 +396,7 @@ removed.
 
 ### The constitution states the rule once, and every command points at it
 
-- **§design-principles** (`framework/constitution.md:52`) drops "an inbox item"
+- **§design-principles** (`framework/constitution.md`) drops "an inbox item"
   from the second disposition.
 - **§grounding** routes an implementation-time assumption to a task or
   an open question.
@@ -582,7 +582,7 @@ See [data-model.md](data-model.md).
   silent waiver, because an unmatched stored decision is pruned rather than
   applied to something else.
 - **Rejected: keeping `captured-issues` as a deprecated alias.** Nothing reads
-  it. `AnalyzeBlock` never even had the field (`primitives.rs:136-239`), and
+  it. `AnalyzeBlock` never even had the field (`primitives.rs`), and
   an alias would keep a measurement of the wrong thing alive.
 - **Rejected: a rewrite migration for existing records.** Records parse
   unchanged. Rewriting them would fabricate a `dispositions:` map for runs that

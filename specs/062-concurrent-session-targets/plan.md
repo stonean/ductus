@@ -23,7 +23,7 @@ Before this spec every targeted command resolved its target with a host read of
 the session file. `amend`, `analyze`, `clarify`, `fold`, `implement`, `plan`,
 `prune`, `review` and `target` all instructed "Read `.ductus/session.toml`" or
 "use the session target from `.ductus/session.toml`" (for example
-`framework/commands/clarify.md:22`, `framework/commands/implement.md:98`,
+`framework/commands/clarify.md`, `framework/commands/implement.md`,
 `framework/commands/target.md`'s no-argument step). Only writes went through a primitive
 (`write-session`). A host read cannot be made per-process: the identity is an
 environment variable, and the host could read it only by the model running a
@@ -74,7 +74,7 @@ error:
 
 1. `DUCTUS_SESSION`, trimmed. Empty means unset (AC14). Otherwise the value is
    sanitized with the slug rule `create-feature` applies to titles and branch
-   identifiers (`derive_slug`, `runtime/src/primitives/create_feature.rs:248`).
+   identifiers (`derive_slug`, `runtime/src/primitives/create_feature.rs`).
    That function is promoted to `pub(crate)` in `runtime/src/primitives/mod.rs`
    so both callers share one rule, rather than a second copy drifting from it.
    A value that sanitizes to nothing is an `InvalidArgument` naming
@@ -100,8 +100,8 @@ platform one.
 
 - **Shared default:** `.ductus/session.toml`, unchanged. It keeps the same
   keys, the same `SessionRecord` field order
-  (`runtime/src/primitives/write_session.rs:219-235`) and the same
-  `SESSION_CHAIN` (`runtime/src/schema/paths.rs:76`), so AC3 and 022's
+  (`runtime/src/primitives/write_session.rs`) and the same
+  `SESSION_CHAIN` (`runtime/src/schema/paths.rs`), so AC3 and 022's
   per-project resolution table both stay true.
 - **Per-process targets:** `.ductus/sessions/{key}.toml`, one file per
   identity. The schema is in [data-model.md](data-model.md).
@@ -154,7 +154,7 @@ a throttling hint). A failed `try_lock` changes nothing, which is the
 idempotency basis. The MCP handlers of the three session tools run
 on the blocking pool, so a wait never holds an async worker. Writes inside the
 lock still use the existing tempfile + rename helper (`write_atomic`,
-`runtime/src/primitives/mod.rs:988`), so a reader outside the lock never sees a
+`runtime/src/primitives/mod.rs`), so a reader outside the lock never sees a
 torn file.
 
 On the `.ductus/` layout a write or retarget takes the lock on every call,
@@ -244,8 +244,8 @@ them in place: a file that cannot be read cannot be proven idle.
 ### `retarget-sessions`: removal without stranding
 
 A new primitive replaces fold's `write-session` re-target
-(`framework/commands/fold.md:75`, step 13) and consolidate's host-conditional
-clear (`framework/commands/consolidate.md:77`, step 6). Consolidate's clear
+(`framework/commands/fold.md`, step 13) and consolidate's host-conditional
+clear (`framework/commands/consolidate.md`, step 6). Consolidate's clear
 step read the session file by hand to decide whether to act.
 
 - **Arguments:** `from` (the removed feature), then either a new target
@@ -302,7 +302,7 @@ the sweep leaves a session file it cannot parse.
 `/.ductus/sessions/` is added to the framework-managed block in
 `framework/templates/project/gitignore` (beside `/.ductus/session.toml` entry) and to this repository's `.gitignore` (beside its same entry), satisfying AC7.
 `/ductus` installs that block with `merge-managed-block`
-(`framework/bootstrap/ductus.md:36`), so adopters receive it on their next
+(`framework/bootstrap/ductus.md`), so adopters receive it on their next
 run with no migration.
 
 The core also writes `.ductus/sessions/.gitignore` containing `*` whenever it
@@ -333,7 +333,7 @@ primitive addition touched (commit `a0185c22`).
 
 ### Constitution and the 010 signpost
 
-§concurrent-features (`framework/constitution.md:762-773`) is rewritten to
+§concurrent-features (`framework/constitution.md`) is rewritten to
 cover:
 
 - per-process targets, identity resolution, and the shared default with pin

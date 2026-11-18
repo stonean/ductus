@@ -17,7 +17,7 @@ Exactly six entries, framework-fixed, with no per-project configuration surface 
 | 5 | `does not exist` | implementation-state |
 | 6 | `left unimplemented` | implementation-state |
 
-Entry 5 was classed as an *existence* tell — contradicted by a target file that is present — until the full-repo run of 2026-08-02 showed that test can only ever fire and never filter: a link that resolves always points at a present file, so the check cannot fail. Its single finding across 47 specs was a false positive (`017/detect-dependency-cycles.md:28`, whose prose says an *override mechanism* "does not exist today" while linking to a scenario that does). Judging it against the target's lifecycle status is the reading in this spec's `## Behavior` section, and the one that can be wrong.
+Entry 5 was classed as an *existence* tell — contradicted by a target file that is present — until the full-repo run of 2026-08-02 showed that test can only ever fire and never filter: a link that resolves always points at a present file, so the check cannot fail. Its single finding across 47 specs was a false positive (`017/detect-dependency-cycles.md`, whose prose says an *override mechanism* "does not exist today" while linking to a scenario that does). Judging it against the target's lifecycle status is the reading in this spec's `## Behavior` section, and the one that can be wrong.
 
 Matching is case-insensitive on ASCII and substring-based within the block's text, at byte offsets outside every inline code span.
 
@@ -46,7 +46,7 @@ File existence still governs whether a target is examinable at all: a target tha
 
 ## Finding shape
 
-Reuses the existing `ArtifactFinding` (`runtime/src/schema/primitives.rs:3430`) with no structural change:
+Reuses the existing `ArtifactFinding` (`runtime/src/schema/primitives.rs`) with no structural change:
 
 | Field | `link-adjacent-drift` | `criterion-path-existence` |
 | --- | --- | --- |
