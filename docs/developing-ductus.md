@@ -79,13 +79,26 @@ So size a part by bytes read, not by entry count. Name the contract each part re
 
 `/{project}:analyze`'s rule judges read the design subjects whole beside their rule part, so size a cell by bytes read too. Measured on 022's analysis of 2026-11-17: 310 rules in 368 KB of rule text, a spec, plan and data model of 208 KB, and 78 scenarios of 397 KB. Nine cells, three rule parts by three scenario groups balanced by bytes, each about 450 to 480 KB, all finished with whole reads, at 264K to 306K tokens.
 
-- **Merge each rule's three answers.**
+Run an analysis here with `scripts/analyze/` (spec 060), from the repository root with `python3 -I`, each script taking the feature. Where a script falls short, fix it; never rebuild it in a temp directory. Each one's docstring holds its options and exit statuses.
+
+1. `detect.py` runs the deterministic steps and prints what each found.
+2. `split.py` writes the cells manifest: shares sized as above, and scenario groups only when a cell would overflow.
+3. `briefs.py` writes every brief and prints each subagent's prompt.
+4. Start step 15's reader, then the judges.
+5. `check.py` checks each hand-back. Ask a failing judge to finish with `SendMessage`, then run it again.
+6. `combine.py` merges the cells.
+7. Write the plan file `record.py` takes. Run it once as a dry run, then with `--write`.
+
+Steps 6 and 7 apply these rules:
+
+- **Merge each rule's answers across its cells.**
   - All not fired is not fired.
   - Addressed, with no finding, is addressed, citing the core subject.
-  - Any finding goes to one fresh reader, with the rule, the three answers and the cited sections.
+  - Every cell a finding is a finding.
+  - A finding beside a cell that found none is unsettled. Settle it with one fresh reader, given the rule, the answers and the cited sections, and enter the outcome in the plan file's `settled` map.
+- **Read each finding against its rule before recording it.** `settled` also overrides a verdict the host finds wrong.
 - **Run the deterministic steps and step 15's reader before the judges.** A fix either one prompts edits a design subject.
-- **Re-judge a design-subject edit made after the judges read by sending each judge the diff** (`SendMessage`, which keeps its context), with the changed lines to read whole, not with a fresh run. 022's re-checks took about ten seconds a cell.
-- **Name in the brief each subject line over 2,000 characters**, read with `sed -n '<n>p' <file> | fold -w 1000`, since the Read tool may cut one.
+- **Re-judge a design-subject edit made after the judges read by sending each judge the diff** (`SendMessage`, which keeps its context), with the changed lines to read whole, not with a fresh run. Re-run `split.py` and `briefs.py` first, which `check.py` requires, and give each judge its new output path. 022's re-checks took about ten seconds a cell.
 
 ## Running a second session
 

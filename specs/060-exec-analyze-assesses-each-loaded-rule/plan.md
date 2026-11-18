@@ -122,6 +122,27 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 
 022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as the review reference's (`framework/reference/review.md`) §Window and coverage requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
 
+### This repository's host runs its rule judging from `scripts/analyze/`
+
+The scenario `rule-judging-runs-from-repo-scripts` puts the host's orchestration around AC10's subagents in `scripts/analyze/`. Rebuilt in a temp directory, it was lost with the session and refined by nobody (owner, 2026-11-18). There is one script for each step. A cells manifest, `manifest.json`, is written by the split and read by every later step, so no share, group, feature or address is fixed in code:
+
+- `detect.py` runs the deterministic steps.
+- `split.py` cuts `verdicts.judge` into shares and the scenarios into groups.
+- `briefs.py` renders `judge-brief.md` and `step15-brief.md`.
+- `check.py` checks each hand-back.
+- `combine.py` merges the cells.
+- `record.py` calls `process-decisions` and `write-analysis`.
+
+They stay in this repository, since the Shared Files manifest in `framework/bootstrap/ductus.md` names no `scripts/` path. An adopter's host follows `framework/reference/analyze.md` §Rule judging in a subagent itself.
+
+- **Staging in the system temp directory.** The scripts stage under `$TMPDIR/ductus-analyze/<feature>`, or `ANALYZE_WORK`, because the CLI reads a `--*-json` file only from there. They write no repository file. `analysis.md` is written by `write-analysis` alone.
+- **Shares keep each rule file whole and balance by rendered bytes.** A cell is one share beside the spec, plan, data model and a scenario group. Scenarios are grouped only when one cell would pass `--cell-bytes`. Both defaults come from `docs/developing-ductus.md` §Sizing an analysis's judges: 135,000 bytes a share, and 480,000 a cell, the size at which 022's nine cells all finished whole reads.
+- **The briefs point at the canonical text.** A judge reads steps 11, 12 or 15 and the reference sections they name, so a template restates none of them. It carries only the run's facts and the JSON `check.py` reads back.
+- **A cite is checked with `read-section`.** Its exact-text heading match uses the same `heading_lines` parse that `write-analysis`'s `cite_resolves` does, so a cite `check.py` passes is one the record keeps.
+- **A disagreement goes to the host, never to a default.** Cells agreeing on a finding give a finding. A finding beside a cell that read other scenarios and found none is unsettled, since that cell may have read what addresses it. `record.py` refuses any rule its plan file does not settle. Replaying the 2026-11-18 hand-backs gave the 12 three-cell runs unchanged. In 022's two runs it left unsettled exactly the rules the host had settled by hand.
+- **A failure is never an exit 0.** Each script exits 1 when a check fails and 2 when an input cannot be read. `decided-by` is `git config user.email`, and an empty one refuses.
+- **The test stubs the runtime.** `scripts/tests/test-analyze-scripts.py` runs each script in a fixture repository against a stub runtime, so it needs no release build. `framework-checks.yml` step (ab) runs it. Each case was seen failing against a mutant of the code it names.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -143,6 +164,11 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 | `specs/022-deterministic-runtime/data-model.md` | Modify | Reason table and prose; `assessSpecQuality` exec note and `loaded-rule-files` |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Status flips; block-quoted signpost linking 060 |
 | `version`, `runtime/Cargo.toml`, `runtime/Cargo.lock`, `runtime/CHANGELOG.md` | Modify | Release `0.54.2` |
+| `scripts/analyze/*.py`, `scripts/analyze/*.md` | Create | The host's rule-judging orchestration and its two brief templates |
+| `scripts/tests/test-analyze-scripts.py` | Create | Each script against a stub runtime |
+| `.github/workflows/framework-checks.yml` | Modify | Step (ab) runs the test |
+| `docs/developing-ductus.md` | Modify | §Sizing an analysis's judges names the scripts and the disagreement rule |
+| `AGENTS.md` | Modify | Points every session at `scripts/analyze/` |
 
 ## Trade-offs
 
