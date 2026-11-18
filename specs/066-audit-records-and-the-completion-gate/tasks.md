@@ -1,5 +1,5 @@
 ---
-next-task: 27
+next-task: 28
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -40,3 +40,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Each new behavior has a test its mutant turns red, listed in `scripts/mutation/line-citation-strip-066.py`
 
 - **Done when**: A partial strip reads mechanical to classify-spec-edit and current to the analysis freshness, an unknown reason is refused, each proven by a test its mutant turns red; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 27. Criteria are verified in review, and the completion gate makes no semantic judgment (scenario criteria-are-verified-in-review)
+
+- [ ] Implement the behavior described in `scenarios/criteria-are-verified-in-review.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
