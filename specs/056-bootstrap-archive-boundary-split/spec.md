@@ -67,7 +67,7 @@ Measured 2026-09-15 over `framework/bootstrap/ductus.md` at 146,953 bytes / 1186
 | `§Re-Run Behavior` | 682 | `§Directory Creation` | 881 |
 | **Total** | **108,337** (73.7%) | **Total** | **38,616** (26.3%) |
 
-So what an adopter curls, installs, loads into context, and byte-compares drops by **26.3% — 38,616 bytes per invocation**.
+So what an adopter curls, installs, loads into context, and byte-compares was predicted to drop by **26.3% — 38,616 bytes per invocation**. The split itself measured 36,536 bytes (24.9%), the difference being prose added back (0e3a9c56; AC11).
 
 Exactly **two** executable forward-dependencies cross the original boundary, both on the pre-flight stale-write path, and both resolve inside the installed half under this assignment. Every other forward reference is **narrative** — an ordering note, a deferred-output pointer, a "described in `§X`" — measured at 38 occurrences across 13 distinct targets, of which `§Closing restart` alone accounts for 11. None is a step the installed half executes.
 

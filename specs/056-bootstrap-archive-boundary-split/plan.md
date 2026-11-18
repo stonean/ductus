@@ -42,11 +42,11 @@ The address is `{tempdir}/ductus-main/framework/bootstrap/ductus-procedure.md` (
 
 Allowlisting is correct rather than expedient. `ductus exec ductus` walks `§Instructions`, which stays installed; nothing dispatches from the archive half, so it genuinely is prose. Manufacturing an `## Instructions` section to score exit 0 would also oblige `check_step_references.rs`'s `BOOTSTRAP_FILES` to gain the file — turning a `framework/` change into a `runtime/` one with a version bump and a `ductus-v` tag.
 
-`runtime/legacy-prose-commands.txt` is listed under `exclude` in `runtime/Cargo.toml` and is referenced from no `runtime/src/**` file and no `build.rs`, so it is neither compiled into the binary nor published in the crate. Editing it changes nothing an adopter receives — hence no version bump. It **is** in `framework-checks.yml`'s path filter and under `runtime/**` for `runtime.yml`, so the commit runs the full cargo suite in the pre-commit hook and both workflows in CI.
+`runtime/legacy-prose-commands.txt` is listed under `exclude` in `runtime/Cargo.toml` and is referenced from no `runtime/src/**` file and no `build.rs`, so it is neither compiled into the binary nor published in the crate. Editing it changes nothing an adopter receives — hence no version bump. It **is** under `runtime/**` for `runtime.yml`, and `framework-checks.yml` runs on every push and pull request (it has had no path filter since 44c0babe), so the commit runs the full cargo suite in the pre-commit hook and both workflows in CI.
 
 ### The allowlist header is corrected in the same change
 
-That file's header asserts *"Each non-blank, non-comment line is a repo-relative path to a `framework/commands/*.md` file"*. Adding a `framework/bootstrap/` entry falsifies it. Correcting the header is part of the same edit rather than a follow-up: a shipped claim that goes false in the commit that falsifies it is the stale-prose failure `AGENTS.md` §Workflow records, and leaving it would be committing that defect knowingly.
+That file's header asserted *"Each non-blank, non-comment line is a repo-relative path to a `framework/commands/*.md` file"*, and adding a `framework/bootstrap/` entry falsified it; it has named both directories since. Correcting the header is part of the same edit rather than a follow-up: a shipped claim that goes false in the commit that falsifies it is the stale-prose failure `AGENTS.md` §Workflow records, and leaving it would be committing that defect knowingly.
 
 ### `govern.md` is re-copied, and gains no counterpart
 
@@ -80,6 +80,6 @@ Not changed, and each checked rather than assumed: every `scripts/audit/*.sh`, e
 
 **Considered and rejected — split `§Edge Cases` across both halves.** Its entries describe both halves, so splitting it is the only way to put each entry beside its subject. Rejected: nothing dispatches from it, it is a reader's index, and two partial copies of one list is the drift shape this framework exists to prevent. It moves whole.
 
-**Known limitation — the cut is 26.3%, not the ~40% this was scoped at.** `§Project Configuration` (12,627 B) and `§File Fetching` (5,165 B) both turn out to be pre-extraction reads. The saving is real — 38,616 bytes off every curl, install, context load and byte-compare — but smaller than the backlog item estimated, and the spec records why.
+**Known limitation — the cut is about a quarter, not the ~40% this was scoped at.** `§Project Configuration` (12,627 B) and `§File Fetching` (5,165 B) both turn out to be pre-extraction reads. The saving is real but smaller than the backlog item estimated, and the spec records why: the section walk predicted 38,616 bytes (26.3%) off every curl, install, context load and byte-compare, and the split measured 36,536 (24.9%) at `ca85c8b8` (AC11).
 
 **Known limitation — nothing detects a future section landing on the wrong side.** The boundary is prose discipline: no check asserts that a section in the installed half reads nothing from the extracted tree, or that one in the archive half is never needed before extraction. A new section can be added to either file and nothing will object. Stating it rather than implying a mechanism that does not exist, per [§design-principles](../../framework/constitution.md#design-principles).
