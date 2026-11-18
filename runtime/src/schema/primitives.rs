@@ -907,8 +907,9 @@ pub struct ProcessWaiversArgs {
     #[arg(skip)]
     pub fired: Vec<FiredFinding>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `fired` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `fired` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub fired_json: Option<String>,
@@ -1012,8 +1013,9 @@ pub struct ProcessDecisionsArgs {
     #[arg(skip)]
     pub fired: Vec<String>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `fired` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `fired` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub fired_json: Option<String>,
@@ -1670,8 +1672,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub findings: Vec<ReviewFinding>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `findings` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `findings` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub findings_json: Option<String>,
@@ -1684,8 +1687,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub applied_waivers: Vec<WaiverRef>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `applied-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `applied-waivers` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub applied_waivers_json: Option<String>,
@@ -1697,8 +1701,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub expired_waivers: Vec<WaiverRef>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `expired-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `expired-waivers` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub expired_waivers_json: Option<String>,
@@ -1710,8 +1715,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub new_waivers: Vec<NewWaiver>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `new-waivers` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `new-waivers` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub new_waivers_json: Option<String>,
@@ -1724,8 +1730,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub observations: Vec<ReviewObservation>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `observations` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `observations` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub observations_json: Option<String>,
@@ -1736,8 +1743,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `expired-decisions` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `expired-decisions` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub expired_decisions_json: Option<String>,
@@ -1750,8 +1758,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub decided_by: Option<String>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `decided-by` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `decided-by` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub decided_by_json: Option<String>,
@@ -1791,8 +1800,8 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub unread: Option<Vec<String>>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `unread` argument as the MCP tool takes it (spec 022). `#[serde(skip)]`
-    /// keeps it out of the MCP schema, as `expired-decisions-json` is.
+    /// `unread` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as `expired-decisions-json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub unread_json: Option<String>,
@@ -1806,8 +1815,9 @@ pub struct WriteReviewArgs {
     #[arg(skip)]
     pub fix_rounds: Option<Vec<FixRound>>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `fix-rounds` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `fix-rounds` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub fix_rounds_json: Option<String>,
@@ -2033,8 +2043,9 @@ pub struct WriteAnalysisArgs {
     #[arg(skip)]
     pub findings: Vec<AnalysisFinding>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `findings` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `findings` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub findings_json: Option<String>,
@@ -2044,8 +2055,9 @@ pub struct WriteAnalysisArgs {
     #[arg(skip)]
     pub expired_decisions: Vec<DecisionRef>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `expired-decisions` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `expired-decisions` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub expired_decisions_json: Option<String>,
@@ -2056,8 +2068,9 @@ pub struct WriteAnalysisArgs {
     #[arg(skip)]
     pub decided_by: Option<String>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `decided-by` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `decided-by` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub decided_by_json: Option<String>,
@@ -2074,8 +2087,8 @@ pub struct WriteAnalysisArgs {
     pub rule_verdicts: BTreeMap<String, RuleVerdict>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
     /// `rule-verdicts` argument as the MCP tool takes it (spec 022).
-    /// `#[serde(skip)]` keeps it out of the MCP schema, as
-    /// [`ApplyManifestArgs::entries_json`] is.
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub rule_verdicts_json: Option<String>,
@@ -2692,7 +2705,7 @@ pub struct DeriveDependenciesResult {
 #[serde(rename_all = "kebab-case")]
 pub struct DeriveReferencesArgs {
     /// Perform the rewrite. Off by default, for the reason recorded on
-    /// [`DeriveDependenciesArgs::write`].
+    /// `derive-dependencies`' `write`.
     #[serde(default)]
     #[arg(long)]
     pub write: bool,
@@ -2700,8 +2713,8 @@ pub struct DeriveReferencesArgs {
     /// instead of every tracked spec. The enumeration still spans every
     /// tracked spec: a reference derives from the body **and** the
     /// `[services]` registry, so a service rename drifts specs nobody
-    /// touched, and an untouched spec is never staged. Those land in
-    /// [`DeriveReferencesResult::unwritten`]. For pre-commit use, so
+    /// touched, and an untouched spec is never staged. Those land in the
+    /// result's `unwritten`. For pre-commit use, so
     /// committing one spec never rewrites another.
     #[serde(default)]
     #[arg(long)]
@@ -4017,8 +4030,8 @@ pub struct ApplyManifestArgs {
     pub substitutions: std::collections::BTreeMap<String, String>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
     /// `entries` array.
-    /// `#[serde(skip)]` keeps it out of the MCP schema, so the tool contract
-    /// is unchanged and an MCP caller passing it is still rejected as unknown.
+    // `#[serde(skip)]` keeps it out of the MCP schema, so the tool contract
+    // is unchanged and an MCP caller passing it is still rejected as unknown.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub entries_json: Option<String>,
@@ -4136,8 +4149,8 @@ pub struct EnforceManifestArgs {
     #[arg(skip)]
     pub pinned: Vec<String>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `expected` array. See
-    /// [`ApplyManifestArgs::entries_json`] for why this surface exists.
+    /// `expected` array.
+    // See `ApplyManifestArgs::entries_json` for why this surface exists.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub expected_json: Option<String>,
@@ -4281,7 +4294,7 @@ pub struct MergePermissionsArgs {
     /// itself once shipped and has since retired.
     ///
     /// An entry appearing in both `allow` and `revoke` is rejected
-    /// ([`crate::primitives::PrimitiveError::ConflictingRevoke`]) rather
+    /// (the `ConflictingRevoke` error) rather
     /// than resolved by pass order: the canonical-presence pass would
     /// re-add whatever the revoke pass removed, so the merge would never
     /// reach a fixed point and `unchanged` would never be emitted.
@@ -5134,8 +5147,9 @@ pub struct PruneProjectArgs {
     #[arg(skip)]
     pub replace: Vec<EntryReplacement>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
-    /// `replace` argument as the MCP tool takes it (spec 022). `#[serde(skip)]` keeps it
-    /// out of the MCP schema, as [`ApplyManifestArgs::entries_json`] is.
+    /// `replace` argument as the MCP tool takes it (spec 022).
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `ApplyManifestArgs::entries_json` is.
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub replace_json: Option<String>,
@@ -8289,7 +8303,7 @@ pub struct RetireFeatureArgs {
     /// `1234.1-widget-cache`.
     ///
     /// Must parse as the branch-scoped form. A sequential `NNN-slug`
-    /// feature is refused **unless** [`Self::allow_sequential`] is set: the
+    /// feature is refused **unless** `allow-sequential` is set: the
     /// sequential form is permanent, and a primitive that could delete one
     /// would make an irreversible operation reachable from a typo.
     #[arg(long)]
