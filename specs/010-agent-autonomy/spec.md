@@ -91,7 +91,7 @@ Track token usage and enforce budget limits. When evaluated, `ductus` had no cos
 
 **Verdict: decline budget tooling, adopt a documentation cross-reference.** Per-task token tracking and budget ceilings require instrumenting the model call itself — that part is platform-level by definition, and out of reach of `ductus`'s runtime, which §runtime-boundary's principle 2 forbids from calling an LLM, so it can never observe token usage. But several decisions in this spec are themselves cost-aware patterns, so the remaining work was to name them and point at platform tooling for the runtime piece.
 
-The constitution's "Cost-conscious" principle (§principles → Business) had no operational guidance, so this spec added `### Cost levers` beside it (§cost-levers), naming `ductus`'s cost levers:
+The constitution's "Cost-conscious" principle, in the Business list `050-constitution` later removed, had no operational guidance, so this spec added `### Cost levers` beside it (§cost-levers), naming `ductus`'s cost levers:
 
 - Lightweight track — skip the plan phase for small features — **removed by `023-govern-refinement`**
 - `[simple]` tier marker on tasks (Q2 above) — route trivial work to cheaper models — **removed by `017-derive-dont-ask`**

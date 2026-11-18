@@ -6,7 +6,7 @@ title: "008-security-rules — plan"
 
 ## Overview
 
-Operationalize the constitution's "Secure" principle by shipping two rule files (`security-backend.md`, `security-frontend.md`), wiring them into ductus's distribution manifest, extending `/{project}:analyze` to enforce them, and updating the constitution to point at them. The work is entirely prompt-and-data — markdown rule files, an extended validate prompt, and a constitution edit. No application code.
+Operationalize security, which the constitution listed as its "Secure" principle until `050-constitution` removed the list, by shipping two rule files (`security-backend.md`, `security-frontend.md`), wiring them into ductus's distribution manifest, extending `/{project}:analyze` to enforce them, and pointing the constitution at them. The work is entirely prompt-and-data — markdown rule files, an extended validate prompt, and a constitution edit. No application code.
 
 ## Technical Decisions
 
@@ -123,15 +123,7 @@ Trade-off: ductus gains complexity from this audit step, but the alternative (ad
 
 ### Constitution gets a one-line append
 
-`framework/constitution.md` "Secure" principle currently reads:
-
-> **Secure:** protect sensitive data through industry standards and best practices
-
-Becomes:
-
-> **Secure:** protect sensitive data through industry standards and best practices. See the `specs/rules/security-*.md` files for enforceable rules.
-
-Minimal — does not duplicate rule content into the constitution; the rule files are the operational detail.
+`framework/constitution.md`'s "Secure" principle gained one sentence, "See the `specs/rules/security-*.md` files for enforceable rules.", which `050-constitution` removed with the Technology list; §rules, which keeps each rule in `specs/rules/{rule-set}.md`, is the constitution's pointer to the rule files. Minimal — no rule content is duplicated into the constitution; the rule files are the operational detail.
 
 ### Data model formalizes rule entry schema
 
@@ -145,7 +137,7 @@ Like the workflow registry spec 005 introduced (since retired by `043-workflows-
 | `framework/rules/security-frontend.md` | Create | Starter set of frontend security rules |
 | `framework/bootstrap/ductus.md` | Modify | Add 2 rows to the **`ductus`-owned shared files (strategy: update)** manifest table mapping `framework/rules/security-{backend,frontend}.md` → `specs/rules/security-{backend,frontend}.md`. Add a new **Security audit (brownfield)** section after **Shared Files** and before **Per-Agent Scaffolding**, plus an audit-summary line in **Post-Scaffolding Output**. |
 | `framework/commands/analyze.md` | Modify | Add **Security rules** check section codifying the 7 edge cases and the contextual matching rule |
-| `framework/constitution.md` | Modify | Append the rule-files reference to the "Secure" principle |
+| `framework/constitution.md` | Modify | Append the rule-files reference to the "Secure" principle, which `050-constitution` later removed |
 | `specs/008-security-rules/data-model.md` | Create | Schema for rule entries (fields, ID format, category enum, Verification phrasing convention) |
 
 ## Trade-offs

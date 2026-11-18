@@ -17,7 +17,7 @@ Comprehensive, enforceable security rules for backend and frontend development. 
 
 ## Motivation
 
-The constitution lists "Secure" as a guiding principle but does not operationalize it. Projects adopting `ductus` have no concrete security rules to follow or validate against. Each project reinvents its own security posture, leading to inconsistency and gaps.
+When this spec was written, the constitution listed "Secure" as a guiding principle but did not operationalize it. Projects adopting `ductus` had no concrete security rules to follow or validate against. Each project reinvented its own security posture, leading to inconsistency and gaps.
 
 Security rules belong at the governance level because they are cross-cutting — the same rules apply regardless of language, framework, or domain. Project-specific security decisions (which auth provider, which encryption library) belong in the project's `system.md` or feature specs. Governance defines *what* must be secured and *how* to think about it; projects decide the implementation.
 
@@ -204,11 +204,7 @@ The first version of this section wrote each finding to `specs/inbox.md`, so tha
 
 ## Constitution Reference
 
-The "Secure" principle in the constitution gains a reference to the security rule files:
-
-> Protect sensitive data through industry standards and best practices. See the `specs/rules/security-*.md` files for enforceable rules.
-
-This connects the principle to its operational detail without duplicating content.
+The constitution points at the security rule files without duplicating their content: §rules keeps each rule in `specs/rules/{rule-set}.md`. The "Secure" principle carried this spec's pointer, "See the `specs/rules/security-*.md` files for enforceable rules.", until `050-constitution` removed the Technology list it sat in.
 
 ## Versioning and Evolution
 
@@ -275,7 +271,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 ### Constitution Reference
 
-- [x] AC28: The "Secure" principle references the security rule files (`specs/rules/security-*.md`)
+- [x] AC28: The "Secure" principle references the security rule files (`specs/rules/security-*.md`) — **superseded by `050-constitution`** (its AC25), which removed the Technology list and the Secure principle with it; the constitution's §rules names where a rule file lives
 
 ## Open Questions
 

@@ -10,7 +10,7 @@ Introduce `framework/rules/observability-backend.md`, an enforceable rule set co
 
 ## Motivation
 
-The constitution names **observability** a governance-recognized cross-cutting category (§rules), and the principles list calls the system to be **Supportable** and **Observable**. When this spec was written, the backend surface covered only the logging/audit slice via `security-backend.md` §BE-LOG; the rest of observability — metrics, distributed tracing, health/readiness, SLOs, alerting — had nowhere to be promoted to the rules tier. Each was re-litigated per feature or discovered missing only during an incident, when the absence of a metric, span, or readiness probe is what turns a degradation into an outage.
+The constitution names **observability** a governance-recognized cross-cutting category (§rules), and its principles list, until `050-constitution` removed it, called the system to be **Supportable** and **Observable**. When this spec was written, the backend surface covered only the logging/audit slice via `security-backend.md` §BE-LOG; the rest of observability — metrics, distributed tracing, health/readiness, SLOs, alerting — had nowhere to be promoted to the rules tier. Each was re-litigated per feature or discovered missing only during an incident, when the absence of a metric, span, or readiness probe is what turns a degradation into an outage.
 
 This spec closes that gap for metrics, distributed tracing, and health/readiness — SLOs and alerting are excluded as operational policy (Resolved Questions): a backend observability rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans (design-time observability commitments) and `/ductus:review` references where applicable.
 

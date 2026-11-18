@@ -87,9 +87,9 @@ The session file is unchanged — autonomy is not session state.
 
 ### Cost-conscious cross-reference: location
 
-Add a new short subsection `### Cost levers` immediately following the `### Business` principles list in `framework/constitution.md`. A subsection is preferred over inlining a paragraph under the bullet because:
+`### Cost levers` is a short subsection of `## Guiding Principles` in `framework/constitution.md`, where it followed the `### Business` principles list until `050-constitution` removed that list. A subsection was preferred over inlining a paragraph under the bullet because:
 
-- The `Cost-conscious` line is a one-line bullet in a structured list; a multi-sentence paragraph would break the list's visual rhythm.
+- The `Cost-conscious` line was a one-line bullet in a structured list; a multi-sentence paragraph would have broken the list's visual rhythm.
 - A named subsection (`### Cost levers`) is greppable and gets its own anchor for cross-references.
 
 Content: one paragraph naming `ductus`'s existing levers (lightweight track, `[simple]` marker, stuck detection, default-off autonomy — the first two since removed, by `023-govern-refinement` and `017-derive-dont-ask`) and pointing at the adopter's platform tooling for runtime cost controls (Claude Code's `/cost`, Anthropic usage dashboard, Cursor's request limits). No commitment to a specific platform — just examples. Paragraph stays short (4–6 sentences) so it reads as guidance, not a manual.

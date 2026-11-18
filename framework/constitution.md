@@ -6,32 +6,6 @@ A rule only one command applies lives in that command's reference, which this do
 
 ## Guiding Principles
 
-These are evaluation criteria, not implementation instructions.
-
-### Technology
-
-- **Secure:** protect sensitive data through industry standards and best practices. See the `specs/rules/security-*.md` files for enforceable rules.
-- **Scalable:** design and implement to be dynamically scaled
-- **Learnable:** fast onboarding through clear patterns, documentation, and accessible codebase design
-- **Reliable:** graceful degradation and automatic recovery when components fail
-- **Recordable:** accurate, durable data capture for business metrics, audit trails, and event tracing
-- **Supportable:** simple and quick to detect, identify, and resolve issues
-- **Automated:** humans only do what computers can't
-- **Testable:** design for security, unit, functional, and load testing
-- **Consumable:** simple and intuitive interfaces into our systems
-- **Verified:** nothing reaches production without validation
-- **Succinct:** artifacts hold all their readers need, and no more
-
-### Business
-
-- **Fast:** responsive systems, short time to market, rapid updates and fixes
-- **Serviceable:** solutions exist to serve identified needs, not to justify themselves
-- **Evolvable:** the business can adapt, grow, and create products and services as needs change
-- **Flexible:** customers are served by products and services that fit their varied needs
-- **Observable:** clear, real-time visibility into product and service performance
-- **Compliant:** meet regulatory, legal, and industry requirements
-- **Cost-conscious:** optimize cost across building, operating, and scaling products and services
-
 <!-- §cost-levers -->
 
 ### Cost levers
