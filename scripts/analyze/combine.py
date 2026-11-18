@@ -5,8 +5,9 @@ analysis's judges).
 
 usage: python3 -I scripts/analyze/combine.py FEATURE
 
-Runs check.py's checks first and refuses on any failure. Then, for each rule,
-over the cells of its share, one per scenario group:
+Runs check.py's checks first and refuses on any failure, step 15's
+included. Then, for each rule, over the cells of its share, one per scenario
+group:
 
 - every cell not fired: not fired;
 - a departure's rule fired in any cell: waived;
@@ -21,7 +22,8 @@ over the cells of its share, one per scenario group:
   data model where a cell does, else the first cell's scenario.
 
 A rule counts as judged only when every cell of its share judged it.
-Writes <work>/merged.json.
+Writes <work>/merged.json for the host to read. record.py merges the
+hand-backs again itself, so a merged.json older than them is never recorded.
 
 Exit status: 0 written, unsettled rules or not, each one printed; 1 when a
 hand-back fails its check; 2 when the manifest cannot be read.
@@ -80,12 +82,13 @@ def run(argv):
         raise lib.Unreadable("usage: combine.py FEATURE")
     feature = argv[0]
     m = lib.load_manifest(feature)
-    problems, outs, unresolved, _ = checker.check(feature, m)
-    failed = sorted(k for k, v in problems.items() if v and k != "step15")
+    result = checker.check(feature, m)
+    failed = sorted(checker.failures(result))
     if failed:
         raise lib.Refused(f"hand-backs fail their check: {', '.join(failed)}; run check.py")
-    merged = merge(m, outs, unresolved)
-    merged["step15"] = outs.get("step15") if not problems.get("step15") else None
+    merged = merge(m, result["outs"], result["unresolved"])
+    merged["step15"] = result["outs"]["step15"]
+    merged["malformed"] = result["malformed"]
     lib.write_json(os.path.join(lib.work_dir(feature), "merged.json"), merged)
     kinds = [v["verdict"] for v in merged["verdicts"].values()]
     print(f"== {feature}: judged {len(merged['judged'])}, unjudged {len(merged['unjudged'])}; "
@@ -98,8 +101,6 @@ def run(argv):
         print(f"  cells differ on {rid}: {kinds}{'  UNSETTLED' if rid in merged['unsettled'] else ''}")
     for rid, reason in merged["unjudged"].items():
         print(f"  unjudged {rid}: {reason}")
-    if problems.get("step15"):
-        print(f"  step 15's hand-back fails its check: {problems['step15']}")
 
 
 if __name__ == "__main__":

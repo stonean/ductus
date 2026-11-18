@@ -135,13 +135,22 @@ The scenario `rule-judging-runs-from-repo-scripts` puts the host's orchestration
 
 They stay in this repository, since the Shared Files manifest in `framework/bootstrap/ductus.md` names no `scripts/` path. An adopter's host follows `framework/reference/analyze.md` §Rule judging in a subagent itself.
 
-- **Staging in the system temp directory.** The scripts stage under `$TMPDIR/ductus-analyze/<feature>`, or `ANALYZE_WORK`, because the CLI reads a `--*-json` file only from there. They write no repository file. `analysis.md` is written by `write-analysis` alone.
-- **Shares keep each rule file whole and balance by rendered bytes.** A cell is one share beside the spec, plan, data model and a scenario group. Scenarios are grouped only when one cell would pass `--cell-bytes`. Both defaults come from `docs/developing-ductus.md` §Sizing an analysis's judges: 135,000 bytes a share, and 480,000 a cell, the size at which 022's nine cells all finished whole reads.
+- **Staging in the system temp directory.** The scripts stage under `$TMPDIR/ductus-analyze/<feature>`, or under `ANALYZE_WORK`, which must resolve inside the system temp directory, because the CLI reads a `--*-json` file only from there. A feature argument must name one directory directly under the spec root. They write no repository file. `analysis.md` is written by `write-analysis` alone.
+- **Settings are read once, at startup, and every call is bounded.** `DUCTUS_BIN`, `ANALYZE_WORK` and `ANALYZE_TIMEOUT_SECONDS` are optional, each with its default a named constant in `scripts/analyze/analyze_lib.py`, an empty value counting as unset. `docs/runtime.md`'s environment-variable table lists them (`CFG-ENV-001`, `CFG-ENV-002`). Each runtime and git call is stopped after `ANALYZE_TIMEOUT_SECONDS`, by default `DEFAULT_TIMEOUT_SECONDS`, 600 seconds, and at most `MAX_TIMEOUT_SECONDS`, a day (`BE-TIMEOUT-001`).
+- **Shares keep each rule file whole and balance by rendered bytes.** A cell is one share beside the spec, plan, data model and a scenario group. Scenarios are grouped only when one cell would pass `--cell-bytes`, into the fewest groups that keep each cell within it. A share or cell that cannot fit, because a rule file or a scenario is larger than its budget, is named in a note. The defaults are `DEFAULT_SHARE_BYTES` and `DEFAULT_CELL_BYTES`:
+  - 135,000 bytes a share, just over the largest of the three rendered shares the 2026-11-18 analyses judged whole (114,213 to 132,784 bytes, by `wc -c`);
+  - 480,000 a cell, the top of the 450 to 480 KB cells that `docs/developing-ductus.md` §Sizing an analysis's judges records finishing whole reads.
 - **The briefs point at the canonical text.** A judge reads steps 11, 12 or 15 and the reference sections they name, so a template restates none of them. It carries only the run's facts and the JSON `check.py` reads back.
 - **A cite is checked with `read-section`.** Its exact-text heading match uses the same `heading_lines` parse that `write-analysis`'s `cite_resolves` does, so a cite `check.py` passes is one the record keeps.
-- **A disagreement goes to the host, never to a default.** Cells agreeing on a finding give a finding. A finding beside a cell that read other scenarios and found none is unsettled, since that cell may have read what addresses it. `record.py` refuses any rule its plan file does not settle. Replaying the 2026-11-18 hand-backs gave the 12 three-cell runs unchanged. In 022's two runs it left unsettled exactly the rules the host had settled by hand.
-- **A failure is never an exit 0.** Each script exits 1 when a check fails and 2 when an input cannot be read. `decided-by` is `git config user.email`, and an empty one refuses.
-- **The test stubs the runtime.** `scripts/tests/test-analyze-scripts.py` runs each script in a fixture repository against a stub runtime, so it needs no release build. `framework-checks.yml` step (ab) runs it. Each case was seen failing against a mutant of the code it names.
+- **A disagreement goes to the host, never to a default.** Cells agreeing on a finding give a finding. A finding beside a cell that read other scenarios and found none is unsettled, since that cell may have read what addresses it. `record.py` refuses any rule its plan file does not settle.
+- **What is recorded is what the judges wrote.** `record.py` refuses:
+  - detection older than a commit, or than any uncommitted edit in the working tree: a changed file of the feature, a rule file or the constitution is named, and an edit anywhere else is reported as the working tree;
+  - a design subject edited, added or removed since the split;
+  - a malformed rule heading a judge reported that the plan file does not name.
+
+  It checks and merges the hand-backs again itself rather than trusting `combine.py`'s output. It records an integrity item step 15 did not check under `integrity-not-checked`, and a broken cross-service reference as an Advisory finding. Any target the run could not read passes `restricted` to `process-decisions`, so a stored decision whose source went unseen is retained.
+- **A failure is never an exit 0.** Each script exits 1 when a check fails, and 2 when an input or setting cannot be read, a call runs out of time, or the script itself fails. `decided-by` is `git config user.email`, and an empty one refuses.
+- **The test stubs the runtime, and one case runs the real one.** `scripts/tests/test-analyze-scripts.py` runs each script in a fixture repository against a stub runtime. Its last case runs the whole chain against the release binary. The scripts read each list the runtime always writes strictly, so a field the runtime renames fails that case rather than reading as empty. `check-rule-ids`' `not-installed`, a list the runtime omits when empty, the case makes non-empty. `framework-checks.yml` step (ab) runs it after the job builds the runtime.
 
 ## Affected Files
 
@@ -168,6 +177,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
 | `scripts/tests/test-analyze-scripts.py` | Create | Each script against a stub runtime |
 | `.github/workflows/framework-checks.yml` | Modify | Step (ab) runs the test |
 | `docs/developing-ductus.md` | Modify | §Sizing an analysis's judges names the scripts and the disagreement rule |
+| `docs/runtime.md` | Modify | Its environment-variable table lists `ANALYZE_WORK` and `ANALYZE_TIMEOUT_SECONDS`, and names `scripts/analyze/` in `DUCTUS_BIN`'s row |
 | `AGENTS.md` | Modify | Points every session at `scripts/analyze/` |
 
 ## Trade-offs

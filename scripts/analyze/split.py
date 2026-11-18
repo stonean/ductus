@@ -12,23 +12,26 @@ or from FILE, a result saved from that call. Each verdicts.reusable entry is
 kept in the manifest for record.py to report again, unjudged.
 
 Shares keep each rule file whole and are balanced by the bytes of their
-rendered text: as many as the judged rules need at --share-bytes each
-(default 135,000). A cell is one share read beside the spec, plan and data
-model and a group of scenarios; when the subjects do not fit one cell's
---cell-bytes (default 480,000; docs/developing-ductus.md, Sizing an
-analysis's judges) the scenarios are split into groups balanced by bytes,
-and every share is judged against every group. Step 15 has its own reader.
+rendered text: the fewest that keep each share within --share-bytes
+(default lib.DEFAULT_SHARE_BYTES). A cell is one share read beside the spec,
+plan and data model and a group of scenarios; when the subjects do not fit
+one cell's --cell-bytes (default lib.DEFAULT_CELL_BYTES) the scenarios are
+split into the fewest groups balanced by bytes that keep each cell within
+it, and every share is judged against every group. A share or cell that
+cannot be brought within its budget, a rule file or a scenario larger than
+it, is named in a note. Step 15 has its own reader.
 
-Needs detect.py's check-departures result, whose entries the briefs name.
-Writes <work>/manifest.json and <work>/share-<X>.md beside it.
+Needs detect.py's results, current for the feature as it stands, whose
+check-departures entries the briefs name. Prints discover-rule-files'
+notice lines. Writes <work>/manifest.json and <work>/share-<X>.md beside it.
 
 Exit status: 0 written; 1 refused (a judged rule in no loaded file, a rule
-file that could not be read); 2 an input could not be read.
+file that could not be read, detection older than an edit or a commit); 2 an input
+could not be read.
 """
 
 import math
 import os
-import subprocess
 import sys
 import time
 
@@ -36,14 +39,13 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import analyze_lib as lib  # noqa: E402
 
-LONG_LINE = 2000
-
-
 def render_file(path, rules, other_headings):
     out = [f"# FILE {path}",
            f"(other-headings in this file, i.e. headings that open no rule: {len(other_headings)})"]
     for h in other_headings:
         out.append(f"- other-heading line {h.get('line')}: {h.get('heading')!r}")
+        for line in (h.get("body") or "").strip("\n").splitlines():
+            out.append(f"    | {line}")
     out.append("")
     for r in rules:
         out += [f"## {r['id']} — tier: {r.get('tier') or 'none'} — heading: {r.get('heading')}", "",
@@ -63,13 +65,26 @@ def balance(items, bins):
     return out, loads
 
 
+def fit(items, bins, limit, extra=0):
+    """The fewest bins from `bins` up, one per item at most, whose loads plus
+    extra stay within limit; with the loads, for a note when even that
+    cannot."""
+    bins = max(1, min(bins, len(items)))
+    while True:
+        out, loads = balance(items, bins)
+        if max(loads) + extra <= limit or bins >= len(items):
+            return out, loads
+        bins += 1
+
+
 def long_lines(path):
     with open(path, encoding="utf-8") as f:
-        return [n for n, line in enumerate(f, 1) if len(line.rstrip("\n")) > LONG_LINE]
+        return [n for n, line in enumerate(f, 1) if len(line.rstrip("\n")) > lib.LONG_LINE]
 
 
 def run(argv):
-    args = {"--share-bytes": "135000", "--cell-bytes": "480000", "--rules-json": None}
+    args = {"--share-bytes": str(lib.DEFAULT_SHARE_BYTES), "--cell-bytes": str(lib.DEFAULT_CELL_BYTES),
+            "--rules-json": None}
     if not argv or argv[0].startswith("--"):
         raise lib.Unreadable("usage: split.py FEATURE [--share-bytes N] [--cell-bytes N] [--rules-json FILE]")
     feature, rest = argv[0], argv[1:]
@@ -82,12 +97,15 @@ def run(argv):
         share_bytes, cell_bytes = int(args["--share-bytes"]), int(args["--cell-bytes"])
     except ValueError as e:
         raise lib.Unreadable(f"--share-bytes and --cell-bytes take integers: {e}") from e
+    if share_bytes < 1 or cell_bytes < 1:
+        raise lib.Unreadable("--share-bytes and --cell-bytes take a whole number of at least 1")
     d = lib.feature_dir(feature)
     w = lib.work_dir(feature)
+    lib.check_detection_current(feature, os.path.join(w, "det"))
     departures_path = os.path.join(w, "det", "check-departures.json")
-    if not os.path.isfile(departures_path):
-        raise lib.Unreadable(f"{departures_path} does not exist; run scripts/analyze/detect.py {feature} first")
-    departures = lib.read_json(departures_path).get("entries") or []
+    departures = lib.read_json(departures_path).get("entries")
+    if not isinstance(departures, list):
+        raise lib.Unreadable("check-departures' result has no entries list")
     spec_path = os.path.join(w, "det", "read-spec.json")
     status = (lib.read_json(spec_path).get("frontmatter") or {}).get("status") \
         if os.path.isfile(spec_path) else None
@@ -106,6 +124,8 @@ def run(argv):
     if found.get("unreadable"):
         raise lib.Refused(f"rule files could not be read: {found['unreadable']}; their rules are "
                           "neither judged nor reusable, so the run cannot cover them")
+    for note in found.get("notices") or []:
+        print(f"notice: {note}")
     judge = set(verdicts["judge"])
     rules_dir = found.get("rules-dir") or ""
     files, placed = [], set()
@@ -120,10 +140,15 @@ def run(argv):
     if missing:
         raise lib.Refused(f"verdicts.judge names rules no loaded file holds: {missing}")
 
+    notes = []
     total = sum(f["bytes"] for f in files)
-    n_shares = max(1, min(len(files), math.ceil(total / share_bytes))) if files else 0
-    groups_of_files, share_loads = balance([(f["file"], f["bytes"]) for f in files], n_shares) \
-        if n_shares else ([], [])
+    groups_of_files = []
+    if files:
+        groups_of_files, loads = fit([(f["file"], f["bytes"]) for f in files],
+                                     math.ceil(total / share_bytes), share_bytes)
+        if max(loads) > share_bytes:
+            notes.append(f"a share holds {max(loads)} bytes, over --share-bytes {share_bytes}: "
+                         "a rule file is larger than a share")
     by_file = {f["file"]: f for f in files}
     shares = {}
     for i, names in enumerate(groups_of_files):
@@ -144,19 +169,16 @@ def run(argv):
     scen = [(p, b) for p, b in subjects if p.startswith("scenarios/")]
     core_bytes, scen_bytes = sum(b for _, b in core), sum(b for _, b in scen)
     max_share = max((s["bytes"] for s in shares.values()), default=0)
-    notes = []
     if not scen or core_bytes + max_share + scen_bytes <= cell_bytes:
         groups = [[p for p, _ in scen]]
     else:
-        budget = cell_bytes - core_bytes - max_share
-        largest = max(b for _, b in scen)
-        if budget < largest:
-            notes.append(f"the spec, plan and data model ({core_bytes} bytes) beside the largest share "
-                         f"({max_share}) leave {budget} of --cell-bytes {cell_bytes} for scenarios; "
-                         f"each cell holds at least {largest} bytes of them, over the budget")
-            budget = largest
-        parts, _ = balance(scen, math.ceil(scen_bytes / budget))
+        budget = max(1, cell_bytes - core_bytes - max_share)
+        parts, loads = fit(scen, math.ceil(scen_bytes / budget), cell_bytes, core_bytes + max_share)
         groups = [sorted(g, key=str.lower) for g in parts if g]
+        if max(loads) + core_bytes + max_share > cell_bytes:
+            notes.append(f"a cell holds {max(loads) + core_bytes + max_share} bytes, over --cell-bytes "
+                         f"{cell_bytes}: the spec, plan and data model ({core_bytes}) beside the largest "
+                         f"share ({max_share}) and one scenario group do not fit")
 
     run_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     sizes = dict(subjects)
@@ -171,7 +193,7 @@ def run(argv):
                           "out": os.path.join(w, f"out-{cell}-{run_id}.json")})
     s15 = [p for p in ("spec.md", "plan.md") if p in sizes]
     system = "specs/system.md" if os.path.isfile("specs/system.md") else None
-    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    head = lib.head()
     manifest = {
         "feature": feature, "status": status, "head": head, "run": run_id,
         "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "work": w,

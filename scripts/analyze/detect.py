@@ -11,11 +11,16 @@ lint-markdown, check-artifacts, check-orphaned-references,
 check-unfolded-specs (steps 2-10), resolve-references when the spec has a
 references: index (step 13), prune-plan and check-artifact-size (steps 16
 and 17). Each result is saved whole, its lists-file merged in, under
-<work>/det/<primitive>.json. split.py and record.py read them from there.
+<work>/det/<primitive>.json, with <work>/det/meta.json holding HEAD, the
+digest of the feature's files, the rule files and the constitution it ran
+over, and a digest of the working tree's uncommitted state; each run first
+clears the results of the last. split.py and record.py
+read them there, and refuse them once any of those has changed since.
 
 Steps 2-10, 13, 16 and 17 render each finding in the tier it carries; this
-summary prints them so the host can render and disposition them. Steps 11,
-12, 14 and 15 are judgment: split.py, briefs.py, check.py and combine.py.
+summary prints them so the host can render and disposition them, with the
+notice lines discover-rule-files returns. Steps 11, 12, 14 and 15 are
+judgment: split.py, briefs.py, check.py and combine.py.
 
 Exit status: 0 when every primitive returned a result, findings or not; 2
 when one returned none, naming it. A primitive that could not run is never
@@ -36,7 +41,6 @@ def steps(feature, rule_files, has_references):
     for r in rule_files:
         rules += ["--rule-file", r]
     out = [
-        ("read-spec", ["read-spec", "--feature", feature]),
         ("validate-frontmatter", ["validate-frontmatter", "--path", f"{d}/spec.md"]),
         ("traverse-deps", ["traverse-deps", "--feature", feature]),
         ("resolve-anchor", ["resolve-anchor", "--path", f"{d}/spec.md",
@@ -102,6 +106,8 @@ def summary(name, r):
             skipped[s.get("reason")] = skipped.get(s.get("reason"), 0) + 1
         found = [(f.get("family"), f.get("severity"), f.get("message")) for f in g("findings") or []]
         return f"findings={found} skipped-by-reason={skipped}"
+    if name == "check-unfolded-specs":
+        return f"examined={g('examined')} unfolded={g('unfolded')}"
     if name == "prune-plan":
         secs = [(s.get("heading"), (s.get("finding") or {}).get("message"), s.get("decided"))
                 for s in g("sections") or []]
@@ -118,16 +124,25 @@ def run(argv):
     if len(argv) != 1:
         raise lib.Unreadable("usage: detect.py FEATURE")
     feature = argv[0]
-    lib.feature_dir(feature)
     det = os.path.join(lib.work_dir(feature), "det")
     os.makedirs(det, exist_ok=True)
+    for n in os.listdir(det):
+        if n.endswith(".json"):  # a run that fails leaves no meta; one with no references, no references result
+            os.remove(os.path.join(det, n))
+    meta = os.path.join(det, "meta.json")
     rules, _ = lib.call("discover-rule-files", "--all")
     rules_dir = rules.get("rules-dir") or ""
     rule_files = [s if "/" in s else f"{rules_dir}/{s}" for s in rules.get("selected") or []]
+    digest = lib.detection_digest(feature, [*rule_files, constitution()])
+    tree = lib.tree_state()
     spec, _ = lib.call("read-spec", "--feature", feature)
-    has_refs = bool((spec.get("frontmatter") or {}).get("references"))
-    exits, failed = {}, []
+    lib.write_json(os.path.join(det, "read-spec.json"), spec)
     print(f"== {feature} (results under {det})")
+    for note in rules.get("notices") or []:
+        print(f"notice: {note}")
+    print(f"read-spec: {summary('read-spec', spec)}")
+    has_refs = bool((spec.get("frontmatter") or {}).get("references"))
+    exits, failed = {"read-spec": 0}, []
     for name, args in steps(feature, rule_files, has_refs):
         try:
             result, code = lib.call(*args, allow_exit=True)
@@ -138,9 +153,9 @@ def run(argv):
         exits[name] = code
         lib.write_json(os.path.join(det, f"{name}.json"), result)
         print(f"{name}{f' (exit {code})' if code else ''}: {summary(name, result)}")
-    lib.write_json(os.path.join(det, "exits.json"), exits)
     if failed:
         raise lib.Unreadable(f"no result from {', '.join(failed)}; the run is not detected")
+    lib.write_json(meta, {"head": lib.head(), "digest": digest, "tree": tree, "exits": exits})
 
 
 if __name__ == "__main__":

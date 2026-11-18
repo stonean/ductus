@@ -12,32 +12,42 @@ PLAN.json holds what the host decided:
                             {tier, family, message, path, live, and
                             optionally disposition and decision-key}
    "settled": {RULE: verdict or null},
-                            the host's verdict for each rule combine.py left
+                            the host's verdict for each rule the cells left
                             unsettled (null for not fired), and any it
                             overrides, each printed
    "dispositions": {KEY: disposition},
-                            a disposition for a rule finding, by its key
+                            a disposition for a generated finding, by its key
+   "malformed-headings": [...],
+                            each malformed heading a judge reported, which
+                            the host has judged and recorded as a finding or
+                            set aside
    "unexamined": {REASON: N}}
                             targets the host could not judge, beside those
-                            detect.py's results name
+                            the run's results name
 
-Each fired rule's finding is written as `rule-assessment — RULE: message`,
-in the Blocking tier for a MUST-tier rule and the Advisory tier otherwise,
-from merged.json and from each verdicts.reusable finding. A finding a
-stored decision matches takes its stored outcome. decided-by is the
-repository's `git config user.email`.
+The hand-backs are checked and merged again here, as check.py and
+combine.py do, so what is recorded is what the judges wrote. Each fired
+rule's finding, and each verdicts.reusable finding, is written as
+`rule-assessment — RULE: message`, in the Blocking tier for a MUST-tier
+rule and the Advisory tier otherwise. Each broken cross-service reference
+and each repository the registry holds twice is an Advisory finding. The
+unexamined targets are those detect.py's results name, an integrity item
+step 15 did not check, and the plan's; any the run could not read sets
+process-decisions' restricted, so a stored decision is retained rather than
+expired. A finding a stored decision matches takes its stored outcome.
+decided-by is the repository's `git config user.email`.
 
 Without --write it prints the record it would write and the write-analysis
 call; with --write it makes the call.
 
 Exit status: 0 written, or the dry run printed; 1 refused: a hand-back
-fails its check, a rule is unsettled, a design subject changed, no
-decided-by, or write-analysis refused; 2 an input could not be read.
+fails its check, a rule is unsettled, a reported malformed heading is not
+in the plan, detection predates an edit or a commit, two findings share a key,
+no decided-by, or write-analysis refused; 2 an input could not be read.
 """
 
 import collections
 import os
-import subprocess
 import sys
 import time
 
@@ -45,6 +55,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import analyze_lib as lib  # noqa: E402
 import check as checker  # noqa: E402
+import combine  # noqa: E402
 
 
 def key(f):
@@ -57,25 +68,62 @@ def rule_finding(feature, rid, v, tier):
             "message": f"{rid}: {v['message']}", "path": f"specs/{feature}/{path}", "live": True}
 
 
+def load(det, name):
+    p = os.path.join(det, f"{name}.json")
+    if not os.path.isfile(p):
+        raise lib.Unreadable(f"{p} does not exist; run detect.py first")
+    return lib.read_json(p)
+
+
+def listed(result, field, name):
+    """A list the runtime always writes, so one absent is a renamed field,
+    never an empty list."""
+    if not isinstance(result.get(field), list):
+        raise lib.Unreadable(f"{name}'s result has no {field} list")
+    return result[field]
+
+
 def unexamined(det):
-    def load(name):
-        p = os.path.join(det, f"{name}.json")
-        if not os.path.isfile(p):
-            raise lib.Unreadable(f"{p} does not exist; run detect.py first")
-        return lib.read_json(p)
+    """The unexamined targets detect.py's results name, by reason."""
     un = collections.Counter()
-    for s in load("check-artifacts").get("skipped") or []:
+    for s in listed(load(det, "check-artifacts"), "skipped", "check-artifacts"):
         un[s["reason"]] += 1
-    for ref in load("resolve-anchor").get("references") or []:
+    for ref in listed(load(det, "resolve-anchor"), "references", "resolve-anchor"):
         if ref.get("unjudged"):
             un[ref["unjudged"]] += 1
-    ids = load("check-rule-ids")
-    un["rule-not-installed"] += len(ids.get("not-installed") or [])
-    if ids.get("examined") == 0 and ids.get("citations-count"):
+    ids = load(det, "check-rule-ids")
+    if not isinstance(ids.get("examined"), int):
+        raise lib.Unreadable("check-rule-ids' result has no examined count")
+    un["rule-not-installed"] += len(ids.get("not-installed") or [])  # absent when empty
+    if ids["examined"] == 0 and ids.get("citations-count"):
         un["rule-citations-not-checked"] += ids["citations-count"]
-    un["artifact-unreadable"] += len(load("check-artifact-size").get("skipped") or [])
-    un["referrer-unreadable"] += len(load("check-orphaned-references").get("skipped") or [])
+    un["artifact-unreadable"] += len(listed(load(det, "check-artifact-size"), "skipped", "check-artifact-size"))
+    un["referrer-unreadable"] += len(listed(load(det, "check-orphaned-references"), "skipped",
+                                            "check-orphaned-references"))
     return +un
+
+
+def reference_findings(feature, det):
+    """Step 13's Advisory findings: each broken reference and each repository
+    the registry holds under two aliases; the unknowns are printed, never
+    findings (framework/reference/analyze.md, Cross-service references)."""
+    p = os.path.join(det, "resolve-references.json")
+    if not os.path.isfile(p):
+        return []
+    r = lib.read_json(p)
+    out, spec = [], f"specs/{feature}/spec.md"
+    for ref in listed(r, "references", "resolve-references"):
+        if ref.get("outcome") == "broken":
+            out.append({"tier": "advisory", "family": "cross-service-references", "path": spec, "live": True,
+                        "message": f"reference to {ref.get('service')} {ref.get('spec')} is broken: the "
+                                   "service's checkout holds no such spec"})
+        elif ref.get("outcome") != "ok":
+            print(f"reference {ref.get('service')} {ref.get('spec')}: {ref.get('outcome')} (informational)")
+    for dup in listed(r, "duplicate-repos", "resolve-references"):
+        out.append({"tier": "advisory", "family": "cross-service-references", "path": spec, "live": True,
+                    "message": f"the [services] registry holds {dup.get('repo')} under "
+                               f"{', '.join(dup.get('aliases') or [])}"})
+    return out
 
 
 def run(argv):
@@ -85,20 +133,23 @@ def run(argv):
         raise lib.Unreadable("usage: record.py FEATURE PLAN.json [--write]")
     feature, plan_path = argv
     w = lib.work_dir(feature)
+    det = os.path.join(w, "det")
     m = lib.load_manifest(feature)
     plan = lib.read_json(plan_path)
-    merged_path = os.path.join(w, "merged.json")
-    if not os.path.isfile(merged_path):
-        raise lib.Unreadable(f"{merged_path} does not exist; run combine.py first")
-    merged = lib.read_json(merged_path)
+    if not isinstance(plan, dict):
+        raise lib.Unreadable(f"{plan_path} is not a JSON object")
 
-    problems, _, _, _ = checker.check(feature, m)
-    failed = {k: v for k, v in problems.items() if v}
-    if failed:
-        raise lib.Refused(f"hand-backs or subjects fail their check: {failed}")
-    if os.path.isfile(os.path.join(w, "det", "resolve-references.json")):
-        raise lib.Refused("the spec has a references: index, whose outcomes this script does not "
-                          "classify yet; extend it before recording")
+    lib.check_detection_current(feature, det)
+    result = checker.check(feature, m)
+    if checker.failures(result):
+        raise lib.Refused(f"hand-backs or subjects fail their check: {checker.failures(result)}")
+    merged = combine.merge(m, result["outs"], result["unresolved"])
+    reported = sorted({h for hs in result["malformed"].values() for h in hs})
+    unacknowledged = sorted(set(reported) - set(plan.get("malformed-headings") or []))
+    if unacknowledged:
+        raise lib.Refused(f"judges reported malformed headings the plan's malformed-headings does not "
+                          f"name: {unacknowledged}; a malformed rule heading is a Blocking finding "
+                          "(framework/reference/analyze.md, Rules)")
 
     tiers_of = {rid: t for s in m["shares"].values() for rid, t in s["tiers"].items()}
     verdicts = dict(merged["verdicts"])
@@ -130,14 +181,27 @@ def run(argv):
     for r in m.get("reusable") or []:
         if r.get("verdict") == "finding":
             findings.append(rule_finding(feature, r["id"], r, r.get("tier")))
+    findings += reference_findings(feature, det)
     keys = [key(f) for f in findings if f.get("live", True)]
     dupes = sorted(k for k, n in collections.Counter(keys).items() if n > 1)
     if dupes:
         raise lib.Refused(f"two live findings share a key: {dupes}")
+    planned = {f.get("message") for f in plan.get("findings") or []}
+    for kind in ("grounding", "integrity", "decision-reasons"):
+        for item in result["outs"]["step15"].get(kind) or []:
+            if item.get("message") not in planned:
+                print(f"step 15 {kind}, not in the plan: {item.get('path')}: {item.get('message')}")
 
+    un = unexamined(det) + collections.Counter(plan.get("unexamined") or {})
+    un["integrity-not-checked"] += len(result["unchecked"])
+    un = +un
+    restricted = lib.is_restricted(un)
     lib.write_json(os.path.join(w, "fired.json"), keys)
-    decided, _ = lib.call("process-decisions", "--feature", feature, "--record", "analysis",
-                          "--fired-json", os.path.join(w, "fired.json"))
+    decide = ["process-decisions", "--feature", feature, "--record", "analysis",
+              "--fired-json", os.path.join(w, "fired.json")]
+    decided, _ = lib.call(*decide, *(["--restricted"] if restricted else []))
+    for name in ("matched", "expired", "lapsed"):
+        listed(decided, name, "process-decisions")
     matched = {d["key"]: d for d in decided.get("matched") or []}
     lapsed = {d["key"] for d in decided.get("lapsed") or []}
     dispositions = plan.get("dispositions") or {}
@@ -159,21 +223,17 @@ def run(argv):
         if k in lapsed and k not in dispositions:
             print(f"lapsed: {k} needs a new disposition in the plan's dispositions map")
 
-    email = subprocess.run(["git", "config", "user.email"], capture_output=True, text=True).stdout.strip()
+    email = lib.git("config", "user.email")
     if not email:
         raise lib.Refused("git config user.email is empty, so no decided-by can be recorded")
     tiers = collections.Counter(f["tier"] for f in findings if f.get("live", True))
-    un = unexamined(os.path.join(w, "det")) + collections.Counter(plan.get("unexamined") or {})
-    rule_verdicts = {rid: v for rid, v in verdicts.items()}
-
     lib.write_json(os.path.join(w, "findings.json"), findings)
     lib.write_json(os.path.join(w, "expired.json"),
                    (decided.get("expired") or []) + (decided.get("lapsed") or []))
     lib.write_json(os.path.join(w, "decided-by.json"), email)
-    lib.write_json(os.path.join(w, "verdicts.json"), rule_verdicts)
-    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    cmd = [lib.binary(), "write-analysis", "--feature", feature,
-           "--analyzed-at", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "--analyzed-against", head,
+    lib.write_json(os.path.join(w, "verdicts.json"), verdicts)
+    cmd = ["write-analysis", "--feature", feature,
+           "--analyzed-at", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "--analyzed-against", lib.head(),
            "--hard-fail", str(tiers.get("hard-fail", 0)),
            "--blocking-findings", str(tiers.get("blocking", 0)), "--advisory", str(tiers.get("advisory", 0)),
            "--findings-json", os.path.join(w, "findings.json"),
@@ -188,18 +248,19 @@ def run(argv):
         cmd += ["--judged-rule", rid]
 
     print(f"== {feature}: hard-fail {tiers.get('hard-fail', 0)}, blocking {tiers.get('blocking', 0)}, "
-          f"advisory {tiers.get('advisory', 0)}; unexamined {dict(un)}; {len(merged['judged'])} rules "
-          f"judged, {len(rule_verdicts)} fired; {len(decided.get('expired') or [])} decisions expire")
+          f"advisory {tiers.get('advisory', 0)}; unexamined {dict(un)}{' (restricted)' if restricted else ''}; "
+          f"{len(merged['judged'])} rules judged, {len(verdicts)} fired; "
+          f"{len(decided.get('expired') or [])} decisions expire")
     for f in findings:
         print(f"  [{f['tier']}] {'' if f.get('live', True) else '(gone) '}{key(f)[:140]} "
               f"=> {f.get('disposition', {}).get('outcome')}")
     if not write:
         print("dry run; pass --write to record it")
         return
-    p = subprocess.run(cmd, capture_output=True, text=True)
-    print(p.stdout.strip()[:2000] or p.stderr.strip()[:2000])
+    p = lib.run_cmd([lib.binary(), *cmd])
     if p.returncode:
-        raise lib.Refused(f"write-analysis exited {p.returncode}: {p.stderr.strip()[:600]}")
+        raise lib.Refused(f"write-analysis exited {p.returncode}: {(p.stderr or p.stdout).strip()[:600]}")
+    print(p.stdout.strip()[:600])
 
 
 if __name__ == "__main__":

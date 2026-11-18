@@ -54,7 +54,7 @@ def long_note(m, paths):
             for p in paths if m["subjects"].get(p, {}).get("long-lines")]
     if not hits:
         return ""
-    return ("These lines run past 2,000 characters, which the Read tool may cut. Read each with "
+    return (f"These lines run past {lib.LONG_LINE:,} characters, which the Read tool may cut. Read each with "
             "`sed -n '<n>p' <file> | fold -w 1000`: " + "; ".join(hits) + ".")
 
 
@@ -81,7 +81,7 @@ def run(argv):
         share = m["shares"][c["share"]]
         share_long = ""
         if share.get("long-lines"):
-            share_long = ("Lines of the share past 2,000 characters, read with `sed -n '<n>p' <file> | "
+            share_long = (f"Lines of the share past {lib.LONG_LINE:,} characters, read with `sed -n '<n>p' <file> | "
                           f"fold -w 1000`: {', '.join(map(str, share['long-lines']))}.")
         text = fill(judge, {**base, "CELL": c["cell"], "SHARE": c["share"], "OUT": c["out"],
                             "SUBJECTS": subject_lines(m, c["subjects"]),
