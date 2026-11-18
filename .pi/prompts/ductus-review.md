@@ -128,7 +128,7 @@ Run once per targeted feature, in order. Resolve a `[feature]` argument through 
 
    1. Invoke `read-spec` against the feature to load its acceptance criteria (text, label and checkbox state, in body order) for the criteria step (**§Criteria step** in `.ductus/reference/review.md`).
 
-   2. <!-- llm:verifyCriteria --> Run the **criteria step**: judge each acceptance criterion step 7.1 loaded against the code that implements it, wherever that code lies — the window says what changed, not where a criterion's code is — one met or not-met verdict per criterion, its note the evidence (the path and symbol, and the test that proves it) or why it is not met. Judge each individually; never batch-judge. A criterion the step cannot judge gets no verdict and is named in the Summary. A dimension-restricting flag does not skip this step.
+   2. <!-- llm:verifyCriteria --> Run the **criteria step**: judge each acceptance criterion the `read-spec` call above loaded against the code that implements it, wherever that code lies — the window says what changed, not where a criterion's code is — one met or not-met verdict per criterion, its note the evidence (the path and symbol, and the test that proves it) or why it is not met. Judge each individually; never batch-judge. A criterion the step cannot judge gets no verdict and is named in the Summary. A dimension-restricting flag does not skip this step.
 
    3. Invoke `mark-criterion` for each verdict, by label (by index for a criterion with none), with `checked` set to the verdict, so a met criterion is ticked and a not-met one unticked. A tick refused because `spec.md` changed under it is reported beside its verdict and leaves the criterion as it was. Never batch-mark.
 
