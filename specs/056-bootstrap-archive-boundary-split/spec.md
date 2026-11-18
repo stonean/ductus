@@ -119,7 +119,7 @@ The self-update check keeps comparing the installed file against upstream, now o
 
 ### Rationale disposition
 
-Rationale does not move as one class. (`specs/inbox.md` puts it at 17–25% of the file — a figure this spec carries as that item's rather than its own, because nothing here acts on it: the disposition below is a rule about *which* rationale moves, not a budget.)
+Rationale does not move as one class. (The `specs/inbox.md` item this spec retired in ff301e1b put it at 17–25% of the file — a figure this spec carries as that item's rather than its own, because nothing here acts on it: the disposition below is a rule about *which* rationale moves, not a budget.)
 
 - **Rationale that constrains execution stays** with the step it constrains, in whichever half that step lands. It is what stops an agent doing the tempting wrong thing, and a pointer to it elsewhere would be read after the mistake.
 - **Dated incident narrative moves** to the spec that decided the fix, with a pointer back from the procedure.
