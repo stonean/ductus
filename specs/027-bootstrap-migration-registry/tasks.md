@@ -1,5 +1,5 @@
 ---
-next-task: 19
+next-task: 20
 ---
 
 # 027 — Bootstrap Migration Registry Tasks
@@ -39,3 +39,13 @@ Implemented in `364c330b` (landed on `main` 2026-11-12), and verified by the scr
 - [x] A first adoption that stopped before step 4 runs no migration on its re-run (8be4f935)
 
 - **Done when**: the batched run 003's matching task names shows each outcome, which the commit ticking this task states; a defect it finds is fixed first
+
+## 19. Finish AC25 and AC27, and correct what 027's pre-done verification found (owner decision, 2026-11-18)
+
+- [ ] `scripts/audit/migration-coverage.sh` gains a Family 10 duplicate-id check: each `id` two `[[migrations]]` entries share is a finding. `scripts/tests/test-migration-coverage.sh` gains a case shown to fail without it, also under /bin/bash 3.2. The script's header comment and 027's §Audit Family list it (AC25: no check made a duplicated id fail; a fixture with two same-id entries and one procedure file passed)
+- [ ] `framework/bootstrap/ductus-procedure.md` §Duplicate-id and reference-integrity guard names its two abort messages: `migration {id}: procedure file missing from archive`, and one for a duplicated id (AC27 named a message the guard never stated)
+- [ ] 10e's finding for a malformed or non-release `version` carries a remedy for the version file, not the archive-it remedy an overdue entry gets
+- [ ] spec.md: AC7 annotated superseded, since the loop also reads the pre-run `git status --porcelain -- specs/`, the active config and the guard's procedure-file existence. AC21 narrowed: an absent target emits nothing, while a present, converged target reports one `left as is` line in inbox-guidance-refresh, memory-routing-leaves-claude-md, remove-legacy-constitutions-region, strip-inbox-guidance and constitution-import. AC27's `aborts the batch at that entry` annotated superseded by 367c8817's guard-first placement
+- [ ] AC30 and `scenarios/migrations-apply-once-per-repo.md` Behavior bullet 5 cite `gitignore-marker-rename` in the past tense, since c061c1f0 archived it
+
+- **Done when**: each item holds against the tree; Family 10 and its tests pass on the tree and the new case fails without the check; the landing follows docs/developing-ductus.md §Landing a runtime change steps 3 to 5; and 027's review of the window since fdf80a2f, its analysis and its gate follow
