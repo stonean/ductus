@@ -1,20 +1,20 @@
 ---
 spec: 062-concurrent-session-targets
-last-run: 2026-11-18T13:07:02Z
-analyzed-against: d793782d76f6450f20e84d63c4a25e9770a9a4e8
+last-run: 2026-11-19T13:28:35Z
+analyzed-against: ca029bc311be75578872e0698287d94fed9df416
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 2
+unexamined: 3
 analyzed-digest:
-  data-model.md: 18dc633f1739c9f32b632d67921378c8d2225a39e257076c8ad9cc88b45d6c9f
-  plan.md: c9f6780af99ce78a368818f00e05ae31e3f0deb7b3ad3732e742f858b915b2d1
-  review.md: 8fcb169d49bab581eb6fa0db348689ed3fd72eaf75bf8119333cafffd3428554
-  scenarios/first-writers-create-the-ignore-file-once.md: 150b95396db7f7e774f4da1726618b953070531f1810c4272a5c080f7e47c0b8
-  spec.md: 61277a4c97121bf594664e9d94a640099fbdc7a7b1d7f37d166f160e021ae262
+  data-model.md: 2f139ba060dd47cd8145c26285e922cf1c4953880bfc2a11f1f64426749916ab
+  plan.md: 05f372e7377d6cac6a25dfdce2c17eef79433a68adbb752b04b6b63202356b6d
+  review.md: be70f306f88de4480e0079d1084fea2c8de84592436e1fc206854f13a829ddfc
+  scenarios/first-writers-create-the-ignore-file-once.md: 10654412621bdf8d3809f10d1559179ba335acba2ea2bca183a8042a12a79ca6
+  spec.md: 97172c7a3808fc2ffb13b88e7137b7d53054c5b73c24ffd91badcd8073585350
   tasks.md: 0470763b7f991104538c90010af84e0df993f61bffc87490a10cf3cdc6a9e6e3
 unexamined-by-reason:
-  root-absent: 2
+  root-absent: 3
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
   api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
@@ -29,7 +29,8 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-INPUT-001: {verdict: addressed, cite: "plan.md#Identity"}
+  BE-ERR-002: {verdict: addressed, cite: "data-model.md#`retarget-sessions`"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`retarget-sessions`"}
   BE-INPUT-002: {verdict: addressed, cite: "spec.md#Process identity"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Storage: confine each process to its own file"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Per-process record: `.ductus/sessions/{key}.toml`"}
@@ -38,21 +39,20 @@ rule-verdicts:
   BE-RACE-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-RACE-002: {verdict: addressed, cite: "plan.md#Storage: confine each process to its own file"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
+  BE-REPR-001: {verdict: addressed, cite: "plan.md#`write-session`: own file plus default"}
   BE-RETRY-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-RETRY-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#`write-session`: own file plus default"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#One session core, four callers"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
-  CFG-CONST-004: {verdict: addressed, cite: "plan.md#Synchronization: one advisory lock (`BE-RACE-001`)"}
   CFG-ENV-001: {verdict: addressed, cite: "plan.md#One session core, four callers"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
   CFG-ENV-007: {verdict: addressed, cite: "plan.md#Identity"}
-  CFG-ENV-008: {verdict: addressed, cite: "plan.md#One session core, four callers"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 5
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -62,7 +62,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 3 unexamined target(s). Dispositions: 5 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -86,8 +86,12 @@ dispositions:
 
 ## Unexamined targets
 
-- root-absent: 2
+- root-absent: 3
 
 ## Fixed in this run
 
-*None.*
+- grounding — §Synchronization gave about four hundred lock attempts in ten seconds with no method; it now states the arithmetic from `retry_bound`'s bounds, each wait averaging half its bound, about 405 (§Grounding (advisory); owner approval for the Group B directory). — `specs/062-concurrent-session-targets/plan.md` — **fixed** (decided by the rule)
+- grounding — §Synchronization said the jitter comes from the standard library's randomly seeded hasher with no source; it now cites `RandomState::new`, documented as initialized with random keys in `library/std/src/hash/random.rs` (§Grounding (advisory); owner approval for the Group B directory). — `specs/062-concurrent-session-targets/plan.md` — **fixed** (decided by the rule)
+- grounding — §Storage pointed the shared default's field order at `SessionRecord` in `runtime/src/primitives/write_session.rs`, which that file no longer holds; it now names `DefaultRecord` in `runtime/src/session.rs`, as the review made the data model say (§Grounding (advisory); owner approval for the Group B directory). — `specs/062-concurrent-session-targets/plan.md` — **fixed** (decided by the rule)
+- grounding — §The shared default said a restarted agent comes back with a new platform identity, with no source; it now says one that does, as each new Claude Code session does, resumes the most recent target, and one that keeps its identity resumes its own (§Grounding (advisory); owner approval for the Group B directory). — `specs/062-concurrent-session-targets/spec.md` — **fixed** (decided by the rule)
+- grounding — The Motivation said running two or more agent processes at once was the common case for the operator who raised it, with no source; it now attributes it to the owner's report recorded in `25c946ea` (§Grounding (advisory); owner approval for the Group B directory). — `specs/062-concurrent-session-targets/spec.md` — **fixed** (decided by the rule)
