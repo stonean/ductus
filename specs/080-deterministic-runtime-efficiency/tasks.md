@@ -1,5 +1,5 @@
 ---
-next-task: 60
+next-task: 61
 ---
 
 # 080 — Deterministic runtime efficiency Tasks
@@ -13,3 +13,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `scripts/tests/test-gen-claude-commands.sh` shows a value below the bound refused with the bound named, and the test fails when the check stops reading the constant
 
 - **Done when**: The bound is a named constant that the check, its refusal and the plan all name, a test that fails without it proves a value below it refused, and 080's next review reads the change.
+
+## 60. A step gates on a bounded list by its count
+
+- [ ] Implement the behavior described in `scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
