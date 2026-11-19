@@ -21,8 +21,8 @@ MUTATIONS = [
     (
         'M1 no path is ever credited',
         'src/primitives/compute_review_scope.rs',
-        '            match records.iter().find(|record| record.read(commit, &path)) {\n',
-        '            match None::<&ReadRecord> {\n',
+        '            if records.iter().any(|record| record.read(commit, &path)) {\n',
+        '            if false {\n',
         'compute_review_scope::tests::a_path_a_complete_record_read_is_credited_and_owes_no_review',
     ),
     (

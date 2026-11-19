@@ -258,7 +258,7 @@ dispositions:
 
 ## Excluded from scope
 
-<one bullet per path the scope left to another spec, with the specs that claimed it, and per path a fix round left out, with that round; `*None.*` when none>
+<one bullet per path the scope left to another spec, and per path a fix round left out, with that round; `*None.*` when none>
 
 ## Unexamined governance
 

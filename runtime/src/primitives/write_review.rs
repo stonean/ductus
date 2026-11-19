@@ -849,16 +849,13 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// beside a zero `examined`, a record no reader can take for a review that
 /// read its scope.
 ///
-/// The paths the scope left out come with it, each with the specs that claimed
-/// it, so the record names what it did not read. An `unread` entry the scope
+/// The paths the scope left out come with it, so the record names what it did
+/// not read. An `unread` entry the scope
 /// does not hold is refused here, where the entries are.
-fn resolve_scope(
-    args: &WriteReviewArgs,
-    repo: &Path,
-) -> Result<(u32, BTreeMap<String, Vec<String>>)> {
+fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<String>)> {
     if args.diff_base.is_empty() {
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
-        return Ok((0, BTreeMap::new()));
+        return Ok((0, BTreeSet::new()));
     }
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: args.feature.clone(),
@@ -1384,8 +1381,8 @@ struct Record<'a> {
     /// The fix-round loop's fields; `None` when the run passed no
     /// `fix-rounds`, which writes none of them.
     fix_rounds: Option<&'a LoopRecord>,
-    /// Each path the scope left out, with the specs that claimed it.
-    excluded: &'a BTreeMap<String, Vec<String>>,
+    /// Each path the scope left out.
+    excluded: &'a BTreeSet<String>,
     /// Each file the record leaves open; see [`open_findings`].
     open_findings: &'a [String],
     /// The criteria step's verdicts; `None` when the run passed none, which
@@ -2060,13 +2057,10 @@ fn render_unexamined_governance(repo: &Path) -> String {
         .join("\n")
 }
 
-/// Each path the scope left out, by the specs that claimed it, and each path a
-/// fix round left out, by the round.
-fn render_excluded(excluded: &BTreeMap<String, Vec<String>>, rounds: &[FixRound]) -> String {
+/// Each path the scope left out, and each path a fix round left out, by the round.
+fn render_excluded(excluded: &BTreeSet<String>, rounds: &[FixRound]) -> String {
     let flat = crate::primitives::flatten_line;
-    let from_scope = excluded
-        .iter()
-        .map(|(path, claimants)| format!("- `{}` — {}", flat(path), claimants.join(", ")));
+    let from_scope = excluded.iter().map(|path| format!("- `{}`", flat(path)));
     let from_rounds = (1..=rounds.len()).zip(rounds).flat_map(|(n, round)| {
         round
             .excluded
@@ -3069,7 +3063,13 @@ mod tests {
     }
 
     #[test]
-    fn the_record_names_each_excluded_path_by_the_spec_that_claimed_it() {
+    fn an_excluded_path_is_listed_without_the_specs_that_claimed_it() {
+        let excluded = BTreeSet::from(["p.rs".to_string()]);
+        assert_eq!(render_excluded(&excluded, &[]), "- `p.rs`");
+    }
+
+    #[test]
+    fn the_record_names_each_excluded_path() {
         let tmp = tempdir().unwrap();
         let parent = repo_with_another_specs_commit(&tmp);
         let mut args = base_args("001-x");
@@ -3082,9 +3082,12 @@ mod tests {
         assert!(report.contains("\nscope: 2\n"), "{report}");
         assert!(report.contains("\nexcluded: 1\n"), "{report}");
         assert!(
-            report.contains("## Excluded from scope\n\n- `src/other.rs` — 002-y\n"),
+            report.contains("## Excluded from scope\n\n- `src/other.rs`\n"),
             "{report}"
         );
+        let section = report.split("## Excluded from scope").nth(1).unwrap();
+        let section = section.split("\n## ").next().unwrap();
+        assert!(!section.contains("002-y"), "{section}");
         assert!(
             report.contains("1 path(s) only another spec's commits changed"),
             "{report}"

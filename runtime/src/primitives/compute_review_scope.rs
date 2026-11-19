@@ -55,7 +55,7 @@ use crate::schema::primitives::{
 /// for a malformed read size or a list file that cannot be written.
 pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
     let scope = compute(args, repo)?;
-    let excluded: Vec<String> = scope.excluded.keys().cloned().collect();
+    let excluded: Vec<String> = scope.excluded.iter().cloned().collect();
     let mut result = ComputeReviewScopeResult {
         diff_base: scope.diff_base.clone(),
         base_source: scope.base_source,
@@ -122,9 +122,8 @@ pub(crate) struct ReviewScope {
     pub(crate) plan_affected: Vec<String>,
     /// See [`ComputeReviewScopeResult::deleted`].
     pub(crate) deleted: Vec<String>,
-    /// Each path `modified_since` holds that the scope left out, with the specs
-    /// that claimed it.
-    pub(crate) excluded: BTreeMap<String, Vec<String>>,
+    /// Each path `modified_since` holds that the scope left out.
+    pub(crate) excluded: BTreeSet<String>,
 }
 
 /// Resolve the review's diff base and scope, every list whole. `write-review`
@@ -231,7 +230,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         scope.extend(
             plan_affected
                 .iter()
-                .filter(|path| !deleted.contains(*path) && !excluded.contains_key(*path))
+                .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))
                 .cloned(),
         );
     }
@@ -299,9 +298,7 @@ fn paths_owing_a_review(
     // A deletion left the scope because it cannot be read, and is still a change:
     // this spec's unless only another spec's commit made it, as the scope's own rule.
     let its_own_deletions = deleted.iter().filter(|path| {
-        window.own.contains(*path)
-            || uncommitted.contains(*path)
-            || !window.others.contains_key(*path)
+        window.own.contains(*path) || uncommitted.contains(*path) || !window.others.contains(*path)
     });
     let mut owed_by: Vec<String> = scope
         .iter()
@@ -380,24 +377,18 @@ fn split_changes(
     deleted: &BTreeSet<String>,
     window: &WindowClaims,
     uncommitted: &BTreeSet<String>,
-) -> (BTreeSet<String>, BTreeMap<String, Vec<String>>) {
+) -> (BTreeSet<String>, BTreeSet<String>) {
     let mut scope = BTreeSet::new();
-    let mut excluded = BTreeMap::new();
+    let mut excluded = BTreeSet::new();
     for path in modified_since
         .iter()
         .filter(|path| !deleted.contains(*path))
     {
-        let claimants = window
-            .others
-            .get(path)
-            .filter(|_| !window.own.contains(path) && !uncommitted.contains(path));
-        match claimants {
-            Some(claimants) => {
-                excluded.insert(path.clone(), claimants.iter().cloned().collect());
-            }
-            None => {
-                scope.insert(path.clone());
-            }
+        if window.others.contains(path) && !window.own.contains(path) && !uncommitted.contains(path)
+        {
+            excluded.insert(path.clone());
+        } else {
+            scope.insert(path.clone());
         }
     }
     (scope, excluded)
@@ -444,7 +435,7 @@ fn hold_in_scope<'a>(
     paths: impl Iterator<Item = &'a String>,
     repo: &Path,
     scope: &mut BTreeSet<String>,
-    excluded: &mut BTreeMap<String, Vec<String>>,
+    excluded: &mut BTreeSet<String>,
 ) {
     // A path that leaves the project, by a `..`, an absolute form or a link,
     // is not probed: it stays where it was (`BE-INPUT-004`).
@@ -667,8 +658,8 @@ fn last_review_commit(
 struct WindowClaims {
     /// Paths a commit gave this spec.
     own: BTreeSet<String>,
-    /// Paths a commit left to other specs, each with the specs that claimed it.
-    others: BTreeMap<String, BTreeSet<String>>,
+    /// Paths a commit left to other specs.
+    others: BTreeSet<String>,
     /// Paths a staging spec folded into this one below `done` brought, wherever
     /// the window starts, since no review has read them.
     folded_in: BTreeSet<String>,
@@ -680,16 +671,10 @@ impl WindowClaims {
     /// `split_changes` then lists it in `excluded`, and it owes no review.
     fn take_unclaimed(&mut self, records: &[ReadRecord], commit: Oid, paths: Vec<String>) {
         for path in paths {
-            match records.iter().find(|record| record.read(commit, &path)) {
-                Some(record) => {
-                    self.others
-                        .entry(path)
-                        .or_default()
-                        .insert(record.spec.clone());
-                }
-                None => {
-                    self.own.insert(path);
-                }
+            if records.iter().any(|record| record.read(commit, &path)) {
+                self.others.insert(path);
+            } else {
+                self.own.insert(path);
             }
         }
     }
@@ -754,20 +739,8 @@ fn attribute_window(
             window.take_unclaimed(&records, oid, claims.paths);
             continue;
         }
-        let others: Vec<String> = claims
-            .claimants
-            .iter()
-            .filter(|claimant| **claimant != form)
-            .map(|claimant| attributor.name_of(claimant))
-            .collect();
         if !claims.is_claimed_by(&form) {
-            for path in claims.paths {
-                window
-                    .others
-                    .entry(path)
-                    .or_default()
-                    .extend(others.iter().cloned());
-            }
+            window.others.extend(claims.paths);
             continue;
         }
 
@@ -820,11 +793,7 @@ fn attribute_window(
             if path.starts_with(&own_prefix) || by_subject {
                 window.own.insert(path);
             } else {
-                window
-                    .others
-                    .entry(path)
-                    .or_default()
-                    .extend(others.iter().cloned());
+                window.others.insert(path);
             }
         }
     }
@@ -835,8 +804,6 @@ fn attribute_window(
 /// A committed review record that states what its run read: the commits its window
 /// held and the scope entries its passes did not read (spec 081).
 struct ReadRecord {
-    /// The directory of the spec whose review it is, the name `excluded` gives it.
-    spec: String,
     /// The commits in `diff-base..reviewed-against`.
     window: HashSet<Oid>,
     /// The record's `unread` entries as the paths they are, since a scope entry may be
@@ -874,13 +841,13 @@ fn read_records(
     let mut records = Vec::new();
     for (oid, claims) in commits {
         for path in &claims.paths {
-            let Some(spec) = path
+            if path
                 .strip_prefix(&prefix)
                 .and_then(|rest| rest.strip_suffix(&suffix))
-                .filter(|directory| !directory.contains('/'))
-            else {
+                .is_none_or(|directory| directory.contains('/'))
+            {
                 continue;
-            };
+            }
             let tree = repository.find_commit(*oid)?.tree()?;
             let Some(record) = record_at(repository, &tree, &project.to_git(path))? else {
                 continue;
@@ -903,7 +870,6 @@ fn read_records(
                 continue;
             };
             records.push(ReadRecord {
-                spec: spec.to_string(),
                 window,
                 literal: unread.iter().cloned().collect(),
                 unread: PlanEntries::new(&unread),
@@ -1901,7 +1867,7 @@ mod tests {
         assert_eq!(file["diff-base"], serde_json::json!(whole.diff_base));
         assert_eq!(
             file["excluded"],
-            serde_json::json!(whole.excluded.keys().collect::<Vec<_>>())
+            serde_json::json!(whole.excluded.iter().collect::<Vec<_>>())
         );
         assert_eq!(file["scope"], serde_json::json!(whole.scope));
         assert_eq!(
@@ -2174,12 +2140,12 @@ mod tests {
     fn a_path_left_open_comes_back_from_excluded() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/old.rs", "feat(002): theirs");
-        assert!(x(&tmp).excluded.contains_key("src/old.rs"));
+        assert!(x(&tmp).excluded.contains("src/old.rs"));
         let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n");
         commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
         let scope = x(&tmp);
         assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
-        assert!(!scope.excluded.contains_key("src/old.rs"));
+        assert!(!scope.excluded.contains("src/old.rs"));
     }
 
     /// A file gone has nothing to read, and a named path leaving the project is not
@@ -2517,7 +2483,7 @@ mod tests {
     }
 
     #[test]
-    fn another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant() {
+    fn another_specs_commit_leaves_the_scope_and_is_listed_in_excluded() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/other.rs", "feat(002): its work");
         change(&tmp, &repo, "specs/002-y/tasks.md", "tasks(002): its tasks");
@@ -2530,23 +2496,11 @@ mod tests {
         let scope = x(&tmp);
         assert!(!has(&scope, "src/other.rs"), "{:?}", scope.scope);
         assert!(!has(&scope, "specs/002-y/tasks.md"), "{:?}", scope.scope);
-        assert_eq!(scope.excluded["src/other.rs"], ["002-y"]);
-        assert_eq!(scope.excluded["specs/002-y/tasks.md"], ["002-y"]);
-        assert_eq!(scope.excluded["src/by_directory.rs"], ["002-y"]);
+        assert!(scope.excluded.contains("src/other.rs"));
+        assert!(scope.excluded.contains("specs/002-y/tasks.md"));
+        assert!(scope.excluded.contains("src/by_directory.rs"));
         // `modified-since` keeps its meaning: every path changed since the base.
         assert!(scope.modified_since.contains(&"src/other.rs".to_string()));
-    }
-
-    #[test]
-    fn a_claimant_no_longer_on_disk_is_named_by_its_number() {
-        let (tmp, repo, _) = two_specs(&[], &[]);
-        write(&tmp.path().join("specs/003-gone/spec.md"), &spec("done"));
-        write(&tmp.path().join("src/gone.rs"), "fn gone() {}\n");
-        commit_all(&repo, "feat(003): its work");
-        fs::remove_dir_all(tmp.path().join("specs/003-gone")).unwrap();
-
-        let scope = x(&tmp);
-        assert_eq!(scope.excluded["src/gone.rs"], ["003"]);
     }
 
     /// 001-x under a new slug, the rename committed.
@@ -2876,13 +2830,13 @@ mod tests {
     fn a_fold_below_done_lifts_the_exclusion_in_a_window_spanning_its_commits() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         stage(&tmp, &repo, "in-progress", Some("001-x"));
-        assert!(x(&tmp).excluded.contains_key("src/s.rs"));
+        assert!(x(&tmp).excluded.contains("src/s.rs"));
         remove_staging(&tmp, false);
         commit_all(&repo, "fold(1234.1): into 001-x");
 
         let scope = x(&tmp);
         assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
-        assert!(!scope.excluded.contains_key("src/s.rs"));
+        assert!(!scope.excluded.contains("src/s.rs"));
     }
 
     /// The flip to `done` lies in this window and changed the staging spec's
@@ -2896,7 +2850,7 @@ mod tests {
         commit_all(&repo, "fold(1234.1): into 001-x");
 
         let scope = x(&tmp);
-        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+        assert!(scope.excluded.contains("src/s.rs"));
         assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
     }
 
@@ -2910,7 +2864,7 @@ mod tests {
         commit_all(&repo, "fold(1234.1): into 002-y");
 
         let scope = x(&tmp);
-        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+        assert!(scope.excluded.contains("src/s.rs"));
         let target = compute(&args("002-y", None), tmp.path()).unwrap();
         assert!(has(&target, "src/s.rs"), "{:?}", target.scope);
     }
@@ -3094,7 +3048,7 @@ mod tests {
             "{:?}",
             scope.scope
         );
-        assert_eq!(scope.excluded["src/s.rs"], ["1234.1"]);
+        assert!(scope.excluded.contains("src/s.rs"));
     }
 
     /// The tree is read by the path from the work tree too.
@@ -3135,7 +3089,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(has(&scope, "src/shared.rs"));
-        assert!(!scope.excluded.contains_key("src/shared.rs"));
+        assert!(!scope.excluded.contains("src/shared.rs"));
     }
 
     #[test]
@@ -3163,7 +3117,7 @@ mod tests {
         let (scope_x, scope_y) = (x(&tmp), y(&tmp));
         assert!(has(&scope_x, "src/x.rs"), "{:?}", scope_x.scope);
         assert!(!has(&scope_y, "src/x.rs"), "{:?}", scope_y.scope);
-        assert_eq!(scope_y.excluded["src/x.rs"], ["001-x"]);
+        assert!(scope_y.excluded.contains("src/x.rs"));
     }
 
     /// A named commit's code is each named spec's to review, in whatever order the
@@ -3177,7 +3131,7 @@ mod tests {
         for scope in [x(&tmp), y(&tmp)] {
             for path in ["src/first.rs", "src/second.rs"] {
                 assert!(has(&scope, path), "{path}: {:?}", scope.scope);
-                assert!(!scope.excluded.contains_key(path), "{path}");
+                assert!(!scope.excluded.contains(path), "{path}");
             }
         }
     }
@@ -3194,7 +3148,7 @@ mod tests {
         let (scope_x, scope_y) = (x(&tmp), y(&tmp));
         assert!(has(&scope_x, "specs/001-x/notes.md"), "{:?}", scope_x.scope);
         assert!(!has(&scope_x, "src/code.rs"), "{:?}", scope_x.scope);
-        assert_eq!(scope_x.excluded["src/code.rs"], ["002-y"]);
+        assert!(scope_x.excluded.contains("src/code.rs"));
         assert!(has(&scope_y, "src/code.rs"), "{:?}", scope_y.scope);
     }
 
@@ -3208,7 +3162,7 @@ mod tests {
 
         for scope in [x(&tmp), y(&tmp)] {
             assert!(has(&scope, "src/unplanned.rs"), "{:?}", scope.scope);
-            assert!(!scope.excluded.contains_key("src/unplanned.rs"));
+            assert!(!scope.excluded.contains("src/unplanned.rs"));
         }
     }
 
@@ -3234,13 +3188,13 @@ mod tests {
             "{:?}",
             scope_x.scope
         );
-        assert_eq!(scope_x.excluded["specs/002-y/scenarios/b.md"], ["002-y"]);
+        assert!(scope_x.excluded.contains("specs/002-y/scenarios/b.md"));
         assert!(
             has(&scope_y, "specs/002-y/scenarios/b.md"),
             "{:?}",
             scope_y.scope
         );
-        assert_eq!(scope_y.excluded["specs/001-x/scenarios/a.md"], ["001-x"]);
+        assert!(scope_y.excluded.contains("specs/001-x/scenarios/a.md"));
         for scope in [&scope_x, &scope_y] {
             assert!(has(scope, "src/unplanned.rs"), "{:?}", scope.scope);
         }
@@ -3253,7 +3207,7 @@ mod tests {
             "{:?}",
             scope_x.scope
         );
-        assert_eq!(scope_x.excluded["specs/002-y/scenarios/c.md"], ["002-y"]);
+        assert!(scope_x.excluded.contains("specs/002-y/scenarios/c.md"));
     }
 
     /// A spec the subject names reviews the commit's code whichever plan lists it
@@ -3281,7 +3235,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(has(&scope, "specs/001-x/tasks.md"), "{:?}", scope.scope);
-        assert_eq!(scope.excluded["specs/002-y/tasks.md"], ["002-y"]);
+        assert!(scope.excluded.contains("specs/002-y/tasks.md"));
     }
 
     #[test]
@@ -3295,7 +3249,7 @@ mod tests {
         assert_eq!(scope.diff_base, start);
         assert_eq!(scope.base_source, BaseSource::Since);
         assert!(has(&scope, "src/mine.rs"));
-        assert_eq!(scope.excluded["src/other.rs"], ["002-y"]);
+        assert!(scope.excluded.contains("src/other.rs"));
         assert!(!has(&scope, "src/before.rs"));
     }
 
@@ -3331,7 +3285,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(has(&scope, "src/other.rs"), "{:?}", scope.scope);
-        assert!(!scope.excluded.contains_key("src/other.rs"));
+        assert!(!scope.excluded.contains("src/other.rs"));
         assert!(has(&scope, "src/untracked.rs"), "{:?}", scope.scope);
     }
 
@@ -3406,7 +3360,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(!has(&scope, "src/planned.rs"), "{:?}", scope.scope);
-        assert_eq!(scope.excluded["src/planned.rs"], ["002-y"]);
+        assert!(scope.excluded.contains("src/planned.rs"));
     }
 
     const DISPOSITIONS: &str =
@@ -4087,16 +4041,13 @@ mod tests {
     }
 
     /// A path a committed review states it read is read once: it leaves every other
-    /// window, under the reading spec's name, and owes no review (spec 081, AC13).
+    /// window, and owes no review (spec 081, AC13).
     #[test]
     fn a_path_a_complete_record_read_is_credited_and_owes_no_review() {
         let tmp = read_by_y(&["src/x.rs"], "unread: []\n", holding_the_chore);
         let scope = x(&tmp);
         assert!(!has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert_eq!(
-            scope.excluded.get("src/x.rs"),
-            Some(&vec!["002-y".to_string()])
-        );
+        assert!(scope.excluded.contains("src/x.rs"));
         assert!(!scope.review_owed, "{:?}", scope.owed_by);
     }
 
@@ -4196,7 +4147,7 @@ mod tests {
     fn a_path_in_another_specs_directory_owes_no_review() {
         for edit in ["specs/002-y/analysis.md", "specs/002-y/scenarios/z.md"] {
             let scope = reopened_with_a_record(edit);
-            assert_eq!(scope.excluded[edit], ["002-y"], "{:?}", scope.scope);
+            assert!(scope.excluded.contains(edit), "{:?}", scope.scope);
             assert!(!scope.review_owed, "{edit}");
         }
 
@@ -4259,8 +4210,8 @@ mod tests {
         commit_all(&repo, "chore: touches 002 and the neighbour");
 
         let scope = compute(&args("001-x", None), &project).unwrap();
-        assert_eq!(scope.excluded["specs/002-y/plan.md"], ["002-y"]);
-        assert_eq!(scope.excluded["src/theirs.rs"], ["002-y"]);
+        assert!(scope.excluded.contains("specs/002-y/plan.md"));
+        assert!(scope.excluded.contains("src/theirs.rs"));
         assert!(!scope.modified_since.iter().any(|p| p.contains("other/")));
     }
 
@@ -4314,7 +4265,7 @@ mod tests {
         });
         let paths = ["here.md".to_string(), "linked/there.md".to_string()];
         let mut scope = BTreeSet::new();
-        let mut excluded = BTreeMap::new();
+        let mut excluded = BTreeSet::new();
         hold_in_scope(paths.iter(), repo.path(), &mut scope, &mut excluded);
         assert_eq!(scope.into_iter().collect::<Vec<_>>(), ["here.md"]);
     }

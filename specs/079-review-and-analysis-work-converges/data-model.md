@@ -7,7 +7,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | Field | Type | Written when | Read by |
 | --- | --- | --- | --- |
 | `fix-rounds-open` | `true`, or absent | Every `write-review` of a run with a fix-round loop but the last, which omits it | `check-review-gate` blocks while it is present |
-| `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path by the spec that claimed it |
+| `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path (`ductus write-review --help`) |
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
 | `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD`, and `check-review-gate`, which blocks on a listed break |
 

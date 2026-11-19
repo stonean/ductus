@@ -97,18 +97,6 @@ impl<'a> Attributor<'a> {
             .map(|(_, directory)| directory.as_str())
     }
 
-    /// The spec `form`, as a report names it: its directory, or for a spec no
-    /// longer on disk the part of a directory's name before its slug.
-    pub(crate) fn name_of(&self, form: &FeatureForm) -> String {
-        self.directory_of(form).map_or_else(
-            || match form {
-                FeatureForm::Sequential { number } => format!("{number:03}"),
-                FeatureForm::BranchScoped { identifier, n } => format!("{identifier}.{n}"),
-            },
-            str::to_string,
-        )
-    }
-
     /// Who `commit` belongs to, and the paths it contributes.
     ///
     /// # Errors

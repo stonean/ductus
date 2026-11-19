@@ -192,7 +192,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         '        if claims.claimants.is_empty() {\n            // A commit naming no spec',
         '        if claims.claimants.len() < 99 {\n            // A commit naming no spec',
-        'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant',
+        'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_listed_in_excluded',
     ),
     (
         'M27 a commit no spec claims is left out',
@@ -206,7 +206,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         '        if !claims.is_claimed_by(&form) {\n',
         '        if claims.claimants.is_empty() {\n',
-        'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_named_by_its_claimant',
+        'compute_review_scope::tests::another_specs_commit_leaves_the_scope_and_is_listed_in_excluded',
     ),
     (
         'M31 a subject naming none leaves the unplanned path to no one',
@@ -239,22 +239,22 @@ MUTATIONS = [
     (
         'M35 uncommitted work can leave the scope',
         'src/primitives/compute_review_scope.rs',
-        '.filter(|_| !window.own.contains(path) && !uncommitted.contains(path));',
-        '.filter(|_| !window.own.contains(path));',
+        'if window.others.contains(path) && !window.own.contains(path) && !uncommitted.contains(path)',
+        'if window.others.contains(path) && !window.own.contains(path)',
         'compute_review_scope::tests::uncommitted_work_joins_whole_even_on_another_specs_path',
     ),
     (
         'M36 a path this spec also changed leaves the scope',
         'src/primitives/compute_review_scope.rs',
-        '.filter(|_| !window.own.contains(path) && !uncommitted.contains(path));',
-        '.filter(|_| !uncommitted.contains(path));',
+        'if window.others.contains(path) && !window.own.contains(path) && !uncommitted.contains(path)',
+        'if window.others.contains(path) && !uncommitted.contains(path)',
         'compute_review_scope::tests::a_path_another_specs_commit_also_changed_stays_in_scope',
     ),
     (
         'M37 a path no walked commit names is dropped',
         'src/primitives/compute_review_scope.rs',
-        '            None => {\n                scope.insert(path.clone());\n            }',
-        '            None => {\n                if window.own.contains(path) || uncommitted.contains(path) {\n                    scope.insert(path.clone());\n                }\n            }',
+        '        } else {\n            scope.insert(path.clone());\n        }',
+        '        } else if window.own.contains(path) || uncommitted.contains(path) {\n            scope.insert(path.clone());\n        }',
         'compute_review_scope::tests::a_changed_path_no_walked_commit_names_stays_in_scope',
     ),
     (
@@ -274,7 +274,7 @@ MUTATIONS = [
     (
         "M40 a plan file another spec's commit changed returns on a first review",
         'src/primitives/compute_review_scope.rs',
-        '                .filter(|path| !deleted.contains(*path) && !excluded.contains_key(*path))\n',
+        '                .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))\n',
         '                .filter(|path| !deleted.contains(*path))\n',
         'compute_review_scope::tests::a_plan_file_only_another_specs_commit_changed_moves_to_that_spec',
     ),
@@ -349,13 +349,6 @@ MUTATIONS = [
         'compute_review_scope::tests::a_plan_entry_names_a_path_as_the_corpus_writes_them',
     ),
     (
-        'M52 a retired claimant is named without its width',
-        'src/primitives/commit_attribution.rs',
-        'FeatureForm::Sequential { number } => format!("{number:03}"),',
-        'FeatureForm::Sequential { number } => format!("{number}"),',
-        'compute_review_scope::tests::a_claimant_no_longer_on_disk_is_named_by_its_number',
-    ),
-    (
         'M53 the file form keeps excluded inline',
         'src/primitives/compute_review_scope.rs',
         '        result.excluded = None;\n',
@@ -395,28 +388,28 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '    let _ = writeln!(fm, "excluded: {}", record.excluded.len());\n',
         '',
-        'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
+        'write_review::tests::the_record_names_each_excluded_path',
     ),
     (
         'M59 the record does not name what it excluded',
         'src/primitives/write_review.rs',
-        '    let from_scope = excluded\n        .iter()',
-        '    let from_scope = excluded\n        .iter()\n        .take(0)',
-        'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
+        '    let from_scope = excluded.iter().map(',
+        '    let from_scope = excluded.iter().take(0).map(',
+        'write_review::tests::the_record_names_each_excluded_path',
     ),
     (
         'M60 a generated Summary is silent on what was excluded',
         'src/primitives/write_review.rs',
         '    if !record.excluded.is_empty() {\n        let _ = write!(',
         '    if record.excluded.len() > 99 {\n        let _ = write!(',
-        'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
+        'write_review::tests::the_record_names_each_excluded_path',
     ),
     (
         'M61 the denominator ignores the scope rule',
         'src/primitives/write_review.rs',
         '        u32::try_from(entries.len()).unwrap_or(u32::MAX),\n        result.excluded,',
         '        u32::try_from(entries.len() + result.excluded.len()).unwrap_or(u32::MAX),\n        result.excluded,',
-        'write_review::tests::the_record_names_each_excluded_path_by_the_spec_that_claimed_it',
+        'write_review::tests::the_record_names_each_excluded_path',
     ),
     (
         'M62 a record naming no run ends a first review',
@@ -792,8 +785,8 @@ MUTATIONS = [
     (
         'M115 another spec\'s deletion makes a review owed',
         'src/primitives/compute_review_scope.rs',
-        '            || !window.others.contains_key(*path)\n    });',
-        '            || true\n    });',
+        'uncommitted.contains(*path) || !window.others.contains(*path)\n    });',
+        'uncommitted.contains(*path) || true\n    });',
         'compute_review_scope::tests::another_specs_deletion_owes_this_spec_no_review',
     ),
     (
@@ -1794,7 +1787,7 @@ MUTATIONS = [
     (
         'M266 an empty base is derived, and refuses',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeMap::new()));\n    }\n',
+        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeSet::new()));\n    }\n',
         '',
         'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
@@ -1847,5 +1840,12 @@ MUTATIONS = [
         '                .filter(|entry| scope.plan_affected.contains(entry))',
         '                .filter(|_| true)',
         'compute_review_scope::tests::a_changed_path_holding_a_brace_names_only_itself',
+    ),
+    (
+        'M319 an excluded path is listed with a note after it',
+        'src/primitives/write_review.rs',
+        'excluded.iter().map(|path| format!("- `{}`", flat(path)));',
+        'excluded.iter().map(|path| format!("- `{}` — 002-y", flat(path)));',
+        'write_review::tests::the_record_names_each_excluded_path write_review::tests::an_excluded_path_is_listed_without_the_specs_that_claimed_it',
     ),
 ]
