@@ -4,7 +4,9 @@ name: runtime-release
 # deterministic runtime binary. Tag scheme: ductus-v<MAJOR>.<MINOR>.<PATCH>.
 # Releases before 0.28.0 were tagged gvrn-v*; those tags and their assets are
 # left exactly as published (spec 049).
-# The release notes are sourced from runtime/CHANGELOG.md.
+# This workflow sets no release body. What changed is recorded in
+# runtime/CHANGELOG.md, whose `[Unreleased]` section scripts/check-release-tag.sh
+# requires the release commit to version.
 #
 # Job order is load-bearing and reads top to bottom:
 #   audit ───────┐                                                ┌─→ verify-published
@@ -519,8 +521,9 @@ jobs:
   # The manifest below is belt-and-suspenders, not the completeness gate: that
   # is `acquire`, which fails before `publish` when a target staged nothing.
   # What this catches is the narrower case of an artifact that vanished between
-  # the two, and it keeps the job honest about uploading a complete set or
-  # none.
+  # the two, so the upload is never started with an incomplete set. The upload
+  # itself is not atomic: the release is public while its files attach, and an
+  # upload that fails midway is repaired by re-running this job.
   #
   # REQUIRED_TARGETS must match the build matrix. Drift in the safe direction
   # (a target added to the matrix but not here) publishes an extra asset;

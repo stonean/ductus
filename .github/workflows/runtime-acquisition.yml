@@ -145,8 +145,15 @@ jobs:
           # 1. Fetch the archive and its sidecar. A missing sidecar is a
           #    failure here, not a skip: unlike the source tarball, release
           #    assets always carry theirs.
+          # A just-published asset can answer 404 briefly. --retry-all-errors
+          # makes -f's 404 retriable (curl does not retry one otherwise); the
+          # backoff is curl's default (1, 2, 4, 8, 16 seconds) and
+          # --retry-max-time stops a new attempt after 60 seconds, so a download
+          # takes at most 60 + DOWNLOAD_MAX_TIME_SECONDS seconds and the two stay
+          # under the job's 15 minutes.
           fetch=(--proto '=https' --tlsv1.2 -fsSL
-            --connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS")
+            --connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS"
+            --retry 5 --retry-all-errors --retry-max-time 60)
           curl "${fetch[@]}" "${base}/${archive}" -o "$archive"
           curl "${fetch[@]}" "${base}/${archive}.sha256" -o "${archive}.sha256"
 
