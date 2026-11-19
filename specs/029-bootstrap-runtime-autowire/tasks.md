@@ -1,5 +1,5 @@
 ---
-next-task: 18
+next-task: 19
 ---
 
 # 029 — Bootstrap Runtime Auto-Detect and Wire Tasks
@@ -14,3 +14,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A scratch-adopter bootstrap shows a normal run unchanged
 
 - **Done when**: no path built from user input is written, removed or extracted uncontained on any route the bootstrap specifies, the artifacts above say so, and 029's analysis records BE-INPUT-004 addressed
+
+## 18. Prove the review's Branch 2 listing check where only CI and a full run can (029's review, owner decision 2026-11-19)
+
+- [ ] A dispatched runtime-acquisition.yml run against ductus-v0.59.11 passes on all five targets, its listing check included, so the check holds under Linux GNU tar and Windows Git Bash as well as macOS bsdtar
+- [ ] A scratch-adopter bootstrap with --ref=main after the push runs every step to the end, Runtime acquisition Branch 2 listing and extracting the published asset, and halts nowhere
+
+- **Done when**: both pass on the pushed text, or a failure is fixed and both pass
