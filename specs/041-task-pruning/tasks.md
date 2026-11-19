@@ -1,5 +1,5 @@
 ---
-next-task: 28
+next-task: 29
 ---
 
 # 041 — Spec Directory Pruning Tasks
@@ -31,3 +31,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 Owed after this task, in order: 041's review of its change; the pre-done criteria verification; then a full analysis, since the task edits 041's design subjects. The 2026-11-15 analysis was judged but never recorded, and its verdicts go stale with this edit. What it found carries into the next run. `BE-TXN-002` turns `addressed` once the guard lands, and `BE-PAYLOAD-001` and `BE-RACE-003` were judged `addressed`. Two step-15 grounding claims in `plan.md` want a citation in the same design edit: that other `tasks.md` readers are line scanners, and that an adopter's tree holds no copy of the project templates. Of the stored grounding decisions, all but the one on a `done` spec's artifacts being committed still stand, so carry them under their stored keys.
 
 - **Done when**: No prune apply overwrites a change made between its read and its write, proven by tests their mutants turn red; the whole `cargo test` passes; and 041's next review reads the change.
+
+## 28. An open fenced block or comment is not examined
+
+- [ ] Implement the behavior described in `scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested

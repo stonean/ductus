@@ -33,7 +33,10 @@ A `tasks.md` is segmented into one ordered `Vec<Block>`; the preamble is
 simply the first `Structure` block, not a separate field. Structure detection is shared: `detect_tasks_structure` yields
 `Flat` (task headings at level 2, `## N.`) or `Phased` (task headings at
 level 3, `### N.`, under `## …` phase containers). `task_level` is 2 or 3
-accordingly.
+accordingly. Every line goes through `SkipScanner`; a fenced block or HTML
+comment still open at the end of the file leaves the lines from its opener on
+in no block, so the result reports them as its **unexamined tail** (the
+`unexamined-tail` bullet below), never as structure.
 
 ```rust
 enum PruneMode { KeepPending, Reset }
@@ -217,6 +220,13 @@ Result for one feature (a **compact summary — never the file body**):
   the primitive doing its own write (per the runtime-eligibility resolution
   in [spec.md](spec.md)).
 
+- `unexamined-tail` — present only when `tasks.md` ends inside an open fenced
+  block (`cause: open-fence`) or HTML comment (`open-comment`). `from-line` is
+  the 1-based line of the whole file the region opens on: it and every later
+  line are in no section and were not examined, so the file never reads as
+  clean. An apply, in either mode, writes nothing (`applied: false`) until the
+  region is closed, and the preview still reports the sections it read. Absent
+  means no region was open, never that none was checked.
 - `sections-count`, `form`, `lists-file` — `sections` is inline while the
   result serialized fits `[artifacts] read-size-bytes`; past it `form` is
   `file`, `sections` is absent, `sections-count` stays inline in both forms,
@@ -290,6 +300,10 @@ above: a `##` heading opens a **section**, and a `#` heading opens a
 structural block. The lines before the first heading are the **preamble**.
 Preamble and structural blocks are always kept; a `###` or deeper heading
 stays inside the section that holds it.
+
+A fenced block or HTML comment still open at the end of the file leaves the
+lines from its opener on in no block, so the result reports them as its
+**unexamined tail** (the `unexamined-tail` bullet below), never as structure.
 
 A section's **text** is its lines from the heading to its last non-blank
 line, joined by `\n`. The digest and the size both read the text, so a
@@ -416,6 +430,11 @@ Result (a **compact summary — never a section's text**):
   fresh preview taken once the run has finished writing to the spec, so the
   reopen follows the tree the run leaves.
 
+- `unexamined-tail` — as `prune-tasks`': present only when `plan.md` ends
+  inside an open fenced block or HTML comment, `from-line` is a line of the
+  whole file, and an apply removes nothing (`applied: false`), whatever `remove`
+  names, so a design-record section the open region swallowed into another
+  section cannot be removed.
 - `sections-count`, `form`, `lists-file` — `sections` is inline while the
   result serialized fits `[artifacts] read-size-bytes`; past it `form` is
   `file`, `sections` is absent, `sections-count` stays inline in both forms,
@@ -493,6 +512,9 @@ summary above at the top level, and a walk carries only the walk:
   section outside the record, and a `done` spec whose `reopen-required` is
   `true` even when it has no such section or no `plan.md`, so a reopen from
   edits made before the run reaches the corpus preview.
+- `unexamined-count` — the listed features carrying an `unexamined-tail`; a
+  spec with one is listed whatever else it has to reduce, and the other specs
+  are still reduced. Absent at zero, inline in both forms, like `features-count`.
 - `skipped` — for `prune-tasks`, each spec without a `tasks.md`
   (`no-tasks-file`), and under `apply` each spec whose `tasks.md` changed
   after the walk read it (`changed-since-read`; *The write guard*); for `prune-plan`, each spec without a `plan.md` and
