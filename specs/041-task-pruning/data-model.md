@@ -393,8 +393,8 @@ Result (a **compact summary — never a section's text**):
   is written. A domain outcome, not an error: `/{project}:analyze` dispatches
   the preview on every spec, and a spec below `planned` has no plan.
 - `status` — the spec's frontmatter status, read on every call.
-- `sections-examined` — `##` sections read, inside the record and out, so an
-  empty `sections` over `sections-examined: 0` (no sections) reads
+- `sections-examined` — `##` sections read, inside the record and out, so a
+  zero `sections-count` over `sections-examined: 0` (no sections) reads
   differently from one over `sections-examined: 5` (all in the record). It is
   named apart from a walk's `examined`, which counts features, because a
   result's two halves share one key space (below).
