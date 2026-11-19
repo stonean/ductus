@@ -207,7 +207,7 @@ its version and date.
   no longer owes each of them a review: `compute-review-scope` credits each
   of its paths once a review record committed in the window states it read
   the path (its window holds the commit; no skipped pass, budget stop or open
-  fix-round loop), listing it in `excluded` under the reading spec. A record
+  fix-round loop), listing it in `excluded`. A record
   with no `unread`, every one written before this change, credits nothing.
 
 - **A spec's decided rule departures are recorded, not lost (spec 073).** A
