@@ -34,6 +34,6 @@ The `/{project}:analyze` slash command remains available for on-demand auditing 
 
 ## Edge Cases
 
-- If an acceptance criterion was already marked `- [x]` from a prior session, leave it as-is and do not re-verify unless the user requests it.
-- If a criterion fails verification, leave it as `- [ ]` and report the failure.
+- If an acceptance criterion was already marked `- [x]` from a prior session, `/{project}:review`'s criteria step still judges it on each run, and unticks it when it no longer holds.
+- If a criterion fails verification, `/{project}:review` sets it to `- [ ]` and records it not met, which blocks `done`.
 - If validation fails, report the specific failures and do not propose the status transition. The user fixes the issues and re-runs the command.

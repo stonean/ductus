@@ -8,10 +8,10 @@ section: "Command Set"
 
 Acceptance criteria are the surface `/{project}:review`'s criteria step verifies semantically — it judges each one and marks it at verification time, and `/{project}:implement`'s completion gate holds `done` while one stands unticked. A criterion that does not exist is a behavior no review checks, so a spec can pass its gate on a list that omits work the spec actually shipped.
 
-Criteria are authored at `/{project}:specify` and refined at `/{project}:clarify`. After that, no command writes one:
+Criteria are authored at `/{project}:specify` and refined at `/{project}:clarify`. Before `/{project}:amend` gained the criterion route this scenario specifies, no command wrote one after that:
 
 - `/{project}:clarify` updates criteria (it verifies each is concrete and testable, rewrites vague ones, and flags missing ones) but gates on `draft`. On an `in-progress` spec with zero open questions it stops with "already `in-progress`".
-- `/{project}:amend`'s two routes write a question or a scenario plus its task, and its Scope Boundaries state that no other artifact contents are modified.
+- `/{project}:amend`'s two routes wrote a question or a scenario plus its task, and its Scope Boundaries stated that no other artifact contents were modified.
 - `/{project}:plan` gates on `clarified`, so a spec on the reopen cycle fails it.
 
 The state that needs the write is ordinary: a follow-on scenario lands on a reopened spec, its behavior is implemented, and nothing at criteria level verifies it. The workaround is a direct `spec.md` body edit — the same shape as the `append-task`-by-hand workaround that `023-govern-refinement`'s `extend-existing-scenario-task` scenario exists to remove, and the same shape as the gap `046-scenario-open-question-visibility` closed: a reachable pipeline state with no command routing out of it.
@@ -77,9 +77,13 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
   without stating one"*, so the constitution had already separated a criterion's
   label from its text.
 
-  Refusing was additionally ruled out by what follows from it: nothing detects
-  an unchecked criterion on a `done` spec — `check-artifacts`' criterion
-  families cover path existence and labels, not verification state — so a
-  refused criterion would be recorded somewhere no gate ever reads. Reopening
-  routes it into `/{project}:implement`'s criterion-verification step, which is
-  the gate that actually verifies criteria.
+  Refusing was additionally ruled out by what followed from it then: nothing
+  detected an unchecked criterion on a `done` spec — `check-artifacts`'
+  criterion families covered path existence and labels, not verification
+  state — so a refused criterion would have been recorded somewhere no gate
+  read. Reopening routed it into `/{project}:implement`'s criterion-verification
+  step, then the gate that verified criteria. Since 066's
+  `criteria-are-verified-in-review`, `/{project}:review`'s criteria step judges
+  every criterion and `check-artifacts` reports a `done` spec holding an
+  unticked criterion as drifted, so the reopen still routes the criterion to
+  its judge.
