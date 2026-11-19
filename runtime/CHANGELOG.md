@@ -462,6 +462,141 @@ its version and date.
   which replaces `.pi/extensions/ductus.ts`. Spec 064, task 18, scenario
   `colon-form-commands-run-on-pi`.
 
+- **`dashboard`, `discover-rule-files`, `check-artifact-size` and the config
+  readers name every unknown key in a ductus-owned `.ductus/config.toml`
+  section (spec 019; `CFG-ENV-012`).**
+  One registry, `runtime/src/schema/config_keys.rs`, declares the keys each
+  ductus-owned section recognizes: the plain keys, the fields of named
+  `[constitutions]` and `[services]` entries and of
+  `[[review.disabled-rule-files]]` entries, `[host]`'s legacy
+  `cli-config-dir`, and the retired `[workflows]`. A key outside it is
+  reported by name, never dropped and never an error, and only the key name is
+  judged: a wrong-typed value stays its reader's to report.
+  `discover-rule-files` (`[rules]`, `[review]`) and `check-artifact-size`
+  (`[artifacts]`) add a notice, `dashboard` returns `config.unknown-keys`
+  (later moved to the lists file past `[artifacts] read-size-bytes`, with
+  `unknown-keys-count` inline) and `/status` renders a callout, and
+  `Host::load`, `Paths::load`, `resolve-constitutions`, `resolve-references`,
+  `derive-references` and `check-orphaned-references` warn once per process on
+  stderr. `/ductus` names them in its summary, and the markdown-only paths of
+  `/review`, `/status`, `/clarify`, `/plan` and `/analyze` compare by hand. A
+  key that needs quotes is shown escaped, a tab or bidirectional control in a
+  key or in the config path is escaped (`BE-INPUT-011`), and the warning drops
+  a failed stderr write, so a broken stderr pipe no longer panics a primitive
+  that read the config (exit 101). The installer's `§Project Configuration`
+  now lists `[runtime]`, `[review]` `tech-stack-verified` and `[services]`,
+  and a test holds it to the registry. Spec 019 (reviewed under 063), commits
+  `e7044738`, `b482e029`, `9d4d8c76`.
+
+- **`resolve-anchor` judges a pointer into a shipped command reference, and
+  its result gains a `cross-document` count (spec 067, scenario
+  `pointers-into-shipped-files-are-judged`; spec 071).** A reference on a line
+  naming exactly one shipped document, and an explicit `**§X** in <shipped
+  doc>` pair, resolves against that document's headings, the citing file's, or
+  the constitution's markers, and is counted `cross-document`; it is zero
+  wherever the installer's Shared Files manifest is absent, as in every
+  adopter. A `**§X** in` pair resolves only when `X` equals a heading of its
+  document, so a pointer that outlived a shortened heading is no longer
+  prefix-matched. `check-step-references` treats `step N of §X` and `step N of
+  **§X**` as qualified, like `X's step N`, so a pointer into a reference's own
+  numbered list is no longer resolved against the command's steps. Commits
+  `b772a6ac`, `36b3ddb6` and `083c4b08`. Later widened: a reference on a line
+  naming any readable document is judged against it (`8651d466`), not only
+  one naming a shipped document.
+- **A new migration, `claude-md-import-syntax`, rewrites `CLAUDE.md`'s
+  `@import <path>` lines to the `@<path>` form Claude Code loads, and
+  `constitution-import` adds the constitution import (spec 002,
+  `claude-md-template-imports-load`, task 5; spec 050,
+  `the-constitution-fits-one-read`).** Claude Code imports a file only as
+  `@path`, and a path ends at the first unescaped space, so the template's
+  `@import AGENTS.md` named a file called `import` and loaded nothing. The
+  `CLAUDE.md` template now imports `@.ductus/constitution.md` above
+  `@AGENTS.md`. `claude-md-import-syntax` (`introduced_in` 0.60.0, no
+  `sunset_after`) rewrites each `@import <path>` line outside a code fence
+  (quotes dropped, spaces escaped, each line keeping its own ending), the
+  `@import .ductus/constitution.md` line and a hand-added shared-constitution
+  `@import` line included, and converts the constitution line instead of
+  removing it; a line already in `@path` form stays as written.
+  `constitution-import`, ordered after it on the `id` tie-break, adds
+  `@.ductus/constitution.md` where nothing imports the constitution. It is
+  a second entry because Pre-run Migrations runs only entries ordered after
+  `last_applied`, so it is the only way to reach a `--ref=main` adopter whose
+  `last_applied` is already `claude-md-import-syntax`. It inserts the line
+  with the file's own line ending, and a second run reports converged and
+  writes nothing. `/ductus` renders a shared constitution as
+  `@{document-path}` under a claude-style agent, so the block loads at session
+  start; `/target` step 4 skips a document an import already loaded. Pi reads
+  `AGENTS.md`, keeps its plain link and `/target`'s read.
+  `check-orphaned-references` reports a dangling `@path` import (an `@` that
+  starts a token begins a reference; `x@.ductus/y` does not). Commits
+  `96934872`, `d1e3ec96`, `e48df859`, `7ce72592`, `d5de121c`, `da52bc4c` and
+  `1503ca58`.
+
+- **`prune-project` segments, searches and rewrites the project files (spec
+  041 task 23, items 1-5; spec 075).**
+  The deterministic half of `/{project}:prune --project`. It segments
+  `AGENTS.md` and the spec root's `system.md`, `events.md` and `errors.md`
+  into entries (heading, item, row, block), each reported by locator, size
+  and digest, never text; an HTML comment and a `/ductus`-managed BEGIN/END
+  region are never entries. A catalog entry carries its identifier, and a
+  preview searches the tracked files outside the spec root for it literally;
+  with no repository the search is reported unavailable, never as zero hits.
+  An apply removes or replaces entries by digest, refuses the whole write
+  when any entry changed, collapses blank lines only at the seams it changed,
+  keeps line endings, and creates a missing home from its compiled-in
+  template at mode 0644. It is wired as an MCP tool, a CLI subcommand and an
+  `ductus exec` dispatch, listed in `framework/runtime-tools.txt`, and
+  allowed in the `claude` and `auggie` configure blocks (the other layouts
+  read the tool from the MCP server or the Pi bridge). Later entries bound
+  its result, contain its reads (spec 041, task 25) and write a file only
+  when it is unchanged since it was read (task 27). Spec 041, task 23.
+  `2f61d67d`
+- **`/{project}:prune --project` walks the project files (spec 041 task 23,
+  item 6; specs 075 and 050).**
+  The command gains `--project`. Step 1 refuses it with `--all`, `--reset` or
+  `--force` before reading anything, and routes to a new section, Project
+  files, which previews with `prune-project`, judges each entry by the
+  constitution's §drift-prevention test and §spec-phase definitions,
+  confirms through `gate-confirm`, writes the home before applying, and
+  reports what moved, what was removed and why, and each drafted upstream
+  report. Step 8 routes a plan section's project-only knowledge by the same
+  definitions, to `AGENTS.md` only when every session needs it. The prune
+  reference adds the markdown-only walk, in which a missing home is created
+  with its `#` heading only. The scope names its two widenings: reading
+  source for the catalog search, and writing a confirmed entry into its home.
+  Spec 041, task 23. `ab5eaa49`, `314e7571`
+- **Two rules: `CFG-ENV-013` owns a secret at rest, and `BE-DATA-013` keeps
+  a credential header to its origin (spec 008, tasks 21 and 26).**
+  `CFG-ENV-013` (MUST, `configuration-cross.md`) covers a secret written in
+  source or a container-build manifest, committed to version control, passed
+  to a container build, or placed into an image or other build artifact, in
+  every project shape. A secret may be committed encrypted only when each
+  service has its own copy in each environment, with its own value, key and
+  decryptor, and no developer can decrypt any copy, among other conditions.
+  `BE-DATA-003` keeps only runtime sourcing and `BE-DATA-008` only container
+  runtime injection. `BE-DATA-013` (MUST, `security-backend.md`) requires an
+  outbound client that sends a credential header to refuse redirects, follow
+  only same-origin ones, or rely on a library shown by its documentation or
+  source never to send the header cross-origin. Spec 008, tasks 21 and 26.
+  `554d0ee3`
+- **Migration `remove-legacy-constitutions-region` (0.60.0) removes the
+  unmaintained `ductus:constitutions` comment region (spec 071, tasks 23
+  and 24).**
+  The templates shipped a `<!-- ductus:constitutions -->` comment region from
+  v0.47.0 to v0.59.11 that no run ever maintained. The migration removes it
+  from `CLAUDE.md` and `AGENTS.md` when it is the shipped text, and leaves an
+  edited, unclosed or pinned one with a report. Its id sorts after
+  `memory-routing-leaves-claude-md`, the 0.60.0 entry pushed before it, so
+  an adopter who ran `/{project}` between the two pushes still runs it. Spec
+  071, tasks 23 and 24. `f056b209`, `47e68233`, `77fff147`, `0f31a124`
+- **The Pi trust reminder joins the First run and Update mode messages (spec
+  064, task 16).**
+  When Pi is among the adopted or updated agents, `/{project}` now says that
+  Pi loads the project's `.pi/` resources, the bridge included, only after
+  the project is trusted: an interactive start prompts, and a non-interactive
+  run needs `--approve` or `defaultProjectTrust: "always"`. Spec 064, task
+  16. `3b359742`
+
 ### Changed
 
 - **Each `--{name}-json` flag's `--help` states the JSON its file holds, and no
@@ -1393,6 +1528,788 @@ its version and date.
   rewrite that does not. Its Source quotes MySQL's current wording. Spec 038,
   its scenario `lock-the-parent-before-rewriting-its-children`.
 
+- **The eleven shipped rule files are re-reviewed against their sources: 208
+  rules become 297, and the review renumbers, removes or deprecates no
+  existing ID (specs 008, 017, 034, 036, 037, 038, 039).**
+  The counts are `### {ID}` headings across the eleven files at the review's
+  commit; later entries in this release add rules and move some. Three passes
+  fetched every external claim from its source, and a fourth re-checked each
+  rule changed after them. New obligations are `/analyze` findings for a spec
+  that meets a rule's trigger: `BE-AUTHN-022` (re-authentication for a
+  sensitive account change), `BE-API-015` (WebSocket handshake and origin),
+  `BE-TIMEOUT-003` (a server-side statement timeout), and the further rules
+  each file gains in the accessibility, API, concurrency, configuration,
+  observability, performance, reliability and security sets. A MUST no longer
+  requires continuous integration: the outcome is the MUST, and running the
+  check on every change is a SHOULD of its own (`BE-SCHEMA-003` and `-004`,
+  `FE-BUNDLE-001` and `-003`, `BE-DEPS-001` and `-007`, `FE-DEPS-001` and
+  `-006`, `FE-A11YTEST-001` and `-003`). Service-level objectives and alerting
+  stay out of rule files, bcrypt is legacy-only, `FE-BUNDLE-001` carries no
+  default budget figures, and `QUAL-GROUND-001` covers in-repo contracts and
+  leaves configuration to the `CFG-ENV` rules. `configuration-cross.md` gains
+  a `FLAG` category and renames `ENV` to "Environment and configuration
+  values". Every rule file header states its enforcement mode and the same
+  opt-out paragraph, which now says a project may exclude an unconditional
+  `-cross.md` file through `[[review.disabled-rule-files]]` as well as a
+  stack-selected one. The constitution's `§rules` states the two authoring
+  disciplines, and its configuration summaries match the files. `/analyze`
+  accepts `CFG-FLAG` as an ID category. Citations of malformed-configuration
+  handling move from `CFG-ENV-003` to `CFG-ENV-008` in `/review`, the
+  installer and the registry error comment, and the spec template's
+  `BE-AUTHN-001` example reads "deliberately slow password hashing". Commits
+  `1598b87a`, `7577068c`, `59ba4cc0`.
+- **The owner's answers on the security rules tighten and narrow eight
+  obligations (spec 008, tasks 16 to 18).**
+  `BE-AUTHN-001` accepts any minimum configuration the OWASP Password Storage
+  Cheat Sheet lists as equivalent (five Argon2id, five scrypt), and flags
+  PBKDF2 chosen without the FIPS 140 requirement that makes it the choice.
+  `BE-AUTHN-022` requires a fresh verification with an enrolled second factor
+  or passkey to replace or remove a second factor, enrol another beside an
+  enrolled one, or turn MFA off; the current password alone no longer
+  authorizes it, though it still authorizes the other changes and a first
+  enrolment. A user who lost every enrolled second factor may bind a
+  replacement through account recovery that meets NIST SP 800-63B-4 4.2's AAL2
+  bar and notifies the user independently, and the Verification checks how
+  recovery codes are made, stored, invalidated and expired. `BE-AUTHN-018`'s
+  expiry, newer-token invalidation and reset sweep apply to the tokens a flow
+  issues, and a recovery code saved in advance is exempt until used, then
+  replaced. `BE-API-015` says a WebSocket endpoint MUST NOT accept a token
+  carried in the handshake URL, not even the single-use ticket `BE-API-013`
+  allows elsewhere. `BE-API-011` and `FE-CSRF-001` keep rejecting, or checking
+  `Origin` on, a request without `Sec-Fetch-Site`, a design that falls back to
+  a CSRF token complies through the token, and `SameSite` stays barred as the
+  sole defense. `BE-API-013` and `FE-STORAGE-003` gain a scoped, expiring MAY
+  for a pre-signed object-storage URL (one object, one method, a stated
+  expiry) and allow a single-use token in a path or a query. `FE-XSS-003` now
+  flags `eval`, `document.write`, `Function(...)` and `outerHTML` outright,
+  which is stricter for a spec that sanitizes before `outerHTML`. Commits
+  `3740a899`, `2423de2a`, `c950b949`, `4ce35aab`, `c4de83ce`, `cfda1404`,
+  `9028bb9d`, `273492df`, `24c65619`, `343bf2c8`, `647153ce`, `fc876871`,
+  `c732fcdf`, `88d934d4`.
+- **The configuration rules cover a value from any source (spec 017, tasks 39
+  to 41).**
+  `CFG-ENV-001`'s required-or-optional declaration and `CFG-ENV-003`'s startup
+  validation cover environment variables, configuration-file keys and
+  command-line flags, so a required key missing from a file fails fast naming
+  the setting and the file; a value read from several sources is absent only
+  when every source in `CFG-ENV-007`'s order leaves it absent. `CFG-ENV-005`'s
+  range check covers the same sources and its error names the setting, the
+  file for a file key, the value and the violated bound. `CFG-ENV-002`
+  requires every environment variable and every configuration-file key to be
+  listed in one canonical inventory per kind of source or one for both, never
+  two for one source; a commented example of the file is accepted, and flags
+  are left to help output. A command-line flag is configuration only when it
+  supplies a setting an environment variable, file or default could supply,
+  and an argument naming what one invocation acts on stays with the
+  interface's help output. `CFG-CONST-003` names a configuration value
+  declared per `CFG-ENV-001` as an operator-tunable value's backing. The
+  installer's `§Project Configuration` now states the defaults it left
+  implicit: `[project]` keys have none and are asked for (`name` falling back
+  to the command argument and then `[host] project`), an absent `[pinned]`
+  pins nothing, an absent `[[review.disabled-rule-files]]` excludes nothing,
+  and an absent `[review]` `tech-stack-verified` means false. Commits
+  `6b0f52da`, `a5e18ad7`, `68b908a6`, `45aa399e`, `8dd72c61`, `24c65619`,
+  `fc876871`.
+- **Constitution: decisions go to the owner one at a time, as a default a
+  project may replace (spec 050).**
+  A grouped list of decisions gives no clean way to clarify one question or
+  one answer, and a question put while background work is still reporting
+  scrolls out of view. `§recommendations` now states the one-per-message rule
+  and names it a default a project's `AGENTS.md` may replace, which the
+  governance-precedence floor allows. Commit `be893cd0`.
+- **`/plan` told an author to name one file per Affected Files row, a rule
+  since replaced.**
+  `/review` built its scope from the first path in each row's File cell, so a
+  second path in the same cell was dropped from it. `compute-review-scope` now
+  reads every backticked path a cell names (see its entry in this release),
+  and `/plan`'s Affected Files step says so instead. Commit `8d426a72`.
+- **The adopter CI template installs the pinned release binary and pins its
+  action (spec 017, task 42; spec 022, task 3; `BE-DEPS-006`, since moved to
+  `SEC-DEPS-001` by the `security-cross.md` entry).**
+  `framework/templates/ci/adopter-generators.yml` could not run: a checkout
+  carries no runtime, since `/ductus` keeps it in a per-machine store linked
+  from the gitignored `.ductus/bin/`. Its first step now downloads
+  `ductus-x86_64-unknown-linux-gnu.tar.gz` at `DUCTUS_VERSION` (0.59.11),
+  checks it against `DUCTUS_SHA256` before anything runs, refuses a binary
+  reporting another version, and puts it on `PATH` from `$RUNNER_TEMP`,
+  outside the work tree, so the sync check cannot see it. The download is
+  bounded by `DOWNLOAD_CONNECT_TIMEOUT_SECONDS`, `DOWNLOAD_MAX_TIME_SECONDS`
+  and a step `timeout-minutes`, and is not retried (`BE-TIMEOUT-001`,
+  `BE-RETRY-001`); a failed one fails the job. No Rust toolchain is needed; on
+  an arm runner the x86_64 binary fails when run. The derive step calls
+  `ductus` from `PATH`, and `actions/checkout` is pinned to a full commit SHA
+  with its release tag in a comment. A release cannot carry its own archive's
+  hash, so the template names a published release and its pin moves after each
+  one: re-copy the template, or set both values from that release's `.sha256`
+  asset. Neither `/ductus` nor any scaffolding pass writes the template, which
+  an adopter copies by hand, and the header and the `generator-primitives`
+  migration's CI step now say so; a copy still invoking
+  `.ductus/scripts/gen-spec-deps.sh` fails on its first run. Commits
+  `458fa3e3`, `d235e722`, `b85e4907`, `02a5ac13`, `fa489f6a`.
+- **BREAKING: a malformed `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` entry fails
+  every `fetch-archive` call (spec 022, analysis of 2026-10-20; `CFG-ENV-002`,
+  `CFG-ENV-008`).**
+  The variable is now parsed once at startup into bare host names, trimmed,
+  with empty entries skipped and each lower-cased as a URL's host. An entry
+  with a scheme, port, path or credentials could never match a host, so it
+  silently exempted nothing; every fetch now fails with an `invalid
+  DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` error naming the entry, which must be a
+  host name or a bracketed IP literal. An adopter whose value carries a scheme
+  or port, and relied on its being ignored, now fails until it is corrected. A
+  later entry narrows the variable further: plain `http` passes only from a
+  named loopback host. Commit `307b920c`.
+- **BREAKING: `check-artifact-size` halts on an invalid `[artifacts]
+  read-size-bytes` instead of falling back to 50,000 (spec 063, task 12;
+  `CFG-ENV-008`, `CFG-ENV-005`).**
+  A present value that is not a positive whole number of bytes, or an
+  `artifacts` that is not a table, fails with `InvalidReadSize`, naming the
+  setting, the value (flattened to one line, so a newline in committed config
+  cannot forge a second line), the file and the accepted form. An unset key
+  still means 50,000. The result's `threshold.source` can no longer be
+  `invalid`, and `threshold.rejected` is removed, since nothing produces
+  either; an adopter's caller that read them must handle the error instead.
+  `/analyze`, `/clarify` and `/plan` (runtime and markdown-only paths), the
+  MCP tool description and the installer's `[artifacts]` comment state the
+  halt. Spec 063, scenario `an-invalid-threshold-fails-fast`, commits
+  `a226ba3d`, `2bfdfa4e`.
+- **BREAKING: `discover-rule-files` halts on a malformed
+  `[[review.disabled-rule-files]]` entry, and `/review` stops with it (spec
+  025, task 10; `CFG-ENV-008`).**
+  Every entry is validated before any rule file is selected. One that is not a
+  table, has a `file` or `reason` missing or not a string, or has a `reason`
+  under 16 trimmed codepoints fails with `InvalidDisabledRuleFile`, naming the
+  entry's index and the failing field; the entry used to be skipped with a
+  warning. Duplicates keep their warning, and fields an adopter adds to an
+  entry are still accepted. The halt is a configuration error, not a finding,
+  so `blocking` still means a MUST violation, and the run exits non-zero.
+  `file` and `reason` in the remaining notices, and each disabled file name
+  `/status` shows, are flattened to one line so a newline cannot forge a
+  `loading rule files:` or dashboard line (`BE-INPUT-011`). `/review`'s source
+  and the installer's schema comment state the halt. Spec 025, scenario
+  `a-malformed-disabled-entry-fails-fast`, commits `a32af25b`, `036f03cb`,
+  `bee36927`.
+
+- **BREAKING: every path argument is resolved through its symbolic links
+  before the containment check (spec 022, task 4; `BE-INPUT-004`, scenario
+  `a-path-argument-resolves-inside-its-base`).** The lexical check read a
+  path's text alone, so a link inside the project that pointed out of it
+  passed: `set-status` rewrote an outside `spec.md`, `create-scenario` wrote
+  outside through a linked `scenarios/`, and `mark-task` read an outside
+  `tasks.md`. A new `validate_contained` refuses a path when a link on it
+  resolves outside the canonicalized project root, compared by whole
+  components; a path not created yet is judged by its deepest existing
+  ancestor, a dangling link by where its target would resolve, and a link loop
+  is refused. Every feature argument also walks the feature directory and
+  refuses the call when any link in it resolves outside the project, so the
+  fixed-name files a primitive opens beneath it are covered. The check runs at
+  the 32 feature-argument call sites and the 7 file-path sites;
+  `check-artifacts` checks its argument but skips the walk, so a linked
+  sibling stays a skip (spec 067). The three session-file sites first kept the
+  lexical screen, since replaced by the entry on session files opening through
+  canonical containment, and later entries extend the check to the fixed-name
+  project files, the spec-root listing and five more reads. A corpus walk
+  reaching a checked call site, `prune-plan` and `prune-tasks` with `all` and
+  `dashboard` through `resolve-references`, is refused as a whole when one
+  spec directory holds an outward link. One hop budget, 40 links as the kernel
+  counts them, is shared across a whole resolution, so a chain of links that
+  each name the next twice is refused in well under a second rather than
+  taking exponential time, and a name appended after a `..` past a missing
+  directory is resolved when it exists. A malformed config is warned about
+  once per call instead of once per feature. The `writeCode` boundary matches
+  where each edit path lands, and its `OutOfBoundary` reason names a symlink
+  taking it outside the boundary or the project, or one that cannot be
+  resolved. A project that links a spec directory, or a file in one, to a
+  target outside the project now sees `InvalidPath`. Spec 022, task 4;
+  `fd7e1d4e`, `fd42d4e9`, `404db2ac`, `a680b2c1`.
+- **BREAKING: eight more primitives check their path arguments, and the
+  staging paths and `lint-markdown` globs narrow (spec 022, task 9;
+  `BE-INPUT-004`).** `validate-frontmatter`, `resolve-anchor`,
+  `check-rule-ids` and `check-promotion-coverage` take each path as
+  project-relative through the containment check and refuse an absolute one,
+  checking every path before reading any; `resolve-feature` checks the feature
+  it matches, with the directory walk, before reading its status or a
+  scenario. `fetch-archive`'s `destination` and `extract-archive`'s `archive`
+  and `destination` must be absolute paths inside the system temp directory,
+  the one `/ductus` makes with `mktemp -d -t`, with a link on them that leaves
+  it refused; a later entry also refuses a `dest` that contains the working
+  directory. The roots accepted are the temp directory as
+  `std::env::temp_dir()` returns it or canonically, the directory `getconf
+  DARWIN_USER_TEMP_DIR` names on macOS (read once, bounded by
+  `GETCONF_TIMEOUT`, 5 s), and `/tmp` where `TMPDIR` is empty off macOS; the
+  temp directory itself, and a root inside another, is refused. A staging path
+  is matched to a root by its text before anything resolves it, so a path
+  outside every root is never opened. `lint-markdown`'s `paths` must be
+  project-relative, may hold no link leaving the project under a glob's
+  literal prefix or a named directory, and refuse a leading `:`, `!` or `#`
+  and any brace, parenthesis, `|` or backslash, which markdownlint-cli2 reads
+  as syntax this check does not model. Every shipped caller already passes
+  what these admit. Spec 022, task 9; `61ec6512`, `4ed8340d`, `fe4b949b`,
+  `cdb679c9`, `478190a9`, `7767773f`, `9e7b7943`, `54068808`.
+- **BREAKING: the runtime refuses to write an agent host's configuration (spec
+  022, task 11).** The refusal holds on every surface (MCP, CLI and `ductus
+  exec`) and for every agent, with no prompt. `merge-permissions` refuses an
+  `allow` entry outside Claude's canonical set, which later entries shrink and
+  extend with a link check. `apply-manifest`, `enforce-manifest` and
+  `merge-managed-block` refuse a destination under `.claude/`, `.augment/`,
+  `.agents/`, `.opencode/` or `.pi/`, or at `.mcp.json` or `opencode.json(c)`,
+  matched at any depth; a later entry adds `.ductus/bin` to the refused
+  directories. The exceptions are the rows a `/ductus` step writes: command
+  and skill files, the `ductus` install file, the Antigravity rules mirror and
+  the Pi bridge; `merge-managed-block` writes no row at all. `apply-manifest`
+  and `enforce-manifest` judge every entry before the first write or removal,
+  and `apply-manifest` writes the bytes it judged. A command, skill or prompt
+  file it writes may carry only `description`, `argument-hint`, `parity` and
+  `name` in its frontmatter. `migrate-session-file` takes only
+  `<config-dir>/<name>-session.json`. A destination is judged where the write
+  lands, so a link there is replaced and not followed through, and by the path
+  as given; the names are Unicode case-folded, and Windows' trailing dots,
+  spaces and stream suffix are dropped. The destination is judged from the
+  root of the outermost git work tree, found by its `.git` entry, as well as
+  from the project root, so running from inside `.claude/` or with
+  `--target-root ..` reaches no host configuration; the names below
+  `.claude/worktrees/<name>/` are judged afresh as a project's own. The
+  worktree's own name is judged with the names below it, so a config-directory
+  name there is refused. A link inside a config directory that points at a
+  project file is left, and so is a destination outside the project, which
+  `apply-manifest`'s roots still reach (spec 022, task 17); the plan states
+  both residuals. Rows are matched at any depth, because a project may root a
+  target in a subdirectory. Spec 022, task 11; `23710352`, `76836eac`,
+  `bc4d9b06`, `03c84ab3`, `64290393`, `fc7dde88`, `6711de58`, `0ff220b7`,
+  `9df128b6`.
+- **Principle 5 of §runtime-boundary lets a primitive stay off the MCP surface
+  (spec 022, task 19).** The constitution now says a primitive that, called
+  without a prompt, would run a command the project supplies, write outside
+  the project and its staging directory, or write a host's settings or command
+  files MAY be left off MCP; it stays a `ductus <name>` subcommand and a
+  `ductus exec` step. §runtime-host-integration names the exception: a step
+  that names such a primitive runs it through the CLI. The amendment applies
+  to every host and names no runtime identifier. Spec 022, task 19;
+  `80a1ca97`.
+- **The bootstrap bounds and verifies every fetch it makes (spec 061, task 24;
+  spec 022, task 8).** The latest-release redirect read, the version pin, both
+  migration-registry reads, the self-update fetch and the per-language
+  `.gitignore` fetch pass `--proto '=https' --tlsv1.2` and `--connect-timeout
+  {connect-timeout}` (10 s) and `--max-time {request-timeout}` (60 s),
+  constants the bootstrap owns and defines in its Derived paths table. The
+  runtime archive and its sidecar pass the same TLS flags and their own
+  `{download-connect-timeout}` (30 s) and `{download-timeout}` (300 s), since
+  the archives are 5.8 to 6.7 MB; a download that times out is a network
+  failure. Pi's configure step fetches its bridge like `/ductus` and names the
+  same two bounds. A halt for a tag below the floor, a tag below an applied
+  migration, or a named tag that does not exist now names where the tag came
+  from (`from --ref`, recorded as `[source] ref` in the active config file, or
+  the default), and the halt for a failed latest-release read names curl's
+  error when the request failed or timed out. A tag resolved from `latest` is
+  "the latest release" however `latest` was given. Spec 061, task 24; spec
+  022, tasks 6 and 8; `cc3d18aa`, `fdcdb129`, `db8fb327`, `17424d39`,
+  `4ed8340d`.
+- **`install.sh` bounds both of its requests (spec 022, task 6; spec 061).**
+  The latest-release header read and the bootstrap download take
+  `--connect-timeout 10` (`CONNECT_TIMEOUT_SECONDS`) and `--max-time 60`
+  (`REQUEST_TIMEOUT_SECONDS`), so a hung connection fails and the installer
+  halts naming the URL (`BE-TIMEOUT-001`). The halt for a named tag below the
+  floor says "from --ref". Spec 022, task 6; `a016b9d4`, `cc3d18aa`.
+- **The shipped CI template's `actions/checkout` pin moves a major release,
+  v4.4.0 to v7.0.1 (spec 022, task 7).**
+  `framework/templates/ci/adopter-generators.yml` pins commit
+  `3d3c42e5aac5ba805825da76410c181273ba90b1`. None of the breaking changes in
+  the release notes touches how the template uses the action. Spec 022, task
+  7; `b58db0b8`.
+- **Lockfile refresh**: `rustls-webpki` 0.103.15 to 0.103.16
+  (RUSTSEC-2026-0382, certificate verification could accept distrusted
+  intermediates) and `webpki-root-certs` 1.0.9 to 1.0.10 (RUSTSEC-2026-0383,
+  bundled roots trusted distrusted emSign intermediates). `d58fd275`.
+
+- **BREAKING: `apply-manifest` bounds `target-root` and `source-root` by the
+  working directory (spec 022, task 17 (a), `ff35f4ca`).** The roots were
+  absolute-capable bases, so an auto-approved tool could write outside the
+  project with no host prompt. `target-root` must lie inside the working
+  directory; `source-root` inside it or strictly inside a staging directory.
+  An absolute root outside them, a `..` root and a root reached through a link
+  that leaves them are refused before any entry is examined. It narrows what
+  the primitive accepts, so it is breaking under `BE-COMPAT-001`. It bounds the
+  primitive, not the agent: `/ductus` calls it with `target-root .`, and the
+  agent's own file tools and the read-only cross-service primitives reach other
+  projects as before. `/ductus` State B passes `--source-root
+  {framework-root}`.
+- **BREAKING: `fetch-archive` and `extract-archive` write only to a staging
+  path outside the working directory (spec 022, task 17 question 2 (a);
+  `b2719007`, `86635000`).** Both bounded their write destination to a staging
+  root alone, ignoring the project, so a project lying inside a staging root (a
+  checkout under `/tmp` on Linux, a `TMPDIR` override, or Windows with `TMP`
+  and `TEMP` both unset) had its files written with no prompt; `extract-archive`
+  wrote a `.claude/settings.local.json` granting every shell command into such
+  a project. `extract-archive`'s `dest` and `fetch-archive`'s output archive must
+  now lie strictly inside a staging root and outside the working directory;
+  `extract-archive`'s input archive keeps the staging bound alone. `/ductus`'s
+  `{tempdir}` is a fresh directory outside the project and passes. When
+  `TMPDIR` points inside the working tree, `{tempdir}` lands inside the project
+  and extraction is refused, so `/ductus` cannot bootstrap there. Later
+  extended: both also refuse a `dest` that contains the working directory (the
+  entry for spec 022 task 43, on `merge-permissions` and an archive's staging
+  path).
+- **BREAKING: every writer that takes a caller-supplied destination refuses
+  Claude Code's protected set (spec 022, task 20 (a); `e8208aa2`,
+  `e0262086`).** The destination check that judged the agent config
+  directories now also refuses the protected directories (`.git`,
+  `.config/git`, `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`,
+  `.yarn`, `.mvn`) and the protected files (shell rc files, `.gitconfig`,
+  `.npmrc`, `.pre-commit-config.yaml`, `lefthook.*`, `.claude.json`, and the
+  rest of the host's list), outright, since no `/ductus` row writes any of
+  them. `apply-manifest`, `enforce-manifest` and `merge-managed-block` judge it
+  through their destination names; `append-task` and `create-scenario` judge
+  it on their feature path, which also closes the `.claude/rules` route; and
+  `merge-permissions` judges the protected set and the MCP and settings files,
+  not the config-directory rows, since it writes `settings.local.json` under a
+  config directory. A protected component above the working directory, as when
+  the working directory is itself `.cargo`, is refused, and so is a write
+  through a root `.mcp.json` link. `.githooks` is not in the set. Later
+  extended: the same writers refuse `.ductus/bin` (the entry "Every
+  destination-judging writer refuses the runtime pointer's directory").
+- **`/ductus` seeds only the commands each bootstrap step runs (spec 022, task
+  18 question 1 (a) and 1a (a); `df474a1f`, `4a0e047d`, `f24c55c6`,
+  `cd06a227`, `047c6e9b`).** Each seed entry whose command can run another
+  command or write outside the project becomes the exact command a step spells,
+  with `*` only for an operand that differs per run, a `.exe` twin for each
+  Windows path, and one CLI rule per subcommand a step runs (the eleven of the
+  bootstrap and its migrations, and `compute-review-scope`), so
+  `run-generator`, `exec` and the rest of the CLI prompt. `git diff` is
+  dropped from the seed (no step runs it) and Claude's three single-slash
+  `Read` rules go. Claude goes from 20 shell entries to 46 and from 6 `Read`
+  rules to 3, with 17 entries retired; the exact `cp` and `ln` rules for the
+  runtime pointer are dropped again, because Claude Code strips a bare `xargs`
+  before matching and an exact rule then runs with appended operands (any
+  readable file copied into any directory, or `.ductus/bin/ductus` relinked to
+  any file). The pointer's link therefore prompts on a run that acquires or
+  repairs it. `/ductus`'s §Permission Setup gains a step that removes each
+  agent's retired seed entries (allow grants only), so a project on
+  `--ref=main` that ran `/ductus` since `df474a1f` is cleaned. Pi has no seed
+  and is unchanged; Auggie, Antigravity and OpenCode, supported at this point,
+  were narrowed the same way (support since dropped, see "Auggie, Antigravity
+  and OpenCode are no longer supported agents") and `install.sh`'s four copies
+  were regenerated from the one list. Later narrowed: the Claude seed no
+  longer grants `Bash(curl *)` or `Bash(tar *)` (the entry "`/configure` no
+  longer grants thirteen Claude allow entries").
+- **A command's markdown-only reference moves into its own file, and the
+  thirteen command files shrink from 430,896 to 191,489 bytes (spec 071, tasks
+  2-16).** Each of the thirteen commands' reference half is now
+  `framework/reference/<command>.md`, installed once at
+  `.ductus/reference/<command>.md` and shared by every agent, and read when a
+  step names a section there; the command keeps its Instructions and gains a
+  location line, and each reference opens with a paragraph saying where a named
+  section lives and that a bare `§name` is a heading of the file or a
+  constitution marker. The maintainer-only `audit` command's reference is
+  withheld with the command. `/ductus` installs twelve new Shared Files rows
+  and enforces `.ductus/reference/` like a command directory, removing a stale
+  reference file; `analyze` drops from 111,742 bytes to 38,862. The sizes sum
+  the thirteen files under `framework/commands/` that gained a reference
+  (`audit` included), measured with `git show <sha>:<path> | wc -c` at
+  `b772a6ac~1` and `b772a6ac`; the twelve an adopter receives go from 393,629
+  to 186,282. The constitution's canonical-sources row names
+  `framework/reference/*.md` beside the command source.
+  `check-corpus-links --scope repository` excludes the generated
+  `.ductus/reference/` copies only in a tree that also carries
+  `framework/reference/`, where the sources are checked; in an adopter they are
+  checked as the installed files they are. Commits `c91391ad`, `b772a6ac`,
+  `39c7c9e2`, `85b2e1a5`. The references were cut again later (the entry "A
+  command's reference holds what a step does with a result, and no more").
+- **The bootstrap's installer defects from a scratch adoption are fixed (spec
+  071, tasks 20 and 21; `b0b1f9d0`, `083c4b08`, `117413d6`, `d9ac40a3`).**
+  The constitutions region in the `AGENTS.md` and `CLAUDE.md` templates uses
+  `BEGIN` and `END` markers, as `merge-managed-block` does; both files map to
+  `create`, so their placeholders are substituted; `/ductus` makes one
+  `apply-manifest` call per selected agent, each with that agent's own
+  `cli-config-dir`; `enforce-manifest`'s `expected` and `pinned` lists are
+  paths relative to the enforced directory; Pi's bridge is written after the
+  framework archive is extracted; a greenfield run (no config file at any tier
+  and no spec-root directory at its start) seeds `[migrations] last_applied`
+  with the newest active entry instead of prompting for every no-op migration;
+  the managed `.gitignore` block is a fixed point on its first run, and the
+  adopter-area copies of its patterns are dropped; the closing restart notice
+  says only what the run did (four variants, "Files written" listing only what
+  it wrote); and the self-install's integrity check reads the first non-blank
+  line. Step 7 records `cli-config-dir` as the config directory of the agent
+  running the bootstrap; step 9's empty substitutions map replaces a
+  keep-literals list it never passed. The `inbox-guidance-refresh` migration
+  now stops silently when no inbox exists. The Antigravity rules-mirror call
+  this round added went with that agent's removal (see "Auggie, Antigravity and
+  OpenCode are no longer supported agents").
+- **`derive-dependencies` and `derive-references` keep a key's whole block when
+  they splice it, and never write a splice that does not parse (spec 067,
+  review round 1; `2be18da6`).** A key's continuation counted only indented
+  lines, so an indentless block sequence (`- item` at column 0, the default of
+  PyYAML and Psych) survived the splice behind the new value as invalid
+  frontmatter, reported `updated`, exit 0; a blank line or a column-0 comment
+  inside the list ended the skip the same way. A continuation now also holds
+  dash-led (`-`) entries and blank lines and comments that an entry follows.
+  `derive-references` inserted `references:` between a block-form
+  `dependencies:` key and its items, turning a dependency into a reference; it
+  now inserts after the key's last continuation line. Both primitives re-parse
+  the frontmatter they are about to write; one that fails is named in
+  `unparseable` and left byte-identical, on a dry run and a write alike. Later
+  changed: such a refused rewrite is named in `unwritable`, and the CLIs exit
+  non-zero on it (the entry "`derive-dependencies` and `derive-references`
+  name a rewrite they refuse").
+- **BREAKING: `check-promotion-coverage` refuses an empty `sections` (spec 067,
+  review round 1, `2be18da6`).** With none, every count was zero by
+  construction, not a measurement. The CLI, the MCP tool and `ductus exec` now
+  return a missing-argument error asking for at least one level-2 section
+  (`--section` on the CLI).
+- **BREAKING: `resolve-anchor` resolves a heading only where a word ends, and
+  not inside a fenced block or an HTML comment (spec 067, scenario
+  `pointers-into-shipped-files-are-judged`; spec 071, `36b3ddb6`,
+  `083c4b08`).** A bare heading reference must end where a word ends
+  (`§Groundingx` names no `Grounding`, `§Hooks` names no `Hook`), and headings
+  are collected outside ` ``` ` fences and HTML comments, so a `## Summary`
+  inside a fenced example names no section. This applies to a reference
+  against the citing file's own headings as well as to a pointer into another
+  document, so a reference that resolved by prefix before is now reported
+  unresolved. It narrows what resolves, so it is breaking under
+  `BE-COMPAT-001`. Measured over all 823 tracked `.md` files at the time, no
+  reference changed kind or resolution.
+- **The constitution is cut from 119,262 to 49,980 bytes and is imported at
+  startup (spec 050, tasks 35-36, scenario `the-constitution-fits-one-read`;
+  `05359e82`, `7ce72592`, `d5de121c`, `da52bc4c`).** Sizes are `git show
+  <sha>:framework/constitution.md | wc -c` of the shipped source, before
+  `{project}` is substituted: 119,262 at `05359e82~1`, 53,813 at `05359e82`,
+  49,989 at `7ce72592`, and 49,980 at `1503ca58` after the review rounds (at
+  `ductus-v0.59.11` it was 116,564, the result the 0.59.11 entry "The
+  constitution is a fifth shorter" records; it grew to 119,262 before this cut,
+  so the two do not overlap). The single-command rules move to the command
+  references that apply them: the review window and coverage rules, with the
+  definition of `scope`, to `reference/review.md` §Window and coverage, the
+  analyze record's field meanings and the in-progress criteria-path
+  measurement to `reference/analyze.md`, and removal by text to
+  `reference/groom.md` §Inbox upkeep; the disposition task's shape is left to
+  `reference/implement.md`, which the constitution now points at. Every other
+  section is compressed to its rule and one reason. All 31 anchor markers, 68
+  headings and the RFC 2119 keyword counts of the 53,811-byte file are kept.
+  The cut fits one read on a host whose read tool caps one read at 51,200 bytes
+  (OpenCode's and Pi's stopped after line 500 at 53,811; OpenCode support is
+  since dropped); an installed copy stays within it for a project name of up to
+  54 characters (27 `{project}` placeholders, so 27 bytes per name character
+  beyond nine). `/target` step 4's read of it now fits one call on those
+  hosts. The file measures 48,763 bytes at the release head `8e4dc677`.
+- **A plan or task-list edit that adds no unchecked task does not reopen a
+  `done` spec, and does not stale its analysis (spec 041, scenario
+  `a-plan-edit-does-not-reopen-a-done-spec`, task 21; specs 047, 063, 066;
+  `e3e54b07`, `fbf2737c`).** `prune-plan`'s `reopen-required` is decided by
+  the `tasks.md` trigger alone (an added unchecked box), so a changed plan
+  design-record section no longer returns `true`; analyze freshness on a
+  `done` spec ignores an in-place edit to `plan.md` or `tasks.md`, while a
+  deleted one still stales the record, and an in-progress spec's plan edit
+  still stales its record; and `check-artifact-size`'s warning for an
+  oversized `plan.md` on a `done` spec says a trim does not reopen it. The
+  constitution's §spec-lifecycle states it beside the three mechanical cases,
+  since an edit adding an unchecked task still reopens. It loosens what
+  reopens and stales, so it is not breaking. Generalized later by
+  `classify-spec-edit`, which answers `correction` for an edit to `spec.md`,
+  `plan.md` or `tasks.md` that changes no criterion, open question or
+  unchecked task.
+- **BREAKING: only gating findings hold `done`, and disposition drift is
+  advisory (spec 058, `findings-cost-in-proportion-to-risk`, task 1; spec 066,
+  `only-gating-findings-hold-done`, task 6; spec 067,
+  `disposition-drift-is-advisory`, task 16).** `check-review-gate`'s last check
+  sums the review record's unwaived MUST and SHOULD violations and the
+  analysis's hard-fail and blocking findings, never `dispositions`'
+  `undispositioned`, so an undecided advisory finding or review observation
+  stays recorded and no longer holds `done`; an unwaived SHOULD now does,
+  which the gate did not read before. Its message reads "outstanding gating
+  finding(s)" where it read "undispositioned finding(s)" and asks to fix the
+  finding or waive a review SHOULD with `/review --waive <rule-id> --reason`.
+  The `blocked-by` wire value stays `undispositioned-findings`.
+  `check-artifacts`' disposition-drift family is Advisory and `/analyze --fix`
+  no longer reverts a `done` spec on it (its triggers are review-state drift
+  and unresolved scenario questions). A non-blocking finding met while working
+  a disposition task is recorded on that task, not appended as a new one. A
+  waiver that expires re-counts toward `should-violations` as well as
+  `must-violations`. The constitution's §implement-phase says the gate blocks
+  on an unwaived SHOULD, and §brownfield-inbox says a gating finding must have
+  a disposition. It changes which records block, so it is breaking under
+  `BE-COMPAT-001`. Commits `e38f5c1f`, `84bb4aa1`, `6cf2bb6e`, `98a2eae0`.
+  Later reworked: the `routed` and `discarded` dispositions became `deferred`
+  and `waived`, and a deferral of a gating finding releases `done` only when
+  its work is still to do on another spec (the entry "A finding is fixed,
+  deferred or waived").
+- **Lockfile refresh**: `rmcp` 3.5.1 to 3.7.0, `tokio` 1.53.3 to 1.54.1, `zip`
+  9.0.4 to 9.1.2, `typed-path` 0.12.3 to 0.13.0, `cc` 1.8.0 to 1.10.0,
+  `pulldown-cmark` 0.13.4 to 0.13.5 and `uuid` 1.28.0 to 1.29.0, with 16
+  other packages moved within their declared ranges (23 in all, resolved to
+  the highest Rust 1.89-compatible versions). No manifest change.
+
+- **BREAKING: `rewrite-spec-links` re-points the path references that
+  `check-orphaned-references` reads, and reports what it did not rewrite
+  (specs 051 tasks 33-35 and 052 tasks 2 and 3).**
+  Besides the body links across the spec root, a fold or a consolidation now
+  re-points, with the same referrer list and token scanner as
+  `check-orphaned-references`, each path reference to the retiring feature in
+  the spec root's `system.md` and in `CLAUDE.md`, `AGENTS.md`, `README.md`
+  and `.githooks/pre-commit`, so none is left dangling in those files. The
+  result gains three lists: `skipped`, naming a referrer it did not read (a
+  symbolic link, a parent resolving outside the project, or text that is not
+  UTF-8) and a symbolic link under the spec root named `*.md` or pointing to
+  a directory, each left as written; `kept-tails`, naming a re-pointed
+  reference whose kept tail names a file the fold did not write, or a
+  `scenarios/{name}` tail the retiring directory does not hold; and
+  `mentions`, naming each line of an examined file that still names the
+  retiring directory by name or number once the rewrite ran. The whole spec
+  root is read before the first write: a markdown file there that is not
+  UTF-8 text, cannot be read or cannot be listed stops the run before
+  anything is written, and a spec root that is itself a link is followed. On
+  a scenario target, a reference to one of the retiring spec's scenarios
+  lands on the scenario the fold carried under that slug, fragment kept. A
+  link inside the target that climbs to the spec root and into the retiring
+  directory is written relative to its file, so the consolidation commit no
+  longer records a self-link as a dependency cycle. Overlapping spans no
+  longer panic. `/{project}:fold` step 7 now stops before step 8 when a
+  carried scenario's slug is taken by a file that is not that scenario, where
+  it used to report it and go on, and `/{project}:consolidate` states that
+  the content move and the consolidation commit together. Breaking under
+  `BE-COMPAT-001`: new files written and new refusals; the three result
+  fields are additive. Later entries add the `refused` list and the write
+  only when a file is unchanged since it was read (spec 051, task 37), walk a
+  scenario target's feature directory and hold `from` to the feature-name
+  rule, and list no scenario tail in `kept-tails` once the retiring directory
+  is gone. Specs 051, tasks 33, 34 and 35, and 052, tasks 2 and 3.
+  `3b359742`, `f056b209`, `47e68233`, `77fff147`, `c1ca45b5`, `2741fb12`,
+  `f395900f`, `ced8c7ca`, `edd08387`, `ea859f7c`, `3297fbd6`
+- **BREAKING: `rewrite-spec-links` holds its `to` to the name grammar (spec
+  051, task 32).**
+  `rewrite-spec-links` writes `to` into every referrer, the executable
+  `.githooks/pre-commit` among them, but held it only to no traversal,
+  containment and two non-empty halves. Both halves now pass
+  `validate_session_feature` and `validate_session_scenario`, the checks
+  `retarget-sessions` applies to the same `{feature}/{scenario}`, before any
+  file is read or written. A feature half naming `templates`, and a scenario
+  half with a space, `;` or `$(...)`, are refused with the corpus unchanged;
+  a branch-scoped feature and a slug are admitted. A later entry holds `from`
+  to the feature-name rule too, and `retire-feature` applies the same screen
+  to its `feature`. Spec 051, task 32. `2f79a9ee`
+- **`check-orphaned-references` and `rewrite-spec-links` read a path behind
+  a prefix naming the project root (spec 051, task 30; spec 067).**
+  A path spelled with a prefix that names the project root from its referrer
+  (`./` and a leading `/` in a root markdown file, `./` in
+  `.githooks/pre-commit`, `../` and a leading `/` in the spec root's
+  `system.md`) is a reference wherever the same path written bare is one,
+  and the existence check sees it as if written bare while the rewrite keeps
+  the prefix as written. `./` and `../` take the bare rule exactly. The one
+  exception is a leading `/` that ends another directory's name: after `~`,
+  `}`, `%` or `)` ending a home or variable directory, or after a quote or
+  backtick closing a variable, so `~/.ductus/bin/ductus` and
+  `"$HOME"/.ductus/x` stay outside it. A leading `/` is read from the
+  project root even in a project below its repository's root, as
+  `check-corpus-links` reads a root-absolute link. Spec 051, task 30.
+  `38fc39f6`, `54715126`, `3fc5755a`, `d1853444`, `c1cf51ff`, `1f2e7b98`
+- **BREAKING: installed files lose group and other write, and
+  `apply-manifest` names a mode it could not set (spec 022, task 23).**
+  GitHub's tarballs record 0664 and 0775, and `apply-manifest` mirrors the
+  extracted mode, so an adopter's installed files, the pre-commit hook among
+  them, were group-writable. `extract-archive` now masks every extracted
+  mode with 0o755, which drops group and other write where the 0o777 mask
+  kept them. `apply-manifest` also re-applies the source mode to an
+  `update`-strategy file whose bytes already match when only its mode
+  differs (a chmod alone: bytes, mtime and the `unchanged` action are kept,
+  and a link is not chmodded through), so an installed file loses group write
+  on the next run. A chmod the file system refuses no longer stops the walk:
+  the file keeps its mode and is named in the result's new `modes-kept`
+  (omitted when empty), and the bootstrap's completion message lists it.
+  Breaking under `BE-COMPAT-001`: the modes of extracted and installed files
+  change, and an unchanged file's mode changes on a run that reports it
+  `unchanged`; `modes-kept` is additive. Spec 022, task 23. `f056b209`,
+  `47e68233`, `77fff147`, `c399913e`
+- **The session-lock poll backs off with jitter and stops at an attempt
+  bound (spec 062, task 28; `BE-RETRY-001`, `BE-RETRY-003`).**
+  A process waiting for the session lock polled every 10 ms. It now waits
+  from 1 ms, doubling to a 50 ms cap, each wait drawn uniformly up to its
+  bound, still stopped by `SESSION_LOCK_TIMEOUT` and now also by
+  `LOCK_MAX_ATTEMPTS` (1,000 attempts), and retries only `WouldBlock`.
+  Spec 062, task 28. `47e68233`, `77fff147`
+- **`fetch-archive` identifies itself by the repository URL (spec 048, task
+  19).**
+  Every request, the archive, its sidecar and each redirect hop, sends
+  `ductus <version> (https://github.com/stonean/ductus)` as its
+  `User-Agent`, where `reqwest` sent none. Spec 048, task 19. `4bbb86f7`
+- **BREAKING: `fetch-archive` refuses a proxy value it cannot use, and reads
+  its certificate paths once at startup (spec 048; `CFG-ENV-001`,
+  `CFG-ENV-008`).**
+  Each proxy variable is parsed when the process starts. A value that does
+  not parse, or names a scheme other than `http` or `https` (a `socks5` URL,
+  which `reqwest` accepted at build and refused only at connect, naming the
+  scheme rather than the variable), now refuses every fetch, naming the
+  variable with its credentials shown as `***`, before anything is resolved
+  or sent; skipping it would have sent that scheme's fetches direct, past the
+  operator's proxy. On Linux and other non-Apple, non-Android Unix,
+  `SSL_CERT_FILE` and `SSL_CERT_DIR` are captured at startup too, and the
+  first fetch loads the roots from those paths, or from the platform store
+  when neither is set. A later entry adds a test that fails when the capture
+  is removed, and another redacts a proxy value whose credentials hold `://`
+  whole. Spec 048. `d4b75e66`
+- **`/{project}` bounds every `--version` probe, accepts only a well-formed
+  pin, and the shipped pre-commit hook echoes a sanitized version (spec
+  048).**
+  The bootstrap runs each `--version` probe, of the store or of a `[runtime]
+  path`, with the host shell tool's timeout set to `{probe-timeout}` (10 s);
+  a probe still running at the limit did not execute and takes that branch's
+  failure path. It halts on any `{pin}` but one `MAJOR.MINOR.PATCH` line in
+  ASCII digits, since later steps interpolate the pin into URLs and file
+  names. The shipped pre-commit hook echoes the binary's first `--version`
+  line cut to 80 printable characters. Spec 048. `d4b75e66`
+- **BREAKING: `apply-manifest`'s and `enforce-manifest`'s `--*-json` files
+  must lie inside a staging directory (spec 048; `BE-INPUT-004`).**
+  The CLI read a `--entries-json`, `--pinned-json`, `--substitutions-json` or
+  `--expected-json` file from any path. It now refuses a path outside the
+  system temp directory, naming the flag, before opening it, as
+  `extract-archive` does for an archive; `/{project}` writes the files into
+  its `{tempdir}`. A later entry holds the `--*-json` flags it adds to the
+  same staging directory (spec 022, "Every MCP argument has a CLI form").
+  Spec 048. `d4b75e66`
+- **`/{project}:plan` and `/{project}:implement` run `derive-dependencies` on
+  entry, and `/{project}:plan` checks cross-spec impact before its gate (spec
+  017).**
+  Each command's sub-step 1.1 invokes `derive-dependencies` as the report-only
+  safety net, as the commands did before spec 022's rewrites lost it, so
+  drift from uncommitted body edits surfaces before work starts. `/plan`'s
+  step 9 now runs the reference's Cross-spec impact check and presents its
+  result in the `gate-confirm` prompt. Spec 017. `3b359742`
+- **`/{project}` writes a `ductus:memory-routing` block into `AGENTS.md`, and
+  the `CLAUDE.md` template no longer carries Auto-Memory Routing (spec 050,
+  scenario `memory-routing-lives-in-agents-md`; spec 075, task 2).**
+  On every run, under every layout, `merge-managed-block` installs or updates
+  an `html-comment`-marked block in `AGENTS.md` saying where a learning goes,
+  per the constitution's §drift-prevention; a pinned `AGENTS.md` still gets
+  it. The `AGENTS.md` template ships the empty markers beneath its header,
+  and the `CLAUDE.md` template drops its Auto-Memory Routing section. The
+  block files a learning true for the project alone in `AGENTS.md` only when
+  every session needs it before acting, and otherwise where its work is read:
+  architecture in `system.md`, `events.md` or `errors.md`, a feature's
+  decision in its spec, a procedure in `docs/` or a skill, a one-file trap in
+  a comment or test there, how a lesson was learned in its commit. New
+  migration `memory-routing-leaves-claude-md` (0.60.0) removes a shipped,
+  unchanged Auto-Memory Routing section from an existing `CLAUDE.md` and
+  leaves an edited one with a report; it ends the section at the next heading
+  or framework `<!-- BEGIN ductus:` block, so a block appended after the
+  section is kept. Specs 050 and 075. `3b359742`, `fb26d602`, `cb30b333`
+- **The inbox template carries no guidance comment and no placeholder item,
+  and migration `strip-inbox-guidance` (0.60.0) removes both from existing
+  inboxes (spec 058, task 2; spec 006).**
+  The template's `<!-- Rules: -->` comment restated constitution
+  §brownfield-inbox, §finding-dispositions and §bug-handling, and its
+  `- [ ] {Brief description ...}` placeholder sat outside it, so every inbox
+  primitive counted it as an outstanding item (a scratch inbox reported
+  `item-count` 2 after one logged item). The template is now its heading and
+  introduction; the one rule stated nowhere else, that an inbox item is a
+  todo and never a status or handoff note, moves into §brownfield-inbox.
+  `inbox-guidance-refresh` (0.53.0) removes the comment when the template
+  carries none, where it replaced it. `strip-inbox-guidance` removes the
+  first `<!-- Rules:` comment and each line outside every fence and HTML
+  comment that is the placeholder, with or without its checkbox, skips a
+  pinned inbox with a warning, keeps line endings and the file's mode, and
+  leaves every other item byte-identical; its id sorts after
+  `remove-legacy-constitutions-region`. Spec 058, task 2; spec 006.
+  `bca9a2fd`, `797799ba`, `89e6f02b`, `09b2a408`, `3f8cc104`
+- **The Frontmatter Migration's precheck judges the tree as the run found
+  it, and its refusal stops only that section (spec 013, task 25).**
+  `/{project}`'s Pre-run Migrations take `git status --porcelain -- specs/`
+  before step 1 writes anything, and the precheck judges that pre-run status,
+  so a file `inbox-guidance-refresh` or `criterion-label-backfill` wrote no
+  longer refuses the run, while a file the adopter had changed still does. A
+  refusal names the dirty paths, writes nothing and skips to the next
+  section; the rest of the run continues, so Shared Files still replaces a
+  pre-upgrade constitution copy and a pre-0.30 hook. Post-Scaffolding Output
+  lists each path a migration made dirty under `specs/` and repeats a
+  refusal. Spec 013, task 25. `9d79988e`
+- **The constitution states succinctness, routes a project-only learning by
+  population, and applies an answer as chosen (specs 050 and 075).**
+  §text-first-artifacts gains the bullet that each artifact is written as
+  short as its required content allows, defining required content by
+  §grounding, §design-principles and §drift-prevention. The Guiding
+  Principles' Technology list gained "Succinct: artifacts hold all their
+  readers need, and no more", and a later change (spec 050, task 50) removed
+  that list with the Technology and Business lists, so the shipped
+  constitution carries the bullet alone. §drift-prevention's *Shared
+  knowledge stays in git* now sends a learning true for the project alone to
+  its own artifacts (`AGENTS.md` only for what an agent needs before acting
+  in any session, that nothing its work reads would say and no check, test
+  or hook reports), and §spec-phase gives `system.md`, `events.md` and
+  `errors.md` one-line definitions. §recommendations adds that an answer is
+  applied as the option reads, a refinement the sources suggest being asked
+  as its own question first. To stay within the 50,000-byte governing size,
+  restatements were cut: the opening tagline, Grounding's lead slogan, the
+  default spec-root clause, Bug Handling's and Brownfield Process's lead
+  sentences, the acquisition clause and the eligibility restatement in the
+  runtime boundary, the recorded-backfill sentence, the frontmatter list of
+  other artifacts, the Readiness Check's closing instruction, and the
+  disposition-task bullet down to its pointer. The sentence naming the
+  checks the completion gate composes with was cut, then restored because
+  spec 046 quotes it. Specs 050 (tasks 41, 43 and 44) and 075. `4e82686d`,
+  `f9ea53dd`, `73f21fc9`, `3b359742`, `54715126`
+- **Rules are as short as their required content (spec 008, tasks 19-21; spec
+  050).**
+  The rule schema drops Rationale: a rule is an ID, a Statement and a
+  Verification, with an optional Source and `DEPRECATED` label, and a
+  Rationale paragraph in a pinned or project-authored file is ignored, never
+  malformed. `/{project}:analyze`'s integrity check, the bootstrap's adoption
+  audit, constitution §rules and `docs/rules.md` say so. All eleven files
+  under `framework/rules/` were cut from 509,421 to 324,390 bytes, then to
+  319,306 in a second pass (`wc -c`, summed): Rationale removed, Source cut
+  to citations, headers cut to scope, ID format, categories and a pointer to
+  §rules. A boundary a Rationale stated moved into the Verification, and a
+  case only a Rationale stated became a Statement clause of the rule's tier,
+  or a MAY for an exemption (`BE-LRO-001`, `BE-RETRY-003`, `BE-BULK-002`,
+  `BE-CACHE-002`, `BE-QUERY-004`, `BE-COORD-002`, `FE-LOAD-008`,
+  `FE-ARIA-004`, `FE-PII-004`). Overlaps now have one owner each: a secret
+  that reaches a client artifact is `CFG-ENV-010`'s wherever it was written;
+  a secret at rest in source, a build manifest, version control or an image
+  is `CFG-ENV-013`'s (the entry above), where the first pass had left an
+  image-baked one with `BE-DATA-008`; `CFG-ENV-006` owns a sensitive
+  configuration value in any error message or operator-facing output;
+  `BE-DATA-001` owns a database connection's encryption and `BE-API-007`
+  every public exposure, database ports included; five backend/frontend
+  pairs (a redirect, a sensitive response's `Cache-Control`, a frontend
+  build's dependencies, a CSRF defense, and a credential's carrier) name
+  which rule owns which case, with a load-conditioned yield where the other
+  file is also loaded; and the OAuth `redirect_uri` rules, the error-envelope
+  rules (`BE-ERRENV-001` to `-003`, `BE-ERR-002`, `BE-ERR-004`) and the
+  credential-carrier rules (`BE-API-013`, `BE-API-015`) do the same. The
+  rule files measured 332,393 bytes at `554d0ee3` (`wc -c`, summed), after
+  the later rule additions. Spec 008, tasks 19-21, 23-25, 28 and 30-33; specs
+  034, 037, 038, 039, 068, 069 and 070. `70bb4af5`, `734b427c`, `28167f78`,
+  `74f6361c`, `194e43f7`, `9b067399`, `afb8a865`
+- **Project templates point at the constitution (spec 075, task 3).**
+  The `AGENTS.md` template's header points at the test in §drift-prevention
+  without restating it and no longer says to append a project-only rule to
+  its matching section, and its Project Structure replaces the `specs/`
+  subtree with a pointer to §spec-phase. The `system.md`, `events.md` and
+  `errors.md` templates say the §spec-phase directory tree defines what the
+  file holds. New adoptions only: `AGENTS.md` installs with the skip strategy
+  and the other three with `create`. Spec 075, task 3. `b763977c`
+- **BREAKING: `resolve-constitutions` measures each loaded shared
+  constitution, halts on a malformed read size, and takes `unmeasured` for
+  `/{project}` (spec 055, tasks 14 and 15; spec 075).**
+  Each loaded record gains `bytes` and `over-limit` against `[artifacts]
+  read-size-bytes`, plus a `warning` naming the alias, the size, the limit
+  and a cut in its own repository as the fix; a document at the limit is not
+  over it. A document that cannot be opened gets no size, and a skipped
+  record is never measured. The result carries `threshold` only when an entry
+  is registered, so a project with no registry reads no new key.
+  `/{project}:target` step 4 shows each loaded alias's size and warning,
+  never blocks on one, reports a skipped entry as not measured, and halts on
+  a malformed read size once an entry is registered, as the primitive now
+  does. The new `unmeasured` argument (`--unmeasured` on the CLI) resolves
+  without reading that setting and carries no size or threshold;
+  `/{project}`'s Shared constitution imports step passes it, so a malformed
+  read size cannot halt the install and recovery path over a setting it does
+  not use. `write-review` and `write-analysis` stay unmeasured. Breaking
+  under `BE-COMPAT-001`: a call that returned a result with a malformed read
+  size and a registered entry now fails; the new fields and argument are
+  additive. Spec 055, tasks 14 and 15. `c6a0dca2`, `e8ed5d62`
+- **Lockfile refresh: `aws-lc-rs` 1.18.2 to 1.19.0, `aws-lc-sys` 0.46.0 to
+  0.47.0, `rmcp` and `rmcp-macros` 3.7.0 to 3.8.0.**
+  Eleven lockfile entries change, within their declared ranges and resolved
+  to the highest Rust 1.89-compatible versions: ten packages move, among
+  them `openssl-probe`, `rustix`, `unicode-width`, `utf8_iter`, `xattr` and
+  `zip`, and `utf_types` 1.0.0 is added. No manifest change. `99c704fd`
+
 ### Removed
 
 - **The `parity:` frontmatter key is gone from every shipped command and from
@@ -1426,6 +2343,21 @@ its version and date.
   registration that host holds, by hand. `check-corpus-links` with `scope:
   repository` no longer excludes those directories as generated command
   copies, so a copy left tracked there has its links checked.
+
+- **BREAKING: `run-generator` is no longer an MCP tool (spec 022, task 14
+  (b)).** It runs any project file with `bash`, so a host that auto-approves
+  the server's tools would let any ductus tool that writes a project file also
+  run any command. The server stops serving it, and `runtime-tools.txt` and
+  the generated configure lists drop it. It stays a `ductus run-generator`
+  subcommand and a `ductus exec` step. The registry names such primitives in
+  `CLI_ONLY_PRIMITIVES`, `runtime-tools.txt` lists them on a `# cli-only:`
+  comment line every tool consumer skips, and the parser still recognizes
+  them. Claude's retired list gains `mcp__ductus__run-generator` so an
+  existing grant is revoked. `/ductus`'s State-A rule stops listing it, and
+  `/analyze`'s generator-drift check and `/audit` step 1 run it through the
+  CLI, `.ductus/bin/ductus run-generator --script <script>`. An agent that
+  called the MCP tool must use the CLI. Spec 022, task 14; `cc4b3bd9`,
+  `1a762901`, `48b0d744`.
 
 ### Fixed
 
@@ -1824,6 +2756,105 @@ its version and date.
 - **`invalidate-review` clears the rest of the run.** The record no longer keeps
   `excluded`, `contract-breaks` and `fix-rounds-open` beside `last-run: null`, and
   `open-findings` stays for the next scope. Spec 079.
+
+- **`fetch-archive` screens every connect-time lookup, so a redirect hop
+  cannot rebind to an internal address (spec 022, task 2; `BE-INPUT-016`).**
+  Only the initial host was pinned to the addresses the SSRF screen resolved.
+  A redirect target was screened, then resolved again, unscreened, when the
+  client connected, so a host that answered the screen with a public address
+  and the connect with an internal one slipped past on every hop. The client
+  now carries a resolver that applies the same internal-range screen to every
+  lookup; the initial host is still resolved once and reused, on port 0 so a
+  same-host redirect keeps its own port. A host named in
+  `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` stays unscreened (later narrowed to
+  plain `http` from a named loopback host only; over `https` it still skips
+  the internal-address screen), and so does the named host of a configured
+  proxy that the client accepts, only for connect-time lookups: a fetch URL or
+  redirect target naming the proxy host, or an IP-literal or rejected proxy
+  value, is screened like any other host. The NAT64 prefix `64:ff9b::/96` is
+  screened as its embedded IPv4 address, a refusal at connect or of a redirect
+  target is named in the error the CLI and MCP print, and every error renders
+  its URL, the sidecar's remote leading token and the archive path on one line
+  (`BE-INPUT-011`). Commits `00e4bd3f`, `d21aaf0c`, `307b920c`.
+- **`/analyze` states the two citation messages it had dropped (spec 008).**
+  `Spec at {path} references unknown rule {ID}` (Blocking) and `Spec at {path}
+  references deprecated rule {ID}; targeted for removal in {version}`
+  (Advisory) are 008's messages; the parseable-procedure rewrite dropped them
+  without a decision to, and `§Rules (blocking and advisory)` restores them,
+  in `framework/commands/analyze.md` when the commit landed and since moved to
+  `framework/reference/analyze.md`. Commit `9ab0ba18`.
+
+- **BREAKING: `extract-archive` refuses an archive entry that would write
+  through a link or whose name is not UTF-8 (spec 022; `BE-INPUT-004`).**
+  `safe_join` now checks each entry name with the canonical containment check
+  against the destination, so a link already under the destination cannot
+  carry an entry outside it; the call fails with `InvalidPath` naming the
+  link. On Unix, where a tar entry's name is raw bytes, a name that is not
+  UTF-8 is refused (`UnsafeArchivePath`) rather than checked by its lossy text
+  and written by its raw bytes; on Windows such a name fails as `Io`. Spec
+  022; `2aec1962`, `22d34767`, `93fcc6b9`.
+- **`prune-tasks --all --apply` refuses as a whole when one feature fails the
+  path check (spec 022; scenario
+  `a-path-argument-resolves-inside-its-base`).** The walk wrote earlier
+  features before a later one failed the check; it now computes every
+  reduction and status first. Spec 022; `e2f4e1b2`.
+
+- **BREAKING: `create-feature` claims its directory atomically and refuses
+  one outside the project (spec 051; `BE-RACE-003`).**
+  It checked that the directory was absent and later made it with
+  `create_dir_all`, so two processes in one tree computing the same branch
+  number both passed and the second `spec.md` landed over the first. The
+  directory is now made with `create_dir`, which the OS refuses with
+  `AlreadyExists` for every caller but one, and the loser returns `created:
+  false`. It also validates containment before the directory is tested or
+  created: with the spec root linked outside the project it wrote
+  `001-escape/` there, and now refuses with nothing written. Breaking under
+  `BE-COMPAT-001`: a spec root that leaves the project is refused where it
+  was accepted. A later entry extends the containment to every listing of
+  the spec root. Spec 051. `f33096a5`, `54715126`
+- **`label-criteria`'s `--help` summary prints on one line, and
+  `criterion-label-backfill` states its idempotency (spec 008, task 29).**
+  clap replaces a brace-wrapped `n` in a doc comment with a newline, so the
+  summary `Assign stable AC{n} labels` split in two in both `ductus --help`
+  and `ductus label-criteria --help`; the comment now reads `AC<n>`, and a
+  test fails when any subcommand's summary or argument help spans lines.
+  `criterion-label-backfill` step 1 no longer tells the host to run a
+  reporting form `label-criteria` does not have: the pass is idempotent by
+  construction. Spec 008, task 29. `74f6361c`
+- **A by-hand `derive-dependencies` runs the runtime through its pointer
+  (spec 022, task 21).**
+  `amend`, `clarify`, `target` and the clarify, implement and plan references
+  advised a bare `ductus derive-dependencies`, which is whatever `PATH`
+  resolves and may not be the runtime; all eight occurrences now spell
+  `.ductus/bin/ductus derive-dependencies`. Spec 022, task 21. `75da4745`
+- **The review reference no longer has a reviewer hand-edit a record, and its
+  sample output names the SHOULDs the gate holds on (spec 020).**
+  `framework/reference/review.md` said an entry fixed after the report was
+  written gains a Status line and drops out of the count, a hand edit to a
+  record `write-review` regenerates whole. A SHOULD kept as-is is now waived
+  with `--waive` and its rationale, a low-confidence finding needs no waiver,
+  and a fix is recorded by re-running `/{project}:review`. The sample stdout's
+  next line now says to fix or waive the 3 SHOULD violations before
+  `/{project}:analyze`, since the done gate holds on an unwaived SHOULD. Spec
+  020. `b82c1c86`, `8815e460`
+- **The bootstrap states what its seeds grant, and its dead runtime tip is
+  gone (spec 048, tasks 24-27).**
+  §Permission Setup said each seed entry grants only what a step runs, while
+  every seed but Pi's kept `ls` and `command -v`; it now says an entry that
+  can run another command or write outside the project is narrowed, and
+  names the two it keeps. State A's version check now names both probes (a
+  `[runtime] path` prompts; only the store form is seeded). The `ductus
+  runtime tip` section and its Post-Scaffolding Output bullet are removed:
+  the tip rendered only on a failed acquisition, which halts in pre-flight,
+  so a run that reaches it never read that file. The Pi configure command
+  calls an adopter's checkout "Pi adopter", not "pip-installed". The
+  Antigravity and OpenCode wording these corrections also touched went with
+  those hosts, which a later entry retires. Spec 048, tasks 24-27; spec 064.
+  `2ce9e62d`, `86503cfb`, `31d064e6`, `40358729`
+- **Lockfile: `libz-sys` 1.1.30 to 1.1.31 (RUSTSEC-2026-0418).**
+  The advisory, published 2026-10-28, is a build script that leaks
+  environment variables into the build directory; `libz-sys` reaches the
+  runtime through `git2` and `libgit2-sys`. `c55d81a2`
 
 ## [0.59.11] — 2026-10-17
 
