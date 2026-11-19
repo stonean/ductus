@@ -1,15 +1,15 @@
 ---
 spec: 020-code-review
-last-run: 2026-11-19T22:35:55Z
-reviewed-against: 5de7c1f98d3545515a679f09b569df3260be2644
-diff-base: ba3c205e68dd43e4ae6c746c62ca52161d905fb0
+last-run: 2026-11-19T23:10:07Z
+reviewed-against: eb7f7aba0eed62cfacef07efe9e929481c503388
+diff-base: 3a634c6bdf1e8a0c7879856b0f594e965714e23e
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 5
-scope: 5
+examined: 2
+scope: 2
 unread: []
-excluded: 44
+excluded: 49
 contract-breaks: 0
 skipped-passes: []
 reviewed-digest:
@@ -58,7 +58,7 @@ blocking: false
 dispositions:
   fixed: 0
   deferred: 0
-  waived: 2
+  waived: 0
   undispositioned: 0
 decisions:
   - key: "other — the Context of scenarios every-loaded-rule-file-has-a-pass and review-reports-a-defect-under-its-owner states in the present tense what task 14 and task 15 changed: that the reference names a rule file in only one pass, that the quality pass's definition does not say it enforces `quality-cross.md`, that `/review` applies no Not-flagged clause, and that 18 yields sit in files no pass applies today. — `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md:9`"
@@ -81,23 +81,13 @@ decisions:
     reason: The list records what 020 delivered, and the relocation is stated beside it, in the 057 note and the Frontmatter schema section; rewording a delivered task list changes no requirement and makes no claim about the tree.
     decided-at: 2026-11-19T02:29:42Z
     decided-by: rule
-  - key: "other — the `[review] tech-stack-verified` halt is carried by step 1's tech-stack branch, so the `review-owed: false` stop and the empty-scope branch never read the key, while the Config bullet and the data model say the halt comes at step 1 before any pass; the claim is wider than the branch that carries it. — ``framework/commands/review.md``"
-    outcome: waived
-    reason: The empty branches write no alignment decision and read no flag, so no malformed value is read as `false` there and CFG-ENV-008's no-silent-fallback holds; step 1's own sentence says the halt is where the flag is read, and rewording the claim is not mechanical enough to spend a fix round on a low-confidence note.
-    decided-at: 2026-11-19T22:35:21Z
-    decided-by: rule
-  - key: other — the sentence added to the `[review] tech-stack-verified` Config bullet leaves its first line longer than the neighbouring bullets' wrap. — ``framework/commands/review.md``
-    outcome: waived
-    reason: Cosmetic only, the markdown lint passes, and a rewrap would start a fix round and regenerate two copies for no requirement.
-    decided-at: 2026-11-19T22:35:21Z
-    decided-by: rule
 ---
 
 # Review — 020-code-review
 
 ## Summary
 
-Window ba3c205e (base-source reopen) to HEAD. Scope 5 entries: framework/commands/review.md, specs/020-code-review/data-model.md and specs/020-code-review/spec.md, each read whole after its window diff, and the two generated copies .claude/commands/ductus/review.md and .pi/prompts/ductus-review.md, read as their window diffs (each equal to the source's change), not whole, so examined is 5 of 5 on that reading. The window's change: this run's own fix(020) commit making a present non-boolean [review] tech-stack-verified halt step 1 (CFG-ENV-008, found by analyze), the waiver example's rule IDs, the Excluded from scope row's pointer to write-review's description, and the status flip. The three security rule files (194,749 bytes) were read whole by the security pass and the nine other rule files, AGENTS.md's Gotchas to Design Principles and system.md by the other four passes: no finding. The criteria step judged all 16 criteria one by one: 16 met (AC9's exit status taken from the criterion's own annotation and write_review.rs tests, not driven). Two NOTE observations, both waived by rule; two stored decisions retained as still holding, two retained as naming files the scope does not hold. No fix round: this run wrote no fix after start-fix-rounds' base. Unexamined: framework/reference/review.md section 'Resolve target and scope' item 4 was not edited and does not mention the new halt.
+Window 3a634c6b (base-source last-review) to HEAD. Scope 2 entries, both read whole by the passes: runtime/tests/golden/review-basic.jsonl (8,623 bytes; commit 78d3af3c moves five diff-base shas in the parity golden, nothing else, checked with the sha tokens normalized; the parity test review_basic_stream_matches_golden passed on this tree) and specs/020-code-review/analysis.md (4,910 bytes), so examined is 2 of 2. The security rule files, the nine other rule files, AGENTS.md's Gotchas to Design Principles and system.md were unchanged since the previous window's whole read (git diff 5de7c1f9 HEAD over them is empty) and are not re-read; all five passes ran: no finding. The criteria step re-judged all 16 criteria against the tree: 16 met; AC9's exit status was not driven, taken from write_review.rs and its tests. Two decisions from the previous run's observations expired, their keys naming a file this scope does not hold; two stored decisions are retained. No fix round: this run wrote no fix.
 
 16 of 16 acceptance criteria judged met.
 
@@ -142,8 +132,7 @@ Window ba3c205e (base-source reopen) to HEAD. Scope 5 entries: framework/command
 
 ## Observations
 
-- other — the `[review] tech-stack-verified` halt is carried by step 1's tech-stack branch, so the `review-owed: false` stop and the empty-scope branch never read the key, while the Config bullet and the data model say the halt comes at step 1 before any pass; the claim is wider than the branch that carries it. — ``framework/commands/review.md`` — **waived**: The empty branches write no alignment decision and read no flag, so no malformed value is read as `false` there and CFG-ENV-008's no-silent-fallback holds; step 1's own sentence says the halt is where the flag is read, and rewording the claim is not mechanical enough to spend a fix round on a low-confidence note. (decided by the rule)
-- other — the sentence added to the `[review] tech-stack-verified` Config bullet leaves its first line longer than the neighbouring bullets' wrap. — ``framework/commands/review.md`` — **waived**: Cosmetic only, the markdown lint passes, and a rewrap would start a fix round and regenerate two copies for no requirement. (decided by the rule)
+*None.*
 
 ## Skipped passes
 
@@ -151,49 +140,54 @@ Window ba3c205e (base-source reopen) to HEAD. Scope 5 entries: framework/command
 
 ## Excluded from scope
 
-- `.ductus/reference/analyze.md`
-- `.ductus/reference/audit.md`
-- `.ductus/reference/plan.md`
 - `.ductus/reference/review.md`
-- `framework/reference/analyze.md`
-- `framework/reference/audit.md`
-- `framework/reference/plan.md`
 - `framework/reference/review.md`
 - `runtime/CHANGELOG.md`
-- `runtime/src/main.rs`
+- `runtime/src/interpreter/payload.rs`
+- `runtime/src/parser/mod.rs`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_command_flags.rs`
+- `runtime/src/primitives/check_corpus_links.rs`
+- `runtime/src/primitives/check_orphaned_references.rs`
+- `runtime/src/primitives/check_review_gate.rs`
 - `runtime/src/primitives/check_step_references.rs`
-- `runtime/src/primitives/commit_attribution.rs`
-- `runtime/src/primitives/compute_review_scope.rs`
-- `runtime/src/primitives/tool_loading.rs`
-- `runtime/src/primitives/write_review.rs`
+- `runtime/src/primitives/derive_routing_candidates.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/spec_links.rs`
 - `runtime/src/schema/descriptions.rs`
 - `runtime/src/schema/primitives.rs`
-- `runtime/tests/check_step_references_cli.rs`
-- `scripts/audit/README.md`
-- `scripts/audit/step-reference-integrity.sh`
-- `scripts/mutation/review-read-credit.py`
-- `scripts/mutation/scope-attribution.py`
-- `scripts/mutation/step-references-bounded.py`
-- `scripts/mutation/step-references-reach.py`
-- `scripts/tests/test-step-reference-integrity.sh`
+- `runtime/tests/bounded_list_gates.rs`
+- `runtime/tests/derive_dependencies_golden.rs`
+- `runtime/tests/derive_references_golden.rs`
+- `runtime/tests/mcp.rs`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/reopen-measure.py`
 - `specs/022-deterministic-runtime/tasks.md`
-- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
-- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
-- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
-- `specs/026-framework-self-audit/spec.md`
-- `specs/026-framework-self-audit/tasks.md`
-- `specs/041-task-pruning/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
 - `specs/051-branch-scoped-spec-numbering/tasks.md`
-- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
-- `specs/066-audit-records-and-the-completion-gate/tasks.md`
-- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
+- `specs/057-analyze-artifact-and-record-relocation/review.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/review.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
 - `specs/067-analyze-and-audit-checks/tasks.md`
-- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
 - `specs/071-command-reference-split/tasks.md`
-- `specs/079-review-and-analysis-work-converges/data-model.md`
-- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
 - `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/plan.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
 - `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
 - `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
