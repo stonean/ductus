@@ -313,6 +313,16 @@ own session file, so the two compose.
   worktrees at once; `050-constitution`'s cut to one read dropped that note
   (scenario `the-constitution-fits-one-read`, 2026-10-27, as AC25 records).
 
+- **Is `DUCTUS_SESSION` a configuration value, so that `CFG-ENV-008`'s
+  startup fail-fast reaches it?** No. It is an optional identity label:
+  unset, a process is identified by its platform's own session id
+  (`CLAUDE_CODE_SESSION_ID` on Claude Code), and set, it only names or groups
+  sessions, so it tunes no behavior. An invalid value therefore fails each
+  call that asks for the identity, naming the variable and its value, rather
+  than stopping the process at startup, as
+  `plan.md` §One session core, four callers states. Owner decision,
+  2026-11-19, from 062's analysis.
+
 **Why split from agent-autonomy:** [010](../010-agent-autonomy/spec.md) was a
 capability evaluation — it weighed GSD-2's features and declined multi-target
 sessions — and owns none of the session machinery. This spec reverses that
