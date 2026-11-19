@@ -133,9 +133,9 @@ as fixed rather than deferred.
 
 ## Sequencing with 048
 
-[048](../048-govern-acquired-runtime/spec.md) resumes after this spec lands, and writes the final paths from the start. Its Phase 1 — the version pin, the release publish gate, and the single archive format — is independent of the name and is already shipped.
+[048](../048-govern-acquired-runtime/spec.md) resumed after this spec landed and wrote the final paths from the start. Its Phase 1 — the version pin, the release publish gate, and the single archive format — was independent of the name and had already shipped.
 
-The relationship runs the other way too: 048's remaining migration entry and this spec's migration entry both rewrite an adopter's MCP configuration. If both ship, they must compose — or 048's is authored already knowing the new names, and there is only one.
+The relationship ran the other way too: 048's remaining migration entry and this spec's both rewrite an adopter's MCP configuration. Both shipped in 0.28.0 and compose by order: `ductus-rename` renames the server key and command, then `runtime-store-path` rewrites the path, run second by the lexicographic tie-break on their equal `introduced_in` (`framework/migrations.toml`).
 
 ## Acceptance Criteria
 
