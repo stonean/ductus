@@ -10,7 +10,7 @@
 | `.ductus/sessions/.gitignore` | `*` | The first process to hold the session lock, when absent (`scenarios/first-writers-create-the-ignore-file-once.md`) |
 
 The shared default's keys and field order are unchanged
-(`runtime/src/primitives/write_session.rs`'s `SessionRecord`, at `25c946ea`): `feature`, `path`,
+(`runtime/src/session.rs`'s `DefaultRecord`; first written as `SessionRecord` in `runtime/src/primitives/write_session.rs`, at `25c946ea`): `feature`, `path`,
 `scenario`, `scenario-path`, `set-at`, `cli-config-dir`, all optional.
 
 ## Sessions on different specs
@@ -59,7 +59,8 @@ by = "review"                     # label of the session whose command removed i
 
 Notes:
 
-- `used-at` is refreshed on every resolution and write, under the lock. The
+- `used-at` is refreshed on every resolution and every target or clear write,
+  under the lock; a host-config write and a read-only peek leave it alone. The
   sweep removes a file whose `used-at` is more than seven days old, and it
   never removes the caller's own file.
 - `seen-peers` is the peer set this session was last told about. A resolution
@@ -68,8 +69,9 @@ Notes:
 - `[notice]` is delivered and removed by the owner's next resolution. A second
   removal before delivery replaces it: only the latest fate of the target is
   true.
-- A file that fails to parse is an operational error for its owner (AC22), and
-  it is reported but never deleted by another process's sweep.
+- A file that fails to parse, or holds no parseable `used-at`, is reported but
+  never deleted by another process's sweep; a file that fails to parse is also
+  an operational error for its owner (AC22).
 
 ## `resolve-session`
 
