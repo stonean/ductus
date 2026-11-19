@@ -1,7 +1,7 @@
 ---
 spec: 020-code-review
-last-run: 2026-11-19T22:37:23Z
-analyzed-against: c5e8e1a2e54efd74276bce008882785783a14d74
+last-run: 2026-11-19T23:11:10Z
+analyzed-against: 494993849affcc9adcd56d692f03978aad9305de
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
@@ -9,7 +9,7 @@ unexamined: 3
 analyzed-digest:
   data-model.md: 1625833bc1e1572da569f7c582ededc4ea9b59efe55b3f6d459efb59becd9632
   plan.md: edb79569e7bdbdf9bdad94675575a54bed8325a177abd711325c2c64587a9913
-  review.md: 9e0e1c66021c475928344908fd3b7f132ba1ac9641d6429e61864919d7d9cee6
+  review.md: 1a8263e1b735ad1d5e00e366edf7a5a04fa57917c0da8a5b4d543242968203ec
   scenarios/every-loaded-rule-file-has-a-pass.md: 4e31f3bd59ad2c2145b8cb24ceaf8561580ffab2ad3143de1087f65b5109a0f3
   scenarios/review-flag-parsing-is-specified.md: a19fe0f4f50c954363f7cca4d913a81d96374535d31a986792243be5263631c1
   scenarios/review-reports-a-defect-under-its-owner.md: ef91f01e38d96520853db62f5ee62b9b8893d41582f055f4f01a25d5a796b665
