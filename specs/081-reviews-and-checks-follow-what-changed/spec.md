@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [079-review-and-analysis-work-converges]
 cross-spec-impact: [020-code-review, 026-framework-self-audit, 047-analyze-findings-durability, 050-constitution, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges]
 next-criterion: 15
@@ -61,7 +61,7 @@ Specs reached `done` slowly because reviews and checks were owed for changes out
 - [x] AC10: A commit whose subject names no spec is attributed as before this spec, but for the credit below. A code-only commit naming no spec and touching no spec directory stays in the scope of a spec whose window holds it, and makes a review owed there, until a committed review states that it read the commit's paths; a fixture proves it.
 - [x] AC11: `compute-review-scope`'s compiled description and `framework/reference/review.md` §Window and coverage state the attribution rule and the artifact set above.
 - [x] AC12: `write-review` records `unread`, the scope entries the run's passes did not read, whenever the run states it: an empty list when the passes read every entry, and a refusal for an entry the run's scope does not hold. A run that states nothing writes no `unread`. `framework/commands/review.md` step 11 passes it, and the constitution's review-record table and 066's and 020's data models list it.
-- [x] AC13: `compute-review-scope` credits a path of a commit whose subject names no spec and that touches no spec directory when a review record committed in the window states that it read the path: the record's window, `diff-base` to `reviewed-against`, holds the commit, and the record lists `unread` without the path, no skipped pass, no budget stop and no open fix-round loop. A credited path leaves the scope, is listed in `excluded` under the spec whose review read it, and makes no review owed. A path a commit no record credits also changed stays in scope.
+- [x] AC13: `compute-review-scope` credits a path of a commit whose subject names no spec and that touches no spec directory when a review record committed in the window states that it read the path: the record's window, `diff-base` to `reviewed-against`, holds the commit, and the record lists `unread` without the path, no skipped pass, no budget stop and no open fix-round loop. A credited path leaves the scope, is listed in `excluded`, and makes no review owed. A path a commit no record credits also changed stays in scope.
 - [x] AC14: Fixtures prove each direction: a path a complete record read is credited and owes no review; a path the record lists in `unread`, one read by a record with a skipped pass, a budget stop or an open loop, one read by a record with no `unread`, and one whose commit lies outside the record's window each stay in scope.
 
 ## Applicable Rules
