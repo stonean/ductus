@@ -6,18 +6,20 @@ section: "The primitive library"
 
 ## Context
 
-Every `ductus` subcommand panics with exit 101 when the reader of its stdout exits before draining it: `failed printing to stdout: Broken pipe (os error 32)`. Reproduced 2026-10-26 with the 0.59.11 binary: `ductus dashboard | true`, and `read-spec --include-body` piped to `true` or to `dd bs=1 count=1`. Reported against `extract-archive … | head`, it is general: the result emitters in `main.rs` write with `println!`, and nothing handles a broken pipe. Plain `| head` on single-line JSON does not trigger it, because `head` reads to the end of the one line; a reader that exits early does. One stderr site, `warn_unknown_keys`, was fixed in b482e029 (063's review) with `let _ = writeln!`; `main.rs` still writes its errors with `eprintln!`. Exit 101 is also what a panicking or failing run returns, so a shell script cannot tell an early-exiting reader from a crash.
+Every `ductus` subcommand panics with exit 101 when the reader of its stdout exits before draining it: `failed printing to stdout: Broken pipe (os error 32)`. Reproduced 2026-10-26 with the 0.59.11 binary: `ductus dashboard | true`, and `read-spec --include-body` piped to `true` or to `dd bs=1 count=1`. Reported against `extract-archive … | head`, it is general: the result emitters in `main.rs` write with `println!`, and nothing handles a broken pipe. Plain `| head` on single-line JSON does not trigger it, because `head` reads to the end of the one line; a reader that exits early does. One stderr site, `warn_unknown_keys`, was fixed in b482e029 (063's review) with `let _ = writeln!`; `main.rs`'s exit-path diagnostics were written with `eprintln!`, which panics once the stderr reader has gone. Exit 101 is also what a panicking or failing run returns, so a shell script cannot tell an early-exiting reader from a crash.
 
 ## Behavior
 
 - A subcommand whose stdout reader has gone exits without a panic and without a panic message, at the first write that meets the closed pipe.
 - Its exit status is distinguishable from a primitive failure and from a panic.
+- A subcommand whose stderr reader has gone drops the diagnostic it was writing, keeps its own exit status and the output it wrote to stdout, and does not panic: every exit-path write in `main.rs` goes through `ductus::io::warn`.
 - The `mcp` stdio server's handling of a closed transport is unchanged: the fix is at the CLI result-write sites, not a process-wide SIGPIPE reset.
 
 ## Edge Cases
 
 - A write error other than a broken pipe (a full disk on a redirected stdout): still reported as an error.
 - A broken pipe after a primitive has already written files: the files stand; only the report is lost.
+- `ductus exec`'s terminal `error` envelope is written to stdout before the stderr line, so a host that closed stderr still gets it.
 - The proof uses a pipe whose reader is dropped (`std::io::pipe()`, as `runtime/tests/config_unknown_keys.rs` does for stderr), not a closed descriptor.
 
 ## Open Questions

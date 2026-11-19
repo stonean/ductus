@@ -17,12 +17,13 @@ The 2026-07-11 runtime review found three seams where the binary's behavior dive
 The binary honors the protocol contract as documented:
 
 - `ductus exec` emits a terminal `error` envelope on command-file parse failure — descriptive message, the runtime version, and a note that a framework/runtime version mismatch is a possible cause — before exiting non-zero.
-- Unknown, wrong-type, mismatched-request-id, or unparseable inbound lines while suspended are logged to stderr and skipped; the runtime continues waiting for a valid response. Only stdin EOF while awaiting a response is an operational error.
+- Unknown, wrong-type, mismatched-request-id, unparseable or non-UTF-8 inbound lines while suspended are logged to stderr and skipped; the runtime continues waiting for a valid response. Only stdin EOF while awaiting a response is an operational error.
 - `build_extension_request` constructs the typed `assessSpecQuality` request matching the data model's shape, mirroring the `writeCode` builder discipline.
 
 ## Edge Cases
 
 - A late `llm-response` for a superseded request-id is ignored, not fatal.
+- A non-UTF-8 line is skipped whole, never decoded lossily, so a corrupted line cannot parse as an envelope.
 - Blank keepalive lines between envelopes are ignored.
 - The interpreter module doc's claim that the runtime "panics on malformed JSON on stdin" is corrected to describe the ignore rule.
 

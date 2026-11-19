@@ -14,12 +14,14 @@ Found by the real adopter bootstrap of [050-constitution](../../050-constitution
 
 - **An extracted file never carries group or other write.** `extract-archive` masks each entry's mode to `rwxr-xr-x` (`0o755`): an archive's `0664` lands as `0644`, its `0775` as `0755`, on the tar and the zip path alike.
 - **The executable bit survives.** The hook and scripts `apply-manifest` installs keep it, as before.
+- **`merge-managed-block` creates a file at `0644`**, so a `.gitignore` or `CLAUDE.md` it creates is readable by the checkout's other users and writable by none; a file it rewrites keeps its mode. `merge-permissions` creates its personal settings file owner-only.
 - **`apply-manifest` mirrors the masked mode onto every file it writes**, on create and update, and onto an `update`-strategy file whose bytes already match when only its mode differs: the mode is re-applied, the bytes and modification time are left alone, and the action stays `unchanged`.
 
 ## Edge Cases
 
 - **A file an earlier run installed.** It drops to `0644` or `0755` on the next run once the release carrying this fix is the adopter's runtime, whether or not its content changed, when the runner may change its mode. Git records only the executable bit, so the change shows in no diff. A file `apply-manifest` does not manage (a `create` or `skip` row that already exists, or a pinned file) keeps its mode.
 - **A file the runner may not chmod.** One that belongs to another user, or is flagged immutable, keeps its mode: `apply-manifest` names it in the result's `modes-kept`, the bootstrap reports it, and the walk goes on to the entries after it.
+- **The umask is not read.** The mode is a fixed `0644`: the crate forbids unsafe code, and honoring the umask would need a new dependency.
 - **An archive entry with no group or other write.** It is unchanged by the mask: a `0600` entry lands as `0600`.
 
 ## Open Questions

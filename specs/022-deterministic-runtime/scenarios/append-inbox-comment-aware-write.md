@@ -13,12 +13,14 @@ If `inbox.md` ends inside an *unclosed* `<!--` HTML comment (no closing `-->` �
 ## Behavior
 
 - `append_bullet` appends the new bullet at a position the read side will count: the last position outside any open HTML comment or code fence, mirroring the comment/fence awareness of `iter_bullets` / `count_inbox_bullets`. An appended item is always visible to the reader and included in the count — write and read share one notion of inbox content.
+- `append-inbox` refuses text that would open an HTML comment on its own line (a `<!--` outside backticks with no `-->` after it), since the reader would skip the new bullet and everything after it; text with a closed inline comment or a backticked delimiter is accepted.
 - A well-formed `inbox.md` (every comment and fence closed) appends exactly as before — the bullet lands after the final closed region.
 
 ## Edge Cases
 
 - `inbox.md` ending inside an unclosed HTML comment: the bullet lands in a position `count_inbox_bullets` counts (before the unterminated region), never inside the comment where it would be skipped.
 - A trailing unterminated code fence is handled the same way as an unterminated comment.
+- An item already written invisible by an earlier run stays as it is; `/groom` finds it in the file.
 - An empty or comment-only inbox still receives the appended bullet in a counted position.
 
 ## Open Questions
