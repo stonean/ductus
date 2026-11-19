@@ -116,6 +116,30 @@ cp ../ductus/.claude/settings.local.json .claude/
 
 Keep each session on its own specs. `git pull --rebase` before each push, and after pulling runtime changes rebuild and restart the session, since the MCP server keeps the binary it started with.
 
+## Running a review or an analysis from a worktree
+
+A review or analysis run in a shared tree reads every other session's uncommitted file into its window and its fix-round briefs, so run each in a clean worktree of `origin/main`, one per spec (027's, 048's, 062's and 067's on 2026-11-19):
+
+```bash
+git worktree add --detach <scratch>/wt-<NNN> origin/main && cd <scratch>/wt-<NNN>
+npm ci && (cd runtime && cargo build --release --locked)
+mkdir -p .ductus/bin && ln -s ../../runtime/target/release/ductus .ductus/bin/ductus
+runtime/target/release/ductus write-session --cli-config-dir .claude
+```
+
+Without the last two lines `check-orphaned-references` reports false findings. In the worktree use only the CLI, since the `mcp__ductus__*` tools act on the session's own checkout, and commit there.
+
+- **Review.** Follow `framework/commands/review.md` through its primitives' CLI forms, with steps 3 to 7.2 split among three subagents that share one brief in `$TMPDIR`:
+  - A, the security pass over the three `security-*.md` files;
+  - B, the other four passes over the other nine rule files, `AGENTS.md`'s Gotchas to Design Principles and `specs/system.md`, plus a verdict on each stored decision whose key names an in-scope file;
+  - C, the criteria step over every criterion.
+
+  Give them the review reference's sections, `write-review`'s shapes from the HEAD binary (`tools/list`, sent after `initialize` and `notifications/initialized` to `env -u CLAUDE_CODE_SESSION_ID -u DUCTUS_SESSION runtime/target/release/ductus mcp`), a table of 20 KB `sed -n` read ranges, and a fresh hand-back path each. Take `start-fix-rounds`' base before any write, send A and B the whole fix diff to re-run their passes, and hand each `brief-re-read` round's brief path alone to a fresh agent. Pass each structured argument as a `--{name}-json` file in `$TMPDIR`, and backtick every path in a note or observation, since `review.md`'s lint gates `done`.
+- **Pricing a reopen.** Read `compute-review-scope`'s `criteria-owing` after the reopen, never infer it: a `done` spec whose review record predates 066 task 27's criteria step owes every criterion a review when reopened, a scenario-only edit included (067 and 062, 2026-11-19).
+- **Analysis.** Run `scripts/analyze/` from the worktree with `ANALYZE_WORK` set to a fresh directory under `$TMPDIR` and `DUCTUS_BIN` to the worktree's binary, in the order **Sizing an analysis's judges** gives. Commit each design-subject fix before the next `detect.py`, then re-run `split.py` and `briefs.py` and send each judge and step 15's reader the diff with its new output path.
+- **Push gate.** After committing, `git fetch && { git merge-base --is-ancestor origin/main HEAD || git rebase origin/main; }`, then `scripts/audit/run-all.sh`, then in one chain the fetch, the ancestor check, the outgoing subjects counted with `wc -l` and each matched with `grep -qF`, and `git push origin HEAD:main`. Run it again when another push lands meanwhile.
+- **Scratch-adopter bootstrap.** After the push, one subagent that calls no `mcp__ductus__*` tool installs the bootstrap with `install.sh claude --ref=main` and follows it under a scratch `HOME` with an empty store, through a zsh function that unsets both session identities and sets `HOME`. A change to a guard's text also gets a run of that text alone on a tampered copy of the staged registry.
+
 ## Writing a destination check
 
 A destination check judges where a write lands, not only where its path leads, and compares names as the file system folds them.
