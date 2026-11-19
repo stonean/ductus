@@ -1,5 +1,5 @@
 ---
-next-task: 8
+next-task: 9
 ---
 
 # 026 — Framework self-audit (`/audit`) Tasks
@@ -69,3 +69,9 @@ Blocked on task 1: the store tests run against the migrated schema.
 - [x] `scripts/tests/test-audit-path-containment.sh` gains a case per changed family showing a symbolic link resolving outside the repository is reported and not touched, each failing with its family's check removed, proven by hand and recorded
 
 - **Done when**: No audit family probes, globs or opens a path it did not write as a literal without containing it first, proven by a test case per family that fails with the check removed; `framework-checks.yml`'s and `generators.yml`'s steps and `scripts/audit/run-all.sh` pass; and 026's next review reads the change.
+
+## 8. Family 34 judges the reference sections a command's steps reach (from 071's scenario reference-sections-are-reached-by-a-step)
+
+- [ ] Implement the behavior described in `scenarios/family-34-reference-section-reachability.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
