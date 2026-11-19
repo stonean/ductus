@@ -147,7 +147,10 @@ staged_md="$(git diff --cached --name-only --diff-filter=ACM \
 # scripts/maintainer-only-commands.txt, but only to decide whether a command may
 # lack a row, so it moves no output and a bad edit fails the scratch run).
 generator_source_staged=0
-if printf '%s\n' "$staged_names" | grep -qE '^(framework/|scripts/gen-)'; then
+# A here-string, never `printf | grep -q`: grep -q exits on its first match, the
+# writer then dies of SIGPIPE, and pipefail reads that as no match once the
+# names pass the pipe's 64 KB buffer.
+if grep -qE '^(framework/|scripts/gen-)' <<< "$staged_names"; then
   generator_source_staged=1
 fi
 
@@ -263,10 +266,10 @@ while IFS= read -r -d '' meta && IFS= read -r -d '' rel; do
   read -r _ newmode oldsha _ change <<< "${meta#:}"
 
   carry=0
-  if printf '%s\n' "$staged_names" | grep -Fxq -- "$rel"; then
+  if grep -Fxq -- "$rel" <<< "$staged_names"; then
     carry=1
   elif [ "$generator_source_staged" = 1 ] \
-       && printf '%s\n' "$rel" | grep -qE "$generated_outputs"; then
+       && grep -qE "$generated_outputs" <<< "$rel"; then
     carry=1
   fi
   [ "$carry" = 1 ] || continue
@@ -299,8 +302,10 @@ while IFS= read -r -d '' meta && IFS= read -r -d '' rel; do
 done < "$scratch/changes.raw"
 
 # Runtime crate verification — only when staged changes touch runtime/.
+# grep -c reads every name, so the writer is never cut off (see the first here-string).
+runtime_staged=$(git diff --cached --name-only | grep -c '^runtime/' || true)
 if [[ "${DUCTUS_SKIP_RUNTIME_CHECKS:-0}" != "1" ]] \
-   && git diff --cached --name-only | grep -q '^runtime/'; then
+   && [ "$runtime_staged" -gt 0 ]; then
   if ! command -v cargo > /dev/null; then
     echo "pre-commit: runtime/ changes staged but cargo not on PATH; skipping verification" >&2
   else

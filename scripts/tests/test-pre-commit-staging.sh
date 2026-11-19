@@ -27,6 +27,8 @@
 #   H. a staged violation --fix cannot repair (MD028, a blank line inside a
 #      blockquote) stops the commit, naming it, and leaves HEAD and the index
 #      as they were (spec 017 task 46)
+#   I. a commit staging a generator source among 3,000 other names still carries
+#      the regenerated outputs (no SIGPIPE under pipefail in the hook's greps)
 #
 # HOOK_UNDER_TEST overrides the hook (scripts/mutation-style proofs that a case
 # fails with a behavior removed). The runtime is ./runtime/target/release/ductus
@@ -269,6 +271,26 @@ else
 fi
 check "E: the commit holds README.md and nothing else" \
   test "$(committed_files "$R")" = "README.md"
+
+# I. a commit staging a generator source among enough names to fill the pipe
+# still carries the regenerated outputs (`grep -q` ends a pipeline early, and the
+# writer's SIGPIPE under pipefail read as "no generator source staged"). The
+# bulk names sort first, so the first line matches and the rest is unread; 3,000
+# names of 50 bytes pass the 64 KB pipe buffer.
+new_case i
+printf 'stale-tool-i\n' >> "$R/framework/runtime-tools.txt"
+g "$R" add -- framework/runtime-tools.txt
+g "$R" -c user.name=t -c user.email=t@example.com commit -q --no-verify -m "stale outputs" \
+  > /dev/null
+mkdir -p "$R/scripts/gen-aaa"
+for n in $(seq 1 3000); do : > "$R/scripts/gen-aaa/$(printf 'bulk-entry-with-a-long-name-%05d' "$n").txt"; done
+g "$R" add -- scripts/gen-aaa
+if commit "$R" "case i"; then
+  pass "I: the commit succeeds"
+else
+  fail "I: the commit failed: $(cat "$CASE/commit.out")"
+fi
+check "I: the committed outputs agree with the committed sources" outputs_in_sync
 
 # F. a markdown file staged in part.
 new_case f
