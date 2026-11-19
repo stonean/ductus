@@ -166,7 +166,7 @@ Wiring: append one line to `scripts/audit/run-all.sh` after the Family 9 invocat
 run_check "Family 10 — migration coverage" "scripts/audit/migration-coverage.sh"
 ```
 
-And append item 10 to `framework/reference/audit.md`, matching the existing pattern. No new MCP primitive — `run-all.sh` is the orchestrator; `/audit` itself invokes it via `run-generator`.
+And append item 10 to `framework/reference/audit.md`, matching the existing pattern. No new MCP primitive — `run-all.sh` is the orchestrator; `/audit` itself invokes it via `run-generator` (`framework/commands/audit.md` step 1).
 
 ### CHANGELOG.md shape
 
