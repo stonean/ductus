@@ -152,7 +152,7 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 
 ## Resolved Questions
 
-**Is Windows a supported platform?** No, since 2026-11-19 (owner decision): until the project has Windows adopters, no CI job, release asset or acquisition targets Windows. Task 33 removes `runtime.yml`'s two Windows jobs, and task 34 the release target, the acquisition leg and the bootstrap's Windows row.
+**Is Windows a supported platform?** No, since 2026-11-19 (owner decision): until the project has Windows adopters, no CI job, release asset or acquisition targets Windows. Task 33 removes `runtime.yml`'s two Windows jobs, and task 34 the release target, the acquisition leg and the bootstrap's Windows row. The runtime's Windows code and the bootstrap's text for a Windows host that supplies its own binary through `[runtime] path` stay (owner decision, 2026-11-19), so a Windows user can still build from source and run that way.
 
 **Why split from runtime-boundary:** [021](../021-runtime-boundary/spec.md) established the boundary — what a runtime may and may not do, and the principles that admit one at all. This spec exercises that boundary by *changing* one of its principles, and the two cannot be one spec because 021's content is what this one amends: folding them would leave a single spec that both forbids the runtime as a prerequisite and requires it. The overlap Family 7 sees is `framework/constitution.md` and the CI workflow, which is exactly the surface an amendment touches. 021 stays the record of what the boundary was and why; this spec is the record of what changed and what it cost.
 
