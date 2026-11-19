@@ -1,5 +1,5 @@
 ---
-next-task: 61
+next-task: 63
 ---
 
 # 080 — Deterministic runtime efficiency Tasks
@@ -19,3 +19,16 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Implement the behavior described in `scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 61. A primitive's description states a bounded list's emptiness by its count (found while implementing task 60)
+
+- [ ] Reword `DERIVE_DEPENDENCIES` and `DERIVE_REFERENCES` in `runtime/src/schema/descriptions.rs` and the matching doc comments in `runtime/src/schema/primitives.rs`, and report each description's byte change
+
+- **Done when**: the `derive-dependencies` and `derive-references` descriptions and their argument doc comments say examined-and-clean by `updated-count` and the other counts, which both result forms carry, and `runtime/tests/bounded_list_gates.rs` or a sibling test fails on the old wording
+
+## 62. The owner's decisions of 2026-11-19 on the file form are recorded where this spec keeps decisions
+
+- [ ] Decision one: the seventeen command steps whose outcome a file-form result can change are fixed, five by gating on the inline count and twelve by the existing clause that reads the list from the file `lists-file` names, which in part reverses the sweep of per-step branches decided on 2026-11-08
+- [ ] Decision two: `read-tasks` gains no inline unchecked count, since `check-review-gate` blocks on an unchecked task in both forms
+
+- **Done when**: `plan.md`'s section on corpus-growing results and the spec's Resolved Questions state both decisions and no sentence still says every per-step branch is swept

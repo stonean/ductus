@@ -1,5 +1,5 @@
 ---
-next-task: 40
+next-task: 41
 ---
 
 # 079 — Review and analysis work converges Tasks
@@ -27,3 +27,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Implement the behavior described in `scenarios/the-excluded-section-lists-paths-only.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 40. The owner's decisions of 2026-11-19 on the excluded section are recorded where this spec keeps decisions
+
+- [ ] The section lists each excluded path alone; recording only a count and a pointer was weighed and set aside because AC3 has the record name every path
+- [ ] No existing record is rewritten: each shrinks at its spec's next review, since rewriting `review.md` would stale every spec's analysis
+- [ ] Spec 081's AC13 lost its clause that a credited path is listed under a spec, and 081 was reopened for it
+
+- **Done when**: the spec's Resolved Questions state each decision with its reason and its measured effect

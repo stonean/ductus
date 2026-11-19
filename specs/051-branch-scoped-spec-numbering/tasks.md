@@ -1,5 +1,5 @@
 ---
-next-task: 39
+next-task: 40
 ---
 
 # 051 — Branch-scoped spec numbering Tasks
@@ -21,3 +21,10 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] Implement the behavior described in `scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 39. The 2026-11-19 choices on what `rewrite-spec-links` leaves alone are recorded where this spec keeps decisions
+
+- [ ] A link inside a code fence or an inline code span is still rewritten, since the token pass rewrites code spans in referrers on purpose and the two passes must agree
+- [ ] A bare path in angle brackets is not rewritten, since it has no scheme and is no link; it stays listed in `mentions`
+
+- **Done when**: the spec's Resolved Questions or Trade-offs state each choice with its reason

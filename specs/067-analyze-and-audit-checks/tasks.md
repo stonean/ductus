@@ -1,5 +1,5 @@
 ---
-next-task: 43
+next-task: 44
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -98,3 +98,12 @@ The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it ru
 - [x] Implement the behavior described in `scenarios/promotion-coverage-header-without-a-key.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 43. The owner's decisions of 2026-11-19 on the artifact checks are recorded where this spec keeps decisions
+
+- [ ] The set-apart colon span keeps its detection and its finding gains a remedy hint; narrowing detection to a span beside a file path was weighed and set aside because it drops most of what the 2026-11-17 decision targeted
+- [ ] `check-rule-ids` keeps its citation grammar and its not-installed answer, since each change offered trades a waivable false positive for a silent miss on a mistyped citation
+- [ ] `check-artifacts` keeps `clean` unwidened for a spec it could not read, since the skip is recorded and `validate-frontmatter` fails the same file
+- [ ] `check-corpus-links` is not taught reference-style definition lines, which would newly block adopter commits
+
+- **Done when**: the spec's Resolved Questions state each decision with its reason

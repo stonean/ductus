@@ -1,5 +1,5 @@
 ---
-next-task: 60
+next-task: 62
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -241,3 +241,24 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 - [x] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: a file merge-managed-block creates is mode 0644 and a rewrite keeps its mode, proven by a test its mutant turns red; and 022's next review reads the change
+
+## 60. The 0.60.0 release notes state what the pre-tag audit of the unpushed bump found missing or false (owner decision, 2026-11-19: fix everything the audit found)
+
+- [ ] Entries for spec 080's adopter-visible changes, which the notes lack: the MCP tools `render-status`, `read-section`, `render-help` and `merge-status-hook` are new since `ductus-v0.59.11`; `merge-status-hook` installs the Claude Code status and help hooks; and `dashboard` no longer returns `rendered-markdown`, a breaking change to its result. Correct the existing sentence that says `dashboard` names `rendered-markdown`
+- [ ] An entry saying `line-number-citations` is a new `check-artifacts` family that blocks at every status
+- [ ] An entry saying a `.ductus/config.toml` or session file that does not parse, or an invalid `[paths] specs-root`, halts every reader where 0.59.11 warned and used the default, and correct the sentence in the path-argument entry that says a malformed config is warned about
+- [ ] Remove the Added and the Removed entry for `check-review-freshness`, a tool added and retired inside this release that no release served
+- [ ] Give the `substitute-seed-placeholders` migration an entry of its own, as the other five 0.60.0 migrations have
+- [ ] One lockfile entry stating the net versions from 0.59.11 to the release head and naming the advisory the `pulldown-cmark` update addressed, since the recorded steps stop at 2026-10-29
+- [ ] State the command and reference byte totals at the release head, not mid-release, in the entry on what a command's reference holds; state the shipped rule total; and qualify the `prune-project` entry's mention of a configure block for an agent this release drops
+- [ ] Ask the owner, entry by entry, which entries that make a call refuse or rename a wire value are marked BREAKING, since the audit found about twelve unmarked; the owner ruled the seed narrowing not breaking on 2026-11-19
+
+- **Done when**: each item below is an entry or a correction under `[Unreleased]` in `runtime/CHANGELOG.md`, checked against the code at the head it describes, and the entry and BREAKING counts any release summary states are measured after the last edit
+
+## 61. The remaining hand-rolled fence toggles close a fence as `SkipScanner` does (found while implementing task 54)
+
+- [ ] `extract_section_body` in `runtime/src/interpreter/payload.rs`
+- [ ] `top_level_literal_markers` in `runtime/src/parser/mod.rs`
+- [ ] the in-fence toggle in `runtime/src/primitives/spec_links.rs`
+
+- **Done when**: each of the three sites reads a fence by the length-aware rule scenario `skipscanner-inline-code-exemption` states, a test per site fails without it, and the release binary before and after gives identical results for every spec, taken on one committed tree
