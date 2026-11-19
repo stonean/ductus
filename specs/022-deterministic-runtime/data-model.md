@@ -203,7 +203,7 @@ Result:
 
 `scenario-open-questions` is a **sibling** signal, never merged into it: the unresolved questions carried by `scenarios/*.md`, each tagged with its slug, in the shared scenario order. They gate `done`, not `clarified` ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md); scenario `scenario-open-question-signal`).
 
-`scenario-files-unreadable` lists the slugs of scenario files the shared collector could not read, **omitted when empty**, so an empty `scenario-open-questions` means every scenario was read (scenario `unreadable-scenario-is-reported`).
+`scenario-files-unreadable` lists the slugs of scenario files the shared collector could not read, **omitted when empty**, so a zero `scenario-files-unreadable-count` means every scenario was read (scenario `unreadable-scenario-is-reported`).
 
 `label` is the criterion's stable `AC{n}` identifier, or `null` before the labelling pass reaches it ([013 — Text-First Artifacts](../013-text-first-artifacts/scenarios/criterion-identifiers.md)); `text` keeps the `AC{n}:` prefix as authored. The label is parsed by `label-criteria`'s `parse_label`, the function `mark-criterion` resolves a `label` through, so the two cannot disagree.
 

@@ -31,7 +31,7 @@ Every runtime surface answering *"does this spec have unresolved questions?"* re
 - Non-`.md` files and case-varying filenames are decided by the shared listing, not re-derived here.
 - A question resolved between the gate check and the status write is accepted: the gate re-reads at check time and the resolution can only turn a block into a pass.
 - Adding a scenario that carries questions still takes the scenario back-edge to `in-progress`, never the question back-edge to `draft` — the spec body's own Open Questions section is not written to.
-- A feature with an empty `scenario-open-questions` list sees no change to any clarify branch: the report is suppressed entirely rather than rendered as "0 outstanding", so a clean feature reads exactly as it does today.
+- A feature with a zero `scenario-open-questions-count` sees no change to any clarify branch: the report is suppressed entirely rather than rendered as "0 outstanding", so a clean feature reads exactly as it does today.
 - Clarify's report never mutates. The `already {status}` and `done` branches keep their guarantee of modifying no file, and a feature-targeted run never writes to a scenario even when it names one.
 - Recovery state and outstanding scenario questions together: recovery is the more upstream defect and governs the walk, exactly as it wins the dashboard's Next Action cell. The scenario questions are still reported, and remain to be resolved after the recovery walk returns the spec to `clarified`.
 - The host reads no scenario for this: `read-spec`'s `scenario-open-questions` carries the questions, and the feature-targeted Scope Boundaries stay closed to scenario bodies.
