@@ -2757,7 +2757,7 @@ mod tests {
     // --- gate check 13: analyze staleness (and unjudged rules, below) -----------------------------------
     //
     // The *comparison* is tested in `crate::primitives::analyze_subjects` —
-    // subject-set membership, the `analyze:`-block exclusion, deleted and
+    // subject-set membership, the exclusion of `analysis.md`, deleted and
     // unreadable subjects, and the property that the answer does not depend on
     // commit status. What belongs here is the gate wiring: that the block is
     // reachable, ordered correctly among the other checks, and that an
@@ -2782,8 +2782,8 @@ mod tests {
         // In pipeline order: the review's digest, then its record, and only
         // then the analysis — which digests the `review.md` the review just
         // wrote. Taking the analyze digest first would leave the fixture
-        // permanently stale, because `review.md` is one of its subjects. That is the real ordering constraint, not an artefact of
-        // the fixture.
+        // permanently stale, because `review.md` is one of its subjects. That is
+        // the real ordering constraint, not an artefact of the fixture.
         let contracts = crate::primitives::analyze_subjects::subject_digest(
             &dir,
             crate::primitives::analyze_subjects::is_review_contract,

@@ -75,8 +75,8 @@ MUTATIONS = [
     (
         'M9 a legacy key is renamed beside its current spelling',
         'src/primitives/relocate_audit_records.rs',
-        '                if let Some(kept) = entries.iter().find(|other| other.key == current) {',
-        '                if let Some(kept) = entries.iter().find(|other| other.key == "\\0") {',
+        '                if let Some(kept) = existing_entries.iter().find(|other| other.key == current) {',
+        '                if let Some(kept) = existing_entries.iter().find(|other| other.key == "\\0") {',
         'relocate_audit_records::tests::a_legacy_key_beside_its_current_spelling_is_dropped_not_duplicated',
     ),
 ]

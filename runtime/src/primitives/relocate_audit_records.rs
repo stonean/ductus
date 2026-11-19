@@ -7,8 +7,8 @@
 //! ## Why a primitive rather than a script
 //!
 //! A corpus holds one spec per feature, each with two blocks to move, and
-//! adopters have their own. `framework/migrations/criterion-label-backfill.md` settled the same
-//! question for the same reason: its sweep runs through the primitive "never by
+//! adopters have their own. `framework/migrations/criterion-label-backfill.md`
+//! settled the same question for the same reason: its sweep runs through the primitive "never by
 //! hand — 700 criteria across 49 specs in this repository's own backfill, where
 //! a hand edit is a silent renumbering waiting to happen." A shell script
 //! would also have to parse frontmatter, which [§runtime-boundary] principle 3
@@ -275,8 +275,8 @@ fn render_artifact(
         let block_values = block_values(lines);
         // Each entry — a key line and the lines of its value — is carried,
         // renamed or dropped as a unit.
-        let entries = entries(existing_fm.lines());
-        for entry in &entries {
+        let existing_entries = entries(existing_fm.lines());
+        for entry in &existing_entries {
             // A key the block spells differently is the same field, so it is
             // compared and dropped rather than carried forward beside its
             // other spelling. See [`LEGACY_ALIASES`].
@@ -296,7 +296,7 @@ fn render_artifact(
                 // holds the one value there is to keep: the legacy spelling
                 // is dropped, and named when it differs, so no key is written
                 // twice.
-                if let Some(kept) = entries.iter().find(|other| other.key == current) {
+                if let Some(kept) = existing_entries.iter().find(|other| other.key == current) {
                     if kept.value() != entry.value() {
                         disagreements.push(format!("{file}:{}", entry.key));
                     }

@@ -1081,8 +1081,9 @@ fn check_disposition_drift(
 }
 
 /// (d) Review-state drift — reference §"Review state drift (blocking)":
-/// each condition on the record the module doc names, on a `done` spec. Grandfather rule: a `done` spec with **no** `review.md`
-/// at all predates `/ductus:review` and is exempt. Specs not at `done`
+/// each condition on the record the module doc names, on a `done` spec.
+/// Grandfather rule: a `done` spec with **no** review record predates
+/// `/ductus:review` and is exempt. Specs not at `done`
 /// are silently exempt (`review.md` is written lazily on first review).
 fn check_review_drift(
     findings: &mut Vec<ArtifactFinding>,
@@ -1300,7 +1301,7 @@ fn check_unticked_criteria(
 /// them.
 ///
 /// Deliberately **no grandfather rule**, unlike [`check_review_drift`]. An
-/// absent `review.md` genuinely marks a spec as predating that
+/// absent review record genuinely marks a spec as predating that
 /// feature; an unresolved scenario question is a present-tense defect
 /// whenever it arrived, and exempting it would preserve exactly the state
 /// this check exists to surface (spec 046).
