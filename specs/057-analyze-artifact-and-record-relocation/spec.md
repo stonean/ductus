@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [020-code-review, 027-bootstrap-migration-registry, 047-analyze-findings-durability]
 next-criterion: 27
 cross-spec-impact:
