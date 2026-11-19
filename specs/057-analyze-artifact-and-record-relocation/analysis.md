@@ -1,17 +1,18 @@
 ---
 spec: 057-analyze-artifact-and-record-relocation
-last-run: 2026-11-18T13:03:12Z
-analyzed-against: c8817abe9439c9bc03aea111c0057d132f4a1240
+last-run: 2026-11-19T22:51:38Z
+analyzed-against: 1e9110c30cf3218bc27afae79c4d51e2bcd113ba
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
+advisory: 2
 unexamined: 5
 analyzed-digest:
-  data-model.md: 077af403c5bab7c157dd8d52049bc142fff03aad7be68ab0becbee2b5a946ed1
+  data-model.md: 9d6dc21acae6e3e128006a20b2c379d5f9987020d2c21b9e0c885f9fc94dd365
   plan.md: ad5c8600ebf2c8f10f0493970331c03356b77b11d7d98f61fbbca8bc776ef3ec
-  review.md: 160cda4637a41288c50df4efba8d17297cad6a450d53c698da2f9f5b2fc4f3d7
-  spec.md: 490f682a3fe0140bc89bba0587687921784426e5b568e01eeb66a03b24ba0c9f
-  tasks.md: 1b5f609fa6804de99453ebf8e993b6ceec72e59fd76c25227f8f3d12d7133b7d
+  review.md: 3b82385de2dc22ef015f7be566add749b95ca2a81065ff38e2b851a2c5d8aa21
+  scenarios/a-merge-carries-each-keys-whole-value.md: c0cc9145d9f13e8deb06d0befe848a21bcd48b3c6d6ad24cba2ae2e648fc4138
+  spec.md: 9736a05c7076160f483d9a10a1f4789cedf7628377d4987f21b6c19ec15fb29b
+  tasks.md: 466f8f9ea0f74d46d48938de520c7f02f4565c2bd7516132d793048085a0f37e
 unexamined-by-reason:
   not-a-live-claim: 2
   root-absent: 3
@@ -30,35 +31,31 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Trade-offs"}
-  BE-DEPS-007: {verdict: finding, tier: should, at: "plan.md#Affected Files", message: "The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes."}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#Errors"}
+  BE-INPUT-001: {verdict: addressed, cite: "plan.md#`ReviewBlock` and `AnalyzeBlock` keep their shape and change their owner"}
   BE-INPUT-004: {verdict: addressed, cite: "data-model.md#`relocate-audit-records` result"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`relocate-audit-records` result"}
+  BE-RACE-001: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
-  BE-TXN-004: {verdict: addressed, cite: "plan.md#The corpus sweep is a primitive, invoked per spec"}
+  BE-TXN-004: {verdict: addressed, cite: "data-model.md#Errors"}
   QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
 blocking: false
 dispositions:
   fixed: 0
   deferred: 0
-  waived: 3
+  waived: 2
   undispositioned: 0
 decisions:
-  - key: "rule-assessment — BE-DEPS-007: The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes."
+  - key: grounding — Motivation states as fact that the audit family resolving `reviewed-against` never compares the counts on either side, naming no file, symbol or command for that audit family (Grounding advisory).
     outcome: waived
-    reason: 057's dependency change is a version bump in runtime/Cargo.toml and Cargo.lock, and the CI template change adds no dependency; the scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's audit job runs cargo audit on any push touching runtime/**), and where it runs is the project's choice under the rule's Not-flagged clause.
-    decided-at: 2026-11-16T14:01:05Z
+    reason: A dated historical account of the pre-relocation state this spec removed (the retired check-review-agreement and its audit family), which no command can reproduce now; it motivates the change and gates no criterion.
+    decided-at: 2026-11-19T22:51:38Z
     decided-by: rule
-  - key: grounding — Motivation states corpus measurements (54 spec directories, average 37.5 frontmatter lines, 231 for 022, every spec carrying a review.md) as fact with no command, query or method
+  - key: grounding — The sequencing section states that three raw parsers own `waivers` with `#[serde(flatten)]` and that `schema/primitives.rs` carries no `serde_norway::Value`, without naming the three parsers or a command that substantiates it (Grounding advisory).
     outcome: waived
-    reason: A dated historical measurement ('at the time of writing') whose subject, the pre-relocation frontmatter, no longer exists, so no command could reproduce it now; its denominator and unit are stated, and it motivates the change without gating any criterion.
-    decided-at: 2026-11-16T14:01:05Z
-    decided-by: rule
-  - key: grounding — spec.md Behavior states 'Twelve documents describe the blocks today' and the shipped CI template's no-review-block skip as existing-system fact without a path citation
-    outcome: waived
-    reason: the Behavior states the state this spec changed when it was written, twelve documents and the CI template's skip that 057 itself replaced, as the plan's CI decision records; it is the spec's account of its starting point, not a claim about the tree today
-    decided-at: 2026-11-18T13:03:12Z
+    reason: A rationale for a task ordering already delivered, recording why the waivers field stayed open-schema; the claim names the field and the file it concerns, a search for serde(flatten) in runtime/src/primitives finds the parsers, and no criterion depends on it.
+    decided-at: 2026-11-19T22:51:38Z
     decided-by: rule
 ---
 
@@ -66,7 +63,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 5 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 5 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -78,9 +75,8 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-DEPS-007: The plan changes CI configuration (framework/templates/ci/adopter-generators.yml) and Cargo.toml/Cargo.lock but commits to no automated vulnerability scan on dependency-set changes. — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: 057's dependency change is a version bump in runtime/Cargo.toml and Cargo.lock, and the CI template change adds no dependency; the scan the rule asks for already runs on every change to the runtime's manifest and lockfile (runtime.yml's audit job runs cargo audit on any push touching runtime/**), and where it runs is the project's choice under the rule's Not-flagged clause. (decided by the rule)
-- grounding — spec.md Motivation states measured figures (54 spec directories, 37.5 average and 231 lines of frontmatter) with no command or query naming the method — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **waived**: A dated historical measurement ('at the time of writing') whose subject, the pre-relocation frontmatter, no longer exists, so no command could reproduce it now; its denominator and unit are stated, and it motivates the change without gating any criterion. (decided by the rule)
-- grounding — spec.md Behavior states 'Twelve documents describe the blocks today' and the shipped CI template's no-review-block skip as existing-system fact without a path citation — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **waived**: the Behavior states the state this spec changed when it was written, twelve documents and the CI template's skip that 057 itself replaced, as the plan's CI decision records; it is the spec's account of its starting point, not a claim about the tree today (decided by the rule)
+- grounding — Motivation states as fact that the audit family resolving `reviewed-against` never compares the counts on either side, naming no file, symbol or command for that audit family (Grounding advisory). — `specs/057-analyze-artifact-and-record-relocation/spec.md` — **waived**: A dated historical account of the pre-relocation state this spec removed (the retired check-review-agreement and its audit family), which no command can reproduce now; it motivates the change and gates no criterion. (decided by the rule)
+- grounding — The sequencing section states that three raw parsers own `waivers` with `#[serde(flatten)]` and that `schema/primitives.rs` carries no `serde_norway::Value`, without naming the three parsers or a command that substantiates it (Grounding advisory). — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **waived**: A rationale for a task ordering already delivered, recording why the waivers field stayed open-schema; the claim names the field and the file it concerns, a search for serde(flatten) in runtime/src/primitives finds the parsers, and no criterion depends on it. (decided by the rule)
 
 ## Deferred to other specs
 
