@@ -1019,13 +1019,13 @@ fn render_analysis(
     if !subjects.digests.is_empty() {
         let _ = writeln!(out, "analyzed-digest:");
         for (path, digest) in &subjects.digests {
-            let _ = writeln!(out, "  {path}: {digest}");
+            let _ = writeln!(out, "  {}: {digest}", yaml_string(path));
         }
     }
     if !subjects.unreadable.is_empty() {
         let _ = writeln!(out, "analyzed-unreadable:");
         for path in &subjects.unreadable {
-            let _ = writeln!(out, "  - {path}");
+            let _ = writeln!(out, "  - {}", yaml_string(path));
         }
     }
     if !by_reason.is_empty() {
@@ -4414,5 +4414,51 @@ mod tests {
         run(&waived_args(), tmp.path()).unwrap();
         let body = analysis_md(&tmp);
         assert!(body.contains(" — cited `§a'b`\n"), "{body}");
+    }
+
+    /// A subject named with a colon and a comment opener is recorded under its
+    /// own name (scenarios/record-paths-are-quoted-only-when-they-need-it.md),
+    /// so the recorded path set equals the current one and the record reads
+    /// fresh; an ordinary path is written bare.
+    #[test]
+    fn a_subject_named_with_a_colon_and_a_comment_reads_back_fresh() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/042-demo");
+        fs::write(dir.join("notes: draft #1.md"), "# N\n").unwrap();
+        fs::write(dir.join("plan.md"), "# P\n").unwrap();
+
+        run(&args(), tmp.path()).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_analyze_record(&dir)
+        else {
+            panic!("the record written must read back");
+        };
+        let recorded: Vec<String> = record.analyzed_digest.keys().cloned().collect();
+        let current: Vec<String> = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_analyze_subject,
+        )
+        .digests
+        .into_keys()
+        .collect();
+        assert_eq!(recorded, current);
+        assert!(analysis_md(&tmp).contains("\n  plan.md: "));
+    }
+
+    #[test]
+    fn an_unreadable_subject_named_with_a_comment_round_trips() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/042-demo");
+        fs::create_dir_all(dir.join("scenarios")).unwrap();
+        // Invalid UTF-8 makes the subject unreadable rather than absent.
+        fs::write(dir.join("scenarios/a #1.md"), [0xff, 0xfe, 0x00]).unwrap();
+
+        run(&args(), tmp.path()).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_analyze_record(&dir)
+        else {
+            panic!("the record written must read back");
+        };
+        assert_eq!(record.analyzed_unreadable, vec!["scenarios/a #1.md"]);
     }
 }

@@ -1523,13 +1523,13 @@ fn render_contracts(
     } else {
         let _ = writeln!(fm, "reviewed-digest:");
         for (path, digest) in &contracts.digests {
-            let _ = writeln!(fm, "  {path}: {digest}");
+            let _ = writeln!(fm, "  {}: {digest}", yaml_string(path));
         }
     }
     if !contracts.unreadable.is_empty() {
         let _ = writeln!(fm, "reviewed-unreadable:");
         for path in &contracts.unreadable {
-            let _ = writeln!(fm, "  - {path}");
+            let _ = writeln!(fm, "  - {}", yaml_string(path));
         }
     }
 }
@@ -3957,6 +3957,74 @@ mod tests {
         );
     }
 
+    /// A contract named with a comment opener or a colon is recorded under its
+    /// own name (scenarios/record-paths-are-quoted-only-when-they-need-it.md):
+    /// the key reads back as the path, the next write accepts the record, and
+    /// an ordinary path is written byte for byte as it always was.
+    #[test]
+    fn a_contract_named_with_a_comment_or_a_colon_round_trips() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/001-x");
+        fs::create_dir_all(dir.join("scenarios")).unwrap();
+        for name in [
+            "scenarios/a #1.md",
+            "scenarios/b: c.md",
+            "scenarios/plain.md",
+            "data-model.md",
+        ] {
+            fs::write(dir.join(name), "# T\n").unwrap();
+        }
+
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_review_record(&dir)
+        else {
+            panic!("the record written must read back");
+        };
+        let recorded: Vec<String> = record.reviewed_digest.unwrap().into_keys().collect();
+        let current: Vec<String> = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_review_contract,
+        )
+        .digests
+        .into_keys()
+        .collect();
+        assert_eq!(recorded, current);
+
+        // The byte-identity constraint: an ordinary path stays bare.
+        let report = review_md(&tmp, "001-x");
+        let plain = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_review_contract,
+        )
+        .digests["scenarios/plain.md"]
+            .clone();
+        assert!(
+            report.contains(&format!("\n  scenarios/plain.md: {plain}\n")),
+            "{report}"
+        );
+        assert!(report.contains("\n  data-model.md: "), "{report}");
+
+        run(&base_args("001-x"), tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn an_unreadable_contract_named_with_a_comment_round_trips() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/001-x");
+        fs::create_dir_all(dir.join("scenarios")).unwrap();
+        // Invalid UTF-8 makes the contract unreadable rather than absent.
+        fs::write(dir.join("scenarios/a #1.md"), [0xff, 0xfe, 0x00]).unwrap();
+
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        let crate::primitives::RecordLoad::Present(record) =
+            crate::primitives::load_review_record(&dir)
+        else {
+            panic!("the record written must read back");
+        };
+        assert_eq!(record.reviewed_unreadable, vec!["scenarios/a #1.md"]);
+    }
+
     #[test]
     fn frontmatter_review_block_inserted_when_absent() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -6063,6 +6131,13 @@ mod tests {
         assert_eq!(yaml_string("true"), "\"true\"");
         assert_eq!(yaml_string("1234"), "\"1234\"");
         assert_eq!(yaml_string("null"), "\"null\"");
+        // A record path is quoted only when its plain form would not read
+        // back as itself, so an ordinary one is written as it always was.
+        assert_eq!(yaml_string("scenarios/retry.md"), "scenarios/retry.md");
+        assert_eq!(yaml_string("data-model.md"), "data-model.md");
+        assert_eq!(yaml_string("scenarios"), "scenarios");
+        assert_eq!(yaml_string("scenarios/a #1.md"), "\"scenarios/a #1.md\"");
+        assert_eq!(yaml_string("scenarios/b: c.md"), "\"scenarios/b: c.md\"");
     }
 
     /// A `#` after a space or a tab opens a YAML comment, so a plain value
