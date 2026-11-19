@@ -466,7 +466,7 @@ fn descriptions_hold_the_detail_the_second_sweep_points_at() {
         ),
         (
             descriptions::DERIVE_REFERENCES,
-            "only when `unparseable`, `unwritable` and `refused` are also empty",
+            "only when `unparseable-count`, `unwritable-count` and `refused-count` are also zero",
         ),
         (
             descriptions::CHECK_ORPHANED_REFERENCES,

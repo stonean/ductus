@@ -431,7 +431,7 @@ fn report_only_is_the_default_and_never_writes() {
 #[test]
 fn untracked_specs_are_never_rewritten_and_are_reported() {
     // Spec 017 / tracked-specs-not-worktree: an untracked draft is excluded
-    // by design. Reporting it is what keeps an empty `updated` from reading
+    // by design. Reporting it is what keeps a zero `updated-count` from reading
     // as "everything is in sync".
     let dir = tempfile::tempdir().unwrap();
     let specs = [SpecFile {

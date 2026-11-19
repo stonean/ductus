@@ -7,6 +7,10 @@
 //! and stops with "nothing to fold" while thousands are pending, so a step
 //! that asks whether a list is empty reads the `-count`.
 //!
+//! The descriptions and schema doc comments of `DESCRIBED` primitives are held
+//! to the same rule, since a caller reads them as the contract for the same
+//! results.
+//!
 //! The bounded list names are derived from the served tools' output schemas
 //! (the property `X` beside `X-count`, in a tool that also has `lists-file`),
 //! never listed here, so a primitive that gains a bounded list gains the check.
@@ -42,6 +46,10 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     ),
 ];
 
+/// Primitives whose descriptions are held to the rule. Others still state an
+/// emptiness by the list and join this set as each is reworded.
+const DESCRIBED: &[&str] = &["derive-dependencies", "derive-references"];
+
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -70,6 +78,49 @@ async fn served_output_schemas() -> Vec<(String, serde_json::Map<String, Value>)
             Some((tool.name.to_string(), (**schema).clone()))
         })
         .collect()
+}
+
+/// Every tool's description and every `description` string in its input and
+/// output schemas, as (tool, text).
+async fn served_descriptions() -> Vec<(String, String)> {
+    fn collect(tool: &str, value: &Value, out: &mut Vec<(String, String)>) {
+        match value {
+            Value::Object(map) => {
+                for (key, child) in map {
+                    match (key.as_str(), child.as_str()) {
+                        ("description", Some(text)) => out.push((tool.to_string(), text.into())),
+                        _ => collect(tool, child, out),
+                    }
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|item| collect(tool, item, out)),
+            _ => {}
+        }
+    }
+    let (server_side, client_side) = tokio::io::duplex(64 * 1024);
+    let server = GovRuntimeServer::new(workspace_root());
+    tokio::spawn(async move {
+        if let Ok(service) = server.serve(server_side).await {
+            let _ = service.waiting().await;
+        }
+    });
+    let client = ().serve(client_side).await.unwrap();
+    let mut out = Vec::new();
+    for tool in client.list_tools(Option::default()).await.unwrap().tools {
+        let name = tool.name.to_string();
+        if let Some(description) = &tool.description {
+            out.push((name.clone(), description.to_string()));
+        }
+        collect(
+            &name,
+            &Value::Object((*tool.input_schema).clone()),
+            &mut out,
+        );
+        if let Some(schema) = &tool.output_schema {
+            collect(&name, &Value::Object((**schema).clone()), &mut out);
+        }
+    }
+    out
 }
 
 fn is_array(property: &Value) -> bool {
@@ -205,5 +256,31 @@ async fn no_command_step_states_a_bounded_lists_emptiness_by_the_list() {
     assert!(
         stale.is_empty(),
         "an allowed phrase no longer appears, so its entry hides nothing: {stale:?}"
+    );
+}
+
+#[tokio::test]
+async fn no_primitive_description_states_a_bounded_lists_emptiness_by_the_list() {
+    let names = bounded_list_names(&served_output_schemas().await);
+    let descriptions = served_descriptions().await;
+    for tool in DESCRIBED {
+        assert!(
+            descriptions.iter().any(|(name, _)| name == tool),
+            "no description was read for `{tool}`"
+        );
+    }
+    let found: BTreeSet<(String, String)> = descriptions
+        .iter()
+        .filter(|(tool, _)| DESCRIBED.contains(&tool.as_str()))
+        .flat_map(|(tool, text)| {
+            emptiness_by_list(text, &names)
+                .into_iter()
+                .map(|phrase| (tool.clone(), phrase))
+        })
+        .collect();
+    assert!(
+        found.is_empty(),
+        "a description states a bounded list's emptiness by the list, which is absent when the \
+         result is `form: \"file\"`; say it by the `-count`, which both forms carry: {found:?}"
     );
 }

@@ -2700,7 +2700,7 @@ pub struct DeriveDependenciesResult {
     /// `absent`, so it never overstates what the run inspected.
     pub examined: u32,
     /// Untracked specs in the worktree, which are never enumerated or
-    /// rewritten (spec 017). Reported so an empty `updated` cannot be read as
+    /// rewritten (spec 017). Reported so a zero `updated-count` cannot be read as
     /// "everything is in sync" — these were not examined at all. Absent in
     /// the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2733,8 +2733,8 @@ pub struct DeriveDependenciesResult {
     /// `validate-frontmatter` owns diagnosing a malformed block — and never an
     /// error: an unparseable spec is an unknown, not drift.
     ///
-    /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable`, `unwritable` and `refused` are also empty
+    /// The contract this completes: a zero `updated-count` means examined-and-clean
+    /// only when `unparseable-count`, `unwritable-count` and `refused-count` are also zero
     /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
     /// `skipped`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2842,7 +2842,7 @@ pub struct DeriveReferencesResult {
     /// the run inspected.
     pub examined: u32,
     /// Untracked specs in the worktree, never enumerated or rewritten
-    /// (spec 017). Reported so an empty `updated` cannot be read as
+    /// (spec 017). Reported so a zero `updated-count` cannot be read as
     /// "everything is in sync". Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub untracked_skipped: Option<Vec<String>>,
@@ -2851,7 +2851,7 @@ pub struct DeriveReferencesResult {
     /// Number of services resolved from the `[services]` registry. Zero means
     /// every harvested reference records `service: null`, which is a very
     /// different state from "no references found" — an absent registry looks
-    /// identical in `updated` alone. One that cannot be read halts the run.
+    /// identical in `updated-count` alone. One that cannot be read halts the run.
     pub registered_services: u32,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
     /// be derived from them, and tracked specs that are, or run through, a
@@ -2860,8 +2860,8 @@ pub struct DeriveReferencesResult {
     /// `validate-frontmatter` owns diagnosing a malformed block — and never an
     /// error: an unparseable spec is an unknown, not drift.
     ///
-    /// The contract this completes: an empty `updated` means examined-and-clean
-    /// only when `unparseable`, `unwritable` and `refused` are also empty
+    /// The contract this completes: a zero `updated-count` means examined-and-clean
+    /// only when `unparseable-count`, `unwritable-count` and `refused-count` are also zero
     /// (`QUAL-CLAIM-001`), the same pairing `check-artifacts` has with
     /// `skipped`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]

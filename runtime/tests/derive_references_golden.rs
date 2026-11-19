@@ -583,7 +583,7 @@ fn dependencies_frontmatter_is_never_touched() {
 #[test]
 fn an_unterminated_frontmatter_block_is_reported_not_silently_skipped() {
     // QUAL-CLAIM-001: the spec is reachable and still goes underived, so an
-    // empty `updated` must not read as examined-and-clean.
+    // zero `updated-count` must not read as examined-and-clean.
     let dir = tempfile::tempdir().unwrap();
     let specs = [SpecFile {
         slug: "001-a",
