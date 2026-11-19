@@ -600,6 +600,17 @@ its version and date.
 
 ### Changed
 
+- **Six shipped rules change tier under the same ID (specs 070 and 068).**
+  `performance-frontend.md`'s `FE-BUNDLE-002`, `FE-IMAGE-001`,
+  `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` move from MUST to SHOULD,
+  so a finding under one is an advisory warning where 0.59.11's blocked
+  `done`, and a waiver or `departs:` entry written only for one of them is no
+  longer needed. `api-backend.md`'s `BE-PAGE-003` moves from SHOULD to MUST:
+  a spec or plan that introduces a list endpoint over a collection accepting
+  concurrent inserts or deletes and proposes offset pagination is now a
+  blocking `/analyze` finding where 0.59.11 warned, until it commits to
+  cursor-based pagination or records a departure. Offset pagination over a
+  static or append-only-at-tail collection stays permitted.
 - **Each `--{name}-json` flag's `--help` states the JSON its file holds, and no
   subcommand's help prints a developer note (spec 022 task 53; scenario
   `every-mcp-argument-has-a-cli-form`, deferred from 003 task 8).** The help
@@ -2313,6 +2324,18 @@ its version and date.
 
 ### Removed
 
+- **Windows is no longer a published platform (spec 048, AC25; owner
+  decision, 2026-11-19).** A release now publishes `ductus-{target}.tar.gz`
+  and its `.sha256` for `aarch64-apple-darwin`, `x86_64-apple-darwin`,
+  `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` only, with no
+  `x86_64-pc-windows-msvc` asset, and no workflow starts a Windows runner.
+  `/ductus` on a Windows host halts at the Runtime acquisition triple table as
+  on any unpublished platform, naming the store path and the `[runtime]` key.
+  An adopter on Windows builds the runtime from source and sets `[runtime]
+  path` in `.ductus/config.toml` to the binary: `/ductus` then downloads
+  nothing and keeps the pointer's copy current. The Windows asset 0.59.11 and
+  earlier published stays on those releases, and the runtime's own Windows
+  code stays.
 - **The `parity:` frontmatter key is gone from every shipped command and from
   `framework/bootstrap/ductus.md`, with the TODO captures under
   `runtime/tests/parity/` (spec 022's AC7; owner decision, 2026-11-19).** It
@@ -2336,7 +2359,12 @@ its version and date.
   `.opencode/` tree and its root `opencode.json`, leaving them untouched and
   no longer updated: it seeds no permissions there, writes no MCP
   registration, and surfaces no registration step. The managed `.gitignore`
-  block no longer lists those directories. `framework/bootstrap/configure/`
+  block no longer lists those directories. A directory you keep is no longer
+  ignored: a `.augment/`, `.agents/` or `.opencode/` tree is untracked and visible to
+  `git add` until you ignore it. To keep one, add the lines 0.59.11's block
+  carried to your own part of `.gitignore`, outside the managed block:
+  `.augment/*` with `!.augment/commands/`, `.agents/*` with
+  `!.agents/skills/`, and `.opencode/`. `framework/bootstrap/configure/`
   keeps `claude.md` and `pi.md`, and the runtime no longer resolves a command
   under `.opencode/command/`. It still refuses a primitive's write into
   those directories and files, as it refuses one into `.vscode/` or `.idea/`.
