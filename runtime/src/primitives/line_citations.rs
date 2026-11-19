@@ -263,17 +263,18 @@ fn colon_suffix_end(line: &str, colon: usize) -> Option<usize> {
     ends_cleanly(line, end).then_some(end)
 }
 
-/// The end of a `#LN` or `#LN-LM` anchor starting at `hash`.
+/// The end of a `#LN` or `#LN-LM` anchor starting at `hash`. A range's second
+/// `L` is required, so `#L12-20` holds only the anchor `#L12` (owner decision,
+/// 2026-11-18): stripping all of it changes more than a citation.
 fn anchor_suffix_end(line: &str, hash: usize) -> Option<usize> {
     if !line[hash..].starts_with("#L") {
         return None;
     }
     let mut end = digits_end(line, hash + 2)?;
-    if line[end..].starts_with('-') {
-        let from = end + 1 + usize::from(line[end + 1..].starts_with('L'));
-        if let Some(range_end) = digits_end(line, from) {
-            end = range_end;
-        }
+    if line[end..].starts_with("-L")
+        && let Some(range_end) = digits_end(line, end + 2)
+    {
+        end = range_end;
     }
     ends_cleanly(line, end).then_some(end)
 }
@@ -391,6 +392,21 @@ mod tests {
         ] {
             assert!(!strips_to(old, new), "{old} -> {new}");
         }
+    }
+
+    /// A line-range anchor names its second line with an `L`, as `#LN-LM`: in
+    /// `#L12-20` only `#L12` is a citation, so stripping the whole of it is no strip.
+    #[test]
+    fn a_range_anchor_needs_its_second_l() {
+        assert_eq!(suffixes("[it](foo.rs#L12-20)"), vec!["#L12"]);
+        assert!(!strips_to(
+            "See [it](a.rs#L12-20) here.",
+            "See [it](a.rs) here."
+        ));
+        assert!(strips_to(
+            "See [it](a.rs#L12-L20) here.",
+            "See [it](a.rs) here."
+        ));
     }
 
     /// Past the bound on citations tried one by one, only stripping every one is a

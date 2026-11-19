@@ -119,8 +119,8 @@ MUTATIONS = [
     (
         'M15 a line anchor range is cut at its first line',
         'src/primitives/line_citations.rs',
-        '            end = range_end;\n',
-        '            let _ = range_end;\n',
+        '        && let Some(range_end) = digits_end(line, end + 2)\n    {\n        end = range_end;\n',
+        '        && let Some(range_end) = digits_end(line, end + 2)\n    {\n        let _ = range_end;\n',
         'primitives::line_citations::tests::each_citation_form_is_found',
     ),
     (
@@ -171,5 +171,12 @@ MUTATIONS = [
         '    refuse_unknown_reasons(args)?;\n',
         '',
         'primitives::write_analysis::tests::a_reason_outside_the_closed_set_is_refused',
+    ),
+    (
+        "M23 a range anchor's second L is optional",
+        'src/primitives/line_citations.rs',
+        '    if line[end..].starts_with("-L")\n        && let Some(range_end) = digits_end(line, end + 2)\n',
+        "    if line[end..].starts_with('-')\n        && let Some(range_end) =\n            digits_end(line, end + 1 + usize::from(line[end + 1..].starts_with('L')))\n",
+        'primitives::line_citations::tests::a_range_anchor_needs_its_second_l',
     ),
 ]

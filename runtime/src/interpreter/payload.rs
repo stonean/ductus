@@ -4309,7 +4309,7 @@ mod tests {
         ctx.insert("feature".into(), Value::String("004-implement".into()));
         // Session-style directory path (not the spec file).
         ctx.insert("path".into(), Value::String("specs/004-implement".into()));
-        // Merged read-spec result from the completion gate's read step.
+        // Merged read-spec result from the review's criteria step (step 7.1).
         ctx.insert(
             "acceptance-criteria".into(),
             serde_json::json!([

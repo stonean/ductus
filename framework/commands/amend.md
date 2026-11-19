@@ -142,7 +142,7 @@ The goal is a question that is precise, actionable, and self-contained — someo
 
 ### Refine the input (criterion route)
 
-The goal is one testable condition `/{project}:implement`'s completion gate can verify, stated in the spec's terms and without an implementation.
+The goal is one testable condition `/{project}:review`'s criteria step can judge, stated in the spec's terms and without an implementation.
 
 1. **Draft** the criterion as one sentence a check could pass or fail, with a backticked repo-relative path where it names a file (§spec-requirements). Do not write an `AC{n}:` label.
 2. **Check for duplicates** — compare against the entries under the target's `## Acceptance Criteria` with the normalized-whitespace, case-insensitive comparison the question route uses, ignoring each entry's checkbox and `AC{n}:` label. On a match, report: "An equivalent criterion is already recorded: '{existing entry}'. Skip or refine further?" On skip, exit without recording.
@@ -253,7 +253,7 @@ When the user is done, display the next step:
 
 - If a question was recorded on a spec: "Question recorded. Run `/{project}:clarify` to resolve it." On a spec, the status is now `draft` regardless of where it started.
 - If a question was recorded on a scenario: "Question recorded. Run `/{project}:clarify` to resolve it." The parent spec's status is unchanged.
-- If a criterion was recorded: "Criterion recorded unchecked as {label}." On a reopened spec add "The spec is `in-progress`; run `/{project}:implement` to build and verify it."
+- If a criterion was recorded: "Criterion recorded unchecked as {label}." On a reopened spec add "The spec is `in-progress`; run `/{project}:implement` to build it and `/{project}:review` to verify it."
 - If a scenario was recorded: "Scenario recorded at `specs/{feature}/scenarios/{slug}.md` and set as the session target. Run `/{project}:implement` to work on the new task."
 - If the input was a chore: "That's general maintenance, not a spec addition — fixed in {files}." Nothing was recorded on the spec. If the user declined the fix, say that nothing was written.
 - If the user aborted before accepting any input, exit silently — no input was recorded and no status mutation occurred.

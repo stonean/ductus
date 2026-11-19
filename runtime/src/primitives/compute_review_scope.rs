@@ -3506,6 +3506,33 @@ mod tests {
         assert!(value.get("criteria-owing-count").is_none(), "{value}");
     }
 
+    /// Past the read size the owing criteria move to the lists file with the other
+    /// lists, their count staying inline (066 task 27).
+    #[test]
+    fn past_the_read_size_the_owing_criteria_are_in_the_lists_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &format!(
+                "{}\n## Acceptance Criteria\n\n- [ ] AC1: One.\n",
+                spec("in-progress")
+            ),
+        );
+        commit_all(&repo, "chore: seed");
+        read_size(&tmp, 10);
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.form, ListsForm::File);
+        let value = serde_json::to_value(&result).unwrap();
+        assert!(value.get("criteria-owing").is_none(), "{value}");
+        assert_eq!(value["criteria-owing-count"], 1);
+        let file: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join(result.lists_file.unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(file["criteria-owing"], serde_json::json!(["AC1"]));
+    }
+
     /// A spec reopened by `edit`, with a review record carrying `fields`.
     fn reopened_with(fields: &str, edit: &str) -> ReviewScope {
         let tmp = tempfile::tempdir().unwrap();

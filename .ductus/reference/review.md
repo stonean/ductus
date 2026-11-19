@@ -13,9 +13,10 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
 3. Build the file scope per **Inputs** (in the command file). An empty scope
    (no implementation files yet, or none changed since a finished review)
    records 0 findings across all five passes, unless an earlier record counts a
-   finding, which `write-review` refuses to clear unread,
-   `blocking: false`, and exits `0`, skipping items 4–5 and the passes; an
-   observation the reviewer supplies is still dispositioned, as
+   finding, which `write-review` refuses to clear unread. It skips items 4–5
+   and the passes but not the criteria step (**§Criteria step**), and records
+   `blocking: false` and exits `0` unless that step judges a criterion not met;
+   an observation the reviewer supplies is still dispositioned, as
    **Observations** under [Write `review.md`](#write-reviewmd) describes.
    A scope empty because the window only deleted files (`deleted-count` above
    zero) is reported by naming each path in `deleted` and saying no pass could
@@ -191,7 +192,7 @@ mark the finding `auto-fixable`.
 
 Steps 7.1 to 7.3 judge every acceptance criterion of the spec, whatever the window holds (066's scenario `criteria-are-verified-in-review`): the criteria are the spec's contract, and the window only says what changed, so a criterion whose code no reopening touched is judged too.
 
-- **A verdict per criterion, read against the code.** Read the code a criterion's claim names, in scope or not, and drive it where it can be driven: a test's name proves only that the test exists. A met verdict's `note` is its evidence, the path and symbol and the test that proves it; a not-met verdict's says what fails. A criterion that cannot be judged, for want of code, a test or a fetched source, gets no verdict and is named in the Summary: it is never ticked, and a review stays owed while it is not judged met.
+- **A verdict per criterion, read against the code.** Read the code a criterion's claim names, in scope or not, and drive it where it can be driven: a test's name proves only that the test exists. A met verdict's `note` is its evidence, the path and symbol and the test that proves it; a not-met verdict's says what fails. A note is one line: `write-review` refuses one that spans lines, before it writes anything. A criterion that cannot be judged, for want of code, a test or a fetched source, gets no verdict and is named in the Summary: it is never ticked, and a review stays owed while it is not judged met.
 - **The verdict writes the tick.** Step 7.3 ticks a met criterion and unticks a not-met one, and `write-review` records the counts, each not-met criterion and each met one's digest (`criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts`; 066's data model). A not-met verdict sets `blocking`.
 - **A not-met criterion is fixed or corrected, never waived or deferred.** It clears when the code is fixed and a review judges it met, or when the criterion is corrected or moved to the spec that owns the work (§implement-phase). The gate holds `done` while it stands unticked, so a waiver or a deferral would release nothing.
 - **A review is owed while a criterion is unjudged.** `compute-review-scope` reads `review-owed: true` while `spec.md` holds an unticked criterion, or a ticked one the last review did not judge met with its current text, and names each in `criteria-owing`; the completion gate judges none.
@@ -242,6 +243,10 @@ dispositions:
 ## Deferred findings
 
 <violations their deferral releases (§Deferrals), which leave the counts; `*None.*` when none>
+
+## Acceptance criteria
+
+<one line per criterion the criteria step judged, met or not met, with its note; `*No criterion was judged.*` for an empty `criteria` list, and no section when the run passed none>
 
 ## Observations
 
@@ -397,7 +402,7 @@ The record is `review.md`'s own frontmatter, written in the same pass as the rep
 
 `review.md` and `spec.md` are outside the digest, which holds only the contracts a review reads code against. The analyze record's subject set _includes_ them, as this command's outputs and that command's inputs. A spec with no scenarios and no data model records `reviewed-digest: {}`, taken and empty.
 
-`blocking: true` when `must-violations > 0`. This is the field other commands read.
+`blocking: true` when `must-violations > 0` or the criteria step judged a criterion not met (**§Criteria step**). This is the field other commands read.
 
 `dispositions:` counts the run's **observations** — `fixed`, `deferred`, `waived`, `undispositioned` — never its MUST and SHOULD violations, which keep their own counts. The map is always written, because its absence has a meaning: a record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it until this command re-runs. Absence is not zero.
 

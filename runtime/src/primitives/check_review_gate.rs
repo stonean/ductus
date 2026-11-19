@@ -509,12 +509,12 @@ fn disposition_block(
     ))
 }
 
-/// Gate check 5: the review record carries MUST violations. Names each
-/// deferral that holds `done` in `review.md` too, since a MUST whose deferral
-/// releases nothing stops the gate here and never reaches the gating-finding
-/// check (spec 076).
-/// Gate check 5: the record blocks, through its MUST violations or a criterion its
-/// review judged not met (066 task 27), each named.
+/// Gate check 5: the review record blocks, through its MUST violations or a
+/// criterion its review judged not met (066 task 27), each named, and its
+/// guidance offers a waiver or a deferral only for the violations, since neither
+/// releases a criterion. Names each deferral that holds `done` in `review.md`
+/// too, since a MUST whose deferral releases nothing stops the gate here and
+/// never reaches the gating-finding check (spec 076).
 fn must_violations_block(
     must_violations: u32,
     criteria_not_met: &[String],
@@ -531,19 +531,21 @@ fn must_violations_block(
              criteria not met: {criteria}"
         ),
     };
-    let mut guidance = format!(
+    let violations = format!(
         "Resolve the violations and re-run /{project}:review, run \
          /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding, \
          or defer each to pipeline work on another spec \
          (/{project}:review --defer <rule-id> --target <path>), whose gate then holds it."
     );
-    if !criteria_not_met.is_empty() {
-        guidance.push_str(
-            " A criterion judged not met clears when the code is fixed and a review judges it \
-             met, or when the criterion is corrected or moved to the spec that owns the work; a \
-             waiver or a deferral releases nothing.",
-        );
-    }
+    let criteria_advice = "A criterion judged not met clears when the code is fixed and a \
+                           review judges it met, or when the criterion is corrected or moved \
+                           to the spec that owns the work; a waiver or a deferral releases \
+                           nothing.";
+    let guidance = match (must_violations, criteria_not_met.is_empty()) {
+        (_, true) => violations,
+        (0, false) => criteria_advice.to_string(),
+        (_, false) => format!("{violations} {criteria_advice}"),
+    };
     Verdict {
         passed: false,
         blocked_by: Some(ReviewGateBlock::MustViolations),
@@ -4105,11 +4107,27 @@ mod tests {
             "{message}"
         );
         assert!(!message.contains("MUST violation"), "{message}");
+        let guidance = result.guidance.unwrap();
         assert!(
-            result
-                .guidance
-                .unwrap()
-                .contains("a waiver or a deferral releases nothing")
+            guidance.contains("a waiver or a deferral releases nothing"),
+            "{guidance}"
+        );
+        assert!(!guidance.contains("--waive"), "{guidance}");
+        assert!(!guidance.contains("--defer"), "{guidance}");
+    }
+
+    /// A review owed both for changed paths and for a criterion no review judged
+    /// names both, the paths first (066 task 27).
+    #[test]
+    fn a_review_owed_for_paths_and_criteria_names_both() {
+        let verdict = review_owed_block(&["src/a.rs".to_string()], &["AC2".to_string()], "ductus");
+        let message = verdict.message.unwrap();
+        assert!(
+            message.contains(
+                "what changed since the last one or what it left open: src/a.rs; and the \
+                 acceptance criteria no review judged met with their current text: AC2"
+            ),
+            "{message}"
         );
     }
 

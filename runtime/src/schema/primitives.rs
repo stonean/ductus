@@ -1245,7 +1245,7 @@ pub struct ComputeReviewScopeResult {
     pub excluded: Option<Vec<String>>,
     /// In the file form, the file holding the lists whole, from the project
     /// root: a JSON object with `diff-base`, `scope`, `modified-since`,
-    /// `plan-affected`, `deleted` and `excluded`, one entry per line.
+    /// `plan-affected`, `deleted`, `excluded` and `criteria-owing`, one entry per line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }

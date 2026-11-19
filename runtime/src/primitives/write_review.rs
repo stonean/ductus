@@ -3919,7 +3919,7 @@ mod tests {
 
     /// The record describes its own subject. A spec with no scenarios and no
     /// data model still records `reviewed-digest: {}` — taken and empty, which
-    /// the gate reads as current, rather than absent, which it cannot judge.
+    /// reads as current, rather than absent, which cannot be judged.
     #[test]
     fn a_spec_with_no_durable_contracts_records_an_empty_digest() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -6716,6 +6716,36 @@ mod tests {
         assert!(!record.blocking);
         assert_eq!(record.criteria_not_met, Vec::<String>::new());
         assert_eq!(record.criteria_verdicts.map(|v| v.len()), Some(2));
+    }
+
+    /// An unlabelled criterion judged not met is named `#{index}`, which the record
+    /// quotes (a bare `#` starts a YAML comment), and the report lists the criteria
+    /// after the deferrals and before the observations.
+    #[test]
+    fn an_unlabelled_not_met_criterion_is_recorded_quoted_and_listed_after_the_violations() {
+        let tmp = criteria_repo();
+        let mut args = base_args("001-x");
+        args.criteria = Some(vec![verdict(None, Some(2), false)]);
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(record_of(&tmp).criteria_not_met, vec!["#2".to_string()]);
+        let report = review_md(&tmp, "001-x");
+        let at = |heading: &str| report.find(heading).unwrap();
+        assert!(at("## Deferred findings") < at("## Acceptance criteria"));
+        assert!(at("## Acceptance criteria") < at("## Observations"));
+    }
+
+    /// A Summary the caller supplies still ends with the criteria sentence.
+    #[test]
+    fn a_supplied_summary_carries_the_criteria_sentence() {
+        let tmp = criteria_repo();
+        let mut args = base_args("001-x");
+        args.summary = Some("Reviewed by hand.".into());
+        args.criteria = Some(vec![verdict(Some("AC1"), None, true)]);
+        run(&args, tmp.path()).unwrap();
+        assert!(
+            review_md(&tmp, "001-x")
+                .contains("Reviewed by hand.\n\n1 of 1 acceptance criteria judged met."),
+        );
     }
 
     /// A run that passes no criteria writes no criteria field and no section,

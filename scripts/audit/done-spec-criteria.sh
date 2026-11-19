@@ -2,10 +2,11 @@
 # scripts/audit/done-spec-criteria.sh — Family 27 of /audit.
 #
 # A spec at `status: done` whose Acceptance Criteria still carry an unchecked
-# box. The completion gate is supposed to make this unreachable —
-# framework/commands/implement.md marks each verified criterion and refuses to
-# propose the transition while any remains unchecked — so reaching `done` with
-# one unticked means the gate was bypassed or its marking step failed.
+# box. The completion gate is supposed to make this unreachable — only
+# framework/commands/review.md's criteria step ticks a criterion, and
+# check-review-gate blocks `unticked-criterion` while any remains unchecked
+# (066 task 27) — so reaching `done` with one unticked means the gate was
+# bypassed or a review's marking step failed.
 #
 # It happened here. 026 reached `done` in e9262df with AC19 unchecked, and
 # every signal stayed green for the whole interval: run-all.sh exited 0,

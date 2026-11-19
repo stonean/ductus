@@ -30,7 +30,7 @@ The commands fall into two groups.
 - **specify** — create a spec from the template and set it as the session target
 - **clarify** — resolve open questions, enumerate edge cases, verify acceptance criteria, advance draft to clarified
 - **plan** — generate plan.md and tasks.md, run the readiness check, advance clarified to planned
-- **implement** — walk through tasks, write code and tests, verify acceptance criteria, advance the spec through in-progress to done
+- **implement** — walk through tasks, write code and tests, advance the spec through in-progress to done (`/{project}:review` verifies the acceptance criteria first)
 
 #### Utility commands
 

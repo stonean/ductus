@@ -99,6 +99,32 @@ its version and date.
   A writer that does not go through the guard takes no lock and can still land between the
   re-read and the rename.
 
+- **BREAKING: a review judges every acceptance criterion, and the pre-`done` gate judges none (spec 066 task 27, scenario `criteria-are-verified-in-review`).**
+  `write-review` takes `criteria`, one verdict per criterion by label or index
+  (`--criteria-json FILE` on the CLI), and records `criteria-judged`,
+  `criteria-met`, `criteria-not-met` and `criteria-verdicts`, each met
+  criterion's digest; a not-met verdict sets `blocking`, and a malformed verdict
+  is refused before anything is written. `compute-review-scope` reads
+  `review-owed: true`, whatever the window holds, while `spec.md` holds an
+  unticked criterion or a ticked one the record's `criteria-verdicts` does not
+  hold, naming each in the new `criteria-owing` with `criteria-owing-count`.
+  `check-review-gate` blocks the new `unticked-criterion` after `unchecked-task`,
+  and its `review-owed` and `must-violations` messages name the criteria.
+  `ductus exec review` sends `verifyCriteria` and ticks each verdict, and
+  `ductus exec implement` no longer sends it. `invalidate-review` drops the four
+  criteria fields. Breaking under `BE-COMPAT-001`: a new value of a response enum
+  the schema does not document as open to new values, an extension request moved
+  from one walk to another, and `review-owed` reading true where it read false;
+  the argument and the fields are additive.
+
+- **BREAKING: `write-analysis` refuses an `unexamined-by-reason` reason outside the closed set (spec 066 task 26).**
+  The reasons are the data model's table, held in one runtime list
+  (`UNEXAMINED_REASONS`) that a test keeps equal to it; a call recording any
+  other fails naming the argument, on the CLI and MCP paths alike, before it
+  writes. Every reason the exec walker and the analyze command's steps supply is
+  in the set. Breaking under `BE-COMPAT-001`: a call that recorded an unknown
+  reason now fails.
+
 - **BREAKING: `write-review` and `write-analysis` write their record only when it is unchanged since they read it (spec 066 task 24; the owner's BE-TXN-002 class decision, 2026-11-16).**
   Each read `review.md` or `analysis.md` through several helpers (the waivers,
   decisions and rule verdicts it carries forward) and renamed the regenerated
