@@ -6,7 +6,7 @@ Implements [027 — Bootstrap Migration Registry](spec.md).
 
 The implementation drives adopter cleanup from one registry-driven loop, the `## Pre-run Migrations` section of `framework/bootstrap/ductus-procedure.md`: each convention removal is a TOML entry plus a small markdown procedure file, and the loop is the only bootstrap step that applies one. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
 
-No new runtime primitive at v1 (Q11). Per-entry idempotency is preserved as an invariant: every procedure file's first action is a target-presence check that exits silently when nothing to do.
+No new runtime primitive at v1 (Q11). Per-entry idempotency is an invariant each procedure file owns: a re-run changes no file and an absent target emits nothing, while six procedures report a converged target in one line (AC21).
 
 ## Technical Decisions
 
@@ -30,7 +30,7 @@ Field semantics:
 - `introduced_in` — SemVer string, the release the removal shipped in.
 - `sunset_after` — SemVer string or omitted. Entry expires when current ductus ≥ `sunset_after`. Omitted means "active indefinitely."
 - `summary` — one-line human-readable description of the entry, never printed; the post-scaffolding summary carries the lines each applied procedure emits.
-- `target_paths` — array of paths or globs (relative to adopter project root). Read by Family 10 to verify the removed convention is actually absent from current `framework/`.
+- `target_paths` — array of paths or globs (relative to adopter project root). Family 10's 10b holds each `framework/`-prefixed one absent from current `framework/`; an adopter-relative one cannot be checked from this repository (`scripts/audit/migration-coverage.sh`'s header).
 - `procedure_file` — path (relative to repo root) to the markdown procedure file. Always present; there is no declarative-step DSL (Q4).
 
 Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break on `id`. File order in the TOML is not authoritative: the order comes from `introduced_in` and `id`, so where an entry sits in the file carries no meaning.
@@ -66,7 +66,7 @@ Each file is a small markdown procedure with a fixed top-level shape. The bootst
 4. **Summary line.** Report `{summary text}` in the post-scaffolding summary.
 ```
 
-Idempotency check is step 1 of every procedure file, mechanically. The bootstrap loop does not enforce idempotency itself — the procedure file owns it. Family 10 does not verify idempotency, which static state cannot show.
+The procedure file owns idempotency; the bootstrap loop does not enforce it. The shape above puts the check first, and six of the fifteen procedure files name their step 1 so; the other nine open by resolving or locating their target or, in `generator-primitives`, by removing retired scripts (each file's first numbered step, read 2026-11-19), and AC21 states what a re-run of each emits. Family 10 does not verify idempotency, which static state cannot show.
 
 ### Bootstrap loop placement and shape
 
@@ -108,12 +108,12 @@ Take the pre-run `git status --porcelain -- specs/` first, and again when the se
 
 ### SemVer comparison (no new primitive)
 
-SemVer compare is a small shell helper, not a runtime primitive. Two options the procedure file can use:
+SemVer compare is a small shell helper, not a runtime primitive. Two options the host can use:
 
 - `sort -V` on a two-line input. Run on macOS `sort` (2.3-Apple) on 2026-11-19, `printf '0.10.0\n0.4.0\n' | sort -V` orders `0.4.0` first, as SemVer does; GNU `sort -V` support is an assumption, unrun here.
 - A 10-line Python one-liner via `python3 -c 'from packaging.version ...'` when `sort -V` is insufficient for pre-release tags: the same `sort -V` run orders `0.4.0` before `0.4.0-rc1`, the reverse of SemVer, which puts the pre-release first.
 
-The bootstrap loop's filter operation is the only consumer of SemVer compare; it lives in the consolidated `## Pre-run Migrations` prose, not in a script. The procedure files themselves never compare versions.
+In the bootstrap, the loop's filter is SemVer compare's only consumer, in the consolidated `## Pre-run Migrations` prose rather than a script: no procedure file compares versions, and pre-flight's migration-floor check looks an id up in a registry rather than comparing versions (`framework/bootstrap/ductus.md`, **Source resolution**'s *Check the migration floor*). Family 10's 10d and 10e compare versions in their own Python (`scripts/audit/migration-coverage.sh`).
 
 If, after implementation, a SemVer helper proves common across multiple procedure files or scripts, Family 9 of `/audit` (`primitive-promotion-candidates.sh`) will surface it and we promote then.
 
@@ -199,11 +199,11 @@ Q4. A small DSL of `rename` / `delete` / `regex-replace` step types could expres
 
 ### Considered: `apply-migrations` runtime primitive (deferred)
 
-Q11. A primitive that reads the registry, computes the filter, and dispatches procedure files could replace the bootstrap loop's prose. Deferred to a follow-on once Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication that justifies the maintenance overhead. The migration loop contains user prompts and per-file branching, which is host-side territory by 022's existing boundary — a primitive would carry user-interaction protocol design that doesn't exist elsewhere in the runtime.
+Q11. A primitive that reads the registry, computes the filter, and dispatches procedure files could replace the bootstrap loop's prose. Deferred to a follow-on once Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication that justifies the maintenance overhead. The loop asks the operator, once for the batch and again wherever a procedure prompts per file, and executes each procedure's prose (§Pre-run Migrations steps 5 and 7.2), which only the host can do: a primitive reaches the operator only by returning a gate for the host to route (`ductus gate-confirm --help`), so one replacing the loop would still hand every prompt and every procedure back to the host.
 
 ### Considered: git archaeology inside Family 10 (rejected)
 
-Q9. A check that walks `git log -- framework/templates/ framework/commands/` to detect deletions without a corresponding registry entry would catch "removal without migration" mistakes automatically. Rejected because (a) it couples `/audit` to commit history shape (rebases, squashes lose signal), (b) it breaks the "current-state only" contract every other family follows, and (c) it requires distinguishing "convention removal" from "internal refactor that renamed a file" — open-ended classification. The cleaner alternative is a separate pre-commit hook (captured as out-of-scope follow-on) that compares PR diffs against registry changes.
+Q9. A check that walks `git log -- framework/templates/ framework/commands/` to detect deletions without a corresponding registry entry would catch "removal without migration" mistakes automatically. Rejected because (a) it couples the check to commit history shape (rebases, squashes lose signal), and (b) it requires distinguishing "convention removal" from "internal refactor that renamed a file" — open-ended classification. 10d does read history, but only `framework/migrations.toml`'s own, to order its entries, which needs no such classification. The cleaner alternative is a separate pre-commit hook (captured as out-of-scope follow-on) that compares PR diffs against registry changes.
 
 ### Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)
 

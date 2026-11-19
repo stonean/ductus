@@ -133,7 +133,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 ### Out of scope (captured for follow-on)
 
-- "Removal must ship with a migration entry" diff-check is implemented as a separate pre-commit hook in a follow-on spec or scenario — not in this spec. Reason: it's a diff operation against HEAD, not a static-state check, and would couple `/audit` to git history shape.
+- "Removal must ship with a migration entry" diff-check is implemented as a separate pre-commit hook in a follow-on spec or scenario — not in this spec. Reason: it's a diff operation against HEAD, not a static-state check, and would couple the check to git history shape.
 - `apply-migrations` as a runtime primitive is deferred until Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication across procedure files.
 
 ### Migration scope
