@@ -317,6 +317,7 @@ Required on **spec files**, **scenario files**, and the two **audit records** (`
 | `next-criterion` | no | integer | **Maintained by the labelling pass**; never lowered, and absent means no criterion has been labelled yet |
 | `cross-spec-impact` | no | list of spec slugs | **Hand-authored** obligations under §cross-spec-impact |
 | `retired-rules` | no | list of rule IDs | **Hand-authored**; removed rules it records retiring |
+| `folds-into` | no | spec slug | **Written** by `create-feature` on a branch-scoped spec (§numbering): the upstream spec it stands in for; absent on a sequential one |
 
 #### Scenario files
 
@@ -437,7 +438,7 @@ Closing an open question, shipping a scenario, advancing a status, or adopting a
 
 ### Template-rule alignment
 
-Every blocking `/{project}:analyze` check has template scaffolding that passes it by default, and every template section traces to a rule; a diff touching one without the other is incomplete.
+Every blocking `/{project}:analyze` check has template scaffolding that passes it by default, except one that fails an unwritten slot (`plan-consistency`'s decision and file lists), and every template section traces to a rule; a diff touching one without the other is incomplete.
 
 ### Manifest discipline
 
