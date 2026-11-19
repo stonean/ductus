@@ -486,12 +486,12 @@ that no waiver already holds — a single path when there is one:
 
 ```yaml
 waivers:
-  - rule: SEC-BE-014
+  - rule: BE-AUTHN-007
     file: src/api/internal.ts
     reason: "Endpoint is internal-only behind mTLS; rule applies to public APIs"
     waived-at: 2026-05-10T14:40:00Z
     waived-by: <git config user.email>
-  - rule: SEC-BE-021
+  - rule: BE-AUTHN-008
     file:
       - src/api/admin.ts
       - src/api/metrics.ts
