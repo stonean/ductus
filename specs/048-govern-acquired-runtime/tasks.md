@@ -37,6 +37,6 @@ Decided by the owner on 2026-11-13, each deferred here by 048's review. First, A
 - [x] `.github/workflows/runtime-release.yml` builds, packages and gates no Windows target, and `.github/workflows/runtime-acquisition.yml` acquires none
 - [x] `framework/bootstrap/ductus.md` and its `govern.md` copy hold no Windows row in the triple table, nor any other Windows text the owner's answer above removes
 - [x] `README.md` and `docs/runtime.md` list only the platforms published, AC21 and AC23 are annotated as superseded, and 022's and 067's specs state the tree (067's scenario edit reopens it)
-- [ ] A scratch-adopter bootstrap shows a normal run unchanged
+- [x] A scratch-adopter bootstrap shows a normal run unchanged
 
 - **Done when**: AC25 holds, every live artifact states the platforms published, and 048's review and analysis judge it

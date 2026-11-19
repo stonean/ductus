@@ -14,7 +14,7 @@ Found by 041's task 18 (2026-09-29), after 062's runtime commits were first push
 
 ## Behavior
 
-The sessions directory's `.gitignore` is written only by a process holding the session lock, and only when it is absent. The directory itself is created before the lock, because the lock file lives in it, and creating a directory that already exists is not an error. Racing first writers therefore create the ignore file exactly once, and each of them goes on to keep the target it wrote, on every operating system the runtime is released for: Linux, macOS and Windows, the three its test matrix runs on.
+The sessions directory's `.gitignore` is written only by a process holding the session lock, and only when it is absent. The directory itself is created before the lock, because the lock file lives in it, and creating a directory that already exists is not an error. Racing first writers therefore create the ignore file exactly once, and each of them goes on to keep the target it wrote, on every operating system the runtime is released for: Linux and macOS, the two its test matrix runs on. The Windows path the failure above measured is kept in the runtime but no longer tested in CI (048 AC25).
 
 ## Edge Cases
 
