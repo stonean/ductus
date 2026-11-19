@@ -126,6 +126,21 @@ pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBloc
     )?;
     if let Some(content) = &new_content {
         guarded::write_guarded(&snapshot, content)?;
+        // A file created here (`.gitignore`, `CLAUDE.md`) is committed and
+        // not secret, so it takes `0644`, not the tempfile's `0600`
+        // (scenario `installed-files-are-not-group-writable`). A fixed mode,
+        // not the umask: reading the umask needs `unsafe` or a new dependency.
+        // A rewrite keeps the mode it had.
+        #[cfg(unix)]
+        if action_static == "created" {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).map_err(
+                |source| PrimitiveError::Io {
+                    path: path.clone(),
+                    source,
+                },
+            )?;
+        }
     }
 
     let (dedup_removed, dedup_removed_lines) = match style {
@@ -685,6 +700,38 @@ mod tests {
             block: block.into(),
             marker: None,
             marker_style: style.map(str::to_string),
+        }
+    }
+
+    /// A file the primitive creates is `0644` in either style, and a rewrite
+    /// keeps the mode the file had, whether owner-only or group-writable.
+    #[cfg(unix)]
+    #[test]
+    fn a_created_file_is_mode_0644() {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+        for (name, style) in [("CLAUDE.md", None), (".gitignore", Some("line-prefix"))] {
+            let tmp = tempfile::tempdir().unwrap();
+            let path = tmp.path().join(name);
+            let result = run(&args(&path, "framework", style), tmp.path()).unwrap();
+            assert_eq!(result.action, "created");
+            assert_eq!(mode(&path), 0o644, "{name}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_rewrite_keeps_the_existing_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        for want in [0o600, 0o664] {
+            let tmp = tempfile::tempdir().unwrap();
+            let path = tmp.path().join("CLAUDE.md");
+            fs::write(&path, "# Mine\n").unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(want)).unwrap();
+            let result = run(&args(&path, "framework", None), tmp.path()).unwrap();
+            assert_eq!(result.action, "inserted");
+            let got = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(got, want);
         }
     }
 

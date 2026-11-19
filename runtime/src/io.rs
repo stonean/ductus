@@ -29,25 +29,35 @@ pub fn write_envelope<W: Write>(writer: &mut W, message: &ProtocolMessage) -> st
 /// Per the protocol's robustness rule (data-model §JSON-over-stdio: "the
 /// runtime ignores any other inbound JSON shape — it logs to stderr and
 /// continues waiting"), a blank keepalive line or a line that fails to
-/// parse as an envelope is logged to stderr and skipped; reading
+/// parse as an envelope, or is not UTF-8, is logged to stderr and skipped; reading
 /// continues until a valid envelope arrives. Only EOF while awaiting an
 /// envelope is an operational error.
 ///
 /// # Errors
 ///
-/// Bubbles I/O errors from `reader`. Returns
+/// Bubbles I/O errors from `reader`; a line that is not UTF-8 is skipped, not
+/// an error. Returns
 /// [`std::io::ErrorKind::UnexpectedEof`] when the reader closes before
 /// delivering a valid envelope.
 pub fn read_envelope<R: BufRead>(reader: &mut R) -> std::io::Result<ProtocolMessage> {
     loop {
-        let mut line = String::new();
-        let bytes = reader.read_line(&mut line)?;
+        let mut raw = Vec::new();
+        let bytes = reader.read_until(b'\n', &mut raw)?;
         if bytes == 0 {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
                 "stdin closed before next envelope",
             ));
         }
+        // A line that is not UTF-8 is skipped whole, never decoded lossily: a
+        // corrupted line must not parse as an envelope with replacement
+        // characters inside a string value.
+        let Ok(line) = String::from_utf8(raw) else {
+            warn(format_args!(
+                "runtime: ignoring stdin line that is not UTF-8 while awaiting an envelope"
+            ));
+            continue;
+        };
         let trimmed = line.trim();
         if trimmed.is_empty() {
             warn(format_args!(
@@ -116,6 +126,34 @@ mod tests {
                 confirmed: true,
             }
         );
+    }
+
+    #[test]
+    fn read_envelope_skips_a_line_that_is_not_utf8_until_valid() {
+        let valid = "{\"type\":\"gate-response\",\"request-id\":\"g-1\",\"confirmed\":true}\n";
+        // The second line is an envelope but for one byte inside a string value:
+        // a lossy decode would accept it with a replacement character.
+        let mut bytes = b"\xff\xfe\n".to_vec();
+        bytes.extend_from_slice(
+            b"{\"type\":\"gate-response\",\"request-id\":\"g-\xff\",\"confirmed\":true}\n",
+        );
+        bytes.extend_from_slice(valid.as_bytes());
+        let mut reader = Cursor::new(bytes);
+        let parsed = read_envelope(&mut reader).unwrap();
+        assert_eq!(
+            parsed,
+            ProtocolMessage::GateResponse {
+                request_id: "g-1".into(),
+                confirmed: true,
+            }
+        );
+    }
+
+    #[test]
+    fn read_envelope_surfaces_eof_after_only_non_utf8_lines() {
+        let mut reader = Cursor::new(b"\xff\xfe\n\xc3\n".to_vec());
+        let err = read_envelope(&mut reader).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
     }
 
     #[test]

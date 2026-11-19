@@ -797,8 +797,8 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
     /// `request_id`. Any other inbound envelope — a wrong type, or an
     /// `llm-response` for a superseded request-id — is logged to stderr
     /// and skipped per the protocol's ignore-and-continue rule; the
-    /// framing layer ([`read_envelope`]) already skips malformed and
-    /// blank lines the same way.
+    /// framing layer ([`read_envelope`]) already skips malformed,
+    /// non-UTF-8 and blank lines the same way.
     fn await_llm_response(&mut self, request_id: &str) -> std::io::Result<Value> {
         loop {
             match self.read_envelope()? {

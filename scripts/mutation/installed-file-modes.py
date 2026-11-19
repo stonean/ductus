@@ -84,4 +84,18 @@ MUTATIONS = [
         '',
         'apply_manifest',
     ),
+    (
+        'M9 merge-managed-block leaves a file it creates at the tempfile mode',
+        'src/primitives/merge_managed_block.rs',
+        '            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).map_err(\n',
+        '            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).map_err(\n',
+        'merge_managed_block::tests::a_created_file_is_mode_0644',
+    ),
+    (
+        'M10 merge-managed-block sets 0644 on a file it rewrites',
+        'src/primitives/merge_managed_block.rs',
+        '        if action_static == "created" {\n',
+        '        if action_static != "unchanged" {\n',
+        'merge_managed_block::tests::a_rewrite_keeps_the_existing_mode',
+    ),
 ]

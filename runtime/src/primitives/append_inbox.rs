@@ -26,8 +26,8 @@
 use std::path::Path;
 
 use crate::primitives::{
-    ReadSnapshot, Result, SkipScanner, bullet_text, count_inbox_bullets, guarded, rel_path,
-    strip_bullet_marker,
+    PrimitiveError, ReadSnapshot, Result, SkipScanner, bullet_text, count_inbox_bullets, guarded,
+    rel_path, strip_bullet_marker,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendInboxArgs, AppendInboxResult};
@@ -60,6 +60,21 @@ pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
     // `append-primitive-marker-normalization`).
     let text = strip_bullet_marker(&args.text);
     super::validate_inbox_text("append-inbox", "text", &text)?;
+    // The bullet's own line must not open an HTML comment: the reader skips a
+    // line that does, and everything after it, so the item would be invisible
+    // and so would the rest of the file. The rule is `append-inbox`'s alone:
+    // `remove-inbox-item` shares `validate_inbox_text` and must still be able
+    // to name legacy text.
+    if SkipScanner::default().skip(&format!("- [ ] {text}")) {
+        return Err(PrimitiveError::InvalidArgument {
+            primitive: "append-inbox".into(),
+            argument: "text".into(),
+            reason: "the text opens an HTML comment (`<!--`) with no close on the line, which the \
+                     inbox reader skips through to the end of the file; close it or put it in \
+                     backticks"
+                .into(),
+        });
+    }
 
     let root = paths::Paths::load(repo)?.specs_root;
     let inbox_path = repo.join(&root).join("inbox.md");
@@ -176,7 +191,6 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::primitives::PrimitiveError;
     use std::fs;
     use tempfile::tempdir;
 
@@ -205,6 +219,31 @@ mod tests {
             read_inbox(tmp.path()),
             "# Inbox\n\n- [ ] first item\n- [ ] second item\n"
         );
+    }
+
+    #[test]
+    fn text_with_an_unclosed_comment_open_is_refused() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        let before = "# Inbox\n\n- [ ] first item\n";
+        fs::write(tmp.path().join("specs/inbox.md"), before).unwrap();
+        let err = run(&args("note about <!-- html"), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "text" && reason.contains("HTML comment")),
+            "{err:?}"
+        );
+        assert_eq!(read_inbox(tmp.path()), before);
+    }
+
+    #[test]
+    fn a_balanced_or_backticked_comment_delimiter_is_accepted() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        fs::write(tmp.path().join("specs/inbox.md"), "# Inbox\n").unwrap();
+        run(&args("see <!-- x --> inline"), tmp.path()).unwrap();
+        let result = run(&args("mention `<!--` in code"), tmp.path()).unwrap();
+        assert_eq!(result.item_count, 2);
     }
 
     #[test]

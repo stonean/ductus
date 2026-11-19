@@ -28,6 +28,8 @@ The behaviours and the tests that hold them:
   M6  The same test holds the tried-candidates message.
   M7  `append-inbox` does not re-check its text after stripping the marker.
       Killed by append_inbox's `rejects_text_that_is_only_a_marker`.
+  M8  `append-inbox` writes text whose bullet opens an unclosed HTML comment.
+      Killed by append_inbox's `text_with_an_unclosed_comment_open_is_refused`.
 
 No mutation is an expected survivor.
 """
@@ -83,5 +85,12 @@ MUTATIONS = [
         '    super::validate_inbox_text("append-inbox", "text", &text)?;\n',
         '',
         'rejects_text_that_is_only_a_marker',
+    ),
+    (
+        'M8 append-inbox writes text that opens an unclosed comment',
+        'src/primitives/append_inbox.rs',
+        '    if SkipScanner::default().skip(&format!("- [ ] {text}")) {\n',
+        '    if false {\n',
+        'text_with_an_unclosed_comment_open_is_refused',
     ),
 ]

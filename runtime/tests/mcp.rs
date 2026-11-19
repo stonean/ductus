@@ -86,6 +86,7 @@ async fn start_pair(repo: PathBuf) -> rmcp::service::RunningService<rmcp::servic
             Ok(service) => {
                 let _ = service.waiting().await;
             }
+            #[allow(clippy::print_stderr)]
             Err(err) => eprintln!("server failed: {err}"),
         }
     });

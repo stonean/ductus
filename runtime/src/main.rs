@@ -7,6 +7,7 @@ use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 
 use std::io::{self, Write as _};
 
+use ductus::io::warn;
 use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
 use ductus::schema::descriptions;
@@ -284,7 +285,7 @@ fn emit_protocol_schema() -> ExitCode {
             Err(code) => code,
         },
         Err(err) => {
-            eprintln!("failed to serialize protocol schema: {err}");
+            warn(format_args!("failed to serialize protocol schema: {err}"));
             ExitCode::from(1)
         }
     }
@@ -453,13 +454,13 @@ where
                     Err(code) => code,
                 },
                 Err(err) => {
-                    eprintln!("failed to serialize result: {err}");
+                    warn(format_args!("failed to serialize result: {err}"));
                     ExitCode::from(1)
                 }
             }
         }
         Err(err) => {
-            eprintln!("{err}");
+            warn(format_args!("{err}"));
             ExitCode::from(1)
         }
     }
@@ -540,13 +541,19 @@ fn report_cycles(cycles: &[Vec<String>]) {
     }
     for cycle in cycles {
         if let Some(first) = cycle.first() {
-            eprintln!("cycle: {} -> {first}", cycle.join(" -> "));
+            warn(format_args!("cycle: {} -> {first}", cycle.join(" -> ")));
         }
     }
-    eprintln!();
-    eprintln!("derive-dependencies: dependency graph contains cycles (see above).");
-    eprintln!("The body inline links above induced cycles in the derived dep graph.");
-    eprintln!("Remove or move the offending links under '## See also' before committing.");
+    warn(format_args!(""));
+    warn(format_args!(
+        "derive-dependencies: dependency graph contains cycles (see above)."
+    ));
+    warn(format_args!(
+        "The body inline links above induced cycles in the derived dep graph."
+    ));
+    warn(format_args!(
+        "Remove or move the offending links under '## See also' before committing."
+    ));
 }
 
 /// Render broken corpus links to stderr, so an author whose commit is blocked
@@ -556,29 +563,33 @@ fn report_cycles(cycles: &[Vec<String>]) {
 /// make clickable.
 fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
     for link in &result.broken {
-        eprintln!(
+        warn(format_args!(
             "broken link: {}:{} -> `{}` — {}",
             link.path, link.line, link.target, link.guidance
-        );
+        ));
     }
     for skip in &result.skipped {
-        eprintln!(
+        warn(format_args!(
             "skipped: {} ({}) — its links were never checked",
             skip.path, skip.reason
-        );
+        ));
     }
     if !result.guidance.is_empty() {
-        eprintln!("check-corpus-links: {}", result.guidance);
+        warn(format_args!("check-corpus-links: {}", result.guidance));
     }
     if !result.broken.is_empty() {
-        eprintln!();
-        eprintln!(
+        warn(format_args!(""));
+        warn(format_args!(
             "check-corpus-links: {} relative link(s) in {} resolve to nothing.",
             result.broken.len(),
             result.specs_root
-        );
-        eprintln!("Re-point them, or — when a later spec removed the target — name it in prose");
-        eprintln!("instead of linking it. `git commit --no-verify` bypasses this deliberately.");
+        ));
+        warn(format_args!(
+            "Re-point them, or — when a later spec removed the target — name it in prose"
+        ));
+        warn(format_args!(
+            "instead of linking it. `git commit --no-verify` bypasses this deliberately."
+        ));
     }
 }
 
@@ -645,7 +656,7 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(err) => {
-            eprintln!("failed to read {}: {err}", path.display());
+            warn(format_args!("failed to read {}: {err}", path.display()));
             return ExitCode::from(1);
         }
     };
@@ -664,7 +675,7 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
                         Err(code) => code,
                     },
                     Err(err) => {
-                        eprintln!("failed to serialize AST: {err}");
+                        warn(format_args!("failed to serialize AST: {err}"));
                         ExitCode::from(1)
                     }
                 }
@@ -674,14 +685,14 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
             // Exit 2 distinguishes legacy prose from Invalid (exit 1) so
             // scripts/lint-procedure-parseability.sh can gate legacy on
             // the allowlist while rejecting Invalid unconditionally.
-            eprintln!(
+            warn(format_args!(
                 "{}: legacy prose — no parseable Instructions section",
                 path.display()
-            );
+            ));
             ExitCode::from(2)
         }
         Err(err) => {
-            eprintln!("{}: {err}", path.display());
+            warn(format_args!("{}: {err}", path.display()));
             ExitCode::from(1)
         }
     }
@@ -743,9 +754,11 @@ fn emit_exec_parse_error(path: &std::path::Path, err: &ductus::parser::ParseErro
     let stdout = io::stdout();
     let mut writer = stdout.lock();
     if let Err(io_err) = write_envelope(&mut writer, &envelope) {
-        eprintln!("ductus exec: failed to emit parse-error envelope: {io_err}");
+        warn(format_args!(
+            "ductus exec: failed to emit parse-error envelope: {io_err}"
+        ));
     }
-    eprintln!("{message}");
+    warn(format_args!("{message}"));
     ExitCode::from(2)
 }
 
@@ -768,7 +781,9 @@ fn emit_exec_error(code: &str, message: &str) {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
     if let Err(io_err) = write_envelope(&mut writer, &envelope) {
-        eprintln!("ductus exec: failed to emit error envelope: {io_err}");
+        warn(format_args!(
+            "ductus exec: failed to emit error envelope: {io_err}"
+        ));
     }
 }
 
@@ -920,14 +935,14 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
 
     if let Err(message) = ductus::primitives::screen_command_name(command) {
         emit_exec_error("invalid-command-name", &message);
-        eprintln!("ductus exec: {message}");
+        warn(format_args!("ductus exec: {message}"));
         return ExitCode::from(1);
     }
     let overrides = match exec_overrides(args) {
         Ok(overrides) => overrides,
         Err(message) => {
             emit_exec_error("invalid-argument", &message);
-            eprintln!("ductus exec: {message}");
+            warn(format_args!("ductus exec: {message}"));
             return ExitCode::from(1);
         }
     };
@@ -935,7 +950,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Ok(host) => host,
         Err(err) => {
             emit_exec_error("config-unreadable", &err.to_string());
-            eprintln!("{err}");
+            warn(format_args!("{err}"));
             return ExitCode::from(1);
         }
     };
@@ -943,7 +958,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Ok(path) => path,
         Err((code, message)) => {
             emit_exec_error(code, &message);
-            eprintln!("ductus exec: {message}");
+            warn(format_args!("ductus exec: {message}"));
             return ExitCode::from(1);
         }
     };
@@ -954,7 +969,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Err(err) => {
             let message = format!("failed to read {}: {err}", path.display());
             emit_exec_error("file-unreadable", &message);
-            eprintln!("{message}");
+            warn(format_args!("{message}"));
             return ExitCode::from(1);
         }
     };
@@ -969,7 +984,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Ok(identity) => identity,
         Err(err) => {
             emit_exec_error("session-identity-invalid", &err.to_string());
-            eprintln!("{err}");
+            warn(format_args!("{err}"));
             return ExitCode::from(1);
         }
     };
@@ -977,7 +992,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Ok(context) => context,
         Err(err) => {
             emit_exec_error("session-unreadable", &err.to_string());
-            eprintln!("{err}");
+            warn(format_args!("{err}"));
             return ExitCode::from(1);
         }
     };
@@ -999,7 +1014,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Ok(walker) => walker,
         Err(err) => {
             emit_exec_error("config-unreadable", &err.to_string());
-            eprintln!("{err}");
+            warn(format_args!("{err}"));
             return ExitCode::from(1);
         }
     };
@@ -1009,7 +1024,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Err(err) => {
             let message = format!("I/O error: {err}");
             emit_exec_error("io-error", &message);
-            eprintln!("ductus exec: {message}");
+            warn(format_args!("ductus exec: {message}"));
             ExitCode::from(74) // EX_IOERR
         }
     }
@@ -1025,7 +1040,7 @@ fn run_mcp_server(repo: PathBuf) -> ExitCode {
     {
         Ok(rt) => rt,
         Err(err) => {
-            eprintln!("failed to start tokio runtime: {err}");
+            warn(format_args!("failed to start tokio runtime: {err}"));
             return ExitCode::from(1);
         }
     };
@@ -1035,12 +1050,12 @@ fn run_mcp_server(repo: PathBuf) -> ExitCode {
         let service = match server.serve(stdio()).await {
             Ok(svc) => svc,
             Err(err) => {
-                eprintln!("failed to start mcp server: {err}");
+                warn(format_args!("failed to start mcp server: {err}"));
                 return ExitCode::from(1);
             }
         };
         if let Err(err) = service.waiting().await {
-            eprintln!("mcp server terminated with error: {err}");
+            warn(format_args!("mcp server terminated with error: {err}"));
             return ExitCode::from(1);
         }
         ExitCode::SUCCESS
@@ -1121,9 +1136,9 @@ fn main() -> ExitCode {
                 return emit_protocol_schema();
             }
             let Some(path) = file else {
-                eprintln!(
+                warn(format_args!(
                     "runtime parse: missing FILE argument (use --emit-schema for the debug surface)"
-                );
+                ));
                 return ExitCode::from(1);
             };
             run_parse(&path, check)
