@@ -99,8 +99,9 @@ platform one.
 ### Storage: confine each process to its own file
 
 - **Shared default:** `.ductus/session.toml`, unchanged. It keeps the same
-  keys, the same `SessionRecord` field order
-  (`runtime/src/primitives/write_session.rs`) and the same
+  keys, the same field order (`runtime/src/session.rs`'s `DefaultRecord`,
+  first written as `SessionRecord` in `runtime/src/primitives/write_session.rs`)
+  and the same
   `SESSION_CHAIN` (`runtime/src/schema/paths.rs`), so AC3 and 022's
   per-project resolution table both stay true.
 - **Per-process targets:** `.ductus/sessions/{key}.toml`, one file per
@@ -142,11 +143,16 @@ are a few small reads and one or two atomic writes, so a wait that long means
 the holder is stalled, and the call fails naming the lock file rather than
 hanging every agent behind it. The poll (`BE-RETRY-001`) is bounded by that
 timeout and by `LOCK_MAX_ATTEMPTS` (one thousand attempts; the backoff below
-makes about four hundred in ten seconds on average), whichever comes first, and
+makes about four hundred in ten seconds on average, since a wait averages half
+its bound: the first six average 31.5 ms in all and each later one 25 ms, so
+about 6 + 9,968.5 / 25 ≈ 405, before the time each `try_lock` takes),
+whichever comes first, and
 backs off exponentially: the bound on each wait starts at
 `LOCK_RETRY_FIRST` (one millisecond) and doubles to `LOCK_RETRY_CAP` (fifty
 milliseconds), and each wait is drawn uniformly from zero to that bound (full
-jitter, from the standard library's randomly seeded hasher, so no dependency),
+jitter, from a `RandomState`, which the standard library documents as
+initialized with random keys, `RandomState::new` in its
+`library/std/src/hash/random.rs`, so no dependency),
 so contenders that met the lock together do not retry in step. It retries only
 `TryLockError::WouldBlock`, another process holding the lock, and surfaces any
 other `try_lock` error at once (`BE-RETRY-003`; there is no downstream to send

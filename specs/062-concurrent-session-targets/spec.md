@@ -94,9 +94,11 @@ session lock, which creates `.ductus/sessions/` with its lock and ignore files.
 
 An identified process that has no target of its own **adopts** the default on
 its first resolution and announces the adoption. From then on only its own
-writes change its target. A restarted agent, which comes back with a new
-platform identity, therefore resumes the target most recently set in the
-working tree, as a single agent does today. When the default is empty there is
+writes change its target. A restarted agent that comes back with a new
+platform identity, as a new Claude Code session does (one checkout's
+`.ductus/sessions/` holds a file per session that worked in it), therefore
+resumes the target most recently set in the working tree, as a single agent
+does today; one that keeps its identity resumes its own. When the default is empty there is
 nothing to adopt, the process has no target, and nothing is pinned.
 
 Two processes that have no identity share the default and collide exactly as
