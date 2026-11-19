@@ -13,7 +13,8 @@
 // its answer, or a failure, as a displayed message that triggers no turn —
 // and the `{project}:<name>` alias it registers for each installed command
 // (spec 064, scenario colon-form-commands-run-on-pi), which submits the
-// hyphen form as typed input.
+// hyphen form as typed input, at once when Pi is idle or a run can be
+// steered, and once Pi is idle when it is busy with no run to steer.
 // What it does not: pi's own extension loader (jiti), how pi renders a
 // result or a message, and whether a message reaches the agent's context —
 // a real `pi` run is still the only test of those (AGENTS.md, the Pi bridge
@@ -186,6 +187,9 @@ function shownWithoutATurn(messages) {
     throw new Error(`not displayed without a turn: display ${message.display}, options ${JSON.stringify(options)}`);
   return message.content;
 }
+
+// The command context of an idle pi, as an alias's handler reads it.
+const IDLE = { isIdle: () => true, signal: undefined, waitForIdle: async () => {} };
 
 const ARGS = { feature: "no-such-feature" };
 const results = [];
@@ -382,8 +386,8 @@ await check("registers {project}:<name> for each installed template, submitting 
   await until(5000, () => commands.size > 3);
   for (const name of ["harness:review", "harness:target", "harness-status", "harness-help"])
     if (!commands.has(name)) throw new Error(`no ${name}: registered ${[...commands.keys()].join(", ")}`);
-  await within(5000, commands.get("harness:review").handler("--since abc", {}));
-  await within(5000, commands.get("harness:target").handler("", {}));
+  await within(5000, commands.get("harness:review").handler("--since abc", IDLE));
+  await within(5000, commands.get("harness:target").handler("", IDLE));
   const sent = JSON.stringify(userMessages);
   const want = [
     { content: "/harness-review --since abc", options: { expandPromptTemplates: true, deliverAs: "steer" } },
@@ -408,13 +412,41 @@ await check("{project}:status and {project}:help run the same handlers as the hy
 });
 
 await check("a template name outside a command's grammar, or not a markdown file, gets no alias", async () => {
-  const prompts = ["harness-Upper.md", "harness-.md", "harness-x.txt", "harness_y.md", "other-review.md", "harness-ok-2.md"];
+  // `harness-noext` would become `harness:no` were the `.md` check dropped;
+  // `harness-x.txt` alone cannot show that, since `x.` is outside the grammar.
+  const prompts = ["harness-Upper.md", "harness-.md", "harness-x.txt", "harness-noext", "harness_y.md", "other-review.md", "harness-ok-2.md"];
   const { commands } = await load(project({ hostProject: "harness", helpCopy: true, prompts }));
   await until(5000, () => commands.size > 3);
   await sleep(200);
   const aliases = [...commands.keys()].filter((name) => name.includes(":")).sort();
   if (JSON.stringify(aliases) !== JSON.stringify(["harness:help", "harness:ok-2", "harness:status"]))
     throw new Error(`aliases ${aliases.join(", ")}`);
+});
+
+// Pi runs an extension command at once during a compaction and refuses a
+// prompt submitted then, where it queues a typed hyphen command until the
+// compaction ends (pi 1.5.2, `prompt` in core/agent-session.js).
+await check("an alias run while pi is busy with no run to steer submits once pi is idle, and at once while a run can be steered", async () => {
+  const { commands, userMessages } = await load(project({ hostProject: "harness", helpCopy: true, prompts: ["harness-review.md"] }));
+  await until(5000, () => commands.size > 3);
+  const alias = commands.get("harness:review");
+  let idle;
+  let waits = 0;
+  const compacting = {
+    isIdle: () => false,
+    signal: undefined,
+    waitForIdle: () => { waits += 1; return new Promise((r) => { idle = r; }); },
+  };
+  await within(1000, alias.handler("a", compacting));
+  await sleep(100);
+  if (waits !== 1 || userMessages.length) throw new Error(`during a compaction: ${waits} wait(s), submitted ${JSON.stringify(userMessages)}`);
+  idle();
+  await until(1000, () => userMessages.length === 1);
+  if (userMessages[0].content !== "/harness-review a") throw new Error(`submitted ${JSON.stringify(userMessages)}`);
+  const streaming = { isIdle: () => false, signal: {}, waitForIdle: () => { waits += 1; return new Promise(() => {}); } };
+  await within(1000, alias.handler("b", streaming));
+  if (waits !== 1 || userMessages.length !== 2 || userMessages[1].content !== "/harness-review b" || userMessages[1].options?.deliverAs !== "steer")
+    throw new Error(`mid-run: ${waits} wait(s), submitted ${JSON.stringify(userMessages)}`);
 });
 
 await check("a load that registers no command registers no alias", async () => {

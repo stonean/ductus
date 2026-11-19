@@ -370,7 +370,7 @@ The advisory is omitted when no agent is `pinned-divergent` — adopters whose p
 
 ### Security audit summary
 
-If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the **Invocation** row of **Derived values**, exactly as the next-steps list below does. The colon form here is the `claude-style` default; printing it to a Pi adopter names a command that does not exist on their agent:
+If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the **Invocation** row of **Derived values**, exactly as the next-steps list below does. The colon form here is the `claude-style` default; a Pi adopter is shown Pi's own name for each command, though the colon form runs there too through the bridge's alias (spec 064):
 
 ```text
 Security audit: {N} gap(s) in {M} existing spec(s) — nothing was written.
@@ -394,7 +394,7 @@ This summary hands off to `/{project}:analyze`, which dispositions each gap in t
 
 Adopted agents: {comma-separated `name` of selected agents}.
 
-Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to a Pi adopter names commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
+Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; a Pi adopter is shown Pi's own name for each command, though the colon form runs there too through the bridge's alias (spec 064). When several agents were adopted, render the list once per agent under its name):
 
 1. Run `/{project}:configure` in each adopted agent to apply the full permission set.
 2. Fill in `AGENTS.md` — tech stack, project structure, code style, testing conventions, gotchas.

@@ -455,7 +455,8 @@ its version and date.
   the model as plain text. Pi's bridge now registers `/{project}:<name>` for
   each installed `.pi/prompts/{project}-<name>.md`. An alias submits the
   hyphen form with its arguments as typed input, through `sendUserMessage`
-  with `expandPromptTemplates`, so Pi's own expansion applies.
+  with `expandPromptTemplates`, so Pi's own expansion applies; run while Pi
+  compacts, it submits once Pi is idle, as Pi queues typed input until then.
   `/{project}:status` and `/{project}:help` run the same handlers as the
   hyphen commands, with no model turn. The hyphen form keeps working, and no
   installed file is renamed. A Pi project takes it on its next `/ductus`,

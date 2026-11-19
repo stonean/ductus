@@ -86,7 +86,7 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code; `/my-project-specify` on Pi, which discovers flat-named prompt templates rather than a namespaced command directory.
+Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code; `/my-project-specify` on Pi, which discovers flat-named prompt templates rather than a namespaced command directory, and where `/my-project:specify` runs too, through an alias the bridge registers.
 
 Each entry below says what the command **does**; the section it links to says when you would reach for it and why it exists.
 

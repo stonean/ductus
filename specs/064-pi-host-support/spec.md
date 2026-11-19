@@ -117,7 +117,7 @@ mechanism; nothing in the pipeline depends on either.
   a stdio child when it loads, because the tool list comes from it, speaks MCP-over-stdio as newline-delimited JSON-RPC
   2.0 (`initialize` → `tools/list` → `tools/call`) with no npm dependency — the README
   promises nothing enters the adopter's dependency manifest, and the stdio transport
-  needs nothing a ~150-line extension cannot carry. Every tool the server lists is
+  needs nothing a single-file extension cannot carry. Every tool the server lists is
   registered via `pi.registerTool` under `ductus__<name>` with the **server's own
   `inputSchema` passed through** — names and schemas are live-from-server on every
   start, so a future release that adds or changes a primitive reaches Pi with zero

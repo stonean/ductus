@@ -90,7 +90,7 @@ interface ExtensionAPI {
   }): void;
   registerCommand(
     name: string,
-    options: { description?: string; handler: (args: string, ctx: unknown) => Promise<void> },
+    options: { description?: string; handler: (args: string, ctx: CommandContext) => Promise<void> },
   ): void;
   sendMessage(
     message: { customType: string; content: string; display: boolean },
@@ -100,6 +100,14 @@ interface ExtensionAPI {
     content: string,
     options?: { expandPromptTemplates?: boolean; deliverAs?: "steer" | "followUp" },
   ): void;
+}
+
+/** The slice of pi's `ExtensionCommandContext` an alias reads. `signal` is
+ *  the agent run's abort signal, set only while a run is making a request. */
+interface CommandContext {
+  isIdle(): boolean;
+  signal?: unknown;
+  waitForIdle(): Promise<void>;
 }
 
 /** A command's name as /ductus installs it: what may follow `<project>-` in
@@ -377,7 +385,10 @@ function projectRoot(): string {
  *  form with its arguments as typed input, so Pi's own template expansion
  *  and argument substitution apply and the bridge copies neither; mid-turn it
  *  steers, as Pi queues a command typed with Enter while the agent works, since
- *  a handler is not told which key submitted it. Read once
+ *  a handler is not told which key submitted it. While Pi compacts it waits
+ *  for Pi to be idle, as Pi queues typed input until compaction ends: Pi runs
+ *  an extension command at once even then, and refuses a prompt submitted
+ *  during a compaction. Read once
  *  at load, as Pi reads its templates: a template installed later gets its
  *  alias at the next session start. */
 function registerAliases(pi: ExtensionAPI, root: string, project: string, own: Set<string>): void {
@@ -395,11 +406,18 @@ function registerAliases(pi: ExtensionAPI, root: string, project: string, own: S
     const hyphen = prefix + name;
     pi.registerCommand(project + ":" + name, {
       description: "Run /" + hyphen + ", by the spelling ductus's text uses",
-      handler: async (args) => {
-        pi.sendUserMessage("/" + hyphen + (args ? " " + args : ""), {
-          expandPromptTemplates: true,
-          deliverAs: "steer",
-        });
+      handler: async (args, ctx) => {
+        const submit = () =>
+          pi.sendUserMessage("/" + hyphen + (args ? " " + args : ""), {
+            expandPromptTemplates: true,
+            deliverAs: "steer",
+          });
+        /* Busy with no run to steer is a compaction, or the gap between a
+         * run's requests. Not awaited, so the command returns at once, as
+         * queued input does; a session replaced meanwhile has no use for the
+         * submission, so its failure is dropped. */
+        if (ctx.isIdle() || ctx.signal) submit();
+        else void ctx.waitForIdle().then(submit).catch(() => {});
       },
     });
   }
