@@ -82,9 +82,10 @@ Take the pre-run `git status --porcelain -- specs/` first, and again when the se
    missing or malformed. Then apply the Duplicate-id and reference-integrity guard: before
    any later step, abort the loop with one line for each failure —
      - `migration {id}: duplicate id in framework/migrations.toml`
-     - `migration {id}: procedure file missing from archive`
      - `migration {id}: unsafe id or procedure_file` (`id` not a slug, or `procedure_file`
        not exactly `framework/migrations/{id}.md`)
+     - `migration {id}: procedure file missing from archive` (probed only for an entry
+       that passes the rule above)
    `last_applied` keeps its prior value.
 2. Resolve the active config file once; read its `[migrations].last_applied`
    (absence is null).
