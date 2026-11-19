@@ -22,12 +22,12 @@ Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative
 One entry per waiver judgment: one rule, waived at one or more files for one reason. Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
 
 ```yaml
-- rule: SEC-BE-014
+- rule: BE-AUTHN-007
   file: src/api/internal.ts
   reason: "Endpoint is internal-only behind mTLS; rule applies to public APIs"
   waived-at: 2026-05-10T14:40:00Z
   waived-by: dev@example.com
-- rule: SEC-BE-021
+- rule: BE-AUTHN-008
   file:
     - src/api/admin.ts
     - src/api/metrics.ts
@@ -38,7 +38,7 @@ One entry per waiver judgment: one rule, waived at one or more files for one rea
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `rule` | string (rule ID) | yes | E.g. `SEC-BE-014`. Must reference a known rule at write time. |
+| `rule` | string (rule ID) | yes | E.g. `BE-AUTHN-007`. Must reference a known rule at write time. |
 | `file` | string (relative path), or a list of them | yes | The paths the waiver is anchored to, each its own `(rule, file)` anchor and matched literally — never expanded as a pattern. Written as a single path when the entry holds one and as a list when it holds more. An empty list, or a list holding a blank path, is missing. Added by [waiver-file-lists](scenarios/waiver-file-lists.md); a one-path entry is unchanged. |
 | `reason` | string | yes | Free-text justification. Empty string is invalid. |
 | `waived-at` | ISO 8601 timestamp | yes | Set by `/ductus:review --waive`. |
