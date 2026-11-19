@@ -36,6 +36,7 @@
 use std::path::{Component, Path, PathBuf};
 
 use crate::host::AGENT_CONFIG_DIRS;
+use crate::primitives::rule_sections::Fences;
 use crate::primitives::spec_links::is_frontmatter_fence;
 use crate::primitives::{Result, inline_code_spans, rel_path};
 use crate::schema::paths;
@@ -396,7 +397,7 @@ fn scan_file(
 ) {
     let mut fm_seen = false;
     let mut in_fm = false;
-    let mut in_fence = false;
+    let mut fences = Fences::default();
 
     for (idx, raw) in text.lines().enumerate() {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -416,16 +417,13 @@ fn scan_file(
             continue;
         }
 
-        // Fenced code. Toggled line by line rather than stripped wholesale:
-        // deleting the block would shift every line number after it, so a
-        // finding would cite the wrong line — further off the deeper into the
-        // file it sits.
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-            in_fence = !in_fence;
-            continue;
-        }
-        if in_fence {
+        // Fenced code, by the rule `SkipScanner` reads but not through it: a
+        // link inside an HTML comment is still checked, and an unclosed `<!--`
+        // must not hide the rest of the file. Skipped line by line rather than
+        // stripped wholesale: deleting the block would shift every line number
+        // after it, so a finding would cite the wrong line — further off the
+        // deeper into the file it sits.
+        if fences.holds(line.trim_start()) {
             continue;
         }
 
@@ -776,6 +774,19 @@ mod tests {
             "# Demo\n\n```text\n[gone](../041-gone/spec.md)\n```\n",
         );
         assert_eq!(run_at(tmp.path()).broken, [] as [BrokenCorpusLink; 0]);
+    }
+
+    #[test]
+    fn a_link_inside_a_longer_fence_holding_a_shorter_one_is_not_checked() {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            "# Demo\n\n````md\n```text\n[gone](../041-gone/spec.md)\n```\n[also](../041-also/spec.md)\n````\n\n[after](../041-after/spec.md)\n",
+        );
+        let result = run_at(tmp.path());
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert_eq!(result.broken[0].target, "../041-after/spec.md");
     }
 
     #[test]

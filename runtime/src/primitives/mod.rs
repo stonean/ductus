@@ -3094,7 +3094,8 @@ pub fn screen_command_name(name: &str) -> std::result::Result<(), String> {
 }
 
 /// Per-line skip state shared by the `tasks.md` / spec structural walkers.
-/// Content inside a fenced code block (` ``` `) or an HTML comment
+/// Content inside a fenced code block (opened and closed as
+/// [`rule_sections::FenceRun`] says) or an HTML comment
 /// (`<!-- … -->`) is not markdown structure — it must not yield headings,
 /// task numbers, phase containers, or checkboxes. Feed every line of a
 /// document in order; [`skip`](SkipScanner::skip) reports the lines to ignore.
@@ -3105,9 +3106,9 @@ pub fn screen_command_name(name: &str) -> std::result::Result<(), String> {
 /// tasks, where a reader of the file sees none.
 #[derive(Default)]
 pub(crate) struct SkipScanner {
-    in_fence: bool,
-    /// The run that opened the fence, since only its own kind closes it.
-    fence_marker: &'static str,
+    /// The open fence, since only a run of its character at least as long
+    /// closes it.
+    fence: Option<rule_sections::FenceRun>,
     in_comment: bool,
 }
 
@@ -3120,10 +3121,14 @@ impl SkipScanner {
     /// A comment delimiter inside a backtick inline-code span is inert (it
     /// neither opens nor closes a region), so prose that merely mentions
     /// `<!--` in code font is not mistaken for a comment opener.
+    ///
+    /// A fence indented to any depth still opens, unlike `CommonMark`'s
+    /// four-column limit: tasks, criteria and plan lists nest fences deeper.
     pub(crate) fn skip(&mut self, line: &str) -> bool {
-        if self.in_fence {
-            if line.trim_start().starts_with(self.fence_marker) {
-                self.in_fence = false;
+        let trimmed = line.trim_start();
+        if let Some(open) = self.fence {
+            if open.closed_by(trimmed) {
+                self.fence = None;
             }
             return true;
         }
@@ -3133,12 +3138,9 @@ impl SkipScanner {
             }
             return true;
         }
-        for marker in ["```", "~~~"] {
-            if line.trim_start().starts_with(marker) {
-                self.in_fence = true;
-                self.fence_marker = marker;
-                return true;
-            }
+        if let Some(open) = rule_sections::FenceRun::opened_by(trimmed) {
+            self.fence = Some(open);
+            return true;
         }
         // Comment delimiters inside a backtick inline-code span are inert —
         // prose that merely mentions `<!--` in code font must not open a skip
@@ -3160,7 +3162,7 @@ impl SkipScanner {
     /// an unterminated region that runs to EOF (e.g. `append-inbox` placing a
     /// new bullet where the comment/fence-aware read side will count it).
     pub(crate) fn in_region(&self) -> bool {
-        self.in_fence || self.in_comment
+        self.fence.is_some() || self.in_comment
     }
 
     /// `true` while the scanner sits inside an open fenced code block. Lets a
@@ -3168,7 +3170,7 @@ impl SkipScanner {
     /// payload inside its entry, tell it from an HTML comment, which
     /// [`skip`](Self::skip) reports the same way.
     pub(crate) fn in_fence(&self) -> bool {
-        self.in_fence
+        self.fence.is_some()
     }
 }
 
@@ -4811,6 +4813,47 @@ mod tests {
         assert!(scanner.skip("```"));
         assert!(scanner.skip("- [ ] still inside"));
         assert!(scanner.skip("~~~"));
+        assert!(!scanner.skip("- [ ] outside"));
+    }
+
+    /// A longer fence closes only on a run as long as its opener, so a shorter
+    /// fence inside it is content.
+    #[test]
+    fn skip_scanner_a_longer_fence_closes_only_on_a_run_as_long() {
+        let mut scanner = SkipScanner::default();
+        for line in ["````md", "```rust", "x", "```", "````"] {
+            assert!(scanner.skip(line), "{line}");
+        }
+        assert!(!scanner.skip("after"));
+    }
+
+    /// A run followed by an info string is the fence's content, not its close.
+    #[test]
+    fn skip_scanner_an_info_string_does_not_close_a_fence() {
+        let mut scanner = SkipScanner::default();
+        assert!(scanner.skip("```"));
+        assert!(scanner.skip("```sh"));
+        assert!(scanner.skip("- [ ] inside"));
+        assert!(scanner.skip("```"));
+        assert!(!scanner.skip("- [ ] outside"));
+    }
+
+    /// A line that begins an inline code span opens no fence.
+    #[test]
+    fn skip_scanner_a_line_opening_an_inline_code_span_opens_no_fence() {
+        let mut scanner = SkipScanner::default();
+        assert!(!scanner.skip("```a``` text"));
+        assert!(!scanner.skip("- [ ] x"));
+    }
+
+    /// A fence nested in a list opens at any depth, unlike `CommonMark`'s four
+    /// columns, because tasks and criteria nest fences.
+    #[test]
+    fn skip_scanner_keeps_an_indented_fence() {
+        let mut scanner = SkipScanner::default();
+        assert!(scanner.skip("        ```"));
+        assert!(scanner.skip("- [ ] inside"));
+        assert!(scanner.skip("        ```"));
         assert!(!scanner.skip("- [ ] outside"));
     }
 

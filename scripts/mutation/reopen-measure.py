@@ -894,16 +894,16 @@ MUTATIONS = [
     (
         'M132 a tilde fence is no fence',
         'src/primitives/mod.rs',
-        'for marker in ["```", "~~~"] {',
-        'for marker in ["```"] {',
+        'if let Some(open) = rule_sections::FenceRun::opened_by(trimmed) {',
+        'if let Some(open) = rule_sections::FenceRun::opened_by(trimmed).filter(|_| trimmed.starts_with("```")) {',
         'primitives::tests::skip_scanner_reads_a_tilde_fence',
     ),
     (
         'M133 either fence closes the other',
         'src/primitives/mod.rs',
-        'if line.trim_start().starts_with(self.fence_marker) {',
-        'if line.trim_start().starts_with("```") || line.trim_start().starts_with("~~~") {',
-        'primitives::tests::skip_scanner_reads_a_tilde_fence',
+        'if open.closed_by(trimmed) {',
+        'if trimmed.starts_with("```") || trimmed.starts_with("~~~") {',
+        'primitives::tests::skip_scanner_reads_a_tilde_fence primitives::tests::skip_scanner_a_longer_fence_closes_only_on_a_run_as_long',
     ),
     (
         "M134 a link borrows a later reference's target",
@@ -946,5 +946,25 @@ MUTATIONS = [
         '|| !record.skipped_passes.is_empty();',
         '|| record.skipped_passes.is_empty();',
         'measure_reopenings::tests::a_finished_run_recording_no_stop_left_nothing',
+    ),
+    (
+        'M140 check-corpus-links closes a fence on any fence line',
+        'src/primitives/check_corpus_links.rs',
+        [
+            'let mut fences = Fences::default();',
+            'if fences.holds(line.trim_start()) {',
+        ],
+        [
+            'let mut fences = Fences::default();\n    let mut toggled = false;',
+            'if {\n            let t = line.trim_start();\n            if t.starts_with("```") || t.starts_with("~~~") {\n                toggled = !toggled;\n                true\n            } else {\n                toggled\n            }\n        } {',
+        ],
+        'primitives::check_corpus_links::tests::a_link_inside_a_longer_fence_holding_a_shorter_one_is_not_checked',
+    ),
+    (
+        'M141 a fence indented at all is no fence',
+        'src/primitives/mod.rs',
+        'if let Some(open) = rule_sections::FenceRun::opened_by(trimmed) {',
+        'if let Some(open) = rule_sections::FenceRun::opened_by(line) {',
+        'primitives::tests::skip_scanner_keeps_an_indented_fence',
     ),
 ]

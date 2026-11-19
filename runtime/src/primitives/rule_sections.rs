@@ -403,7 +403,7 @@ enum Entry {
 /// An open fence's delimiter: its character, a backtick or a tilde, and how
 /// many of it the opening line ran.
 #[derive(Clone, Copy)]
-struct FenceRun {
+pub(crate) struct FenceRun {
     mark: u8,
     len: usize,
 }
@@ -412,7 +412,7 @@ impl FenceRun {
     /// The fence `trimmed` opens: a run of three or more backticks or tildes,
     /// then an info string, which in a backtick fence holds no backtick, as
     /// `CommonMark`'s fenced code blocks open.
-    fn opened_by(trimmed: &str) -> Option<Self> {
+    pub(crate) fn opened_by(trimmed: &str) -> Option<Self> {
         let mark = *trimmed.as_bytes().first()?;
         if mark != b'`' && mark != b'~' {
             return None;
@@ -426,7 +426,7 @@ impl FenceRun {
     /// Whether `trimmed` closes this fence: a run of its character at least as
     /// long as the opening one, with nothing after it, so a line such as
     /// ```` ```sh ```` inside a longer fence is the fence's content.
-    fn closed_by(self, trimmed: &str) -> bool {
+    pub(crate) fn closed_by(self, trimmed: &str) -> bool {
         let len = trimmed.bytes().take_while(|&b| b == self.mark).count();
         len >= self.len && trimmed[len..].trim().is_empty()
     }
@@ -438,11 +438,11 @@ impl FenceRun {
 /// also reads, and one left open runs to the end of the file, as `CommonMark`
 /// renders it.
 #[derive(Default)]
-struct Fences(Option<FenceRun>);
+pub(crate) struct Fences(Option<FenceRun>);
 
 impl Fences {
     /// Whether `trimmed`, the next line, is a fenced block's line.
-    fn holds(&mut self, trimmed: &str) -> bool {
+    pub(crate) fn holds(&mut self, trimmed: &str) -> bool {
         if let Some(open) = self.0 {
             if open.closed_by(trimmed) {
                 self.0 = None;

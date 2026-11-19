@@ -6925,6 +6925,23 @@ mod tests {
         assert!(found[0].1.contains("`src/b.rs:4`"), "{found:?}");
     }
 
+    /// A four-backtick block holding a triple-backtick example is one fenced
+    /// block, so a citation inside its inner fence is no finding while the same
+    /// token after the block is.
+    #[test]
+    fn a_nested_fence_hides_a_citation_until_the_outer_one_closes() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\n````md\n```text\nsrc/a.rs:12\n```\nsrc/a.rs:13\n````\n\nSee `src/b.rs:4`.\n",
+        );
+        let found = citation_findings(&compute(&args(), repo).unwrap());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("`src/b.rs:4`"), "{found:?}");
+    }
+
     /// A line number set apart from its file in its own code span is reported
     /// too, since it is as much a line citation as one attached to its path.
     #[test]
