@@ -217,7 +217,7 @@ The six back-filled entries, which shared one uniform `sunset_after`, are all ar
 
 ### "Removal must ship with migration" is discipline-only at v1
 
-Family 10 verifies registry/state consistency, not registry/diff coverage. A maintainer who deletes `framework/templates/foo.md` without adding a `[[migrations]]` entry breaks adopters silently — Family 10 only catches the divergence after the registry diverges from filesystem state, not at commit time. Captured as a follow-on pre-commit hook spec/scenario.
+Family 10 verifies registry/state consistency, not registry/diff coverage. A maintainer who deletes `framework/templates/foo.md` without adding a `[[migrations]]` entry breaks adopters silently — Family 10 only catches the divergence after the registry diverges from filesystem state, not at commit time. No check covers it and none is planned: a pre-commit diff check is out of scope, with no follow-on (spec.md's Out of scope list; owner decision, 2026-11-19).
 
 ### CHANGELOG.md append at sunset is maintainer-discipline
 
