@@ -1,17 +1,17 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-18T22:50:19Z
-analyzed-against: fba832e81c36da0596436e9aa903280c0509bbcd
+last-run: 2026-11-19T13:52:43Z
+analyzed-against: 1c92e0a9b9f61e8d2ae46af1cfe42b6eb25f8f6f
 hard-fail: 0
 blocking-findings: 0
-advisory: 0
+advisory: 1
 unexamined: 43
 analyzed-digest:
-  plan.md: 073a53bba0905d29e9305eb57049b3c0a86f29c950c3b8ddee8317d0043792be
-  review.md: 6cbf7058cfb52c13ea478679cac17810da971bcd678888a9b9d1a2480469d529
+  plan.md: 24f26aa3009899d20702b630f90c2b5489d2507c397c7312d197f78af71e3297
+  review.md: 390822fead1440a5ff6fb4d8ce15dd9364e06e094ae54abe0ad4b5d092fa452b
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 4d4a93fd968898006fa4780beb8088e48616ed1ceae54574ac38a3a02ad9583b
-  scenarios/families-follow-the-command-reference-split.md: b15323a687a50e807ee49ff7af93447c01f19102d833870155aef792e2125371
+  scenarios/families-follow-the-command-reference-split.md: 12e2262fecdcf34d018c78f9dfe65fcebc769ba9eabfca3859c172163da4b073
   scenarios/family-10-migration-coverage.md: a535ac8c1e4dce26084c03066fc88978f0668f05e15f3600d87dbb6bf85ecf9a
   scenarios/family-17-contract-binding.md: 1ab3dfbc5c53ca5ab082b587a299b1951c8dd3c3e29148db5ed3a5df50903faf
   scenarios/family-18-marker-list-parity.md: 296f55313954ec984b5260945b92639d15b8458f707f90e94e0bd1bbc0f052c0
@@ -24,7 +24,7 @@ analyzed-digest:
   scenarios/family-28-audit-family-registry-parity.md: bf80f1d64718deb87a7dec79c69e9248e8c1ab4a41e65c638488fdd9fcd5e529
   scenarios/family-34-step-reference-integrity.md: 8598c2bd4072742f934254d0ea46094ec1388a6d0206defa6a123c0553e29015
   scenarios/family-35-manifest-destination-links.md: 28297923f8f5f4ec6833696028c4076e247cfadb3d945b0a2446acc18237cc11
-  scenarios/family-36-self-url-resolution.md: 131a9075d3b50b79ecc67ca444703b56df8f4e48c0e16f5ff4e083a9a0070cdb
+  scenarios/family-36-self-url-resolution.md: e4c14882f66a90cee309b539ffe60ecfeef564eb7ad024ab39a537314c0e051f
   scenarios/family-39-shipped-anchor-resolution.md: c25191adf85b75351517d55c89a55a24a5d083e325f894f680c04ace54401e8f
   scenarios/family-40-deprecated-rules-are-removed-on-time.md: 689441c4d67ea3b73b147f0bf319db6ef7a50034ea46218ef67799dee0f5732e
   scenarios/host-namespace-parity.md: e8a67c95e2e596cf9a231bbfa26545c4beee96af1a043fd83608899e16087790
@@ -52,25 +52,26 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/family-34-step-reference-integrity.md#Edge Cases"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "scenarios/family-27-done-spec-unchecked-criteria.md#Behavior"}
-  QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/link-check-consolidation.md#Edge Cases"}
-  QUAL-GROUND-001: {verdict: addressed, cite: "scenarios/family-17-contract-binding.md#Behavior"}
-  QUAL-STUB-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
-  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
+  SEC-DEPS-001: {verdict: addressed, cite: "plan.md#CI integration"}
 blocking: false
 dispositions:
-  fixed: 7
+  fixed: 3
   deferred: 0
-  waived: 0
+  waived: 1
   undispositioned: 0
+decisions:
+  - key: "grounding — AC22: the 031 and 041 incident (\"both carried `should-violations: 1` in `spec.md` while their own `review.md` recorded `0`, for weeks\", and the 031 root cause of a hand-moved waiver) is stated as fact about past artifacts with no commit, query or artifact citation (§Grounding)."
+    outcome: waived
+    reason: An acceptance criterion's text is not edited during an analysis, since the edit changes the criterion's digest and owes a new review, and the review's criteria step judges each criterion against the tree, as the owner decided for 020's AC15. AC22 is annotated superseded by 057, so the 031 and 041 incident it recounts is the historical record of why the retired check existed.
+    decided-at: 2026-11-19T13:52:43Z
+    decided-by: rule
 ---
 
 # Analysis — 026-framework-self-audit
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 43 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 43 unexamined target(s). Dispositions: 3 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -82,7 +83,7 @@ dispositions:
 
 ## Advisory findings
 
-*None.*
+- grounding — AC22: the 031 and 041 incident ("both carried `should-violations: 1` in `spec.md` while their own `review.md` recorded `0`, for weeks", and the 031 root cause of a hand-moved waiver) is stated as fact about past artifacts with no commit, query or artifact citation (§Grounding). — `specs/026-framework-self-audit/spec.md` — **waived**: An acceptance criterion's text is not edited during an analysis, since the edit changes the criterion's digest and owes a new review, and the review's criteria step judges each criterion against the tree, as the owner decided for 020's AC15. AC22 is annotated superseded by 057, so the 031 and 041 incident it recounts is the historical record of why the retired check existed. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -101,10 +102,6 @@ dispositions:
 
 ## Fixed in this run
 
-- grounding — Motivation said the pre-v0.1.0 review passes surfaced ~30 of 45 findings as framework-level drift, with no source or method (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
-- grounding — AC17 said the family exited 0 over 514 files, with no source for the count (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
-- grounding — AC24 said a spec rename rots 32 shipped citations, with no source for the figure or its population (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
-- grounding — The shell-first orchestration decision said run-generator already spawns with --dry-run and captures stdout, stderr and exit, with no file-and-symbol citation (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
-- grounding — Section 9 and AC11 said runtime/legacy-prose-commands.txt names amend.md and help.md today, though it lists audit.md too, as host-run since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/spec.md` — **fixed** (decided by the rule)
-- grounding — The Overview, the procedure-shape section and the Affected Files rows said audit.md ships parseable and leaves the allowlist, though it has been legacy prose to the parser since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
-- grounding — The shell-first decision said the /audit procedure is parseable with one numbered step per family, and check zero said /audit invokes the nine scripts via run-generator, though the host runs one step over run-all.sh since 0a14c63b (§Grounding (advisory)). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+- grounding — Technical Decisions, Check zero (and Known limitation: new generators require manual update in two places): states as fact that Family 5 (template-validate alignment) does not catch a generator or lint added to one of the two lists and not the other because both files enumerate the same list textually, citing no script or symbol and carrying no assumption marker — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+- grounding — Every family contains the paths it did not write as a literal: names `bounded_lists::place` and `validate_contained` in a claim about current code without their files. — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+- grounding — Technical Decisions, Check zero: "`scripts/audit/check-zero.sh` builds the runtime before running them" is stated as fact about the existing script and cites no file-and-symbol, command or assumption marker (§Grounding). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
