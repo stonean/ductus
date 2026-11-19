@@ -47,6 +47,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 65. Disposition out-of-spec finding: spec prose in 022, 041, 045 and 067 states a bounded list's emptiness by the list
 
-- [ ] Found by task 61's sweep: `specs/022-deterministic-runtime/data-model.md` and its scenario `scenario-open-question-signal`; `specs/041-task-pruning/data-model.md`; `specs/067-analyze-and-audit-checks/` (`spec.md`, `data-model.md`, `plan.md`, four scenarios); `specs/045-decision-state-drift-detection/` (`data-model.md`, `plan.md`). Each sentence is judged: true of both result forms, or false of the file form
+- [x] Found by task 61's sweep: `specs/022-deterministic-runtime/data-model.md` and its scenario `scenario-open-question-signal`; `specs/041-task-pruning/data-model.md`; `specs/067-analyze-and-audit-checks/` (`spec.md`, `data-model.md`, `plan.md`, four scenarios); `specs/045-decision-state-drift-detection/` (`data-model.md`, `plan.md`). Each sentence is judged: true of both result forms, or false of the file form
 
 - **Done when**: every named sentence has one disposition: fixed in its spec, deferred to that spec's work, or waived with its reason

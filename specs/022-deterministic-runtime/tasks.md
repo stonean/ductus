@@ -14,7 +14,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Remove the Added and the Removed entry for `check-review-freshness`, a tool added and retired inside this release that no release served
 - [x] Give the `substitute-seed-placeholders` migration an entry of its own, as the other five 0.60.0 migrations have
 - [x] One lockfile entry stating the net versions from 0.59.11 to the release head and naming the advisory the `pulldown-cmark` update addressed, since the recorded steps stop at 2026-10-29
-- [ ] State the command and reference byte totals at the release head, not mid-release, in the entry on what a command's reference holds; state the shipped rule total; and qualify the `prune-project` entry's mention of a configure block for an agent this release drops
+- [x] State the command and reference byte totals at the release head, not mid-release, in the entry on what a command's reference holds; state the shipped rule total; and qualify the `prune-project` entry's mention of a configure block for an agent this release drops
 - [x] Ask the owner, entry by entry, which entries that make a call refuse or rename a wire value are marked BREAKING, since the audit found about twelve unmarked; the owner ruled the seed narrowing not breaking on 2026-11-19
 
 - **Done when**: each item below is an entry or a correction under `[Unreleased]` in `runtime/CHANGELOG.md`, checked against the code at the head it describes, and the entry and BREAKING counts any release summary states are measured after the last edit
