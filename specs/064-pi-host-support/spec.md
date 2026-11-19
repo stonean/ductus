@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 056-bootstrap-archive-boundary-split]
 next-criterion: 17
 ---
