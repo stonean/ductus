@@ -20,7 +20,7 @@ This is the defect class the framework names as `QUAL-CLAIM-001` — a fully-imp
 
 **The third set exists for both derivations.** A `references:` entry depends on the `[services]` registry as well as the body, so renaming a service alias drifts every referencing spec without touching or staging any of them. `derive-references` therefore enumerates every tracked spec and filters only the write, exactly as `derive-dependencies` does; [067's `derive-references-unstaged-drift-is-reported`](../../067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md) is the authority for that primitive's behavior.
 
-**The two remaining shell generators are assessed, not assumed.** `gen-help-tables.sh` ("help.md in sync") and `gen-configure-mcp.sh` ("mcp-allow blocks in sync") share the message *shape* but regenerate from fixed sources rather than by enumerating specs. Each is checked against the same question — can its zero count ever mean "did not examine?" — and its message is corrected only if the answer is yes. A uniform edit applied without that check would be its own unfounded claim.
+**The two remaining shell generators are assessed, not assumed.** `gen-help-tables.sh` ("No changes (N command(s) in sync)") and `gen-configure-mcp.sh` ("No changes (mcp-allow block in sync)") share the message *shape* but regenerate from fixed sources rather than by enumerating specs. Each is checked against the same question — can its zero count ever mean "did not examine?" — and its message is corrected only if the answer is yes. A uniform edit applied without that check would be its own unfounded claim.
 
 ### Outcome of that assessment (2026-08-16)
 

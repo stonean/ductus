@@ -4,7 +4,7 @@ Implements [018 — Adopter-Owned Pre-Commit](spec.md).
 
 ## Overview
 
-Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus-procedure.md` §Hook Installation plus `framework/bootstrap/ductus.md` §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the migration code path (one-time, recovery is documented in §Edge Cases). No data model, no event contracts, no error codes.
+Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus-procedure.md` §Hook Installation plus `framework/bootstrap/ductus.md` §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the detection ladder's precondition for a wired outcome, which skips wiring a `.githooks/pre-commit` that does not invoke the inner hook; the migration this plan shipped was retired on 2026-11-18 (spec §Migration). No data model, no event contracts, no error codes.
 
 ## Technical Decisions
 
@@ -20,7 +20,7 @@ The new `framework/bootstrap/hooks/pre-commit` is written from scratch as the ad
 
 Three substantive edits to the section, each motivated by the spec:
 
-1. **Detection ladder collapses from 7 items to 4.** Items 2–5 (third-party hook systems) merge into a single "any third-party hook system detected" branch with the same skip-and-warn behavior. The old item 6 (sentinel-detected ductus-installed file) is removed entirely — under the new model, `.githooks/pre-commit` is never ductus-managed, so detecting it as such is meaningless. The old items 1 and 7 collapse to the new items 1 and 4 (already-wired vs. fresh-install).
+1. **Detection ladder collapses from 7 items to 4.** Spec 059 later added a fifth case, rewiring the `.githooks` value a pre-059 run wrote from a project in a repository subdirectory, so §Hook Installation now has five. Items 2–5 (third-party hook systems) merge into a single "any third-party hook system detected" branch with the same skip-and-warn behavior. The old item 6 (sentinel-detected ductus-installed file) is removed entirely — under the new model, `.githooks/pre-commit` is never ductus-managed, so detecting it as such is meaningless. The old items 1 and 7 collapse to the new items 1 and 4 (already-wired vs. fresh-install).
 
 2. **No migration subsection.** The one this plan added to `framework/bootstrap/ductus-procedure.md` §Hook Installation was retired on 2026-11-18 (`spec.md` §Migration).
 
@@ -49,7 +49,7 @@ The 017 body, ACs, and resolved-question entries are not edited. The block-quote
 
 ### Verification approach
 
-The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox project to verify the fresh-install path. The verification is manual — run `/ductus` against a temp directory (a clean repo with no hooks) and inspect the resulting file layout. The ductus repo's own CI does not exercise this code path (CI runs generators in dry-run; it does not boot a fresh adopter project). Manual sandbox verification is the discharge criterion for those ACs.
+The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox project to verify the fresh-install path. The verification is manual — run `/ductus` against a temp directory (a clean repo with no hooks) and inspect the resulting file layout. The ductus repo's own CI does not exercise this code path (CI runs the generators and fails on a changed tree; it does not boot a fresh adopter project). Manual sandbox verification is the discharge criterion for those ACs.
 
 ## Affected Files
 
@@ -64,7 +64,7 @@ The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox pr
 | `specs/018-adopter-owned-pre-commit/plan.md` | Create | This file |
 | `specs/018-adopter-owned-pre-commit/tasks.md` | Create | Task breakdown |
 
-The CI workflow at `.github/workflows/` (if present) is not touched — generators run in dry-run mode and the rename is byte-identical for the inner file, so CI sees no diff.
+The CI workflow at `.github/workflows/` (if present) is not touched — CI runs the generators and fails on a changed tree, and the rename is byte-identical for the inner file, so CI sees no diff.
 
 ## Trade-offs
 

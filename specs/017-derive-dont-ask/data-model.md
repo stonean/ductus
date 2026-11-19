@@ -169,13 +169,13 @@ The refine group was named `commands-elaborate` here when this spec shipped, aft
 
 ## Hook sentinel comment
 
-The shipped adopter pre-commit hook contains a single sentinel line near the top:
+Under spec 017 the shipped adopter pre-commit hook carried a single sentinel line near the top:
 
 ```bash
 # managed-by: ductus
 ```
 
-`/ductus`'s hook-installation logic uses the presence of this sentinel to distinguish a ductus-installed hook from a hand-rolled one. When the sentinel is present, `/ductus` treats the file as `update`-strategy and overwrites it on subsequent runs (subject to `.ductus/config.toml` `[pinned] files`). When the sentinel is absent, `/ductus` skips installation and warns the user.
+`/ductus`'s hook-installation logic used the presence of this sentinel to distinguish a ductus-installed hook from a hand-rolled one. When the sentinel was present, `/ductus` treated the file as `update`-strategy and overwrote it on subsequent runs (subject to `.ductus/config.toml` `[pinned] files`). When it was absent, `/ductus` skipped installation and warned the user.
 
 **Post-018:** the sentinel line still ships, but it moved with the ownership split described in the signpost at the top of `spec.md`, and no `/ductus` step reads it now: the Shared Files manifest's row decides each hook file's strategy. `018-adopter-owned-pre-commit` made `framework/bootstrap/hooks/pre-commit` an adopter-owned `create`-strategy outer stub carrying **no** sentinel, and put the ductus-owned orchestration in `.githooks/ductus-pre-commit`, which carries `# managed-by: ductus` on line 2. The migration that read it to recognize a spec-017-era hook was retired on 2026-11-18 (018 §Migration). Pinning is `.ductus/config.toml`.
 
