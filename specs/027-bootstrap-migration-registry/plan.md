@@ -203,7 +203,7 @@ Q11. A primitive that reads the registry, computes the filter, and dispatches pr
 
 ### Considered: git archaeology inside Family 10 (rejected)
 
-Q9. A check that walks `git log -- framework/templates/ framework/commands/` to detect deletions without a corresponding registry entry would catch "removal without migration" mistakes automatically. Rejected because (a) it couples the check to commit history shape (rebases, squashes lose signal), and (b) it requires distinguishing "convention removal" from "internal refactor that renamed a file" — open-ended classification. 10d does read history, but only `framework/migrations.toml`'s own, to order its entries, which needs no such classification. The cleaner alternative is a separate pre-commit hook (captured as out-of-scope follow-on) that compares PR diffs against registry changes.
+Q9. A check that walks `git log -- framework/templates/ framework/commands/` to detect deletions without a corresponding registry entry would catch "removal without migration" mistakes automatically. Rejected because (a) it couples the check to commit history shape (rebases, squashes lose signal), and (b) it requires distinguishing "convention removal" from "internal refactor that renamed a file" — open-ended classification. 10d does read history, but only `framework/migrations.toml`'s own, to order its entries, which needs no such classification. The cleaner alternative, a separate pre-commit hook that compares a commit's diff against registry changes, is out of scope with no follow-on (spec.md's Out of scope list; owner decision, 2026-11-19).
 
 ### Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)
 
