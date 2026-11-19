@@ -3,8 +3,9 @@
 //!
 //! A cross-pass dedup breaks a severity tie by the higher confidence, and a
 //! `low`-confidence finding lands in Low-confidence whatever its severity. `blocking` is
-//! true exactly when `must-violations` exceeds zero, and the exit code (0 / 1) is
-//! derivable from it. The empty scope is a branch of this primitive, not a prose special
+//! true exactly when `must-violations` exceeds zero or the criteria step judged a
+//! criterion not met (066 task 27), and the exit code (0 / 1) is derivable from it.
+//! The empty scope is a branch of this primitive, not a prose special
 //! case. It wrote a second copy into a `review:` block in `spec.md` until spec 057 left
 //! the record one home.
 //!

@@ -60,8 +60,8 @@ Written to `specs/NNN-feature/review.md` — one review artifact per spec, regar
 
 ### Frontmatter
 
-The run record, and since 057 the **only** copy of it. Written in the order
-below on every run.
+The run record, and since 057 the **only** copy of it. The example shows a
+subset: the table below lists every field, and `write-review` fixes the order.
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
 > `captured-issues` is gone: observations are no longer written to the inbox,
@@ -107,7 +107,7 @@ decisions:                           # omitted entirely when empty
 | `spec` | string | yes | Feature slug — matches the parent directory. |
 | `scenario` | string | no | Written only when the run was scenario-targeted; absent otherwise. |
 | `last-run` | ISO 8601 timestamp or null | yes | Set on each run. Spelled `reviewed-at` here until 057; the spec block called the same instant `last-run`, and one home leaves one spelling. Null only on a record that has never run. |
-| `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for one thing, the mechanical-sweep rename exemption. |
+| `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for two things: the mechanical-sweep rename exemption, and the end of the record's window (`diff-base` to `reviewed-against`), which `compute-review-scope` reads to credit what the record states it read (081). |
 | `diff-base` | string (Git SHA) | yes | The window's start `compute-review-scope` resolved (`base-source` names which), or the value passed to `--since=<ref>`. |
 | `must-violations` | integer ≥ 0 | yes | Count after waivers and releasing deferrals (076). |
 | `should-violations` | integer ≥ 0 | yes | SHOULD-tier count, after waivers and releasing deferrals (076), as `must-violations`. |

@@ -735,8 +735,10 @@ When MUST violations are present:
 The `analyze` row renders on the blocking path too: the fixes that clear the
 violations are exactly what supersedes the recorded analysis.
 
-Exit code: `0` when not blocking, `1` when blocking. Allows CI to gate on the
-exit code without parsing the report.
+Exit code: `0` when not blocking, `1` when blocking, carried in `write-review`'s
+result as `exit-code`. The CLI and `ductus exec` exit 0 once the record is written,
+so CI gates on the committed record's `blocking` (the CI template's audit-record
+gate), not on an exit status.
 
 ## Idempotency
 

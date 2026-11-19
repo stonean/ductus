@@ -1930,7 +1930,7 @@ pub struct WriteReviewResult {
     pub observations: u32,
     /// How the observations were dispositioned — the map this call recorded.
     pub dispositions: Dispositions,
-    /// `true` when `must-violations` exceeds zero.
+    /// `true` when `must-violations` exceeds zero or a criterion is judged not met.
     pub blocking: bool,
     /// Derived exit code: 1 when blocking, else 0.
     pub exit_code: i32,
