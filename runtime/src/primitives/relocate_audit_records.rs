@@ -31,7 +31,8 @@
 //! is the *normal* case for the review half, not a conflict to refuse — the
 //! block is merged into the artifact's frontmatter instead. The spec block
 //! wins on a disagreement, because it is the copy every gate actually read,
-//! and each disagreeing key is **reported**: 031 and 041 are exactly why a
+//! a key is compared and carried with its whole value, indented lines
+//! included, and each disagreeing key is **reported**: 031 and 041 are exactly why a
 //! migration must not resolve that difference quietly.
 //!
 //! `analysis.md` almost never exists before this, so its half is nearly always a
@@ -271,36 +272,38 @@ fn render_artifact(
 
     let mut out = String::from("---\n");
     if let Some((existing_fm, _)) = &existing {
-        let block_keys = keyed(lines);
-        for line in existing_fm.lines() {
-            let Some(key) = top_level_key(line) else {
-                continue;
-            };
+        let block_values = block_values(lines);
+        // Each entry — a key line and the lines of its value — is carried,
+        // renamed or dropped as a unit.
+        for entry in entries(existing_fm.lines()) {
             // A key the block spells differently is the same field, so it is
             // compared and dropped rather than carried forward beside its
             // other spelling. See [`LEGACY_ALIASES`].
-            let block_key = legacy_alias(key).unwrap_or(key);
-            if let Some(block_value) = block_keys.get(block_key) {
+            let block_key = legacy_alias(entry.key).unwrap_or(entry.key);
+            if let Some(block_value) = block_values.get(block_key) {
                 // The block wins, but the difference is named rather than
                 // quietly dropped. The disagreement names the key as the
                 // artifact spelled it, so an operator can see which side
                 // carried what.
-                let artifact_value = line.split_once(':').map(|(_, v)| v.trim());
-                if artifact_value.is_some_and(|v| v != block_value.trim()) {
-                    disagreements.push(format!("{file}:{key}"));
+                if entry.value().is_some_and(|v| v != *block_value) {
+                    disagreements.push(format!("{file}:{}", entry.key));
                 }
                 continue;
             }
-            if let Some(current) = legacy_alias(key) {
+            if let Some(current) = legacy_alias(entry.key) {
                 // The block carries no value for this field, so the
                 // artifact's is the only one there is — renamed rather than
                 // emitted under a spelling nothing reads any more.
-                let value = line.split_once(':').map_or("", |(_, v)| v.trim());
+                let value = entry.line.split_once(':').map_or("", |(_, v)| v.trim());
                 let _ = writeln!(out, "{current}: {value}");
-                continue;
+            } else {
+                out.push_str(entry.line);
+                out.push('\n');
             }
-            out.push_str(line);
-            out.push('\n');
+            for child in &entry.children {
+                out.push_str(child);
+                out.push('\n');
+            }
         }
     } else {
         let _ = writeln!(out, "spec: {feature}");
@@ -354,15 +357,72 @@ fn top_level_key(line: &str) -> Option<&str> {
     line.split(':').next().map(str::trim)
 }
 
-/// The block's top-level keys, mapped to their raw values, for merge comparison.
-fn keyed(lines: &[String]) -> std::collections::BTreeMap<&str, &str> {
-    lines
-        .iter()
-        .filter_map(|line| {
-            let key = top_level_key(line)?;
-            let value = line.split_once(':').map(|(_, v)| v)?;
-            Some((key, value))
-        })
+/// A top-level frontmatter key line with the lines that belong to its value.
+struct Entry<'a> {
+    line: &'a str,
+    key: &'a str,
+    /// Indented lines, column-zero sequence items and the blank lines between
+    /// them, in order.
+    children: Vec<&'a str>,
+}
+
+impl Entry<'_> {
+    /// The key's whole value, for comparison: the text after the first colon,
+    /// then each non-blank child trimmed on its own line, so a difference of
+    /// indentation alone is no difference. `None` for a line with no colon.
+    fn value(&self) -> Option<String> {
+        let (_, first) = self.line.split_once(':')?;
+        let mut value = first.trim().to_string();
+        for child in self
+            .children
+            .iter()
+            .filter(|child| !child.trim().is_empty())
+        {
+            value.push('\n');
+            value.push_str(child.trim());
+        }
+        Some(value)
+    }
+}
+
+/// Group frontmatter lines into entries. A line belongs to the key above it
+/// when it is indented, or is a column-zero sequence item (`- x`), or is blank
+/// and followed, past any further blanks, by such a line. Any other blank line
+/// is dropped; an indented line before any key is dropped.
+fn entries<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<Entry<'a>> {
+    let mut out: Vec<Entry<'a>> = Vec::new();
+    let mut blanks: Vec<&'a str> = Vec::new();
+    for line in lines {
+        if line.trim().is_empty() {
+            blanks.push(line);
+            continue;
+        }
+        let sequence = line.trim_end() == "-" || line.starts_with("- ");
+        let indented = line.starts_with([' ', '\t']);
+        match out.last_mut() {
+            Some(entry) if indented || sequence => {
+                entry.children.append(&mut blanks);
+                entry.children.push(line);
+            }
+            None if indented => blanks.clear(),
+            _ => {
+                blanks.clear();
+                out.push(Entry {
+                    line,
+                    key: top_level_key(line).unwrap_or(""),
+                    children: Vec::new(),
+                });
+            }
+        }
+    }
+    out
+}
+
+/// The block's top-level keys, mapped to their whole values, for merge comparison.
+fn block_values(lines: &[String]) -> std::collections::BTreeMap<&str, String> {
+    entries(lines.iter().map(String::as_str))
+        .into_iter()
+        .filter_map(|entry| Some((entry.key, entry.value()?)))
         .collect()
 }
 
@@ -383,9 +443,26 @@ fn split_record_blocks(fm_text: &str) -> (String, Vec<(String, Vec<String>)>) {
     let mut kept = String::new();
     let mut blocks: Vec<(String, Vec<String>)> = Vec::new();
     let mut current: Option<String> = None;
+    // Blank lines seen since the last other line: inside the block when an
+    // indented line follows, otherwise outside it.
+    let mut blanks = 0usize;
 
     for line in fm_text.lines() {
+        if line.is_empty() {
+            blanks += 1;
+            continue;
+        }
         let indented = line.starts_with([' ', '\t']);
+        if current.is_some() && indented {
+            if let Some((_, lines)) = blocks.last_mut() {
+                lines.extend(std::iter::repeat_n(String::new(), blanks));
+                lines.push(line.strip_prefix("  ").unwrap_or(line).to_string());
+            }
+            blanks = 0;
+            continue;
+        }
+        kept.push_str(&"\n".repeat(blanks));
+        blanks = 0;
         if !indented {
             let key = line.split(':').next().unwrap_or("").trim();
             if matches!(key, "review" | "analyze") && line.trim_end().ends_with(':') {
@@ -393,18 +470,12 @@ fn split_record_blocks(fm_text: &str) -> (String, Vec<(String, Vec<String>)>) {
                 blocks.push((key.to_string(), Vec::new()));
                 continue;
             }
-            current = None;
-        }
-        if current.is_some() && indented {
-            if let Some((_, lines)) = blocks.last_mut() {
-                lines.push(line.strip_prefix("  ").unwrap_or(line).to_string());
-            }
-            continue;
         }
         current = None;
         kept.push_str(line);
         kept.push('\n');
     }
+    kept.push_str(&"\n".repeat(blanks));
     // A key present with no indented body carries no record to move.
     blocks.retain(|(_, lines)| !lines.is_empty());
     (kept, blocks)
@@ -814,5 +885,167 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
+    }
+
+    /// The frontmatter lines of a file written by the primitive.
+    fn frontmatter_of(path: &Path) -> String {
+        let text = fs::read_to_string(path).unwrap();
+        split_frontmatter(&text, path).unwrap().0.to_string()
+    }
+
+    const REVIEW_HEAD: &str = "---\nspec: 001-x\n";
+
+    /// A key the block does not override keeps every line of its value — an
+    /// indented list, a map, a block scalar with an interior blank line — in
+    /// order, beside the block's own keys (spec 057, scenario
+    /// `a-merge-carries-each-keys-whole-value`).
+    #[test]
+    fn a_kept_multi_line_key_carries_its_children() {
+        let tmp = repo(SPEC);
+        let dir = tmp.path().join("specs/001-x");
+        let artifact = format!(
+            "{REVIEW_HEAD}waivers:\n  - rule: X\n    reason: because\nreviewed-digest:\n  spec.md: abc\nnote: |\n  first\n\n  second\nflow: [1, 2]\n# keep\n---\n\n# Review — 001-x\n"
+        );
+        fs::write(dir.join("review.md"), artifact).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.disagreements.is_empty(), "{result:?}");
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(
+            fm.starts_with(
+                "spec: 001-x\nwaivers:\n  - rule: X\n    reason: because\nreviewed-digest:\n  spec.md: abc\nnote: |\n  first\n\n  second\nflow: [1, 2]\n# keep\n"
+            ),
+            "{fm}"
+        );
+        assert!(fm.contains("last-run: 2026-08-01T00:00:00Z"), "{fm}");
+        assert!(fm.contains("must-violations: 0"), "{fm}");
+    }
+
+    /// A key the block overrides is replaced whole, and named when its whole
+    /// value differs; a re-indented copy of the same value is not a difference.
+    #[test]
+    fn an_overridden_multi_line_key_is_replaced_whole_and_a_difference_is_named() {
+        let spec = "---\nstatus: done\ndependencies: []\nreview:\n  last-run: 2026-08-01T00:00:00Z\n  waivers:\n    - rule: Y\n      reason: new\n---\n\n# 001 — X\n";
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!(
+                "{REVIEW_HEAD}waivers:\n  - rule: X\n    reason: old\n---\n\n# Review — 001-x\n"
+            ),
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.disagreements, ["review.md:waivers"]);
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(fm.contains("rule: Y"), "{fm}");
+        assert!(!fm.contains("rule: X"), "{fm}");
+        assert_eq!(fm.matches("waivers:").count(), 1, "{fm}");
+
+        // The same value indented differently agrees.
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!(
+                "{REVIEW_HEAD}waivers:\n    - rule: Y\n      reason: new\n---\n\n# Review — 001-x\n"
+            ),
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.disagreements.is_empty(), "{result:?}");
+    }
+
+    /// A key renamed by the legacy-spelling fold keeps its lines.
+    #[test]
+    fn a_renamed_legacy_key_keeps_its_children() {
+        let spec = "---\nstatus: done\ndependencies: []\nreview:\n  must-violations: 0\n---\n\n# 001 — X\n";
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!(
+                "{REVIEW_HEAD}reviewed-at:\n  at: 2026-07-04T00:00:00Z\n---\n\n# Review — 001-x\n"
+            ),
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(
+            fm.contains("last-run: \n  at: 2026-07-04T00:00:00Z\n"),
+            "{fm}"
+        );
+        assert!(!fm.contains("reviewed-at"), "{fm}");
+    }
+
+    /// Input with no multi-line key merges as it did: a blank line between two
+    /// scalar keys of an existing artifact is still dropped.
+    #[test]
+    fn a_blank_line_between_scalar_keys_is_still_dropped() {
+        let tmp = repo(SPEC);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!("{REVIEW_HEAD}diff-base: cafe\n\nadvisory: 1\n---\n\n# Review — 001-x\n"),
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(
+            fm.starts_with("spec: 001-x\ndiff-base: cafe\nadvisory: 1\nlast-run:"),
+            "{fm}"
+        );
+    }
+
+    /// A blank line between two lines of a record block does not end it: both
+    /// lines move, and `spec.md` keeps no orphan indented line.
+    #[test]
+    fn a_blank_line_inside_a_spec_block_does_not_end_it() {
+        let spec = "---\nstatus: done\ndependencies: []\nreview:\n  last-run: 2026-08-01T00:00:00Z\n\n  must-violations: 2\nnext-criterion: 7\n---\n\n# 001 — X\n";
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        run(&args(), tmp.path()).unwrap();
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(fm.contains("last-run: 2026-08-01T00:00:00Z"), "{fm}");
+        assert!(fm.contains("must-violations: 2"), "{fm}");
+        let rewritten = fs::read_to_string(dir.join("spec.md")).unwrap();
+        assert!(!rewritten.contains("must-violations"), "{rewritten}");
+        let (spec_fm, _) = split_frontmatter(&rewritten, Path::new("spec.md")).unwrap();
+        let map: std::collections::BTreeMap<String, serde_norway::Value> =
+            serde_norway::from_str(spec_fm).unwrap();
+        assert_eq!(map.len(), 3, "{spec_fm}");
+    }
+
+    /// A sequence written at its key's own indent belongs to that key: kept
+    /// whole when the block does not override it, dropped whole when it does.
+    #[test]
+    fn a_column_zero_sequence_belongs_to_its_key() {
+        let tmp = repo(SPEC);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!("{REVIEW_HEAD}waivers:\n- rule: X\n- rule: Z\n---\n\n# Review — 001-x\n"),
+        )
+        .unwrap();
+        run(&args(), tmp.path()).unwrap();
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(
+            fm.starts_with("spec: 001-x\nwaivers:\n- rule: X\n- rule: Z\n"),
+            "{fm}"
+        );
+
+        let spec =
+            "---\nstatus: done\ndependencies: []\nreview:\n  waivers: []\n---\n\n# 001 — X\n";
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!("{REVIEW_HEAD}waivers:\n- rule: X\n---\n\n# Review — 001-x\n"),
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.disagreements, ["review.md:waivers"]);
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert!(!fm.contains("rule: X"), "{fm}");
+        assert!(fm.contains("waivers: []"), "{fm}");
     }
 }
