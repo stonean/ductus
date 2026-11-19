@@ -1270,7 +1270,7 @@ mod tests {
             &dst,
             vec![entry("a.md", "a.md", "update")],
             vec![],
-            subs(&[("{project}", "magpie")]),
+            subs(&[("{project}", "acme")]),
         );
         let err = run(&args, tmp.path()).unwrap_err();
         assert!(
@@ -1325,7 +1325,7 @@ mod tests {
                 entry("b.md", "b.md", "create"),
             ],
             vec![],
-            subs(&[("project", "magpie")]),
+            subs(&[("project", "acme")]),
         );
         let err = run(&args, tmp.path()).unwrap_err();
         let text = err.to_string();
@@ -1366,7 +1366,7 @@ mod tests {
                 entry("copied.md", "copied.md", "skip-if-conflict"),
             ],
             vec![],
-            subs(&[("project", "magpie")]),
+            subs(&[("project", "acme")]),
         );
         run(&args, tmp.path()).unwrap();
         assert_eq!(

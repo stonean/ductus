@@ -10,7 +10,7 @@ section: "Follow-on scenarios"
 
 What the decision did not consider is the **unchecked** form. Its edge cases are written against `- [x] Done when: …`, where clause-not-subtask is invisible to a reader: the box is already ticked, so excluding it changes nothing anyone sees. When `/ductus:plan` authors `- [ ] Done when: …` and the line is never ticked, the exclusion becomes visible — `/ductus:implement`'s completion tally counts only real subtasks, all of which are checked, and reports the task complete while an unchecked box sits on screen directly beneath it.
 
-Observed on the adopter project `nookwit/magpie`: `/magpie:implement` reported "all checked" against tasks whose `tasks.md` still showed unchecked boxes. Magpie normalized its two specs to the canonical `- **Done when**: …` form (001 + 002, 27 lines), so it no longer trips — the workaround removed the symptom from one repo, not the defect from the runtime. Any adopter whose task breakdown is authored by `/ductus:plan` in the checkbox form reproduces it.
+Observed on an adopter project: its `/{project}:implement` reported "all checked" against tasks whose `tasks.md` still showed unchecked boxes. The project normalized its two specs to the canonical `- **Done when**: …` form (001 + 002, 27 lines), so it no longer trips — the workaround removed the symptom from one repo, not the defect from the runtime. Any adopter whose task breakdown is authored by `/ductus:plan` in the checkbox form reproduces it.
 
 The defect is a reporting one: the runtime's tally and the human's reading of the same file disagree, and the human has no way to tell which is right.
 

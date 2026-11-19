@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn checkbox_form_done_when_is_excluded_from_subtask_indexing() {
-        // The magpie / `/ductus:plan`-authored shape: a checkbox-form done-when
+        // An adopter's `/ductus:plan`-authored shape: a checkbox-form done-when
         // (`- [x] Done when: …`) as the task's last `- [x]` line. It carries
         // a checkbox but must not be addressable as a subtask, and the real
         // subtasks before it must keep their indexes — matching what

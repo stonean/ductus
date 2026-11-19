@@ -260,6 +260,11 @@ Stable relationships post-rewrite:
 - Reimplementing `npx markdownlint-cli2` natively — the runtime wraps it as a primitive.
 - Building any non-MCP integration surface (LSP, web UI, REST). Speculative; would need its own spec under §runtime-boundary's eligibility criteria.
 
+## Applicable Rules
+
+- departs: `BE-TIMEOUT-001`
+  - reason: `ductus exec`'s waits for an `llm-response` or a `gate-response` are on the host that spawned the runtime and holds both of its pipes, and a gate waits on a person, so no bound fits either wait; the walk ends when the host closes stdin, which `read_envelope` reports as the end of input (owner decision, 2026-11-19)
+
 ## Open Questions
 
 *None — all resolved.*
