@@ -346,6 +346,8 @@ Checks:
 
 ## Severity tiers
 
+<!-- audit:kept a scenario of spec 067 names it as the four tiers -->
+
 - **Hard fail (blocking)** — required-field violations and malformed frontmatter. The spec is not valid until these are fixed; pipeline advancement is blocked.
 - **Blocking** — structural or content issues that must be fixed before the next pipeline gate fires.
 - **Advisory** — issues that should be fixed but do not block advancement.
@@ -365,6 +367,8 @@ Every finding still live when detection ends — hard fail, blocking, and adviso
 - **A `decisions:` list that does not parse is reported, never read as empty.** `validate-frontmatter` names it as a hard fail, and `process-decisions` and `write-analysis` refuse it. Until it is repaired no stored decision applies, each finding it held takes a new disposition, and the run cannot record over it. A malformed list can cost a repeated question, never a silently waived finding.
 
 ## Record fields
+
+<!-- audit:kept the constitution names it as the analyze record's field semantics -->
 
 The analyze record's fields and types are declared in the constitution's §text-first-artifacts; what each means:
 

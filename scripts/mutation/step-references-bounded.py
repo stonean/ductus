@@ -4,7 +4,8 @@ bounded (BE-PAYLOAD-001). Each mutation removes one part of the bound in
 leaving the result or entering the file, a count, and the segment the file
 sits under. The tests that kill them are
 `the_lists_are_inline_while_the_result_fits` and
-`the_lists_are_in_a_file_past_the_read_size`.
+`the_lists_are_in_a_file_past_the_read_size`. The sixth list, `reachability`, is
+held by `step-references-reach.py`.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/step-references-bounded.py
 [ID ...]`; see run.py for the format. This file is data, read with

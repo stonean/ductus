@@ -17,7 +17,7 @@ Spec 071 (command reference split) records the requirement in its scenario `refe
 - A reference with no `##` section is reported as having none, a state of its own beside the examined ones, and a reference whose command or text cannot be read is a `skipped` entry with its reason: neither reads as a pass.
 - The result states `sections-examined`, `sections-exempt`, `sections-unreached` and `references-without-sections` beside `reachability`, a per-reference list moved to the `lists-file` with the other lists past `[artifacts] read-size-bytes`. The CLI exits non-zero when `findings` is not empty or a subject could not be read.
 - The check runs in a tree holding `framework/commands/` and `framework/reference/`; in an adopter's project it examines nothing and reports the skip that the Instructions subject already reports.
-- Measured over this repository's tree by counting `##` headings outside fenced blocks in each `framework/reference/<command>.md` that has a command, under this walk: 74 sections, 2 of them the exempt pair, 0 unreached.
+- Measured by `check-step-references` over this repository at the commit that added the check: 74 `##` sections outside fenced blocks and comments in 13 references, 2 exempt, 0 unreached, and 6 references with no section (`audit`, `consolidate`, `log`, `prune`, `specify`, `status`). The designer's independent count by script over the same tree gave 74 sections and the same two unreached before the markers.
 
 ## Edge Cases
 

@@ -2,7 +2,7 @@
 # Test surface for the file form of /audit Family 34
 # (scripts/audit/step-reference-integrity.sh; spec 026 task 6, BE-PAYLOAD-001).
 #
-# `check-step-references` returns its five lists inline while the result fits
+# `check-step-references` returns its six lists inline while the result fits
 # `[artifacts] read-size-bytes` and past it in the file its `lists-file` names.
 # The family renders the lists, so in the file form it must read them there,
 # and a file it cannot read, or one lacking a list, must be a finding that
@@ -18,6 +18,8 @@
 #      finding and reports no step reference as checked
 #   D. a result naming a list file that lacks a list is a `(precondition)`
 #      finding too
+#   E. a reference section no step of its command reaches is reported in both
+#      forms, and a section reached only through a reached section is not
 #
 # Needs the release runtime (runtime/target/release/ductus), as
 # framework-checks.yml builds it before this step.
@@ -121,14 +123,37 @@ fi
 echo "D. a list file lacking a list"
 dir="$(make_tree lacking)"
 mkdir -p "$dir/.ductus/results"
-printf '{"findings": [], "examined": ["x"], "with-steps": [], "not-a-procedure": []}\n' > "$dir/.ductus/results/partial.json"
+printf '{"findings": [], "examined": ["x"], "with-steps": [], "not-a-procedure": [], "skipped": []}\n' > "$dir/.ductus/results/partial.json"
 stub "$dir" '{"form":"file","lists-file":".ductus/results/partial.json","findings-count":0,"examined-count":1,"with-steps-count":0,"not-a-procedure-count":0,"skipped-count":0,"references-out-of-subject":0}'
 run_family "$dir"
 if [ "$code" = 1 ] && printf '%s' "$out" | grep -q '(precondition)' \
-  && printf '%s' "$out" | grep -q 'holds no skipped list'; then
+  && printf '%s' "$out" | grep -q 'holds no reachability list'; then
   pass "a list file missing a list is a precondition finding"
 else
   fail "list file lacking a list: exit $code, output: $out"
+fi
+
+echo "E. an unreached reference section"
+# cmd.md cites Reached; Reached cites Through by `§`; Orphan is cited by nothing.
+dir="$(make_tree sections)"
+mkdir -p "$dir/framework/reference"
+sed -i.bak 's/see step 9\./see step 2./' "$dir/framework/commands/cmd.md" && rm "$dir/framework/commands/cmd.md.bak"
+printf '%s\n' '' 'Read **§Reached** in `.ductus/reference/cmd.md`.' >> "$dir/framework/commands/cmd.md"
+printf '%s\n' '# Cmd reference' '' '## Reached' '' 'See §Through.' '' '## Through' '' 'Text.' '' '## Orphan' '' 'Text.' > "$dir/framework/reference/cmd.md"
+run_family "$dir"
+inline_out="$out"
+if [ "$code" = 1 ] && printf '%s' "$out" | grep -q '`## Orphan` is reached by no step' \
+  && ! printf '%s' "$out" | grep -q 'Through'; then
+  pass "an unreached section is reported, and one reached through a reached section is not"
+else
+  fail "unreached section: exit $code, output: $out"
+fi
+printf '[artifacts]\nread-size-bytes = 1\n' > "$dir/.ductus/config.toml"
+run_family "$dir"
+if [ "$code" = 1 ] && [ "$out" = "$inline_out" ]; then
+  pass "the file form reports the same unreached section"
+else
+  fail "unreached section, file form: exit $code, output: $out"
 fi
 
 if [ "$failures" -gt 0 ]; then

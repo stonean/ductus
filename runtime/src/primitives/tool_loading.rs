@@ -118,6 +118,26 @@ fn bold_regex() -> &'static Regex {
     R.get_or_init(|| Regex::new(r"\*\*([^*]+)\*\*").expect("hard-coded regex compiles"))
 }
 
+/// A markdown link to a heading of the same document, `[text](#slug)`.
+#[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
+fn anchor_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\]\(#([^)\s]+)\)").expect("hard-coded regex compiles"))
+}
+
+/// The anchor a markdown renderer gives `heading`: lowercase, each space a
+/// hyphen, and every character that is not a letter, a digit, `_` or `-`
+/// dropped.
+fn heading_slug(heading: &str) -> String {
+    heading
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || matches!(c, '_' | '-') || c.is_whitespace())
+        .map(|c| if c.is_whitespace() { '-' } else { c })
+        .collect()
+}
+
 /// A name written as an invocation: `invoke`, `invokes` or `invoking`, an
 /// optional `the`, then the backticked name.
 #[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
@@ -181,7 +201,8 @@ impl Indexed {
 /// A line of the command file
 /// cites a section with a `§` followed by its heading, matched longest
 /// first and ending where a word ends ([`cited_heading`]), or with a bold
-/// span equal to its heading. A line naming `.ductus/reference/<name>.md`
+/// span equal to its heading, or with a markdown anchor link to it
+/// ([`heading_slug`]). A line naming `.ductus/reference/<name>.md`
 /// resolves only against the references it names; any other line against
 /// its own document, then the command file, then the command's own
 /// reference, the one its text names as `.ductus/reference/<command>.md`.
@@ -200,8 +221,50 @@ impl Indexed {
 pub fn cited_tools<E>(
     text: &str,
     command: &str,
-    mut read_reference: impl FnMut(&str) -> Result<String, E>,
+    read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<BTreeSet<&'static str>, E> {
+    walk_citations(text, command, read_reference).map(|walk| walk.tools)
+}
+
+/// The sections a command's citations reach, as (reference name, heading)
+/// pairs: the same walk as [`cited_tools`], which also follows a markdown
+/// anchor link `[text](#slug)` to the heading it names in the document
+/// holding the link ([`heading_slug`]). A section of the command file itself
+/// is not a reference's and is left out. Spec 026's `check-step-references`
+/// judges each reference's `##` sections against it.
+///
+/// # Errors
+///
+/// What `read_reference` returns for a reference it cannot read.
+pub fn cited_sections<E>(
+    text: &str,
+    command: &str,
+    read_reference: impl FnMut(&str) -> Result<String, E>,
+) -> Result<BTreeSet<(String, String)>, E> {
+    walk_citations(text, command, read_reference).map(|walk| {
+        walk.seen
+            .into_iter()
+            .filter_map(|(doc, heading)| match doc {
+                Doc::Reference(name) => Some((name, heading)),
+                Doc::Command => None,
+            })
+            .collect()
+    })
+}
+
+/// What [`walk_citations`] found: the tools invoked and every section
+/// reached.
+struct Walk {
+    tools: BTreeSet<&'static str>,
+    seen: BTreeSet<(Doc, String)>,
+}
+
+/// The citation walk [`cited_tools`] and [`cited_sections`] share.
+fn walk_citations<E>(
+    text: &str,
+    command: &str,
+    mut read_reference: impl FnMut(&str) -> Result<String, E>,
+) -> Result<Walk, E> {
     // A comment is content, not an invocation or a citation, whether it spans
     // lines or sits on one (plan *Batched (AC29)*).
     let mut skip = SkipScanner::default();
@@ -275,6 +338,13 @@ pub fn cited_tools<E>(
                     queue.push((doc.clone(), inner.to_owned()));
                 }
             }
+            // A link to a heading names it in the document holding the
+            // link, wherever the link sits.
+            for cap in anchor_regex().captures_iter(line) {
+                if let Some(heading) = docs[from].texts.iter().find(|h| heading_slug(h) == cap[1]) {
+                    queue.push((from.clone(), heading.clone()));
+                }
+            }
         }
         Ok(())
     };
@@ -297,7 +367,7 @@ pub fn cited_tools<E>(
         );
         cite(&doc, &body, &mut docs, &mut queue)?;
     }
-    Ok(tools)
+    Ok(Walk { tools, seen })
 }
 
 /// `text`, a command copy after substitution, with a last paragraph added to
@@ -942,6 +1012,25 @@ mod tests {
             vec!["derive-boundary"],
             "the cited section's invocation counts, its mention and an uncited section do not"
         );
+    }
+
+    /// A markdown anchor link to a heading of the document holding it reaches
+    /// that section, so the tool it invokes loads and `cited_sections` names
+    /// it (spec 026, `check-step-references`); a link to no heading of the
+    /// document reaches nothing.
+    #[test]
+    fn an_anchor_link_reaches_the_section_it_names_in_its_own_document() {
+        let command =
+            format!("{OWN}## Instructions\n\n1. Run **§Top** in `.ductus/reference/x.md`.\n");
+        let reference = "## Top\n\nSee [the row](#the-row), [none](#nowhere).\n\n\
+                         ## The row\n\nInvoke `mark-task`.\n\n## Other\n\nInvoke `append-task`.\n";
+        assert_eq!(cited(&command, &[("x", reference)]), vec!["mark-task"]);
+        let sections = cited_sections(&command, "x", |_: &str| -> Result<String, String> {
+            Ok(reference.to_owned())
+        })
+        .unwrap();
+        let names: Vec<&str> = sections.iter().map(|(_, h)| h.as_str()).collect();
+        assert_eq!(names, vec!["The row", "Top"]);
     }
 
     /// An invocation inside a fenced block or an HTML comment of a cited

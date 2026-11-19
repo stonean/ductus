@@ -48,7 +48,7 @@
 # bootstrap procedures. A numbered list outside Instructions restarts at 1 and
 # is a different list, so its mentions are counted and not resolved (a
 # command's reference is its own file under
-# framework/reference/, outside the subject);
+# framework/reference/, outside the step subject, which the second subject below reads);
 # a file whose Instructions holds several lists rather than one procedure
 # (`amend.md` restarts under each subsection, `status.md` uses three one-item
 # lists) is named in `not-a-procedure` rather than examined, because resolving
@@ -66,7 +66,15 @@
 # the examined-set guard above unrun, which reads as clean. Its exit status is
 # tested, and a non-zero one is a finding.
 #
-# Past `[artifacts] read-size-bytes` the primitive moves its five lists to the
+# SECOND SUBJECT — the `##` sections of each framework/reference/<command>.md
+# that its command reaches (spec 026, from 071's scenario
+# reference-sections-are-reached-by-a-step). An agent reads a section only where
+# a step names it, so one no step reaches is never read: an `unreached-section`
+# finding, unless it carries an `audit:kept` marker with a stated reason
+# (`empty-exemption`, `stale-exemption` and `misplaced-exemption` keep the
+# marker honest). A reference with no section is counted apart, not passed.
+#
+# Past `[artifacts] read-size-bytes` the primitive moves its six lists to the
 # file its `lists-file` names, relative to the repository root where this
 # family runs (026 task 6, BE-PAYLOAD-001). The render reads them there, and a
 # file it cannot read, or one lacking a list, is a `(precondition)` finding
@@ -117,7 +125,7 @@ if d.get("form") == "file":
     try:
         with open(d["lists-file"], encoding="utf-8") as handle:
             lists = json.load(handle)
-        missing = [key for key in ("findings", "examined", "with-steps", "not-a-procedure", "skipped")
+        missing = [key for key in ("findings", "examined", "with-steps", "not-a-procedure", "skipped", "reachability")
                    if not isinstance(lists.get(key), list)]
         if missing:
             raise ValueError("it holds no {} list".format(", ".join(missing)))
@@ -132,6 +140,10 @@ FIX = {
     "unresolved": "renumber the reference to the step it means, or restore the step it named",
     "self-reference": "a step referring to its own number is renumbering residue — point it at the step it meant",
     "discontinuous": "renumber the Instructions list so it runs 1..n without gaps",
+    "unreached-section": "cite the section from the step that needs it, delete it if it only restates, or mark it with an audit:kept comment stating the reader outside the command that keeps it",
+    "empty-exemption": "state the reason in the audit:kept comment, or remove it",
+    "stale-exemption": "remove the audit:kept comment: the section is reached",
+    "misplaced-exemption": "move the audit:kept comment to the line directly beneath its ## heading, or remove it",
 }
 
 for f in d.get("findings", []):
@@ -151,12 +163,19 @@ sys.stderr.write(
     "{} not one procedure (not resolved: {}); "
     "{} reference(s) outside the Instructions section were counted, not resolved. "
     "A reference that renumbering shifted onto a DIFFERENT existing step is not "
-    "detectable here and is not claimed.\n".format(
+    "detectable here and is not claimed. "
+    "Reference sections: {} judged in {} reference(s), {} exempt, {} unreached, "
+    "{} reference(s) with no section (not a pass: nothing to reach).\n".format(
         len(d.get("examined", [])),
         len(d.get("with-steps", [])),
         len(d.get("not-a-procedure", [])),
         ", ".join(d.get("not-a-procedure", [])) or "none",
         d.get("references-out-of-subject", 0),
+        d.get("sections-examined", 0),
+        len(d.get("reachability", [])),
+        d.get("sections-exempt", 0),
+        d.get("sections-unreached", 0),
+        d.get("references-without-sections", 0),
     )
 )
 '

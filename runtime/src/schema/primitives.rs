@@ -7945,7 +7945,9 @@ pub struct CheckCorpusLinksResult {
 /// Args for `check-step-references`. Reports `step N` prose references in a
 /// command file that name a step the file does not have. Maintainer scope: the
 /// subject is `framework/commands/` plus the two bootstrap procedures, where
-/// the drift originates, not the generated copies an adopter cannot repair.
+/// the drift originates, not the generated copies an adopter cannot repair,
+/// and the `##` sections of each `framework/reference/` file that its command
+/// reaches.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckStepReferencesArgs {}
@@ -7959,13 +7961,40 @@ pub struct StepReferenceFinding {
     /// 1-based line the reference sits on; `0` for a whole-file finding
     /// (`discontinuous`, `no-steps-extracted`), which names no single line.
     pub line: usize,
-    /// `unresolved`, `self-reference`, or `discontinuous` — a closed set,
-    /// because the repairs differ.
+    /// `unresolved`, `self-reference`, `discontinuous`, `unreached-section`,
+    /// `empty-exemption`, `stale-exemption` or `misplaced-exemption` — a
+    /// closed set, because the repairs differ.
     pub kind: String,
-    /// The step number referenced; `0` for a whole-file finding.
+    /// The step number referenced; `0` for a whole-file finding and for the
+    /// four section kinds, which name a reference file and its line.
     pub reference: u32,
     /// What is wrong, in the maintainer's terms.
     pub message: String,
+}
+
+/// A reference section kept without a step naming it, with the reason its
+/// heading's `<!-- audit:kept <reason> -->` marker states.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExemptSection {
+    /// The `##` heading's text.
+    pub section: String,
+    /// The marker's stated reason.
+    pub reason: String,
+}
+
+/// One reference file's reachability: how many `##` sections it holds and
+/// which of them are exempt. `sections: 0` is the no-sections state, which is
+/// not a pass.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReferenceReach {
+    /// Repo-relative path of the reference file.
+    pub reference: String,
+    /// Its `##` sections outside fenced blocks and comments.
+    pub sections: u32,
+    /// The sections a valid marker exempts.
+    pub exempt: Vec<ExemptSection>,
 }
 
 /// A file the check could not read, recorded so an empty `findings` is never
@@ -7979,7 +8008,7 @@ pub struct StepReferenceSkip {
     pub reason: String,
 }
 
-/// Result of `check-step-references`. Its five lists are inline while the
+/// Result of `check-step-references`. Its six lists are inline while the
 /// result fits `[artifacts] read-size-bytes`, and past it in the file
 /// `lists-file` names, each list's count inline in both forms.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -8017,22 +8046,41 @@ pub struct CheckStepReferencesResult {
     pub skipped: Option<Vec<StepReferenceSkip>>,
     /// Entries in `skipped`, in either form.
     pub skipped_count: usize,
+    /// One entry per reference file judged, in path order. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reachability: Option<Vec<ReferenceReach>>,
+    /// Entries in `reachability`, in either form.
+    pub reachability_count: usize,
+    /// `##` sections judged, over every reference in `reachability`.
+    #[serde(default)]
+    pub sections_examined: u32,
+    /// Sections a valid marker exempts.
+    #[serde(default)]
+    pub sections_exempt: u32,
+    /// Sections no step reaches and no valid marker exempts: the
+    /// `unreached-section` findings.
+    #[serde(default)]
+    pub sections_unreached: u32,
+    /// References holding no `##` section, which have nothing to reach.
+    #[serde(default)]
+    pub references_without_sections: u32,
     /// `step N` mentions outside the Instructions section, counted but never
     /// resolved: a numbered list elsewhere in the file restarts at 1 and is a
     /// different list. (A command's reference, whose
     /// sub-procedures restart the same way, is its own file under
-    /// `framework/reference/` and outside this subject.) Present so an empty `findings` is not read as *every
+    /// `framework/reference/` and outside this step subject.) Present so an empty `findings` is not read as *every
     /// reference in the file resolves* (`QUAL-CLAIM-001`).
     #[serde(default)]
     pub references_out_of_subject: u32,
     /// Set when the check could not establish a subject at all.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub guidance: String,
-    /// Where the five lists are: in this result, or past the read size in the
+    /// Where the six lists are: in this result, or past the read size in the
     /// file `lists-file` names.
     #[serde(default)]
     pub form: ListsForm,
-    /// In the file form, the file holding the five lists whole, from the
+    /// In the file form, the file holding the six lists whole, from the
     /// project root: a JSON object with their keys.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,

@@ -42,7 +42,7 @@
 //!
 //! A command's reference carries sub-procedures that restart
 //! at 1. It lives in its own file under `framework/reference/` (spec 071),
-//! so it is outside this subject, but a numbered list can still sit in a
+//! so it is outside the step subject, but a numbered list can still sit in a
 //! command file outside its Instructions. Those are separate numbered lists,
 //! so resolving an Instructions reference against them — or the reverse —
 //! would manufacture findings. The subject is therefore the **Instructions**
@@ -55,14 +55,33 @@
 //! it against the citing file's own step set is exactly how a check like this
 //! invents findings.
 //!
+//! ## Reference sections a command reaches (spec 026, from 071's scenario)
+//!
+//! A command's reference is read by section, only where a step names it, so a
+//! `##` section no step reaches is never read ([`reach`]). Each
+//! `framework/reference/<command>.md` is judged against
+//! `framework/commands/<command>.md` through the walk spec 080's tool loading
+//! makes ([`cited_sections`]), so one walker decides what a citation reaches.
+//! A section kept for a reader outside the command carries
+//! `<!-- audit:kept <reason> -->` directly beneath its heading: it is
+//! reported exempt with its reason, and the marker is a finding when its
+//! reason is empty, when its section is reached anyway, or when it sits
+//! anywhere else, so an exemption cannot outlive its cause. A reference with
+//! no `##` section is counted apart, never a pass.
+//!
 //! [`references_out_of_subject`]: crate::schema::primitives::CheckStepReferencesResult::references_out_of_subject
 
 use std::path::Path;
+use std::sync::OnceLock;
 
-use crate::primitives::{Result, read_text, rel_path, section_line_indices};
+use regex::Regex;
+
+use crate::primitives::resolve_anchor::heading_lines;
+use crate::primitives::tool_loading::cited_sections;
+use crate::primitives::{Result, SkipScanner, read_text, rel_path, section_line_indices};
 use crate::schema::primitives::{
-    CheckStepReferencesArgs, CheckStepReferencesResult, ListsForm, StepReferenceFinding,
-    StepReferenceSkip,
+    CheckStepReferencesArgs, CheckStepReferencesResult, ExemptSection, ListsForm, ReferenceReach,
+    StepReferenceFinding, StepReferenceSkip,
 };
 
 /// Command sources. The generated copies under a host's commands directory
@@ -76,6 +95,9 @@ const BOOTSTRAP_FILES: [&str; 2] = [
     "framework/bootstrap/ductus.md",
     "framework/bootstrap/govern.md",
 ];
+
+/// The references whose sections the commands reach.
+const REFERENCE_DIR: &str = "framework/reference";
 
 /// The heading whose numbered list is the subject.
 const SUBJECT_SECTION: &str = "Instructions";
@@ -102,12 +124,14 @@ struct StepReferences {
     with_steps: Vec<String>,
     not_a_procedure: Vec<String>,
     skipped: Vec<StepReferenceSkip>,
+    reachability: Vec<ReferenceReach>,
+    sections_unreached: u32,
     references_out_of_subject: u32,
     guidance: String,
 }
 
 /// `scan` as the primitive's result: inline while it fits `[artifacts]
-/// read-size-bytes`, and past it with its five lists in the file it names and
+/// read-size-bytes`, and past it with its six lists in the file it names and
 /// only their counts inline (`bounded_lists::place`; 026 task 6,
 /// `BE-PAYLOAD-001`).
 ///
@@ -122,6 +146,7 @@ fn bound(scan: StepReferences, repo: &Path) -> Result<CheckStepReferencesResult>
         "with-steps": scan.with_steps,
         "not-a-procedure": scan.not_a_procedure,
         "skipped": scan.skipped,
+        "reachability": scan.reachability,
     });
     let mut result = CheckStepReferencesResult {
         findings_count: scan.findings.len(),
@@ -134,6 +159,19 @@ fn bound(scan: StepReferences, repo: &Path) -> Result<CheckStepReferencesResult>
         not_a_procedure: Some(scan.not_a_procedure),
         skipped_count: scan.skipped.len(),
         skipped: Some(scan.skipped),
+        reachability_count: scan.reachability.len(),
+        sections_examined: scan.reachability.iter().map(|r| r.sections).sum(),
+        sections_exempt: scan
+            .reachability
+            .iter()
+            .map(|r| u32::try_from(r.exempt.len()).unwrap_or(u32::MAX))
+            .sum(),
+        sections_unreached: scan.sections_unreached,
+        references_without_sections: u32::try_from(
+            scan.reachability.iter().filter(|r| r.sections == 0).count(),
+        )
+        .unwrap_or(u32::MAX),
+        reachability: Some(scan.reachability),
         references_out_of_subject: scan.references_out_of_subject,
         guidance: scan.guidance,
         form: ListsForm::Inline,
@@ -152,6 +190,7 @@ fn bound(scan: StepReferences, repo: &Path) -> Result<CheckStepReferencesResult>
         result.with_steps = None;
         result.not_a_procedure = None;
         result.skipped = None;
+        result.reachability = None;
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -179,6 +218,7 @@ fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
     } else {
         std::fs::read_dir(repo.join(COMMANDS_DIR))
     };
+    let commands_listed = listing.is_ok();
     match listing {
         Ok(entries) => {
             let mut dir_paths: Vec<_> = entries
@@ -326,6 +366,18 @@ fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
         }
     }
 
+    // Where there are no command sources there are no sections for them to
+    // reach, and the skip above already says nothing was examined.
+    let mut reachability = Vec::new();
+    let mut sections_unreached = 0;
+    if commands_listed {
+        let reached = reach(repo);
+        sections_unreached = reached.unreached;
+        findings.extend(reached.findings);
+        skipped.extend(reached.skipped);
+        reachability = reached.reachability;
+    }
+
     let guidance = if examined.is_empty() {
         format!("no command sources found under {COMMANDS_DIR} — nothing was examined")
     } else {
@@ -338,9 +390,189 @@ fn compute(_args: &CheckStepReferencesArgs, repo: &Path) -> StepReferences {
         with_steps,
         not_a_procedure,
         skipped,
+        reachability,
+        sections_unreached,
         references_out_of_subject,
         guidance,
     }
+}
+
+/// The reference marker: a line holding only
+/// `<!-- audit:kept <reason> -->`, the reason optional so an empty one can be
+/// found.
+#[allow(clippy::expect_used)] // A hard-coded pattern that compiles.
+fn kept_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new(r"^\s*<!--\s*audit:kept(\s.*?)?\s*-->\s*$").expect("hard-coded regex compiles")
+    })
+}
+
+/// [`reach`]'s findings, skips and per-reference record.
+#[derive(Default)]
+struct Reach {
+    findings: Vec<StepReferenceFinding>,
+    skipped: Vec<StepReferenceSkip>,
+    reachability: Vec<ReferenceReach>,
+    unreached: u32,
+}
+
+/// Judge every `framework/reference/<command>.md` against its command's
+/// citations ([`cited_sections`]). A reference whose command or text cannot be
+/// read, or that cites a reference that cannot be, is a skip: nothing is
+/// judged of it.
+fn reach(repo: &Path) -> Reach {
+    let mut out = Reach::default();
+    if super::leaves_project(repo, REFERENCE_DIR) {
+        out.skipped.push(StepReferenceSkip {
+            path: REFERENCE_DIR.to_string(),
+            reason: "reference directory could not be listed: it leaves the project".to_string(),
+        });
+        return out;
+    }
+    let mut references: Vec<std::path::PathBuf> = match std::fs::read_dir(repo.join(REFERENCE_DIR))
+    {
+        Ok(entries) => entries
+            .filter_map(std::result::Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|ext| ext == "md"))
+            .collect(),
+        Err(err) => {
+            out.skipped.push(StepReferenceSkip {
+                path: REFERENCE_DIR.to_string(),
+                reason: format!("reference directory could not be listed: {err}"),
+            });
+            return out;
+        }
+    };
+    references.sort();
+    let read = |rel: &str| -> std::result::Result<String, String> {
+        if super::leaves_project(repo, rel) {
+            return Err(format!("{rel} leaves the project"));
+        }
+        read_text(&repo.join(rel)).map_err(|err| format!("{rel} could not be read: {err}"))
+    };
+    for path in &references {
+        let rel = rel_path(path, repo);
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let judged = read(&rel).and_then(|reference| {
+            let command = read(&format!("{COMMANDS_DIR}/{stem}.md"))?;
+            let reached = cited_sections(&command, stem, |name| {
+                read(&format!("{REFERENCE_DIR}/{name}.md"))
+            })?;
+            Ok((reference, reached))
+        });
+        match judged {
+            Ok((reference, reached)) => {
+                let own: std::collections::HashSet<&str> = reached
+                    .iter()
+                    .filter(|(name, _)| name == stem)
+                    .map(|(_, heading)| heading.as_str())
+                    .collect();
+                judge_sections(&rel, &reference, &own, &mut out);
+            }
+            Err(reason) => out.skipped.push(StepReferenceSkip {
+                path: rel,
+                reason: format!("could not be judged: {reason}"),
+            }),
+        }
+    }
+    out
+}
+
+/// One reference's `##` sections against the headings its command reaches.
+fn judge_sections(
+    rel: &str,
+    reference: &str,
+    reached: &std::collections::HashSet<&str>,
+    out: &mut Reach,
+) {
+    let lines: Vec<&str> = reference.lines().collect();
+    let finding = |line: usize, kind: &str, message: String| StepReferenceFinding {
+        file: rel.to_string(),
+        line,
+        kind: kind.into(),
+        reference: 0,
+        message,
+    };
+    let sections: Vec<_> = heading_lines(reference)
+        .into_iter()
+        .filter(|h| h.level == 2)
+        .collect();
+    let mut attached = std::collections::HashSet::new();
+    let mut exempt = Vec::new();
+    for section in &sections {
+        let marker = (section.line + 1..lines.len())
+            .find(|&i| !lines[i].trim().is_empty())
+            .and_then(|i| kept_regex().captures(lines[i]).map(|cap| (i, cap)));
+        let reason = marker.as_ref().map(|(i, cap)| {
+            attached.insert(*i);
+            cap.get(1).map_or("", |m| m.as_str()).trim().to_string()
+        });
+        let is_reached = reached.contains(section.text.as_str());
+        let mut exempted = false;
+        match reason {
+            Some(reason) if reason.is_empty() => out.findings.push(finding(
+                section.line + 2,
+                "empty-exemption",
+                format!(
+                    "{rel}: the `audit:kept` marker under `{}` states no reason, so it exempts \
+                     nothing — state why a reader outside the command keeps the section",
+                    section.text
+                ),
+            )),
+            Some(_) if is_reached => out.findings.push(finding(
+                section.line + 2,
+                "stale-exemption",
+                format!(
+                    "{rel}: `{}` is reached by its command, so its `audit:kept` marker exempts \
+                     nothing — remove the marker",
+                    section.text
+                ),
+            )),
+            Some(reason) => {
+                exempted = true;
+                exempt.push(ExemptSection {
+                    section: section.text.clone(),
+                    reason,
+                });
+            }
+            None => {}
+        }
+        if !is_reached && !exempted {
+            out.unreached += 1;
+            out.findings.push(finding(
+                section.line + 1,
+                "unreached-section",
+                format!(
+                    "{rel}: `## {}` is reached by no step of its command, so no agent reads it — \
+                     cite it from the step that needs it, delete it if it restates, or mark it \
+                     `<!-- audit:kept <reason> -->` beneath the heading",
+                    section.text
+                ),
+            ));
+        }
+    }
+    let mut skip = SkipScanner::default();
+    for (i, line) in lines.iter().enumerate() {
+        if !skip.skip(line) && kept_regex().is_match(line) && !attached.contains(&i) {
+            out.findings.push(finding(
+                i + 1,
+                "misplaced-exemption",
+                format!(
+                    "{rel}: an `audit:kept` marker that is not the first line beneath a `##` \
+                     heading exempts nothing — move it, or remove it"
+                ),
+            ));
+        }
+    }
+    out.reachability.push(ReferenceReach {
+        reference: rel.to_string(),
+        sections: u32::try_from(sections.len()).unwrap_or(u32::MAX),
+        exempt,
+    });
 }
 
 /// The step number a line opens with, when it opens a numbered step.
@@ -555,10 +787,270 @@ mod tests {
         assert_eq!(step_references("see step 5 of the walk"), vec![5]);
     }
 
+    /// A project with the given command and reference files, each as
+    /// `(name, text)`.
+    fn reach_project(commands: &[(&str, &str)], references: &[(&str, &str)]) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        for (dir, files) in [(COMMANDS_DIR, commands), (REFERENCE_DIR, references)] {
+            std::fs::create_dir_all(tmp.path().join(dir)).unwrap();
+            for (name, text) in files {
+                std::fs::write(tmp.path().join(dir).join(format!("{name}.md")), text).unwrap();
+            }
+        }
+        tmp
+    }
+
+    /// A command whose one step names its reference `x` and cites `pointer`.
+    fn command(pointer: &str) -> String {
+        format!(
+            "# X\n\n## Instructions\n\n1. One, per {pointer} in `.ductus/reference/x.md`.\n\
+             2. Two.\n3. Three.\n"
+        )
+    }
+
+    fn kinds(found: &StepReferences) -> Vec<&str> {
+        found.findings.iter().map(|f| f.kind.as_str()).collect()
+    }
+
+    /// A section no step reaches is a finding that names the reference, the
+    /// section and its line, and counts as unreached.
+    #[test]
+    fn an_unreached_section_is_reported_and_named() {
+        let tmp = reach_project(
+            &[("x", &command("**§Reached**"))],
+            &[("x", "# X\n\n## Reached\n\nText.\n\n## Orphan\n\nText.\n")],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert_eq!(kinds(&found), vec!["unreached-section"], "{found:?}");
+        let finding = &found.findings[0];
+        assert_eq!(finding.file, "framework/reference/x.md");
+        assert_eq!(finding.line, 7);
+        assert!(finding.message.contains("## Orphan"), "{}", finding.message);
+        assert_eq!(found.sections_unreached, 1);
+        assert_eq!(found.reachability[0].sections, 2);
+    }
+
+    /// A section a reached section names by `§`, and one only a markdown
+    /// anchor link in a reached section names, are reached.
+    #[test]
+    fn a_section_reached_through_a_reached_one_or_by_an_anchor_link_is_reached() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**"))],
+            &[(
+                "x",
+                "## Top\n\nSee §Through and [the output](#the-output-row).\n\n\
+                 ## Through\n\nText.\n\n## The `output` row\n\nText.\n",
+            )],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert!(found.findings.is_empty(), "{found:?}");
+        assert_eq!(found.reachability[0].sections, 3);
+    }
+
+    /// A heading inside a fenced block is not a section, so it is neither
+    /// counted nor reported.
+    #[test]
+    fn a_heading_in_a_fenced_block_is_not_a_section() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**"))],
+            &[("x", "## Top\n\n```text\n## Example\n```\n")],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert!(found.findings.is_empty(), "{found:?}");
+        assert_eq!(found.reachability[0].sections, 1);
+    }
+
+    /// A subsection cited by name reaches itself and not its `##` parent.
+    #[test]
+    fn a_cited_subsection_does_not_reach_its_parent_section() {
+        let tmp = reach_project(
+            &[("x", &command("**§Child**"))],
+            &[(
+                "x",
+                "## Parent\n\n### Child\n\nText.\n\n### Spare\n\nText.\n",
+            )],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert_eq!(kinds(&found), vec!["unreached-section"], "{found:?}");
+        assert!(found.findings[0].message.contains("## Parent"));
+        assert_eq!(
+            found.reachability[0].sections, 1,
+            "only a `##` heading is a section"
+        );
+    }
+
+    /// A section with a marker stating its reason is exempt: listed with the
+    /// reason and counted, and it is no finding.
+    #[test]
+    fn an_exempt_section_with_a_reason_is_exempt_and_counted() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**"))],
+            &[(
+                "x",
+                "## Top\n\nText.\n\n## Kept\n\n<!-- audit:kept the constitution names it -->\n\nText.\n",
+            )],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert!(found.findings.is_empty(), "{found:?}");
+        assert_eq!(
+            found.reachability[0].exempt,
+            vec![ExemptSection {
+                section: "Kept".into(),
+                reason: "the constitution names it".into(),
+            }]
+        );
+        let result = bound(found, tmp.path()).unwrap();
+        assert_eq!(result.sections_exempt, 1);
+        assert_eq!(result.sections_examined, 2);
+        assert_eq!(result.sections_unreached, 0);
+    }
+
+    /// An empty reason exempts nothing, a marker on a reached section is
+    /// stale, and a marker anywhere but beneath a `##` heading is misplaced:
+    /// each a finding, so an exemption cannot rot.
+    #[test]
+    fn an_empty_stale_or_misplaced_exemption_is_a_finding() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**"))],
+            &[(
+                "x",
+                "## Top\n\n<!-- audit:kept it is cited anyway -->\n\nText.\n\n## Empty\n\n\
+                 <!-- audit:kept -->\n\nText.\n\n## Loose\n\nText.\n<!-- audit:kept stray -->\n",
+            )],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        let mut got = kinds(&found);
+        got.sort_unstable();
+        assert_eq!(
+            got,
+            vec![
+                "empty-exemption",
+                "misplaced-exemption",
+                "stale-exemption",
+                "unreached-section",
+                "unreached-section",
+            ],
+            "{found:?}"
+        );
+        assert_eq!(found.reachability[0].exempt, vec![]);
+        assert_eq!(found.sections_unreached, 2);
+    }
+
+    /// A reference with no `##` section is counted as having none: neither a
+    /// finding, a skip nor a silent pass.
+    #[test]
+    fn a_reference_with_no_sections_is_reported_as_having_none() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**"))],
+            &[("x", "# X\n\nOpening.\n")],
+        );
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert!(
+            found.findings.is_empty() && found.skipped.is_empty(),
+            "{found:?}"
+        );
+        assert_eq!(found.reachability[0].sections, 0);
+        let result = bound(found, tmp.path()).unwrap();
+        assert_eq!(result.references_without_sections, 1);
+        assert_eq!(result.sections_examined, 0);
+    }
+
+    /// A reference with no command, one that is not readable, and one whose
+    /// command names a reference that is missing are skips with their
+    /// reasons, never a pass.
+    #[test]
+    fn an_unreadable_reference_is_a_skip() {
+        let tmp = reach_project(
+            &[("x", &command("**§Top**")), ("y", &command("**§Top**"))],
+            &[("x", "## Top\n"), ("nocommand", "## Top\n")],
+        );
+        // `y`'s reference is a directory, which cannot be read as text.
+        std::fs::create_dir(tmp.path().join(REFERENCE_DIR).join("y.md")).unwrap();
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        let skipped: Vec<&str> = found.skipped.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            skipped,
+            vec![
+                "framework/reference/nocommand.md",
+                "framework/reference/y.md"
+            ],
+            "{found:?}"
+        );
+        assert!(
+            found
+                .skipped
+                .iter()
+                .all(|s| s.reason.contains("could not be judged"))
+        );
+        assert_eq!(found.reachability.len(), 1, "only x was judged");
+    }
+
+    /// A command that names another reference it cannot read is a skip too,
+    /// since what it reaches there is unknown.
+    #[test]
+    fn a_cited_reference_that_cannot_be_read_is_a_skip() {
+        let command = "# X\n\n## Instructions\n\n1. See **§Top** in `.ductus/reference/gone.md`.\n";
+        let tmp = reach_project(&[("x", command)], &[("x", "## Top\n")]);
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert_eq!(found.skipped.len(), 1, "{found:?}");
+        assert!(found.skipped[0].reason.contains("gone.md"), "{found:?}");
+        assert_eq!(found.reachability, vec![]);
+    }
+
+    /// In a project with no `framework/` — an adopter's — nothing is examined,
+    /// the existing skip says so, and no reachability is claimed.
+    #[test]
+    fn a_project_without_framework_sources_judges_no_sections() {
+        let tmp = tempfile::tempdir().unwrap();
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        assert!(
+            found.examined.is_empty() && found.reachability.is_empty(),
+            "{found:?}"
+        );
+        assert_eq!(found.skipped.len(), 1, "{found:?}");
+        assert!(found.guidance.contains("nothing was examined"));
+    }
+
+    /// The shipped tree: every `##` section of every reference is reached,
+    /// except the two a stated reason keeps. Built from the real files, so it
+    /// fails when a pointer a command needs is removed (spec 071).
+    #[test]
+    fn the_shipped_references_are_reached_except_the_two_kept_sections() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap();
+        let found = compute(&CheckStepReferencesArgs {}, root);
+        assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        let unreached: Vec<&str> = found.findings.iter().map(|f| f.message.as_str()).collect();
+        assert!(unreached.is_empty(), "{unreached:#?}");
+        let exempt: Vec<(&str, &str)> = found
+            .reachability
+            .iter()
+            .flat_map(|r| {
+                r.exempt
+                    .iter()
+                    .map(move |e| (r.reference.as_str(), e.section.as_str()))
+            })
+            .collect();
+        assert_eq!(
+            exempt,
+            vec![
+                ("framework/reference/analyze.md", "Severity tiers"),
+                ("framework/reference/analyze.md", "Record fields"),
+            ]
+        );
+        assert!(
+            found.reachability.iter().map(|r| r.sections).sum::<u32>() > 50,
+            "the walk judged too few sections to be reading the references"
+        );
+    }
+
     /// A project with a clean command file and one whose Instructions
-    /// refers to step 9, which it lacks.
+    /// refers to step 9, which it lacks, and a reference directory that holds
+    /// no file.
     fn project() -> tempfile::TempDir {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(REFERENCE_DIR)).unwrap();
         let dir = tmp.path().join(COMMANDS_DIR);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
@@ -603,6 +1095,8 @@ mod tests {
         assert_eq!(result.not_a_procedure_count, 0);
         assert_eq!(result.skipped, Some(vec![]));
         assert_eq!(result.skipped_count, 0);
+        assert_eq!(result.reachability, Some(vec![]));
+        assert_eq!(result.reachability_count, 0);
         assert!(!tmp.path().join(".ductus/results").exists());
     }
 
@@ -626,11 +1120,13 @@ mod tests {
         assert_eq!(bounded.with_steps, None);
         assert_eq!(bounded.not_a_procedure, None);
         assert_eq!(bounded.skipped, None);
+        assert_eq!(bounded.reachability, None);
         assert_eq!(bounded.findings_count, 1);
         assert_eq!(bounded.examined_count, 2);
         assert_eq!(bounded.with_steps_count, 2);
         assert_eq!(bounded.not_a_procedure_count, 0);
         assert_eq!(bounded.skipped_count, 0);
+        assert_eq!(bounded.reachability_count, 0);
         assert_eq!(
             bounded.references_out_of_subject,
             whole.references_out_of_subject
@@ -657,6 +1153,7 @@ mod tests {
         );
         assert_eq!(lists["not-a-procedure"], serde_json::json!([]));
         assert_eq!(lists["skipped"], serde_json::json!([]));
+        assert_eq!(lists["reachability"], serde_json::json!([]));
         crate::primitives::bounded_lists::assert_counts_name_the_file(
             "check-step-references",
             &serde_json::to_value(&bounded).unwrap(),

@@ -1293,7 +1293,9 @@ fn main() -> ExitCode {
             emit_result(primitives::check_command_flags::run(&args, &repo))
         }
         Command::CheckStepReferences(args) => {
-            emit_result(primitives::check_step_references::run(&args, &repo))
+            emit_result_gated(primitives::check_step_references::run(&args, &repo), |r| {
+                r.findings_count > 0 || r.skipped_count > 0 || !r.guidance.is_empty()
+            })
         }
         Command::CheckUnfoldedSpecs(args) => {
             emit_result(primitives::check_unfolded_specs::run(&args, &repo))
