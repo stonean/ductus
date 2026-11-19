@@ -967,4 +967,32 @@ MUTATIONS = [
         'if let Some(open) = rule_sections::FenceRun::opened_by(line) {',
         'primitives::tests::skip_scanner_keeps_an_indented_fence',
     ),
+    (
+        'M142 a lazy continuation line is dropped',
+        'src/primitives/read_spec.rs',
+        "if (line.starts_with([' ', '\\t']) || lazy)",
+        "if (line.starts_with([' ', '\\t']))",
+        'primitives::read_spec::tests::a_lazy_continuation_line_folds_into_its_criterion primitives::classify_spec_edit::tests::editing_the_lazy_second_line_of_a_wrapped_criterion_reopens',
+    ),
+    (
+        'M143 a lazy line folds across a blank line',
+        'src/primitives/read_spec.rs',
+        'last.is_some_and(|previous| previous + 1 == idx)',
+        'last.is_some()',
+        'primitives::read_spec::tests::a_line_after_a_blank_or_a_list_item_is_not_a_continuation',
+    ),
+    (
+        'M144 a list item directly under a criterion folds into it',
+        'src/primitives/read_spec.rs',
+        '            && list_item(line).is_none()\n',
+        '',
+        'primitives::read_spec::tests::a_line_after_a_blank_or_a_list_item_is_not_a_continuation',
+    ),
+    (
+        'M145 a folded continuation leaves the next line unadjacent',
+        'src/primitives/read_spec.rs',
+        '            current.text.push_str(trimmed);\n            last = Some(idx);',
+        '            current.text.push_str(trimmed);',
+        'primitives::read_spec::tests::a_continuation_never_adds_an_entry_so_the_mark_index_holds',
+    ),
 ]

@@ -344,9 +344,12 @@ pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection>
 /// A wrapped acceptance criterion spans multiple source lines: an indented
 /// non-checkbox continuation line folds into the preceding criterion's
 /// text (mirroring [`parse_open_questions`]) rather than being dropped
-/// mid-sentence. The index derivation stays keyed to checkbox lines only —
-/// a continuation line never pushes a new entry — so the read/mark index
-/// contract is preserved.
+/// mid-sentence, and so does a line directly under the criterion, with no
+/// blank line between, that starts no other block (a heading, list item,
+/// thematic break, block quote or table row): its lazy continuation, which
+/// `CommonMark` reads as part of the item. The index derivation stays keyed
+/// to checkbox lines only — a continuation line never pushes a new entry —
+/// so the read/mark index contract is preserved.
 ///
 /// Kept in one place for the same reason as
 /// [`parse_sections`]: it already skips comments and fenced blocks, and a
@@ -355,6 +358,10 @@ pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection>
 pub(crate) fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<AcceptanceCriterion> {
     let lines: Vec<&str> = body.lines().collect();
     let mut out: Vec<AcceptanceCriterion> = Vec::new();
+    // The line index of the criterion or continuation last pushed or folded,
+    // so a line is "directly under" it only at the next index: a blank line, a
+    // comment or a fence between them breaks the adjacency.
+    let mut last: Option<usize> = None;
     for idx in section_line_indices(&lines, section_heading) {
         let line = lines[idx];
         if let Some((checked, text)) = checkbox::parse_checkbox_line(line) {
@@ -371,21 +378,28 @@ pub(crate) fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<Accepta
                 text,
                 label,
             });
+            last = Some(idx);
             continue;
         }
-        // Fold an indented, non-checkbox continuation line into the last
-        // criterion. Indentation is the wrap signal (markdown continuation
-        // lines are indented under their list item); a non-indented,
-        // non-checkbox line is not a continuation and is ignored.
+        // Fold a non-checkbox continuation line into the last criterion: an
+        // indented one (markdown continuation lines are indented under their
+        // list item), or a lazy one directly under it that starts no other
+        // block. Any other non-checkbox line is ignored.
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
         }
-        if line.starts_with([' ', '\t'])
+        let lazy = last.is_some_and(|previous| previous + 1 == idx)
+            && parse_atx_heading(line).is_none()
+            && list_item(line).is_none()
+            && !is_thematic_break(trimmed)
+            && !trimmed.starts_with(['>', '|']);
+        if (line.starts_with([' ', '\t']) || lazy)
             && let Some(current) = out.last_mut()
         {
             current.text.push(' ');
             current.text.push_str(trimmed);
+            last = Some(idx);
         }
     }
     out
@@ -852,6 +866,59 @@ mod tests {
         );
         assert!(!result.acceptance_criteria[0].checked);
         assert!(result.acceptance_criteria[1].checked);
+    }
+
+    /// A criterion's text and checked flag, in order, as `read-spec` reports them.
+    fn criteria_of(section: &str) -> Vec<(bool, String)> {
+        let body = format!("# T\n\n## Acceptance Criteria\n\n{section}");
+        parse_checkboxes(&body, "Acceptance Criteria")
+            .into_iter()
+            .map(|c| (c.checked, c.text))
+            .collect()
+    }
+
+    #[test]
+    fn a_lazy_continuation_line_folds_into_its_criterion() {
+        let found = criteria_of("- [x] AC1: The thing must\nreturn 200 on success.\n- [ ] Next.\n");
+        assert_eq!(
+            found,
+            vec![
+                (
+                    true,
+                    "AC1: The thing must return 200 on success.".to_string()
+                ),
+                (false, "Next.".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_line_after_a_blank_or_a_list_item_is_not_a_continuation() {
+        for (section, text) in [
+            ("- [ ] One.\n\nstray prose\n", "One."),
+            ("- [ ] One.\n- a list item\n", "One."),
+            ("- [ ] One.\n> a quote\n", "One."),
+            ("- [ ] One.\n| a | row |\n", "One."),
+            ("- [ ] One.\n---\n", "One."),
+            ("- [ ] One.\n### Sub\n", "One."),
+            ("- [ ] One.\n<!--\nhidden\n-->\nstray prose\n", "One."),
+        ] {
+            assert_eq!(
+                criteria_of(section),
+                vec![(false, text.to_string())],
+                "{section:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_continuation_never_adds_an_entry_so_the_mark_index_holds() {
+        let found = criteria_of(
+            "- [ ] A,\nwrapped lazily\nand again\n  and indented.\n- [x] B.\n- [ ] C.\n",
+        );
+        let checked: Vec<bool> = found.iter().map(|(c, _)| *c).collect();
+        assert_eq!(checked, vec![false, true, false]);
+        assert_eq!(found[0].1, "A, wrapped lazily and again and indented.");
     }
 
     #[test]

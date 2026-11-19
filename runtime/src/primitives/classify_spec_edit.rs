@@ -910,6 +910,17 @@ mod tests {
     }
 
     #[test]
+    fn editing_the_lazy_second_line_of_a_wrapped_criterion_reopens() {
+        let lazy = SPEC.replace(
+            "- [x] AC1: First thing.\n",
+            "- [x] AC1: First thing must\nreturn 200 on success.\n",
+        );
+        let (_dir, root) = committed(&[("spec.md", &lazy)]);
+        edit(&root, "spec.md", &lazy.replace("200", "500"));
+        assert_reopens(&root, &[SpecEditReason::Criterion]);
+    }
+
+    #[test]
     fn an_added_criterion_reopens() {
         let (_dir, root) = fixture();
         let added = SPEC.replace(
