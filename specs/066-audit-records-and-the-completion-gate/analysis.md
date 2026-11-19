@@ -1,15 +1,15 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-18T02:12:23Z
-analyzed-against: 87ac26bfdf54efb2ae603cc79e668ca03b876687
+last-run: 2026-11-19T01:18:09Z
+analyzed-against: 6983d5af510e00a5de0d5a8444103e7a4c92ef1f
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 9
 analyzed-digest:
-  data-model.md: 0dfad555e49515b76f6cafc1f2b3b9f1bb6d17cb6ee2c78bf6d8d606812fc38e
-  plan.md: 1415327728911d261212234d52e1ebf896c2094d0169736a798b488bc20ed65c
-  review.md: 815a7e8e1f3dab8ec9a6b56bb098765ab58fd19947a0bad9c1ab5dfa5300e1b0
+  data-model.md: b4209d91ef5401225341a84cb8ce4b75063516a20781258c2f2df09b1a05450c
+  plan.md: f2bb05f06fcc5323d50e6d44f38124d733c347d8d74dfc6766819a6fd1f080d2
+  review.md: fd43076da2bdafc626732af4f01131beb63a834997864597152a0a8fff1f5d5f
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -18,6 +18,7 @@ analyzed-digest:
   scenarios/a-supplied-summary-carries-the-loops-account.md: 80f366f0462d15212f4c5ceb7c097095fd5c5cd87ee68f769056c3dc1c803882
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 39b59f38bb7b419b250d16d6ff6f3fec473959a3f9293706a6fcab931f6f232d
   scenarios/checkbox-state-is-outside-the-analysis-digest.md: ca9c4875ae8dec48c0c79edc74f3af3d4ee405601c6a8b1dee3c9a68f748834d
+  scenarios/criteria-are-verified-in-review.md: 46195c281734fabf5056a32817a48667b7d6465b7a2f3f8119f16c238637c8c7
   scenarios/freshness-results-have-a-bounded-size.md: 0365689904e4ca8d3a11c14ce4411acbe95373560bf6ffa390a17afda8c832e0
   scenarios/only-gating-findings-hold-done.md: 27a6385fb7da6ccd6bf74303f92559b00998fe170248408e1df76bdf3a0b0f29
   scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
@@ -35,8 +36,8 @@ analyzed-digest:
   scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: d934ce2636756013a7c582d09dc139f587963f98c3d402b30bf36e6d9f370342
-  tasks.md: 458333b0918151dc1c0bbbc89d2465ab6c01e605d295e79a228fb8ec8806844b
+  spec.md: d08ad3fe3c22460d41bf0a9a26c3d9f8f3847d548ec29c6d4fe3869e5c89636e
+  tasks.md: 300a3103c4f5b152951ed6a2d7a82e84c3a00b06075e1851e3c934f801530f54
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
@@ -54,8 +55,9 @@ rule-digest:
   security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
+  BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
@@ -69,10 +71,10 @@ rule-verdicts:
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
-  CFG-CONST-003: {verdict: addressed, cite: "scenarios/a-renamed-file-contributes-its-rewrites.md#Behavior"}
+  CFG-ENV-008: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 9
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -82,7 +84,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 9 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -111,4 +113,12 @@ dispositions:
 
 ## Fixed in this run
 
-*None.*
+- grounding — The Motivation stated 022's data model at 99,953 bytes and only 2 KB of its prose repeated another file, with no commit or method for either; the size now cites wc -c at fd8e44a6, and the overlap figure, recorded nowhere, and the unsourced 'one of its two largest slices' are dropped (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
+- grounding — A stripped line-number citation decision said a host such as docs.rs with a port still reads as one, citing nothing; it now names EXTENSIONS, which lists rs (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- grounding — The Trade-offs said 022's 44,823 bytes are the same either way, beside a wc -c date that covered only the two data models; the figures now cite 391af75b, where all three held (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- grounding — The Resolved Question on two new specs said 022's 44,823 bytes are the same either way, with no method; it now cites wc -c at 391af75b (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
+- grounding — The closed-set decision's BE-COMPAT-001 paragraph said every reason the exec walker and the analyze steps supply is in the set, citing no source; it now names the emitters read at 680e4739 (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- grounding — The Overview said the primitives ship under 022, which no artifact states; it now says they were built under 022 before 08f0b199 split them out, whose message lists them (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- grounding — The bounded-results decision said 055's test sets the analysis record aside, naming no test; it now names write_review_and_write_analysis_keep_the_unmeasured_resolution in resolve_constitutions.rs, and cites rewrite_spec_links.rs for writing before it bounds (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- grounding — The gate-containment decision said parse_feature_dir already rules out .. and an absolute name, naming no file; it and the plan's other symbols cited in claims about existing code (classify_cross_spec_entry, holds_done_until_reviewed, design_subjects_match, exempt_renames, render_paths, bound_lists, RecordFreshness) now name their files (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- rule-assessment — BE-COMPAT-001: the plan described tasks 7, 14, 20 and 22's bounded results, each ceasing past the read size to carry inline a list that was inline at ductus-v0.59.11, without classifying the change as additive or breaking; the 'Freshness paths go to a file past the read size' section now classifies them breaking past the read size, as 063's plan does its own, and runtime/CHANGELOG.md labels them (6983d5af) — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
