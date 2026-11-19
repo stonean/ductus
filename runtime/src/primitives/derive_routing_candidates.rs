@@ -1,10 +1,10 @@
 //! `derive-routing-candidates` — the homes proposed work could belong to.
 //!
 //! `/ductus:groom` walks a five-route decision tree before anything is
-//! written; `/ductus:specify` had no equivalent, so the two routing rules that
-//! exist to *prevent* a new spec — add a rule to its surface's home spec, and
-//! route runtime work to the spec that owns the runtime — bound only for work
-//! arriving through the inbox. Work arriving through conversation bypassed the
+//! written; `/ductus:specify` had no equivalent, so the routing that exists to
+//! *prevent* a new spec — a rule added to its surface's home spec, and runtime
+//! work offered the spec that owns the runtime as one candidate — bound only for
+//! work arriving through the inbox. Work arriving through conversation bypassed the
 //! tree entirely, at the one moment the rules matter.
 //!
 //! This primitive supplies the deterministic half: given the proposed work in
