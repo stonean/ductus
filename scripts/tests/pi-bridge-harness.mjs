@@ -289,7 +289,7 @@ await check("{project}-status spells each command hint as Pi names the command",
   await within(5000, commands.get("harness-status").handler("", {}));
   const view = shownWithoutATurn(messages);
   const colon = view.match(/\/harness:[a-z]+/g) ?? [];
-  if (colon.length) throw new Error(`hints Pi cannot run: ${[...new Set(colon)].join(", ")}`);
+  if (colon.length) throw new Error(`hints left in the colon spelling: ${[...new Set(colon)].join(", ")}`);
   if (!view.includes("/harness-target")) throw new Error(`no /harness-target hint: ${view.slice(-300)}`);
 });
 
@@ -315,7 +315,7 @@ await check("registers {project}-help, whose handler shows the guide as Pi spell
   if (!guide.startsWith("## harness — Spec-Driven Development Pipeline")) throw new Error(`no guide: ${guide.slice(0, 200)}`);
   if (!guide.includes("| `/harness-specify` |")) throw new Error(`no /harness-specify row: ${guide.slice(0, 600)}`);
   const colon = guide.match(/\/harness:[a-z]+/g) ?? [];
-  if (colon.length) throw new Error(`commands Pi cannot run: ${[...new Set(colon)].join(", ")}`);
+  if (colon.length) throw new Error(`commands left in the colon spelling: ${[...new Set(colon)].join(", ")}`);
   if (guide.includes("<!--")) throw new Error("the guide carries the generator's markers");
 });
 
@@ -359,11 +359,13 @@ await check("with no help copy at load, no command registers, and the notice nam
 
 await check("a runtime with render-status but no render-help registers only the status command, under both spellings", async () => {
   const ANSWERS_AS_A_VIEW = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", project: "stub" }) }], isError: false });`;
-  const { tools, commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW, ["render-status"]) }));
+  const { tools, commands, notices } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW, ["render-status"]) }));
   await until(5000, () => commands.size > 0);
   await sleep(200);
   if (tools.size !== 1 || commands.size !== 2 || !commands.has("stub-status") || !commands.has("stub:status"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+  // This project has no `.pi/prompts` to list for aliases, which is no failed load.
+  if (notices.length) throw new Error(`a notice for a load that registered: ${notices.join("; ")}`);
 });
 
 await check("a runtime without render-status registers no status command", async () => {
@@ -447,6 +449,12 @@ await check("an alias run while pi is busy with no run to steer submits once pi 
   await within(1000, alias.handler("b", streaming));
   if (waits !== 1 || userMessages.length !== 2 || userMessages[1].content !== "/harness-review b" || userMessages[1].options?.deliverAs !== "steer")
     throw new Error(`mid-run: ${waits} wait(s), submitted ${JSON.stringify(userMessages)}`);
+  // A wait that fails, as on a session replaced meanwhile, submits nothing
+  // and leaves no unhandled rejection in pi's process, which `check` reports.
+  const replaced = { isIdle: () => false, signal: undefined, waitForIdle: () => Promise.reject(new Error("stale context")) };
+  await within(1000, alias.handler("c", replaced));
+  await sleep(100);
+  if (userMessages.length !== 2) throw new Error(`after a failed wait: submitted ${JSON.stringify(userMessages)}`);
 });
 
 await check("a load that registers no command registers no alias", async () => {

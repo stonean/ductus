@@ -1,15 +1,20 @@
 ---
 spec: 064-pi-host-support
-last-run: 2026-11-16T21:58:56Z
-reviewed-against: fbe519a7dc648fc5a3e2d0a01fc2659c7e211ac9
-diff-base: 3f8e238cfcd253ef4e7f4b461cec3cb82c595bc4
+last-run: 2026-11-19T20:24:24Z
+reviewed-against: ebd15ffe7d5b48edea5e8d8d9a0ae7e0e5362326
+diff-base: 7d590049d1c7757356a895bfbe79c979648270ac
 must-violations: 0
 should-violations: 0
 low-confidence: 0
 examined: 7
-scope: 7
-unread: []
-excluded: 3
+scope: 12
+unread:
+  - .pi/extensions/ductus.ts
+  - framework/bootstrap/govern.md
+  - framework/bootstrap/ductus.md
+  - runtime/CHANGELOG.md
+  - specs/064-pi-host-support/plan.md
+excluded: 2
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -18,14 +23,48 @@ diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
+  scenarios/colon-form-commands-run-on-pi.md: c07825a14968e579c817cd098a61de4c07123b4548adacbda74815da8cc30180
   scenarios/pi-layout-is-dispatched.md: 0d0d2a6867c610e4d55252aa82fdf7a449ab0735ec16f47484a8c8dc332595fc
   scenarios/the-bridge-closes-its-server-at-shutdown.md: f852164bef881ed3a6f33eea81347d0bd23334182d9a5e810afcd46086a77f07
   scenarios/the-bridge-fails-loudly-and-recovers.md: 67570df65ceffa494936a5282eb62c100f14c125065562038aaa771077b1bf45
+criteria-judged: 15
+criteria-met: 15
+criteria-verdicts:
+  - label: AC1
+    digest: 2ce9222d417f6ebb39a012f097568269f30cb03de4fbb178e7345efade4192fa
+  - label: AC2
+    digest: 3935b8fe4e07fe2774bdbc9b955a6e3ae84504c5dc2c927999f5b0c8e0eb6180
+  - label: AC3
+    digest: 359568112319701e44760f35032237dc239726ad23928e1edacb3ee9d250b58f
+  - label: AC4
+    digest: b3392642692c02a9fcf1f6453254baa65940e3ccf1b15afce7447c326fae9591
+  - label: AC5
+    digest: a447cc6dc65cfcd2690bc96d5e76e6dd74dc62564c158984629eff0c906b1729
+  - label: AC6
+    digest: f9f0d199440f45ae0a9be28b23a22bb34272ce073c84009d37b0956ca48b70aa
+  - label: AC7
+    digest: c69250eb73f50db60bca00b8bcf4b54a29e1d203cce441bec4d87c3102ef177e
+  - label: AC8
+    digest: 2ec4718a4907b110007279e562167940ff9269fb6b92a468071c70b66e0aeaec
+  - label: AC9
+    digest: 3e10b018525d8263842a09daeec406ab1b68eb6c2c569ba70de673122eeedc53
+  - label: AC10
+    digest: 8392ae51f4e4b19043fab823a1724a1b41fdca5fe5b5baaa9f558f766a04a242
+  - label: AC11
+    digest: 159d757b769e351ccef09b610e7fba55bb0ed57e24251c4d8e7542d7fc4182d3
+  - label: AC12
+    digest: 8df676c3da9927aa21f00c68fb1d70d18bdd5aee13c1887f459106b74c9c421b
+  - label: AC13
+    digest: c2e4a0a10ea1d48f98a59b5be0e8436e6e44d134e07aa854634ed4f02a43da64
+  - label: AC14
+    digest: 85886ac8851d1d93cb65c53c2d1e780af923f6b8705d8c635f778ee2081d0c1b
+  - label: AC15
+    digest: f436855fddf6d5e21f507fc5a2aa313f4a7c1ec406c536059e0fa7c9f836377e
 blocking: false
 dispositions:
-  fixed: 7
+  fixed: 3
   deferred: 0
-  waived: 3
+  waived: 13
   undispositioned: 0
 decisions:
   - key: "convention: a-status-commit-holds-only-the-transition's Behavior reads as requiring the bullet to say a transition staged alone is lost — `specs/050-constitution/scenarios/a-status-commit-holds-only-the-transition.md`"
@@ -66,11 +105,6 @@ decisions:
   - key: "convention: a #fragment containing a dot is cut at the dot on a fold into a scenario — `runtime/src/primitives/rewrite_spec_links.rs`"
     outcome: waived
     reason: GitHub's heading slugs carry no dots, so such a fragment names no heading a link in this corpus can reach; a contrived input
-    decided-at: 2026-10-28T20:13:41Z
-    decided-by: andy@stone.dev
-  - key: "convention: no numbered step of the bootstrap names the two managed-block merges — `framework/bootstrap/ductus.md`"
-    outcome: waived
-    reason: Instructions step 4 lists what apply-manifest replaces, not every Shared Files step, and two real adopter bootstraps on this text wrote both blocks from Shared Files
     decided-at: 2026-10-28T20:13:41Z
     decided-by: andy@stone.dev
   - key: "convention: whether Auggie resolves CLAUDE.md's @AGENTS.md import, and so reads the routing block, is unverified — `framework/templates/project/claude-md.md`"
@@ -223,11 +257,6 @@ decisions:
     reason: the fixture mirrors the real file's table shapes, and the real MCP registration table carries the column
     decided-at: 2026-11-11T13:19:28Z
     decided-by: rule
-  - key: "other: an adopter with an installed .augment, .agents or .opencode tree gets no notice from /ductus, nothing removes it, and the managed .gitignore block no longer ignores it — `framework/bootstrap/ductus.md`"
-    outcome: waived
-    reason: the owner dropped the three hosts as a breaking change; the CHANGELOG's Removed entry tells such an adopter to remove the tree by hand, the runtime refuses writes there by the owner's exception, and detecting a dropped host's tree would be new bootstrap behavior rather than a fix to this change
-    decided-at: 2026-11-11T13:19:28Z
-    decided-by: rule
   - key: "perf: install.sh validates the agent key only after the latest-release lookup and the bootstrap download — `install.sh`"
     outcome: waived
     reason: the order predates the removal, the arm still halts before writing anything, and moving the check is a behavior change with its own test
@@ -278,15 +307,32 @@ decisions:
     reason: It is the existing wording for any failure of the handshake, a runtime death during it included, and it names the real reason; it arises only for a call racing the shutdown, which pi is tearing down.
     decided-at: 2026-11-16T21:57:56Z
     decided-by: rule
+  - key: "other: the status and help command handlers repeat one another's body, each calling its primitive, respelling the answer and showing it with no turn — `framework/bootstrap/pi/ductus-bridge.ts`"
+    outcome: waived
+    reason: 080 gave the two commands this shape, each handler differing in its primitive, its result reader and its message; this window added no third copy, and folding two bodies into one helper would change code no loaded rule faults
+    decided-at: 2026-11-19T20:23:18Z
+    decided-by: rule
+  - key: "convention: the Pi bridge gotcha names only the status and help commands as what the bridge registers, not the colon aliases — `AGENTS.md`"
+    outcome: waived
+    reason: "the gotcha is incomplete, not false: it gives the two commands as why the bridge stays Pi's tool surface, which holds with or without the aliases; the bridge's header and the scenario state the aliases"
+    decided-at: 2026-11-19T20:23:18Z
+    decided-by: rule
+  - key: "edge: a `[host] project` holding a space gives alias names Pi parses only up to the space, so no alias of it runs — `framework/bootstrap/pi/ductus-bridge.ts`"
+    outcome: waived
+    reason: the hyphen form cannot run under such a namespace either, the value comes from the project's own committed configuration, and the bootstrap accepts only lowercase letters, digits and hyphens for it
+    decided-at: 2026-11-19T20:23:18Z
+    decided-by: rule
 ---
 
 # Review — 064-pi-host-support
 
 ## Summary
 
-064's review of its reopening's window, from `3f8e238c` to HEAD: the new scenario the-bridge-closes-its-server-at-shutdown and task 17 (`2e2ca395`), and the bridge's session_shutdown stop and unref with two harness cases (`a89b3e52`). One agent ran all five passes, read all nine loaded backend and cross rule files whole, 064's spec, plan and three scenarios whole, and read 7 of the 7 scope entries whole, the generated `.pi/extensions/ductus.ts` by byte comparison with its source; it read the 47 stored decisions' keys by search rather than the frontmatter whole, and none names a file in the scope. No finding: BE-INPUT-003, BE-TIMEOUT-001, CFG-CONST-003 and QUAL-TEST-001 engage the bridge and are met, and the design-time, service-only and API rules do not fire against a local stdio extension. Ten observations: a broken contract, a call queued behind the one in flight at shutdown was not failed and respawned the runtime, fixed in the run with a harness case; six chores fixed (the ExtensionAPI slice's session_shutdown overload, the harness header, the scenario's edge case on a shutdown before any call, the plan's D2, the in-flight case's missing test, the harness's duplicated process pattern); three waived by the rule with their reasons. The fix round was re-read by an independent agent against 064's spec and three scenarios, read whole: clean, and the loop's closing brief was empty.
+Review of the window `7d590049..HEAD`, 064's reopening for the scenario `colon-form-commands-run-on-pi` (tasks 18 and 19), in three parts: the security pass against the three `security-*.md` files, each read whole (194,749 bytes); the reuse, quality, efficiency and simplicity passes against the other nine rule files, each read whole, `AGENTS.md` from Gotchas to its end and `specs/system.md`; and the criteria step. No MUST or SHOULD violation. All 15 criteria were judged met, each against the code it names and driven where it can be: the harness, the two named `runtime/src/host.rs` tests, Families 14, 15, 17 and 21, and `scripts/gen-claude-commands.sh --check`, which was not shown to fail on drift. Six observations: three fixed in the run (two stale failure messages in the harness, two untested branches of `registerAliases` now each killed by a mutant, and a dated record under the plan's D9), three waived by rule. Ten stored decisions on in-scope files were read against the tree and still stand; two no longer stand and expire: a numbered step of `framework/bootstrap/ductus.md` now names the managed-block merges, and Agent Selection now gives dropped hosts' trees a notice. Examined counts the seven entries read whole: `framework/bootstrap/pi/ductus-bridge.ts`, `scripts/tests/pi-bridge-harness.mjs`, the scenario, `specs/064-pi-host-support/spec.md`, `specs/064-pi-host-support/tasks.md`, `README.md` and `framework/bootstrap/ductus-procedure.md`. Not counted, and named in `unread`: `.pi/extensions/ductus.ts`, a generated copy `cmp` shows byte-identical to the bridge read whole; `framework/bootstrap/govern.md`, byte-identical by `cmp` to `framework/bootstrap/ductus.md`; `framework/bootstrap/ductus.md`, read by its window diff and its Derived values, MCP registration, Adding a new agent, Pi layout, Agent Selection and detection sections (about 34 KB of 164,778 bytes); `runtime/CHANGELOG.md`, read by the hunks of the two commits naming this spec; and `specs/064-pi-host-support/plan.md`, read in its D9 section only, which the fix round changed. The harness passes 23 of 23 cases against the release runtime. Real pi 1.5.2 in RPC mode ran the aliases in this repository's Pi layout and in an adopter-shaped scratch project, a compaction held open included; the commit of task 19 holds those runs, which the reviewers checked against Pi's source and did not repeat. One fix round: the run's fixes to the harness were re-read by an independent agent, which found nothing; the plan's and task list's edits are exempt paths, which the analysis reads.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+15 of 15 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -308,18 +354,42 @@ decisions:
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: `install.sh` `pi)` arm: dest `.pi/prompts/ductus.md`, `cp` verbatim, in-arm comment 'No settings seed', no heredoc; error line reads "expected: claude or pi"; Family 14 `installer-registry-parity.sh` exit 0 asserts the pi arm seeds no settings
+- AC2 — met: `framework/bootstrap/ductus.md` Agent Registry row `pi` | Pi | `.pi` | `pi` | `{}` with rules_file_note 'Pi reads `AGENTS.md` natively'; Family 14 greps the `{}` cell
+- AC3 — met: `framework/bootstrap/ductus.md` §Derived values `pi` column holds all seven values (path, invocation, install path, settings file with no-op, native rules file `AGENTS.md`, cleanup glob `{project}-*.md` in `prompts/`); Invocation also names the colon alias (task 18) without altering the claimed value
+- AC4 — met: `framework/bootstrap/ductus.md` §MCP registration row `pi`: `.pi/extensions/ductus.ts`, `project-local`, `write-file`; §MCP wiring ('write-file agents') defers Pi's copy to the Pi-layout Bridge step and writes no MCP config
+- AC5 — met: `framework/bootstrap/ductus.md` §Pi layout: slash-command manifest has 16 `framework/commands/` rows (audit excluded) plus configure, verbatim copy to `{config_dir}/prompts/{project}-{name}.md` with substitution; Bridge step verbatim, no substitution; `.pi/` in `framework/templates/project/gitignore`; Trust reminder carried by completion message (step 11)
+- AC6 — met: `framework/bootstrap/pi/ductus-bridge.ts` imports only `node:` builtins, spawns `<root>/.ductus/bin/ductus mcp`, hand-rolled JSON-RPC (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`), `registerTool` as `ductus__<name>` with `tool.inputSchema`, `setEncoding("utf8")`, timeout `drop`+`kill`, respawn via `connect`; `node scripts/tests/pi-bridge-harness.mjs` exit 0, all 23 cases PASS incl. missing binary, mid-session exit, timeout, split character
+- AC7 — met: `framework/bootstrap/configure/pi.md` Verify-and-repair steps 1-4 fetch the bridge at the `[source] ref` /ductus resolves, byte-compare, overwrite on divergence, report no-permission and trust facts; `scripts/gen-configure-mcp.sh` header names the Pi exclusion
+- AC8 — met: `runtime/src/host.rs` `Host::command_file_candidates` returns `commands/{project}/{name}.md` then `prompts/{project}-{name}.md`; `cargo test --release --locked --lib host::tests::command_file_candidates` 2 passed (both named tests); `git show fcaa7d2a` confirms the correction note (the existing test's expected list was extended)
+- AC9 — met: `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` links `../../064-pi-host-support/spec.md`; `specs/022-deterministic-runtime/data-model.md` §Command-file candidates lists the pi candidate 'appended last'
+- AC10 — met: run in the tree: `installer-registry-parity.sh` exit 0 (pi branch at the layout switch plus the pi-arm no-seed assertion), `runtime-probe-parity.sh` exit 0 with stderr 'skipped pi', `host-namespace-parity.sh` exit 0 (scans `{config_dir}/prompts/<ns>-*.md`, compared 2 config dirs)
+- AC11 — met: `scripts/gen-claude-commands.sh --check` exit 0 and its Pi pass builds `.pi/prompts/ductus-*.md` and `.pi/extensions/ductus.ts`; `git ls-files .pi` tracks 17 prompts plus configure and the bridge; `.gitignore` carries `.pi/*` with `!.pi/prompts/` and `!.pi/extensions/` (a drift mutant was not run: copying the tree to scratch was denied)
+- AC12 — met: `framework/constitution.md` §runtime-host-integration reads 'Pi `ductus__`, through the `.pi/extensions/ductus.ts` bridge rather than pi's own MCP client', matching the criterion's own supersession note; the wrap of the runtime's MCP server over stdio is stated in `framework/bootstrap/ductus.md` Pi layout Bridge step
+- AC13 — met: `README.md`: line 7 'Claude Code and Pi', per-agent install table row `pi` (`.pi/prompts/ductus.md`), and the invocation paragraph names `/my-project-specify` for Pi (and now the colon alias)
+- AC14 — met: `specs/064-pi-host-support/plan.md` D9 holds the 2026-09-20 smoke-test record with all four evidence points and the 2026-11-19 record of real pi 1.5.2 RPC runs that loaded the bridge as it stands, registered both spellings, made a live `render-status` call and expanded a `.pi/prompts/` template; `host::tests::command_file_candidates_pi_shape_from_session_cli_config_dir` passes for the `ductus exec` candidate
+- AC15 — met: `cmp framework/bootstrap/ductus.md framework/bootstrap/govern.md` exit 0 (identical); `transitional-bootstrap-parity.sh` (Family 21) exit 0
+
 ## Observations
 
-- bug — a call queued behind an in-flight call when session_shutdown fires is not failed: stop() drops only the pending requests of the child and leaves callChain alone, so the queued call then runs, respawns the runtime after the shutdown, and waits on it (arguable against the scenario's 'fails any call still waiting on it'; a driver with a stub runtime that never answers showed the queued call running a fresh child after the shutdown and settling only at a second shutdown or the request timeout) — `framework/bootstrap/pi/ductus-bridge.ts:289` (breaks the spec's contract) — **fixed** (decided by the rule)
-- convention — the file's own ExtensionAPI slice, documented as what the bridge uses, declares on() for session_start only, so pi.on("session_shutdown", ...) does not type-check against it — `framework/bootstrap/pi/ductus-bridge.ts:72` — **fixed** (decided by the rule)
-- convention — the harness header comment lists what it covers and omits the two cases task 17 added (session_shutdown stopping the runtime, and a process that loaded the bridge exiting by itself) — `scripts/tests/pi-bridge-harness.mjs:5` — **fixed** (decided by the rule)
-- other — the scenario's second Edge Case says a shutdown before any call finds no child, but the bridge spawns the runtime at load, so a shutdown before any tool call finds and stops that child (driver: runtime running after load and before any call, gone after the shutdown); the sentence holds only when the runtime never started or has died — `specs/064-pi-host-support/scenarios/the-bridge-closes-its-server-at-shutdown.md:23` — **fixed** (decided by the rule)
-- other — plan.md D2 states the bridge keeps the runtime alive and respawns it, and records neither the session_shutdown stop nor the unreferenced child and pipes, so the design record omits what task 17 added (the scenario carries the requirement) — `specs/064-pi-host-support/plan.md:56` — **fixed** (decided by the rule)
+- convention: two failure messages in the respelling cases said a colon hint is one Pi cannot run, which task 18 made false; reworded to say the hint was not respelled — `scripts/tests/pi-bridge-harness.mjs` — **fixed** (decided by the rule)
+- other: two branches of `registerAliases`, the dropped rejection after the idle wait and the return when `.pi/prompts` cannot be listed, had no harness case failing without them; two assertions added, each killed by its mutant — `scripts/tests/pi-bridge-harness.mjs` — **fixed** (decided by the rule)
+- other: the smoke-test record under D9 still said nothing exercised pi's own loader on the rewritten bridge, though real pi 1.5.2 runs since have; a dated record of the 2026-11-19 run added — `specs/064-pi-host-support/plan.md` — **fixed** (decided by the rule)
+- other: the status and help command handlers repeat one another's body, each calling its primitive, respelling the answer and showing it with no turn — `framework/bootstrap/pi/ductus-bridge.ts` — **waived**: 080 gave the two commands this shape, each handler differing in its primitive, its result reader and its message; this window added no third copy, and folding two bodies into one helper would change code no loaded rule faults (decided by the rule)
+- convention: the Pi bridge gotcha names only the status and help commands as what the bridge registers, not the colon aliases — `AGENTS.md` — **waived**: the gotcha is incomplete, not false: it gives the two commands as why the bridge stays Pi's tool surface, which holds with or without the aliases; the bridge's header and the scenario state the aliases (decided by the rule)
+- edge: a `[host] project` holding a space gives alias names Pi parses only up to the space, so no alias of it runs — `framework/bootstrap/pi/ductus-bridge.ts` — **waived**: the hyphen form cannot run under such a namespace either, the value comes from the project's own committed configuration, and the bootstrap accepts only lowercase letters, digits and hyphens for it (decided by the rule)
+- convention: a language with no github/gitignore template, such as markdown, prints a fetch failure on every run — `framework/bootstrap/ductus.md` — **waived**: the run names the failed URL and writes nothing for it, which is the procedure's stated outcome; the subject's markdown language is an input no project has a template for
+- convention: the Closing restart gives no single form for Pi wired in the run beside Claude already registered — `framework/bootstrap/ductus-procedure.md` — **waived**: the per-agent forms compose into an accurate notice, as the subject's run shows, so no host reads it wrong
+- convention: the Pi Bridge step says verbatim while the per-agent apply-manifest call carries a substitutions map — `framework/bootstrap/ductus.md` — **waived**: the Bridge step's verbatim copy is its own call, and the subject's bridge matched the framework source byte for byte
+- convention: the detection step counts deferred mcp__ductus__ tool names as State A — `framework/bootstrap/ductus.md` — **waived**: an artifact of the test harness, whose tool list belonged to another project's session; a real adopter session lists only its own
+- convention: the Frontmatter Migration's specs/**/spec.md walk reports specs/templates/spec.md as already frontmatter on every run — `framework/bootstrap/ductus-procedure.md` — **waived**: the template has frontmatter, so the walk skips it with a report line and writes nothing
+- other: with surface-instruction gone, the MCP registration table's mechanism column holds one value — `framework/bootstrap/ductus.md` — **waived**: the column is the extension point the Adding a new agent steps cite; dropping it is a design change, not removal residue (decided by the rule)
+- stale: the Derived values row label Command/skill path still names the skill layout — `framework/bootstrap/ductus.md` — **waived**: a label, not a claim: it still names the command-file path both layouts use, no parser keys on it, and renaming it is a seven-spec sweep, two of them scenarios, for no behavior change (decided by the rule)
 - other — pi's extension documentation (Long-lived resources and shutdown) says not to start a process from the extension factory and to defer it to session_start or the command that needs it; the bridge spawns the runtime in the factory at load — `framework/bootstrap/pi/ductus-bridge.ts:358` — **waived**: The tool list the bridge registers comes from the runtime, so registration has to start it; spec 064 plan Trade-offs records 'Spawn at load, not lazily' and a lazily started bridge would register nothing. The unreferenced child and the session_shutdown stop are what make the factory spawn safe. (decided by the rule)
 - other — the stdin unref line is observably unnecessary on Node 26.13.0 (macOS): a copy of the bridge without it, driven by a stub runtime that answers after 1.5 s, completed the call and the process exited by itself; copies without the stdout unref or without the child unref hung (exit 124 at 12 s) — `framework/bootstrap/pi/ductus-bridge.ts:190` — **waived**: The scenario Behavior names the child and both its pipes, and the line costs one statement; whether the stdin handle keeps the loop alive varies with a pending write and with Node versions the harness does not pin, so no test can isolate it here. (decided by the rule)
-- other — the scenario's first Edge Case (a call in flight at shutdown settles with the shutdown's error) has no harness case; the shutdown case runs with the runtime idle. A driver with a stub that never answers showed the in-flight call settle in 1 ms with 'ductus: probe failed: the ductus bridge was shut down' — `scripts/tests/pi-bridge-harness.mjs:363` — **fixed** (decided by the rule)
 - other — a call that is mid-handshake when session_shutdown fires fails with the bridge's 'is missing or unusable — run /ductus to re-acquire it' envelope, carrying the shutdown reason only in the closing parenthesis (driver: three runs, same text) — `framework/bootstrap/pi/ductus-bridge.ts:365` — **waived**: It is the existing wording for any failure of the handshake, a runtime death during it included, and it names the real reason; it arises only for a call racing the shutdown, which pi is tearing down. (decided by the rule)
-- other — the harness spells the runtime process pattern twice, in killRuntime and in runtimeRunning — `scripts/tests/pi-bridge-harness.mjs:129` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -327,9 +397,8 @@ decisions:
 
 ## Excluded from scope
 
-- `specs/012-multi-agent-govern/tasks.md` — 012-multi-agent-govern
-- `specs/022-deterministic-runtime/scenarios/merge-managed-block-renamed-subsection.md` — 022-deterministic-runtime
-- `specs/048-govern-acquired-runtime/scenarios/pointer-follows-the-store.md` — 048-govern-acquired-runtime
+- `specs/071-command-reference-split/spec.md` — 071-command-reference-split, 080-deterministic-runtime-efficiency
+- `specs/080-deterministic-runtime-efficiency/plan.md` — 071-command-reference-split, 080-deterministic-runtime-efficiency
 
 ## Unexamined governance
 

@@ -253,6 +253,14 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 > `scripts/tests/pi-bridge-harness.mjs` covers the transport under node; nothing here
 > exercised pi's own loader on the rewritten bridge. An attempt with pi 1.0.4 stopped
 > at the model request, refused by the account's usage limit, before any tool call.
+>
+> **Real pi 1.5.2, RPC mode (2026-11-19, tasks 18 and 19):** pi's own loader loaded
+> the bridge as it now stands, in this repository's Pi layout and in an adopter-shaped
+> scratch project whose prompts and bridge `apply-manifest` installed. Each registered
+> the commands under both spellings, which the bridge does only once the runtime has
+> listed its tools; showed the pipeline view through a live `render-status` call with
+> no model turn; and expanded a `.pi/prompts/` template with its argument. The two
+> tasks' commit messages hold the runs.
 
 ## Affected Files
 
