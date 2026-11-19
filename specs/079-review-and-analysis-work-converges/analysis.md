@@ -1,17 +1,17 @@
 ---
 spec: 079-review-and-analysis-work-converges
-last-run: 2026-11-18T13:12:40Z
-analyzed-against: 67f1f01b3f7a2a34c70ba9434c4eba326202e808
+last-run: 2026-11-19T03:03:45Z
+analyzed-against: d9cfd0b6828777a588450cc084b7f339185257b3
 hard-fail: 0
 blocking-findings: 0
-advisory: 6
+advisory: 4
 unexamined: 3
 analyzed-digest:
   data-model.md: 1413afb3cec6f554723b56bcc6e190fc2140fe7ab52407e09e6f27984a75ba7f
-  plan.md: 9fcc1596e070ac488a6ae88795cd833cca265bbd699e39aa970cd5fed3b54280
+  plan.md: a5e84ad730829cc4c5bf86b0e241f5ab7bac244b0c0d428c904abc2365572094
   research.md: d992eacf8fdd3a7568c8f20415bb7150eb7bb2581d9164fc55f23d60aa7b5952
-  review.md: 5d1790b2f5a934c6da0b44a79c05f1f55763159231cfc33a4ffc2f94af0e6d49
-  spec.md: 2519a9b14bd8f267a7f7139e3633583ede9ba072107fabe482ffee10e7df677d
+  review.md: 0170d0b373f86e204e3789e65aa15306b5bab2902218eeac4f16e9c32c7013e0
+  spec.md: a7ea6912a0fd8c3acce1095ceff025a6eefdbd66e9170e2a90062c695ebbcbc1
   tasks.md: fce4651dd9262f9233e1cc8565d22fab75b9a006c7918ceca2412fd7d94438bd
 unexamined-by-reason:
   anchor-target-unjudgeable: 1
@@ -36,22 +36,21 @@ rule-verdicts:
   BE-INPUT-002: {verdict: addressed, cite: "spec.md#Applicable Rules"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`measure-reopenings` (new primitive)"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The writers this spec changes are guarded where they are owned"}
   CFG-CONST-001: {verdict: addressed, cite: "data-model.md#Constants"}
   CFG-CONST-002: {verdict: addressed, cite: "data-model.md#Constants"}
   CFG-CONST-003: {verdict: addressed, cite: "data-model.md#Constants"}
-  CFG-ENV-001: {verdict: addressed, cite: "data-model.md#Constants"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
-  QUAL-DELEG-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
-  QUAL-TEST-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Edge Cases"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#One commit-attribution helper"}
+  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#The measurement"}
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 7
   deferred: 0
   waived: 4
-  undispositioned: 2
+  undispositioned: 0
 decisions:
   - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 87355 bytes, 2 read pages at the 50000-byte read size
     outcome: waived
@@ -79,7 +78,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 6 advisory; not blocking. 3 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 4 waived, 2 undispositioned. An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 3 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -91,12 +90,10 @@ decisions:
 
 ## Advisory findings
 
-- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 92275 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
+- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 93717 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
+- decision-reasons — Resolved Question "Does the gate enforce a review that is owed?" rejects the literal-test option as "53 more reviews", a run count, with the result given up only partly stated. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: the run counts are this spec's result under design, review and analysis work converging within its bound: the answer weighs misses against AC1 and over-bound closings, measured over 126 closings, not the reopen an option would start (decided by the rule)
+- decision-reasons — Resolved Question "Does a record's commit leave code committed after the run unread?" rejects adding what lies between to the next window because a review preceding its commit would owe a second review, the review run being the reason. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
 - rule-assessment — BE-DEPS-007: The plan changes CI configuration (.github/workflows/framework-checks.yml step v) but commits to no automated vulnerability scan on a manifest or lockfile change. — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The step runs a repository script and alters no dependency set; runtime.yml's cargo audit job already scans every change to the runtime's manifest and lockfile, as 081's plan records, and 073's, 017's and 072's analyses waived this rule on the same kind of CI addition. (decided by the rule)
-- decision-reasons — spec.md Resolved Questions (Does a record's commit leave code committed after the run unread?) rejects an option because it would owe a second review — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
-- decision-reasons — spec.md Resolved Questions (Does the gate enforce a review that is owed?) rejects an option for 53 more reviews, 33 of them reading only another spec's text — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: the run counts are this spec's result under design, review and analysis work converging within its bound: the answer weighs misses against AC1 and over-bound closings, measured over 126 closings, not the reopen an option would start (decided by the rule)
-- decision-reasons — spec.md Resolved Questions (Where does each change land?) rejects an option chiefly because it reopens 076 and owes up to 16 runs on the owners — `specs/079-review-and-analysis-work-converges/spec.md` — **undispositioned**
-- decision-reasons — spec.md Resolved Questions on a stopped review's and a cut-off review's re-run reject leaving it a miss because it asks a task on this spec per stop, beside a result reason — `specs/079-review-and-analysis-work-converges/spec.md` — **undispositioned**
 
 ## Deferred to other specs
 
@@ -113,4 +110,10 @@ decisions:
 
 ## Fixed in this run
 
-- plan-consistency — plan.md Overview says specs/system.md does not exist in this repository, but it does (878 bytes, Network section) — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — Edge Case 'What is not a correction' states as fact that a stale analyzed-digest on a done spec fires no check and the next analysis reads the text, naming no file, symbol or command (Grounding). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — Fix rounds states that /{project}:analyze already reads the text an exempt path covers (also in the spec's 'Does the fix-round loop earn its cost?'), a claim about current analyze scope with no citation or assumption marker (Grounding). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — The measurement section states that write-review stamps a decision a host carries from another spec's record as new, with the run's time and author, and has no argument naming its source, with no code or command cited (Grounding). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — The review-owed paragraph states the pre-081 test (a path outside a spec's directory or a scenario or data-model edit owes a review, a stale digest counts) and names `stale_review_block`, a gate check that no longer exists — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — Symbols named without their file in claims about existing code: `parse_feature_dir`, `holds_done_until_reviewed`, `run_in_spec_block`, `read_plan_affected`, `demote_out_of_round` and `decisions::merge` — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — Motivation states "That loop worked" of 078's fix-round loop as fact, citing no measurement or record for the judgment (Grounding, advisory). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — Trade-offs states that `/{project}:analyze` "asks nobody about an advisory finding and has no `--waive`", a claim about the command's current behavior, with no step, reference section or primitive cited (Grounding, advisory). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
