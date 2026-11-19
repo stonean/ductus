@@ -15,7 +15,7 @@ Generic, project-agnostic slash command templates that operationalize the `ductu
 
 ## Problem
 
-The constitution defines the pipeline (spec, plan, tasks, implement) and the spec lifecycle (draft, clarified, planned, in-progress, done), but provides no interactive tooling to enforce it. Adopter projects have built their own slash commands from scratch, duplicating the pipeline logic that should be shared.
+The constitution defines the pipeline (spec, plan, tasks, implement) and the spec lifecycle (draft, clarified, planned, in-progress, done), but provides no interactive tooling to enforce it. Adopter projects have built their own slash commands from scratch, duplicating the pipeline logic that should be shared (the plan's Overview names the one these commands were derived from, as its first version recorded at `2c838b20`).
 
 ## Behavior
 
@@ -68,7 +68,7 @@ Pipeline commands enforce gates before executing:
 
 ### Template References
 
-Pipeline commands reference spec templates from the project's `specs/templates/` directory, not from `ductus`. Each project copies the `ductus` templates into their own `specs/templates/` during bootstrap.
+Pipeline commands reference spec templates from the project's `specs/templates/` directory, not from `ductus`. Each project copies the `ductus` templates into their own `specs/templates/` during bootstrap (the `ductus`-owned shared files section of `framework/bootstrap/ductus.md`).
 
 ## Acceptance Criteria
 

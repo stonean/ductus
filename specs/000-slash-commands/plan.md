@@ -6,7 +6,7 @@ title: "000-slash-commands — plan"
 
 ## Overview
 
-Generic slash command `.md` files, one per command, in `framework/commands/`. Each command is derived from the working implementation in a prior adopter project — a Go backend service that had built its own slash commands — but generalized: that project's own references are replaced with `{project}` placeholders, and its language-specific logic (Go code style, module patterns) is removed in favor of references to the constitution and AGENTS.md.
+Generic slash command `.md` files, one per command, in `framework/commands/`. Each command is derived from the working implementation in a prior adopter project — a Go backend service that had built its own slash commands, as this plan recorded when first written (`2c838b20`) — but generalized: that project's own references are replaced with `{project}` placeholders, and its language-specific logic (Go code style, module patterns) is removed in favor of references to the constitution and AGENTS.md.
 
 ## Technical Decisions
 
@@ -14,13 +14,15 @@ Generic slash command `.md` files, one per command, in `framework/commands/`. Ea
 
 Command sources live at `framework/commands/{command}.md`; the `configure` command is the exception, sourced per agent from `framework/bootstrap/configure/{agent}.md`. This is the template source — `/ductus` installs each command at the agent's command path (`.claude/commands/{project}/` for Claude Code; `framework/bootstrap/ductus.md` §Derived values lists every layout) and replaces the placeholders.
 
-Rationale: Keeping them under `framework/` (not under `.claude/commands/`) avoids them being treated as active slash commands in the `ductus` repo itself. The repo's own installed copies in `.claude/commands/ductus/` are generated from these sources by `scripts/gen-claude-commands.sh`.
+Rationale: Keeping them under `framework/` (not under `.claude/commands/`) avoids them being treated as active slash commands in the `ductus` repo itself, since an agent loads a project's commands from its command path (`{config_dir}/commands/{project}/<name>.md` for the `claude-style` layout; `framework/bootstrap/ductus.md` §Derived values, **Command/skill path** row). The repo's own installed copies in `.claude/commands/ductus/` are generated from these sources by `scripts/gen-claude-commands.sh`.
 
 ### Parameterization approach
 
 Every command uses literal `{project}` as the project placeholder, in its cross-references (`/{project}:clarify`, `/{project}:plan`), and `scripts/gen-claude-commands.sh` substitutes `{cli-config-dir}` for the agent's config directory too (added by `012-multi-agent-govern`). No command source spells `{cli-config-dir}` now: `/{project}:analyze` reads the layout-derived rows instead ([scenario](scenarios/analyze-reads-the-layout-derived-command-set.md)).
 
-No other placeholders are needed. The bootstrap command (spec 003) handles find-and-replace during project scaffolding.
+No other placeholders are needed. The installer replaces them during project scaffolding (`framework/bootstrap/ductus.md` §Placeholder Substitution).
+
+Rationale: a literal token is a plain find-and-replace for the installer and for `scripts/gen-claude-commands.sh`, so no template engine ships with the framework, and each placeholder is a value that differs between adopters or agents: the project name always, the config directory once a second agent existed (012).
 
 ### Deriving from the source project
 
@@ -43,7 +45,7 @@ Rationale: lint compliance is a quality gate the constitution defines (§markdow
 
 ### A `done` stop says the request is not built
 
-The message shape is one bullet in the constitution's §spec-lifecycle, which every command loads; `amend`, `clarify`, `plan`, `implement` and `target` point at it, never copy it, and `target`'s `done` row takes the qualified form. The bullet states the "Not built yet: {request}." line, said only when new work is asked for, and the qualified `done`, always; `/{project}:status`'s cell is unchanged, and the bullet leaves it unnamed since the constitution sits at its byte ceiling. `cross-spec-impact:` names `014-reclarify-backedge` only: its criteria quote `/clarify`'s `done` message and `/amend`'s re-open prompt. `023-govern-refinement`'s AC30 still holds (the `done` row points at `/amend`); only its annotation's quote of the old row wording is provenance of the day it shipped, so it takes no entry.
+The message shape is one bullet in the constitution's §spec-lifecycle, which every command loads; `amend`, `clarify`, `plan`, `implement` and `target` point at it, never copy it, and `target`'s `done` row takes the qualified form. The bullet states the "Not built yet: {request}." line, said only when new work is asked for, and the qualified `done`, always; `/{project}:status`'s cell is unchanged, and the bullet leaves it unnamed since the constitution stood at 49,998 bytes against `scripts/lint-governing-size.sh`'s 50,000-byte ceiling when this was decided (`git cat-file -s 78a6ff34:framework/constitution.md`). `cross-spec-impact:` names `014-reclarify-backedge` only: its criteria quote `/clarify`'s `done` message and `/amend`'s re-open prompt. `023-govern-refinement`'s AC30 still holds (the `done` row points at `/amend`); only its annotation's quote of the old row wording is provenance of the day it shipped, so it takes no entry.
 
 ### `/amend`'s criterion route writes with host tools, not a primitive
 
@@ -71,7 +73,7 @@ For an `in-progress` spec with no open question, `framework/commands/target.md` 
 
 ### Considered: a single-file command reference instead of one file per command
 
-Rejected. Each command needs enough instruction detail that a single file would be unwieldy. Separate files also match how Claude Code discovers and lists slash commands — one file per command.
+Rejected. Each command needs enough instruction detail that a single file would be unwieldy. Separate files also match how an agent discovers and lists slash commands — one file per command, the file's name the command's (`framework/bootstrap/ductus.md` §Derived values, **Command/skill path** and **Invocation** rows).
 
 ### Considered: using a different placeholder syntax (e.g., `{{project}}`, `$PROJECT`)
 

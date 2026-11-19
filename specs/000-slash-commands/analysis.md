@@ -1,19 +1,19 @@
 ---
 spec: 000-slash-commands
-last-run: 2026-11-14T03:40:29Z
-analyzed-against: 3cf8dffd0638e6d72f4822d8cfd7062d26afde30
+last-run: 2026-11-19T02:16:59Z
+analyzed-against: b90ba7b7d7404050a96f7cc496a92fc725c39fb0
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 6
 analyzed-digest:
-  plan.md: a92e10920e8a23424265ea635f9a5eb44fe6839cf09ec1646cfc8600adfb7e54
-  review.md: 92bb129a789fac02524f0037954b192be3ecb5d23a6d4e604deaa3e40002338b
+  plan.md: 9d04757c0ea2e4ba28d7d0d381a8094ff61dd8a0d2bba0124b4178bf48a750b4
+  review.md: 6928e132da5cc5e89bf99b177233392ef50d364453a72f788b778528b36ec5a5
   scenarios/a-done-stop-says-the-request-is-not-built.md: a578e1a0f2c9dfbaee173a31734aa64e2d42afd5d10f41df72fd9c47cd9b3402
   scenarios/analyze-reads-the-layout-derived-command-set.md: 134abf405d47afc5d4b055bd91105293db6ba2b434a82d0c1ea2a908a1f2e4d7
   scenarios/clarify-one-at-a-time.md: 74531377a3ba6862619c2a4aaf861084da5b53d69ac09a39f28740176f5c078d
   scenarios/command-autocomplete-summary.md: de4ef40b8d2a8587be508d333d502198cae4c312639b282ce363d8bb7253fa66
-  scenarios/criterion-route-after-draft.md: b08bf71669de7980442f8246be334fac4440d43c1920eca95c770878f5c45386
+  scenarios/criterion-route-after-draft.md: 7fa00d35986c315ec41a85794276370181240fd34f822374a03cf816cacd7063
   scenarios/dashboard-dependencies-column.md: d1ce2860d34e9be0e4f34bb67651645e92b709bca1a1572833259923b9da0428
   scenarios/implement-skips-planned-prompt.md: adeb014c4192e84543d733fcf27f12907c2cada0d4950af9782a6168a6fac1c3
   scenarios/implement-stops-below-planned.md: 4e74cbbf5c625ee2b7415a3bc682f996d1b8356b2d25cb3203e8dcf08d9e0f81
@@ -21,8 +21,8 @@ analyzed-digest:
   scenarios/target-argument-parsing.md: b91e1ec533ba1730f5b3760219ef3817c6238298ae8c351670a6edc9b6bb6db3
   scenarios/target-clear-flag.md: 1a64e209badd9131c6874a3786b01cc599e422965d21d9e7fac72acde67b114b
   scenarios/target-names-the-step-the-gate-would-name.md: 0d3ff3d98704f5df2d560838f193b1daadf073a62e5039ce9b215259b41bd31b
-  scenarios/validation-gates.md: 07dc0f7d1d5c494503cca763dbfcfd75e497395621cf43d0b20b73b0048ef934
-  spec.md: e987bb6c21cd2dfb3c81bcf757ec32b9c405c6c0e7b1ab2811f06c527ced1eda
+  scenarios/validation-gates.md: ad40135b38a38f59e616f28469869744f79196b625742bb013111475d72e4a07
+  spec.md: 16789c8b16ecf492048453800ef09a24bd46101201afbbbb5589ae79be39670e
   tasks.md: 40a98a58684463ac4fe162fedc33ff6e028b5207caa947b62e89e728d4958405
 unexamined-by-reason:
   never-existed: 2
@@ -38,14 +38,12 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
-rule-verdicts:
-  BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/dashboard-dependencies-column.md#Behavior"}
 blocking: false
 dispositions:
-  fixed: 6
+  fixed: 7
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -55,7 +53,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 6 unexamined target(s). Dispositions: 6 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 6 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -85,9 +83,10 @@ dispositions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-PAYLOAD-001: The status dashboard table lists every spec (and each spec's dependencies array) with no stated maximum size or bound; the design neither commits to one nor points at the read-size-bytes lists-file bound that 022/080 own. — `specs/000-slash-commands/scenarios/dashboard-dependencies-column.md` — **fixed**
-- grounding — plan.md Trade-offs states a count (57 placeholders across nine names in the constitution, six in the spec template) with no method; a re-count under one plausible pattern gives 46 and 14 — `specs/000-slash-commands/plan.md` — **fixed**
-- grounding — plan.md asserts 'No runtime primitive appends an acceptance criterion' (an absence claim about the existing runtime) with no source named — `specs/000-slash-commands/plan.md` — **fixed**
-- grounding — AC1 (and AC7) state history facts ('the first commit's commands/ directory held thirteen files', 'no commit contains a next.md') with no commit or command cited — `specs/000-slash-commands/spec.md` — **fixed**
-- plan-consistency — Technical Decision 'Deriving from the source project' lists transformations but states no rationale — `specs/000-slash-commands/plan.md` — **fixed**
-- plan-consistency — Technical Decision 'Analyze and markdownlint' states the behavior (lint through lint-markdown, advisory findings) but no rationale — `specs/000-slash-commands/plan.md` — **fixed**
+- grounding — Overview states each command derives from a working Go backend adopter project's commands, with no citation or hedge (§Grounding (advisory)). — `specs/000-slash-commands/plan.md` — **fixed** (decided by the rule)
+- grounding — Directory location rationale asserts files under .claude/commands/ would be treated as active slash commands in this repo, an uncited claim about host behavior (§Grounding (advisory)). — `specs/000-slash-commands/plan.md` — **fixed** (decided by the rule)
+- grounding — Trade-offs states one file per command matches how Claude Code discovers and lists slash commands, an uncited claim about an external system (§Grounding (advisory)). — `specs/000-slash-commands/plan.md` — **fixed** (decided by the rule)
+- grounding — A done stop decision states the constitution sits at its byte ceiling, a measurable fact with no command or figure cited (§Grounding (advisory)). — `specs/000-slash-commands/plan.md` — **fixed** (decided by the rule)
+- grounding — Template References states each project copies the ductus templates into specs/templates/ during bootstrap, a descriptive claim naming no source (§Grounding (advisory)). — `specs/000-slash-commands/spec.md` — **fixed** (decided by the rule)
+- plan-consistency — Technical Decision 'Parameterization approach' states what is done but no rationale for choosing it (§Plan consistency). — `specs/000-slash-commands/plan.md` — **fixed** (decided by the rule)
+- grounding — Problem: 'Adopter projects have built their own slash commands from scratch, duplicating the pipeline logic that should be shared' is a descriptive claim about existing reality with no citation or assumption marker. — `specs/000-slash-commands/spec.md` — **fixed** (decided by the rule)
