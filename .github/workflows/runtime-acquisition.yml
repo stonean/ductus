@@ -159,11 +159,20 @@ jobs:
             shasum -a 256 -c "${archive}.sha256"
           fi
 
-          # 3. Install into the store with the executable bit set.
-          mkdir -p "$store"
-          tar -xzf "$archive"
+          # 3. Install into the store with the executable bit set. List the
+          #    archive first, as Branch 2 step 6 does: it must hold exactly one
+          #    regular file, the binary, and only that member is extracted, so
+          #    no entry name becomes a path (BE-INPUT-004).
           binary="ductus"
           [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
+          listing="$(tar -tvzf "$archive")"
+          if [ "$(printf '%s\n' "$listing" | wc -l | tr -d ' ')" != 1 ] \
+            || [ "${listing#-}" = "$listing" ] || [ "${listing##* }" != "$binary" ]; then
+            echo "::error::${archive} lists '${listing}', not the one regular file ${binary}"
+            exit 1
+          fi
+          mkdir -p "$store"
+          tar -xzf "$archive" "$binary"
           mv "$binary" "$store/$binary"
           chmod +x "$store/$binary"
 

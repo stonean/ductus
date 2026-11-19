@@ -74,7 +74,7 @@ Published under `https://github.com/stonean/ductus/releases/download/ductus-v{ve
 
 The complete set the release workflow asserts before publishing carries more than these five: the SBOM (`ductus.cdx.json` plus its `.sha256` sidecar) and, since [061](../061-updates-track-the-latest-release-tag/spec.md), the installer `install.sh`, staged from a checkout at the tag. The installer has no sidecar: it is fetched over HTTPS and piped to `sh`, and a post-release job compares the published copy byte for byte with the tag's.
 
-Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so extraction prompts once in Manual mode, and Pi has no permission gate.
+Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so each of step 6's two `tar` runs, the listing and the extraction, prompts in Manual mode, and Pi has no permission gate.
 
 ## Detection states
 
@@ -89,14 +89,14 @@ State B originally aborted in pre-flight. The scenario `state-b-continues-in-ses
 
 ## Acquisition command set
 
-Each step, and the permission grammar entry it needs. Claude's seed (`framework/bootstrap/ductus.md` §Permission Setup, the `claude` row) grants today: the three digest tools; `mkdir` as the exact `mkdir -p ~/.ductus/bin/` and `mkdir -p .ductus/bin`; `chmod` as the exact `chmod +x ~/.ductus/bin/ductus` command, its `.exe` twin and the githooks one; and the store probe, exact. It grants no `curl` and no `tar`, retired by 022 task 18, so each prompts once in Manual mode, and no pointer command beyond `mkdir -p .ductus/bin`, by design (022 task 18 question 1a). Pi has no permission gate.
+Each step, and the permission grammar entry it needs. Claude's seed (`framework/bootstrap/ductus.md` §Permission Setup, the `claude` row) grants today: the three digest tools; `mkdir` as the exact `mkdir -p ~/.ductus/bin/` and `mkdir -p .ductus/bin`; `chmod` as the exact `chmod +x ~/.ductus/bin/ductus` command, its `.exe` twin and the githooks one; and the store probe, exact. It grants no `curl` and no `tar`, retired by 022 task 18, so each prompts in Manual mode (`tar` twice, since step 6 lists the archive before extracting it), and no pointer command beyond `mkdir -p .ductus/bin`, by design (022 task 18 question 1a). Pi has no permission gate.
 
 | Step | Command | Seeded today |
 | --- | --- | --- |
 | fetch archive + sidecar | `curl` | **no** (prompts once) |
 | verify digest | `shasum -a 256` (macOS) / `sha256sum` (Linux) / `certutil -hashfile` (Windows) | yes |
+| list, then extract its one member | `tar`, twice | **no** (prompts for each) |
 | create the store directory | `mkdir` | exact `mkdir -p ~/.ductus/bin/` only |
-| extract | `tar` | **no** (prompts once) |
 | set the executable bit | `chmod` | exact `chmod +x` store command and its `.exe` twin only |
 | materialize the pointer | `ln` (falling back to `cp`) | **no** |
 | probe the version | executing the store path | exact `--version` probe only |

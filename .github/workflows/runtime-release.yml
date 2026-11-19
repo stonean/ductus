@@ -204,8 +204,9 @@ jobs:
       # spec 048; `.tar.gz` everywhere means acquisition extracts with `tar`
       # on every platform, so `unzip` never enters any agent's permission
       # grammar. Windows 10+ ships bsdtar as `tar`. Two agents remain:
-      # Claude's seed grants no `tar` (022 task 18), so extraction prompts
-      # once in Manual mode, and Pi has no permission gate.
+      # Claude's seed grants no `tar` (022 task 18), so each of the
+      # bootstrap's two `tar` runs, the listing and the extraction, prompts in
+      # Manual mode, and Pi has no permission gate.
       #
       # `shell: bash` on Windows is Git Bash, which supplies tar and shasum —
       # so this is one step rather than a per-OS pair. The archived binary
@@ -379,10 +380,19 @@ jobs:
             shasum -a 256 -c "${archive}.sha256"
           fi
 
-          mkdir -p "$store"
-          tar -xzf "$archive"
+          # List the archive first, as the bootstrap's Branch 2 step 6 does:
+          # it must hold exactly one regular file, the binary, so a packaging
+          # change that adopters' bootstraps would halt on blocks the publish.
           binary="ductus"
           [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
+          listing="$(tar -tvzf "$archive")"
+          if [ "$(printf '%s\n' "$listing" | wc -l | tr -d ' ')" != 1 ] \
+            || [ "${listing#-}" = "$listing" ] || [ "${listing##* }" != "$binary" ]; then
+            echo "::error::${archive} lists '${listing}', not the one regular file ${binary}"
+            exit 1
+          fi
+          mkdir -p "$store"
+          tar -xzf "$archive" "$binary"
           mv "$binary" "$store/$binary"
           chmod +x "$store/$binary"
 

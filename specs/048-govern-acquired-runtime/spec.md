@@ -182,7 +182,7 @@ Pre-granting the *verification* step is the security-relevant half, and it runs 
 
 Executing the acquired binary is pre-granted on the same reasoning, and only because verification precedes it: nothing is executed that has not already matched its published digest. An unverified binary is never written to the store at all, so there is no state in which the execution grant applies to something unchecked.
 
-One simplification falls out of the enumeration: publishing the Windows asset as `.tar.gz` removes `unzip` from the surface entirely, since Windows 10+ ships `bsdtar` and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so extraction prompts once in Manual mode, and Pi has no permission gate. Extraction becomes one command on every platform.
+One simplification falls out of the enumeration: publishing the Windows asset as `.tar.gz` removes `unzip` from the surface entirely, since Windows 10+ ships `bsdtar` and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so each of the extraction's two `tar` runs, the listing and the extraction of its one member, prompts in Manual mode, and Pi has no permission gate. Extraction uses one tool on every platform.
 
 **Which platforms are guaranteed?**
 

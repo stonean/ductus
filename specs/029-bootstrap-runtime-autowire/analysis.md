@@ -1,21 +1,22 @@
 ---
 spec: 029-bootstrap-runtime-autowire
-last-run: 2026-11-14T02:41:26Z
-analyzed-against: de9f01d0256ee948144fe9adc5aaa04afd5a2240
+last-run: 2026-11-19T00:44:50Z
+analyzed-against: efd3d488116e0752e8e7fb94f5c712c42f6263c5
 hard-fail: 0
 blocking-findings: 0
-advisory: 2
-unexamined: 3
+advisory: 1
+unexamined: 7
 analyzed-digest:
-  plan.md: cd25efecd0b3c0440829628602c5b9093dde8634fce66ba3ac7ea35605643908
-  review.md: 3dc3225ee5648467859a43ecbc14d50cb952833b06e17db38629223d467faaa1
+  plan.md: 9101bf2dbd922e758e456f47d0bc3c2e975a6e6f4566cb9ade9c494bab3d4b29
+  review.md: 515186f1c572f6bb16fb0d2ebc5f3cca133715f26472a6a6804cabc613f4ef66
   scenarios/archive-fetch-direct-codeload.md: 0c333420c198f9fd69c3deb351da92c157df213d27e4c0f9dbbe09e70d2456cd
   scenarios/project-inputs-asked-once.md: 8c36e81564e833083b10b6bdee4440d27fd556deabb7b35df9a5d3bc97c1f411
   scenarios/runtime-probe-parity-audit.md: 584a4570a0b5ea5b345fa1b9f9612759f2b6d847087210470a41029782c60d12
-  scenarios/state-a-deterministic-path-forcing.md: e95d7fa36a82af236c90dd03f582c15d3d34c72691706382d668b42359f92fea
-  spec.md: acd5c55c6ecfef9a8a36e418b9cd3a99bda33a5d07f6a019fa158ab78afe29c2
-  tasks.md: 715dad36bf66b5f4397855d7b9bb489d6f089387a51c931bca60b0aa0c2ac092
+  scenarios/state-a-deterministic-path-forcing.md: 6826e091652444615f197ea687ff2e25abad353a806148408c143c4641a561a8
+  spec.md: b95d4805e0ef00d9e58108175b60165e9881fb2d1d2755a76a1f84d7616cd799
+  tasks.md: 61479c531cffb8aa19a700f5bb387af7b7019df626b32c8e8c40400ab0d37751
 unexamined-by-reason:
+  anchor-target-unjudgeable: 4
   root-absent: 3
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
@@ -27,8 +28,8 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-DATA-001: {verdict: addressed, cite: "scenarios/archive-fetch-direct-codeload.md#Behavior"}
@@ -42,19 +43,14 @@ rule-verdicts:
   CFG-ENV-012: {verdict: finding, tier: should, at: "scenarios/project-inputs-asked-once.md#Behavior", message: "The new [project] config table's loader treatment of an unrecognized key (fail, or warn by name) is not stated."}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 8
   deferred: 0
-  waived: 2
+  waived: 1
   undispositioned: 0
 decisions:
   - key: "rule-assessment — CFG-ENV-012: The new [project] config table's loader treatment of an unrecognized key (fail, or warn by name) is not stated."
     outcome: waived
     reason: "advisory and no change to 029's design: the [project] section's loader already reports an unrecognized key by name without failing, as for every ductus-owned section (runtime/src/schema/config_keys.rs, warn_unknown_keys; 022's scenario config-readers-name-unknown-keys and 019's an-unknown-config-key-is-named own that behavior)"
-    decided-at: 2026-11-14T02:41:26Z
-    decided-by: rule
-  - key: "grounding — Motivation states as fact that the model interprets a \"~20k-token procedure\", a measured figure about the existing bootstrap with no stated method, source or assumption marker"
-    outcome: waived
-    reason: a magnitude given as the motivation; no criterion or requirement depends on it, and re-measuring the markdown reference path's token cost is no mechanical chore
     decided-at: 2026-11-14T02:41:26Z
     decided-by: rule
 ---
@@ -63,7 +59,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 7 unexamined target(s). Dispositions: 8 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -76,7 +72,6 @@ decisions:
 ## Advisory findings
 
 - rule-assessment — CFG-ENV-012: The new [project] config table's loader treatment of an unrecognized key (fail, or warn by name) is not stated. — `specs/029-bootstrap-runtime-autowire/scenarios/project-inputs-asked-once.md` — **waived**: advisory and no change to 029's design: the [project] section's loader already reports an unrecognized key by name without failing, as for every ductus-owned section (runtime/src/schema/config_keys.rs, warn_unknown_keys; 022's scenario config-readers-name-unknown-keys and 019's an-unknown-config-key-is-named own that behavior) (decided by the rule)
-- grounding — Motivation states as fact that the model interprets a "~20k-token procedure", a measured figure about the existing bootstrap with no stated method, source or assumption marker — `specs/029-bootstrap-runtime-autowire/spec.md` — **waived**: a magnitude given as the motivation; no criterion or requirement depends on it, and re-measuring the markdown reference path's token cost is no mechanical chore (decided by the rule)
 
 ## Deferred to other specs
 
@@ -88,8 +83,16 @@ decisions:
 
 ## Unexamined targets
 
+- anchor-target-unjudgeable: 4
 - root-absent: 3
 
 ## Fixed in this run
 
-*None.*
+- grounding — Motivation states as fact that the markdown-only reference path is a '~20k-token procedure' with no measurement, method or citation. — `specs/029-bootstrap-runtime-autowire/spec.md` — **fixed** (decided by the rule)
+- grounding — Motivation states as fact that 'MCP servers are loaded at session start', an external host behavior, with no source cited and no assumption marker; the whole design rests on it. — `specs/029-bootstrap-runtime-autowire/spec.md` — **fixed** (decided by the rule)
+- grounding — State A section states that Claude Code surfaces tool names in a deferred-tool reminder before exposing schemas, with no source cited. — `specs/029-bootstrap-runtime-autowire/spec.md` — **fixed** (decided by the rule)
+- grounding — Resolved Questions 'claude-style .mcp.json location' states that repo-root .mcp.json is Claude Code's documented project-level MCP config, with no link to the documentation or to the §MCP registration row. — `specs/029-bootstrap-runtime-autowire/spec.md` — **fixed** (decided by the rule)
+- grounding — Technical Decisions 'ductus tool permissions granted at wiring time' states that exact-match dedup leaves the wildcard and enumerated entries both, a claim about the merge step's behavior with no citation of where that step is defined. — `specs/029-bootstrap-runtime-autowire/plan.md` — **fixed** (decided by the rule)
+- lint-markdown — review.md line 243: MD037 spaces inside emphasis markers, from a criterion note's unbackticked mcp__ductus__* span — `specs/029-bootstrap-runtime-autowire/review.md` — **fixed** (decided by the rule)
+- lint-markdown — review.md line 259: MD034 bare URL, from a criterion note's unbackticked codeload URL — `specs/029-bootstrap-runtime-autowire/review.md` — **fixed** (decided by the rule)
+- resolve-anchor — the Resolved Question on the .mcp.json location cited §MCP registration, which does not begin with its heading's full text, MCP registration (per-agent) — `specs/029-bootstrap-runtime-autowire/spec.md` — **fixed** (decided by the rule)

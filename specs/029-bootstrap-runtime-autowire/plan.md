@@ -48,7 +48,7 @@ No `merge-mcp-config` primitive is added — State B is runtime-absent by defini
 
 ### ductus tool permissions granted at wiring time (State B)
 
-Alongside the wiring write, State B adds the `ductus` tool permission to the layout's settings file (additively) so the **next** session calls the tools prompt-free. Use the per-layout wildcard — `mcp__ductus__*` for Claude — the minimal bootstrap grant. The enumerated per-tool set already lives in the generated `<!-- generated:mcp-allow -->` blocks of the configure files and is applied later by `/{project}:configure`; the wildcard at wiring time coexists harmlessly (exact-match dedup leaves both). Rationale: `spec.md` §Permission Setup + Resolved Q3.
+Alongside the wiring write, State B adds the `ductus` tool permission to the layout's settings file (additively) so the **next** session calls the tools prompt-free. Use the per-layout wildcard — `mcp__ductus__*` for Claude — the minimal bootstrap grant. The enumerated per-tool set already lives in the generated `<!-- generated:mcp-allow -->` blocks of the configure files and is applied later by `/{project}:configure`; the wildcard at wiring time coexists harmlessly (exact-match dedup leaves both; `framework/bootstrap/ductus.md` §ductus runtime auto-wiring states it). Rationale: `spec.md` §Permission Setup + Resolved Q3.
 
 ### Reverse the "wired separately, not scaffolded" decision
 
