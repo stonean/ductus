@@ -4899,6 +4899,12 @@ pub struct PruneTasksSummary {
     pub sections_count: usize,
     /// Repo-relative path to the tasks file.
     pub path: String,
+    /// Present when `tasks.md` ends inside an open fenced block or HTML
+    /// comment, so the lines from `from-line` on are in no section and were
+    /// not examined; an apply of it writes nothing. Absent when no region
+    /// was open.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unexamined_tail: Option<UnexaminedTail>,
 }
 
 /// Result for `prune-tasks`: one feature's summary, at the top level exactly
@@ -4955,6 +4961,9 @@ pub struct PruneTasksLine {
     pub size_after: SizeSummary,
     /// Repo-relative path to the tasks file.
     pub path: String,
+    /// As [`PruneTasksSummary::unexamined_tail`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unexamined_tail: Option<UnexaminedTail>,
 }
 
 impl PruneTasksLine {
@@ -4970,6 +4979,7 @@ impl PruneTasksLine {
             size_before: summary.size_before,
             size_after: summary.size_after,
             path: summary.path,
+            unexamined_tail: summary.unexamined_tail,
         }
     }
 }
@@ -5000,6 +5010,11 @@ pub struct PruneWalk<T> {
     pub skipped: Option<Vec<SkippedFeature>>,
     /// Entries in `skipped`, in either form.
     pub skipped_count: usize,
+    /// Entries in `features` that carry an `unexamined-tail`: specs whose
+    /// file ends inside an open fenced block or HTML comment and was not
+    /// written. Absent at zero, and inline in both forms.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unexamined_count: usize,
 }
 
 /// One feature's summary within a walk.
@@ -5178,6 +5193,12 @@ pub struct PrunePlanSummary {
     /// computed, never `false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reopen_required: Option<bool>,
+    /// Present when `plan.md` ends inside an open fenced block or HTML
+    /// comment, so the lines from `from-line` on are in no section and were
+    /// not examined; an apply of it removes nothing. Absent when no region
+    /// was open.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unexamined_tail: Option<UnexaminedTail>,
 }
 
 /// Result for `prune-plan`: one feature's summary, at the top level, or —
@@ -5344,7 +5365,9 @@ pub struct ProjectFile {
     pub over_limit: Option<bool>,
     /// Present when the file ends inside an open HTML comment or an open
     /// managed region, so the lines from there to its end are in no entry:
-    /// they were not examined. Absent when the whole file was walked.
+    /// they were not examined. `prune-project` never reports `open-fence`: it
+    /// keeps an unterminated fence as a block entry. Absent when the whole
+    /// file was walked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unexamined_tail: Option<UnexaminedTail>,
 }
@@ -5353,6 +5376,9 @@ pub struct ProjectFile {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum TailCause {
+    /// A fence with no closer: every line after it is fenced text. Reported
+    /// by `prune-tasks` and `prune-plan`, never by `prune-project`.
+    OpenFence,
     /// A `<!--` with no closing `-->`: every line after it is comment text.
     OpenComment,
     /// A `<!-- BEGIN {marker} -->` with no `<!-- END {marker} -->`: every line
@@ -8490,8 +8516,9 @@ mod tests {
         PruneWalkEntry, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
         ResolveAnchorArgs, ResolveAnchorResult, RuleCitation, RunGeneratorArgs, RunGeneratorResult,
         ScenarioOpenQuestion, SetStatusArgs, SetStatusResult, SizeSummary, SkipReason,
-        SkippedFeature, SpecSection, Subtask, Task, TraverseDepsArgs, TraverseDepsResult,
-        ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
+        SkippedFeature, SpecSection, Subtask, TailCause, Task, TraverseDepsArgs,
+        TraverseDepsResult, UnexaminedTail, ValidateFrontmatterArgs, ValidateFrontmatterResult,
+        WriteSessionArgs, WriteSessionResult,
     };
     use super::{
         ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
@@ -8732,6 +8759,7 @@ mod tests {
             ]),
             sections_count: 3,
             path: "specs/041-task-pruning/tasks.md".into(),
+            unexamined_tail: None,
         }
     }
 
@@ -8800,6 +8828,7 @@ mod tests {
                     reason: SkipReason::NoTasksFile,
                 }]),
                 skipped_count: 1,
+                unexamined_count: 0,
             }),
             form: ListsForm::Inline,
             lists_file: None,
@@ -8824,6 +8853,62 @@ mod tests {
         );
         assert_eq!(value["skipped"][0]["reason"], "no-tasks-file");
         assert!(!value.as_object().unwrap().contains_key("mode"));
+        // Nothing unexamined, nothing new on the wire.
+        assert!(!value.as_object().unwrap().contains_key("unexamined-count"));
+        assert_eq!(round_trip(&walked), walked);
+    }
+
+    /// The summary half carries `unexamined-tail`, the walk half
+    /// `unexamined-count`, and no key is shared between them, so each
+    /// survives a round trip in its own shape (a shared key would be consumed
+    /// by the half deserialized first).
+    #[test]
+    fn prune_tasks_unexamined_keys_survive_a_round_trip_in_each_shape() {
+        let tail = UnexaminedTail {
+            from_line: 7,
+            cause: TailCause::OpenFence,
+        };
+        let summary = PruneTasksSummary {
+            unexamined_tail: Some(tail),
+            ..prune_tasks_summary()
+        };
+        let single = PruneTasksResult {
+            summary: Some(summary.clone()),
+            walk: None,
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        let value: serde_json::Value = serde_json::to_value(&single).unwrap();
+        assert_eq!(
+            value["unexamined-tail"],
+            serde_json::json!({ "from-line": 7, "cause": "open-fence" })
+        );
+        assert!(!value.as_object().unwrap().contains_key("unexamined-count"));
+        assert_eq!(round_trip(&single), single);
+
+        let walked = PruneTasksResult {
+            summary: None,
+            walk: Some(PruneWalk {
+                examined: 3,
+                features: Some(vec![PruneWalkEntry {
+                    feature: "041-task-pruning".into(),
+                    summary: PruneTasksLine::new(summary, "done".into()),
+                }]),
+                features_count: 1,
+                skipped: Some(Vec::new()),
+                skipped_count: 0,
+                unexamined_count: 1,
+            }),
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
+        assert_eq!(value["unexamined-count"], 1);
+        assert_eq!(
+            value["features"][0]["unexamined-tail"],
+            serde_json::json!({ "from-line": 7, "cause": "open-fence" })
+        );
+        assert!(!value.as_object().unwrap().contains_key("unexamined-tail"));
         assert_eq!(round_trip(&walked), walked);
     }
 
@@ -8876,6 +8961,7 @@ mod tests {
                 bytes: 350,
             },
             reopen_required: None,
+            unexamined_tail: None,
         };
         let result = PrunePlanResult {
             summary: Some(summary.clone()),
@@ -8920,6 +9006,7 @@ mod tests {
                     reason: SkipReason::NoPlanFile,
                 }]),
                 skipped_count: 1,
+                unexamined_count: 0,
             }),
             form: ListsForm::Inline,
             lists_file: None,
@@ -8931,6 +9018,73 @@ mod tests {
             serde_json::to_value(SkipReason::ChangedSinceRead).unwrap(),
             "changed-since-read"
         );
+        assert_eq!(round_trip(&walked), walked);
+    }
+
+    /// `prune-plan`'s two shapes each carry their own unexamined key and
+    /// share none (see the `prune-tasks` test of the same name).
+    #[test]
+    fn prune_plan_unexamined_keys_survive_a_round_trip_in_each_shape() {
+        let summary = PrunePlanSummary {
+            path: "specs/041-task-pruning/plan.md".into(),
+            missing: false,
+            status: "done".into(),
+            sections_examined: 2,
+            sections_count: 0,
+            sections: Some(Vec::new()),
+            applied: false,
+            stale_sections: Vec::new(),
+            size_before: SizeSummary {
+                lines: 9,
+                bytes: 90,
+            },
+            size_after: SizeSummary {
+                lines: 9,
+                bytes: 90,
+            },
+            reopen_required: None,
+            unexamined_tail: Some(UnexaminedTail {
+                from_line: 4,
+                cause: TailCause::OpenComment,
+            }),
+        };
+        let single = PrunePlanResult {
+            summary: Some(summary.clone()),
+            walk: None,
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        let value: serde_json::Value = serde_json::to_value(&single).unwrap();
+        assert_eq!(
+            value["unexamined-tail"],
+            serde_json::json!({ "from-line": 4, "cause": "open-comment" })
+        );
+        assert!(!value.as_object().unwrap().contains_key("unexamined-count"));
+        assert_eq!(round_trip(&single), single);
+
+        let walked = PrunePlanResult {
+            summary: None,
+            walk: Some(PruneWalk {
+                examined: 2,
+                features: Some(vec![PruneWalkEntry {
+                    feature: "041-task-pruning".into(),
+                    summary,
+                }]),
+                features_count: 1,
+                skipped: Some(Vec::new()),
+                skipped_count: 0,
+                unexamined_count: 1,
+            }),
+            form: ListsForm::Inline,
+            lists_file: None,
+        };
+        let value: serde_json::Value = serde_json::to_value(&walked).unwrap();
+        assert_eq!(value["unexamined-count"], 1);
+        assert_eq!(
+            value["features"][0]["unexamined-tail"]["cause"],
+            "open-comment"
+        );
+        assert!(!value.as_object().unwrap().contains_key("unexamined-tail"));
         assert_eq!(round_trip(&walked), walked);
     }
 

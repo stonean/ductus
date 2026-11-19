@@ -47,15 +47,15 @@ MUTATIONS = [
     (
         'M5 keep-pending reads a frontmatter line as structure',
         'src/primitives/prune_tasks.rs',
-        'cur.lines.extend(frontmatter.lines().map(str::to_string));\n    let mut skip = SkipScanner::default();',
-        'let mut skip = SkipScanner::default();',
+        'cur.lines.extend(frontmatter.lines().map(str::to_string));\n    let mut region = OpenRegion::default();',
+        'let mut region = OpenRegion::default();',
         'a_comment_in_the_frontmatter_is_no_heading',
     ),
     (
         'M6 keep-pending scans the frontmatter block for headings',
         'src/primitives/prune_tasks.rs',
-        'for line in body.lines() {',
-        'for line in content.lines() {',
+        'for (index, line) in body.lines().enumerate() {',
+        'for (index, line) in content.lines().enumerate() {',
         'a_comment_in_the_frontmatter_is_no_heading',
     ),
     (

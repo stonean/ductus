@@ -19,18 +19,19 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 
 use crate::primitives::decisions::{RawDecision, read_decisions, same_key};
-use crate::primitives::prune_tasks::{BoundedPruneResult, bound_result};
+use crate::primitives::prune_tasks::{BoundedPruneResult, OpenRegion, bound_result};
 use crate::primitives::prune_tasks::{one_feature_or_all, read_status, size_of};
 use crate::primitives::read_tasks::adds_unchecked_box;
 use crate::primitives::write_analysis::finding_key_of;
 use crate::primitives::{
-    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, ReadSnapshot, Result, SkipScanner,
-    hex, join_blocks, line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path,
+    ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, ReadSnapshot, Result, hex,
+    join_blocks, line_ending_of, list_feature_dirs, parse_atx_heading, read_text, rel_path,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
     DecisionOutcome, ListsForm, PlanFinding, PlanRemoval, PlanSection, PrunePlanArgs,
     PrunePlanResult, PrunePlanSummary, PruneWalk, PruneWalkEntry, SkipReason, SkippedFeature,
+    UnexaminedTail,
 };
 
 /// The plan template's `##` headings, in template order — the design record.
@@ -95,15 +96,15 @@ impl Block {
 /// Segment `content` into blocks. A block opens at every heading of level 2
 /// or above outside a fenced block or an HTML comment, so a `##` in either is
 /// not structure, and a `###` stays inside the section that holds it.
-fn segment(content: &str) -> Vec<Block> {
-    let mut skip = SkipScanner::default();
+fn segment(content: &str) -> (Vec<Block>, Option<UnexaminedTail>) {
+    let mut region = OpenRegion::default();
     let mut blocks = vec![Block {
         heading: None,
         lines: Vec::new(),
     }];
-    for line in content.lines() {
-        // `skip` runs first on every line, so the scanner advances in order.
-        if !skip.skip(line)
+    for (index, line) in content.lines().enumerate() {
+        // `observe` runs first on every line, so the scanner advances in order.
+        if !region.observe(index, line)
             && let Some((level, heading)) = parse_atx_heading(line)
             && level <= 2
         {
@@ -117,7 +118,7 @@ fn segment(content: &str) -> Vec<Block> {
             block.lines.push(line.to_string());
         }
     }
-    blocks
+    (blocks, region.tail(0))
 }
 
 /// Execute the `prune-plan` primitive against the given project root: one
@@ -234,7 +235,10 @@ fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prune
     let mut skipped = Vec::new();
     for feature in &names {
         let summary = summarize(feature, args, repo, root)?;
-        if summary.sections_count > 0 || summary.reopen_required == Some(true) {
+        if summary.sections_count > 0
+            || summary.reopen_required == Some(true)
+            || summary.unexamined_tail.is_some()
+        {
             features.push(PruneWalkEntry {
                 feature: feature.clone(),
                 summary,
@@ -249,6 +253,10 @@ fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prune
     Ok(PruneWalk {
         examined: u32::try_from(names.len()).unwrap_or(u32::MAX),
         features_count: features.len(),
+        unexamined_count: features
+            .iter()
+            .filter(|entry| entry.summary.unexamined_tail.is_some())
+            .count(),
         features: Some(features),
         skipped_count: skipped.len(),
         skipped: Some(skipped),
@@ -300,7 +308,7 @@ fn summarize_between(
         Some(snapshot) => snapshot.text()?,
         None => None,
     };
-    let blocks = content.map(segment).unwrap_or_default();
+    let (blocks, unexamined_tail) = content.map(segment).unwrap_or_default();
     let stored = read_decisions(&feature_dir, ANALYSIS_RECORD_FILE)?;
     let (examined, outside) = outside_record(&blocks, &stored);
     let (claimed, stale_sections) = claim(&outside, &args.remove);
@@ -322,7 +330,10 @@ fn summarize_between(
 
     // With no plan every listed removal is stale, so an apply over a missing
     // plan is refused by the same test.
-    let applied = args.apply && stale_sections.is_empty();
+    // A plan that ends inside an open region is never written: the lines
+    // after the opener sit inside one block, so a section it swallowed could
+    // be removed with it.
+    let applied = args.apply && stale_sections.is_empty() && unexamined_tail.is_none();
     let after = if applied {
         without(&claimed)
     } else if args.apply {
@@ -363,6 +374,7 @@ fn summarize_between(
         size_before: size_of(before),
         size_after: size_of(&after),
         reopen_required,
+        unexamined_tail,
     })
 }
 
@@ -1148,6 +1160,7 @@ mod tests {
         let template =
             fs::read_to_string(repo_root.join("framework/templates/spec/plan.md")).unwrap();
         let headings: Vec<String> = segment(&template)
+            .0
             .into_iter()
             .filter_map(|block| block.heading)
             .collect();
@@ -1349,5 +1362,103 @@ mod tests {
         let _outside = crate::primitives::outward::dir(tmp.path(), "specs", |_| {});
         let result = super::run(&all(), tmp.path());
         assert!(crate::primitives::outward::refused(&result), "{result:?}");
+    }
+
+    /// A `## Notes` section outside the record holds a fence that never
+    /// closes, and the design-record `## Technical Decisions` after it sits
+    /// inside that fence, so it is part of the Notes block. Removing Notes
+    /// would remove it too; the file is reported unexamined and no apply
+    /// removes anything (spec 041, scenario
+    /// `an-open-fenced-block-or-comment-is-not-examined`).
+    const OPEN_FENCE_PLAN: &str = "# 041 — Plan\n\n## Overview\n\nThe approach.\n\n## Notes\n\n```sh\n\n## Technical Decisions\n\nWhy.\n";
+
+    #[test]
+    fn an_unclosed_fence_under_a_non_record_section_cannot_remove_the_design_record() {
+        let tmp = tempdir().unwrap();
+        project(tmp.path(), "in-progress", Some(OPEN_FENCE_PLAN));
+        let previewed = run(&preview(), tmp.path()).unwrap();
+        assert_eq!(
+            previewed.unexamined_tail,
+            Some(UnexaminedTail {
+                from_line: 9,
+                cause: crate::schema::primitives::TailCause::OpenFence
+            })
+        );
+        let notes = previewed
+            .sections
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|section| section.heading == "Notes")
+            .expect("Notes is outside the record");
+        let applied = run(&apply(&[notes]), tmp.path()).unwrap();
+        assert!(!applied.applied);
+        assert_eq!(applied.stale_sections, [] as [String; 0]);
+        assert!(applied.unexamined_tail.is_some());
+        assert_eq!(plan_text(tmp.path()), OPEN_FENCE_PLAN, "nothing removed");
+    }
+
+    #[test]
+    fn an_unclosed_comment_is_reported_with_its_cause() {
+        let tmp = tempdir().unwrap();
+        let plan = OPEN_FENCE_PLAN.replace("```sh", "<!-- a note");
+        project(tmp.path(), "in-progress", Some(&plan));
+        let result = run(&preview(), tmp.path()).unwrap();
+        assert_eq!(
+            result.unexamined_tail,
+            Some(UnexaminedTail {
+                from_line: 9,
+                cause: crate::schema::primitives::TailCause::OpenComment
+            })
+        );
+    }
+
+    /// A closed fence reports no tail, the key absent from the wire.
+    #[test]
+    fn a_closed_fence_reports_no_tail() {
+        let tmp = tempdir().unwrap();
+        let plan = OPEN_FENCE_PLAN.replace("```sh\n\n", "```sh\n\n```\n\n");
+        project(tmp.path(), "in-progress", Some(&plan));
+        let result = run(&preview(), tmp.path()).unwrap();
+        assert_eq!(result.unexamined_tail, None);
+        let wire = serde_json::to_value(&result).unwrap();
+        assert!(!wire.as_object().unwrap().contains_key("unexamined-tail"));
+    }
+
+    /// A walk lists a plan with a tail, though it holds no section outside the
+    /// record to report, and counts it.
+    #[test]
+    fn a_walk_lists_a_plan_with_a_tail_and_counts_it() {
+        let tmp = tempdir().unwrap();
+        project(
+            tmp.path(),
+            "in-progress",
+            Some("# P\n\n## Overview\n\n```sh\n\n## Technical Decisions\n"),
+        );
+        let other = tmp.path().join("specs/042-other");
+        write(
+            &other.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n",
+        );
+        write(&other.join("plan.md"), "# P\n\n## Overview\n\nFine.\n");
+        let walk_args = PrunePlanArgs {
+            feature: None,
+            all: true,
+            apply: false,
+            remove: Vec::new(),
+        };
+        let walk = super::run(&walk_args, tmp.path())
+            .unwrap()
+            .walk
+            .expect("a walk");
+        assert_eq!(walk.unexamined_count, 1);
+        let listed: Vec<&str> = walk
+            .features
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|entry| entry.feature.as_str())
+            .collect();
+        assert_eq!(listed, [FEATURE]);
     }
 }

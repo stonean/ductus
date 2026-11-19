@@ -32,7 +32,7 @@ use crate::schema::paths;
 use crate::schema::primitives::{
     Classification, ListsForm, PruneAction, PruneGate, PruneMode, PruneSection, PruneTasksArgs,
     PruneTasksLine, PruneTasksResult, PruneTasksSummary, PruneWalk, PruneWalkEntry, SizeSummary,
-    SkipReason, SkippedFeature,
+    SkipReason, SkippedFeature, TailCause, UnexaminedTail,
 };
 
 /// The template `tasks.md` body with its `# …` H1 line removed — the reset
@@ -40,6 +40,45 @@ use crate::schema::primitives::{
 /// ([`tests::canonical_empty_body_matches_template`]) asserts this equals
 /// `framework/templates/spec/tasks.md` minus its H1 so the two never drift.
 const CANONICAL_EMPTY_TASKS_BODY: &str = "Tasks derived from the [plan](plan.md). Complete in order.\n\n<!-- Each task should be small enough to implement and verify independently.\n     Mark subtasks as they are completed. Every task MUST close with a\n     `- **Done when**: …` line stating its completion condition — the\n     tooling reads this exact form to confirm the task is fully specified.\n\n     A task body may also carry working notes — what the next session needs\n     to resume it: the mechanics, the order, what is left on disk — placed\n     as §tasks-phase says. Write them as prose on the pending task they\n     concern, so they go when the task is pruned. Put an ordering constraint\n     on the task that must wait, never above the first task or under a\n     heading of its own, which outlive every task; and never write a note as\n     a checkbox, which would count toward the task's completion. Anything\n     that must outlast the task belongs in its durable home first.\n\n     Schedule no review, analysis or completion gate as a task: they run\n     once every box here is ticked, and refuse to record before then, so\n     what a spec owes them is prose on its pending task. Example:\n\n## 1. Create sessions table migration\n\n- [ ] Write SQL migration for `sessions` table\n- [ ] Run migration and verify schema\n\n- **Done when**: the migration applies cleanly and `sessions` matches the data model.\n\n## 2. Implement session store\n\nBlocked on task 1: the store tests run against the migrated schema.\n\n- [ ] Create `shared/auth/session.go` with Create, Get, Delete methods\n- [ ] Write store integration tests against real PostgreSQL\n\n- **Done when**: all store methods are covered by passing integration tests.\n\n## 3. Update README link to migration guide\n\n- [ ] Edit `README.md` to point at the new path\n\n- **Done when**: the README link resolves to the new path.\n\n-->\n";
+
+/// A [`SkipScanner`] that also remembers where the region it sits in opened,
+/// so a caller can tell, once the whole file is fed, that it ends inside an
+/// open fenced block or HTML comment. It asks only whether a region is open
+/// at the end, never which line closes one, so it holds under any closing
+/// rule `SkipScanner` applies.
+#[derive(Default)]
+pub(crate) struct OpenRegion {
+    scanner: SkipScanner,
+    /// 0-based index of the line that opened the region still open.
+    opened_at: usize,
+}
+
+impl OpenRegion {
+    /// Advance over line `index` (0-based, in order) and report whether it is
+    /// to be skipped, as [`SkipScanner::skip`] does.
+    pub(crate) fn observe(&mut self, index: usize, line: &str) -> bool {
+        let was_open = self.scanner.in_region();
+        let skipped = self.scanner.skip(line);
+        if !was_open && self.scanner.in_region() {
+            self.opened_at = index;
+        }
+        skipped
+    }
+
+    /// The tail left unexamined when the lines fed end inside an open region;
+    /// `line_offset` is the number of lines before the first one fed, so
+    /// `from-line` is a line of the whole file.
+    pub(crate) fn tail(&self, line_offset: usize) -> Option<UnexaminedTail> {
+        self.scanner.in_region().then(|| UnexaminedTail {
+            from_line: self.opened_at + line_offset + 1,
+            cause: if self.scanner.in_fence() {
+                TailCause::OpenFence
+            } else {
+                TailCause::OpenComment
+            },
+        })
+    }
+}
 
 /// Frontmatter shape used only to read `status` (see [`read_status`]).
 #[derive(serde::Deserialize)]
@@ -296,7 +335,9 @@ fn plan_walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PlannedWa
     let mut skipped = Vec::new();
     for feature in &names {
         match reduce(feature, args, repo, root) {
-            Ok(reduction) if reduction.summary.nothing_to_prune => {}
+            Ok(reduction)
+                if reduction.summary.nothing_to_prune
+                    && reduction.summary.unexamined_tail.is_none() => {}
             Ok(reduction) => {
                 // The walk's line carries the status. A reset read it for its
                 // gate; keep-pending did not, so read it here, before any
@@ -346,6 +387,10 @@ fn write_walk(planned: PlannedWalk) -> Result<PruneWalk<PruneTasksLine>> {
     Ok(PruneWalk {
         examined: u32::try_from(examined).unwrap_or(u32::MAX),
         features_count: features.len(),
+        unexamined_count: features
+            .iter()
+            .filter(|entry| entry.summary.unexamined_tail.is_some())
+            .count(),
         features: Some(features),
         skipped_count: skipped.len(),
         skipped: Some(skipped),
@@ -424,7 +469,7 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
         (PruneMode::KeepPending, PruneGate::NotApplicable, None)
     };
 
-    let blocks = segment(&content, &tasks_path)?;
+    let (blocks, unexamined_tail) = segment(&content, &tasks_path)?;
 
     // Per-mode reduction: compute the would-be output, the section records,
     // and the removed/kept counts.
@@ -455,7 +500,9 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
     // A write happens only on `apply`, only when there is a change, and (for
     // reset) only when the gate permits it. keep-pending is never gated.
     let gate_permits = !matches!(gate, PruneGate::BlockedNeedsForce);
-    let applied = args.apply && !nothing_to_prune && gate_permits;
+    // A file that ends inside an open region is never written: the lines
+    // after the opener sit in no block, so no section after it was judged.
+    let applied = args.apply && !nothing_to_prune && gate_permits && unexamined_tail.is_none();
 
     Ok(Reduction {
         summary: PruneTasksSummary {
@@ -471,6 +518,7 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
             sections_count: sections.len(),
             sections: Some(sections),
             path: rel_path(&tasks_path, repo),
+            unexamined_tail,
         },
         snapshot,
         new_content,
@@ -510,7 +558,7 @@ pub(crate) fn read_status(feature_dir: &Path, root: &str, feature: &str) -> Resu
 /// # Errors
 ///
 /// [`PrimitiveError::MalformedTasks`] when the frontmatter never closes.
-fn segment(content: &str, path: &Path) -> Result<Vec<Block>> {
+fn segment(content: &str, path: &Path) -> Result<(Vec<Block>, Option<UnexaminedTail>)> {
     let frontmatter = super::tasks_counter::frontmatter(content, path)?;
     let body = &content[frontmatter.len()..];
     let task_level: u8 = match detect_tasks_structure(content) {
@@ -524,12 +572,12 @@ fn segment(content: &str, path: &Path) -> Result<Vec<Block>> {
     // The initial block starts empty (no first line); clear the placeholder.
     cur.lines.clear();
     cur.lines.extend(frontmatter.lines().map(str::to_string));
-    let mut skip = SkipScanner::default();
+    let mut region = OpenRegion::default();
     let mut current_phase_name: Option<String> = None;
     let mut current_phase_idx: Option<usize> = None;
 
-    for line in body.lines() {
-        if skip.skip(line) {
+    for (index, line) in body.lines().enumerate() {
+        if region.observe(index, line) {
             cur.lines.push(line.to_string());
             continue;
         }
@@ -593,7 +641,7 @@ fn segment(content: &str, path: &Path) -> Result<Vec<Block>> {
         cur.lines.push(line.to_string());
     }
     blocks.push(cur);
-    Ok(blocks)
+    Ok((blocks, region.tail(frontmatter.lines().count())))
 }
 
 /// keep-pending reduction: drop spent task sections and emptied phase
@@ -1615,5 +1663,128 @@ mod tests {
         let _outside = crate::primitives::outward::dir(tmp.path(), "specs", |_| {});
         let result = super::run(&all(false, false, true), tmp.path());
         assert!(crate::primitives::outward::refused(&result), "{result:?}");
+    }
+
+    /// A spent task, then a fence that never closes, then a pending task: the
+    /// pending task's heading is inside the open fence, so the file is
+    /// reported unexamined from the opener and no apply may write it.
+    const OPEN_FENCE: &str =
+        "# T\n\n## 1. Done one\n\n- [x] a\n\n```sh\n\n## 2. Pending two\n\n- [ ] b\n";
+
+    /// A spent task, then an HTML comment that never closes, then a pending
+    /// task.
+    const OPEN_COMMENT: &str =
+        "# T\n\n## 1. Done one\n\n- [x] a\n\n<!-- a note\n\n## 2. Pending two\n\n- [ ] b\n";
+
+    /// An unclosed fence is reported, never read as clean, and an apply
+    /// writes nothing: before, the pending task fell into the spent task's
+    /// block and an apply deleted it (spec 041, scenario
+    /// `an-open-fenced-block-or-comment-is-not-examined`).
+    #[test]
+    fn an_unclosed_fence_is_reported_and_an_apply_writes_nothing() {
+        let (_tmp, repo) = write_repo(OPEN_FENCE, Some("in-progress"));
+        let preview = run(&args(false, false, false), &repo).unwrap();
+        assert_eq!(
+            preview.unexamined_tail,
+            Some(UnexaminedTail {
+                from_line: 7,
+                cause: TailCause::OpenFence
+            })
+        );
+        let applied = run(&args(false, false, true), &repo).unwrap();
+        assert!(!applied.applied);
+        assert_eq!(applied.unexamined_tail, preview.unexamined_tail);
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, OPEN_FENCE, "nothing written; task 2 still present");
+    }
+
+    #[test]
+    fn an_unclosed_comment_is_reported_and_an_apply_writes_nothing() {
+        let (_tmp, repo) = write_repo(OPEN_COMMENT, Some("in-progress"));
+        let applied = run(&args(false, false, true), &repo).unwrap();
+        assert_eq!(
+            applied.unexamined_tail,
+            Some(UnexaminedTail {
+                from_line: 7,
+                cause: TailCause::OpenComment
+            })
+        );
+        assert!(!applied.applied);
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, OPEN_COMMENT);
+    }
+
+    /// `from-line` is a line of the whole file, frontmatter included.
+    #[test]
+    fn the_tail_line_counts_the_frontmatter() {
+        let tasks = format!("---\nnext-task: 3\n---\n{OPEN_FENCE}");
+        let (_tmp, repo) = write_repo(&tasks, Some("in-progress"));
+        let result = run(&args(false, false, false), &repo).unwrap();
+        assert_eq!(result.unexamined_tail.map(|tail| tail.from_line), Some(10));
+    }
+
+    /// A fence that closes reports no tail and the reduction is the one it
+    /// always was; the key is absent from the wire.
+    #[test]
+    fn a_closed_fence_reports_no_tail() {
+        let tasks = OPEN_FENCE.replace("```sh\n\n", "```sh\n\n```\n\n");
+        let (_tmp, repo) = write_repo(&tasks, Some("in-progress"));
+        let result = super::run(&args(false, false, true), &repo).unwrap();
+        let summary = result.summary.expect("a summary");
+        assert_eq!(summary.unexamined_tail, None);
+        assert_eq!(summary.removed_count, 1);
+        assert!(summary.applied);
+        let wire = serde_json::to_value(&summary).unwrap();
+        assert!(!wire.as_object().unwrap().contains_key("unexamined-tail"));
+    }
+
+    /// A reset discards every section, so one over an open region is held back
+    /// like any apply.
+    #[test]
+    fn a_reset_with_an_open_region_writes_nothing() {
+        let (_tmp, repo) = write_repo(OPEN_FENCE, Some("done"));
+        let result = run(&args(true, false, true), &repo).unwrap();
+        assert!(!result.applied);
+        assert!(result.unexamined_tail.is_some());
+        let body = fs::read_to_string(repo.join("specs/041-task-pruning/tasks.md")).unwrap();
+        assert_eq!(body, OPEN_FENCE);
+    }
+
+    /// A spec with nothing to reduce whose file ends in an open fence.
+    const PENDING_ONLY_OPEN: &str = "# T\n\n## 1. Pending\n\n- [ ] a\n\n```sh\n\n## 2. Hidden\n";
+
+    /// Under `all` a spec with a tail is listed with it and counted, even when
+    /// it has nothing to reduce, and every other spec is still reduced.
+    #[test]
+    fn a_walk_lists_a_spec_with_a_tail_and_writes_the_others() {
+        let spent_only = "# T\n\n## 1. Done one\n\n- [x] a\n";
+        let tmp = corpus(&[
+            ("002-open", "in-progress", Some(OPEN_FENCE)),
+            ("003-clean", "in-progress", Some(spent_only)),
+            ("004-pending", "in-progress", Some(PENDING_ONLY)),
+            ("005-quiet", "in-progress", Some(PENDING_ONLY_OPEN)),
+        ]);
+        let result = super::run(&all(false, false, true), tmp.path()).unwrap();
+        let walk = result.walk.expect("a walk");
+        assert_eq!(walk.unexamined_count, 2);
+        let listed: Vec<&str> = walk
+            .features
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|entry| entry.feature.as_str())
+            .collect();
+        assert_eq!(listed, ["002-open", "003-clean", "005-quiet"]);
+        let open = &walk.features.as_ref().unwrap()[0].summary;
+        assert!(!open.applied);
+        assert_eq!(open.unexamined_tail.map(|tail| tail.from_line), Some(7));
+        assert!(walk.features.as_ref().unwrap()[1].summary.applied);
+        let read = |name: &str| {
+            fs::read_to_string(tmp.path().join(format!("specs/{name}/tasks.md"))).unwrap()
+        };
+        assert_eq!(read("002-open"), OPEN_FENCE);
+        assert_ne!(read("003-clean"), spent_only);
+        let wire = serde_json::to_value(&walk).unwrap();
+        assert_eq!(wire["unexamined-count"], 2);
     }
 }
