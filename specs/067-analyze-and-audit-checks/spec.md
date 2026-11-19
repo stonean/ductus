@@ -23,7 +23,7 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 
 ## Artifact checks
 
-`check-artifacts` runs the deterministic artifact families for one feature — completeness, task and scenario consistency, review-state and disposition drift, scenario open questions, link-adjacent drift, criterion paths, body paths, criterion labels, spec integrity, plan consistency and cross-spec impact drift — at the severity tiers the constitution assigns. A target a family cannot examine is reported as skipped with a reason from a closed set, never escalated into a finding, except the spec's own unreadable artifact at `done`.
+`check-artifacts` runs the deterministic artifact families for one feature — completeness, task and scenario consistency, review-state and disposition drift, scenario open questions, link-adjacent drift, criterion paths, body paths, line-number citations, criterion labels, spec integrity, plan consistency and cross-spec impact drift — at the severity tiers the constitution assigns. A target a family cannot examine is reported as skipped with a reason from a closed set, never escalated into a finding, except the spec's own unreadable artifact at `done`.
 
 ## Frontmatter, dependency, anchor and rule checks
 

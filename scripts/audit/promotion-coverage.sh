@@ -74,12 +74,16 @@ if [ -z "$ductus_bin" ]; then
   exit "$drift"
 fi
 
+# The sections the family reads, held once: the coverage line counts them.
+SECTIONS=(Workflow Gotchas Boundaries "Design Principles")
+section_args=()
+for section in "${SECTIONS[@]}"; do
+  section_args+=(--section "$section")
+done
+
 if ! payload="$("$ductus_bin" check-promotion-coverage \
   --rules-file "$RULES_FILE" \
-  --section Workflow \
-  --section Gotchas \
-  --section Boundaries \
-  --section "Design Principles" \
+  "${section_args[@]}" \
   --table-file "$TABLE_FILE" \
   --table-section "$TABLE_SECTION" \
   --pointer-link "$POINTER_LINK" 2>/dev/null)"; then
@@ -90,12 +94,13 @@ if ! payload="$("$ductus_bin" check-promotion-coverage \
 fi
 
 records="$(
-  printf '%s' "$payload" | RULES_FILE="$RULES_FILE" TABLE_FILE="$TABLE_FILE" python3 -c '
+  printf '%s' "$payload" | RULES_FILE="$RULES_FILE" TABLE_FILE="$TABLE_FILE" SECTION_COUNT="${#SECTIONS[@]}" python3 -c '
 import json, os, sys
 
 data = json.load(sys.stdin)
 rules_file = os.environ["RULES_FILE"]
 table_file = os.environ["TABLE_FILE"]
+section_count = int(os.environ["SECTION_COUNT"])
 
 # Past [artifacts] read-size-bytes the three lists are in the file `lists-file`
 # names (spec 080): read them there, or say the coverage was not computed. A
@@ -137,9 +142,9 @@ if data.get("table-state") == "no-table":
         "promotion-coverage: no classification table at %s — coverage not computed\n" % table_file)
 else:
     sys.stderr.write(
-        "promotion-coverage: %d rule-bearing across 4 section(s) — %d table-keyed, "
+        "promotion-coverage: %d rule-bearing across %d section(s) — %d table-keyed, "
         "%d pointer-citing, %d classified => %d unclassified\n" % (
-            data.get("rule-bearing", 0), data.get("table-keyed", 0),
+            data.get("rule-bearing", 0), section_count, data.get("table-keyed", 0),
             data.get("pointer-citing", 0), data.get("classified", 0),
             data.get("unclassified", 0)))
     for lead in data.get("unclassified-entries", []):
