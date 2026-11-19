@@ -1,17 +1,53 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-17T20:05:55Z
-reviewed-against: 56ab4553473e02b5ed9f9c7b4547c68087e348e0
-diff-base: 3e35c5341c0751e9aacb220347e90c39bc9fb88e
+last-run: 2026-11-19T15:57:05Z
+reviewed-against: 36d371c4b41be8d386aecca921cf81e2e9b5630a
+diff-base: 3e45b653fb95df75bb60287e98f118641f39f422
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 4
+examined: 17
+scope: 55
 unread:
-  - specs/022-deterministic-runtime/analysis.md
-  - specs/022-deterministic-runtime/tasks.md
-excluded: 1
+  - runtime/CHANGELOG.md
+  - runtime/src/schema/primitives.rs
+  - .claude/commands/ductus/analyze.md
+  - .claude/commands/ductus/implement.md
+  - .claude/commands/ductus/link.md
+  - .claude/commands/ductus/plan.md
+  - .claude/commands/ductus/specify.md
+  - .claude/commands/ductus/status.md
+  - .claude/commands/ductus/target.md
+  - .pi/prompts/ductus-analyze.md
+  - .pi/prompts/ductus-implement.md
+  - .pi/prompts/ductus-link.md
+  - .pi/prompts/ductus-plan.md
+  - .pi/prompts/ductus-specify.md
+  - .pi/prompts/ductus-status.md
+  - .pi/prompts/ductus-target.md
+  - framework/bootstrap/ductus.md
+  - framework/bootstrap/govern.md
+  - framework/commands/analyze.md
+  - framework/commands/implement.md
+  - framework/commands/link.md
+  - framework/commands/plan.md
+  - framework/commands/specify.md
+  - framework/commands/status.md
+  - framework/commands/target.md
+  - runtime/src/host.rs
+  - runtime/src/interpreter/mod.rs
+  - runtime/src/io.rs
+  - runtime/src/primitives/host_config.rs
+  - runtime/src/schema/severity.rs
+  - runtime/tests/exec_subprocess.rs
+  - runtime/tests/fixtures/ductus-basic/framework/bootstrap/install.md
+  - runtime/tests/golden/implement-basic.jsonl
+  - runtime/tests/parity.rs
+  - scripts/mutation/stderr-warnings-022.py
+  - specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md
+  - specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md
+  - specs/022-deterministic-runtime/scenarios/writecode-payload-bundling.md
+excluded: 159
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -20,7 +56,7 @@ diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 7ec795f721c05faeb74e015f56730c9ef5fcebe81d6bf5f1641e621b4ec176b8
+  data-model.md: b18e13ef537f7a75101dfbe3f866554a1a881724627e42b31000403b5b9d9829
   scenarios/a-closed-stdout-is-a-quiet-exit.md: ef3db93cc91fecfca53ab67300605cbdf3823c916fe6f1131933740434ad0ca5
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: f3c4072fc69ebfa829d92ae21c7043b7e3aa2a4be3db175b7df56204882e6fb4
   scenarios/a-done-when-clause-reads-to-its-end.md: b2d6b2ab8cbd208eec3ac811edc662c296792d51ec7ab1e0c49ec2c8acb045e9
@@ -36,32 +72,32 @@ reviewed-digest:
   scenarios/check-stuck-tasks-md-advancement.md: aaabecc62d10bbdde0c532dadc61cde5fa6b88e3792680389b26eb8b4b95d5b7
   scenarios/clarify-command-acceleration.md: 5f2a753c0a3aeffc1883225f19d7a352053bd8ef6968adb2c381312cec907a31
   scenarios/cli-config-dir-per-contributor.md: adc1a63bfb7c786e70a81a303b64cc19c974a91035fcb288a59ef149dda1e268
-  scenarios/commands-dir-parameterization.md: f7cb45048600cd51dfe3c245ac61a689589486c28153999700581624ee6ac6bb
+  scenarios/commands-dir-parameterization.md: 9e170f99b9d80d6b3657af6f3f14b14dde362cab2b1b05733c78a33939b47422
   scenarios/config-readers-name-unknown-keys.md: 569aec4b2acbb964f737bb9499a4fecc7dfc1807aad5a4db0ad360d4da6e5fff
   scenarios/config-resolution-single-probe.md: a487eec0a7cce706acd911511115140073284ca5b35409ec24cf4f2546b38724
   scenarios/config-sourced-paths-and-the-traversal-boundary.md: 3ed48e5af4e6a0ca019f9f7ae961771a01e94e595c02ae7c614258b42d777873
-  scenarios/constitution-excerpts-as-skill-resources.md: 672e58e225993a12b8a332a642a918322967fe3c8a3679ffa06aa654788ddc69
+  scenarios/constitution-excerpts-as-skill-resources.md: b3a47b109ba64ff7d4ca132f66159e8de232aa9e659330e1968153dc63148b8b
   scenarios/coverage-expansion-primitives.md: 8fbe190c64b21c9f0edf92d764bdf9138d4f122830eea60df726d526859578d6
   scenarios/coverage-residue-cleanup.md: 0c6315ac8f0f041f624b0a389bbfca855d9886bb06703cef4ee5ffd513770d17
   scenarios/criterion-label-assignment.md: 57e455a91d0b76c6a3a5bdea80288300c246d00d53425730be88896e89c25305
   scenarios/dashboard-primitive.md: 70d8a91916780bab45ed495f1c7f197d1ebd83f27caba0b1a4a2ea9849434fca
   scenarios/derive-boundary-uncommitted-spec-dir.md: 64edf042d36ea149576e46e44ddf9bd4bce4e6eea12c59a092a31781baec5c6b
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
-  scenarios/every-mcp-argument-has-a-cli-form.md: 409a34b5a138642d023dc7f0a0b864013f053c84b02620f9bcb16fda20cbc4ef
+  scenarios/every-mcp-argument-has-a-cli-form.md: 942f7dac34955cf0f4714e53045b295e2aa9d47667ec56fb0d174ae2ae1f8191
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
-  scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
+  scenarios/exec-clarify-asks-each-open-question.md: 74ce986d0d56e4b6fc7c59254c7f3c3caca4e0ca0075324cb0ed4b9b62ce56b5
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
   scenarios/fetch-archive-bounds-the-whole-download.md: cb908fbcee4bdcb1f8701c2a678fd472716b4e8e2e61172200324af7abb05379
   scenarios/fetch-archive-dns-rebinding.md: e876d9e0d27d6757b024b9f9ff885f8cb0baa56d5886939cae487a591d362af8
   scenarios/fetch-archive-names-its-timeout.md: d45c28473624ee40fb8f6bdf93961bf28947f8d0e05413c7e713f2b307d911a2
   scenarios/framework-list-dedup.md: e01884c811f286768f80cf0a616088c569bb1961ab07db670b47e843f39d91fd
-  scenarios/govern-bootstrap.md: 5a52fb02c1be863ed6a9051fd004a9fc6f1dd802494f9405649bf34b95bc76c4
+  scenarios/govern-bootstrap.md: 5ffb4022ff53b32e9288a4f15fff7cd3441a2cea1bf42f07fbd080c264529089
   scenarios/groom-command-acceleration.md: dd6052b3d7ee1b1f8528913b82eabfbaf6debe4de51043824b2fcd5d040ed27e
   scenarios/host-protocol-conformance.md: 13c3a2d89eedf4f79e66c9d4e8e97a9b7361e6fd1fa340a76c46730c28e4d542
-  scenarios/implement-completion-gate.md: 0c466759ae195e7131a5a7838f7f6f0403d42baa6f98de596af9e32aa481285e
+  scenarios/implement-completion-gate.md: d094ebf57e1f453690a6dc01fd28282df377b3c4362daf90f95f76183d635292
   scenarios/installed-files-are-not-group-writable.md: 3a29eb614d5bd804698622713e8d18e29d8b68f3030d342a4e1f1be30c276cc4
   scenarios/lint-markdown-lints-only-what-it-is-given.md: 92efe81c7326ae4daa08f1f40596afe6221a30433a45ccc7998ab5fadff28ddf
-  scenarios/lint-markdown-tool-resolution.md: 06ec661f04cfabf19e7950adfb86d3db440ba48cd4ec8095c34897e0a96d1986
+  scenarios/lint-markdown-tool-resolution.md: 79a8b063c83b9de05358a3aa25eab94c9ce930737b73d29638c57f9b6ab8f6af
   scenarios/mark-task-backtick-headings.md: a405d3e4b08ef15de8037541c05a93f70a5553f4a72407b917aed4e50ba20507
   scenarios/mark-task-untick-symmetry.md: 0b04c0e1f2091244701f75c435884cb0857a2be728eac41f84fbe41c8df92fb0
   scenarios/mcp-arg-unknown-field-strictness.md: 57c17fb05d72b8f47f64140fc0d8ba6df0c0b8f757282e41d1036aa222309a1b
@@ -77,33 +113,84 @@ reviewed-digest:
   scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
   scenarios/resolve-references-cli-exec-wiring.md: 51d572e34ffca5314a4a7af140296fbc1c34008a46a4fd7a65216eae522aa957
   scenarios/review-exec-wiring.md: 9dbf0c621deaa58d40d16d09c289abdd5cb31ab5555f2036088e1d8f04d76515
-  scenarios/review-runtime-acceleration.md: ffbd167fe98fcb8ccdde8f0c329ae395347258a98518a7d40c612300ea75a34e
+  scenarios/review-runtime-acceleration.md: 653e0021c5082d77cc4f827fbfcd309297f20a2d1eb277fdde752e677fc10084
   scenarios/review-scope-parse-fidelity.md: f970155028f105cc7441f1597113df13592fc0e0b0fceee80b60787e420ef2ac
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: dd72b20cb886ee804141895d169ebb90eb5c548df260fb02cb1643dd2a6f777a
   scenarios/scaffolding-primitives.md: c3495b99e2f440822fed57cb08ba0cd668e9093fd786ad37e616a8508417c699
-  scenarios/scenario-open-question-signal.md: b731886b9aa7affab0a231d595f4ed422cb9a566dc1c4c31faf03c33f0674227
+  scenarios/scenario-open-question-signal.md: 58fb1c80f5dacc4e4d2fb3619de1b626363283f71ed460910c10ac80f0ecfd65
   scenarios/scenario-question-parser-fix.md: bdcaf5f9bb7d0ff795d6e3a6a5045a79afc63b55d8ce4b3331f807c337bf2ada
-  scenarios/severity-is-a-closed-set-not-a-string.md: 8b6ca46ef55c4f6b12420786ebae219f5aa4f2a2878c85d042098f5674013d2e
+  scenarios/severity-is-a-closed-set-not-a-string.md: d4ea4d23382e2968d72df879d89c7617ffe0b1a8f4049430a25cf70d5f1bd25f
   scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
   scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
   scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
   scenarios/the-cli-surface-nothing-pins.md: 634128f508bb6cc3d94913216ce5aefa3571a93bae2e2d45ecb8a0accf22dcc6
   scenarios/the-constitutions-registry-validates-its-values.md: 161cf85126b357e1c7fe6e63be2de5d80e96842a26acb3ed299af55f4bd92acc
-  scenarios/the-pi-command-candidate.md: 115a1720aa5a467e95d6525a6e5f0dd496898a5dba80a937992ea7b498c6500f
+  scenarios/the-pi-command-candidate.md: 577baec752506c60c08e56bbff45ff33e8e21f06d1763d73b7fe9e3170de41d0
   scenarios/unchecked-done-when-clause-tally.md: 2fa92d88a135df29d4097e5fac7ba2a42583303237cb81bcb8a8df3a7e157ade
   scenarios/unreadable-scenario-is-reported.md: 28c763fee22e177c50586f69989911128438c23964e1fa4831f628ae366792ae
   scenarios/waiver-processing-order.md: 0adb750e651d94ac8bcf06dd0dfbba84cd937c09817035e913ec08b77687f8e8
   scenarios/write-boundary-path-normalization.md: aea2703ee38d7a2ab5806444dd12f99370bfee540bafd8935c9f20d43bd86dee
   scenarios/write-session-primitive.md: 56779f1f97b3622d04b44e61e3c05653afa8f3010014f0699b3f234a630f7db5
   scenarios/writecode-boundary-derivation.md: 44bbce7e22a35dd58048811c3441f633e2e14f37e48dcdeac089c42276a639cd
-  scenarios/writecode-payload-bundling.md: 196c9d5ee60f7afe918bf0308e9276bcb8b224c80a2f80beacc44b474b39e195
-  scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
+  scenarios/writecode-payload-bundling.md: f7d9803245a4ce80944bce99df469356646005d213816a1cf9dda26a64537b41
+  scenarios/writecode-payload-canonicalize-paths.md: 635d30397102d2ab90aed011a4499395c13b469d281126fc944b9930fc16522f
+criteria-judged: 24
+criteria-met: 24
+criteria-verdicts:
+  - label: AC1
+    digest: 1ee3232ad9c69c65b5edc183cf2fcf7eb7fd5eeecb9bd26f8acedd15dd9e455b
+  - label: AC2
+    digest: dc5e3ed5f8bb422afe5242f38a349758840644f9bb708fd0101ea40ad5187ac3
+  - label: AC3
+    digest: 858f966a227944e88e0fb9b4f08054451f30b36bf90e8008901d0126307dc767
+  - label: AC4
+    digest: 76db9598cdb563dff7783041edf377328bb05b85d120ea49ed08e6b603967777
+  - label: AC5
+    digest: 2a1f7dfbc67a5a57b2586ab5e43c98b9e0930ce091fd82d7fd2a18fbf709ba41
+  - label: AC6
+    digest: 9e3c2c504d2d1462152b74ff980f0b4c14f7f919579eddb246e24449a79660d6
+  - label: AC7
+    digest: 195b624a833deb8832c0f8afdd14cacf8b0e84d60d7938e1a126575096a86da1
+  - label: AC8
+    digest: 60c17c84076fa16092f1f8091d763df48e23455ea1ad3f92792cce5518283fd4
+  - label: AC9
+    digest: 5261f6634e5bfc334a5544130f0732b7e67510753ef54285c27d715e93740923
+  - label: AC10
+    digest: 9471e857f5c1d5249e1e7c78777a041347a83d27b1f30b65dcca394cab8ceb6f
+  - label: AC11
+    digest: 35a39b0dbb7be8cf95cbf730dc92164e015e8e30523194f89a68b97e986457cc
+  - label: AC12
+    digest: f307436cef6bd11e5a639151bafecb0f5e962edcbdb04ca8fd4d6af977f8d88c
+  - label: AC13
+    digest: 5791f1a5a83f19ec43f7268a29bfadfaa96c4ac73c76e9d91a21795f4dc3f1d5
+  - label: AC14
+    digest: 9f99a327bbb0e1f519bede2c94089b90134a3d7478c0e2223cd2004168932826
+  - label: AC15
+    digest: e35e70b9c7e6cfe596471bf18019006d27de7b1c93c70ad1ae748ac833400d36
+  - label: AC16
+    digest: bebe9b75762e7b61e7054d6af166678bf7534341ca8b248f51a1d62e093a6f1d
+  - label: AC17
+    digest: 7cfe650691b28015aad094ae8a55013a9dba8c6bca3d28796b913773ed30f206
+  - label: AC18
+    digest: 4970f490e6241db026ec90a7e0f3bd237204b4ea89f6cd8fbb8a9c3dfbaeb18a
+  - label: AC19
+    digest: 6833ce49340db8e7f894886fd61c068b19cf35c4c555d669b283b316802ad4bd
+  - label: AC20
+    digest: 6b4def3ee454042d4cc5823ee4f586a8f707eab0ce4f20601a6f10efe1409298
+  - label: AC21
+    digest: 2b286129139c8160a6236d50593dbdc830c6b4121651830bea211cf95de75188
+  - label: AC28
+    digest: 52a1993c428c268c396213450071d0e0d80b4a36fd2f16e4950e0e7f72b1b9da
+  - label: AC29
+    digest: 3d2883cffe1d765b59fe77173a3131a877cb18b537a11b3340d6ff2f0c36df06
+  - label: AC31
+    digest: 0be735b38d4da9a57fb5e26cc0e413ab9f8205df60f8a956bc614eff1187107d
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 33
   deferred: 0
-  waived: 4
+  waived: 21
   undispositioned: 0
 decisions:
   - key: "reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs`"
@@ -936,15 +1023,72 @@ decisions:
     reason: the four-flag parser keeps the step's exit-2 nothing-was-judged message for an unknown argument, which argparse's own usage error would replace
     decided-at: 2026-11-17T19:31:01Z
     decided-by: rule
+  - key: security — `is_internal_v6` in `runtime/src/primitives/fetch_archive.rs` folds IPv4-mapped and NAT64 addresses back to the IPv4 they carry but not IPv4-compatible, 6to4 or Teredo forms — `runtime/src/primitives/fetch_archive.rs`
+    outcome: waived
+    reason: No loaded rule names IPv4-compatible, 6to4 or Teredo forms, and every range BE-INPUT-007 and BE-INPUT-016 enumerate is screened, so widening the screen to them is a new requirement, not a chore.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: security — `load_scope_files` in `runtime/src/interpreter/payload.rs` sends each scope file's content in the `performReview` request with a containment check only; the secret guard runs only for `writeCode`'s plan-relevant files — `runtime/src/interpreter/payload.rs`
+    outcome: waived
+    reason: "No loaded rule or 022 contract states a secret guard on performReview's scope: the data model and scenario writecode-payload-canonicalize-paths scope the guard to writeCode, so adding one is a new requirement, not a chore."
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — `read_envelope` in `runtime/src/io.rs` reads each `ductus exec` stdin line with no length cap — `runtime/src/io.rs`
+    outcome: waived
+    reason: AGENTS.md names BE-INPUT-006 among the rules that never fire against the runtime, a local stdio process whose only peer is the host that spawned it.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — `every_json_flag_help_states_its_arguments_shape` in `runtime/src/main.rs` compares field names only, and `scripts/mutation/json-flag-help-022.py` has no mutant for type labels or three developer-note regex arms — `runtime/src/main.rs`
+    outcome: waived
+    reason: QUAL-TEST-001's Not flagged clause covers a test whose mutation list records how it was shown to fail, as M1 to M4 do for the named behaviors; mutants for the type labels are hardening no criterion asks for.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — `every_mcp_argument_has_a_cli_form` in `runtime/src/main.rs` starts an in-memory MCP server to read schemas that `tool_input_schemas` now returns directly — `runtime/src/main.rs`
+    outcome: waived
+    reason: The test proves the served tools/list response, which tool_input_schemas does not build (no reject_unknown_fields or flag_always_loaded), so replacing it would change which surface the test proves.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — the command-file lookup ladder is built twice, by `exec_candidates` in `runtime/src/main.rs` and `locate_command_file` in `runtime/src/interpreter/payload.rs` — `runtime/src/main.rs`
+    outcome: waived
+    reason: Both take their installed candidates from Host::command_file_candidates, so the layout set lives in one place; merging the two ladders is a refactor of two callsites, not a chore.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — scenario `writecode-payload-canonicalize-paths` Done-when names the retired `gvrn` crate at a `0.7.3` patch bump — `specs/022-deterministic-runtime/scenarios/writecode-payload-canonicalize-paths.md`
+    outcome: waived
+    reason: The sentence records which release shipped the change, under the crate's name then; rewriting it edits history, and the scenario's Behavior and tests state no version.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — scenario `the-pi-command-candidate` names `main::locate_exec_command` as a callsite, though `main::exec_candidates` is the function that calls `Host::command_file_candidates` — `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md`
+    outcome: waived
+    reason: locate_exec_command is the callsite that walks the list and takes the first path that exists, as the sentence says, building it through exec_candidates; the data model and plan name the same function.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — the `plan-basic` fixture's stand-in spec mentions a strict-fields parity check — `runtime/tests/fixtures/plan-basic/specs/005-plan/spec.md`
+    outcome: waived
+    reason: It is fixture data, the body of a stand-in spec, and describes no live artifact or behavior.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — `specs/023-govern-refinement/spec.md` and `plan.md` say the renamed command's `parity:` block stays unchanged — `specs/023-govern-refinement/spec.md`
+    outcome: waived
+    reason: It records the scope of 023's rename as decided then; a sweep does not rewrite the record of what it sweeps (AGENTS.md).
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
+  - key: other — `warn` in `runtime/src/io.rs` repeats the inline `let _ = writeln!` pattern of `runtime/src/main.rs` and `runtime/src/schema/config_keys.rs` — `runtime/src/io.rs`
+    outcome: waived
+    reason: Those sites lock stderr once across a loop of lines, which a one-line warn would not do.
+    decided-at: 2026-11-19T15:52:41Z
+    decided-by: rule
 ---
 
 # Review — 022-deterministic-runtime
 
 ## Summary
 
-The window since 3e35c534 holds task 52 (7d64a274), which extends the loopback proxy test to a [::1] origin and adds M7. One reviewer ran the five passes. It read runtime/src/primitives/fetch_archive.rs and scripts/mutation/fetch-archive-loopback-http.py whole, and the twelve rule files' Statements through discover-rule-files' result, as a projection of ID, tier and Statement. No Verification was needed. The two other scope entries, analysis.md and tasks.md, are artifacts read by their hunks and are named in unread. The reviewer ran the test and M7 by hand in a scratch copy on macOS, where M7 kills only through the [::1] origin. runtime.yml runs the test on Linux and Windows. No finding. Two observations were fixed in round 1: the [::1] bind names IPv6 when it cannot bind, and task 52's text names where the proxy-bypass claim lives. The four stored decisions on fetch_archive.rs were checked and still stand.
+Review of 022's window since its reopen (`3e45b653`, base-source reopen) to HEAD `36d371c4`, with this run's fixes, and the record's first criteria step (066 task 27), so all 24 criteria were owed. Rule files: all twelve under `framework/rules/`, which `discover-rule-files` selects when no stack is passed, since `[review] tech-stack-verified` skips the detection step. Nine parts read: three security parts over the three security rule files and one slice of the scope each, four parts running the other four passes over the nine other rule files, `AGENTS.md`'s Gotchas to Design Principles and `specs/system.md`, and two criteria parts; each re-ran over the fix diff. Of the 55 scope entries the passes read 17 whole. `runtime/src/schema/primitives.rs` (493,040 bytes) and `runtime/CHANGELOG.md` (481,977) were read at their window hunks only. The 14 `.claude/commands/ductus/` and `.pi/prompts/` copies are generated from the command sources, the generators re-run and in sync. The other 22 entries are ones this run's fixes added or changed after the passes read them: the nine command and bootstrap sources, `runtime/src/io.rs`, `runtime/src/interpreter/mod.rs`, `runtime/src/host.rs`, `runtime/src/primitives/host_config.rs`, `runtime/src/schema/severity.rs`, `runtime/tests/exec_subprocess.rs`, `runtime/tests/parity.rs`, `runtime/tests/golden/implement-basic.jsonl`, the `ductus-basic` fixture's `install.md`, `scripts/mutation/stderr-warnings-022.py` and three scenarios; the passes' re-run and the fix-round loop read them at their changed lines. The eight `runtime/tests/parity/*/expected.txt` TODO captures are deleted. 0 MUST, 0 SHOULD, 0 low-confidence. 54 observations: 33 fixed and 21 waived, 10 of the waivers stored decisions that still stand. The fixes include the class of `ductus exec` warnings written with `eprintln!`: six sites, reproduced red at exit 101 with stderr's reader closed, fixed through `warn` and proven by M1 to M7. They also include a dead snake-case lookup in `cli_command`, and stale claims in the plan, data model, spec and scenarios. AC7 could not be judged met, because its LLM-path comparison was never taken. The owner decided on 2026-11-19 to correct the criterion and retire the `parity:` scaffolding, and it is now judged met on its annotation. All 24 criteria are judged met. Evidence: the whole `cargo test` on the fixed tree passed (3,626 passed, 0 failed, 2 ignored), clippy and fmt are clean, and all four `scripts/mutation/json-flag-help-022.py` mutants and all seven `scripts/mutation/stderr-warnings-022.py` mutants are killed. `framework-checks.yml` and `generators.yml` steps pass on the fixed tree, apart from the generator-diff step, which reads uncommitted work. HEAD's `runtime` run 44548781766 passed on all four jobs.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+24 of 24 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -966,14 +1110,89 @@ The window since 3e35c534 holds task 52 (7d64a274), which extends the loopback p
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: `runtime/src/main.rs` declares `Command::Mcp` and `Command::Exec` (dispatching to `run_mcp_server` and `run_exec`), HEAD's release `ductus --help` lists `mcp` and `exec`, and tests `lists_every_manifest_tool_and_canonical_set` (tests/mcp.rs) and `exec_drives_a_deterministic_procedure_to_complete` (tests/exec_subprocess.rs) passed in cargo-test-022.log.
+- AC2 — met: `lists_every_manifest_tool_and_canonical_set` (tests/mcp.rs, passed) asserts the served tool set equals `tool_names()` (registry less `CLI_ONLY_PRIMITIVES`) and equals `framework/runtime-tools.txt`, whose `# cli-only: run-generator` line is held by `the_manifest_names_the_cli_only_primitives` (passed); names are bare verb-noun.
+- AC3 — met: `runtime/README.md` section 'JSON-over-stdio protocol' documents the closed envelope set with a Stability section, `specs/022-deterministic-runtime/data-model.md` carries the schemas, and `runtime/tests/exec_subprocess.rs` (now 15 tests, the diff adds `an_ignored_stdin_line_warns_without_failing_the_walk_when_stderr_is_gone`; 14 passed at HEAD) plus `walker.rs` (16, stray and malformed stdin lines ignored) cover it, the host's rerun of the fixed tree owing the new count.
+- AC4 — met: `bash scripts/lint-procedure-parseability.sh` exits 0 at HEAD and `runtime/legacy-prose-commands.txt` allows only `amend`, `help`, `audit` and `ductus-procedure`, so status/target/analyze/implement/plan/specify parse; their goldens in `runtime/tests/parity.rs` (6 `*_basic_stream_matches_golden`) passed.
+- AC5 — met: `framework/commands/{analyze,implement,plan,specify}.md` carry `<!-- llm:assessSpecQuality|writeCode|writeSpecBody -->` markers, and `runtime/src/schema/extensions.rs` defines the matching request and response types (`WriteSpecBodyRequest`/`Response`, `WriteCodeRequest`/`Response`, `AssessSpecQuality*`) with response validation in its dispatch.
+- AC6 — met: met on its annotation (delivered as written; workflow renamed to `framework-checks.yml` by 048, which carried the check across): `.github/workflows/framework-checks.yml` step '(f) Procedure parseability' runs `scripts/lint-procedure-parseability.sh` (exit 0 here), no `markdown-only-pipeline.yml` remains, and framework-checks run 44548781875 on HEAD concluded success.
+- AC7 — met: met on its annotation (delivered in part: each command runs end to end and its stream matches a committed golden; the LLM-driven comparison was never taken and is retired with the prose-walked path, scaffolding removed, owner 2026-11-19): `runtime/tests/parity.rs` keeps the six `*_basic_stream_matches_golden` cases (status, target, analyze, implement, plan, specify) over `runtime/tests/golden/*.jsonl` and only the `read_parity_spec`/`read_parity_capture` skip path and `parity:` frontmatter structs are removed in fix-r1-code.diff, those six tests passed in cargo-test-022.log at HEAD, and the `runtime/tests/parity/*/expected.txt` placeholders are deleted (only `runtime/tests/parity/cross-service` remains).
+- AC8 — met: `runtime/tests/parity.rs` drives `ductus exec` over status, target, analyze, implement, plan and specify with a host stub answering extension points, and its 13 tests passed in 1.08s in cargo-test-022.log; the criterion itself assigns remaining wall-clock to the host's semantic work.
+- AC9 — met: met on its annotation (delivered as written; guarantee removed by 048, which made the runtime a requirement): `framework/constitution.md` §runtime-boundary principle 3 states the runtime is required and acquisition failure halts, `docs/runtime.md` 'When acquisition fails' says there is no silent degradation, so the no-binary cycle is retired on the tree.
+- AC10 — met: `framework/runtime-tools.txt` is held set-equal to the served tools by `lists_every_manifest_tool_and_canonical_set` (passed), and `bash scripts/lint-tool-coverage.sh` at HEAD exits 0 ('17 command file(s) examined, 15 naming a runtime tool, 15 of them carrying the pointer').
+- AC11 — met: `.github/workflows/runtime.yml` has jobs that run `cargo build --release --locked` and `cargo test --release --locked` (failing on any test failure) over the whole suite, which exercises the primitives against fixtures (`runtime/tests/mcp.rs`, the `runtime/src/primitives/` unit tests), on ubuntu and macos; HEAD run 44548781766 on `36d371c4` completed success on all four jobs (ubuntu and macos build+test, cargo audit, fmt+clippy), and the host's whole `cargo test --locked` on the fixed tree passed 3,626 with 0 failed.
+- AC12 — met: met on its annotation (that workflow no longer exists, 048 replaced it with the acquisition workflow): `.github/workflows/markdown-only-pipeline.yml` is absent from the tree, and its replacement `.github/workflows/runtime-acquisition.yml` exists with newest run 44534767355 (workflow_dispatch) concluding success.
+- AC13 — met: `write_atomic_bytes` and `guarded::write_guarded` (used by `mark_task`, `mark_criterion`, `set_status`) write a same-directory `NamedTempFile`, sync and persist it over the target; proved by `tests/atomic_writes.rs` `mark_task_rename_is_atomic_under_parallel_reads`, `mark_criterion_rename_is_atomic_under_parallel_reads`, `set_status_rename_is_atomic_under_parallel_reads` and `set_status::tests::a_failed_write_leaves_the_spec_unchanged_and_no_tempfile`, all ok in `cargo-test-022.log`.
+- AC14 — met: `ductus --version` prints `ductus 0.59.11`, matching `runtime/Cargo.toml`; `emit_exec_parse_error` in `runtime/src/main.rs` emits an `error` envelope with `runtime-version` and a message naming a possible version mismatch, proved by `exec_emits_terminal_error_envelope_on_unparseable_command_file` (`tests/exec_subprocess.rs`, ok).
+- AC15 — met: `.github/workflows/runtime-release.yml` matrix builds exactly `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` with a `.sha256` per archive, latest run 39039762658 success; README `## The runtime` describes acquisition (`/ductus` downloads, verifies the checksum); the newest release `ductus-v0.59.11` (2026-10-17) predates the Windows drop and still lists an `x86_64-pc-windows-msvc` asset, which is history and not the workflow's current matrix.
+- AC16 — met: met on its annotation (delivered as written; the pointer remains, optionality removed by 048): `framework/bootstrap/ductus-procedure.md` completion output carries a pointer to `[The runtime](https://github.com/stonean/ductus#the-runtime)` in its numbered next steps (`you do not install it`) and in the Tip line; it no longer says optional, as annotated.
+- AC17 — met: met on its annotation (delivered as written, no-nag half still holds; markdown-only first-class guarantee retired by 048): grep of `framework/commands/*.md` for install-nag or missing-runtime wording finds none (only an unrelated `prune.md` AGENTS.md line).
+- AC18 — met: `specs/022-deterministic-runtime/analysis.md` records `hard-fail: 0`, `blocking-findings: 0`, `blocking: false` (analyzed-against `027cc14b`); at HEAD `validate-frontmatter --path specs/022-deterministic-runtime/spec.md` returned clean with 0 findings and `check-artifacts --feature 022-deterministic-runtime` returned 2 advisory scenario-consistency findings only (`done-when-authoring-forms.md`, `scenario-question-parser-fix.md`) and no blocking; the analysis this program runs after the review judges it again.
+- AC19 — met: `.github/workflows/framework-checks.yml` step (c) runs `npx markdownlint-cli2` over the repo; its run 44548781875 on HEAD `36d371c4` completed with success, and `scripts/run-workflow-steps.py` ran the same step on this run's fixed tree with exit 0.
+- AC20 — met: `validate_substitution_key` in `runtime/src/primitives/apply_manifest.rs` rejects empty keys and keys containing `{` or `}` before any write; tests `placeholder_shaped_substitution_key_is_rejected_with_zero_writes`, `empty_substitution_key_is_rejected` and `bare_keys_with_punctuation_and_spaces_are_accepted` ok; `runtime/CHANGELOG.md` `## [0.43.0]` carries the BREAKING entry.
+- AC21 — met: `ApplyManifestResult`/entry fields in `runtime/src/schema/primitives.rs` carry `substitutions_applied: Option<u32>` per entry (null when never run) plus aggregate `substitutions_applied` and `entries_substituted` (checked by the `r_value["entries-substituted"]` round-trip, `substitution_counts_separate_examined_from_unexamined` ok); the bare-key contract is in the `apply_manifest.rs` module docs, the `substitutions` doc comment, and `The substitution map is keyed bare` in both `framework/bootstrap/ductus.md` and `govern.md`; `ductus-procedure.md` line `N substitutions across M files` surfaces both counts.
+- AC28 — met: `every_registry_primitive_has_a_clap_subcommand` in `runtime/src/main.rs` compares `BTreeSet`s of clap subcommand names against `PRIMITIVE_REGISTRY` in both directions and excludes `mcp`, `exec`, `parse`, `hook`, `help` via `NON_PRIMITIVE_SUBCOMMANDS` with reasons; ran ok in `cargo-test-022.log`; `runtime/src/schema/registry.rs` now says every surface is covered and `AGENTS.md` carries no `unpinned` claim (grep).
+- AC29 — met: `validate_no_traversal` in `runtime/src/primitives/mod.rs` has a `# The config-sourced path boundary` section stating the hand-edit trust, the originating-writer rule and `Nothing enforces this`; `resolve_constitutions.rs` and `resolve_references.rs` classify docs cite it via `super::validate_no_traversal` rather than restating.
+- AC31 — met: `dashboard` returns `inbox-standing` (`{state: clean, outstanding: 0, path: specs/inbox.md}` run on WT) and `render_status` ends its summary with `Inbox: ✓ clean` after Counts/Tags/Reopenings and before `Next actions:`; `pipeline_view.rs` renders all four states (outstanding with oldest date, age undeterminable, clean, `? no readable ... nothing examined`); `inbox_standing::tests::*` (blame, shallow, absent, unblameable) all ok.
+
 ## Observations
 
-- security: a redirect hop is looked up twice rather than connected to the address its screen resolved — `runtime/src/primitives/fetch_archive.rs` — **waived**: 022's scenario allows an equivalent connect-time re-check, both lookups are screened, and the owner prescribed this resolver and its staged-rebind test
-- other — the [::1] origin's bind in a_named_loopback_host_is_fetched_without_the_proxy is a bare unwrap, so a runner with no IPv6 loopback panics without saying why — `runtime/src/primitives/fetch_archive.rs:2189` — **fixed** (decided by the rule)
-- convention — task 52's text credits specs/system.md and the plan with the loopback proxy-bypass claim, which docs/runtime.md and the changelog carry — `specs/022-deterministic-runtime/tasks.md:196` — **fixed** (decided by the rule)
-- reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs` — **waived**: the GaiResolver it replaced behaves the same way, and in production the lookup is getaddrinfo, which the operating system resolver's own timeouts bound
-- reliability: the initial and redirect-screen lookups run outside the client's timeout — `runtime/src/primitives/fetch_archive.rs` — **waived**: unchanged by this fix and bounded the same way, by the operating system resolver's timeouts; FETCH_DEADLINE bounds the download itself
-- other: two proxy tests each define the same four-line internal-address lookup — `runtime/src/primitives/fetch_archive.rs` — **waived**: test fixtures local to each test; sharing one would couple the tests for no gain
+- security — `plan.md` §Agent reach said no destination check names `.ductus/bin/`, so `apply-manifest` and `merge-managed-block` could replace the pointer, while `POINTER_DIRS` in `runtime/src/primitives/host_config.rs` refuses it — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- security — `plan.md` §Path arguments stated no bound on extraction, though `extract-archive` caps decompressed bytes (`MAX_EXTRACT_BYTES`) and entries (`MAX_EXTRACT_ENTRIES`) — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- security — `is_internal_v6` in `runtime/src/primitives/fetch_archive.rs` folds IPv4-mapped and NAT64 addresses back to the IPv4 they carry but not IPv4-compatible, 6to4 or Teredo forms — `runtime/src/primitives/fetch_archive.rs` — **waived**: No loaded rule names IPv4-compatible, 6to4 or Teredo forms, and every range BE-INPUT-007 and BE-INPUT-016 enumerate is screened, so widening the screen to them is a new requirement, not a chore. (decided by the rule)
+- security — `load_scope_files` in `runtime/src/interpreter/payload.rs` sends each scope file's content in the `performReview` request with a containment check only; the secret guard runs only for `writeCode`'s plan-relevant files — `runtime/src/interpreter/payload.rs` — **waived**: No loaded rule or 022 contract states a secret guard on performReview's scope: the data model and scenario writecode-payload-canonicalize-paths scope the guard to writeCode, so adding one is a new requirement, not a chore. (decided by the rule)
+- security — ductus parse FILE reads any path it is given with no containment and prints the parsed procedure (the whole AST, content included) when the file is Procedure-shaped markdown; every primitive path argument goes through validate_contained. The subcommand is CLI-only (excluded from the MCP registry by NON_PRIMITIVE_SUBCOMMANDS) and is driven by scripts/lint-procedure-parseability.sh over framework/commands. — `runtime/src/main.rs:635-681` — **waived**: a local CLI debug and CI surface the MCP server does not expose, supplied by the operator or a script, and an agent that can run it can already read the same file with its shell; no host-to-runtime trust boundary lies between the path's supplier and its reader, and the plan's path-argument section scopes the check to primitives (decided by the rule)
+- bug — `ductus exec`'s six ignore-and-continue warnings (`read_envelope`'s two in `runtime/src/io.rs`, `await_llm_response`'s and `await_gate_response`'s four in `runtime/src/interpreter/mod.rs`) wrote with `eprintln!`, which panics when stderr's reader has gone, so a walk that would complete exited 101; each now goes through `warn`, proven by `an_ignored_stdin_line_warns_without_failing_the_walk_when_stderr_is_gone` and `scripts/mutation/stderr-warnings-022.py` M1 to M7 — `runtime/src/io.rs` — **fixed** (decided by the rule)
+- other — `cli_command` and `every_json_flag_help_states_its_arguments_shape` in `runtime/src/main.rs` tried a snake-case property name no served schema uses before the kebab-case one; the dead candidate is removed — `runtime/src/main.rs` — **fixed** (decided by the rule)
+- other — `runtime/CHANGELOG.md`'s task 53 entry said two MCP argument descriptions changed, but `7b4fff37` also reworded `merge-permissions`' `revoke`, `retire-feature`'s `feature` and `derive-references`' `write` and `staged` — `runtime/CHANGELOG.md` — **fixed** (decided by the rule)
+- other — AC7's LLM-path half was ticked at `7283e2ca` while every `runtime/tests/parity/*/expected.txt` capture was a TODO placeholder and `runtime/tests/parity.rs` only printed SKIPPED; the criterion is corrected and the `parity:` frontmatter, the eight captures and the skip branch are retired (owner decision, 2026-11-19) — `specs/022-deterministic-runtime/spec.md` — **fixed**
+- other — the `ductus-basic` fixture's stand-in `runtime/tests/fixtures/ductus-basic/framework/bootstrap/install.md` said its test asserts a strict-files bound its frontmatter no longer declares — `runtime/tests/fixtures/ductus-basic/framework/bootstrap/install.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Atomic writes still said adopters running on Windows accept the atomicity gap, though no Windows binary is released since 048 task 33 — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Known limitations framed Windows atomic-write semantics as an adopter-facing limitation — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Trade-offs listed Windows atomicity as an accepted trade-off with no qualifier — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Release workflow sized each job timeout from a Windows job that no longer runs — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- convention — task 53's design was not stated in `plan.md` beyond an Affected Files row for `runtime/src/mcp/flag_help.rs` — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Parser strategy gave `parse(source)`, but the code takes `parse(source, command_name)` — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Dependency selection omitted `flate2`, `tar`, `zip` and `sha2` and listed fewer `tokio` features than `runtime/Cargo.toml` enables — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md` §Error semantics said exit 128 and above means signal-killed, but the runtime exits 141 on a closed stdout (`STDOUT_CLOSED_EXIT`) — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- other — `plan.md`'s rewritten golden-stream section named the six commands and the bootstrap stand-in but not `review_basic_stream_matches_golden`, and called the comparison byte for byte without the `{{runtime-version}}` substitution — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- stale — `data-model.md` §`set-status` promised an `error` envelope with `code: "status-mismatch"`, which no path emits: the CLI and MCP error is text and `ductus exec` emits `primitive-failure` — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `data-model.md`'s `verdicts` `reusable` description omitted spec 073's `waived` verdict — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `data-model.md` said `severity` is on five shapes with three vocabularies, but `ReReadFinding` is a sixth with a fourth; `runtime/src/schema/severity.rs`'s module doc and scenario `severity-is-a-closed-set-not-a-string` are swept to match — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `data-model.md`, `runtime/src/host.rs` and scenario `the-pi-command-candidate` named `main::run_exec` as a command-file callsite, which is `main::locate_exec_command` — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `data-model.md`'s `read-spec` example omitted `tags`, which every result carries — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `data-model.md`'s severity paragraph said "They live in" `runtime/src/schema/severity.rs` right after naming `ReReadSeverity`, which lives in `runtime/src/schema/primitives.rs` — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- other — `spec.md` §LLM extension points and `data-model.md`'s follow-on paragraph gave `verifyCriteria` to `/ductus:implement`'s completion gate; since 066 task 27 it is `/ductus:review`'s criteria step 7.2 — `specs/022-deterministic-runtime/spec.md` — **fixed** (decided by the rule)
+- other — `spec.md` §Follow-on scenarios called review's runtime value-add small, which scenario `review-runtime-acceleration` says undercounts the bookkeeping four primitives now do — `specs/022-deterministic-runtime/spec.md` — **fixed** (decided by the rule)
+- other — `spec.md`'s distribution Resolved Question left Windows package managers to the community after the Windows target was dropped (048 AC25) — `specs/022-deterministic-runtime/spec.md` — **fixed** (decided by the rule)
+- other — scenario `implement-completion-gate` cited `verifyCriteria` as `/ductus:implement` step 11, which `framework/commands/review.md` step 7.2 now sends — `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — **fixed** (decided by the rule)
+- other — scenario `implement-completion-gate` said `check-review-gate` is `/ductus:implement` step 14; it is step 11 — `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — **fixed** (decided by the rule)
+- other — scenario `implement-completion-gate` said `diff-cross-spec` runs at steps 7 and 13; it runs at steps 7 and 10 — `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — **fixed** (decided by the rule)
+- other — scenario `review-runtime-acceleration` stated test counts for `append_task.rs` and `create_scenario.rs` that had moved — `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` — **fixed** (decided by the rule)
+- other — scenario `govern-bootstrap` said the parity test runs `ductus exec ductus` and that the bootstrap gains a `parity:` field; the test runs `ductus exec install`, and no such field exists — `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md` — **fixed** (decided by the rule)
+- other — scenario `writecode-payload-canonicalize-paths` left open a `PathTraversalBlocked` alternative the code settled on the `out-of-repo` label — `specs/022-deterministic-runtime/scenarios/writecode-payload-canonicalize-paths.md` — **fixed** (decided by the rule)
+- other — the Contexts of scenarios `severity-is-a-closed-set-not-a-string`, `lint-markdown-tool-resolution` and `writecode-payload-canonicalize-paths` stated a fixed defect in the present tense with no date; each now reads as the state before the change — `specs/022-deterministic-runtime/scenarios/severity-is-a-closed-set-not-a-string.md` — **fixed** (decided by the rule)
+- other — scenarios `constitution-excerpts-as-skill-resources` and `writecode-payload-bundling` required a `runtime/tests/parity/` test, a directory now holding only the cross-service capture; each points at `runtime/tests/parity.rs` — `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md` — **fixed** (decided by the rule)
+- other — `read_envelope` in `runtime/src/io.rs` reads each `ductus exec` stdin line with no length cap — `runtime/src/io.rs` — **waived**: AGENTS.md names BE-INPUT-006 among the rules that never fire against the runtime, a local stdio process whose only peer is the host that spawned it. (decided by the rule)
+- other — `every_json_flag_help_states_its_arguments_shape` in `runtime/src/main.rs` compares field names only, and `scripts/mutation/json-flag-help-022.py` has no mutant for type labels or three developer-note regex arms — `runtime/src/main.rs` — **waived**: QUAL-TEST-001's Not flagged clause covers a test whose mutation list records how it was shown to fail, as M1 to M4 do for the named behaviors; mutants for the type labels are hardening no criterion asks for. (decided by the rule)
+- other — `every_mcp_argument_has_a_cli_form` in `runtime/src/main.rs` starts an in-memory MCP server to read schemas that `tool_input_schemas` now returns directly — `runtime/src/main.rs` — **waived**: The test proves the served tools/list response, which tool_input_schemas does not build (no reject_unknown_fields or flag_always_loaded), so replacing it would change which surface the test proves. (decided by the rule)
+- other — the command-file lookup ladder is built twice, by `exec_candidates` in `runtime/src/main.rs` and `locate_command_file` in `runtime/src/interpreter/payload.rs` — `runtime/src/main.rs` — **waived**: Both take their installed candidates from Host::command_file_candidates, so the layout set lives in one place; merging the two ladders is a refactor of two callsites, not a chore. (decided by the rule)
+- other — scenario `writecode-payload-canonicalize-paths` Done-when names the retired `gvrn` crate at a `0.7.3` patch bump — `specs/022-deterministic-runtime/scenarios/writecode-payload-canonicalize-paths.md` — **waived**: The sentence records which release shipped the change, under the crate's name then; rewriting it edits history, and the scenario's Behavior and tests state no version. (decided by the rule)
+- other — scenario `the-pi-command-candidate` names `main::locate_exec_command` as a callsite, though `main::exec_candidates` is the function that calls `Host::command_file_candidates` — `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` — **waived**: locate_exec_command is the callsite that walks the list and takes the first path that exists, as the sentence says, building it through exec_candidates; the data model and plan name the same function. (decided by the rule)
+- other — the `plan-basic` fixture's stand-in spec mentions a strict-fields parity check — `runtime/tests/fixtures/plan-basic/specs/005-plan/spec.md` — **waived**: It is fixture data, the body of a stand-in spec, and describes no live artifact or behavior. (decided by the rule)
+- other — `specs/023-govern-refinement/spec.md` and `plan.md` say the renamed command's `parity:` block stays unchanged — `specs/023-govern-refinement/spec.md` — **waived**: It records the scope of 023's rename as decided then; a sweep does not rewrite the record of what it sweeps (AGENTS.md). (decided by the rule)
+- other — `warn` in `runtime/src/io.rs` repeats the inline `let _ = writeln!` pattern of `runtime/src/main.rs` and `runtime/src/schema/config_keys.rs` — `runtime/src/io.rs` — **waived**: Those sites lock stderr once across a loop of lines, which a one-line warn would not do. (decided by the rule)
+- other — main.rs error paths use eprintln!, which panics when stderr is a pipe whose reader has gone, so a failing run can exit 101 instead of 1; the closed-stdout scenario scopes itself to stdout and names the eprintln sites as unchanged — `runtime/src/main.rs:455` — **waived**: a-closed-stdout-is-a-quiet-exit scopes its behavior to the stdout result writers and states main.rs still writes errors with eprintln, and the run is already failing when these fire (decided by the rule)
+- other — the CLI flag hydration is a table of 22 hydrate_field calls and tests prove only the shared helper and two primitives, so a call dropped or pointed at the wrong argument (applied against expired waivers, say) fails no test; every_mcp_argument_has_a_cli_form pins clap presence only — `runtime/src/main.rs:339` — **waived**: d3192610 records the hydration helper proved red with its assignment removed, and each of the 21 calls pairs a flag with its same-named field, so a swap shows in review as a name mismatch (decided by the rule)
+- other — a stdout reader that has gone is a quiet exit 141 for every result written through write_stdout_line, but ductus exec (protocol envelopes written by the interpreter and emit_exec_error) and gate-confirm still report it as exit 1 or 74 with a stderr message. Driven on a fixture: resolve-session exits 141 with empty stderr; exec of an unknown command exits 1 and prints 'failed to emit error envelope: Broken pipe'. No panic in either, and the scenario a-closed-stdout-is-a-quiet-exit scopes the fix to the result emitters in main.rs. — `runtime/src/main.rs:733-748` — **waived**: the scenario's Context names the result emitters in main.rs as the sites and its test covers three of them; exec's stdout is the walk's protocol channel, where a closed reader ends the walk with an error status distinct from a panic, which the scenario's second behavior requires, and nothing is written twice (decided by the rule)
+- other — the 22 --{name}-json flags are each hydrated by one hydrate_field call in main.rs (checked: 22 flags in schema/primitives.rs, 22 calls, every flag paired with its own field), but only process-waivers' fired-json and write-review's fix-rounds-json are driven by a test; every_mcp_argument_has_a_cli_form checks that a flag exists, not that main.rs reads it, so dropping a hydrate_field call for any of the other 19 passes the suite and silently sends an empty list. The commit message records one mutation proof only. — `runtime/src/main.rs:1719-1814` — **waived**: scenario every-mcp-argument-has-a-cli-form requires one test that every MCP argument has a CLI form, which every_mcp_argument_has_a_cli_form meets, and the hydration test the commit adds proves its behavior for two flags; the other pairings were read and are correct today, and no loaded rule's Statement is violated by the gap (decided by the rule)
+- other — main.rs reports its failure paths with over thirty eprintln! calls, which panic when the stderr reader has gone, where the stdout writes go through write_stdout_line (task 27) and warn_unknown_keys writes stderr without panicking — `runtime/src/main.rs:285` — **waived**: each call is on a path that is already failing, so a closed stderr changes the exit status from 1 to a panic's 101 on a run that had failed anyway, and no result or write is lost (decided by the rule)
+- other — the two CLI json-flag tests drive 2 of the 14 hydration arms task 24 added (fired-json and fix-rounds-json), so deleting or mis-wiring another arm leaves both green while the flag is ignored; the commit records a mutant for each test, not for each arm — `runtime/src/main.rs:1774` — **waived**: each omitted arm is one hydrate_field call whose flag and field names were read pairwise here and agree, and the commit records how each test was shown to fail (decided by the rule)
+- other — the scenario's process-waivers summary (expire when the file is gone or the rule no longer fires in a file the run's scope holds) and the review reference's Per-run waiver processing items 2 and 3 omit two carve-outs the primitive's description states: a plan Affected Files entry the scope holds counts as reading a file, and a scope that cannot be read retains a waiver even for a deleted file. — `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md:23` — **waived**: Both are summaries of a rule the primitive's compiled description states whole and canonically (PROCESS_WAIVERS); the omissions narrow neither the scenario's tests nor the reference's steps, and a restatement of the carve-outs would be a second copy of a canonical source. (decided by the rule)
+- other — the scenario slug ductus-bootstrap is cited as a spec 022 scenario in seven live places, but the scenario file is govern-bootstrap.md (title Ductus bootstrap); no file named ductus-bootstrap ever existed in git history. 022's plan.md line 338 links it correctly with the label ductus-bootstrap and the path govern-bootstrap.md. Citations outside this part's table: runtime/src/main.rs:866, runtime/src/primitives/fetch_archive.rs:5, scripts/lint-procedure-parseability.sh:78, specs/022-deterministic-runtime/plan.md:338, scenarios/apply-manifest.md:9, scenarios/runtime-primitive-structural-bugs.md:13, runtime/tests/fixtures/ductus-basic/framework/bootstrap/install.md:28. — `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md:1` — **waived**: Not mechanical: the repair is a choice between renaming the scenario file to ductus-bootstrap.md (one rename and one plan.md link; the digest key in analysis.md regenerates) and re-pointing seven prose citations in four directories, including a runtime/ comment batch. The scenario is reachable by its link in plan.md and its title, so no reader is sent to a missing file by a link; it holds no requirement. (decided by the rule)
+- convention — the Exec arguments paragraph sits between the inbound messages' JSON-shape sentence and the gate-response paragraph that continues the same topic — `specs/022-deterministic-runtime/data-model.md:124` — **waived**: the move would change no claim, rule or behavior, which the Observations rules in framework/reference/review.md say is no observation (decided by the rule)
 
 ## Skipped passes
 
@@ -981,7 +1200,165 @@ The window since 3e35c534 holds task 52 (7d64a274), which extends the loopback p
 
 ## Excluded from scope
 
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 060-exec-analyze-assesses-each-loaded-rule
+- `.claude/commands/ductus/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `.claude/commands/ductus/review.md` — 066-audit-records-and-the-completion-gate
+- `.ductus/reference/audit.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `.ductus/reference/implement.md` — 066-audit-records-and-the-completion-gate
+- `.ductus/reference/review.md` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate
+- `.github/workflows/runtime-acquisition.yml` — 029-bootstrap-runtime-autowire, 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `.github/workflows/runtime-release.yml` — 029-bootstrap-runtime-autowire, 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `.github/workflows/runtime.yml` — 048-govern-acquired-runtime
+- `.pi/prompts/ductus-amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
+- `AGENTS.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `README.md` — 048-govern-acquired-runtime
+- `docs/developing-ductus.md` — 060-exec-analyze-assesses-each-loaded-rule, 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
+- `docs/runtime.md` — 048-govern-acquired-runtime
+- `docs/slash-commands.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `framework/bootstrap/ductus-procedure.md` — 003-bootstrap-automation, 017-derive-dont-ask, 018-adopter-owned-pre-commit, 027-bootstrap-migration-registry
+- `framework/commands/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `framework/commands/review.md` — 066-audit-records-and-the-completion-gate
+- `framework/constitution.md` — 000-slash-commands, 020-code-review, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `framework/migrations.toml` — 027-bootstrap-migration-registry
+- `framework/reference/audit.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `framework/reference/implement.md` — 066-audit-records-and-the-completion-gate
+- `framework/reference/review.md` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate
+- `runtime/README.md` — 048-govern-acquired-runtime
+- `runtime/src/interpreter/payload.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `runtime/src/primitives/check_review_gate.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/src/primitives/classify_spec_edit.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `runtime/src/primitives/compute_review_scope.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/src/primitives/criterion_verdicts.rs` — 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/src/primitives/derive_routing_candidates.rs` — 079-review-and-analysis-work-converges
+- `runtime/src/primitives/invalidate_review.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `runtime/src/primitives/line_citations.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `runtime/src/primitives/mod.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `runtime/src/primitives/write_review.rs` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate
+- `runtime/src/schema/descriptions.rs` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/src/schema/extensions.rs` — 040-configurable-specs-dir, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate
+- `runtime/tests/fixtures/implement-basic/.govern.session.toml` — 066-audit-records-and-the-completion-gate
+- `runtime/tests/fixtures/implement-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
+- `runtime/tests/fixtures/review-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
+- `runtime/tests/golden/review-basic.jsonl` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/tests/mcp.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `runtime/tests/review_command.rs` — 066-audit-records-and-the-completion-gate
+- `scripts/audit/README.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `scripts/audit/done-spec-criteria.sh` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `scripts/audit/migration-coverage.sh` — 027-bootstrap-migration-registry
+- `scripts/audit/promotion-coverage.sh` — 067-analyze-and-audit-checks
+- `scripts/measure-replace-under-server.sh` — 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `scripts/mutation/criteria-in-review-066.py` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `scripts/mutation/fix-round-record.py` — 066-audit-records-and-the-completion-gate
+- `scripts/mutation/line-citation-strip-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `scripts/mutation/reopen-measure.py` — 066-audit-records-and-the-completion-gate
+- `scripts/mutation/reviews-follow-what-changed.py` — 066-audit-records-and-the-completion-gate
+- `scripts/mutation/scope-attribution.py` — 066-audit-records-and-the-completion-gate
+- `scripts/tests/test-migration-coverage.sh` — 027-bootstrap-migration-registry
+- `specs/000-slash-commands/analysis.md` — 000-slash-commands
+- `specs/000-slash-commands/plan.md` — 000-slash-commands
+- `specs/000-slash-commands/review.md` — 000-slash-commands
+- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `specs/000-slash-commands/scenarios/validation-gates.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `specs/000-slash-commands/spec.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `specs/003-bootstrap-automation/analysis.md` — 003-bootstrap-automation
+- `specs/003-bootstrap-automation/plan.md` — 003-bootstrap-automation, 012-multi-agent-govern
+- `specs/003-bootstrap-automation/review.md` — 003-bootstrap-automation
+- `specs/003-bootstrap-automation/spec.md` — 003-bootstrap-automation, 012-multi-agent-govern
+- `specs/003-bootstrap-automation/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
+- `specs/007-govern-workflow/analysis.md` — 007-govern-workflow
+- `specs/007-govern-workflow/plan.md` — 007-govern-workflow
+- `specs/007-govern-workflow/review.md` — 007-govern-workflow
+- `specs/007-govern-workflow/scenarios/ductus-self-update-precheck.md` — 007-govern-workflow
+- `specs/007-govern-workflow/spec.md` — 007-govern-workflow
+- `specs/007-govern-workflow/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
+- `specs/012-multi-agent-govern/analysis.md` — 012-multi-agent-govern
+- `specs/012-multi-agent-govern/plan.md` — 003-bootstrap-automation, 012-multi-agent-govern
+- `specs/012-multi-agent-govern/review.md` — 012-multi-agent-govern
+- `specs/012-multi-agent-govern/spec.md` — 003-bootstrap-automation, 012-multi-agent-govern
+- `specs/012-multi-agent-govern/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
+- `specs/013-text-first-artifacts/analysis.md` — 013-text-first-artifacts
+- `specs/013-text-first-artifacts/plan.md` — 013-text-first-artifacts, 026-framework-self-audit
+- `specs/013-text-first-artifacts/spec.md` — 013-text-first-artifacts, 026-framework-self-audit
+- `specs/015-tarball-fetch/plan.md` — 015-tarball-fetch
+- `specs/017-derive-dont-ask/analysis.md` — 017-derive-dont-ask
+- `specs/017-derive-dont-ask/data-model.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit
+- `specs/017-derive-dont-ask/plan.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit
+- `specs/017-derive-dont-ask/review.md` — 017-derive-dont-ask
+- `specs/017-derive-dont-ask/scenarios/generator-sync-claim-honesty.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit
+- `specs/017-derive-dont-ask/spec.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit
+- `specs/018-adopter-owned-pre-commit/analysis.md` — 018-adopter-owned-pre-commit
+- `specs/018-adopter-owned-pre-commit/plan.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit
+- `specs/018-adopter-owned-pre-commit/review.md` — 018-adopter-owned-pre-commit
+- `specs/018-adopter-owned-pre-commit/spec.md` — 017-derive-dont-ask, 018-adopter-owned-pre-commit, 056-bootstrap-archive-boundary-split
+- `specs/020-code-review/analysis.md` — 020-code-review
+- `specs/020-code-review/data-model.md` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `specs/020-code-review/plan.md` — 020-code-review
+- `specs/020-code-review/review.md` — 020-code-review
+- `specs/020-code-review/spec.md` — 020-code-review, 066-audit-records-and-the-completion-gate
+- `specs/026-framework-self-audit/analysis.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/review.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/scenarios/family-36-self-url-resolution.md` — 026-framework-self-audit
+- `specs/026-framework-self-audit/spec.md` — 013-text-first-artifacts, 026-framework-self-audit
+- `specs/027-bootstrap-migration-registry/analysis.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/plan.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/review.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/scenarios/a-first-adoption-runs-no-migration.md` — 007-govern-workflow, 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/scenarios/a-projects-own-constitution-is-not-relocated.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/scenarios/seed-files-keep-no-literal-placeholder.md` — 027-bootstrap-migration-registry
+- `specs/027-bootstrap-migration-registry/spec.md` — 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
+- `specs/027-bootstrap-migration-registry/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 056-bootstrap-archive-boundary-split
+- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md` — 029-bootstrap-runtime-autowire
+- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
+- `specs/040-configurable-specs-dir/spec.md` — 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/analysis.md` — 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/data-model.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/plan.md` — 029-bootstrap-runtime-autowire, 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/review.md` — 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md` — 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/spec.md` — 029-bootstrap-runtime-autowire, 040-configurable-specs-dir, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/tasks.md` — 048-govern-acquired-runtime, 062-concurrent-session-targets, 067-analyze-and-audit-checks
+- `specs/056-bootstrap-archive-boundary-split/analysis.md` — 056-bootstrap-archive-boundary-split
+- `specs/056-bootstrap-archive-boundary-split/plan.md` — 056-bootstrap-archive-boundary-split
+- `specs/056-bootstrap-archive-boundary-split/review.md` — 056-bootstrap-archive-boundary-split
+- `specs/056-bootstrap-archive-boundary-split/spec.md` — 056-bootstrap-archive-boundary-split
+- `specs/056-bootstrap-archive-boundary-split/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
+- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 000-slash-commands, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
+- `specs/062-concurrent-session-targets/analysis.md` — 062-concurrent-session-targets
+- `specs/062-concurrent-session-targets/data-model.md` — 062-concurrent-session-targets
+- `specs/062-concurrent-session-targets/plan.md` — 062-concurrent-session-targets
+- `specs/062-concurrent-session-targets/review.md` — 062-concurrent-session-targets
+- `specs/062-concurrent-session-targets/scenarios/first-writers-create-the-ignore-file-once.md` — 048-govern-acquired-runtime, 062-concurrent-session-targets
+- `specs/062-concurrent-session-targets/spec.md` — 048-govern-acquired-runtime, 062-concurrent-session-targets
+- `specs/066-audit-records-and-the-completion-gate/analysis.md` — 066-audit-records-and-the-completion-gate
+- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `specs/066-audit-records-and-the-completion-gate/plan.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `specs/066-audit-records-and-the-completion-gate/review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
+- `specs/066-audit-records-and-the-completion-gate/spec.md` — 000-slash-commands, 020-code-review, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 000-slash-commands, 020-code-review, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `specs/067-analyze-and-audit-checks/analysis.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/plan.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/review.md` — 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md` — 048-govern-acquired-runtime, 067-analyze-and-audit-checks
+- `specs/067-analyze-and-audit-checks/spec.md` — 048-govern-acquired-runtime, 067-analyze-and-audit-checks
+- `specs/073-decided-rule-departures-are-recorded/plan.md` — 073-decided-rule-departures-are-recorded
+- `specs/079-review-and-analysis-work-converges/analysis.md` — 079-review-and-analysis-work-converges
+- `specs/079-review-and-analysis-work-converges/plan.md` — 079-review-and-analysis-work-converges
+- `specs/079-review-and-analysis-work-converges/review.md` — 079-review-and-analysis-work-converges
+- `specs/079-review-and-analysis-work-converges/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md` — 081-reviews-and-checks-follow-what-changed
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md` — 081-reviews-and-checks-follow-what-changed
+- `specs/081-reviews-and-checks-follow-what-changed/review.md` — 081-reviews-and-checks-follow-what-changed
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
 
 ## Unexamined governance
 
