@@ -572,20 +572,40 @@ fn check_plan_consistency(
         );
     }
     let lines: Vec<&str> = text.lines().collect();
-    let decisions = section_line_indices(&lines, "Technical Decisions");
-    if !decisions
+    let (has_decisions, decisions) = plan_section(&lines, "Technical Decisions");
+    if !has_decisions {
+        blocking(absent_plan_section("Technical Decisions"));
+    } else if !decisions
         .iter()
         .any(|&i| !without_inline_comments(lines[i]).trim().is_empty())
     {
         blocking("the plan's Technical Decisions section states no decision".into());
     }
-    if !lists_a_file(&lines, &section_line_indices(&lines, "Affected Files")) {
+    let (has_files, files) = plan_section(&lines, "Affected Files");
+    if !has_files {
+        blocking(absent_plan_section("Affected Files"));
+    } else if !lists_a_file(&lines, &files) {
         blocking(
             "the plan's Affected Files section lists no file: no list item, table row, \
              code span or path outside comments"
                 .into(),
         );
     }
+}
+
+/// A plan's section by heading, matched without regard to case (the one place a
+/// heading is not matched exactly, spec 067 scenario
+/// `a-plan-heading-is-matched-without-regard-to-case`), with whether the
+/// heading exists: an absent section and an empty one are different findings.
+fn plan_section(lines: &[&str], heading: &str) -> (bool, Vec<usize>) {
+    super::section_line_indices_by(lines, |h| h.eq_ignore_ascii_case(heading))
+}
+
+fn absent_plan_section(heading: &str) -> String {
+    format!(
+        "the plan has no '## {heading}' section (the heading is matched without regard to \
+         case; a differently worded heading is not read)"
+    )
 }
 
 /// Whether an Affected Files section, given as its line indices, lists a file
@@ -1604,7 +1624,8 @@ fn path_family_examines(
 }
 
 /// The repository's own ignore rules, as `git check-ignore` reads them, for
-/// the criterion family's `gitignored` skip: a criterion naming local state
+/// the criterion family's `gitignored` skip and `check-orphaned-references`'
+/// exemption: a criterion naming local state
 /// such as `.ductus/session.toml` resolves in a working checkout and not in a
 /// fresh clone, so without the rule one spec's result differs by tree.
 ///
@@ -1614,13 +1635,13 @@ fn path_family_examines(
 /// unanswered lookup is not evidence that a path is local state. A rule kept
 /// only inside a directory absent from the tree is not seen, which is why the
 /// shipped gitignore template lists `/.ductus/results/`.
-struct IgnoreRules<'a> {
+pub(crate) struct IgnoreRules<'a> {
     repo: &'a Path,
     project: std::cell::OnceCell<Option<ProjectRepository>>,
 }
 
 impl<'a> IgnoreRules<'a> {
-    fn new(repo: &'a Path) -> Self {
+    pub(crate) fn new(repo: &'a Path) -> Self {
         Self {
             repo,
             project: std::cell::OnceCell::new(),
@@ -1630,7 +1651,7 @@ impl<'a> IgnoreRules<'a> {
     /// Whether the ignore rules ignore `rel`, a path from the project root. A
     /// trailing `/` is kept, so a directory-only rule (`/.ductus/bin/`)
     /// matches a directory candidate.
-    fn ignores(&self, rel: &str) -> bool {
+    pub(crate) fn ignores(&self, rel: &str) -> bool {
         let project = self
             .project
             .get_or_init(|| ProjectRepository::discover(self.repo).ok());
@@ -2724,11 +2745,19 @@ fn check_line_number_citations(
                 .map(|citation| citation.path_start..citation.suffix.end)
                 .chain(line_citations::find_set_apart(line));
             for span in cited {
+                // Only the set-apart colon form begins with `:`, and it cannot be told
+                // from a port in a span of its own (spec 067 scenario
+                // `a-bare-port-span-names-its-remedy`).
+                let port_hint = if line[span.clone()].starts_with(':') {
+                    " (a bare `:N` code span is read as a line number; write a port with its host, as `localhost:8080`)"
+                } else {
+                    ""
+                };
                 findings.push(ArtifactFinding {
                     family: LINE_CITATION_FAMILY.into(),
                     severity: AnalyzeSeverity::Blocking,
                     message: format!(
-                        "line {}: `{}` cites a line by number, which drifts as the code moves; name the symbol, test, heading or a quoted phrase it points at instead (§grounding)",
+                        "line {}: `{}` cites a line by number, which drifts as the code moves; name the symbol, test, heading or a quoted phrase it points at instead (§grounding){port_hint}",
                         index + 1,
                         &line[span]
                     ),
@@ -6648,6 +6677,37 @@ mod tests {
     }
 
     #[test]
+    fn a_none_list_item_does_not_block_a_clarified_spec() {
+        let body = "## Acceptance Criteria\n\n- [ ] One.\n\n## Open Questions\n\n- None\n";
+        assert_eq!(integrity("clarified", body, None), vec![]);
+    }
+
+    #[test]
+    fn a_plan_heading_is_matched_without_regard_to_case() {
+        let plan = "# Plan\n\n[spec](spec.md)\n\n## Technical decisions\n\nUse X.\n\n\
+            ## AFFECTED FILES\n\n`src/a.rs`\n";
+        assert_eq!(integrity("planned", GOOD_BODY, Some(plan)), vec![]);
+    }
+
+    #[test]
+    fn an_absent_plan_section_is_reported_as_absent() {
+        let no_files = "# Plan\n\n[spec](spec.md)\n\n## Technical Decisions\n\nUse X.\n";
+        let found = integrity("planned", GOOD_BODY, Some(no_files));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].1.contains("has no '## Affected Files' section"));
+        assert!(!found[0].1.contains("lists no file"));
+        let reworded = "# Plan\n\n[spec](spec.md)\n\n## Technical Decisions and Rationale\n\nUse X.\n\n\
+            ## Affected Files\n\n`src/a.rs`\n";
+        let found = integrity("planned", GOOD_BODY, Some(reworded));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0]
+                .1
+                .contains("has no '## Technical Decisions' section")
+        );
+    }
+
+    #[test]
     fn a_plan_that_does_not_reference_its_spec_is_blocking() {
         let plan = GOOD_PLAN.replace("Implements [042 — Demo](spec.md).", "Implements the thing.");
         let found = integrity("planned", GOOD_BODY, Some(&plan));
@@ -6882,6 +6942,35 @@ mod tests {
             .map(|(_, message)| message.split('`').nth(1).unwrap())
             .collect();
         assert_eq!(cited, vec!["src/a.rs:12", ":388"], "{found:?}");
+    }
+
+    /// A bare `:N` span cannot be told from a port, so its finding names the remedy;
+    /// a path-attached citation and a `#LN` span carry no hint (067's
+    /// `a-bare-port-span-names-its-remedy`).
+    #[test]
+    fn a_bare_colon_span_names_the_port_remedy() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Demo\n\nSee `src/a.rs:12`, `:8080` and `#L3`.\n",
+        );
+        let found = citation_findings(&compute(&args(), repo).unwrap());
+        let hinted: Vec<(&str, bool)> = found
+            .iter()
+            .map(|(_, message)| {
+                (
+                    message.split('`').nth(1).unwrap(),
+                    message.contains("localhost:8080"),
+                )
+            })
+            .collect();
+        assert_eq!(
+            hinted,
+            vec![("src/a.rs:12", false), (":8080", true), ("#L3", false)],
+            "{found:?}"
+        );
     }
 
     /// An artifact the family cannot read is recorded as every family records one: a

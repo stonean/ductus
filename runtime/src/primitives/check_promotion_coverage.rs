@@ -354,13 +354,17 @@ fn table_keys(content: &str, section: Option<&str>) -> Vec<String> {
         // A delimiter row (`| --- |`) marks the end of the header; the row
         // before it was the header, and neither is a key.
         if !cell.is_empty() && cell.chars().all(|c| matches!(c, '-' | ':' | ' ')) {
-            if let Some(last) = keys.pop() {
-                debug_assert!(header_pending, "popped a key that was not a header: {last}");
+            // Only a header that pushed a key leaves one to remove: a header with an
+            // empty first cell pushed none (spec 067 scenario
+            // `promotion-coverage-header-without-a-key`).
+            if header_pending {
+                keys.pop();
             }
             header_pending = false;
             continue;
         }
         if cell.is_empty() {
+            header_pending = false;
             continue;
         }
         header_pending = true;
@@ -550,6 +554,30 @@ mod tests {
         // "Entry" is the header and must not be taken as a key.
         assert!(!r.unmatched_keys.iter().any(|k| k == "Entry"));
         assert_eq!(r.table_rows, 1);
+    }
+
+    /// A header whose first cell is empty pushes no key, so its delimiter row
+    /// removes none: the previous table's last key stays (067's
+    /// `promotion-coverage-header-without-a-key`).
+    #[test]
+    fn a_header_with_an_empty_first_cell_keeps_the_previous_tables_keys() {
+        let rules = "# R\n\n## Workflow\n\n- **Alpha rule.** Text.\n- **Beta rule.** Text.\n";
+        let table = "# Plan\n\n## Classification\n\n| Entry | Reason |\n| --- | --- |\n\
+                     | Alpha rule | a |\n| Beta rule | b |\n\n| | Why |\n| --- | --- |\n";
+        // The same with no blank line between the tables: only a level-3 heading
+        // (which does not reset the state) separates them.
+        let adjacent = table.replace("| b |\n\n| | Why |", "| b |\n### Next\n| | Why |");
+        assert_ne!(adjacent, table);
+        for table in [table, adjacent.as_str()] {
+            let tmp = seed(rules, Some(table));
+            let r = run(&args(true), tmp.path()).unwrap();
+            assert_eq!(r.table_keyed, 2, "{table}");
+            assert!(
+                r.unclassified_entries.is_empty(),
+                "{table}: {:?}",
+                r.unclassified_entries
+            );
+        }
     }
 
     #[test]

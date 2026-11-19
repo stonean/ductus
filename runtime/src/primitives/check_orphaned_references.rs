@@ -258,6 +258,10 @@ pub(crate) fn compute(repo: &Path) -> Result<Checked> {
     // written on the way out. Same distinction `criterion-path-existence`
     // draws, using the same two helpers rather than a second copy of the rule.
     let ships_elsewhere = super::check_artifacts::adopter_destinations(repo);
+    // Local state the repository's ignore rules ignore (`.ductus/session.toml`,
+    // `.ductus/sessions/`) is absent from a fresh clone by construction, so naming
+    // it is no orphan; opened on the first absent candidate only.
+    let ignore_rules = super::check_artifacts::IgnoreRules::new(repo);
     let mut findings = Vec::new();
     let mut examined = Vec::new();
     let mut skipped = Vec::new();
@@ -307,6 +311,9 @@ pub(crate) fn compute(repo: &Path) -> Result<Checked> {
                     continue;
                 }
                 if super::check_artifacts::ships_to_adopter(&ships_elsewhere, &target) {
+                    continue;
+                }
+                if ignore_rules.ignores(&target) {
                     continue;
                 }
                 findings.push(OrphanedReference {
@@ -1014,6 +1021,42 @@ mod tests {
             "a declared adopter destination is not local breakage: {:?}",
             result.findings
         );
+    }
+
+    /// Local state a fresh clone lacks by construction is no orphan (067's
+    /// `orphan-check-skips-ignored-local-state`); a missing path the ignore rules
+    /// leave alone is still reported, so the exemption is not vacuous.
+    #[test]
+    fn a_gitignored_local_state_path_is_not_an_orphan() {
+        let tmp = adopter();
+        git2::Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("AGENTS.md"),
+            "Read `.ductus/session.toml` and `.ductus/sessions/`.\n",
+        );
+        write(
+            &tmp.path().join(".gitignore"),
+            "/.ductus/session.toml\n/.ductus/sessions/\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
+        write(&tmp.path().join(".gitignore"), "/.ductus/session.toml\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(targets, vec![".ductus/sessions/"]);
+    }
+
+    #[test]
+    fn nothing_is_ignored_outside_a_git_repository() {
+        let tmp = adopter();
+        write(
+            &tmp.path().join("AGENTS.md"),
+            "Read `.ductus/session.toml`.\n",
+        );
+        write(&tmp.path().join(".gitignore"), "/.ductus/session.toml\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
     }
 
     #[test]

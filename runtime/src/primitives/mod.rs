@@ -3755,7 +3755,18 @@ pub(crate) fn section_lines<'a>(body: &'a str, heading: &str) -> Vec<&'a str> {
 /// `mark-criterion`'s checkbox addressing both consume it, which keeps
 /// their criterion indexes in lockstep.
 pub(crate) fn section_line_indices(lines: &[&str], heading: &str) -> Vec<usize> {
+    section_line_indices_by(lines, |h| h == heading).1
+}
+
+/// As [`section_line_indices`], for the headings `matches` accepts. Also says
+/// whether any heading matched, which an empty result cannot: an absent
+/// section and an empty one both yield no lines.
+pub(crate) fn section_line_indices_by(
+    lines: &[&str],
+    matches: impl Fn(&str) -> bool,
+) -> (bool, Vec<usize>) {
     let mut out = Vec::new();
+    let mut found = false;
     let mut skip = SkipScanner::default();
     let mut in_section = false;
     let mut section_level: u8 = 0;
@@ -3767,7 +3778,8 @@ pub(crate) fn section_line_indices(lines: &[&str], heading: &str) -> Vec<usize> 
             if in_section && level <= section_level {
                 in_section = false;
             }
-            if h == heading {
+            if matches(&h) {
+                found = true;
                 in_section = true;
                 section_level = level;
                 continue;
@@ -3777,7 +3789,7 @@ pub(crate) fn section_line_indices(lines: &[&str], heading: &str) -> Vec<usize> 
             out.push(idx);
         }
     }
-    out
+    (found, out)
 }
 
 /// The two directory forms a feature can take under the spec root
@@ -6330,6 +6342,22 @@ mod tests {
         // Comment and fence content (delimiter lines included) is skipped;
         // only the blank lines and the real checkbox line survive.
         assert_eq!(section_line_indices(&lines, "A"), vec![1, 5, 9]);
+    }
+
+    #[test]
+    fn section_line_indices_by_reports_whether_a_heading_matched() {
+        let lines: Vec<&str> = "## A\n\n- x\n\n## Other\n".lines().collect();
+        // A matching heading with nothing under it, and no matching heading, both
+        // yield no lines; only the flag tells them apart.
+        let (found, empty) =
+            section_line_indices_by(&lines[3..], |h| h.eq_ignore_ascii_case("other"));
+        assert!(found && empty.is_empty());
+        let (found, none) = section_line_indices_by(&lines, |h| h.eq_ignore_ascii_case("missing"));
+        assert!(!found && none.is_empty());
+        let (found, some) = section_line_indices_by(&lines, |h| h.eq_ignore_ascii_case("a"));
+        assert!(found && some == vec![1, 2, 3]);
+        // The exact-match wrapper keeps its case sensitivity.
+        assert_eq!(section_line_indices(&lines, "a"), Vec::<usize>::new());
     }
 
     #[test]

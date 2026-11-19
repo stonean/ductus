@@ -392,8 +392,8 @@ pub(crate) fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<Accepta
 }
 
 /// Parse the list items of the named questions section into entries
-/// (continuation lines fold in; the placeholder lines in
-/// [`QUESTION_PLACEHOLDERS`] are skipped). `pub(crate)`: shared with
+/// (continuation lines fold in; the placeholder items
+/// [`is_placeholder_question`] names are skipped). `pub(crate)`: shared with
 /// `append-question`, whose dedup must see exactly the entries this
 /// reader reports.
 ///
@@ -501,20 +501,29 @@ fn is_thematic_break(trimmed: &str) -> bool {
     matches!(first, '-' | '*' | '_') && count >= 3
 }
 
-/// The "no entries here" placeholder lines a questions section may carry: the
-/// spec template's, the one `create-scenario` compiles into every new
-/// scenario's Open Questions, and its Resolved Questions twin. None is
-/// authored as a list item today, so the guard is belt-and-braces — but the
-/// set means the behavior no longer depends on that (spec 046).
-const QUESTION_PLACEHOLDERS: [&str; 3] = [
-    "*None — all resolved.*",
-    "*None — captured during scenario authoring.*",
-    "*None yet.*",
-];
+/// The "no entries here" items a questions section may carry: the scaffold
+/// placeholders (the spec template's, the one `create-scenario` compiles into
+/// every new scenario's Open Questions, and its Resolved Questions twin) and
+/// the ways an author writes "none" as a list item, the bullet form of the
+/// prose spellings the reader already reads as no question (spec 046; spec 067
+/// scenario `a-none-list-item-is-no-open-question`). Emphasis marks, a trailing
+/// period and case are ignored. An item that merely begins with the word, or
+/// that is a question, is a question.
+fn is_placeholder_question(text: &str) -> bool {
+    let bare = text
+        .trim()
+        .trim_matches(['*', '_'])
+        .trim_end_matches(['.', '!'])
+        .trim_matches(['*', '_'])
+        .trim()
+        .to_lowercase();
+    matches!(bare.as_str(), "none" | "n/a" | "none yet")
+        || (bare.starts_with("none — ") && !bare.ends_with('?'))
+}
 
 fn push_question(out: &mut Vec<OpenQuestion>, text: &str) {
     let trimmed = text.trim();
-    if trimmed.is_empty() || QUESTION_PLACEHOLDERS.contains(&trimmed) {
+    if trimmed.is_empty() || is_placeholder_question(trimmed) {
         return;
     }
     out.push(OpenQuestion {
@@ -921,8 +930,60 @@ mod tests {
     }
 
     #[test]
+    fn a_none_list_item_is_no_open_question() {
+        for none in [
+            "None",
+            "None.",
+            "**None**",
+            "N/A",
+            "n/a.",
+            "None — all resolved during clarification",
+        ] {
+            let body = format!("## Open Questions\n\n- {none}\n");
+            assert!(
+                parse_open_questions(&body, "Open Questions").is_empty(),
+                "not skipped: {none}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_question_starting_with_none_is_still_a_question() {
+        for question in [
+            "None of the queues cover retries?",
+            "None — which queue covers retries?",
+            "Nothing",
+        ] {
+            let body = format!("## Open Questions\n\n- {question}\n");
+            assert_eq!(
+                parse_open_questions(&body, "Open Questions").len(),
+                1,
+                "skipped: {question}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_scenario_whose_open_questions_is_a_none_item_has_no_question() {
+        let dir = tempfile::tempdir().unwrap();
+        let scenarios = dir.path().join("scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(
+            scenarios.join("s.md"),
+            "---\nsection: \"X\"\n---\n\n# S\n\n## Open Questions\n\n- None\n",
+        )
+        .unwrap();
+        let scan = collect_scenario_open_questions(dir.path());
+        assert!(scan.questions.is_empty() && scan.unreadable.is_empty());
+    }
+
+    #[test]
     fn every_placeholder_is_skipped_even_as_a_bullet() {
-        for placeholder in QUESTION_PLACEHOLDERS {
+        for placeholder in [
+            "*None — all resolved.*",
+            "*None — captured during scenario authoring.*",
+            "*None yet.*",
+        ] {
             let plain = format!("## Open Questions\n\n{placeholder}\n");
             assert!(
                 parse_open_questions(&plain, "Open Questions").is_empty(),
