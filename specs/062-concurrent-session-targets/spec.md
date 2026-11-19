@@ -35,7 +35,8 @@ sessions (its Parallel milestones section and Resolved Question 5). The verdict 
 premises: that working on two features at once was rare, and that
 `git worktree` and platform isolation already covered it. The first did not
 hold: for the operator who raised this, running two or more agent processes at
-once was the common case. The second carried a cost 010 did not weigh: by default
+once was the common case (the owner's report, recorded in `25c946ea`,
+2026-09-29). The second carried a cost 010 did not weigh: by default
 `git worktree add` refuses a branch already checked out by another worktree
 (git-worktree(1), under `--force`), so under trunk-based work two worktrees
 could not both be on `main` without overriding that safeguard.
