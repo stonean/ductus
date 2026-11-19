@@ -1,5 +1,5 @@
 ---
-next-task: 33
+next-task: 35
 ---
 
 # 048 — Ductus-Acquired Runtime Tasks
@@ -22,3 +22,21 @@ Decided by the owner on 2026-11-13, each deferred here by 048's review. First, A
 - [x] Record the run, its job and each pointer row's outcome in `scenarios/pointer-follows-the-store.md`'s Edge Cases and `spec.md`'s Edge Cases, in place of the sentence that calls this case unmeasured; a row that fails there is a new task
 
 - **Done when**: every pointer row is measured on Windows unelevated with Developer Mode off, State B's json files are measured in a real agent session on Windows, and each outcome is recorded with its run, or the owner has decided the next step for a case that could not be reached
+
+### 33. Remove runtime.yml's two Windows jobs (AC25, owner decision 2026-11-19)
+
+- [x] `.github/workflows/runtime.yml`'s build-and-test matrix holds `ubuntu-latest` and `macos-latest` only, task 32's `windows-unelevated` job is gone, and the `.exe` conditionals and comments the Windows leg kept alive are gone or state the two images
+- [x] 022's plan, and 048's spec, plan and `state-b-continues-in-session` scenario, say no CI job runs on Windows
+- [ ] The first runtime run after the push starts no Windows job
+
+- **Done when**: runtime.yml starts no Windows runner, no live artifact says it does, and a pushed run shows it
+
+### 34. Drop Windows as a supported platform: the release, the acquisition and the bootstrap (AC25, owner decision 2026-11-19)
+
+- [ ] Put to the owner first whether Windows runtime code (`cfg(windows)` branches, `.exe` handling such as `merge-status-hook`'s hook command) and the bootstrap's remaining Windows text (`.exe` twins in the seeds, `certutil`, the copy-pointer notes) go too, or stay for a `[runtime] path` user
+- [ ] `.github/workflows/runtime-release.yml` builds, packages and gates no Windows target, and `.github/workflows/runtime-acquisition.yml` acquires none
+- [ ] `framework/bootstrap/ductus.md` and its `govern.md` copy hold no Windows row in the triple table, nor any other Windows text the owner's answer above removes
+- [ ] `README.md` and `docs/runtime.md` list only the platforms published, AC21 and AC23 are annotated as superseded, and 022's and 067's specs state the tree (067's scenario edit reopens it)
+- [ ] A scratch-adopter bootstrap shows a normal run unchanged
+
+- **Done when**: AC25 holds, every live artifact states the platforms published, and 048's review and analysis judge it

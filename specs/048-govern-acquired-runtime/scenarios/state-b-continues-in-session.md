@@ -99,8 +99,8 @@ unaffected — it never entered State B.
 - **The wiring was skipped** because the MCP file is not valid JSON: acquisition
   still happened and the pointer exists, so the run still continues by CLI; only
   the closing restart notice changes to say the registration was skipped.
-- **On Windows, the files a host writes are unmeasured.** The runtime's tests
-  on `windows-latest` write the `--*-json` files themselves. No real agent
+- **On Windows, the files a host writes are unmeasured.** No CI job runs on
+  Windows since 048 task 33 (owner decision 2026-11-19), and no real agent
   session on Windows has written them into `{tempdir}` with its own write tool
   and passed them to the CLI. The owner decided on 2026-11-17 not to run one
   (048 task 32), so that composition stays unmeasured there.
