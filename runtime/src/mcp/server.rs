@@ -122,6 +122,21 @@ impl GovRuntimeServer {
     }
 }
 
+/// Every served tool's input schema, as `tools/list` returns it, keyed by tool
+/// name. The CLI renders each `--{name}-json` flag's help from these, so the
+/// help and the tool read one schema. Built without a repository, so it
+/// touches no project file and writes nothing to stderr.
+#[must_use]
+pub fn tool_input_schemas() -> Vec<(String, Arc<JsonObject>)> {
+    let mut router = GovRuntimeServer::tool_router();
+    strip_nonstandard_formats(&mut router);
+    router
+        .map
+        .values()
+        .map(|route| (route.attr.name.to_string(), route.attr.input_schema.clone()))
+        .collect()
+}
+
 /// Strip non-standard numeric `format` hints from every tool schema.
 ///
 /// `schemars` stamps OpenAPI-style `format` values (`uint32`, `uint64`,

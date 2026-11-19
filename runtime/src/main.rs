@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 
 use std::io::{self, Write as _};
 
@@ -1047,12 +1047,57 @@ fn run_mcp_server(repo: PathBuf) -> ExitCode {
     })
 }
 
+/// The clap command tree, each `--{name}-json` flag's help extended with the
+/// shape of the JSON its file holds, read from the input schema the MCP tool
+/// publishes for that argument (spec 022, scenario
+/// `every-mcp-argument-has-a-cli-form`).
+fn cli_command() -> clap::Command {
+    let schemas = ductus::mcp::server::tool_input_schemas();
+    let mut command = Cli::command();
+    for (tool, schema) in &schemas {
+        let flags: Vec<String> = command
+            .find_subcommand(tool)
+            .into_iter()
+            .flat_map(clap::Command::get_arguments)
+            .map(|arg| arg.get_id().as_str().to_owned())
+            .filter(|id| id.ends_with("_json"))
+            .collect();
+        if flags.is_empty() {
+            continue;
+        }
+        command = command.mut_subcommand(tool, |mut sub| {
+            for id in flags {
+                let property = id.trim_end_matches("_json");
+                let shape = [property.to_owned(), property.replace('_', "-")]
+                    .iter()
+                    .find_map(|name| ductus::mcp::flag_help::shape_help(schema, name));
+                sub = sub.mut_arg(id.as_str(), |arg| {
+                    let own = arg
+                        .get_long_help()
+                        .or_else(|| arg.get_help())
+                        .map(ToString::to_string)
+                        .unwrap_or_default();
+                    match shape {
+                        Some(shape) => arg.long_help(format!("{own}\n\n{shape}")),
+                        None => arg,
+                    }
+                });
+            }
+            sub
+        });
+    }
+    command
+}
+
 // A flat CLI dispatch match with one arm per primitive; it grows by one
 // line with each primitive and is mechanical, so the line-count lint is not
 // meaningful here.
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = match Cli::from_arg_matches(&cli_command().get_matches()) {
+        Ok(cli) => cli,
+        Err(error) => error.exit(),
+    };
     // The runtime's environment variables — the session identity, the fetch
     // allowlist and the proxy variables — are read here, once, for every
     // subcommand (`CFG-ENV-001`), and primitives answer from this reading.
@@ -1352,8 +1397,8 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{
-        Cli, derive_dependencies_blocks, derive_references_blocks, refused_lines, seed_context,
-        unwritable_lines,
+        Cli, cli_command, derive_dependencies_blocks, derive_references_blocks, refused_lines,
+        seed_context, unwritable_lines,
     };
     use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
 
@@ -1594,6 +1639,149 @@ mod tests {
         let mut split = Vec::new();
         walk(&Cli::command(), "ductus", &mut split);
         assert!(split.is_empty(), "short help spanning lines: {split:#?}");
+    }
+
+    /// Every `--{name}-json` flag's help states the JSON its file holds: the
+    /// argument's shape, rendered from the schema the MCP tool publishes, with
+    /// every field of every type nested under it. The fields expected are
+    /// collected here from the schema independently of the renderer, so a flag
+    /// whose help leaves a nested type's field to an error to name fails
+    /// naming the flag and the field (spec 022, scenario
+    /// `every-mcp-argument-has-a-cli-form`).
+    #[test]
+    fn every_json_flag_help_states_its_arguments_shape() {
+        fn field_names(
+            root: &serde_json::Map<String, serde_json::Value>,
+            node: &serde_json::Value,
+            seen: &mut BTreeSet<String>,
+            out: &mut BTreeSet<String>,
+        ) {
+            match node {
+                serde_json::Value::Object(map) => {
+                    if let Some(name) = map
+                        .get("$ref")
+                        .and_then(serde_json::Value::as_str)
+                        .and_then(|r| r.strip_prefix("#/$defs/"))
+                        && seen.insert(name.to_owned())
+                        && let Some(def) = root.get("$defs").and_then(|d| d.get(name))
+                    {
+                        field_names(root, def, seen, out);
+                    }
+                    for (key, child) in map {
+                        if key == "properties"
+                            && let Some(props) = child.as_object()
+                        {
+                            out.extend(props.keys().cloned());
+                        }
+                        if key != "description" {
+                            field_names(root, child, seen, out);
+                        }
+                    }
+                }
+                serde_json::Value::Array(items) => {
+                    for item in items {
+                        field_names(root, item, seen, out);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let schemas: std::collections::BTreeMap<_, _> = ductus::mcp::server::tool_input_schemas()
+            .into_iter()
+            .collect();
+        let command = cli_command();
+        let mut examined = 0_usize;
+        let mut nested = 0_usize;
+        let mut missing = Vec::new();
+        for sub in command.get_subcommands() {
+            let Some(schema) = schemas.get(sub.get_name()) else {
+                continue;
+            };
+            for arg in sub.get_arguments() {
+                let id = arg.get_id().as_str();
+                let Some(property) = id.strip_suffix("_json") else {
+                    continue;
+                };
+                examined += 1;
+                let help = arg
+                    .get_long_help()
+                    .map(ToString::to_string)
+                    .unwrap_or_default();
+                let flag = format!("{} --{}", sub.get_name(), id.replace('_', "-"));
+                let kebab = property.replace('_', "-");
+                let node = schema
+                    .get("properties")
+                    .and_then(|p| p.get(&kebab).or_else(|| p.get(property)));
+                let Some(node) = node else {
+                    missing.push(format!("{flag}: the tool has no `{kebab}` argument"));
+                    continue;
+                };
+                if !help.contains(&format!("The file holds `{kebab}`:")) {
+                    missing.push(format!("{flag}: help states no shape"));
+                    continue;
+                }
+                let mut fields = BTreeSet::new();
+                field_names(schema, node, &mut BTreeSet::new(), &mut fields);
+                nested += fields.len();
+                for field in fields {
+                    if !help.contains(&format!("{field}: ")) {
+                        missing.push(format!("{flag}: help omits field `{field}`"));
+                    }
+                }
+            }
+        }
+        assert!(examined > 0, "no --<name>-json flag was examined");
+        assert!(nested > 0, "no nested field was compared");
+        assert!(
+            missing.is_empty(),
+            "json flag help without its shape: {missing:#?}"
+        );
+    }
+
+    /// No subcommand's help prints a developer note: a rustdoc path link or a
+    /// Rust path (`crate::host::Host`, `Type::variant`) or a serde attribute in
+    /// a doc comment documents the code, and stays out of what clap renders.
+    /// Both the short and the long help of the root and of every subcommand,
+    /// nested ones included, are read.
+    #[test]
+    fn no_help_prints_a_developer_note() {
+        fn walk(
+            cmd: &clap::Command,
+            path: &str,
+            note: &regex::Regex,
+            found: &mut Vec<String>,
+            rendered: &mut usize,
+        ) {
+            let mut cmd = cmd.clone();
+            for text in [
+                cmd.render_help().to_string(),
+                cmd.render_long_help().to_string(),
+            ] {
+                *rendered += 1;
+                for hit in note.find_iter(&text) {
+                    found.push(format!("{path}: {}", hit.as_str()));
+                }
+            }
+            for sub in cmd.get_subcommands() {
+                walk(
+                    sub,
+                    &format!("{path} {}", sub.get_name()),
+                    note,
+                    found,
+                    rendered,
+                );
+            }
+        }
+        let note =
+            regex::Regex::new(r"\[`[A-Za-z_][A-Za-z0-9_:.<>]*`\]|\w+::\w+|serde|#\[").unwrap();
+        let mut found = Vec::new();
+        let mut rendered = 0_usize;
+        walk(&cli_command(), "ductus", &note, &mut found, &mut rendered);
+        assert!(rendered > 100, "only {rendered} helps were read");
+        found.sort();
+        found.dedup();
+        assert!(found.is_empty(), "developer notes in --help: {found:#?}");
     }
 
     fn repo_with_default(body: &str) -> tempfile::TempDir {

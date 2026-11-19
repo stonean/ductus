@@ -4700,7 +4700,7 @@ pub struct AppendTaskArgs {
     ///
     /// When phased and the supplied heading does not match any existing
     /// phase, the primitive refuses with
-    /// `PrimitiveError::ParentHeadingNotFound` rather than silently
+    /// a heading-not-found error rather than silently
     /// creating a new phase or appending at file bottom.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
@@ -5610,9 +5610,9 @@ pub struct WriteSessionArgs {
     pub scenario_path: Option<String>,
     /// Optional per-contributor agent config-dir name (`.claude`, `.pi`).
     /// Written to the gitignored session file by `/ductus` so a teammate's
-    /// agent choice never lands in committed config. Read back by
-    /// `crate::host::Host`. On a target write it is preserved from the
-    /// existing file unless supplied here.
+    /// agent choice never lands in committed config. Read back when the
+    /// runtime locates an installed command file. On a target write it is
+    /// preserved from the existing file unless supplied here.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

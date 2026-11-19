@@ -451,6 +451,24 @@ its version and date.
 
 ### Changed
 
+- **Each `--{name}-json` flag's `--help` states the JSON its file holds, and no
+  subcommand's help prints a developer note (spec 022 task 53; scenario
+  `every-mcp-argument-has-a-cli-form`, deferred from 003 task 8).** The help
+  of each such flag (`write-review`'s `--observations-json`, `apply-manifest`'s
+  `--entries-json` and the rest) named the argument and not its shape, so a host
+  on the CLI learned a nested entry's fields one `missing field` error at a time.
+  It now ends with one line per field, giving its name, type and whether it is
+  required, with each nested type's fields indented below the field that holds
+  it, rendered from the input schema the MCP tool publishes
+  (`ductus::mcp::flag_help`, `ductus::mcp::server::tool_input_schemas`), so the
+  help and the tool read one schema. `write-session`'s `--cli-config-dir` and
+  `append-task`'s `--parent-heading` named a Rust path (`crate::host::Host`,
+  `PrimitiveError::ParentHeadingNotFound`) in their help; the two sentences now
+  say it in words, which also changes those two arguments' MCP descriptions. Two
+  new unit tests in `runtime/src/main.rs` fail when a flag's help omits its
+  shape or any nested field, and when any subcommand's help holds a Rust path,
+  a rustdoc link or a serde attribute; `scripts/mutation/json-flag-help-022.py`
+  proves them.
 - **BREAKING: `discover-rule-files`' `selected`, `dashboard`'s
   `config.disabled-rule-files` and `label-criteria`'s `assigned` move to the
   list file past `[artifacts] read-size-bytes` (spec 022 task 42;

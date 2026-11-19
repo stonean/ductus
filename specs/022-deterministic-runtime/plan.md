@@ -366,6 +366,7 @@ Considered and rejected:
 | `runtime/src/interpreter/` | Create | Procedure walker, JSON protocol I/O |
 | `runtime/src/primitives/` | Create | One module per primitive |
 | `runtime/src/mcp/` | Create | `rmcp`-based MCP server |
+| `runtime/src/mcp/flag_help.rs` | Create | Renders each `--{name}-json` flag's help shape from the tool's input schema (task 53) |
 | `runtime/src/schema/` | Create | Typed schemas for primitives, protocol, extension points |
 | `runtime/src/io.rs` | Create | Stdio framing for protocol messages and progress |
 | `runtime/tests/` | Create | Integration tests + golden output comparisons |

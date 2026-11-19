@@ -9,4 +9,5 @@
 //! `schemars::JsonSchema`; handlers delegate to the primitive's pure-Rust
 //! function and serialize the result.
 
+pub mod flag_help;
 pub mod server;
