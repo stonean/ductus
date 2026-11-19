@@ -1,20 +1,20 @@
 ---
 spec: 067-analyze-and-audit-checks
-last-run: 2026-11-18T03:05:20Z
-analyzed-against: 0f69a61b076dfe433f8d13c8d907adff16423a6f
+last-run: 2026-11-19T13:12:22Z
+analyzed-against: 963049a5642e30b14efbf3ddd0810b19b92c1739
 hard-fail: 0
 blocking-findings: 0
-advisory: 4
-unexamined: 57
+advisory: 2
+unexamined: 58
 analyzed-digest:
   data-model.md: dc423389548141d67554f1bfd29e4ac69833154f5ace0d89b3f763dd430dc1dc
-  plan.md: bbb32155720615274f56778e845e2d15dc60c9ff5a1bdf7b26caa5813a712caa
-  review.md: 6ceff664e69779487135bc9ee7a087488bbd1ee187aaded7298776b8f8f129fe
+  plan.md: 24d7ae63c7a1c7a9e042a6e94775636f182cb5938e5f54caac9185b60b354fd7
+  review.md: 0cce7b45690d92a669d9338500ceec6b2f7c8bfbbce34143d07c3a298769ada4
   scenarios/a-record-cites-a-removed-rule.md: 20b5adcfb587c0ad32b99376a81f772f92a2e31fd040d1948712a4039dc74474
   scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: 73b4360b8740a08f023125fdae8fe14b859bc2ac7e60a8a39642ea51e3d08d1a
   scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md: 596fd2546524b3b353e1c077e85e496a3be0d52b44fec54480808571a36c6569
   scenarios/adopter-corpus-link-integrity.md: 5d5aca644cf0573708948c8030ddd1fb161ff263ca1c67af46fb38da30a9b35e
-  scenarios/adopter-generator-promotion.md: 1d1829578fb2dbbd96329c1b50ddd9372b8c4aa96bbf7ca25e6ad0e6c4bcef91
+  scenarios/adopter-generator-promotion.md: 7785b509ac9315624dd8061ccf745942c8de50864e2f951ba7d9bf5748bb469d
   scenarios/an-at-path-import-is-a-reference.md: 38631023408ed48edd5072f1c61394eb5ce8d70ee6d340cf2c79403ba55517a2
   scenarios/analyze-artifact-checks.md: 529dd14e7258557d249aeea8379c45a3f26d6b034a939036f327df572bdf8c46
   scenarios/anchor-reference-kinds.md: c91dc7e263b77ff21f56a8866dcda145172facae7d471c094f96dabff8405795
@@ -48,10 +48,10 @@ analyzed-digest:
   scenarios/status-gated-families-are-not-silent.md: 1833246fc09413e940f018c8201286f35ca0ae386a567e7c52c8eac53c7d4059
   scenarios/the-promotion-coverage-line.md: 0d91757bfa43a8311441fd9d1319714c3756e192f0cb6c2dc22bfb35b245d48f
   scenarios/traverse-deps-cycle-check.md: b752045f0614cbba344c7164ccd7e10d76a16b4a39dc28e9ce19d5da83d219c2
-  spec.md: da4b2397714427197394ad1eb3bee08701f10e16479eb1b9dcab5b761db22348
+  spec.md: 5e4c62dec19e3b8625147638065a2607d4e0d49d26612be154e9fb989b80f3d4
   tasks.md: a8024e9ec0a2743958903ba7e7044e5dfedd95db502d3e1565593705eae8d0e1
 unexamined-by-reason:
-  never-existed: 14
+  never-existed: 15
   not-a-live-claim: 15
   root-absent: 20
   ships-to-adopter: 8
@@ -72,7 +72,7 @@ rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Primitive interface changes, classified under `BE-COMPAT-001`"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`validate-frontmatter` — full frontmatter schema check"}
   BE-INPUT-002: {verdict: addressed, cite: "scenarios/sibling-link-grammar-is-the-shared-one.md#Behavior"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#A path that leaves the project is `outside-project`, not `root-absent`"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
@@ -80,13 +80,20 @@ rule-verdicts:
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`check-artifacts` — deterministic artifact-check families for one feature"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
+  BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
+  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Step 15 judges the reasons behind recorded decisions, advisory, with its own exec reason"}
+  CFG-CONST-003: {verdict: addressed, cite: "data-model.md#`derive-dependencies` / `derive-references` — the frontmatter index derivations"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "data-model.md#`check-artifacts` — deterministic artifact-check families for one feature"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "data-model.md#`check-promotion-coverage` — how much of a rules file is routed to its canonical source"}
+  QUAL-GROUND-001: {verdict: addressed, cite: "data-model.md#`check-rule-ids` — verify cited rule IDs exist and aren't deprecated"}
+  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Step 15 judges the reasons behind recorded decisions, advisory, with its own exec reason"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 10
   deferred: 0
-  waived: 4
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: \"- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root, and the **historical** roots `.govern/`, `scripts/gen-` and `scripts/lib/`, since the orphan a migration leaves carries the root before the move (scenario [`orphaned-reference-historical-roots`](scenarios/orphaned-reference-historical-roots.md)). `matched-prefixes` bounds a clean result by scope, as `examined` bounds it by subject.\""
@@ -99,23 +106,13 @@ decisions:
     reason: "Correct by design: the scenario explains why the historical roots are the prefixes `scripts/gen-` and `scripts/lib/`; naming a retired root is its subject. Operator-approved discard (2026-10-16)."
     decided-at: 2026-10-16T19:13:57Z
     decided-by: andy@stone.dev
-  - key: grounding — plan.md states as fact that nothing in the runtime classifies skip reasons, so no code beyond the two sites changes, with no file-and-symbol, command or query behind it
-    outcome: waived
-    reason: A negative claim about existing code that scopes task 30's landed two-site change (`05838d8c`, cited in the plan's interface table); the surrounding section is cited by symbol, and settling it needs a code search, which is no mechanical chore.
-    decided-at: 2026-11-16T13:33:46Z
-    decided-by: rule
-  - key: "grounding — plan.md states as fact that steps 16-21 of analyze are 'cited by number' by the runtime's walker, the references and the done specs' plans, with no file, symbol or command cited (two places: step 15 decision and integrity-split decision)"
-    outcome: waived
-    reason: The sentence gives the reason a design choice (no new analyze step) was made; the landed tasks 23 and 28 are cited by commit in the plan's interface table, and grounding the claim needs a search for step-number citations, which is no mechanical chore.
-    decided-at: 2026-11-16T13:33:46Z
-    decided-by: rule
 ---
 
 # Analysis — 067-analyze-and-audit-checks
 
 ## Summary
 
-0 hard-fail, 0 blocking, 4 advisory; not blocking. 57 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 58 unexamined target(s). Dispositions: 10 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -129,8 +126,6 @@ decisions:
 
 - body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: "- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root, and the **historical** roots `.govern/`, `scripts/gen-` and `scripts/lib/`, since the orphan a migration leaves carries the root before the move (scenario [`orphaned-reference-historical-roots`](scenarios/orphaned-reference-historical-roots.md)). `matched-prefixes` bounds a clean result by scope, as `examined` bounds it by subject." — `specs/067-analyze-and-audit-checks/data-model.md` — **waived**: Correct by design: `scripts/lib/` is named as a historical prefix root the orphaned-reference check matches on purpose, not as a file that should exist. Operator-approved discard (2026-10-16).
 - body-path-existence — names `scripts/lib/`, which existed in this repository and no longer resolves: "**The pre-042 entries are prefixes, not a directory.** `scripts/gen-` and `scripts/lib/` rather than `scripts/`, because the framework owned those and never the whole directory. A `scripts/` root would make every unresolved adopter script a finding — noise this check must not produce, and the reason the current-roots list was scoped in the first place." — `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-historical-roots.md` — **waived**: Correct by design: the scenario explains why the historical roots are the prefixes `scripts/gen-` and `scripts/lib/`; naming a retired root is its subject. Operator-approved discard (2026-10-16).
-- grounding — plan.md states as fact that nothing in the runtime classifies skip reasons, so no code beyond the two sites changes, with no file-and-symbol, command or query behind it — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: A negative claim about existing code that scopes task 30's landed two-site change (`05838d8c`, cited in the plan's interface table); the surrounding section is cited by symbol, and settling it needs a code search, which is no mechanical chore. (decided by the rule)
-- grounding — plan.md states as fact that steps 16-21 of analyze are cited by number by the runtime's walker, the references and the done specs' plans, with no file, symbol or command cited — `specs/067-analyze-and-audit-checks/plan.md` — **waived**: The sentence gives the reason a design choice (no new analyze step) was made; the landed tasks 23 and 28 are cited by commit in the plan's interface table, and grounding the claim needs a search for step-number citations, which is no mechanical chore. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -142,11 +137,20 @@ decisions:
 
 ## Unexamined targets
 
-- never-existed: 14
+- never-existed: 15
 - not-a-live-claim: 15
 - root-absent: 20
 - ships-to-adopter: 8
 
 ## Fixed in this run
 
-*None.*
+- grounding — §One subject per spec said neither 066 nor 022 links 067 and 022 names it only as a backticked slug; both link it from a blockquoted signpost, which `derive-dependencies` takes no edge from, and the plan now says so, citing each spec's `dependencies:` and the run's no-cycle result (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — §A path that leaves the project said nothing in the runtime classifies the skip reasons, with no search behind it; it now cites the search and the one class list, `EXCLUDED_BY_CONSTRUCTION` in `scripts/analyze/analyze_lib.py` (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — Two decisions said steps 16 to 21 are cited by number with no source; the step 15 decision now names `runtime/src/interpreter/analyze_tally.rs`, both analyze documents and the plans of 041, 063 and 082, and the integrity-split decision points at it (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — The line-number-citations Resolved Question named the `# managed-by: ductus` sentinel on line 2 with no artifact; it now cites `framework/bootstrap/ductus-procedure.md` §Hook Installation, as the plan's matching trade-off does (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
+- grounding — §Check-artifacts walks the feature directory said `create-feature` and `decisions` call `validate_feature_contained`, leaving out `check-artifacts`' own call before its walk; it now names all three (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — §The routing gate keeps offering 022 cited `AGENTS.md`'s routing entry, which no entry is named; it now cites the Workflow entry on shared runtime surfaces (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — The frontmatter-checks section said `resolve-anchor` classifies the references that are not claims about the markers file, which understates AC2's judging of every reference against what it points at; it now says that (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
+- grounding — The Motivation gave 99,953 bytes with no measurement, and an eight-word overlap of 2 KB that does not re-derive at `fd8e44a6` (about 12 KB across all tracked markdown, 4.9 KB with one file); it now cites `wc -c` at `fd8e44a6` and drops the figure, as 066's copy did (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
+- grounding — The line-number-citations decision said neither the shipped CI template nor the hook reports an adopter's citations, with no source; it now names both files, neither of which calls `check-artifacts` (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- grounding — The known-limit trade-off said a host such as `docs.rs` with a port reads as a citation with no source; it now names `line_citations::find`'s listed-extension rule for a path with no slash (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
