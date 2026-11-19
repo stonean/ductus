@@ -10,6 +10,19 @@ its version and date.
 
 ### Added
 
+- **`tests/bounded_list_gates.rs` fails when a command step states a bounded list's emptiness by the list rather than its `-count` (spec 080, scenario `a-step-gates-on-a-bounded-list-by-its-count`).**
+  Past `[artifacts] read-size-bytes` a bounded result is `form: "file"`: each
+  moved list is absent and only its `-count` stays inline, so a step that read
+  "an empty `unfolded`" there read an absent list as an empty one. The test
+  derives the bounded list names from the served tools' output schemas (a list
+  property beside its `X-count`, in a tool that also has `lists-file`), scans
+  `framework/commands/*.md` for `empty`, `non-empty`, `no` or `zero` before such a
+  name, or the name followed by `is empty` or `is absent`, and fails on one not in
+  a short allow-list that states a reason for each entry. It also fails on an
+  allow-list entry that no longer appears. It fails on the command text before
+  this change ("non-empty `updated`", "empty `rewritten`", "empty `unfolded`") and
+  passes after it. A phrase that names no list (clarify's "when the field is
+  empty") is outside what a phrase scan can see.
 - **BREAKING: `append-question`, `append-task`, `label-criteria`, `mark-criterion`, `mark-task`, `set-status`, `append-inbox`, `remove-inbox-item`, `merge-managed-block` and `merge-permissions` write a file only when it is unchanged since they read it (spec 022 task 38; the owner's BE-TXN-002 class decision, 2026-11-16).**
   Each read its file, computed the replacement and renamed it over the file
   with no guard, so a change another writer landed in between was dropped.
@@ -600,6 +613,29 @@ its version and date.
 
 ### Changed
 
+- **Five command steps gate on a bounded list's `-count`, and nine read its contents from `lists-file` in the form's file case (spec 080).**
+  `/fold` steps 1 and 11, `/consolidate` step 4, `/analyze` step 6 and `/clarify`
+  step 2 read `unfolded-count`, `rewritten-count`, `updated-count`,
+  `open-questions-count` and `scenario-open-questions-count`, which both forms
+  carry. `/fold` steps 1 and 11, `/implement` steps 1 and 9, `/target`'s
+  `read-tasks` step and step 3, `/review` step 1 and `/analyze` steps 1 and 8
+  say to read the list from the file `lists-file` names when `form` is `file`,
+  in the phrase the existing steps use. No primitive changes.
+- **Every `##` section of a command reference is reached by a step of its command, or is gone (spec 071, scenario `reference-sections-are-reached-by-a-step`).**
+  Measured at `b7b07500` over the 12 shipped references that have a command, 23 of
+  93 sections were named by no command text, no reached section and no anchor
+  link; 74 sections remain, 2 unreached by design (`framework/reference/analyze.md`
+  `Severity tiers` and `Record fields`, each read by a document outside the
+  command). `/plan` step 9 names `Validation gate` and step 10 carries the
+  next-step line, `/implement` step 5 names `Walk through tasks`, `/review` step
+  11 names `Output` and step 1 names the base-override rules of `Window and
+  coverage`, and `/specify` steps 6 and 10 carry the one-question-per-list-item
+  rule and the next-step line. The sections that only restated a command or a
+  primitive's contract are deleted, and `status`, `consolidate` and `specify`
+  references stay as their opening paragraph. The parity goldens `plan-basic`,
+  `implement-basic` and `review-basic` are re-blessed (the plan step 9 prompt
+  and the fixture commit shas).
+- **`review.md`'s `Excluded from scope` section lists each excluded path without the specs that claimed it (spec 079, scenario `the-excluded-section-lists-paths-only`, task 39; owner decision, option b).** Those claimant lists were 88.8% of the section's bytes (paths 1,039,676 of 9,469,301 bytes across the 76 `specs/*/review.md` records at `b7b07500`, method: section split on level-2 headings, UTF-8 byte length) and no primitive, command or check reads them. A fix round's left-out path keeps its round. Projected over those 76 records the corpus total falls from 10,982,629 to 2,595,832 bytes and the records over 50,000 bytes from 32 to 13 (`measure.py` projection, not a rewrite: a record written before keeps its claimant lists until its spec's next review). Nothing the primitives report changes: `compute-review-scope`'s `excluded` result already listed paths only, and `excluded` stays a count in the record's frontmatter. The claimant lists, read nowhere else, are removed from `compute_review_scope`'s internal `excluded` map and window claims, and `commit_attribution`'s `name_of` goes with them. `write-review`'s description is 29 bytes shorter (7,993 to 7,964); `compute-review-scope`'s, 36 bytes shorter (4,399 to 4,363), no longer says a credited path is listed "under the spec whose review read it".
 - **Six shipped rules change tier under the same ID (specs 070 and 068).**
   `performance-frontend.md`'s `FE-BUNDLE-002`, `FE-IMAGE-001`,
   `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` move from MUST to SHOULD,
@@ -2390,6 +2426,102 @@ its version and date.
 
 ### Fixed
 
+- **A code fence closes only on a run as long as its opener (spec 022).**
+  `SkipScanner` (read by about 25 primitives' structural walkers, among them
+  `check-artifacts`' line-citation check) and `check-corpus-links` now open and
+  close a fence as `CommonMark` does: a four-backtick block holding a
+  triple-backtick example is one block, a line such as ```` ```sh ```` or a
+  shorter run inside a fence is its content, and a line that begins an inline
+  code span opens no fence. A fence indented to any depth still opens, since
+  tasks and criteria nest fences in lists. `check-corpus-links` still reads
+  links inside HTML comments. No file in this repository's spec corpus reads
+  differently (the corpus run over every spec found no difference).
+- **A line directly under a criterion belongs to it (spec 022).** `read-spec`'s
+  acceptance-criteria walk folds a line that follows a criterion with no blank
+  line between, and starts no other block (heading, list item, thematic break,
+  block quote, table row), into that criterion, as it already folded an indented
+  one, so an edit to a wrapped criterion's second line changes its text and
+  `classify-spec-edit` reopens a `done` spec for it. The criteria's indexes are
+  unchanged. A stored criterion verdict for a lazily wrapped criterion re-judges
+  once, since its key is now the whole text.
+- **No subcommand's exit path panics when stderr's reader has gone (spec 022).**
+  Every diagnostic `main.rs` wrote with `eprintln!` (35 sites) goes through
+  `ductus::io::warn`, so a subcommand keeps its exit status and the result it
+  wrote to stdout (`check-corpus-links` and `derive-dependencies` exit 1 with
+  their JSON, `ductus exec` exits 1 with its terminal `error` envelope) instead
+  of exiting 101. Clippy now denies `print_stderr`.
+- **`ductus exec` skips a stdin line that is not UTF-8 (spec 022).** The walk
+  logged and skipped a blank or unparseable line but ended in an `io-error`
+  envelope and exit 74 on one that was not valid UTF-8. It now skips that line
+  whole, never decoding it lossily.
+- **`append-inbox` refuses text that would open an HTML comment (spec 022).**
+  Text holding a `<!--` outside backticks with no `-->` after it made the new
+  bullet's own line a comment opener, so the reader skipped the bullet and the
+  rest of the file. It is refused with an error naming the fix; a closed inline
+  comment or a backticked delimiter is accepted.
+- **A file `merge-managed-block` creates is mode 0644 (spec 022).** It landed at
+  the tempfile's 0600; a `.gitignore` or `CLAUDE.md` it creates is committed and
+  not secret. A rewrite keeps the file's mode, and `merge-permissions`' personal
+  settings file stays owner-only.
+- **`write-review` and `write-analysis` quote a path that would not read back as itself (spec 066, scenario `record-paths-are-quoted-only-when-they-need-it`).**
+  The digest keys (`reviewed-digest`, `analyzed-digest`) and the unreadable
+  items (`reviewed-unreadable`, `analyzed-unreadable`) were written bare, so a
+  scenario or data-model file named with a colon then a space, or a space then
+  `#`, broke the record:
+  `write-review` wrote a `review.md` the next run could not read, and
+  `write-analysis` recorded a key that read back as a shorter path, so the
+  analysis read stale on every run. Each path now goes through `yaml_string`,
+  which quotes exactly when the plain form would not read back, and never
+  flattens the path. A path that was bare stays bare byte for byte (997
+  digest keys over the 76 `review.md` and 76 `analysis.md` records of this
+  repository at the fix's base commit, 0 changed), so no stored record changes
+  and no analysis goes stale on that account.
+- **`rewrite-spec-links` re-points a reference-style definition and keeps a link's title out of the path (spec 051, scenario `a-definition-and-a-title-follow-the-link-grammar`).**
+  A definition line (`[label]: ../{from}/spec.md`) in a spec-root file was left
+  naming the retiring directory, and no check saw it dangle. It is now
+  re-pointed as an inline link is, its title and spacing kept; a footnote
+  definition (`[^1]: ...`) and a bare `<path>`, which is no link, are left as
+  written and listed in `mentions`. A link's destination is split from its
+  title (and from `<...>`), so a titled link no longer reports a kept tail of
+  `spec.md 'x'` and a path quoted in a title is no longer re-pointed. A link
+  without a title is rewritten exactly as before. The primitive's description
+  grows by 144 bytes (3,838 to 3,982).
+- **A list item that says none is no open question (spec 067).** `read-spec`
+  and every reader of its parser (`dashboard`, `check-review-gate`,
+  `append-question`, `classify-spec-edit`, `check-artifacts`) no longer count
+  `- None`, `- N/A` or `- None — …` (emphasis, case and a trailing period
+  ignored) as an open question, in a spec or a scenario. An item that merely
+  begins with the word, or a `none — …` item that ends in a question mark,
+  still counts. `spec-integrity` no longer blocks a clarified spec over one.
+- **`plan-consistency` matches its two headings without regard to case (spec
+  067).** `check-artifacts` finds `Technical Decisions` and `Affected Files` in
+  any case and reports a missing heading as missing, not as an empty section.
+  Every other reader of a section by heading keeps its exact match.
+- **The finding for a bare `:N` code span names its remedy (spec 067).** A port
+  is written with its host (`localhost:8080`). Detection is unchanged.
+- **`check-orphaned-references` skips git-ignored local state (spec 067).** A
+  managed path the repository's ignore rules ignore (`.ductus/session.toml`,
+  `.ductus/sessions/`, `.ductus/results/`, `.ductus/bin/`), which a fresh clone
+  lacks, is no orphan. The exemption is silent, not a `skipped` entry.
+- **`check-promotion-coverage` keeps a table's keys when a later header has an
+  empty first cell (spec 067).** An entry the earlier table covers is no longer
+  reported unclassified.
+- **`prune-tasks` and `prune-plan` no longer delete past an unclosed fenced
+  block or HTML comment (spec 041).** A file that ends inside one is reported
+  with `unexamined-tail` (`from-line`, and `cause` `open-fence` or
+  `open-comment`), an apply of it writes nothing (`applied: false`), and a walk
+  lists the spec and counts it in `unexamined-count`. Before, every later `##`
+  heading was swallowed into the open block, so a prune removed a pending task
+  or a design-record section. A result for a file with no open region carries
+  no new key.
+- **`relocate-audit-records` carries each key's whole value (spec 057).** It
+  keeps the indented lines of a key it carries from an existing `review.md` or
+  `analysis.md` (`waivers:`, `decisions:`, `reviewed-digest:`,
+  `criteria-verdicts:`, a block scalar, a sequence at the key's own indent),
+  compares a key's whole value for `disagreements`, and no longer ends a
+  `review:` or `analyze:` block at a blank line. Before, a multi-line key the
+  block did not override was emptied while the call reported success. Input
+  with no multi-line key merges as before.
 - **`ductus exec` no longer fails a walk when a warning cannot reach stderr
   (spec 022; its review of 2026-11-19).** The walker warns on stderr for each
   stdin line or envelope it ignores (a blank or unparseable line, a response
