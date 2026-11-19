@@ -1,19 +1,23 @@
 ---
 spec: 081-reviews-and-checks-follow-what-changed
-last-run: 2026-11-19T03:06:07Z
-reviewed-against: 5979ce6e660387735d1d6e812cd27d0d1ef47e12
-diff-base: 24d3a8f4ca50e3c6d0e483bce82dbaafa157a171
+last-run: 2026-11-19T22:36:52Z
+reviewed-against: 9826d5f21aaa791af18df8a70fab0b7e5fcb2e12
+diff-base: 64946fe729a18e8ffe3c86f7276dfa658909f84f
 must-violations: 0
 should-violations: 0
 low-confidence: 0
 examined: 1
-scope: 1
-unread: []
-excluded: 107
+scope: 5
+unread:
+  - .ductus/reference/review.md
+  - framework/reference/review.md
+  - runtime/CHANGELOG.md
+  - specs/081-reviews-and-checks-follow-what-changed/plan.md
+excluded: 34
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 0
+fix-rounds: 2
+re-reads: 1
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
@@ -32,7 +36,7 @@ criteria-verdicts:
   - label: AC5
     digest: b5dde1cc393751c8960b0c7cc89d6043749710f5cc333d84347e37bbf9b1cf50
   - label: AC6
-    digest: e9a1bf6aaf385d0877478412e14a6c0a12de870b5359457b5475bf0ea7ad19f7
+    digest: 0d5be3eb979e5fa9199394466a0dea3794c313d55585d448e610e2d267e14bfe
   - label: AC7
     digest: 59c12298f241c2e322bed0c8c509f84989dc1cb5a9b44a18caa843d577c5ab9f
   - label: AC8
@@ -46,14 +50,14 @@ criteria-verdicts:
   - label: AC12
     digest: 8f7fb7dbd7b9528ece61066f9efa371e1c90ed5ee5bb1b35a35eaf720b86021c
   - label: AC13
-    digest: ebadb6be65b05214a72287b6df665f467935f11acc15eb85c2aa348742e13534
+    digest: 18c0cde89f84eb2df1d3d9f1cdb2d2a0be886a79a6c2153a322b7ca91d56eb2d
   - label: AC14
     digest: 279e204a95da01794f7703ac2b5cbe8dd9b446c5b6b55633898e5796108eb1b1
 blocking: false
 dispositions:
   fixed: 2
   deferred: 0
-  waived: 0
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "other — on a run with an empty `diff-base` (a spec never `in-progress`), `write-review` refuses every non-empty `unread` as outside the scope, though `compute-review-scope` returns the plan entries as that scope (`scope: [src/a.rs]`, fixture repo3): the message tells the host to list only entries compute returned, and the entry is one. `resolve_scope` returns `BTreeSet::new()` for the empty base before any scope is derived, while its own doc says that scope still holds a first review's plan entries. AC12 refuses \"an entry the run's scope does not hold\"; this one is held. — `runtime/src/primitives/write_review.rs:828-831`"
@@ -101,15 +105,20 @@ decisions:
     reason: Task 9 of 081 and AC11/AC12 require the reference and both data models to state unread and the credit; the copies match the code now. Pipeline-machinery observation on framework work, waived rather than deferred per AGENTS.md Workflow.
     decided-at: 2026-11-13T17:38:07Z
     decided-by: rule
+  - key: 079's `AC6` sentence on a commit belonging to no spec is not annotated with 081's read credit of 2026-11-13 (AC13), though 081's AC5 asks only for the 2026-11-11 changes — `specs/079-review-and-analysis-work-converges/spec.md`
+    outcome: waived
+    reason: 081's AC5 is met as written; the fix lies in 079's criteria, a spec this run must not reopen, and is reported to the parent.
+    decided-at: 2026-11-19T22:36:52Z
+    decided-by: rule
 ---
 
 # Review — 081-reviews-and-checks-follow-what-changed
 
 ## Summary
 
-Window 24d3a8f4 (base-source reopen, 066 task 27b) to 5979ce6e. The scope holds one artifact, spec.md (19,818 bytes), read whole by the passes, so 1 of 1 examined and unread is empty. The nine backend and cross rule files were read whole (285,795 bytes) and all five passes ran: no finding. The criteria step judged all 14 criteria one by one against the tree and history, with the proving unit tests run (compute_review_scope 134, check_review_gate 96, write_review 156 and merge_permissions 48 passed) and merge-permissions driven on a fixture: all 14 met. Two observations were fixed by rule: the Behavior bullet on a commit naming no spec now names AC13's credit, and the artifact-set Resolved Question states its method, which re-derives 664, 425, 437 and 444 commits at 6158d7df, each 2 below the figures first recorded, with the difference of 12 unchanged and all 12 confirmed AGENTS.md-only. One stored decision expired, its key naming no file; nine are retained, each keyed to a file outside the scope. Unexamined: the Motivation's and Resolved Questions' other dated measurements (the 12-spec census, CI durations, the 58, 7, 37 and 16 commit counts, the 49-reopening and 8-of-61 figures), which were not re-derived.
+Window 64946fe7 (the 2026-11-19 reopen of AC13) to HEAD. The five passes ran over the scope's design file specs/081-reviews-and-checks-follow-what-changed/spec.md (20,618 bytes, read whole before round 2's edit) against all twelve rule files read whole (408,526 bytes), specs/system.md and AGENTS.md Gotchas to Design Principles: no violation, one observation matching a stored waiver. The criteria step judged all 14 criteria one by one against the tree (409 tests passed in cargo test --lib over compute_review_scope, check_review_gate, write_review and commit_attribution, dev profile); AC6 as first read was not met, since runtime.yml's filters list the 066 data model, and its text was corrected through round 2. Round 1 fixed stale claims that a credited path is excluded under a spec (framework/reference/review.md and its copy, runtime/CHANGELOG.md, plan.md), and a fresh re-read of its diff found nothing; round 2 edited only spec.md and plan.md (exempt) and I read its four changed lines myself, so spec.md's round-2 text and the four fix paths are named unread, not examined. The eight stored decisions whose keys name runtime files outside this window are retained untouched.
 
-1 fix round(s): 0 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 1.
+2 fix round(s): 1 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 2.
 
 14 of 14 acceptance criteria judged met.
 
@@ -135,25 +144,27 @@ Window 24d3a8f4 (base-source reopen, 066 task 27b) to 5979ce6e. The scope holds 
 
 ## Acceptance criteria
 
-- AC1 — met: `compute_review_scope` tests `a_reopening_that_changed_code_owes_a_review_and_a_contract_edit_does_not` (scenarios/a.md and data-model.md give review_owed false, code true) and `an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged` (066 task 27 clause) pass in `cargo test --lib compute_review_scope` (134 passed)
-- AC2 — met: `check_review_gate` test `a_contract_change_since_the_review_holds_done_only_on_the_analysis` gives blocked_by AnalyzeStale for a scenario edit and ReviewOwed naming `src/code.rs` for a code change; no `review is stale` string remains in runtime/src or framework; 96 check_review_gate tests pass
-- AC3 — met: `ductus check-review-freshness` is an unrecognized subcommand; `scripts/audit/run-all.sh` has no Family 19 and `framework/runtime-tools.txt` no entry; `RETIRED_ALLOW` in `merge_permissions.rs` lists it and the CLI with --canonical on a fixture settings file reported revoked [mcp__ductus__check-review-freshness] and removed it
-- AC4 — met: `framework/constitution.md` blast-radius rule says review reads code, analyze the artifacts, and a change confined to artifacts owes their checks and no build/test/lint/CI; `framework/reference/review.md` says a changed contract owes an analysis (reviewed-digest decides no staleness) and no longer says a scenario or data-model edit stales a review
-- AC5 — met: 079 spec.md: Resolved Questions on scenario edits and on attribution each end with a Spec 081 (owner, 2026-11-11) reversal/narrowing; AC4 annotation `Superseded in part (spec 081): a stale digest owes no review`; AC6 annotation names the named-commit rule
-- AC6 — met: `.github/workflows/generators.yml` and `framework-checks.yml` key `runtime-cache` on Cargo.lock, Cargo.toml, rust-toolchain.toml and `runtime/src/**`, touch sources back on a hit and print `No build of these runtime sources is cached, so this run compiles one.` on a miss; gh runs 43110200293 and 43110200122 on aec09d69 (spec-only) show Reuse step success and Build the runtime 2 s and 1 s; `runtime.yml` push paths exclude `specs/`; `AGENTS.md` local-checks rule says no build, no cargo, no code workflow for artifacts
-- AC7 — met: Commits 33688944, 401e474b and 58878cfb land every behavior change in `runtime/src`, `framework/constitution.md`, `framework/reference/`, `framework/commands/` and `framework/bootstrap/configure/claude.md`; the repo-only files they touch are the CI cache, `scripts/` mutants and `AGENTS.md`, which carry no pipeline behavior
-- AC8 — met: Tests `an_artifact_outside_the_spec_root_owes_no_review_and_code_does` (.ductus/, AGENTS.md, CLAUDE.md no code; docs/, sub/AGENTS.md, README.md code), `a_configured_spec_root_is_the_artifact_root` and `a_subdirectory_project_reads_its_artifacts_from_the_project_root` pass; 066 task 27 clause proven by `an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged`
-- AC9 — met: Tests `a_named_commits_code_goes_to_every_spec_it_names` and `a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory` pass: `src/code.rs` of `fix(002)` is in 002's scope and excluded for 001 even though 001's plan lists it, while 001 keeps its own directory's `notes.md`
-- AC10 — met: Test `a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it` (feat: touching only `src/unnamed.rs` stays in scope and review_owed true) and the credit tests `a_path_a_complete_record_read_is_credited_and_owes_no_review` pass; `a_subject_naming_none_leaves_each_claimants_directory_to_it` keeps 079 attribution for unnamed multi-spec commits
-- AC11 — met: `ductus compute-review-scope --help` (descriptions.rs) states the named-commit rule, the credit rule, the artifact set (spec root, .ductus/, AGENTS.md, CLAUDE.md) and review-owed; `framework/reference/review.md` Window and coverage bullets state the attribution, the unread credit and the artifact set
-- AC12 — met: `write_review` tests `unread_is_written_whenever_the_run_states_it` (None/[]/entry) and `an_unread_entry_outside_the_scope_is_refused` pass; `framework/commands/review.md` step 11 passes `unread`; `framework/constitution.md` review-record table, `specs/066-audit-records-and-the-completion-gate/data-model.md` and `specs/020-code-review/data-model.md` list `unread`
-- AC13 — met: Tests `a_path_a_complete_record_read_is_credited_and_owes_no_review` (leaves scope, `excluded` names 002-y, no review owed), `a_record_credits_each_path_it_did_not_name_unread`, `a_record_whose_diff_base_is_the_commit_credits_nothing`, `a_later_change_no_record_read_keeps_the_path` pass
-- AC14 — met: `a_path_no_complete_record_read_stays_and_owes_the_review` loops unread-listed, no `unread`, skipped-passes, budget-stop and fix-rounds-open records, each keeping the path in scope with review_owed; `a_record_whose_window_does_not_hold_the_commit_credits_nothing` covers the out-of-window case; all pass
+- AC1 — met: `compute_review_scope` `paths_owing_a_review` keeps only non-artifact paths (`is_project_artifact` in `runtime/src/primitives/mod.rs`), and `owes_a_review` adds the record-holds and unjudged-criterion clauses; tests `a_reopening_that_changed_code_owes_a_review_and_a_contract_edit_does_not` and `an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged` pass (409 passed across compute_review_scope, check_review_gate, write_review, commit_attribution)
+- AC2 — met: `check_review_gate` has no review-stale check and `ReviewGateBlock` no such variant; test `a_contract_change_since_the_review_holds_done_only_on_the_analysis` proves both directions (a scenario edit blocks AnalyzeStale only, a `src/code.rs` commit blocks ReviewOwed)
+- AC3 — met: `check-review-freshness` is an unrecognized subcommand of the built binary and absent from `tools/list`; `scripts/audit/run-all.sh` registers no Family 19; `RETIRED_ALLOW` in `runtime/src/primitives/merge_permissions.rs` lists the entry and agrees with `framework/bootstrap/configure/claude.md` step 4 (compared by reading, the equality test was not in the run's filter)
+- AC4 — met: `framework/constitution.md` states review for code, analyze for artifacts and the check-selection rule; `framework/reference/review.md` says a changed contract stales no review
+- AC5 — met: 079's `spec.md` AC4 and AC6 carry the 'Superseded in part (spec 081)' annotations and the two Resolved Questions end with the 081 sentences of 2026-11-11; the later credit is unannotated in 079, which AC5 does not ask for (observation waived)
+- AC6 — met: `framework-checks.yml` and `generators.yml` key the `runtime/target` cache on `Cargo.lock`, `Cargo.toml`, `rust-toolchain.toml` and `runtime/src/**`, date tracked files back on an exact hit and print `No build of these runtime sources is cached, so this run compiles one.` on a miss; push `b2421e14` (spec-only) ran both workflows with 'Build the runtime' at 1 s and no `runtime.yml` run; `runtime.yml`'s filters list only `specs/066-audit-records-and-the-completion-gate/data-model.md` among the spec files, which the corrected criterion text names; the criterion as first read (no exception) was not met and its text is corrected, see the observations
+- AC7 — met: every behavior change lands in `runtime/src`, `framework/constitution.md`, `framework/reference/review.md`, `framework/commands/review.md` and `framework/bootstrap/configure/claude.md`, with `runtime/CHANGELOG.md` [Unreleased] entries; the repo-only files carry cache and maintenance, not pipeline behavior
+- AC8 — met: `is_project_artifact` tests `the_spec_root_ductus_and_the_agent_files_are_artifacts`, `every_other_path_is_code`, `a_configured_spec_root_is_the_artifact_root` and `a_subdirectory_project_reads_its_artifacts_from_the_project_root` pass; the 066 clause is proven by `an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged`
+- AC9 — met: `attribute_window` gives a named commit's outside paths to the named specs and a directory-only claimant its own directory; tests `a_named_commits_code_goes_to_every_spec_it_names` and `a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory` pass
+- AC10 — met: `attribute_window` keeps 079's rule for an unnamed commit and `take_unclaimed` credits only on a record; tests `a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it` and `a_path_no_complete_record_read_stays_and_owes_the_review` pass
+- AC11 — met: `COMPUTE_REVIEW_SCOPE` in `runtime/src/schema/descriptions.rs` and the bullets of `framework/reference/review.md` Window and coverage state the attribution, the credit and the artifact set
+- AC12 — met: `write_review` `resolve_scope` refuses an `unread` entry outside the scope and `render_unread` writes `[]`, the list or nothing; tests `unread_is_written_whenever_the_run_states_it` and `an_unread_entry_outside_the_scope_is_refused` pass; `framework/commands/review.md` step 11, the constitution table and the 020 and 066 data models list `unread`
+- AC13 — met: `compute_review_scope` `attribute_window` -> `take_unclaimed` credits a path of a no-spec commit touching no spec directory when `read_records` holds a committed record (last-run set, no skipped pass, budget stop or open loop, `unread` stated without the path) whose `commits_between(diff_base, reviewed_against)` holds the commit; `split_changes` lists it in `excluded` as a path alone and it owes no review; an uncredited path of the commit stays in scope; tests `a_path_a_complete_record_read_is_credited_and_owes_no_review` and `a_record_credits_each_path_it_did_not_name_unread` pass; agrees with 079's scenario `the-excluded-section-lists-paths-only`
+- AC14 — met: the fixture tests `a_path_a_complete_record_read_is_credited_and_owes_no_review`, `a_path_no_complete_record_read_stays_and_owes_the_review` (unread-listed, no `unread`, skipped pass, budget stop, open loop), `a_record_whose_window_does_not_hold_the_commit_credits_nothing` and `a_record_whose_diff_base_is_the_commit_credits_nothing` pass
 
 ## Observations
 
-- convention — Behavior's bullet on a commit naming no spec says it is attributed as 079 attributes it, unchanged, and stays in every window holding it, though the spec's own AC10 and AC13 add the credit that ends that once a committed review read its paths — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
-- convention — the Resolved Question on the project's artifacts records 666, 427, 439 and 446 commits at `6158d7df` with no method; the method now stated re-derives 664, 425, 437 and 444, each 2 lower, with the difference of 12 unchanged — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- a credited path the window deleted is not listed in `excluded`, though AC13 says a credited path is listed in `excluded`: it stays in `deleted` with `review-owed: false` — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **waived**: A deletion has nothing to read and was never listed in `excluded` under 079 either; the gate's answer (no review owed) is the one AC13 asks for, so only the sentence's reach is loose. Observation about the pipeline's machinery, not a break of what the criterion protects. (decided by the rule)
+- the `unread` bullet of `framework/reference/review.md` (and its installed copy `.ductus/reference/review.md`), the Unreleased entry of `runtime/CHANGELOG.md` and `plan.md` still said a credited path is excluded under the reading spec or the claimants' names, which 079's scenario `the-excluded-section-lists-paths-only` and AC13 no longer say — `framework/reference/review.md` — **fixed** (decided by the rule)
+- AC6 said `runtime.yml` does not run for a push confined to the project's artifacts, but its `paths:` filters list `specs/066-audit-records-and-the-completion-gate/data-model.md`, which a test in `runtime/src/primitives/write_analysis.rs` reads (spec 066 task 26, after 081's plan); the Motivation's 'no Rust test read the checkout's artifacts' was likewise a claim about `1cc1dd52` only — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- 079's `AC6` sentence on a commit belonging to no spec is not annotated with 081's read credit of 2026-11-13 (AC13), though 081's AC5 asks only for the 2026-11-11 changes — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: 081's AC5 is met as written; the fix lies in 079's criteria, a spec this run must not reopen, and is reported to the parent. (decided by the rule)
 
 ## Skipped passes
 
@@ -161,113 +172,40 @@ Window 24d3a8f4 (base-source reopen, 066 task 27b) to 5979ce6e. The scope holds 
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/implement.md` — 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/review.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `.ductus/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/review.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `.github/workflows/runtime-acquisition.yml` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime-release.yml` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime.yml` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `.pi/prompts/ductus-amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-implement.md` — 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
-- `AGENTS.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `README.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `docs/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
-- `docs/runtime.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `docs/slash-commands.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/bootstrap/ductus-procedure.md` — 027-bootstrap-migration-registry
-- `framework/bootstrap/ductus.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `framework/bootstrap/govern.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `framework/commands/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `framework/commands/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/commands/review.md` — 066-audit-records-and-the-completion-gate
-- `framework/constitution.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/migrations.toml` — 027-bootstrap-migration-registry
-- `framework/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/reference/review.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/CHANGELOG.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 073-decided-rule-departures-are-recorded
-- `runtime/README.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `runtime/src/interpreter/mod.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/interpreter/payload.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/check_review_gate.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/src/primitives/compute_review_scope.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/src/primitives/criterion_verdicts.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/src/primitives/derive_routing_candidates.rs` — 079-review-and-analysis-work-converges
-- `runtime/src/primitives/line_citations.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/write_review.rs` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/descriptions.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/src/schema/extensions.rs` — 022-deterministic-runtime, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/primitives.rs` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/tests/fixtures/implement-basic/.govern.session.toml` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/implement-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/review-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/implement-basic.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/review-basic.jsonl` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/tests/mcp.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `runtime/tests/review_command.rs` — 066-audit-records-and-the-completion-gate
-- `scripts/audit/README.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/done-spec-criteria.sh` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/migration-coverage.sh` — 027-bootstrap-migration-registry
-- `scripts/mutation/criteria-in-review-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `scripts/mutation/fix-round-record.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/line-citation-strip-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reopen-measure.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reviews-follow-what-changed.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/scope-attribution.py` — 066-audit-records-and-the-completion-gate
-- `scripts/tests/test-migration-coverage.sh` — 027-bootstrap-migration-registry
-- `specs/000-slash-commands/analysis.md` — 000-slash-commands
-- `specs/000-slash-commands/plan.md` — 000-slash-commands
-- `specs/000-slash-commands/review.md` — 000-slash-commands
-- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/scenarios/validation-gates.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/spec.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/015-tarball-fetch/plan.md` — 015-tarball-fetch
-- `specs/020-code-review/analysis.md` — 020-code-review
-- `specs/020-code-review/data-model.md` — 020-code-review, 022-deterministic-runtime
-- `specs/020-code-review/plan.md` — 020-code-review
-- `specs/020-code-review/review.md` — 020-code-review, 022-deterministic-runtime
-- `specs/020-code-review/spec.md` — 020-code-review, 022-deterministic-runtime
-- `specs/022-deterministic-runtime/data-model.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` — 020-code-review, 022-deterministic-runtime
-- `specs/022-deterministic-runtime/spec.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/027-bootstrap-migration-registry/analysis.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/plan.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/review.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/a-projects-own-constitution-is-not-relocated.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/spec.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/048-govern-acquired-runtime/data-model.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/plan.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/spec.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/tasks.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/analysis.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/073-decided-rule-departures-are-recorded/plan.md` — 073-decided-rule-departures-are-recorded
-- `specs/079-review-and-analysis-work-converges/analysis.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/plan.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/review.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/plan.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/plan.md`
+- `runtime/src/main.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/020-code-review/data-model.md`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
 
 ## Unexamined governance
 
