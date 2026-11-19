@@ -153,7 +153,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   `ductus-<name>.md` files (`{project}` → `ductus`, `{cli-config-dir}` → `.pi`) plus
   the verbatim bridge copy to `.pi/extensions/ductus.ts`; `--check` covers both, so
   the pre-commit check-zero protects the pi surface. This repo's `.gitignore` gains
-  `.pi/*` with negations for `.pi/prompts/` and `.pi/extensions/ductus.ts`, mirroring
+  `.pi/*` with negations for `.pi/prompts/` and `.pi/extensions/`, mirroring
   that file's `.claude/*` / `!.claude/commands/` lines; the dogfooded copy is committed.
 - `scripts/audit/README.md` updates the three family descriptions to carry the pi
   shapes.
