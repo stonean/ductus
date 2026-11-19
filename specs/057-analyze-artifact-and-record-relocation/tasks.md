@@ -18,6 +18,6 @@ The migration `framework/migrations/audit-record-relocate.md` is not edited to n
 
 ## 28. A merge carries each key's whole value
 
-- [ ] Implement the behavior described in `scenarios/a-merge-carries-each-keys-whole-value.md`
+- [x] Implement the behavior described in `scenarios/a-merge-carries-each-keys-whole-value.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
