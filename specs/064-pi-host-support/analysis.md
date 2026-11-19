@@ -1,24 +1,25 @@
 ---
 spec: 064-pi-host-support
-last-run: 2026-11-16T22:27:32Z
-analyzed-against: 2a4542dc9bf0dbd50f41be831ec1001c7894a84e
+last-run: 2026-11-19T20:35:23Z
+analyzed-against: 5597e0d1ea79eb67903f2ae91c0d140b574b020d
 hard-fail: 0
 blocking-findings: 0
-advisory: 6
-unexamined: 24
+advisory: 1
+unexamined: 26
 analyzed-digest:
-  plan.md: 4284bdac93e239db2ea41e23cae4d88751464f255b35100eccdd43e63a79de43
-  review.md: 90cb9b67e19c2a763dd6a11444fe29c7184bb019f6c5458bd887ce4c351abbd2
+  plan.md: d49d989518572800d5b6e726d36ace2fdd66ab3b74e74c2be56b052b2b7480bb
+  review.md: bc2c99bcd0e5d747def0929d639356c261f4a4fa3069d4b403ae49d466c31b57
+  scenarios/colon-form-commands-run-on-pi.md: c07825a14968e579c817cd098a61de4c07123b4548adacbda74815da8cc30180
   scenarios/pi-layout-is-dispatched.md: 0d0d2a6867c610e4d55252aa82fdf7a449ab0735ec16f47484a8c8dc332595fc
   scenarios/the-bridge-closes-its-server-at-shutdown.md: f852164bef881ed3a6f33eea81347d0bd23334182d9a5e810afcd46086a77f07
   scenarios/the-bridge-fails-loudly-and-recovers.md: 67570df65ceffa494936a5282eb62c100f14c125065562038aaa771077b1bf45
-  spec.md: 69a71a473c7bde26131fd4538ba557a237d7ef44537809f06a6d82a971e34f0f
-  tasks.md: a24b6d010388c3bdd7ada9ec6eaa388a027d22e2ac980fb59c7174e41e59a94c
+  spec.md: e09c3ae887fc7eaf270202d07054e1f6bcc770bc46de1071fc17ab72169fc5dd
+  tasks.md: d0fb97c562d30de375dfa75dcdb7763bcee5ba8fdbe994b4344b45b78ebbd556
 unexamined-by-reason:
   anchor-target-unjudgeable: 1
   never-existed: 4
   not-a-live-claim: 1
-  root-absent: 14
+  root-absent: 16
   ships-to-adopter: 4
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
@@ -36,21 +37,18 @@ rule-digest:
 rule-verdicts:
   BE-DATA-001: {verdict: addressed, cite: "plan.md#D4 — `configure/pi.md`: verify-and-repair"}
   BE-DATA-011: {verdict: addressed, cite: "plan.md#D4 — `configure/pi.md`: verify-and-repair"}
-  BE-INPUT-002: {verdict: addressed, cite: "plan.md#D4 — `configure/pi.md`: verify-and-repair"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
-  BE-INPUT-004: {verdict: finding, tier: must, at: "plan.md#D3 — One runtime change: Pi's command-file candidate", message: "plan.md D3 adds the pi command-file candidate {cli-config-dir}/prompts/{project}-{name}.md, built from the unscreened cli-config-dir and [host] project and opened with no canonical containment, as are the claude-style candidate beside it and their four readers"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
   BE-RACE-002: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
-  BE-TRACE-002: {verdict: finding, tier: should, at: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server", message: "plan.md wraps configure/pi.md's fetch and the bridge's calls to its runtime child, externally dependent work, in no span"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
+  BE-TRACE-002: {verdict: finding, tier: should, at: "plan.md#D4 — `configure/pi.md`: verify-and-repair", message: "plan.md wraps configure/pi.md's fetch and the bridge's calls to its runtime child, externally dependent work, in no span"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server"}
 blocking: false
 dispositions:
   fixed: 0
-  deferred: 1
-  waived: 6
+  deferred: 0
+  waived: 1
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-TRACE-002: plan.md wraps configure/pi.md's fetch and the bridge's calls to its runtime child, externally dependent work, in no span"
@@ -58,45 +56,13 @@ decisions:
     reason: The runtime and its bridge are a per-agent stdio process with no tracing pipeline; adding the first span belongs to a spec about the runtime's observability, as 022's analysis decided for fetch-archive.
     decided-at: 2026-11-11T01:07:44Z
     decided-by: rule
-  - key: grounding — spec.md's Verified Pi Layout states pi's permissions, native-rules, settings and trust behavior with no source, where plan.md grounds the command-surface and skills rows in pi's dist sources and the runtime-tools row cites pi's CHANGELOG
-    outcome: waived
-    reason: A host behavior whose re-sourcing needs pi's documentation or source or a run, which is research rather than a chore.
-    decided-at: 2026-11-11T01:07:44Z
-    decided-by: rule
-  - key: grounding — spec.md's Compatibility Contract says pi has no deferred-tool mechanism, with no source
-    outcome: waived
-    reason: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
-    decided-at: 2026-11-11T13:28:01Z
-    decided-by: rule
-  - key: grounding — plan.md D2 names pi's built-in tools read and bash, with no source
-    outcome: waived
-    reason: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
-    decided-at: 2026-11-11T13:28:01Z
-    decided-by: rule
-  - key: grounding — plan.md D2's 0.3 s answer-time measurement states no spec, invocation or timing method
-    outcome: waived
-    reason: re-measuring with a stated method is research rather than a chore, and the figure only shows the 120 s bound sits more than two orders of magnitude above the runtime's answer time, a margin no plausible method moves
-    decided-at: 2026-11-11T13:28:01Z
-    decided-by: rule
-  - key: grounding — spec.md and plan.md D1 say pi loads skill descriptions into the system prompt and prompt-matches them, with no source for that behavior
-    outcome: waived
-    reason: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
-    decided-at: 2026-11-11T13:28:01Z
-    decided-by: rule
-  - key: "rule-assessment — BE-INPUT-004: plan.md D3 adds the pi command-file candidate {cli-config-dir}/prompts/{project}-{name}.md, built from the unscreened cli-config-dir and [host] project and opened with no canonical containment, as are the claude-style candidate beside it and their four readers"
-    outcome: deferred
-    target: specs/022-deterministic-runtime/tasks.md
-    task: "40"
-    reason: Host::command_file_candidates and its four readers are 022's runtime core; 022 task 40 contains every candidate and screens both values (owner, 2026-11-16)
-    decided-at: 2026-11-16T22:27:32Z
-    decided-by: andy@stone.dev
 ---
 
 # Analysis — 064-pi-host-support
 
 ## Summary
 
-0 hard-fail, 0 blocking, 6 advisory; not blocking. 24 unexamined target(s). Dispositions: 0 fixed, 1 deferred, 6 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 26 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -108,16 +74,11 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-TRACE-002: plan.md wraps configure/pi.md's fetch and the bridge's calls to its runtime child, externally dependent work, in no span — `specs/064-pi-host-support/plan.md` — **waived**: The runtime and its bridge are a per-agent stdio process with no tracing pipeline; adding the first span belongs to a spec about the runtime's observability, as 022's analysis decided for fetch-archive.
-- grounding — Verified Pi Layout's Native rules row (`AGENTS.md` loaded natively, regardless of project trust) names no source; the provenance blockquote cites docs for settings, security, trust and permissions but not for rules loading — `specs/064-pi-host-support/spec.md` — **waived**: A host behavior whose re-sourcing needs pi's documentation or source or a run, which is research rather than a chore.
-- grounding — Compatibility Contract states 'Pi has no permission prompts and no deferred-tool mechanism' as fact with no citation — `specs/064-pi-host-support/spec.md` — **waived**: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
-- grounding — plan.md D2 names pi built-ins (`read`, `bash`, ...) as collision surface with no citation — `specs/064-pi-host-support/plan.md` — **waived**: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
-- grounding — plan.md D2 says check-artifacts and compute-review-scope on the largest spec each answered in about 0.3 s (2026-10-28) with no spec named, invocation or timing method — `specs/064-pi-host-support/plan.md` — **waived**: re-measuring with a stated method is research rather than a chore, and the figure only shows the 120 s bound sits more than two orders of magnitude above the runtime's answer time, a margin no plausible method moves
-- grounding — spec.md D1 and plan.md D1 say skills are description-loaded into the system prompt and prompt-matched; plan D1 cites interactive-mode.js only for the skill:<name> and enableSkillCommands facts — `specs/064-pi-host-support/plan.md` — **waived**: a pi host behavior whose source needs pi's documentation, its source or a run, which is research rather than a chore
+- rule-assessment — BE-TRACE-002: plan.md wraps configure/pi.md's fetch and the bridge's calls to its runtime child, externally dependent work, in no span — `specs/064-pi-host-support/plan.md` — **waived**: The runtime and its bridge are a per-agent stdio process with no tracing pipeline; adding the first span belongs to a spec about the runtime's observability, as 022's analysis decided for fetch-archive. (decided by the rule)
 
 ## Deferred to other specs
 
-- rule-assessment — BE-INPUT-004: plan.md D3 adds the pi command-file candidate {cli-config-dir}/prompts/{project}-{name}.md, built from the unscreened cli-config-dir and [host] project and opened with no canonical containment, as are the claude-style candidate beside it and their four readers — `specs/064-pi-host-support/plan.md` — **deferred** to `specs/022-deterministic-runtime/tasks.md` task 40
+*None.*
 
 ## Contradictions
 
@@ -128,7 +89,7 @@ decisions:
 - anchor-target-unjudgeable: 1
 - never-existed: 4
 - not-a-live-claim: 1
-- root-absent: 14
+- root-absent: 16
 - ships-to-adopter: 4
 
 ## Fixed in this run
