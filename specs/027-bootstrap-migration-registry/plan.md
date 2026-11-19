@@ -70,7 +70,7 @@ Idempotency check is step 1 of every procedure file, mechanically. The bootstrap
 
 ### Bootstrap loop placement and shape
 
-The loop is the `## Pre-run Migrations` section of `framework/bootstrap/ductus-procedure.md`, which `framework/bootstrap/ductus.md` reaches at its step 3a, after the archive is extracted and before the first manifest pass. Its shape:
+The loop is the `## Pre-run Migrations` section of `framework/bootstrap/ductus-procedure.md`, which `framework/bootstrap/ductus.md` reaches at its step 3a, after the archive is extracted and before the first manifest pass. It sits there because it reads the registry and each procedure file from the extracted archive, and it converts what an earlier release left behind before this release's files land (`framework/bootstrap/ductus.md` §Instructions, its **Pre-run Migrations** bullet). Its shape:
 
 ```markdown
 ## Pre-run Migrations
@@ -168,27 +168,11 @@ run_check "Family 10 — migration coverage" "scripts/audit/migration-coverage.s
 
 And append item 10 to `framework/reference/audit.md`, matching the existing pattern. No new MCP primitive — `run-all.sh` is the orchestrator; `/audit` itself invokes it via `run-generator`.
 
-### CHANGELOG.md seed format
+### CHANGELOG.md shape
 
-Top of file:
+`CHANGELOG.md` at the repository root opens by saying it is the adopter-facing record of removed conventions, each entry a recipe for an adopter who skipped past an entry's sunset, links this spec, and points at `runtime/CHANGELOG.md` for the runtime crate's own release notes. Under `## Archived migrations`, a paragraph says why entries leave the registry and that 10b holds their target paths absent, and each archived entry follows in the shape **Sunset commit shape** gives.
 
-```markdown
-# CHANGELOG
-
-Adopter-facing record of framework conventions that have been removed.
-Each entry is a recipe for adopters who skipped past the active sunset
-window and need to apply the removal manually. See spec
-[027 — Bootstrap Migration Registry](specs/027-bootstrap-migration-registry/spec.md)
-for the governing pipeline.
-
-The runtime crate's own release notes live at `runtime/CHANGELOG.md`.
-
-## Archived migrations
-
-*None yet — registry introduced in ductus {registry_introduction_version}.*
-```
-
-Future maintainers append archived migrations under `## Archived migrations` as they sunset, with most-recent at the top.
+It is a separate file because no step of the bootstrap reads it (AC15): an adopter past an entry's sunset applies that recipe by hand, while the runtime crate's release notes describe the binary, not an adopter's layout. Each archive commit appends its entries below the last, so the oldest archived sit at the top: `2fcb5f93`'s two, then `c061c1f0`'s five.
 
 ## Affected Files
 
@@ -205,13 +189,13 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 | `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` | Create | Cross-spec impact: 026 is `done`; Family 10 extension lands as a scenario with back-link to 027 |
 | `specs/027-bootstrap-migration-registry/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `→ in-progress` and `→ done` during implementation |
 
-The runtime write boundary that `/ductus:implement` derives from git history will include the above plus incidental files (CHANGELOG entries on this spec's commits, README spec-status table regeneration via the pre-commit hook).
+The runtime write boundary that `/ductus:implement` derives from git history will include the above plus incidental files, such as `CHANGELOG.md` entries on this spec's commits.
 
 ## Trade-offs
 
 ### Considered: declarative-step DSL for simple migrations (rejected)
 
-Q4. A small DSL of `rename` / `delete` / `regex-replace` step types could express the gitignore-marker migration in two TOML lines. Rejected because five of six existing migrations have twists (skip-if-both-exist, per-file Y/n, pinned-files exclusion, batch prompts, collision handling) that would require extending the DSL until it became a programming language. Markdown procedure files are honest about being prose; the TOML stays pure metadata.
+Q4. A small DSL of `rename` / `delete` / `regex-replace` step types could express the gitignore-marker migration in two TOML lines. Rejected because five of the six back-filled migrations had twists that would require extending the DSL until it became a programming language: skip-if-both-exist (`governance-config-rename`), per-file Y/n (`spec-and-plan-sunset`), pinned-files exclusion (`skills-to-workflows`, `workflow-filename-rename`), and a batch prompt with collision handling (`rule-files-relocate`), each in its recipe in `CHANGELOG.md`'s Archived migrations; only `gitignore-marker-rename` had none. Markdown procedure files are honest about being prose; the TOML stays pure metadata.
 
 ### Considered: `apply-migrations` runtime primitive (deferred)
 
@@ -237,8 +221,8 @@ Family 10 verifies registry/state consistency, not registry/diff coverage. A mai
 
 ### CHANGELOG.md append at sunset is maintainer-discipline
 
-When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. 10e makes the sunset itself not depend on anyone remembering it: five entries, each with `sunset_after` 0.10.0, were still registered at version 0.59.11 when `c061c1f0` archived them, 49 minor releases past it (0.59 less 0.10), before it existed. Family 10 still cannot verify that the CHANGELOG received the recipe: a maintainer who deletes the TOML entry and procedure file without appending breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate for that step.
+When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. 10e makes the sunset itself not depend on anyone remembering it: before it existed, five entries were still registered at version 0.59.11 when `c061c1f0` archived them, four with `sunset_after` 0.10.0, 49 minor releases past it (0.59 less 0.10), and `workflows-sunset` with 0.25.0, 34 past it (each entry's `CHANGELOG.md` heading, and `git show c061c1f0:version`). Family 10 still cannot verify that the CHANGELOG received the recipe: a maintainer who deletes the TOML entry and procedure file without appending breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate for that step.
 
 ### Procedure file content format is loosely specified
 
-The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) procedure files are small enough that code review catches deviations, (c) no non-comment line under `runtime/src` names `framework/migrations/`, so the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.
+The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) procedure files are small enough that code review catches deviations, (c) `grep -rn 'framework/migrations/' runtime/src` finds three lines, each a `//!` module doc comment (run 2026-11-19), so the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.
