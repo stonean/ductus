@@ -41,7 +41,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 64. Four more steps read a bounded list from the file when the result is in file form (owner decision, 2026-11-19)
 
-- [ ] `framework/commands/analyze.md` and `framework/commands/review.md`, the steps that invoke `process-decisions`; `framework/commands/prune.md`, the `--project` apply branch; `framework/reference/clarify.md`, the paragraph deriving the scenario question list. `framework/commands/groom.md` step 2 stays, since its list is bounded by the slug set (owner, 2026-11-19)
+- [x] `framework/commands/analyze.md` and `framework/commands/review.md`, the steps that invoke `process-decisions`; `framework/commands/prune.md`, the `--project` apply branch; `framework/reference/clarify.md`, the paragraph deriving the scenario question list. `framework/commands/groom.md` step 2 stays, since its list is bounded by the slug set (owner, 2026-11-19)
 
 - **Done when**: each of the four blocks names the file form for the bounded lists it reads or gates on their counts, each file's byte change is measured, and the whole `cargo test` passes
 
