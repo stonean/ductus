@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [017-derive-dont-ask]
 next-criterion: 15
 ---
