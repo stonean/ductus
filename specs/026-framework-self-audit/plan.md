@@ -45,7 +45,7 @@ Before any family check fires, `scripts/audit/check-zero.sh`, the first thing `r
 8. `scripts/lint-procedure-parseability.sh`
 9. `scripts/lint-tool-coverage.sh`
 
-The first two are runtime primitives, so `scripts/audit/check-zero.sh` builds the runtime before running them.
+The first two are runtime primitives, so `scripts/audit/check-zero.sh` builds the runtime before running them (its `cargo build --release --locked` step, which reports a failed build as a finding).
 
 Any non-zero exit produces a `check-zero` finding pointing at the failing script. When check-zero fails, the family checks are skipped — running them against known-stale generator output produces misleading findings. Exit code is `1`; stdout makes the cause unambiguous.
 
