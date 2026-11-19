@@ -425,6 +425,8 @@ The window a review reads and the coverage counts it records, as `/ductus:review
 
 ## Blocking semantics
 
+<!-- audit:kept a rule no step acts on; the command's Pipeline position cites it -->
+
 A spec MUST NOT advance from `in-progress` to `done` while its `review.md`
 records `blocking: true`. Three mechanisms hold it, none resting on human
 diligence (§design-principles):

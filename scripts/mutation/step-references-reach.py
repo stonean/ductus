@@ -3,7 +3,7 @@ reference sections a command's steps reach (`reach`, `judge_sections`, and
 the anchor-link arm of the citation walk in `tool_loading`). Each mutation
 removes one part of the rule: the reach test, the exemption, one of the three
 exemption findings, the no-sections count, the skip, the `##` level, the
-walk's following of a reached section and of an anchor link, and the CLI's
+start set of the section walk (numbered steps only), the walk's following of a reached section and of an anchor link, and the CLI's
 exit status, and the sixth list's place in the bounded result. The tests that kill them are named per mutation.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/step-references-reach.py
@@ -129,5 +129,19 @@ MUTATIONS = [
         '    if commands_listed {\n',
         '    if true {\n',
         'check_step_references::tests::a_project_without_framework_sources_judges_no_sections',
+    ),
+    (
+        'M17 the section walk starts from the whole command file',
+        'src/primitives/tool_loading.rs',
+        '    let start = if from_steps {\n',
+        '    let start = if false {\n',
+        'check_step_references::tests::only_a_numbered_step_reaches_a_section',
+    ),
+    (
+        'M18 a note after the steps is part of the last step',
+        'src/primitives/tool_loading.rs',
+        '        } else if after_blank && !content.starts_with([\' \', \'-\', \'*\']) {\n',
+        '        } else if false {\n',
+        'check_step_references::tests::only_a_numbered_step_reaches_a_section',
     ),
 ]

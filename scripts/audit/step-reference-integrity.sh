@@ -69,7 +69,7 @@
 # SECOND SUBJECT — the `##` sections of each framework/reference/<command>.md
 # that its command reaches (spec 026, from 071's scenario
 # reference-sections-are-reached-by-a-step). An agent reads a section only where
-# a step names it, so one no step reaches is never read: an `unreached-section`
+# a numbered step names it, so one no such step reaches is never read: an `unreached-section`
 # finding, unless it carries an `audit:kept` marker with a stated reason
 # (`empty-exemption`, `stale-exemption` and `misplaced-exemption` keep the
 # marker honest). A reference with no section is counted apart, not passed.

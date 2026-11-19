@@ -20,6 +20,8 @@ Before generating any artifacts, check the feature directory for existing plan f
 
 ## Cross-spec context checklist
 
+<!-- audit:kept read before the steps; the command's Scope Boundaries cite it -->
+
 Before creating the plan, load only the cross-spec context this feature actually needs:
 
 - **Always read:** `specs/system.md` — architecture patterns and shared conventions.

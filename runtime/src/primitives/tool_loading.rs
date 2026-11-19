@@ -223,11 +223,14 @@ pub fn cited_tools<E>(
     command: &str,
     read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<BTreeSet<&'static str>, E> {
-    walk_citations(text, command, read_reference).map(|walk| walk.tools)
+    walk_citations(text, command, false, read_reference).map(|walk| walk.tools)
 }
 
-/// The sections a command's citations reach, as (reference name, heading)
-/// pairs: the same walk as [`cited_tools`], which also follows a markdown
+/// The sections the numbered steps of a command's `## Instructions` reach,
+/// as (reference name, heading) pairs ([`step_lines`]): the walk of
+/// [`cited_tools`] started from those lines alone, so a citation in a
+/// purpose, a scope list, a flags table, the Instructions preamble or a
+/// note after a step reaches nothing. It also follows a markdown
 /// anchor link `[text](#slug)` to the heading it names in the document
 /// holding the link ([`heading_slug`]). A section of the command file itself
 /// is not a reference's and is left out. Spec 026's `check-step-references`
@@ -241,7 +244,7 @@ pub fn cited_sections<E>(
     command: &str,
     read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<BTreeSet<(String, String)>, E> {
-    walk_citations(text, command, read_reference).map(|walk| {
+    walk_citations(text, command, true, read_reference).map(|walk| {
         walk.seen
             .into_iter()
             .filter_map(|(doc, heading)| match doc {
@@ -259,10 +262,14 @@ struct Walk {
     seen: BTreeSet<(Doc, String)>,
 }
 
-/// The citation walk [`cited_tools`] and [`cited_sections`] share.
+/// The citation walk [`cited_tools`] and [`cited_sections`] share. The tools
+/// are always those of the whole command file; `from_steps` starts the
+/// section walk from the numbered steps alone ([`step_lines`]) instead of the
+/// whole file.
 fn walk_citations<E>(
     text: &str,
     command: &str,
+    from_steps: bool,
     mut read_reference: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<Walk, E> {
     // A comment is content, not an invocation or a citation, whether it spans
@@ -349,7 +356,12 @@ fn walk_citations<E>(
         Ok(())
     };
 
-    cite(&Doc::Command, text, &mut docs, &mut queue)?;
+    let start = if from_steps {
+        step_lines(text)
+    } else {
+        text.to_owned()
+    };
+    cite(&Doc::Command, &start, &mut docs, &mut queue)?;
     while let Some((doc, heading)) = queue.pop() {
         if !seen.insert((doc.clone(), heading.clone())) {
             continue;
@@ -450,6 +462,53 @@ pub fn add_tool_search_line(
         }
     }
     Ok(out)
+}
+
+/// The lines of a command's numbered steps under `## Instructions`: each
+/// numbered line with its continuation lines, sub-steps and bullets. A step
+/// ends at a blank line followed by unindented text that is no list item, so
+/// a note after the last step, and the preamble before the first, are left
+/// out. Lines in a fenced block or an HTML comment count as blank
+/// ([`SkipScanner`]).
+fn step_lines(text: &str) -> String {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let headings = atx_headings(&lines);
+    let Some(&(start, level, _)) = headings.iter().find(|h| h.2 == "Instructions") else {
+        return String::new();
+    };
+    let end = headings
+        .iter()
+        .find(|h| h.0 > start && h.1 <= level)
+        .map_or(lines.len(), |h| h.0);
+    let mut skip = SkipScanner::default();
+    let mut out = String::new();
+    let mut in_step = false;
+    let mut after_blank = false;
+    for line in &lines[start + 1..end] {
+        let content = line.trim_end_matches(['\n', '\r']);
+        let skipped = skip.skip(content);
+        if skipped || content.trim().is_empty() {
+            after_blank = true;
+            if in_step {
+                out.push('\n');
+            }
+            continue;
+        }
+        let numbered = content
+            .split_once(". ")
+            .is_some_and(|(n, _)| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()));
+        if numbered {
+            in_step = true;
+        } else if after_blank && !content.starts_with([' ', '-', '*']) {
+            in_step = false;
+        }
+        after_blank = false;
+        if in_step {
+            out.push_str(content);
+            out.push('\n');
+        }
+    }
+    out
 }
 
 /// The index of the first ATX heading reading `Instructions`, at any level,

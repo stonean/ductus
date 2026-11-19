@@ -134,11 +134,11 @@ else
 fi
 
 echo "E. an unreached reference section"
-# cmd.md cites Reached; Reached cites Through by `§`; Orphan is cited by nothing.
+# a step of cmd.md cites Reached; Reached cites Through by `§`; Orphan is cited by nothing.
 dir="$(make_tree sections)"
 mkdir -p "$dir/framework/reference"
 sed -i.bak 's/see step 9\./see step 2./' "$dir/framework/commands/cmd.md" && rm "$dir/framework/commands/cmd.md.bak"
-printf '%s\n' '' 'Read **§Reached** in `.ductus/reference/cmd.md`.' >> "$dir/framework/commands/cmd.md"
+sed -i.bak 's|^2\. Two\.|2. Two, per **§Reached** in `.ductus/reference/cmd.md`.|' "$dir/framework/commands/cmd.md" && rm "$dir/framework/commands/cmd.md.bak"
 printf '%s\n' '# Cmd reference' '' '## Reached' '' 'See §Through.' '' '## Through' '' 'Text.' '' '## Orphan' '' 'Text.' > "$dir/framework/reference/cmd.md"
 run_family "$dir"
 inline_out="$out"

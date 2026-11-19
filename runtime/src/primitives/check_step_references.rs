@@ -58,7 +58,9 @@
 //! ## Reference sections a command reaches (spec 026, from 071's scenario)
 //!
 //! A command's reference is read by section, only where a step names it, so a
-//! `##` section no step reaches is never read ([`reach`]). Each
+//! `##` section no numbered step of the command's `## Instructions` reaches
+//! is never read ([`reach`]): a citation in a purpose, a scope list, a flags
+//! table, the preamble or a note after a step reaches nothing. Each
 //! `framework/reference/<command>.md` is judged against
 //! `framework/commands/<command>.md` through the walk spec 080's tool loading
 //! makes ([`cited_sections`]), so one walker decides what a citation reaches.
@@ -936,6 +938,32 @@ mod tests {
         assert_eq!(found.sections_unreached, 2);
     }
 
+    /// Only a numbered step starts the walk: a citation in the Instructions
+    /// preamble, in a note after the steps or in another section of the
+    /// command (Scope Boundaries) reaches nothing, and one in a bullet inside
+    /// a step does.
+    #[test]
+    fn only_a_numbered_step_reaches_a_section() {
+        let command = "# X\n\n## Scope Boundaries\n\n- See **§InScope** in `.ductus/reference/x.md`.\n\n\
+                       ## Instructions\n\n> Preamble cites **§InPreamble**.\n\n\
+                       1. One, per **§Top** in `.ductus/reference/x.md`.\n   - a bullet citing **§InBullet**\n\
+                       2. Two.\n3. Three.\n\nA note after the steps cites **§InNote**.\n";
+        let reference = "## Top\n\n## InBullet\n\n## InPreamble\n\n## InNote\n\n## InScope\n";
+        let tmp = reach_project(&[("x", command)], &[("x", reference)]);
+        let found = compute(&CheckStepReferencesArgs {}, tmp.path());
+        let mut unreached: Vec<&str> = found
+            .findings
+            .iter()
+            .map(|f| f.message.split('`').nth(1).unwrap())
+            .collect();
+        unreached.sort_unstable();
+        assert_eq!(
+            unreached,
+            vec!["## InNote", "## InPreamble", "## InScope"],
+            "{found:?}"
+        );
+    }
+
     /// A reference with no `##` section is counted as having none: neither a
     /// finding, a skip nor a silent pass.
     #[test]
@@ -1012,10 +1040,10 @@ mod tests {
     }
 
     /// The shipped tree: every `##` section of every reference is reached,
-    /// except the two a stated reason keeps. Built from the real files, so it
+    /// except the four a stated reason keeps. Built from the real files, so it
     /// fails when a pointer a command needs is removed (spec 071).
     #[test]
-    fn the_shipped_references_are_reached_except_the_two_kept_sections() {
+    fn the_shipped_references_are_reached_except_the_four_kept_sections() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap();
@@ -1037,6 +1065,11 @@ mod tests {
             vec![
                 ("framework/reference/analyze.md", "Severity tiers"),
                 ("framework/reference/analyze.md", "Record fields"),
+                (
+                    "framework/reference/plan.md",
+                    "Cross-spec context checklist"
+                ),
+                ("framework/reference/review.md", "Blocking semantics"),
             ]
         );
         assert!(

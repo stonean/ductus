@@ -7946,8 +7946,8 @@ pub struct CheckCorpusLinksResult {
 /// command file that name a step the file does not have. Maintainer scope: the
 /// subject is `framework/commands/` plus the two bootstrap procedures, where
 /// the drift originates, not the generated copies an adopter cannot repair,
-/// and the `##` sections of each `framework/reference/` file that its command
-/// reaches.
+/// and the `##` sections of each `framework/reference/` file that a numbered
+/// step of its command reaches.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckStepReferencesArgs {}
