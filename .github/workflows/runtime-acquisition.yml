@@ -77,8 +77,8 @@ jobs:
         # If a leg sits queued with no runner assigned, the label is the
         # first thing to check — that is a missing runner, not a hang, and
         # it produces no step output to say so. Measured against the real
-        # 0.28.0 assets: `ubuntu-24.04-arm` and `windows-latest` both work;
-        # `macos-13` never picked up a runner and is gone (see below).
+        # 0.28.0 assets: `ubuntu-24.04-arm` works; `macos-13` never picked
+        # up a runner and is gone (see below).
         include:
           - target: aarch64-apple-darwin
             runner: macos-latest
@@ -95,8 +95,6 @@ jobs:
             runner: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-24.04-arm
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -164,7 +162,6 @@ jobs:
           #    regular file, the binary, and only that member is extracted, so
           #    no entry name becomes a path (BE-INPUT-004).
           binary="ductus"
-          [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
           listing="$(tar -tvzf "$archive")"
           if [ "$(printf '%s\n' "$listing" | wc -l | tr -d ' ')" != 1 ] \
             || [ "${listing#-}" = "$listing" ] || [ "${listing##* }" != "$binary" ]; then

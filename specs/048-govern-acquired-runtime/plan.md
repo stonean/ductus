@@ -8,7 +8,7 @@ Three deliverables that must land as one release, because each is incoherent wit
 
 1. **Acquisition** — `/ductus` downloads, verifies, and installs the runtime into `~/.ductus/bin/`, exposes it per project through a gitignored `.ductus/bin/ductus` pointer, and registers that with each agent's MCP config.
 2. **The requirement** — the constitutional amendment that makes the runtime mandatory, plus the reference sweep and the two cross-spec reopens it forces.
-3. **The release surface** — a repo-root `version` file as the lockstep pin, a publish gate so a tag cannot ship a partial asset set, and a Windows asset published as `.tar.gz`.
+3. **The release surface** — a repo-root `version` file as the lockstep pin, a publish gate so a tag cannot ship a partial asset set, and every asset published as `.tar.gz`.
 
 The ordering constraint that shapes everything else: **acquisition cannot use the runtime.** `fetch-archive` and `extract-archive` are `ductus` primitives, and `ductus` is what is being acquired. Every acquisition step is host shell work expressed in `framework/bootstrap/ductus.md`'s procedure and pre-authorized in Claude's permission seed. No new primitive is written for this feature.
 
@@ -22,7 +22,7 @@ So acquisition is a shell sequence in `ductus.md`'s markdown procedure — `curl
 
 **What each command interpolates** (`BE-INPUT-003`). A host's shell tool takes a command line, so no argument vector is available, and what keeps an operand from changing a command's structure is what the operand can hold. `{pin}` is one line of `MAJOR.MINOR.PATCH` in ASCII digits or the run halts (Source resolution step 5); `{triple}` comes from the closed table in Runtime acquisition step 3; `{tempdir}` is `mktemp`'s output, which Branch 2's steps interpolate unquoted, so a `TMPDIR` holding whitespace is unsupported; `${DUCTUS_REPO:-…}` is expanded by the shell inside double quotes, and an expansion is never re-parsed as shell syntax; the store and pointer paths are the fixed derived paths. The one operand from configuration, the `[runtime] path`, names a binary the project chose to execute, so a value that altered the command would grant nothing the key does not.
 
-**What the extraction writes** (`BE-INPUT-004`, from 029's review). Branch 2 step 6 lists the release archive and halts unless it holds exactly one regular file, `ductus` (`ductus.exe` on Windows), the one member `runtime-release.yml` packs, then extracts that member alone. The only path the extraction writes is that fixed name under the fresh `{tempdir}`, so no entry name the archive carries reaches the filesystem. `runtime-release.yml`'s `acquire` job and `runtime-acquisition.yml` run the same check, so a packaging change that broke it blocks the publish.
+**What the extraction writes** (`BE-INPUT-004`, from 029's review). Branch 2 step 6 lists the release archive and halts unless it holds exactly one regular file, `ductus`, the one member `runtime-release.yml` packs, then extracts that member alone. The only path the extraction writes is that fixed name under the fresh `{tempdir}`, so no entry name the archive carries reaches the filesystem. `runtime-release.yml`'s `acquire` job and `runtime-acquisition.yml` run the same check, so a packaging change that broke it blocks the publish.
 
 The bootstrap already contains the precedent: `ductus.md` fetches the framework archive with a direct `curl` to `codeload.github.com`, chosen over the redirect form because a cross-host redirect defeats a pre-granted `curl` permission. Acquisition follows the same shape and the same reasoning.
 
@@ -69,7 +69,7 @@ Per §cross-spec-impact, [021](../021-runtime-boundary/spec.md) (which owns the 
 
 ### The release surface changes are independently landable
 
-The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only `runtime-release.yml` and the repo root. They can ship before anything else and are safe on their own — a `version` file nothing reads yet, and a gate that only fires on a partial matrix. Sequencing them first means the acquisition work is written against a release surface that already behaves the way it assumes.
+The `version` file, the publish gate, and the `.tar.gz` packaging touch only `runtime-release.yml` and the repo root. They can ship before anything else and are safe on their own — a `version` file nothing reads yet, and a gate that only fires on a partial matrix. Sequencing them first means the acquisition work is written against a release surface that already behaves the way it assumes.
 
 ### `fetch-archive`'s HTTP configuration is read once
 
@@ -80,7 +80,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | File | Action | Purpose |
 | --- | --- | --- |
 | `version` | Create | The repo-root SemVer pin, fetched directly in pre-flight (task 16 moved the read off the archive) |
-| `.github/workflows/runtime-release.yml` | Modify | Publish gate on the complete asset set; Windows asset as `.tar.gz` |
+| `.github/workflows/runtime-release.yml` | Modify | Publish gate on the complete asset set; assets as `.tar.gz`; no Windows target (task 34) |
 | `.github/workflows/framework-checks.yml` | Rename | Was `markdown-only-pipeline.yml`, whose job asserted the retired opt-in invariant |
 | `.github/workflows/runtime-acquisition.yml` | Create | Replacement: end-to-end acquisition on each runner platform |
 | `framework/constitution.md` | Modify | §runtime-boundary principle 3 + Opt-in invariant; §text-first-artifacts narrowing |

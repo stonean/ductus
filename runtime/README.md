@@ -8,7 +8,7 @@ Deterministic runtime for the [ductus](https://github.com/stonean/ductus) spec-d
 
 A project adopting ductus does not install the runtime by hand: `/ductus` acquires the pinned release into a ductus-owned store during adoption. See [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README, and [docs/runtime.md](https://github.com/stonean/ductus/blob/main/docs/runtime.md) for supplying your own binary.
 
-Every `ductus-v*` tag publishes `ductus-<target>.tar.gz` with a `.sha256` sidecar to GitHub releases, for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc`. The crate also builds from source with `cargo install ductus`.
+Every `ductus-v*` tag publishes `ductus-<target>.tar.gz` with a `.sha256` sidecar to GitHub releases, for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`. The crate also builds from source with `cargo install ductus`, which is how a Windows host gets a binary to name in `[runtime] path`.
 
 ## Usage
 

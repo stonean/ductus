@@ -900,9 +900,10 @@ pub fn validate_write_code_boundary(
 /// rejected rather than normalized silently — the LLM is asked for clean
 /// repo-relative paths.
 ///
-/// The segment screen splits on **both** `/` and `\`: the release ships
-/// the `x86_64-pc-windows-msvc` target, where `\` is a path separator, so
-/// `runtime/a\..\..\x` would otherwise slip a `..` traversal past a `/`-only
+/// The segment screen splits on **both** `/` and `\`: a Windows build of
+/// the runtime, which a Windows host builds from source for `[runtime]
+/// path`, treats `\` as a path separator, so `runtime/a\..\..\x` would
+/// otherwise slip a `..` traversal past a `/`-only
 /// split (its lone backslash-laden segment is not literally `..`) and
 /// escape a `runtime/**` boundary. Treating `\` as a separator here keeps
 /// the screen in step with the leading-`\` and `C:` Windows forms already
@@ -1327,7 +1328,7 @@ mod tests {
         // `runtime/a\..\..\x` starts with `runtime/` and its only
         // `/`-delimited tail segment (`a\..\..\x`) is not literally `..`,
         // so a `/`-only split would wave it through against `runtime/**` —
-        // then `\` resolves as a separator on the Windows release target
+        // then `\` resolves as a separator on a Windows build
         // and the `..` components escape the boundary. Splitting on both
         // separators catches the traversal.
         use super::{ValidationError, validate_write_code_boundary};

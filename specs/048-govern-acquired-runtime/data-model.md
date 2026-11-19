@@ -62,7 +62,7 @@ The `.gitignore` block gains `.ductus/bin/`, joining the anchored `/.ductus/sess
 
 ## Release assets
 
-Published under `https://github.com/stonean/ductus/releases/download/ductus-v{version}/`, one archive plus one sidecar per target. All five are required for a release to publish.
+Published under `https://github.com/stonean/ductus/releases/download/ductus-v{version}/`, one archive plus one sidecar per target. All four are required for a release to publish.
 
 | Target triple | Asset | Sidecar |
 | --- | --- | --- |
@@ -70,11 +70,10 @@ Published under `https://github.com/stonean/ductus/releases/download/ductus-v{ve
 | `x86_64-apple-darwin` | `ductus-x86_64-apple-darwin.tar.gz` | `.sha256` |
 | `x86_64-unknown-linux-gnu` | `ductus-x86_64-unknown-linux-gnu.tar.gz` | `.sha256` |
 | `aarch64-unknown-linux-gnu` | `ductus-aarch64-unknown-linux-gnu.tar.gz` | `.sha256` |
-| `x86_64-pc-windows-msvc` | `ductus-x86_64-pc-windows-msvc.tar.gz` | `.sha256` |
 
-The complete set the release workflow asserts before publishing carries more than these five: the SBOM (`ductus.cdx.json` plus its `.sha256` sidecar) and, since [061](../061-updates-track-the-latest-release-tag/spec.md), the installer `install.sh`, staged from a checkout at the tag. The installer has no sidecar: it is fetched over HTTPS and piped to `sh`, and a post-release job compares the published copy byte for byte with the tag's.
+The complete set the release workflow asserts before publishing carries more than these four: the SBOM (`ductus.cdx.json` plus its `.sha256` sidecar) and, since [061](../061-updates-track-the-latest-release-tag/spec.md), the installer `install.sh`, staged from a checkout at the tag. The installer has no sidecar: it is fetched over HTTPS and piped to `sh`, and a post-release job compares the published copy byte for byte with the tag's.
 
-Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and keeping `.tar.gz` keeps `unzip` out of every permission surface: Claude's seed grants no `tar` (022 task 18), so each of step 6's two `tar` runs, the listing and the extraction, prompts in Manual mode, and Pi has no permission gate.
+Every published platform ships `.tar.gz` rather than `.zip` so extraction is `tar` on every platform and `unzip` stays out of every permission surface: Claude's seed grants no `tar` (022 task 18), so each of step 6's two `tar` runs, the listing and the extraction, prompts in Manual mode, and Pi has no permission gate.
 
 ## Detection states
 
@@ -94,7 +93,7 @@ Each step, and the permission grammar entry it needs. Claude's seed (`framework/
 | Step | Command | Seeded today |
 | --- | --- | --- |
 | fetch archive + sidecar | `curl` | **no** (prompts once) |
-| verify digest | `shasum -a 256` (macOS) / `sha256sum` (Linux) / `certutil -hashfile` (Windows) | yes |
+| verify digest | `shasum -a 256` (macOS) / `sha256sum` (Linux) | yes |
 | list, then extract its one member | `tar`, twice | **no** (prompts for each) |
 | create the store directory | `mkdir` | exact `mkdir -p ~/.ductus/bin/` only |
 | set the executable bit | `chmod` | exact `chmod +x` store command and its `.exe` twin only |
