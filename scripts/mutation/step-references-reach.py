@@ -123,4 +123,11 @@ MUTATIONS = [
         '',
         'check_step_references::tests::the_lists_are_in_a_file_past_the_read_size',
     ),
+    (
+        'M16 a project with no command sources is also judged for reference sections',
+        'src/primitives/check_step_references.rs',
+        '    if commands_listed {\n',
+        '    if true {\n',
+        'check_step_references::tests::a_project_without_framework_sources_judges_no_sections',
+    ),
 ]
