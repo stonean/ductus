@@ -1,47 +1,58 @@
 ---
 spec: 027-bootstrap-migration-registry
-last-run: 2026-10-26T17:36:02Z
-analyzed-against: c0952038a758b7a36c6c57ebb856367fd7655085
+last-run: 2026-11-19T02:26:24Z
+analyzed-against: 7b9aa67e50e661ae4300e8a9bac1570c77d26284
 hard-fail: 0
 blocking-findings: 0
-advisory: 4
-unexamined: 10
+advisory: 1
+unexamined: 17
 analyzed-digest:
-  plan.md: 77b8d64b02840376ed8ad8f2abce36b813a9ea2f5bd6b47849d401343ae88781
-  review.md: 29bbdaa1535b07a7dc3731ba10e21eba42cf423243d90d11f7254e69f86b4a43
-  scenarios/migration-chain-reference-integrity.md: b187024e6ed8fee90fe31be0f2bbcd4786782f8e4395a89c09142f20218f914d
-  scenarios/migrations-apply-once-per-repo.md: ef57af25a1eb071076c60b005ffdbf9f3a1b2afad889ba939b230679b9d4f9b4
-  spec.md: 22446f6225641a473ed72a13a33a9596629e3bb419a894211f955f400683a0ba
-  tasks.md: ff144324ac4ec523c5ef57afaf0922196affd4889c659017111d8d1683aaf360
+  plan.md: 292721de090050a945573dd50e52c9942e6e6c33319abc9e99488dfff28e316b
+  review.md: 84daf5622aecd7281064d059feb2b58be02c8f20bd524de869353fa9bc5fa207
+  scenarios/a-first-adoption-runs-no-migration.md: 72dea9489a50c0db0b1f95b2e61a0ccaa499495a4ef1e4cadde8a5a826c48bce
+  scenarios/a-projects-own-constitution-is-not-relocated.md: f8abe06d0c71fb56767340d373cb44f2c1d401ab309997307bf6a578c760cd82
+  scenarios/migration-chain-reference-integrity.md: cd416ac0962c23dd9e3a675208b6bee5f522544ecf4f788770cd59100f1edee6
+  scenarios/migrations-apply-once-per-repo.md: ecff31c3d2c1a80ad8c3ff8390033bc704cc7cee57428322934f6677243003c2
+  scenarios/seed-files-keep-no-literal-placeholder.md: 58bbb1208e1c7b11f873f00c193bfdc18f9c9664e72042b59c90767c440ca43a
+  spec.md: c4a8548ca101e5457b9ca2f246dac8088a3dc60b7d830259ddd4fd62019c8843
+  tasks.md: bc141b9b62663b3c63e17ec035ad90539b5808eff5a830f4c4b1e4eb39f8c589
 unexamined-by-reason:
-  not-a-live-claim: 4
-  root-absent: 5
+  never-existed: 2
+  not-a-live-claim: 8
+  root-absent: 6
   ships-to-adopter: 1
+rule-digest:
+  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
+  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
+  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
+  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
+  performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
+  performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
+  quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
+  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
+  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+rule-verdicts:
+  BE-INPUT-001: {verdict: addressed, cite: "spec.md#Bootstrap Loop"}
+  BE-INPUT-002: {verdict: addressed, cite: "spec.md#Edge cases and failure modes"}
+  BE-INPUT-004: {verdict: addressed, cite: "spec.md#Bootstrap Loop"}
+  BE-INPUT-008: {verdict: addressed, cite: "spec.md#Resolved Questions"}
+  CFG-ENV-001: {verdict: addressed, cite: "plan.md#`.ductus/config.toml` `[migrations]` section"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
+  CFG-ENV-008: {verdict: addressed, cite: "spec.md#Edge cases and failure modes"}
+  CFG-ENV-012: {verdict: addressed, cite: "spec.md#Adopter State"}
 blocking: false
 dispositions:
-  fixed: 1
-  routed: 0
-  discarded: 4
+  fixed: 14
+  deferred: 0
+  waived: 1
   undispositioned: 0
 decisions:
   - key: plan-record — plan.md §Known Limitations is outside the design record
-    outcome: discarded
+    outcome: waived
     reason: "deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)"
-    decided-at: 2026-10-16T02:24:44Z
-    decided-by: andy@stone.dev
-  - key: grounding — spec.md and plan.md say TOML parsers don't guarantee array-of-tables order preservation across rewrites
-    outcome: discarded
-    reason: rationale for the resolved Registry-order decision in the design record; the order rule it supports (introduced_in by SemVer, lexicographic tie-break on id) does not depend on it (operator decision, 2026-10-16)
-    decided-at: 2026-10-16T02:24:44Z
-    decided-by: andy@stone.dev
-  - key: grounding — plan.md says BSD and GNU sort both support -V
-    outcome: discarded
-    reason: rationale for a SemVer-compare option the plan offered; the shipped loop compares in the bootstrap prose and no script depends on sort -V (operator decision, 2026-10-16)
-    decided-at: 2026-10-16T02:24:44Z
-    decided-by: andy@stone.dev
-  - key: grounding — plan.md says /audit invokes the audit orchestrator via run-generator
-    outcome: discarded
-    reason: describes the wiring the plan designed against, in the design record; it holds, per framework/commands/audit.md step 1 (operator decision, 2026-10-16)
     decided-at: 2026-10-16T02:24:44Z
     decided-by: andy@stone.dev
 ---
@@ -50,7 +61,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 4 advisory; not blocking. 10 unexamined target(s). Dispositions: 1 fixed, 0 routed, 4 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 17 unexamined target(s). Dispositions: 14 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -62,17 +73,36 @@ decisions:
 
 ## Advisory findings
 
-- plan-record — plan.md §Known Limitations is outside the design record — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)
-- grounding — spec.md and plan.md say TOML parsers don't guarantee array-of-tables order preservation across rewrites — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: rationale for the resolved Registry-order decision in the design record; the order rule it supports (introduced_in by SemVer, lexicographic tie-break on id) does not depend on it (operator decision, 2026-10-16)
-- grounding — plan.md says BSD and GNU sort both support -V — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: rationale for a SemVer-compare option the plan offered; the shipped loop compares in the bootstrap prose and no script depends on sort -V (operator decision, 2026-10-16)
-- grounding — plan.md says /audit invokes the audit orchestrator via run-generator — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: describes the wiring the plan designed against, in the design record; it holds, per framework/commands/audit.md step 1 (operator decision, 2026-10-16)
+- plan-record — plan.md §Known Limitations is outside the design record — `specs/027-bootstrap-migration-registry/plan.md` — **waived**: deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)
+
+## Deferred to other specs
+
+*None.*
+
+## Contradictions
+
+*None.*
 
 ## Unexamined targets
 
-- not-a-live-claim: 4
-- root-absent: 5
+- never-existed: 2
+- not-a-live-claim: 8
+- root-absent: 6
 - ships-to-adopter: 1
 
 ## Fixed in this run
 
-- spec-requirements — spec.md carries a point-in-time Completion record (2026-08-17) reading Closed. while the frontmatter reads in-progress — `specs/027-bootstrap-migration-registry/spec.md` — **fixed**
+- rule-assessment — BE-INPUT-004: the Bootstrap Loop's guard named only a slug allowlist and an exact-path match for the path it turns a registry `id` into, and pointed at no containment mechanism; step 1 now points at `extract-archive`'s, which extracts no link entry — `specs/027-bootstrap-migration-registry/spec.md` — **fixed** (decided by the rule)
+- plan-consistency — The Bootstrap loop placement decision said where the loop sits and gave no reason; it now says why, citing `framework/bootstrap/ductus.md` §Instructions (§Plan consistency (blocking if plan exists)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- plan-consistency — The CHANGELOG.md seed format decision gave the seed text and its ordering with no reason, describing a seed and a most-recent-first order the file no longer holds; it now states the file's shape as it stands, with its reason (§Plan consistency (blocking if plan exists)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The DSL trade-off said five of six existing migrations have twists, describing migrations since archived, with no source; it now names each back-filled migration's twist from its recipe in `CHANGELOG.md` (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — Known Limitations said no non-comment line under `runtime/src` names `framework/migrations/`, a measurement with no command; it now gives the `grep` and its date (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — Known Limitations said `c061c1f0` archived five entries each with `sunset_after` 0.10.0, though `workflows-sunset` had 0.25.0; it now gives each, citing the `CHANGELOG.md` headings and `git show c061c1f0:version` (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The note after Affected Files said the pre-commit hook regenerates a README spec-status table, which no generator or hook does now; the clause is gone (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The `apply-migrations` trade-off said a primitive would carry user-interaction protocol design that exists nowhere else in the runtime, citing nothing, though `gate-confirm` surfaces prompts; it now says a primitive reaches the operator only through a gate the host routes (`ductus gate-confirm --help`) (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The git-archaeology trade-off said a history check breaks the current-state-only contract every other family follows, though 10d and other families read history; that reason is gone and 10d's one-file history read is named (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The Overview and the procedure-file shape said every procedure file's first step is a target-presence check, though nine of the fifteen open otherwise; both now state what each file's first step shows and point at AC21 (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The SemVer decision said the loop's filter is SemVer compare's only consumer, though Family 10's 10d and 10e compare versions; it now scopes the claim to the bootstrap and names 10d and 10e (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The `target_paths` field said Family 10 holds each path absent from `framework/`, though 10b checks only `framework/`-prefixed ones; it now says so, citing the script's header (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The Family 10 wiring said `/audit` invokes `run-all.sh` via `run-generator`, citing nothing; it now cites `framework/commands/audit.md` step 1 (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/plan.md` — **fixed** (decided by the rule)
+- grounding — The out-of-scope diff-check bullet said the check would couple `/audit` to git history shape, though `/audit` already reads history in 10d; it now says the check itself would be coupled (§Grounding (advisory)). — `specs/027-bootstrap-migration-registry/spec.md` — **fixed** (decided by the rule)
