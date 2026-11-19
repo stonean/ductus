@@ -33,7 +33,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 
 ## Motivation
 
-022's data model had reached 99,953 bytes against a 50,000-byte read size, and trimming could not close the gap: measured by eight-word overlap, only 2 KB of its prose repeated another file. Its content was contract. The primitives that write and judge the audit records were one of its two largest slices with a single subject, so they became a spec of their own.
+022's data model had reached 99,953 bytes (`wc -c` at `fd8e44a6`, 2026-10-15) against a 50,000-byte read size, and trimming could not close the gap, since its content was contract. The primitives that write and judge the audit records were a slice of it with a single subject, so they became a spec of their own.
 
 ## The review record
 
@@ -67,4 +67,4 @@ A record is stale when the files it read have changed since, compared by content
 ## Resolved Questions
 
 - **Why a spec of its own rather than a scenario on 022?** `/{project}:specify`'s routing gate offered 022, the runtime-owning spec. Declined: 022's data model exceeded one read, and these primitives share one subject — the two audit records and the gate that reads them — that no other part of 022 needs to understand. (Operator-approved split, 2026-10-15.)
-- **Why two new specs and not one?** One subject per spec: this one holds the audit records and the gate that reads them, and `067-analyze-and-audit-checks` the checks whose findings feed the analyze record, which have readers these primitives do not — the `/{project}:audit` families and the pre-commit hook. Size does not decide it: one spec holding both would carry a data model of about 40 KB (the two as built, 19,775 and 20,201 bytes by `wc -c` on 2026-10-15), some 10 KB under the 50,000-byte read size, where two keep each near 20 KB; 022's 44,823 bytes are the same either way. The dependency runs 067 → 066 → 022.
+- **Why two new specs and not one?** One subject per spec: this one holds the audit records and the gate that reads them, and `067-analyze-and-audit-checks` the checks whose findings feed the analyze record, which have readers these primitives do not — the `/{project}:audit` families and the pre-commit hook. Size does not decide it: one spec holding both would carry a data model of about 40 KB (the two as built, 19,775 and 20,201 bytes by `wc -c` at `391af75b`, 2026-10-15), some 10 KB under the 50,000-byte read size, where two keep each near 20 KB; 022's 44,823 bytes there are the same either way. The dependency runs 067 → 066 → 022.

@@ -1,60 +1,20 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-19T00:38:50Z
-reviewed-against: efd3d488116e0752e8e7fb94f5c712c42f6263c5
-diff-base: 78fd056ade2638e31f158626cd4df79fde08ad11
+last-run: 2026-11-19T01:12:39Z
+reviewed-against: 14713cefea941f002828a2806c42e5fc4b0fcc6f
+diff-base: d10c2c45063cd2a55fe0020691fe01dfbb7468d9
 must-violations: 0
 should-violations: 0
-low-confidence: 1
-examined: 23
-scope: 64
+low-confidence: 0
+examined: 2
+scope: 3
 unread:
-  - .claude/commands/ductus/amend.md
-  - .claude/commands/ductus/implement.md
-  - .claude/commands/ductus/review.md
-  - .ductus/reference/audit.md
-  - .ductus/reference/implement.md
-  - .ductus/reference/review.md
-  - .github/workflows/runtime-acquisition.yml
-  - .github/workflows/runtime-release.yml
-  - .pi/prompts/ductus-amend.md
-  - .pi/prompts/ductus-implement.md
-  - .pi/prompts/ductus-review.md
-  - AGENTS.md
-  - framework/bootstrap/ductus.md
-  - framework/bootstrap/govern.md
-  - framework/commands/amend.md
-  - framework/constitution.md
-  - framework/reference/audit.md
   - runtime/CHANGELOG.md
-  - runtime/src/interpreter/mod.rs
-  - runtime/src/interpreter/payload.rs
-  - runtime/src/main.rs
-  - runtime/src/primitives/check_review_gate.rs
-  - runtime/src/primitives/compute_review_scope.rs
-  - runtime/src/primitives/line_citations.rs
-  - runtime/src/primitives/mod.rs
-  - runtime/src/primitives/write_review.rs
-  - runtime/src/schema/descriptions.rs
-  - runtime/src/schema/extensions.rs
-  - runtime/src/schema/primitives.rs
-  - runtime/tests/mcp.rs
-  - scripts/audit/README.md
-  - scripts/audit/done-spec-criteria.sh
-  - scripts/mutation/line-citation-strip-066.py
-  - scripts/mutation/reopen-measure.py
-  - scripts/mutation/scope-attribution.py
-  - specs/000-slash-commands/spec.md
-  - specs/029-bootstrap-runtime-autowire/review.md
-  - specs/029-bootstrap-runtime-autowire/spec.md
-  - specs/048-govern-acquired-runtime/data-model.md
-  - specs/048-govern-acquired-runtime/plan.md
-  - specs/048-govern-acquired-runtime/spec.md
-excluded: 26
+excluded: 12
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 1
+fix-rounds: 0
+re-reads: 0
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
@@ -103,9 +63,9 @@ criteria-verdicts:
     digest: 010fec4de3c948b457a9c6ce91153ca3e200783fe86ab5f7b66b154a9cc07016
 blocking: false
 dispositions:
-  fixed: 25
+  fixed: 0
   deferred: 0
-  waived: 23
+  waived: 3
   undispositioned: 0
 decisions:
   - key: "other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md`"
@@ -303,15 +263,20 @@ decisions:
     reason: a Resolved Question dated 2026-08-17 recording its reasoning as of then, quoting the constitution as it read, exemption (c) included; the decision it records, reopening, still holds and now routes the criterion to review's criteria step, and 9f5a0fcb swept the scenario's Context and Behavior, which state current behavior
     decided-at: 2026-11-19T00:38:50Z
     decided-by: rule
+  - key: other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md`
+    outcome: waived
+    reason: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim.
+    decided-at: 2026-11-19T01:12:39Z
+    decided-by: rule
 ---
 
 # Review — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-066's review of task 27, the criteria step's first run: the window from 78fd056a (base-source reopen) to efd3d488, whose 066 commits are cbffcddb to 24d9bbea, ce10acac and efd3d488. Five independent agents divided it by behavior. Three ran all five passes, over the record (27a), what owes a review and the gate (27b, 27c), and the commands, exec walker and sweep (27d, 27e), each reading the nine loaded backend and cross rule files whole (285,795 bytes; slice B read seven of them on a second request). One judged AC1 to AC6 against their code wherever it lies, running their tests and driving the release binary on fixtures. One checked 066's data model, scenario, plan, spec and tasks whole against the code. 23 of the 64 scope entries were read whole and 41 are unread: 17 at every 066 hunk with each item or section enclosing one (write_review.rs, compute_review_scope.rs, check_review_gate.rs, interpreter/mod.rs, payload.rs, extensions.rs, main.rs, primitives/mod.rs, schema/primitives.rs, descriptions.rs, tests/mcp.rs, reopen-measure.py, scope-attribution.py, the constitution, AGENTS.md, the audit reference and framework/bootstrap/ductus.md); 10 mirrors, the nine generated copies of the review, implement, amend and audit sources, which gen-claude-commands.sh --check reports in sync after this run's edits, and framework/bootstrap/govern.md, byte-identical to ductus.md by cmp; 7 uncommitted entries of another session's 029 and 048 work (two workflows, 029's spec and record, 048's spec, plan and data model), not read; and 7 of this run's own fixes that joined the scope (amend.md, runtime/CHANGELOG.md, line_citations.rs, whose text before the fix the criteria agent read whole, both scripts/audit files, line-citation-strip-066.py and 000's spec.md), which the fix round re-reads. Every pass ran. One finding, QUAL-TEST-001 (should, low confidence): an_unreadable_spec_is_an_error_not_a_spec_owing_nothing skips its assertion when the process can read a mode-000 file, as under root. The criteria step judged all six criteria met, AC6 only after a fix: line_citations took a range anchor's second L as optional, so stripping #L12-20 read mechanical, which AC6 and the seven other sources naming #LN-LM do not allow; the owner chose to require the L (2026-11-18), and on a fixture stripping #L12-20 now reopens a done spec. 48 observations. 25 were fixed in the run, among them the broken contract that failed CI run 44423820535 on every platform (review-basic.jsonl was blessed before ce10acac edited review.md, moving its fixture's diff-base; re-blessed, only diff-base changing), tests and mutants M22 to M27 for five task-27 behaviors no mutant covered, the gate's guidance offering a waiver for a not-met criterion (M28), changelog entries for tasks 26 and 27, and stale claims of an implement-side criteria check in amend.md, the audit script and its README, the review reference, 000's spec and 066's plan, spec and scenario. 9 were waived by the rule with their reasons, and 14 matched stored decisions and were carried, each issue still standing at HEAD. 16 stored decisions were retained, their files unread by this run. After the fixes, cargo fmt --check, clippy -D warnings and the whole cargo test --release --locked (3,623 passed, 0 failed) ran from a worktree of HEAD holding this run's diff alone, and all 28 mutants of criteria-in-review-066.py and all 23 of line-citation-strip-066.py were killed. Fix round 1's independent re-read read every path its brief names, another session's 029 record and the golden's changed lines whole on a second request, and found nothing; round 2 was empty.
+066's second review, of the window from d10c2c45 (base-source last-review, the first review's record) holding three uncommitted entries: runtime/CHANGELOG.md, whose four 066 entries for tasks 7, 14, 20 and 22 gain the BREAKING label and a sentence naming what is breaking against 0.59.11, and the plan's new BE-COMPAT-001 paragraph and grounding citations in the plan and spec, both made for 066's analysis. One agent that held the nine loaded backend and cross rule files read whole (285,795 bytes) ran all five passes over them, and read plan.md and spec.md whole and each CHANGELOG hunk with its whole entry; runtime/CHANGELOG.md is unread, read at its hunks only. It checked every claim the new text makes against the tree: each list named as inline at ductus-v0.59.11 against that tag's result structs, each commit and task named, the attributions to 080's task 5 and 073's task 14, and each symbol and test the citations name; the exec walker's reasons at 680e4739 were checked by the host in analyze_tally.rs. No finding. One observation, waived by the rule with its reason, and the two stored decisions on plan.md's Affected Files carried, each still standing. The criteria step judged AC1 to AC6 again, each met against the tree after d10c2c45, their text unchanged, the tests proving each re-run. Nothing was fixed, so no fix round ran.
 
-1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+0 fix round(s): 0 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
 6 of 6 acceptance criteria judged met.
 
@@ -325,13 +290,7 @@ decisions:
 
 ## Low-confidence findings
 
-### LOW-CONFIDENCE: QUAL-TEST-001 — an_unreadable_spec_is_an_error_not_a_spec_owing_nothing branches its assertion away when the process can read a mode-000 file
-
-- **File**: `runtime/src/primitives/criterion_verdicts.rs:136-154`
-- **Rule**: A test SHOULD fail when the behavior it names is removed or broken. A test that passes whether or not the code under test behaves as named SHOULD NOT be added or counted as coverage.
-- **Finding**: The test sets mode 0o000 and asserts owing_in errors only inside `if std::fs::read(&spec).is_err()`; under a root user (or a file system ignoring modes) the assertion is skipped and the test passes with the unreadable-is-an-error behavior removed (mutant 'an unreadable spec owes nothing' is killed as uid 501 but could not be in a root run). The comment records the branch; the remaining assertion (absent file owes nothing) holds in either case. Low confidence: the suite's known runs are non-root.
-- **Auto-fixable**: no
-- **Suggested fix**: Make the unreadable file independent of the user, for example a directory named spec.md (read_text then fails for every user), or assert the not-root condition and skip loudly instead of passing.
+*None.*
 
 ## Waived findings
 
@@ -343,63 +302,18 @@ decisions:
 
 ## Acceptance criteria
 
-- AC1 — met: write_analysis.rs run() derives blocking and refuses unparseable spec frontmatter (driven: YAML parse error, no analysis.md written); check_review_gate.rs run_with_lint orders review checks before analyze_half_block (NotAnalyzed, AnalyzeFindings); cargo test --lib check_review_gate (95 pass) and write_analysis (100 pass), incl. blocking_is_set_by_either_gating_tier, malformed_frontmatter_is_never_given_a_clean_record, a_reviewed_but_unanalyzed_spec_is_blocked, a_missing_review_is_reported_before_a_missing_analysis
-- AC2 — met: write_analysis.rs UNEXAMINED_REASONS + refuse_unknown_reasons, by_reason fold with unexamined = sum, omitted when empty (render), schema/primitives.rs parse_reason_count rejects malformed pairs; driven on CLI (bad pair, bad count, bogus reason refused with nothing written; 2+3 gave unexamined 5 returned; clean run writes no map); tests a_reason_outside_the_closed_set_is_refused, the_reason_list_is_the_data_models_table, a_bare_total_survives_a_derived_reason_beside_it
-- AC3 — met: write_review.rs render_contracts always writes reviewed-digest (empty map included) over is_review_contract; analyze_subjects.rs freshness_of/exempt_renames keep reviewed-against for the sweep exemption only and keep candidates when trees are unavailable; no digest is Undeterminable; compute_review_scope.rs contracts_against_digest uses it; the gate (check_review_gate.rs) neither compares it nor names an unjudged review in passing_notices (superseded clause holds); tests a_spec_with_no_durable_contracts_records_an_empty_digest, an_empty_contract_digest_is_current_but_an_absent_one_is_not, a_stale_digest_puts_its_contract_in_scope_and_owes_no_review, a_review_record_with_no_digest_raises_no_review_notice
-- AC4 — met: check_review_gate.rs already_done_block (status == "done" exactly) runs before markdown_lint_block, returns AlreadyDone with passed false; driven: done gave blocked-by already-done, status wibble fell through to not-reviewed; tests a_done_spec_short_circuits_without_claiming_to_have_passed, a_done_spec_is_not_held_against_a_later_lint_violation, an_unrecognized_status_is_not_treated_as_done
-- AC5 — met: check_review_gate.rs cross_spec_impact_states/classify_cross_spec_entry/links_back/cross_spec_impact_block, ordered after scenario_question_block and before load_review_record, states carried onto the pass; driven: discharged, undischarged, target-missing, self-reference and a symlinked spec.md leaving the project reported outside-project with a block; tests a_blockquoted_signpost_discharges_the_obligation, a_spec_md_linked_outside_the_project_is_reported_and_never_read, a_scenario_name_that_is_not_utf8_has_no_contained_spelling, an_undischarged_impact_outranks_a_missing_review
-- AC6 — met: line_citations.rs find/strips_to (:N, :N-M with a hyphen or an en dash, :N:C, #LN, #LN-LM, the range's second L required since this run's fix, so stripping #L12-20 is no strip: a_range_anchor_needs_its_second_l) is the one rule mechanical_sweep.rs, classify_spec_edit.rs and analyze_subjects.rs freshness_of use for both records; a token needs an extension, a listed one with no slash, so a host:port is no citation; constitution.md §spec-lifecycle (c) states it; tests a_strip_only_commit_leaves_the_records_current, a_citation_stripped_from_a_criterion_is_a_correction, a_strip_beside_another_change_is_judged_on_that_change, line_citations (12 pass), mechanical_sweep_parity (5 pass); driven on a fixture with the fixed build: stripping #L12-20 reopens a done spec, and #L12-L20, #L12 and :12–20 strips read mechanical
+- AC1 — met: write_analysis.rs run() derives blocking, refuses unparseable spec frontmatter; check_review_gate.rs run_with_lint puts every review check before analyze_half_block (NotAnalyzed, AnalyzeFindings); cargo test --lib check_review_gate (96) and write_analysis (100) pass; driven on the binary
+- AC2 — met: write_analysis.rs UNEXAMINED_REASONS/refuse_unknown_reasons and the by_reason sum, schema/primitives.rs parse_reason_count; driven (2+3 gave unexamined 5, bogus reason and x=y refused); tests a_reason_outside_the_closed_set_is_refused, the_reason_list_is_the_data_models_table pass
+- AC3 — met: write_review.rs render_contracts always writes reviewed-digest; analyze_subjects.rs freshness_of/exempt_renames, compute_review_scope.rs contracts_against_digest; the gate no longer compares it; tests an_empty_contract_digest_is_current_but_an_absent_one_is_not, a_stale_digest_puts_its_contract_in_scope_and_owes_no_review pass (write_review 156, compute_review_scope 134)
+- AC4 — met: check_review_gate.rs already_done_block runs before markdown_lint_block on the exact value done; driven (done gave already-done); test a_done_spec_is_not_held_against_a_later_lint_violation passes
+- AC5 — met: check_review_gate.rs cross_spec_impact_states/cross_spec_impact_block ordered after scenario_question_block and before the review record; driven (discharged/undischarged/target-missing/self-reference/outside-project); tests a_blockquoted_signpost_discharges_the_obligation, a_spec_md_linked_outside_the_project_is_reported_and_never_read pass; d10c2c45's must_violations_block change touches only the review half, which AC5 does not claim
+- AC6 — met: line_citations.rs strips_to with anchor_suffix_end now requiring -L so only #LN and #LN-LM are strips, matching the criterion exactly, shared by mechanical_sweep.rs, classify_spec_edit.rs and analyze_subjects.rs; tests a_range_anchor_needs_its_second_l (line_citations 12 pass), a_strip_only_commit_leaves_the_records_current, mechanical_sweep_parity (5) pass
 
 ## Observations
 
-- convention — WRITE_REVIEW said an empty scope's report is blocking:false, though a not-met criterion blocks it (an_empty_scope_reads_blocking_from_a_not_met_criterion) — `runtime/src/schema/descriptions.rs` — **fixed** (decided by the rule)
-- convention — WRITE_REVIEW's list of the CLI's --{name}-json arguments left out criteria, which task 27a added as --criteria-json — `runtime/src/schema/descriptions.rs` — **fixed** (decided by the rule)
-- other — three behaviors task 27a added had no test its mutant turned red: the criteria section's place after the deferred findings, the quoted #N name of an unlabelled not-met criterion (bare, a YAML comment), and the criteria sentence on a supplied Summary; two tests and mutants M22 to M24 added — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
-- other — a run judging only some criteria records criteria-judged and criteria-met over those alone, and its generated Summary reads 'N of N', with no count of the criteria it left unjudged — `runtime/src/primitives/write_review.rs` — **waived**: the data model defines criteria-judged as the criteria the run judged and promises no unjudged count; compute-review-scope names each unjudged criterion in criteria-owing and reads review-owed true, so the gate holds done, and the command names a criterion it could not judge in the Summary (decided by the rule)
-- other — task 27's breaking changes, which the plan's BE-COMPAT-001 paragraph classifies, had no runtime/CHANGELOG.md [Unreleased] entry, nor had task 26's; both added — `runtime/CHANGELOG.md` — **fixed** (decided by the rule)
-- other — criteria-owing's file form had no test, since the only file-form test's spec holds no criterion, so leaving the list out of the lists file, or inline, survived; a test and mutants M25 and M26 added — `runtime/src/primitives/compute_review_scope.rs` — **fixed** (decided by the rule)
-- other — review_owed_block's arm naming both the changed paths and the owing criteria had no test; a test and mutant M27 added — `runtime/src/primitives/check_review_gate.rs` — **fixed** (decided by the rule)
-- bug — must_violations_block's guidance for a record blocking only through a not-met criterion offered a waiver and a deferral, then said neither releases a criterion; it now matches on the three cases its message does, with mutant M28 — `runtime/src/primitives/check_review_gate.rs` — **fixed** (decided by the rule)
-- convention — must_violations_block carried two 'Gate check 5:' doc comments, the second appended by e0de7982; merged into one — `runtime/src/primitives/check_review_gate.rs` — **fixed** (decided by the rule)
-- other — 66203361 (task 27b) also carries 029 task 17's edit to framework/bootstrap/ductus.md and govern.md, dropping the 'after a fallback to tar' clause, which its message does not name — `framework/bootstrap/ductus.md` — **waived**: another session's staged hunk that rode along through the shared index; docs/developing-ductus.md §Running a second session records the incident, history on main stays as written, and the section reads consistently with 029 task 17 (decided by the rule)
-- bug — criterion_verdicts keeps verdicts by text digest, so two criteria whose text is the same, labels set aside, share one met verdict — `runtime/src/primitives/criterion_verdicts.rs` — **waived**: contrived: two criteria with the same text state one requirement, so a verdict judging it holds for both, and the scenario keys a verdict to the criterion's text (decided by the rule)
-- other — criterion_verdicts::owing_in reads a spec.md that is not a file as owing nothing, while an unreadable one fails — `runtime/src/primitives/criterion_verdicts.rs` — **waived**: unreachable from its callers: compute-review-scope and check-review-gate read the spec before it, so a missing or non-file spec.md fails there first (decided by the rule)
-- other — check_review_gate's unticked_criterion_block enumerates and names criteria as criterion_verdicts::owing does, rather than through one shared helper — `runtime/src/primitives/check_review_gate.rs` — **waived**: the naming (criterion_verdicts::name) and the checkbox parse are already shared; what repeats is a loop of a few lines, and the two select different criteria, unticked against unjudged (decided by the rule)
-- bug — at HEAD cargo test --test parity failed review_basic_stream_matches_golden, on all three CI platforms of run 44423820535: ce10acac edited framework/commands/review.md after e0de7982 blessed runtime/tests/golden/review-basic.jsonl, moving the fixture repo's diff-base sha; the golden is re-blessed — `runtime/tests/golden/review-basic.jsonl` (breaks the spec's contract) — **fixed** (decided by the rule)
-- convention — framework/commands/amend.md's criterion route still said implement's completion gate verifies a criterion, and its report that implement verifies a reopened spec; both now name review — `framework/commands/amend.md` — **fixed** (decided by the rule)
-- convention — scripts/audit/done-spec-criteria.sh's header and scripts/audit/README.md's Family 27 entry still said implement.md marks each verified criterion; 9f5a0fcb swept only framework/reference/audit.md — `scripts/audit/done-spec-criteria.sh` — **fixed** (decided by the rule)
-- convention — framework/reference/review.md's §Resolve target and scope item 3 and §Record the run said an empty scope records blocking: false and blocking is MUST-only, though a not-met criterion blocks — `framework/reference/review.md` — **fixed** (decided by the rule)
-- convention — framework/reference/review.md's report template left out the ## Acceptance criteria section write-review renders after the deferred findings — `framework/reference/review.md` — **fixed** (decided by the rule)
-- other — the criteria step did not say a verdict's note is one line, which write-review otherwise refuses before writing — `framework/reference/review.md` — **fixed** (decided by the rule)
-- convention — a payload.rs test comment still named the completion gate's read step as the source of the verifyCriteria request's criteria — `runtime/src/interpreter/payload.rs` — **fixed** (decided by the rule)
-- other — on the exec path mark_each_verdict returns the first mark-criterion error, a changed-since-read refusal included, so the walk halts with earlier verdicts ticked and no record written, where the host path reports a refusal beside its verdict and goes on — `runtime/src/interpreter/mod.rs` — **waived**: the walker halts on any primitive error by design; the refused criterion is left as it was and no record is written, so the review stays owed and compute-review-scope names every criterion not judged met, the scenario's outcome (decided by the rule)
-- other — docs/developing-ductus.md §Sizing a review's parts calls the nine loaded rule files backend and gives 285,666 bytes, against 285,795 at HEAD with three of them cross files — `docs/developing-ductus.md` — **waived**: a dated measurement of 2026-11-16 and 2026-11-17, outside efd3d488's hunks, and the drift changes no sizing rule the paragraph states (decided by the rule)
-- convention — a write_review.rs test doc comment said the gate reads an empty reviewed-digest as current, though the gate no longer compares the digest (AC3's superseded clause) — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
-- bug — line_citations' anchor_suffix_end took a range anchor's second L as optional, so stripping #L12-20 read mechanical, which AC6 and the seven other sources naming only #LN-LM do not allow; the L is now required (owner decision, 2026-11-18), with a test and mutant M23 of line-citation-strip-066.py — `runtime/src/primitives/line_citations.rs` — **fixed**
-- other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
-- other — plan.md said the exec walker's mark-criterion binding already read verifyCriteria's verdicts that way, though 27d added mark_each_verdict and write-review's criteria binding — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- convention — plan.md's Affected Files row for runtime/src/interpreter/mod.rs described a docs change, where the change is the verdict fan-out and the criteria binding — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- other — plan.md stated '24 live claims' of five passes with no method, where a grep at HEAD returns 27 lines; the count is dropped — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- convention — spec.md's The completion gate section listed the gate's checks without the unchecked-task and unticked-criterion checks — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
-- convention — spec.md's The review record section did not name the criteria step's four record fields — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
-- convention — ComputeReviewScopeResult's lists_file doc comment named five lists, leaving out criteria-owing — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
-- convention — the criteria-are-verified-in-review scenario cited 'this spec's task 9', pruned in a70ff74c, beside the scenario that already carries the point — `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md` — **fixed** (decided by the rule)
-- convention — 000's spec.md command list still said implement verifies acceptance criteria — `specs/000-slash-commands/spec.md` — **fixed** (decided by the rule)
-- other — 000's criterion-route-after-draft Resolved Question says reopening routes a criterion into implement's criterion-verification step — `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — **waived**: a Resolved Question dated 2026-08-17 recording its reasoning as of then, quoting the constitution as it read, exemption (c) included; the decision it records, reopening, still holds and now routes the criterion to review's criteria step, and 9f5a0fcb swept the scenario's Context and Behavior, which state current behavior (decided by the rule)
-- other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **waived**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
-- other: the implement reference's "non-blocking" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md` — **waived**: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
-- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **waived**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
-- other — invalidate-review's SCALARS list drops the run's fix-round fields but leaves `open-findings` and `unread` (079/081 fields) in a record it resets to `last-run: null` (verified on a fixture built under the scratchpad: both survive). compute-review-scope reads `open_findings` from the HEAD record without requiring last-run, so an invalidated record can still name paths owing a review; `unread` is credited only when last-run is set, so it is inert. — `runtime/src/primitives/invalidate_review.rs:112-137` — **waived**: open-findings left on an invalidated record keep the paths the invalidated run left unresolved in the next review's scope, which is conservative; no gate reads either field when last-run is null, and the data model names only the six fix-round fields (decided by the rule)
-- other — `framework/commands/review.md` step 1 (94e5b151) says a zero scope with `deleted-count` above zero is empty 'because every path it would hold was deleted', but `deleted` holds every window deletion whoever's commit made it and `excluded` can also empty the scope, so the sentence and the Summary naming each `deleted` path can mislabel another spec's deletions — `framework/commands/review.md:119` — **waived**: the scenario's edge case scopes the claim to the spec's own code deletions with review-owed true; the report over-names rather than hides a path, and no gate reads it. The wording fix reopens review.md's generated mirrors and 066 for a low-confidence imprecision (decided by the rule)
-- convention — AGENTS.md 2604a6f9's two new bullets (a docs/ commit naming no spec; a subagent's refused Write) are true for every project running the pipeline, so §drift-prevention routes them to the constitution, and AGENTS.md sits 233 bytes under its 50,000-byte ceiling — `AGENTS.md:86` — **waived**: AGENTS.md already carries sibling per-incident bullets of the same kind (the cut-off hand-back and killed-background-agent bullets) and the owner chose this home; the pre-commit hook enforces the ceiling (decided by the rule)
-- other — the new gate tests prove each of the three containments but not three neighbours: no test holds two scenarios (one linked outside, one linking back inside) to show the verdict does not depend on listing order, which the commit and plan state as the reason every scenario is contained before any is read; none shows a symbolic link that stays inside the project is still read and discharges; none asserts the outside-project guidance clause. A mutant that interleaves containment with the read, or refuses every link, survives — `runtime/src/primitives/check_review_gate.rs:1648-1760` — **waived**: each behavior the four tests and four mutants name is killed by reading (M1 to M4 each remove one containment and a named test asserts the state, the detail and the message); the order claim holds by construction of the separate loop, and a test of it would depend on read_dir order the OS controls, so it would fail only some of the time under its mutant. QUAL-TEST-001 judges a test that cannot fail, and none of the five does (decided by the rule)
-- other — classify_cross_spec_entry's outside closure maps every error validate_contained returns to the outside-project state, including a symbolic-link loop, a lexical refusal of the spec root and an Io error resolving the project root itself, each reported as reads outside the project with the error text as detail — `runtime/src/primitives/check_review_gate.rs:1149-1158` — **waived**: each such state holds done the same, nothing was read, and the detail carries the true reason; the spec root is validated before the gate runs and the project root exists, so the Io arm is unreachable in practice. A fourth state would add a response value with no distinct remedy (decided by the rule)
-- other — the gate could have contained the affected spec in one call with validate_feature_path, which walks the directory and refuses on any outward link under it; the commit contains three path kinds by hand instead — `runtime/src/primitives/check_review_gate.rs:1150-1207` — **waived**: validate_feature_path refuses the whole call on a link in any file under the directory, including files the gate never reads (research.md, a data model), and returns an error rather than a per-entry state; using it would widen what the gate refuses and lose the outside-project result the spec requires (QUAL-DELEG-001's shape: the shared check enforces more than the local one needed) (decided by the rule)
-- perf — each validate_contained call re-resolves the canonicalized project root, so one entry costs two calls plus one per scenario, each a resolve of the root and a symlink_metadata walk of the path — `runtime/src/primitives/check_review_gate.rs:1171-1205` — **waived**: an affected spec holds tens of scenarios and a spec declares a handful of entries, so the count is a small constant against the file reads the gate already makes for each; no measurement shows a cost and a shared canonical-base parameter would add a second containment entry point to mod.rs (decided by the rule)
-- other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137` — **waived**: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both. (decided by the rule)
+- other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md` — **waived**: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim. (decided by the rule)
 - other — plan.md Affected Files omits files f65ef759 changed for task 25: docs/analyze.md, framework/reference/implement.md, runtime/src/primitives/mod.rs, scripts/mutation/reopen-measure.py and 079's spec.md — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims and is the owner's plan decision, not a mechanical edit; every one of these files is already in the window through the commit that changed it (decided by the rule)
-- other — the data model's compute-review-scope Size paragraph says performReview's request names every in-scope file whole, but the exec walker's load_scope_files (runtime/src/interpreter/payload.rs) silently skips a scope file that is missing, unreadable or not UTF-8, naming only a path leaving the project in unexaminable — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **waived**: the code is 022 and 080's exec walker, outside 066's primitives; the sentence cites 022's data model for the claim, a correction lands in 022's directory, and nothing in 066's code depends on it (decided by the rule)
-- convention — the constitution's §spec-lifecycle case (c), a citation's line number removed, does not say a line number set apart in its own code span is outside it, though 067's check reports one and removing it deletes a span, which reopens a done spec — `framework/constitution.md` — **waived**: the plan's definition and CLASSIFY_SPEC_EDIT's compiled description state the exclusion, the case is a precision gap rather than a contradiction, and the constitution has one byte of headroom under its 50,000-byte ceiling, so a clarifying rewrite owes a cut elsewhere in a document 050 owns (decided by the rule)
+- other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
 
 ## Skipped passes
 
@@ -407,32 +321,18 @@ decisions:
 
 ## Excluded from scope
 
-- `framework/bootstrap/ductus-procedure.md` — 027-bootstrap-migration-registry
-- `scripts/audit/migration-coverage.sh` — 027-bootstrap-migration-registry
-- `scripts/tests/test-migration-coverage.sh` — 027-bootstrap-migration-registry
-- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule
-- `specs/000-slash-commands/scenarios/validation-gates.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule
-- `specs/007-govern-workflow/plan.md` — 007-govern-workflow
-- `specs/015-tarball-fetch/plan.md` — 015-tarball-fetch
-- `specs/020-code-review/data-model.md` — 020-code-review
-- `specs/020-code-review/spec.md` — 020-code-review
-- `specs/022-deterministic-runtime/data-model.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule
-- `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule
-- `specs/026-framework-self-audit/analysis.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 026-framework-self-audit
-- `specs/027-bootstrap-migration-registry/plan.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/spec.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/056-bootstrap-archive-boundary-split/analysis.md` — 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/spec.md` — 056-bootstrap-archive-boundary-split
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule
-- `specs/079-review-and-analysis-work-converges/spec.md` — 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/spec.md` — 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `.github/workflows/runtime-acquisition.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `.github/workflows/runtime-release.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `framework/bootstrap/ductus.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `framework/bootstrap/govern.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/029-bootstrap-runtime-autowire/tasks.md` — 029-bootstrap-runtime-autowire
+- `specs/048-govern-acquired-runtime/data-model.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `specs/048-govern-acquired-runtime/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
 
 ## Unexamined governance
 

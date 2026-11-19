@@ -650,7 +650,7 @@ its version and date.
   returns, checked before use. A host that cannot (Pi) runs them itself, and
   `ductus exec` still asks per pass and per rule.
 
-- **`process-decisions` keeps retained decisions out of its inline result
+- **BREAKING: `process-decisions` keeps retained decisions out of its inline result
   (spec 066, task 22).** A retained decision asks nothing of the host, yet
   each came back inline with a notice of its own, and in one session they
   were 131K of the 136K characters the primitive returned, which every later
@@ -658,6 +658,11 @@ its version and date.
   one's own notice (`retained-notices`) are in the file `lists-file` names,
   in either form, `retained-count` stays inline, and `notices` carries one
   line per reason instead, a scope that could not be read on its own line.
+  Since task 14, past `[artifacts] read-size-bytes` no list is inline, and
+  `lists-file` names the file holding them all. Breaking under
+  `BE-COMPAT-001`: `matched`, `expired`, `retained` and `notices`, inline in
+  0.59.11, are absent inline past the read size, and `retained` whenever a
+  decision is retained.
 
 - **`write-review`'s departure waivers are bounded by the review scope,
   follow their entry, and yield no deferral (spec 073, review round 1).** An
@@ -830,15 +835,17 @@ its version and date.
   `target-unparseable` skip (family `outward-link`) and keeps running, instead
   of reading the file behind it. A linked `spec.md` ends the run with the skip
   alone and the status `unreadable` (spec 067, spec 022).
-- **`write-review` and `check-review-gate` bound a stale analysis's path list
-  (066).** `write-review`'s `analyze-freshness.paths` and `check-review-gate`'s
+- **BREAKING: `write-review` and `check-review-gate` bound a stale analysis's path list
+  (066, task 20).** `write-review`'s `analyze-freshness.paths` and `check-review-gate`'s
   new `analyze-stale-paths` (the artifacts the message shows three of) are
   inline while the result fits `[artifacts] read-size-bytes`, and past it move
   to the file `lists-file` names, under the key `analyze-stale-paths`. Each
   result gains `analyze-stale-paths-count`, in both forms, and `write-review`
   gains `form` and `lists-file`; a `stale` freshness whose list moved carries
   no `paths` key, so it never reads as a short complete list
-  (`BE-PAYLOAD-001`).
+  (`BE-PAYLOAD-001`). Breaking under `BE-COMPAT-001` for `write-review` past
+  the read size, where a stale freshness no longer carries the `paths` it
+  carried in 0.59.11; `check-review-gate`'s list is new.
 - **Every destination-judging writer refuses the runtime pointer's directory
   (spec 022).** `apply-manifest`, `enforce-manifest`, `merge-managed-block`,
   `append-task`, `create-scenario` and `merge-permissions` refuse a path under
@@ -1208,7 +1215,7 @@ its version and date.
   its task checked or gone, its spec `done` or gone, or a rule file — while
   its finding still fires, under `lapsed`, and the finding needs a new
   disposition. Spec 076.
-- **`compute-review-scope` and `diff-cross-spec` results stay within one
+- **BREAKING: `compute-review-scope` and `diff-cross-spec` results stay within one
   read.** Each result now carries `form` and each list's count
   (`scope-count`, `modified-since-count` and `plan-affected-count`;
   `cross-spec-count`). While a result fits `[artifacts] read-size-bytes`,
@@ -1221,7 +1228,9 @@ its version and date.
   `ductus exec`'s review request reads its scope from the file, halting with
   `lists-file-unreadable` when it cannot. A script of your own that reads
   `scope` or `cross-spec-paths` from either result must read `lists-file`
-  when `form` is `file`. Spec 066, task 7.
+  when `form` is `file`. Breaking under `BE-COMPAT-001` past the read size,
+  where `scope`, `modified-since`, `plan-affected` and `cross-spec-paths`,
+  inline in 0.59.11, are not. Spec 066, task 7.
 - **Ticking an acceptance criterion no longer stales the analysis.**
   `analysis.md`'s `analyzed-digest` takes `spec.md` with each acceptance
   criterion's checkbox as unticked, so `/implement`'s completion run, which
