@@ -3,7 +3,7 @@
 //! time. See spec 022 scenario `commands-dir-parameterization`.
 //!
 //! The runtime resolves command files at two callsites
-//! (`main::run_exec` and `interpreter::payload::locate_command_file`),
+//! (`main::locate_exec_command` and `interpreter::payload::locate_command_file`),
 //! and since spec 080 also in `tool_loading::AlwaysLoaded::resolve` and
 //! `render_help::guide`; the first two used to bake in Claude Code's config-dir name and
 //! this repo's slash-command namespace. This module reads `project` from

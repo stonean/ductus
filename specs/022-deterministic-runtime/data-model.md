@@ -146,7 +146,7 @@ Older tiers are never removed by a primitive — the bootstrap migration is the 
 1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code), tried first;
 2. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
 
-Each adopter installs into one layout; walking both resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::run_exec`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)). `Host::load` refuses a `cli-config-dir` or `project` that is not one path component, naming the file it came from, and each callsite contains a candidate before probing it, never reading one that leaves the project (task 40; plan §Path arguments).
+Each adopter installs into one layout; walking both resolves any of them without knowing which agent wrote the file, and every resolution callsite (`main::locate_exec_command`, `interpreter::payload::locate_command_file`, `tool_loading::AlwaysLoaded::resolve`, `render_help::guide`) consumes the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)). `Host::load` refuses a `cli-config-dir` or `project` that is not one path component, naming the file it came from, and each callsite contains a candidate before probing it, never reading one that leaves the project (task 40; plan §Path arguments).
 
 ## Primitive request/response schemas
 
@@ -154,7 +154,7 @@ Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape
 
 ### Severity tiers — three closed sets, not one
 
-The field is spelled `severity` on five shapes, and the sets behind it are **three distinct vocabularies** rather than one. They live in `runtime/src/schema/severity.rs`, the same single-source-of-truth shape `status.rs` has for the lifecycle set:
+The field is spelled `severity` on six shapes. Five carry the **three distinct vocabularies** below rather than one, and `ReReadFinding` (`read-re-read`, spec 078) carries a fourth, `MUST`, `SHOULD` and `NOTE`, the severity bar of a fix round's brief, as `ReReadSeverity` in `runtime/src/schema/primitives.rs`. The three live in `runtime/src/schema/severity.rs`, the same single-source-of-truth shape `status.rs` has for the lifecycle set:
 
 | Vocabulary | Values | Carried by |
 | --- | --- | --- |
@@ -180,7 +180,8 @@ Result:
 {
   "frontmatter": {
     "status": "clarified",
-    "dependencies": ["021-runtime-boundary"]
+    "dependencies": ["021-runtime-boundary"],
+    "tags": []
   },
   "sections": [
     { "heading": "Motivation", "level": 2, "body": "..." },
@@ -321,7 +322,7 @@ Result:
 { "previous": "clarified", "current": "planned", "path": "specs/.../spec.md" }
 ```
 
-On mismatch (`from` doesn't equal current), returns an `error` envelope with `code: "status-mismatch"` and does not write.
+On mismatch (`from` doesn't equal current), the call fails with `PrimitiveError::StatusMismatch` and does not write: the CLI and MCP error carry text and no code, and a `ductus exec` walk halts with the `error` envelope's code `primitive-failure`.
 
 ### `derive-boundary` — compute runtime write boundary
 
@@ -621,7 +622,7 @@ The complement of `append-inbox` and the deterministic surface behind `/ductus:g
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario and, since 066's task 27, is sent by `/ductus:review`'s criteria step (its step 7.2) as its criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
 
 ### Request bodies past the read size
 
@@ -690,7 +691,7 @@ When `passed: true`, `finding` is `null`.
 
 The response carries an optional `addressed-by` (`"<path>#<Heading>"`) beside `passed` and `finding` (spec 082). With `passed: true` it makes the verdict `addressed`, citing the design subject and heading that addresses the rule, which `write-analysis` stores only when the citation resolves; without it a `passed: true` is a rule that did not fire, so a host that sends none records the walk it recorded before spec 082. A `passed: false` is a finding whose `message` and `location.section` the walk keeps as the rule's verdict. For a rule the spec's departure entry names, the walk records `{verdict: waived}` for any fired answer (`passed: false`, or `passed: true` with `addressed-by`) and nothing for a plain pass; `write-analysis` fills the rest from the entry ([073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md)).
 
-The walker asks about a rule only when the feature's stored verdict for it is not current: the request for a rule whose verdict is current is not sent, its stored finding counts in its tier, and the stream says how many verdicts were reused ([082](../082-rule-assessments-converge-across-runs/spec.md)). On the interactive path `discover-rule-files` called with `all`, `rules` and `feature` returns the same decision as a `verdicts` block: `reason` (`no-prior-verdicts`, `subjects-changed`, `rule-files-changed` or `record-unreadable`, absent while the prior record's verdicts can be reused, even when none fired), `judge` (the IDs of the rules to judge) and `reusable` (each current fired verdict with its `id`, its `verdict` and its `cite`, or its stored `tier`, `at` and `message`), each list inline or, past the read size, in the file `lists-file` names with `reusable-count` and `judge-count` inline.
+The walker asks about a rule only when the feature's stored verdict for it is not current: the request for a rule whose verdict is current is not sent, its stored finding counts in its tier, and the stream says how many verdicts were reused ([082](../082-rule-assessments-converge-across-runs/spec.md)). On the interactive path `discover-rule-files` called with `all`, `rules` and `feature` returns the same decision as a `verdicts` block: `reason` (`no-prior-verdicts`, `subjects-changed`, `rule-files-changed` or `record-unreadable`, absent while the prior record's verdicts can be reused, even when none fired), `judge` (the IDs of the rules to judge) and `reusable` (each current fired verdict with its `id` and its `verdict`, and its `cite` when `addressed`, its stored `tier`, `at` and `message` when `finding`, or its `reason`, `decided-by`, `decided-at` and `cited` when `waived`), each list inline or, past the read size, in the file `lists-file` names with `reusable-count` and `judge-count` inline.
 
 ### `writeCode`
 

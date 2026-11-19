@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-Every finding the runtime produces carries `severity` as a bare `String`: `ReviewFinding`, `FrontmatterFinding` and `ArtifactFinding` (all in `schema/primitives.rs`). The tiers themselves are spelled as inline literals — 16 occurrences in `check_artifacts.rs`, 15 in `validate_frontmatter.rs`, 3 in `schema/extensions.rs`, 2 in `schema/primitives.rs` — with no constant, no enum, and no validation on deserialize. The doc comments name the legal values; nothing enforces them.
+Before this scenario's change, every finding the runtime produced carried `severity` as a bare `String`: `ReviewFinding`, `FrontmatterFinding` and `ArtifactFinding` (all in `schema/primitives.rs`). The tiers themselves are spelled as inline literals — 16 occurrences in `check_artifacts.rs`, 15 in `validate_frontmatter.rs`, 3 in `schema/extensions.rs`, 2 in `schema/primitives.rs` — with no constant, no enum, and no validation on deserialize. The doc comments name the legal values; nothing enforces them.
 
 **The field holds three different closed sets under one type**, not the two this scenario was first written against — a count corrected while implementing it, by reading every `severity` field rather than the two the grooming pass had measured. `ReviewFinding` uses `must` / `should`. `FrontmatterFinding` and `ArtifactFinding` use `hard-fail` / `blocking` / `advisory` / `informational`. And `AssessSpecQualityRule` / `AssessSpecQualityFinding` carry a *rule* tier — `must` / `should` / `info`, plus the empty string that `severity_from_step_prose` returns when a step's prose names no tier. All five share a name and a `String`, so nothing prevents a value from one vocabulary being emitted into another.
 
@@ -22,13 +22,13 @@ The reachable path is not a source typo. `findings` is `write-review`'s argument
 
 ## Behavior
 
-**A severity tier is a closed set, bound so an unrecognized value cannot be constructed, deserialized, or emitted.** The three vocabularies stay distinct rather than being merged into one enum — they are different tier systems belonging to different commands, and collapsing them would make the cross-vocabulary error representable in the type that exists to forbid it.
+**A severity tier is a closed set, bound so an unrecognized value cannot be constructed, deserialized, or emitted.** The vocabularies stay distinct (three when this scenario shipped; spec 078's `ReReadFinding` later added a fourth, `MUST` / `SHOULD` / `NOTE`) rather than being merged into one enum — they are different tier systems belonging to different commands, and collapsing them would make the cross-vocabulary error representable in the type that exists to forbid it.
 
 - The review tiers (`must`, `should`), the analyze tiers (`hard-fail`, `blocking`, `advisory`, `informational`) and the rule tiers (`must`, `should`, `info`, `""`) each become their own type, serialized to exactly the strings they carry today, so `review.md` and `analysis.md` are byte-identical across the change and no consumer's parsing moves. The rule set's empty string becomes a named `Unspecified` variant rather than an absent value, so it cannot be confused with a tier that failed to parse.
 - Deserialization of an out-of-set value is an **error**, not a default. This is the load-bearing half: the current behavior's defect is not that a bad value exists but that it resolves to the permissive tier. A rejected payload names the offending value and the field; it never silently degrades to `should` or to `advisory`.
 - `write_review`'s bucketing and `finding_rank` branch on the bound value rather than on a string comparison, so the `else`-is-`should` catch-all disappears by construction rather than by a guard someone has to remember.
 - The inline literals across `check_artifacts.rs`, `validate_frontmatter.rs` and `schema/extensions.rs` are replaced by the bound values at every site.
-- 022's `data-model.md` result-shape registry records the three closed sets and points at the constitution's [§text-first-artifacts](../../../framework/constitution.md#text-first-artifacts) Validation Severity subsection for the analyze tiers' meaning rather than restating the assignment.
+- 022's `data-model.md` result-shape registry records the closed sets (the three this scenario binds, plus `ReReadFinding`'s) and points at the constitution's [§text-first-artifacts](../../../framework/constitution.md#text-first-artifacts) Validation Severity subsection for the analyze tiers' meaning rather than restating the assignment.
 
 The extension-point contract is where the guarantee has to hold, because that is the reachable path: a `performReview` response carrying an unrecognized severity is rejected with the value named, and the run halts rather than recording a review whose counts silently understate what the passes found.
 

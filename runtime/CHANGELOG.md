@@ -464,8 +464,10 @@ its version and date.
   help and the tool read one schema. `write-session`'s `--cli-config-dir` and
   `append-task`'s `--parent-heading` named a Rust path (`crate::host::Host`,
   `PrimitiveError::ParentHeadingNotFound`) in their help; the two sentences now
-  say it in words, which also changes those two arguments' MCP descriptions. Two
-  new unit tests in `runtime/src/main.rs` fail when a flag's help omits its
+  say it in words; four more help texts (`merge-permissions`' `--revoke`,
+  `retire-feature`'s `--feature`, `derive-references`' `--write` and
+  `--staged`) name what a rustdoc link pointed at, and all six texts are also
+  MCP argument descriptions. Two new unit tests in `runtime/src/main.rs` fail when a flag's help omits its
   shape or any nested field, and when any subcommand's help holds a Rust path,
   a rustdoc link or a serde attribute; `scripts/mutation/json-flag-help-022.py`
   proves them.
@@ -1380,6 +1382,16 @@ its version and date.
 
 ### Removed
 
+- **The `parity:` frontmatter key is gone from every shipped command and from
+  `framework/bootstrap/ductus.md`, with the TODO captures under
+  `runtime/tests/parity/` (spec 022's AC7; owner decision, 2026-11-19).** It
+  declared how a command's `ductus exec` output would be compared with an
+  LLM-driven capture, but no capture was ever taken and no comparison ran:
+  `runtime/tests/parity.rs` printed SKIPPED for each, and 048 retired the
+  prose-walked path a capture would record. The golden-stream tests that
+  compare each command's envelope stream byte for byte are unchanged.
+  `apply-manifest` still accepts the key in a command file, so a newer binary
+  at a project's `[runtime] path` can apply an older release's archive.
 - **BREAKING: `check-review-freshness` is retired, with the self-audit's Family 19.**
   Both asked only whether a `done` spec's scenarios and data model still
   matched its review's digest, which no longer owes a review. The runtime no
@@ -1404,6 +1416,15 @@ its version and date.
 
 ### Fixed
 
+- **`ductus exec` no longer fails a walk when a warning cannot reach stderr
+  (spec 022; its review of 2026-11-19).** The walker warns on stderr for each
+  stdin line or envelope it ignores (a blank or unparseable line, a response
+  for another request, an envelope of another kind) and carries on, but it
+  wrote each warning with `eprintln!`, which panics when stderr's reader has
+  gone, so a walk that would have completed exited 101. The six warnings now go
+  through `ductus::io::warn`, which drops a failed write, as
+  `warn_unknown_keys` already did. A test runs a walk with stderr's reader
+  closed, and `scripts/mutation/stderr-warnings-022.py` proves it.
 - **BREAKING: `fetch-archive` fetches over plain `http` only from a named loopback
   host (spec 022 task 50; 022's analysis of 2026-11-17, `BE-DATA-001`).** A host
   named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` skipped both the https-only and

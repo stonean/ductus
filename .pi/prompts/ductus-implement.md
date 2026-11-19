@@ -1,13 +1,6 @@
 ---
 description: Execute implementation tasks for the targeted feature.
 argument-hint: "[--auto] [feature]"
-parity:
-  strict-fields:
-    - task-checkbox-state
-  strict-files:
-    - "specs/{feature}/tasks.md"
-  semantic-fields:
-    - "code-edits[].content"
 ---
 
 # Implement

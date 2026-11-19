@@ -1,11 +1,11 @@
-//! Per-command parity-test harness.
+//! Per-command golden-stream harness.
 //!
-//! Each rewritten command has a `parity:` frontmatter field declaring how
-//! its runtime-driven output should be compared against the LLM-driven
-//! capture under `runtime/tests/parity/<command>/expected.txt`. This
+//! Each rewritten command, and the bootstrap stand-in, runs end to end
+//! under `ductus exec` against its fixture, and its envelope stream is
+//! compared byte for byte against a committed golden. For each case this
 //! harness:
 //!
-//! 1. Stages each command's fixture (`runtime/tests/fixtures/<fixture>/`)
+//! 1. Stages the command's fixture (`runtime/tests/fixtures/<fixture>/`)
 //!    plus the canonical `framework/commands/<command>.md` into a fresh
 //!    tempdir.
 //! 2. Runs `ductus exec <command>` against the tempdir and captures
@@ -14,18 +14,10 @@
 //!    `runtime/tests/golden/<fixture>.jsonl`, byte-for-byte after the
 //!    `{{runtime-version}}` placeholder is substituted with the
 //!    `CARGO_PKG_VERSION` baked into the binary at build time.
-//! 4. Reads the per-command parity bound from the command file's
-//!    frontmatter and the parity capture. When the capture is still a
-//!    TODO placeholder, the parity comparison is reported SKIPPED via
-//!    `eprintln!` and the test still passes — capture is a maintainer
-//!    step gated on having an LLM-driven host available. When the
-//!    capture is present, the parity bound is recorded for future
-//!    application by the harness (host-side rendering is not yet wired
-//!    in; see the spec's "parity captures are manual" trade-off).
 //!
-//! The shape of `ParitySpec` mirrors the `parity:` keys documented in
-//! the spec's per-command rewrites — additions here must keep the
-//! command files in sync.
+//! No LLM-driven capture is compared: `048-govern-acquired-runtime`
+//! retired the prose-walked path such a capture would record, so 022's
+//! AC7 is met by the golden streams alone (owner decision, 2026-11-19).
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::fs;
@@ -33,32 +25,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use serde::Deserialize;
-
 mod common;
 use common::{copy_dir_recursive, ductus_command};
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct CommandFrontmatter {
-    #[serde(default)]
-    parity: Option<ParitySpec>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-#[allow(dead_code)] // Fields are surfaced via Debug-formatting in the SKIPPED message and
-// by future bound-application code (see the harness module docs).
-struct ParitySpec {
-    #[serde(default)]
-    strict_stdout: Option<bool>,
-    #[serde(default)]
-    strict_files: Option<Vec<String>>,
-    #[serde(default)]
-    strict_fields: Option<Vec<String>>,
-    #[serde(default)]
-    semantic_fields: Option<Vec<String>>,
-}
 
 #[test]
 fn status_basic_stream_matches_golden() {
@@ -807,52 +775,10 @@ fn commit_staged(path: &Path, message: &str) {
         .expect("second commit");
 }
 
-fn read_parity_spec(command: &str, fixture: &str) -> ParitySpec {
-    // Prefer the repo-canonical command file; fall back to a fixture-
-    // local procedure file for bootstrap-namespaced fixtures.
-    let canonical = repo_root()
-        .join("framework/commands")
-        .join(format!("{command}.md"));
-    let path = if canonical.is_file() {
-        canonical
-    } else {
-        repo_root()
-            .join("runtime/tests/fixtures")
-            .join(fixture)
-            .join("framework/bootstrap")
-            .join(format!("{command}.md"))
-    };
-    let source = fs::read_to_string(&path).unwrap();
-    let body = source
-        .strip_prefix("---\n")
-        .or_else(|| source.strip_prefix("---\r\n"))
-        .unwrap_or_else(|| panic!("no frontmatter in {}", path.display()));
-    let end = body
-        .find("\n---\n")
-        .or_else(|| body.find("\n---\r\n"))
-        .unwrap_or_else(|| panic!("no closing frontmatter fence in {}", path.display()));
-    let frontmatter = &body[..end];
-    let parsed: CommandFrontmatter = serde_norway::from_str(frontmatter).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse parity frontmatter in {}: {err}",
-            path.display()
-        )
-    });
-    parsed.parity.unwrap_or_default()
-}
-
 fn read_golden(fixture: &str) -> String {
     let path = repo_root()
         .join("runtime/tests/golden")
         .join(format!("{fixture}.jsonl"));
-    fs::read_to_string(&path).unwrap_or_else(|err| panic!("read {}: {err}", path.display()))
-}
-
-fn read_parity_capture(command: &str) -> String {
-    let path = repo_root()
-        .join("runtime/tests/parity")
-        .join(command)
-        .join("expected.txt");
     fs::read_to_string(&path).unwrap_or_else(|err| panic!("read {}: {err}", path.display()))
 }
 
@@ -922,20 +848,4 @@ fn run_parity_case(command: &str, fixture: &str) {
         "stream mismatch for {fixture}.jsonl — an edit to the `{command}` command's source alone can move it (a golden records step numbers, and implement-basic and review-basic their fixture repos' commit shas). Re-bless this golden only: `BLESS=1 cargo test --release --locked --test parity {}_stream_matches_golden`, then confirm the diff is only those fields and the prose you edited. A corpus-wide BLESS=1 is for a protocol-level change that moves every golden",
         fixture.replace('-', "_"),
     );
-
-    let spec = read_parity_spec(command, fixture);
-    let capture = read_parity_capture(command);
-    if capture.contains("TODO:") {
-        eprintln!(
-            "[parity] {command}: expected.txt is still a TODO placeholder — SKIPPED (bound={spec:?})"
-        );
-    } else {
-        // Future: render envelopes through the host renderer and apply
-        // the per-bound comparison from `spec`. For now this branch
-        // exercises the read path so a captured file at least round-trips.
-        eprintln!(
-            "[parity] {command}: capture present (len={} bytes); per-bound comparison not yet wired",
-            capture.len()
-        );
-    }
 }

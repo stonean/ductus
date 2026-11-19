@@ -1,14 +1,16 @@
 //! Canonical finding-severity tier sets.
 //!
 //! Three closed sets, one per vocabulary, and they are deliberately three
-//! types rather than one. The field is spelled `severity` on all five of the
-//! shapes that carry it, but the sets are not interchangeable — a review
+//! types rather than one. The field is spelled `severity` on the five shapes
+//! that carry one of these sets, but the sets are not interchangeable — a review
 //! finding is `must`/`should`, an analyze finding is the constitution's
 //! four-tier Validation Severity scale, and the rule an `assessSpecQuality`
 //! request assesses carries an RFC 2119 obligation level. Merging them into
 //! one enum would make the cross-vocabulary error — an analyze tier emitted
 //! into a review finding — representable in the very type introduced to
-//! forbid it.
+//! forbid it. A sixth shape, a fix round's `ReReadFinding` (spec 078),
+//! carries a fourth vocabulary, `MUST`/`SHOULD`/`NOTE`, as `ReReadSeverity`
+//! in [`crate::schema::primitives`].
 //!
 //! **The defect these replace was not that a bad value existed; it was where
 //! a bad value landed.** `write-review` bucketed findings with the severity

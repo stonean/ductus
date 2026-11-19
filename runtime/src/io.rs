@@ -50,16 +50,30 @@ pub fn read_envelope<R: BufRead>(reader: &mut R) -> std::io::Result<ProtocolMess
         }
         let trimmed = line.trim();
         if trimmed.is_empty() {
-            eprintln!("runtime: ignoring blank stdin line while awaiting an envelope");
+            warn(format_args!(
+                "runtime: ignoring blank stdin line while awaiting an envelope"
+            ));
             continue;
         }
         match serde_json::from_str(trimmed) {
             Ok(message) => return Ok(message),
             Err(err) => {
-                eprintln!("runtime: ignoring unparseable stdin line ({err}): {trimmed:?}");
+                warn(format_args!(
+                    "runtime: ignoring unparseable stdin line ({err}): {trimmed:?}"
+                ));
             }
         }
     }
+}
+
+/// Write `message` to stderr as one line, dropping a write that fails.
+///
+/// A warning on a path that carries on (a stdin line the walker ignores, a
+/// response for another request) must not fail the walk it warns about:
+/// `eprintln!` panics when stderr's reader has gone, turning a walk that
+/// would complete into exit 101. `warn_unknown_keys` writes the same way.
+pub fn warn(message: std::fmt::Arguments<'_>) {
+    let _ = writeln!(std::io::stderr().lock(), "{message}");
 }
 
 #[cfg(test)]

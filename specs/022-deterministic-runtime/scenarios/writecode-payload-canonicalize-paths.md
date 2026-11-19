@@ -6,22 +6,22 @@ section: "LLM extension points"
 
 ## Context
 
-Spec 022 task #34 added the writeCode payload bundler, including a read-side secret-exfiltration guard in `runtime/src/interpreter/payload.rs` (`load_plan_relevant_files`). The guard refuses paths matching `.env`, `.env.*`, `*-secrets.*`, `credentials*`, and `.gitignore`d entries — but only checks the basename. After the guard passes, `repo.join(&rel)` and `std::fs::read_to_string(&abs)` run without canonicalizing `abs` or verifying it stays under `repo`. A plan entry of `../../etc/passwd` resolves outside the repo: basename `passwd` matches nothing, libgit2 reports not-ignored, and the file's contents land in the outbound LLM payload. The same gap admits absolute paths (`/etc/passwd`) because `Path::join` lets an absolute joinee replace the base.
+Spec 022 task #34 added the writeCode payload bundler, including a read-side secret-exfiltration guard in `runtime/src/interpreter/payload.rs` (`load_plan_relevant_files`). Before this scenario shipped, the guard refused paths matching `.env`, `.env.*`, `*-secrets.*`, `credentials*`, and `.gitignore`d entries — but only checked the basename. After the guard passed, `repo.join(&rel)` and `std::fs::read_to_string(&abs)` ran without canonicalizing `abs` or verifying it stays under `repo`. A plan entry of `../../etc/passwd` resolved outside the repo: basename `passwd` matched nothing, libgit2 reported not-ignored, and the file's contents landed in the outbound LLM payload. The same gap admitted absolute paths (`/etc/passwd`) because `Path::join` lets an absolute joinee replace the base.
 
-A separate but related bypass: `secret_pattern`'s checks are case-sensitive exact-equality on the basename. On case-insensitive filesystems (macOS APFS by default), a plan entry of `.ENV` slips past `secret_pattern` but resolves to `.env` on disk, exfiltrating the file the guard exists to protect.
+A separate but related bypass: `secret_pattern`'s checks were case-sensitive exact-equality on the basename. On case-insensitive filesystems (macOS APFS by default), a plan entry of `.ENV` slipped past `secret_pattern` but resolved to `.env` on disk, exfiltrating the file the guard exists to protect.
 
 Origin: `/ductus:review` of spec 022 at HEAD `2873aad`, recorded as the SHOULD finding against `BE-INPUT-004` in `specs/022-deterministic-runtime/review.md`. Threat model is prompt-injection-class — a compromised `/ductus:plan` LLM, or a malicious plan author bypassing PR review, plants the entry once; the next `/ductus:implement` exfiltrates. Defense-in-depth tightening, not a bug in shipped behavior.
 
 ## Behavior
 
 - `load_plan_relevant_files` MUST canonicalize each candidate path before reading. After computing `let abs = repo.join(&rel);`, the function canonicalizes both `abs` and `repo` and verifies `canon_abs.starts_with(&canon_repo)`. Paths that fail containment MUST halt the procedure with a structured error envelope; paths that resolve to a non-existent file (planned-new) MUST continue silently as today.
-- `PayloadError::SecretExfiltration` grows a `pattern: "out-of-repo"` label for the path-containment failure. The envelope code stays `secret-exfiltration-blocked` for caller compatibility; the `pattern` field is the self-describing surface. (Alternative: a new `PathTraversalBlocked` variant with code `path-traversal-blocked` — chosen at implementation time; the scenario does not pre-decide.)
+- `PayloadError::SecretExfiltration` grows a `pattern: "out-of-repo"` label for the path-containment failure. The envelope code stays `secret-exfiltration-blocked` for caller compatibility; the `pattern` field is the self-describing surface. (Decided at implementation: the `out-of-repo` label on `SecretExfiltration`, with no `PathTraversalBlocked` variant.)
 - `secret_pattern` MUST normalize the basename to ASCII lowercase before its pattern checks. `secret_pattern(".ENV")`, `secret_pattern("Credentials.json")`, and `secret_pattern("DB-Secrets.yaml")` MUST return the same `Some(_)` labels their lowercase counterparts return today.
 - Behavior is observable through the `error` envelope and the existing in-process tests. No protocol or schema changes; no LLM-extension-point contract change.
 
 ## Edge Cases
 
-- **Relative escape (`../foo/secret.toml`)** — canonicalize resolves out of repo; rejected with `out-of-repo` (or `path-traversal-blocked`).
+- **Relative escape (`../foo/secret.toml`)** — canonicalize resolves out of repo; rejected with `out-of-repo`.
 - **Absolute escape (`/etc/passwd`)** — `repo.join(absolute)` is the absolute path; canonicalize stays absolute; containment check fails; rejected.
 - **In-repo relative path (`runtime/src/lib.rs`)** — canonicalizes within `canon_repo`; passes through unchanged.
 - **Planned-new file (`runtime/src/primitives/new_thing.rs` not yet on disk)** — `canonicalize()` errors on the missing file; the function `continue`s and omits it from the bundle, matching today's behavior for absent files.

@@ -1,7 +1,5 @@
 ---
 description: Display the pipeline view for all feature specs.
-parity:
-  strict-stdout: true
 ---
 
 # Status

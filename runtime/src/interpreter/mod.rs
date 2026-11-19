@@ -65,7 +65,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
 
-use crate::io::{read_envelope, write_envelope};
+use crate::io::{read_envelope, warn, write_envelope};
 use crate::primitives;
 use crate::primitives::rule_verdicts::Currency;
 use crate::schema::extensions::{
@@ -809,15 +809,15 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 ProtocolMessage::LlmResponse {
                     request_id: other, ..
                 } => {
-                    eprintln!(
+                    warn(format_args!(
                         "runtime: ignoring llm-response for request-id `{other}` while awaiting `{request_id}`"
-                    );
+                    ));
                 }
                 other => {
-                    eprintln!(
+                    warn(format_args!(
                         "runtime: ignoring {} envelope while awaiting llm-response `{request_id}`",
                         envelope_kind(&other)
-                    );
+                    ));
                 }
             }
         }
@@ -836,15 +836,15 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 ProtocolMessage::GateResponse {
                     request_id: other, ..
                 } => {
-                    eprintln!(
+                    warn(format_args!(
                         "runtime: ignoring gate-response for request-id `{other}` while awaiting `{request_id}`"
-                    );
+                    ));
                 }
                 other => {
-                    eprintln!(
+                    warn(format_args!(
                         "runtime: ignoring {} envelope while awaiting gate-response `{request_id}`",
                         envelope_kind(&other)
-                    );
+                    ));
                 }
             }
         }

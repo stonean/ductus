@@ -1068,9 +1068,7 @@ fn cli_command() -> clap::Command {
         command = command.mut_subcommand(tool, |mut sub| {
             for id in flags {
                 let property = id.trim_end_matches("_json");
-                let shape = [property.to_owned(), property.replace('_', "-")]
-                    .iter()
-                    .find_map(|name| ductus::mcp::flag_help::shape_help(schema, name));
+                let shape = ductus::mcp::flag_help::shape_help(schema, &property.replace('_', "-"));
                 sub = sub.mut_arg(id.as_str(), |arg| {
                     let own = arg
                         .get_long_help()
@@ -1710,9 +1708,7 @@ mod tests {
                     .unwrap_or_default();
                 let flag = format!("{} --{}", sub.get_name(), id.replace('_', "-"));
                 let kebab = property.replace('_', "-");
-                let node = schema
-                    .get("properties")
-                    .and_then(|p| p.get(&kebab).or_else(|| p.get(property)));
+                let node = schema.get("properties").and_then(|p| p.get(&kebab));
                 let Some(node) = node else {
                     missing.push(format!("{flag}: the tool has no `{kebab}` argument"));
                     continue;

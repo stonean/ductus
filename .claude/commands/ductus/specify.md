@@ -1,13 +1,6 @@
 ---
 description: Create a new feature spec.
 argument-hint: "[--branch] [--branch-id <identifier>] [--fold-into <feature>] [feature description]"
-parity:
-  strict-fields:
-    - frontmatter
-  strict-files:
-    - "specs/{NNN-feature}/spec.md"
-  semantic-fields:
-    - spec-body
 ---
 
 # Specify

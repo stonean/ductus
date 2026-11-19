@@ -6,9 +6,9 @@ section: "Follow-on scenarios"
 
 ## Context
 
-`lint-markdown` spawns `Command::new("npx")` and maps any spawn failure to `PrimitiveError::Io { path: repo }`. Both halves of that are wrong in the same situation, and together they cost most of a working session.
+Before this scenario shipped, `lint-markdown` spawned `Command::new("npx")` and mapped any spawn failure to `PrimitiveError::Io { path: repo }`. Both halves of that were wrong in the same situation, and together they cost most of a working session.
 
-**The error names the wrong thing.** When the spawn fails with `ENOENT`, the path reported is the *repository*, not the executable. The operator sees:
+**The error names the wrong thing.** When the spawn failed with `ENOENT`, the path reported was the *repository*, not the executable. The operator sees:
 
 ```text
 I/O error on /Users/stonean/src/stonean/ductus: No such file or directory (os error 2)

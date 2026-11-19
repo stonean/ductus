@@ -1,12 +1,6 @@
 ---
 description: Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Detection never modifies an artifact it audits; each live finding is then fixed, deferred, or waived, with only a gating finding's deferral reaching the operator, the run is recorded, and --fix reverts a done spec drifted by review state or unresolved scenario questions.
 argument-hint: "[--all] [--fix] [feature]"
-parity:
-  semantic-fields:
-    - "findings[].message"
-  strict-fields:
-    - "findings[].rule-id"
-    - "findings[].severity"
 ---
 
 # Analyze

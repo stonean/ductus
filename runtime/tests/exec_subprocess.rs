@@ -271,6 +271,78 @@ fn exec_reads_extension_response_from_stdin() {
     assert_eq!(envelopes[0]["request-id"], "req-1");
 }
 
+/// A warning on a line the walker ignores never fails the walk it warns
+/// about: with stderr's reader gone the warning's write fails, and the walk
+/// still completes. The host sends a blank line and an unparseable one
+/// (`read_envelope`'s two warnings), then, while the walker awaits the
+/// `writeCode` response, a response for another request and an envelope of
+/// another kind (`await_llm_response`'s two), and, while it awaits the gate,
+/// the same pair again (`await_gate_response`'s two): all six warnings, each
+/// written through `ductus::io::warn`. Unix only, where the runtime ignores
+/// `SIGPIPE`, so the write reports a broken pipe that `eprintln!` would have
+/// turned into a panic (exit 101).
+#[cfg(unix)]
+#[test]
+fn an_ignored_stdin_line_warns_without_failing_the_walk_when_stderr_is_gone() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    write_procedure_repo(
+        tmp.path(),
+        "ext",
+        "# /ductus:ext\n\n## Instructions\n\n1. <!-- llm:writeCode --> Ask the LLM to write code.\n2. Invoke `gate-confirm` with a prompt naming the write.\n",
+    );
+    let (reader, writer) = std::io::pipe().unwrap();
+    drop(reader);
+
+    let mut child = ductus_command(runtime_binary())
+        .arg("exec")
+        .arg("ext")
+        .current_dir(tmp.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(writer)
+        .spawn()
+        .expect("spawn runtime");
+
+    let mut stdin = child.stdin.take().unwrap();
+    stdin
+        .write_all(
+            b"\nnot an envelope\n\
+              {\"type\":\"llm-response\",\"request-id\":\"req-0\",\"response\":{}}\n\
+              {\"type\":\"gate-response\",\"request-id\":\"req-1\",\"confirmed\":true}\n\
+              {\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"edits\":[],\"summary\":\"no-op\"}}\n\
+              {\"type\":\"llm-response\",\"request-id\":\"req-9\",\"response\":{}}\n\
+              {\"type\":\"gate-response\",\"request-id\":\"req-0\",\"confirmed\":true}\n\
+              {\"type\":\"gate-response\",\"request-id\":\"req-2\",\"confirmed\":true}\n",
+        )
+        .unwrap();
+    drop(stdin);
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success(), "exit: {:?}", output.status);
+    let types: Vec<String> = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| {
+            serde_json::from_str::<Value>(line).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(
+        types,
+        vec![
+            "llm-request",
+            "progress",
+            "gate-confirm",
+            "progress",
+            "complete"
+        ]
+    );
+}
+
 #[test]
 fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     ensure_binary_built();

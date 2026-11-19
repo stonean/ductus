@@ -1,15 +1,5 @@
 ---
 description: Fixture-only bootstrap procedure — exercises the seven ductus-bootstrap primitives end-to-end.
-parity:
-  strict-files:
-    - "project/framework/commands/specify.md"
-    - "project/.ductus/reference/specify.md"
-    - "project/framework/templates/feature.md"
-    - "project/AGENTS.md"
-    - "project/.gitignore"
-    - "project/.claude/commands/ductus.md"
-  semantic-fields:
-    - completion-message
 ---
 
 # /install (ductus-basic fixture)
@@ -18,8 +8,8 @@ A minimal stand-in for the production `framework/bootstrap/ductus.md`
 procedure. The fixture's parity test stages this file under
 `framework/bootstrap/install.md`, sets context keys for the six
 primitives in the session JSON, runs `ductus exec install`, and asserts
-the resulting on-disk state matches the golden plus the strict-files
-bound above.
+the stream matches the golden and the resulting on-disk state matches
+what `ductus_basic_post_run_filesystem_state_matches_expectations` expects.
 
 The procedure exercises every primitive shape introduced by the
 apply-manifest scenario:

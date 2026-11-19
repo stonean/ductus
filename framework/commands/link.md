@@ -1,9 +1,6 @@
 ---
 description: Register a service so cross-service references resolve to its lifecycle status.
 argument-hint: "[alias repo path [--description <text>] | --list]"
-parity:
-  strict-files:
-    - ".govern.toml"
 ---
 
 # Link

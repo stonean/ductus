@@ -170,11 +170,14 @@ pub(crate) enum HostRow {
     PiBridge,
 }
 
-/// The frontmatter keys the shipped command and installer files carry:
-/// `description`, `argument-hint` and `parity` in `framework/commands/`,
-/// `framework/bootstrap/configure/` and `ductus.md`. A key such as `allowed-tools` or
-/// `hooks` would make the file grant tools or run commands
-/// (code.claude.com/docs/en/skills), so no other key is written.
+/// The frontmatter keys a shipped command or installer file may carry:
+/// `description` and `argument-hint` in `framework/commands/`,
+/// `framework/bootstrap/configure/` and `ductus.md`, and `parity`, which no
+/// shipped file carries since 022's AC7 retired it but an older release's
+/// archive does, so a newer binary at a project's `[runtime] path` can still
+/// apply one. A key such as `allowed-tools` or `hooks` would make the file
+/// grant tools or run commands (code.claude.com/docs/en/skills), so no other
+/// key is written.
 const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "parity"];
 
 /// Judge `dest`, an absolute path a primitive is about to write or delete.

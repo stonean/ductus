@@ -46,7 +46,7 @@ LLM-authored content crosses the runtime boundary as **one payload**, never as s
 
 ### Tests (comprehensive — concrete and testable per the constitution; never depend on human diligence)
 
-Every new primitive ships a `#[cfg(test)]` module in the norm of the existing ones (`append_task.rs` has 21 tests, `create_scenario.rs` 10): each Behavior branch and each Edge Case below is a named test with fixture inputs and asserted outputs. Minimum coverage:
+Every new primitive ships a `#[cfg(test)]` module in the norm of the existing ones (`append_task.rs` and `create_scenario.rs` are the model): each Behavior branch and each Edge Case below is a named test with fixture inputs and asserted outputs. Minimum coverage:
 
 - **`discover-rule-files`** — one test per suffix class (`-backend` / `-frontend` / `-cross` / unrecognized); `[rules] surfaces` as a valid list, `[]` (cross-only), unset (derive-from-stack), and each degenerate value (unrecognized member; a mixed valid-plus-invalid list failing on the invalid member; non-list type); each `[[review.disabled-rule-files]]` outcome (drop-and-notice, no-op notice, unknown warning, malformed-entry halt, duplicate warning); and the notice **ordering** (disabled lines, then `loading rule files: …`). Assert the exact notice strings — they are contract.
 - **`process-waivers`** — apply; expire (file gone); expire (rule no longer fires); retain-not-expire on a dimension-restricted run (`skipped-passes` non-empty) and on a file the run's scope does not hold; do-not-extend to another file; malformed (missing field → skip-and-warn, not pruned); duplicate (first applies, dup warns); code-moved-within-file (anchor is the `(rule, file)` pair, not the line → still applies).
