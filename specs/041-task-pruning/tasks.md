@@ -40,6 +40,6 @@ Owed after this task, in order: 041's review of its change; the pre-done criteri
 
 ## 29. `/analyze` says what a `prune-plan` result with an `unexamined-tail` means (found while implementing task 28)
 
-- [ ] State it where the step reads `sections`, in as few bytes as the content allows, and measure `framework/commands/analyze.md` and `framework/reference/analyze.md` before and after
+- [x] State it where the step reads `sections`, in as few bytes as the content allows, and measure `framework/commands/analyze.md` and `framework/reference/analyze.md` before and after
 
 - **Done when**: the step of `framework/commands/analyze.md` that reads `prune-plan`, or the reference section it cites, tells the host that a result carrying `unexamined-tail` examined only part of the plan and is reported so, never read as a plan with no section outside the design record
