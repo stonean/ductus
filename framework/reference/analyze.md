@@ -99,7 +99,7 @@ When `--fix` is set, this check additionally reverts affected specs from `done` 
 
 ## Link-adjacent decision drift (advisory)
 
-Enforces `.ductus/constitution.md` §drift-prevention's *Decision resolution* obligation where it can be checked deterministically: prose in `spec.md`, `plan.md`, `tasks.md` or `scenarios/*.md` asserting an open state that its own sibling link's target contradicts. The grounding check cannot catch this: it verifies a claim is *cited*, not *true*. The finding's message names the line, every fired tell the target contradicts, the target and its contradicting state, with one finding per block and link. The tell list is closed and framework-fixed, with no per-project configuration, so the promotion criterion below measures drift rather than configuration.
+Enforces `.ductus/constitution.md` §drift-prevention's *Decision resolution* obligation where it can be checked deterministically: prose in `spec.md`, `plan.md`, `tasks.md` or `scenarios/*.md` asserting an open state that its own sibling link's target contradicts. The grounding check cannot catch this: it verifies a claim is *cited*, not *true*. The finding's message names the line, every fired tell the target contradicts, the target and its contradicting state, with one finding per block and link. The tell list is closed and framework-fixed, with no per-project configuration, so **§Promotion criterion for both decision-drift checks (shared)** measures drift rather than configuration.
 
 **Not covered:** `review.md`, pinned to its `reviewed-against` sha so its prose is correct as written, and `data-model.md`; a link whose target *exists* but whose cited section no longer says what the citing prose claims; prose that merely reads as historical; and an implementation-state tell against a scenario target, since a scenario has no lifecycle status and a spent task pruned per §tasks-phase looks like an unimplemented one.
 
@@ -140,10 +140,7 @@ Every reason from `referrer-unreadable` on in the second class comes from outsid
 - `rule-file-unreadable` counts the rule files steps 11 and 12 could not read, whose rules could not even be counted. A host that cannot read a rule file, or finds a rule it cannot place in either tier, records it under the same reason the walker would.
 - `unclassified` holds a total step 21 passed as `unexamined` with no `unexamined-by-reason`, which `write-analysis` records under it so the reasons it derives itself never replace the host's own count.
 - `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked`, `integrity-not-checked` and `decision-reasons-not-checked` are steps 13–15, which `ductus exec` no-ops as host prose, so an exec run records each once whether or not the step would have applied; step 15 is the reading of the spec and plan for grounding, the three judged items of the Spec integrity and Plan consistency sections above, and the decision reasons of the section above, and so owns three reasons. A host that runs those steps never records them.
-
-## Unresolved shared constitutions (informational)
-
-A `[constitutions.*]` entry the run could not read is recorded in the record's `unexamined-by-reason` under `constitution-unresolved`, and counts toward `unexamined`: the analysis is running under fewer rules than the project declares. `write-analysis` derives this from the registry itself, so a caller cannot omit it, and a project with no entries registered records nothing.
+- `write-analysis` records one more reason itself, which a caller never passes: `constitution-unresolved` counts each `[constitutions.*]` entry the run could not read, so the analysis ran under fewer rules than the project declares; a project with no entries registered records nothing.
 
 ## Promotion criterion for both decision-drift checks (shared)
 
@@ -346,10 +343,6 @@ Checks:
 - **Orphaned references** — every reference an adopter-owned file makes into a ductus-managed path resolves (`check-orphaned-references`; step 9). The managed roots are `.ductus/`, `.githooks/`, the configured spec root, and the historical `.govern/`, `scripts/gen-` and `scripts/lib/`. Report `Orphaned reference: {referrer}:{line} names {target}, which does not exist` — plus `; most likely orphaned by migration {id}` **only** when the result's `attribution` is `registry`. Under `watermark` attribution say so instead, naming `last-applied` as the only migration context available; the two must not render alike. A migration re-points only the references the framework wrote, and a fold or a consolidation re-points those naming the directory it retires (`rewrite-spec-links`); an adopter-authored one is reported and left to the adopter. Not references, so never reported: a candidate containing `*` or `NNN`, a git object name (`git show abc1234:specs/x/spec.md`), a path the project ships to adopters (`ships-to-adopter` above), and one the repository's ignore rules ignore (local state a fresh clone lacks).
 
 - **Un-folded branch-scoped specs** — every branch-scoped directory (`{identifier}.{n}-{slug}`) surviving under the spec root is reported (`check-unfolded-specs`; step 10). Report `Un-folded branch-scoped spec: {feature} folds into {target}, status {status}`, appending `; {target} does not resolve in this tree` when it names no directory here. That suffix is a **report**, not a defect: before the merge the target normally lives on the upstream branch, and this check cannot tell which tree it is looking at. Advisory in every case, since the check equally cannot tell an open branch from a merged one.
-
-## Cross-spec impact drift (advisory)
-
-A `done` spec declaring a `cross-spec-impact:` entry no back-link discharges: the gate reads the declaration only on the way to `done`, and an entry added afterwards is a correction, so nothing else would (`check-artifacts`; §cross-spec-impact).
 
 ## Severity tiers
 

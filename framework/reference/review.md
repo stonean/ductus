@@ -740,14 +740,6 @@ result as `exit-code`. The CLI and `ductus exec` exit 0 once the record is writt
 so CI gates on the committed record's `blocking` (the CI template's audit-record
 gate), not on an exit status.
 
-## Idempotency
-
-Re-running `/{project}:review` against an unchanged target whose record the gate
-holds reads the same window, so it reproduces an identical `review.md` (modulo
-`last-run` and `reviewed-against`): review output is a function of code, rules and
-window, never of session state. A finished run has left nothing to read: step 1
-stops on `review-owed: false`, and `--since` names an earlier base to read it again.
-
 ## Notes for adopters
 
 - Projects that customize shipped rule files (e.g.,

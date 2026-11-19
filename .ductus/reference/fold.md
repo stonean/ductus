@@ -2,10 +2,6 @@
 
 **Where a named section lives.** A section named below with no heading here is in the command file, `fold.md`, with the numbered steps this file cites. A bare `§name` is a heading here or a constitution marker; one with another file's path on its line is a heading there, unless it is a constitution marker.
 
-## Enumerating branch-scoped specs
-
-`check-unfolded-specs` (step 1) lists them. A `folds-into` naming a spec absent from this tree is reported as unresolved-here, never as broken: before the merge that absence is the ordinary state, and the distinction is settled at retirement, in the tree where both specs exist.
-
 ## Choosing the route
 
 Two routes, and the choice is about the **body** of the branch-scoped spec:
@@ -35,11 +31,3 @@ Folding into a `done` spec sets it to `in-progress` — the back-edge §spec-lif
 What the step 14 report rests on: `check-orphaned-references` reports whatever a skipped referrer still names, or lists it among the files it could not read, and `check-corpus-links`, which reads through a symbolic link that stays inside the repository (one leaving it is skipped `outward-link` and never read), reports a link in a skipped spec-root link that no longer resolves. A `kept-tails` reference lands on a file of that name the fold did not write, or names a scenario the retiring directory did not hold, and the check sees only that the file exists, so the report names it for the operator. `mentions` is the prose, code spans, link labels and `cross-spec-impact:` entries the rewrite does not move.
 
 `dependencies:` and `references:` are **not** edited: the pre-commit generators rewrite them from the corrected bodies on the next commit, which is why the report recommends committing before folding the next spec (AC23). `check-orphaned-references`, which `/ductus:analyze` runs on every invocation, is the verifier afterwards, not the repair path (AC22).
-
-## Retiring the directory
-
-Removal is the last step and the only irreversible one, and `retire-feature`'s description states its refusals.
-
-- **A refusal leaves the branch-scoped spec exactly where it was.**
-- **A sequential feature is refused on this path.** Fold does not pass the opt-in that only `/ductus:consolidate` passes, and has no argument that would, so a mistyped feature name meets the refusal rather than removing a permanent directory.
-- **An already-absent directory is not a failure.** A re-run converges, which is what the resumption contract in `fold.md` is for.

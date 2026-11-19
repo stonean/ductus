@@ -75,9 +75,3 @@ If any substantive check fails, report the specific failures and do not propose 
 ## Cross-spec impact check
 
 After the plan is written and before finalizing, list every sibling spec referenced by inline markdown link in the spec or plan body. Ask: "Do any of these referenced specs need an update because of decisions made here?" If yes, the §cross-spec-impact rule applies — record the change in the affected spec as a new acceptance criterion or scenario, with a back-link to this spec. Informational; does not block.
-
-## Finalize
-
-1. Present a summary of the plan, task breakdown, and validation gate results. Ask the user to approve the transition to planned. Do not update the status until the user confirms.
-2. On confirmation, update the spec's frontmatter `status` field from clarified to planned.
-3. Display the next step: "Run `/{project}:implement` to begin implementation."
