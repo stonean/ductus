@@ -6,7 +6,7 @@ section: "Record freshness"
 
 ## Context
 
-`reviewed-digest` and `analyzed-digest` are maps keyed by each subject's path, and `reviewed-unreadable` and `analyzed-unreadable` are lists of paths. `write-review` and `write-analysis` wrote each path bare, though every other string in both records goes through `yaml_string`. A scenario or data-model file whose name holds `:` or `#` therefore broke the record: `write-review` wrote a `review.md` it could not read again and the spec stayed blocked until the file was edited by hand, and `write-analysis` wrote a key that read back as a shorter path, so the recorded path set never equalled the current one and the analysis read stale on every run.
+`reviewed-digest` and `analyzed-digest` are maps keyed by each subject's path, and `reviewed-unreadable` and `analyzed-unreadable` are lists of paths. `write-review` and `write-analysis` wrote each path bare, though every other string in both records goes through `yaml_string`. A scenario or data-model file whose name holds a colon followed by a space, or a space followed by `#`, therefore broke the record: `write-review` wrote a `review.md` it could not read again and the spec stayed blocked until the file was edited by hand, and `write-analysis` wrote a key that read back as a shorter path, so the recorded path set never equalled the current one and the analysis read stale on every run.
 
 Quoting every key would rewrite all 76 recorded digest maps, changing `review.md`, which the analysis digest covers, so every spec's analysis would go stale at its next review.
 
