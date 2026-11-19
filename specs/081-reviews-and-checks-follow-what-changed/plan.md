@@ -122,6 +122,8 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 
 ## Cross-spec impact
 
+The statuses below are those of `6158d7df`, where the reopening started (`git show 6158d7df:specs/NNN-<slug>/spec.md`).
+
 - **079.** AC4's annotation, AC6 and the Resolved Questions on scenario edits and attribution change. That reopens 079, which then owes an analysis and, under this rule, no review.
 - **066.** Its data model and scenarios list the gate's checks and `blocked-by` values; it is `in-progress`.
 - **026.** Its criteria and scenarios describe Family 19; it is `in-progress`.
