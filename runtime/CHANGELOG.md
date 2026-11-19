@@ -1378,14 +1378,14 @@ its version and date.
   a spec whose `tasks.md` holds an unchecked box, accepted in 0.59.11, now
   fails.
 - **A command's reference holds what a step does with a result, and no more.**
-  `framework/commands/` and `framework/reference/` together total 465,214
-  bytes at `79cd59a3` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
-  253,797 over the 17 command files and 211,417 over the 13 references), where the
+  `framework/commands/` and `framework/reference/` together total 465,917
+  bytes at `1a7b6911` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
+  254,439 over the 17 command files and 211,478 over the 13 references), where the
   17 command files of `ductus-v0.59.11` totalled 486,072 and no reference existed
   (the same `wc -c` over `git show <rev>:<path>`). The cuts reached 421,717 at
   `101a6e8e`, mid-release, from 553,352 before them, and later changes in the
-  release grew the files again. `framework/reference/review.md` is 55,570 bytes
-  at `79cd59a3` and `framework/reference/analyze.md` 63,924, so each is over
+  release grew the files again. `framework/reference/review.md` is 55,547 bytes
+  at `1a7b6911` and `framework/reference/analyze.md` 63,924, so each is over
   one 50,000-byte read; they were 45,232 and 48,691 at `101a6e8e`, from 67,168
   and 78,632 before the cuts. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
