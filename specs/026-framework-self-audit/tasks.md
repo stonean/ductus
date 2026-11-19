@@ -72,6 +72,6 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 8. Family 34 judges the reference sections a command's steps reach (from 071's scenario reference-sections-are-reached-by-a-step)
 
-- [ ] Implement the behavior described in `scenarios/family-34-reference-section-reachability.md`
+- [x] Implement the behavior described in `scenarios/family-34-reference-section-reachability.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
