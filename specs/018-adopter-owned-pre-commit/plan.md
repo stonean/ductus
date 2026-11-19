@@ -28,7 +28,7 @@ Three substantive edits to the section, each motivated by the spec:
 
 ### Manual integration snippet path change
 
-The snippet (printed when the detection ladder hits a third-party hook system or non-`.githooks` `core.hooksPath`) changes from `./.githooks/pre-commit` to `./.githooks/ductus-pre-commit`. Two callsites: the prose snippet in `framework/bootstrap/ductus-procedure.md` §Hook Installation > Manual integration snippet, and the post-scaffolding output's per-condition skip message. Both update.
+The snippet (printed when the detection ladder hits a third-party hook system or non-`.githooks` `core.hooksPath`) changes from `./.githooks/pre-commit` to `./.githooks/ductus-pre-commit`. Two callsites: the prose snippet in `framework/bootstrap/ductus-procedure.md` §Hook Installation > Manual integration snippet, and the post-scaffolding output's per-condition skip message. Both update. The reason: a project whose own hook runner, not `core.hooksPath`, runs its hooks must call the file ductus keeps current, and the inner hook is the one `/ductus` updates on every run and is safe to call from another runner, while the outer stub is the adopter's own (**§Manual integration snippet** in `specs/018-adopter-owned-pre-commit/spec.md`).
 
 ### Spec 017 signpost
 
@@ -49,7 +49,7 @@ The 017 body, ACs, and resolved-question entries are not edited. The block-quote
 
 ### Verification approach
 
-The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox project to verify the fresh-install path. The verification is manual — run `/ductus` against a temp directory (a clean repo with no hooks) and inspect the resulting file layout. The ductus repo's own CI does not exercise this code path (CI runs the generators and fails on a changed tree; it does not boot a fresh adopter project). Manual sandbox verification is the discharge criterion for those ACs.
+The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox project to verify the fresh-install path. The verification is manual — run `/ductus` against a temp directory (a clean repo with no hooks) and inspect the resulting file layout. The ductus repo's own CI does not exercise this code path (`.github/workflows/generators.yml` runs the generators and fails on a changed tree, and no workflow boots a fresh adopter project: framework-checks' `scripts/tests/test-install.sh` tests only that `install.sh` writes the bootstrap command). Manual sandbox verification is the discharge criterion for those ACs.
 
 ## Affected Files
 
@@ -64,11 +64,11 @@ The end-to-end ACs (AC9, AC11) require a real `/ductus` run against a sandbox pr
 | `specs/018-adopter-owned-pre-commit/plan.md` | Create | This file |
 | `specs/018-adopter-owned-pre-commit/tasks.md` | Create | Task breakdown |
 
-The CI workflow at `.github/workflows/` (if present) is not touched — CI runs the generators and fails on a changed tree, and the rename is byte-identical for the inner file, so CI sees no diff.
+The CI workflow at `.github/workflows/` (if present) is not touched — CI runs the generators and fails on a changed tree (`.github/workflows/generators.yml`), and the rename is byte-identical for the inner file, so CI sees no diff.
 
 ## Trade-offs
 
 - **Two files for adopters to inspect.** When debugging a failed pre-commit, the adopter has to know the wiring goes outer → inner. Mitigated by the comment blocks on each file naming the ownership boundary, and by the manual-integration snippet pointing at the inner file as the public entry point.
 - **No migration from a spec-017 hook.** The one this plan built was retired on 2026-11-18 (`spec.md` §Migration): no release shipped a spec-017 hook on its own, and a project that still holds one gets the skip report of `framework/bootstrap/ductus-procedure.md` §Hook Installation, with the manual integration snippet.
-- **`install.sh` deletion drops a (theoretical) manual reinstall path.** Adopters who deleted their hooks and don't want to re-run `/ductus` would have lost a single command (`bash framework/bootstrap/hooks/install.sh`). The replacement is two commands (`git config core.hooksPath .githooks; chmod +x .githooks/*`). This is fine — the path was never used in practice (verifiable by grep through any adopter project's history; nobody re-runs `install.sh` standalone).
+- **`install.sh` deletion drops a (theoretical) manual reinstall path.** Adopters who deleted their hooks and don't want to re-run `/ductus` would have lost a single command (`bash framework/bootstrap/hooks/install.sh`). The replacement is two commands (`git config core.hooksPath .githooks; chmod +x .githooks/*`). This is fine on an assumption: that no adopter re-runs `install.sh` standalone. An adopter's history is out of reach from this repository, so it cannot be checked here, and no report has named the path.
 - **The outer file's `set -euo pipefail` propagates the inner file's failures unchanged.** A failing generator in the inner file still aborts the commit, which is the desired behavior. The trade-off this avoids: trying to make the outer file "smart" about partial failures (e.g., letting the adopter's checks run even when ductus's checks fail). Out of scope and would invert the ownership model.
