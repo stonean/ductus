@@ -240,14 +240,8 @@ its version and date.
   past `[artifacts] read-size-bytes` to the result's `lists-file`, beside
   `analyze-stale-paths`, each with a count inline. `process-waivers` expires
   a marked waiver whose rule has no well-formed entry, on any run, restricted included, with
-  its `waiver expired:` notice. Its `applied`, `expired`, `retained` and `notices`
-  grow with the departure waivers, so they are bounded (BE-PAYLOAD-001) as
-  `process-decisions`' lists are: past `[artifacts] read-size-bytes` `form` is
-  `file`, the four lists move whole to the file `lists-file` names, and each
-  list's count (`applied-count`, `expired-count`, `retained-count`,
-  `notices-count`) stays inline in both forms. A result with all four empty
-  reads no setting. Under `ductus exec` the walker restores the lists before
-  `write-review` reads `applied` and `expired`.
+  its `waiver expired:` notice, and bounds its result's lists, a breaking
+  change entered under Changed.
 - **A rule verdict can be `waived` (spec 073).** `write-analysis` accepts the
   bare `{verdict: waived}` in `rule-verdicts` for a rule whose trigger fires
   and whose spec holds a well-formed departure entry, and fills `reason`,
@@ -663,6 +657,17 @@ its version and date.
   `BE-COMPAT-001`: `matched`, `expired`, `retained` and `notices`, inline in
   0.59.11, are absent inline past the read size, and `retained` whenever a
   decision is retained.
+
+- **BREAKING: `process-waivers` bounds its result's lists (spec 073, task 14;
+  `BE-PAYLOAD-001`).** Its `applied`, `expired`, `retained` and `notices` grow
+  with the departure waivers, so they are bounded as `process-decisions`'
+  lists are: past `[artifacts] read-size-bytes` `form` is `file`, the four
+  lists move whole to the file `lists-file` names, and each list's count
+  (`applied-count`, `expired-count`, `retained-count`, `notices-count`) stays
+  inline in both forms. A result with all four empty reads no setting. Under
+  `ductus exec` the walker restores the lists before `write-review` reads
+  `applied` and `expired`. Breaking under `BE-COMPAT-001`: the four lists,
+  inline in 0.59.11, are absent inline past the read size.
 
 - **`write-review`'s departure waivers are bounded by the review scope,
   follow their entry, and yield no deferral (spec 073, review round 1).** An
