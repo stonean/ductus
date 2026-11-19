@@ -425,3 +425,26 @@ its schema.
   (owner, 2026-11-19). Trimming `analyze`'s Instructions below the compaction
   window, and splitting `/ductus` further, are out of scope for the same
   reason.
+- **Is an unreached reference section checked, or left to authors?**
+  Resolved: checked. `check-step-references` and Family 34 fail the audit on a
+  `##` section of a shipped reference that no step reaches, because a
+  requirement nothing checks rests on authors remembering it. 026 owns the check
+  (its scenario `family-34-reference-section-reachability`) and this spec the
+  requirement (scenario `reference-sections-are-reached-by-a-step`). Owner
+  decision, 2026-11-19.
+- **Which citations reach a section?** Resolved: only a numbered step under
+  `## Instructions`, with its sub-steps and bullets, or a section already
+  reached. A citation in a preamble, a note after the steps, a flags table or
+  Scope Boundaries reaches nothing, since an agent reads a section when a step
+  sends it there and a note is not run. A section correctly cited from such a
+  block carries `<!-- audit:kept <reason> -->` beneath its heading, counted as
+  exempt and never silent; four carry it: `Severity tiers` and `Record fields`
+  in `framework/reference/analyze.md`, `Cross-spec context checklist` in
+  `framework/reference/plan.md` and `Blocking semantics` in
+  `framework/reference/review.md`. Owner decision, 2026-11-19.
+- **What happens to a section no step reaches?** Resolved: it is deleted, and a
+  rule it held that nothing else states moves into the step or section that
+  needs it. The specify reference's sections, which restated its steps and the
+  primitives' contracts, go with the rest, and a reference left with no section stays as its opening paragraph,
+  since the criteria name every command that has a reference. Owner decision,
+  2026-11-19.
