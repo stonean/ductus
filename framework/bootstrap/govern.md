@@ -81,7 +81,7 @@ For each agent, these paths and behaviors are computed by convention from its ro
 | Derived value | `claude-style` | `pi` |
 | --- | --- | --- |
 | Command/skill path | `{config_dir}/commands/{project}/<name>.md` | `{config_dir}/prompts/{project}-<name>.md` |
-| Invocation | `/{project}:<name>` | `/{project}-<name>` |
+| Invocation | `/{project}:<name>` | `/{project}-<name>`, and `/{project}:<name>` through the bridge's alias for each installed command (spec 064) |
 | `ductus` install path | `{config_dir}/commands/ductus.md` | `{config_dir}/prompts/ductus.md` |
 | Settings file | `{config_dir}/settings.local.json` | `{config_dir}/settings.json` (no permission-gating surface — Permission Setup is a documented no-op) |
 | Permission shape | `permissions.allow/deny` | none (Pi displays no host permission prompt; trust is the only gate) |

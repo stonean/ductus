@@ -448,6 +448,19 @@ its version and date.
   task, and says so when the history is shallow or nothing closed. `/status`
   shows the counts on every run through `dashboard`'s new `reopenings` block.
   `/configure` allows it with the other tools. Spec 079, task 7.
+- **On Pi, a command runs under the colon spelling every ductus text uses.**
+  The commands, references, constitution and rules name a command
+  `/{project}:<name>`, and Pi names it after its prompt template's file,
+  `/{project}-<name>`, so on Pi those references named no command and reached
+  the model as plain text. Pi's bridge now registers `/{project}:<name>` for
+  each installed `.pi/prompts/{project}-<name>.md`. An alias submits the
+  hyphen form with its arguments as typed input, through `sendUserMessage`
+  with `expandPromptTemplates`, so Pi's own expansion applies.
+  `/{project}:status` and `/{project}:help` run the same handlers as the
+  hyphen commands, with no model turn. The hyphen form keeps working, and no
+  installed file is renamed. A Pi project takes it on its next `/ductus`,
+  which replaces `.pi/extensions/ductus.ts`. Spec 064, task 18, scenario
+  `colon-form-commands-run-on-pi`.
 
 ### Changed
 

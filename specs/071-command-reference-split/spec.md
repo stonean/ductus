@@ -418,8 +418,10 @@ its schema.
   2026-10-25: the pin is 0.59.11 and 238 commits sit unreleased since
   `ductus-v0.59.11`.
 - **Is the commands' colon-form invocation in prose fixed here?** Resolved: no.
-  It is wrong for Pi's layout today (the Invocation row of Derived
+  It was wrong for Pi's layout (the Invocation row of Derived
   values in `framework/bootstrap/ductus.md`) and is unchanged by this move, so
-  it is its own change. Trimming `analyze`'s Instructions below the compaction
+  it is its own change: 064's scenario `colon-form-commands-run-on-pi`, under
+  which Pi's bridge registers the colon spelling of each installed command
+  (owner, 2026-11-19). Trimming `analyze`'s Instructions below the compaction
   window, and splitting `/ductus` further, are out of scope for the same
   reason.

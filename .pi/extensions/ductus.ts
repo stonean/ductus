@@ -9,7 +9,10 @@
  * runtime release that adds or changes a primitive reaches pi with no edit
  * here. It also registers `/<project>-status`, which shows the runtime's
  * pipeline view, and `/<project>-help`, which shows the pipeline guide, each
- * with no model turn, or why it cannot (spec 080). Those commands are why the
+ * with no model turn, or why it cannot (spec 080). And since every text
+ * ductus ships names a command `/<project>:<name>`, it registers that
+ * spelling for each installed command too (spec 064, scenario
+ * colon-form-commands-run-on-pi). Those commands are why the
  * bridge stays pi's tool surface now that pi 0.99.0 and later ship an MCP
  * client: no MCP registration can add one, and running both would serve every
  * tool twice (spec 064, Resolved Questions).
@@ -40,7 +43,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { resolve, dirname, join } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 
 /** The MCP protocol version the rmcp-based runtime serves (2025-03-26). */
 const MCP_PROTOCOL_VERSION = "2025-03-26";
@@ -93,7 +96,16 @@ interface ExtensionAPI {
     message: { customType: string; content: string; display: boolean },
     options?: { triggerTurn?: boolean },
   ): void;
+  sendUserMessage(
+    content: string,
+    options?: { expandPromptTemplates?: boolean; deliverAs?: "steer" | "followUp" },
+  ): void;
 }
+
+/** A command's name as /ductus installs it: what may follow `<project>-` in
+ *  a prompt template's filename for the bridge to register its colon
+ *  spelling. */
+const COMMAND_NAME = /^[a-z][a-z0-9-]*$/;
 
 function failure(text: string): ToolResult {
   return { content: [{ type: "text", text }], isError: true };
@@ -136,11 +148,11 @@ function helpResult(result: ToolResult): { guide: string; project: string } {
 class CommandsUnregistered extends Error {}
 
 /** The view with each command hint as Pi names the command. The runtime
- *  spells a hint `/<project>:<name>`, which Pi runs as plain text to the
- *  model; Pi names the command `/<project>-<name>` (spec 064's D1), so the
- *  bridge respells it (spec 080). Lexical: the same form inside quoted text,
- *  such as an open question, is respelled too, and on Pi it names no command
- *  either. */
+ *  spells a hint `/<project>:<name>`; Pi's own name for the command is
+ *  `/<project>-<name>` (spec 064's D1), so the bridge shows that one (spec
+ *  080), though the colon spelling runs too as the alias `registerAliases`
+ *  adds. Lexical: the same form inside quoted text, such as an open question,
+ *  is respelled too. */
 function piSpelling(view: string, project: string): string {
   const escaped = project.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // A replacer function, since a replacement string would expand a `$` in
@@ -357,10 +369,47 @@ function projectRoot(): string {
   }
 }
 
+/** `/<project>:<name>` for each prompt template /ductus installed as
+ *  `.pi/prompts/<project>-<name>.md`, but a name in `own`, whose colon
+ *  spelling the bridge registered with its own handler (spec 064, scenario
+ *  colon-form-commands-run-on-pi). Every text ductus ships names a command
+ *  that way, and Pi names it after the file. An alias submits the hyphen
+ *  form with its arguments as typed input, so Pi's own template expansion
+ *  and argument substitution apply and the bridge copies neither; mid-turn it
+ *  steers, as Pi queues a command typed with Enter while the agent works, since
+ *  a handler is not told which key submitted it. Read once
+ *  at load, as Pi reads its templates: a template installed later gets its
+ *  alias at the next session start. */
+function registerAliases(pi: ExtensionAPI, root: string, project: string, own: Set<string>): void {
+  let files: string[];
+  try {
+    files = readdirSync(join(root, ".pi", "prompts"));
+  } catch {
+    return;
+  }
+  const prefix = project + "-";
+  for (const file of files.sort()) {
+    if (!file.startsWith(prefix) || !file.endsWith(".md")) continue;
+    const name = file.slice(prefix.length, -".md".length);
+    if (!COMMAND_NAME.test(name) || own.has(name)) continue;
+    const hyphen = prefix + name;
+    pi.registerCommand(project + ":" + name, {
+      description: "Run /" + hyphen + ", by the spelling ductus's text uses",
+      handler: async (args) => {
+        pi.sendUserMessage("/" + hyphen + (args ? " " + args : ""), {
+          expandPromptTemplates: true,
+          deliverAs: "steer",
+        });
+      },
+    });
+  }
+}
+
 export default function (pi: ExtensionAPI) {
   /* The pointer /ductus materializes per project; the bridge's sole contract
    * with the runtime is that path (same as every wired host). */
-  const server = new DuctusServer(resolve(projectRoot(), ".ductus/bin/ductus"));
+  const root = projectRoot();
+  const server = new DuctusServer(resolve(root, ".ductus/bin/ductus"));
   const unavailable = (err: unknown) =>
     `ductus: ${server.pointerPath} is missing or unusable — run /ductus to re-acquire it (${reason(err)})`;
 
@@ -399,52 +448,67 @@ export default function (pi: ExtensionAPI) {
         `ductus: the ductus commands are not registered, since ${source} failed at load: ${reason(err)}`,
       );
     }
+    /* The names registered here with their own handler, under both
+     * spellings, so `registerAliases` leaves them out. */
+    const own = new Set<string>();
     /* `/<project>-status` shows the pipeline view with no model turn (spec
      * 080): its handler calls `render-status` through this same server
      * process, so the view resolves this session's target, and shows the view,
      * or the failure, as a displayed message that triggers no turn. A runtime
-     * without `render-status` registers no status command. */
-    if (serves("render-status")) pi.registerCommand(project + "-status", {
-      description: "Show the ductus pipeline view, with no model turn",
-      handler: async () => {
-        let result: ToolResult;
-        try {
-          result = await server.callTool("render-status", {});
-        } catch (err) {
-          result = failure(unavailable(err));
-        }
-        let content: string;
-        try {
-          content = piSpelling(statusResult(result).view, project);
-        } catch (err) {
-          content = "ductus: " + project + "-status could not show the view: " + reason(err);
-        }
-        pi.sendMessage({ customType: "ductus-status", content, display: true }, { triggerTurn: false });
-      },
-    });
+     * without `render-status` registers no status command, and the status
+     * prompt template answers instead. `/<project>:status` runs the same
+     * handler (spec 064). */
+    if (serves("render-status")) {
+      const status = {
+        description: "Show the ductus pipeline view, with no model turn",
+        handler: async () => {
+          let result: ToolResult;
+          try {
+            result = await server.callTool("render-status", {});
+          } catch (err) {
+            result = failure(unavailable(err));
+          }
+          let content: string;
+          try {
+            content = piSpelling(statusResult(result).view, project);
+          } catch (err) {
+            content = "ductus: " + project + "-status could not show the view: " + reason(err);
+          }
+          pi.sendMessage({ customType: "ductus-status", content, display: true }, { triggerTurn: false });
+        },
+      };
+      pi.registerCommand(project + "-status", status);
+      pi.registerCommand(project + ":status", status);
+      own.add("status");
+    }
     /* `/<project>-help` shows the guide `/<project>:help` prints, respelled
      * as the view is, with no model turn (spec 080); a runtime without
      * `render-help` registers no help command, and the help prompt template
-     * answers instead. */
-    if (!serves("render-help")) return;
-    pi.registerCommand(project + "-help", {
-      description: "Show the ductus pipeline guide, with no model turn",
-      handler: async () => {
-        let result: ToolResult;
-        try {
-          result = await server.callTool("render-help", {});
-        } catch (err) {
-          result = failure(unavailable(err));
-        }
-        let content: string;
-        try {
-          content = piSpelling(helpResult(result).guide, project);
-        } catch (err) {
-          content = "ductus: " + project + "-help could not show the guide: " + reason(err);
-        }
-        pi.sendMessage({ customType: "ductus-help", content, display: true }, { triggerTurn: false });
-      },
-    });
+     * answers instead. `/<project>:help` runs the same handler (spec 064). */
+    if (serves("render-help")) {
+      const help = {
+        description: "Show the ductus pipeline guide, with no model turn",
+        handler: async () => {
+          let result: ToolResult;
+          try {
+            result = await server.callTool("render-help", {});
+          } catch (err) {
+            result = failure(unavailable(err));
+          }
+          let content: string;
+          try {
+            content = piSpelling(helpResult(result).guide, project);
+          } catch (err) {
+            content = "ductus: " + project + "-help could not show the guide: " + reason(err);
+          }
+          pi.sendMessage({ customType: "ductus-help", content, display: true }, { triggerTurn: false });
+        },
+      };
+      pi.registerCommand(project + "-help", help);
+      pi.registerCommand(project + ":help", help);
+      own.add("help");
+    }
+    registerAliases(pi, root, project, own);
   });
   /* Handled here so a failed load is never an unhandled rejection in pi's
    * process; session start reports it. */

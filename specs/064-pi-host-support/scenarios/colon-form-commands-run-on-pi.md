@@ -21,7 +21,7 @@ Pi 1.5.2's source supports this:
 ## Behavior
 
 - Once the bridge has learned the namespace at load, it registers `/{project}:<name>` for every prompt template `/ductus` installed as `.pi/prompts/{project}-<name>.md`. Each colon-form reference then names a command on Pi.
-- An alias runs as typing `/{project}-<name>` with the same arguments does. Its handler submits that text through `pi.sendUserMessage` with `expandPromptTemplates: true`. Pi's own template expansion and argument substitution apply, and the bridge holds no copy of either.
+- An alias runs as typing `/{project}-<name>` with the same arguments does. Its handler submits that text through `pi.sendUserMessage` with `expandPromptTemplates: true` and `deliverAs: "steer"`, which applies only mid-turn, where Pi queues a command typed with Enter as a steer. Pi's own template expansion and argument substitution apply, and the bridge holds no copy of either.
 - `/{project}:status` and `/{project}:help` run the same handlers as `/{project}-status` and `/{project}-help`. Each shows the view or the guide with no model turn.
 - The hyphen form keeps working unchanged. No installed file is renamed, and the enforcement glob for `.pi/prompts` is unchanged.
 - A load that registers no command registers no alias either: the runtime cannot start, or the call naming the namespace fails. The notice the load shows is unchanged.
@@ -31,6 +31,7 @@ Pi 1.5.2's source supports this:
 - A template installed after the bridge loaded, such as by a `/ductus` run mid-session, gets its alias at the next session start, as Pi's own template discovery does at load.
 - A `{project}-*.md` name whose `<name>` falls outside a command name's grammar (`[a-z][a-z0-9-]*`) gets no alias.
 - A project's own prompt template named `{project}:<name>.md` is shadowed by the alias, since Pi dispatches an extension command before it expands a template.
+- Typed mid-turn with Alt+Enter, which queues a hyphen command as a follow-up, an alias steers instead, since a command's handler is not told which key submitted it (`interactive-mode.js` in pi 1.5.2).
 - Pi's command completion lists both spellings of each command.
 - A pi older than 1.5.0 is not examined.
 

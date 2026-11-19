@@ -10,7 +10,10 @@
 // flight and any queued behind it there, and a process that loaded the bridge
 // exiting by itself — and the `{project}-status` and `{project}-help` commands
 // it registers under the namespace `render-help` gives at load, each showing
-// its answer, or a failure, as a displayed message that triggers no turn.
+// its answer, or a failure, as a displayed message that triggers no turn —
+// and the `{project}:<name>` alias it registers for each installed command
+// (spec 064, scenario colon-form-commands-run-on-pi), which submits the
+// hyphen form as typed input.
 // What it does not: pi's own extension loader (jiti), how pi renders a
 // result or a message, and whether a message reaches the agent's context —
 // a real `pi` run is still the only test of those (AGENTS.md, the Pi bridge
@@ -53,12 +56,17 @@ const TIMEOUT_DECL = "const REQUEST_TIMEOUT_MS = 120_000;";
 // case rather than leaving it waiting out two minutes. `hostProject` writes
 // the `[host] project` the commands are named by. `helpCopy` installs
 // help.md as /ductus installs it for Pi, `{project}` substituted, under the
-// `.pi` config dir the session file records.
-function project({ binary = runtime, timeoutMs, hostProject, helpCopy = false } = {}) {
+// `.pi` config dir the session file records. `prompts` names further files
+// to write under `.pi/prompts`, each a one-line template.
+function project({ binary = runtime, timeoutMs, hostProject, helpCopy = false, prompts = [] } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "pi-bridge-"));
   dirs.push(dir);
   mkdirSync(join(dir, ".ductus", "bin"), { recursive: true });
   if (hostProject) writeFileSync(join(dir, ".ductus", "config.toml"), `[host]\nproject = "${hostProject}"\n`);
+  if (prompts.length) {
+    mkdirSync(join(dir, ".pi", "prompts"), { recursive: true });
+    for (const file of prompts) writeFileSync(join(dir, ".pi", "prompts", file), "Run with $ARGUMENTS\n");
+  }
   if (helpCopy) {
     writeFileSync(join(dir, ".ductus", "session.toml"), `cli-config-dir = ".pi"\n`);
     mkdirSync(join(dir, ".pi", "prompts"), { recursive: true });
@@ -151,6 +159,7 @@ async function load(dir) {
   const tools = new Map();
   const commands = new Map();
   const messages = [];
+  const userMessages = [];
   const handlers = {};
   const notices = [];
   const api = {
@@ -158,6 +167,7 @@ async function load(dir) {
     registerTool: (tool) => tools.set(tool.name, tool),
     registerCommand: (name, options) => commands.set(name, options),
     sendMessage: (message, options) => messages.push({ message, options }),
+    sendUserMessage: (content, options) => userMessages.push({ content, options }),
   };
   const ctx = { ui: { notify: (message, level) => notices.push(`${level}: ${message}`) } };
   const url = pathToFileURL(join(dir, ".pi", "extensions", "ductus.ts")).href;
@@ -165,7 +175,7 @@ async function load(dir) {
   mod.default(api);
   await sleep(100); // pi fires session_start right after loading extensions
   handlers.session_start?.({}, ctx);
-  return { tools, notices, commands, messages, handlers };
+  return { tools, notices, commands, messages, userMessages, handlers };
 }
 
 // The one message a registered command sent: displayed, and triggering no turn.
@@ -260,7 +270,8 @@ await check("a runtime that stops answering times out once, then is replaced", a
 await check("registers {project}-status, whose handler shows the view and triggers no turn", async () => {
   const { tools, commands, messages } = await load(project({ hostProject: "harness", helpCopy: true }));
   await until(5000, () => commands.size > 1);
-  if (commands.size !== 2 || !commands.has("harness-status") || !commands.has("harness-help"))
+  const expected = ["harness-status", "harness:status", "harness-help", "harness:help"];
+  if (commands.size !== expected.length || !expected.every((name) => commands.has(name)))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
   if (!tools.has("ductus__render-status")) throw new Error("render-status was not registered as a tool");
   await within(5000, commands.get("harness-status").handler("", {}));
@@ -342,12 +353,12 @@ await check("with no help copy at load, no command registers, and the notice nam
   if (notice.includes("missing or unusable")) throw new Error(`the notice blames the pointer: ${notice}`);
 });
 
-await check("a runtime with render-status but no render-help registers only the status command", async () => {
+await check("a runtime with render-status but no render-help registers only the status command, under both spellings", async () => {
   const ANSWERS_AS_A_VIEW = `reply({ content: [{ type: "text", text: JSON.stringify({ "rendered-markdown": "x", project: "stub" }) }], isError: false });`;
   const { tools, commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW, ["render-status"]) }));
   await until(5000, () => commands.size > 0);
   await sleep(200);
-  if (tools.size !== 1 || commands.size !== 1 || !commands.has("stub-status"))
+  if (tools.size !== 1 || commands.size !== 2 || !commands.has("stub-status") || !commands.has("stub:status"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
 });
 
@@ -358,8 +369,65 @@ await check("a runtime without render-status registers no status command", async
   const { commands } = await load(project({ binary: stubRuntime(ANSWERS_AS_A_VIEW_AND_A_GUIDE, ["render-help"]) }));
   await until(5000, () => commands.size > 0);
   await sleep(200);
-  if (commands.size !== 1 || !commands.has("stub-help"))
+  if (commands.size !== 2 || !commands.has("stub-help") || !commands.has("stub:help"))
     throw new Error(`registered ${[...commands.keys()].join(", ")}`);
+});
+
+// Spec 064, scenario colon-form-commands-run-on-pi: every text ductus ships
+// names a command `/{project}:<name>`, and Pi names it after its template's
+// file, `/{project}-<name>`, so the bridge registers the colon spelling too.
+await check("registers {project}:<name> for each installed template, submitting the hyphen form with its arguments as typed input", async () => {
+  const dir = project({ hostProject: "harness", helpCopy: true, prompts: ["harness-review.md", "harness-target.md"] });
+  const { commands, messages, userMessages } = await load(dir);
+  await until(5000, () => commands.size > 3);
+  for (const name of ["harness:review", "harness:target", "harness-status", "harness-help"])
+    if (!commands.has(name)) throw new Error(`no ${name}: registered ${[...commands.keys()].join(", ")}`);
+  await within(5000, commands.get("harness:review").handler("--since abc", {}));
+  await within(5000, commands.get("harness:target").handler("", {}));
+  const sent = JSON.stringify(userMessages);
+  const want = [
+    { content: "/harness-review --since abc", options: { expandPromptTemplates: true, deliverAs: "steer" } },
+    { content: "/harness-target", options: { expandPromptTemplates: true, deliverAs: "steer" } },
+  ];
+  if (sent !== JSON.stringify(want)) throw new Error(`submitted ${sent}`);
+  if (messages.length) throw new Error(`an alias displayed ${messages.length} message(s) instead of submitting`);
+});
+
+await check("{project}:status and {project}:help run the same handlers as the hyphen commands, with no model turn", async () => {
+  const { commands, messages, userMessages } = await load(project({ hostProject: "harness", helpCopy: true }));
+  await until(5000, () => commands.size > 3);
+  for (const name of ["status", "help"]) {
+    const colon = commands.get(`harness:${name}`);
+    if (!colon || colon.handler !== commands.get(`harness-${name}`)?.handler)
+      throw new Error(`harness:${name} does not share harness-${name}'s handler`);
+  }
+  await within(5000, commands.get("harness:help").handler("", {}));
+  const guide = shownWithoutATurn(messages);
+  if (!guide.startsWith("## harness — Spec-Driven Development Pipeline")) throw new Error(`no guide: ${guide.slice(0, 200)}`);
+  if (userMessages.length) throw new Error(`harness:help submitted ${JSON.stringify(userMessages)}`);
+});
+
+await check("a template name outside a command's grammar, or not a markdown file, gets no alias", async () => {
+  const prompts = ["harness-Upper.md", "harness-.md", "harness-x.txt", "harness_y.md", "other-review.md", "harness-ok-2.md"];
+  const { commands } = await load(project({ hostProject: "harness", helpCopy: true, prompts }));
+  await until(5000, () => commands.size > 3);
+  await sleep(200);
+  const aliases = [...commands.keys()].filter((name) => name.includes(":")).sort();
+  if (JSON.stringify(aliases) !== JSON.stringify(["harness:help", "harness:ok-2", "harness:status"]))
+    throw new Error(`aliases ${aliases.join(", ")}`);
+});
+
+await check("a load that registers no command registers no alias", async () => {
+  // render-help fails at load with no help copy, and a runtime serving
+  // neither render-help nor render-status names no namespace.
+  const failed = await load(project({ hostProject: "harness", prompts: ["harness-review.md"] }));
+  await until(5000, () => failed.notices.length > 0);
+  await sleep(200);
+  if (failed.commands.size !== 0) throw new Error(`a failed load registered ${[...failed.commands.keys()].join(", ")}`);
+  const silent = await load(project({ binary: stubRuntime("/* never called */"), prompts: ["stub-review.md"] }));
+  await until(5000, () => silent.tools.size > 0);
+  await sleep(200);
+  if (silent.commands.size !== 0) throw new Error(`a runtime naming no namespace registered ${[...silent.commands.keys()].join(", ")}`);
 });
 
 // Spec 064, scenario the-bridge-closes-its-server-at-shutdown: pi's extension
