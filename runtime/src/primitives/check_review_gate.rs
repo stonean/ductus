@@ -213,7 +213,6 @@ pub(crate) fn run_with_lint(
         crate::primitives::RecordLoad::Unreadable(reason) => {
             return Ok(unreadable_record_block(
                 &rel_dir,
-                &project,
                 RecordKind::Review,
                 &reason,
             ));
@@ -353,7 +352,6 @@ fn analyze_half_block(
         crate::primitives::RecordLoad::Unreadable(reason) => {
             return Err(unreadable_record_block(
                 rel_dir,
-                project,
                 RecordKind::Analyze,
                 &reason,
             ));
@@ -1025,23 +1023,12 @@ fn unreadable_decisions_block(rel_dir: &str, reason: &str) -> Verdict {
 /// have been reviewed sends them to redo work on the strength of something the
 /// gate could not read. The parse error travels with it, so the repair is
 /// actionable rather than a guess.
-fn unreadable_record_block(
-    rel_dir: &str,
-    project: &str,
-    kind: RecordKind,
-    reason: &str,
-) -> Verdict {
-    let (file, noun, verb, blocked_by) = match kind {
-        RecordKind::Review => (
-            "review.md",
-            "a review",
-            "review",
-            ReviewGateBlock::RecordUnreadable,
-        ),
+fn unreadable_record_block(rel_dir: &str, kind: RecordKind, reason: &str) -> Verdict {
+    let (file, noun, blocked_by) = match kind {
+        RecordKind::Review => ("review.md", "a review", ReviewGateBlock::RecordUnreadable),
         RecordKind::Analyze => (
             "analysis.md",
             "an analysis",
-            "analyze",
             ReviewGateBlock::AnalyzeRecordUnreadable,
         ),
     };
@@ -1052,7 +1039,7 @@ fn unreadable_record_block(
             "blocked: {rel_dir}/{file} exists but its record could not be read — whether {noun} ran is undeterminable"
         )),
         guidance: Some(format!(
-            "Repair the frontmatter in {rel_dir}/{file}, or re-run /{project}:{verb} to rewrite it. Parse error: {reason}"
+            "Repair the frontmatter in {rel_dir}/{file} by hand, since {noun} refuses to record over it. Parse error: {reason}"
         )),
         violations: vec![],
         cross_spec_impact: vec![],
@@ -2960,6 +2947,26 @@ mod tests {
         assert!(message.contains("decisions:"), "{message}");
         let guidance = blocked.guidance.unwrap();
         assert!(guidance.contains("Repair"), "{guidance}");
+        assert!(!guidance.contains("re-run"), "{guidance}");
+    }
+
+    /// A `review.md` whose frontmatter does not parse blocks as undeterminable, and its
+    /// guidance says to repair it by hand, since `write-review` refuses to record over it:
+    /// a re-run is no repair.
+    #[test]
+    fn a_review_whose_frontmatter_does_not_parse_says_to_repair_it_by_hand() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::write(
+            tmp.path().join("specs/007-gate/review.md"),
+            "---\nspec: 007-gate\nlast-run: [unclosed\n---\n",
+        )
+        .unwrap();
+        let blocked = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!blocked.passed, "{blocked:?}");
+        assert_eq!(blocked.blocked_by, Some(ReviewGateBlock::RecordUnreadable));
+        let guidance = blocked.guidance.unwrap();
+        assert!(guidance.contains("by hand"), "{guidance}");
         assert!(!guidance.contains("re-run"), "{guidance}");
     }
 
