@@ -10,6 +10,8 @@ Make a scenario's unresolved open questions count toward its parent spec's compl
 
 A scenario exists to organize information — to keep `spec.md` from becoming one huge document. Its questions are still the spec's questions for the purpose of "is this feature done, and what is left?", even though they are authored, displayed, and resolved separately.
 
+> **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md) extended the placeholder guard of AC18: the parser skips a list item that says none (`- None`, `- N/A`, `- None — …`) in the same places, so `check-artifacts` does not block a clarified spec over one. A question that merely begins with the word still counts.
+
 ## Motivation
 
 **Before this feature**, every signal that answered *"does this spec have unresolved questions?"* read the spec body only, so scenario-scoped questions were invisible wherever it mattered:

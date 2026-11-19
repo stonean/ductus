@@ -1,5 +1,5 @@
 ---
-next-task: 38
+next-task: 43
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -68,3 +68,33 @@ The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it ru
 - [x] Each new behavior has a mutant its test kills, listed in `scripts/mutation/line-number-citations-067.py`
 
 - **Done when**: `check-artifacts` reports every line-number citation in a spec's examined artifacts as blocking and nothing AC5 excludes, proven by tests their mutants turn red; every list of the families names it; the whole `cargo test` passes; and 067's next review reads the change.
+
+## 38. A none list item is no open question
+
+- [ ] Implement the behavior described in `scenarios/a-none-list-item-is-no-open-question.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 39. A plan heading is matched without regard to case
+
+- [ ] Implement the behavior described in `scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 40. A bare port span names its remedy
+
+- [ ] Implement the behavior described in `scenarios/a-bare-port-span-names-its-remedy.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 41. The orphan check skips git-ignored local state
+
+- [ ] Implement the behavior described in `scenarios/orphan-check-skips-ignored-local-state.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 42. A header without a key keeps the previous table's keys
+
+- [ ] Implement the behavior described in `scenarios/promotion-coverage-header-without-a-key.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
