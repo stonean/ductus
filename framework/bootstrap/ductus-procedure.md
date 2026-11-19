@@ -78,12 +78,13 @@ If the active config file's `[migrations].last_applied` references an `id` that 
 
 ### Duplicate-id and reference-integrity guard
 
-If `framework/migrations.toml` contains two entries with the same `id`, or if any entry's `procedure_file` references a path that doesn't exist in the fetched archive, abort the loop before applying anything, with one line for each failure:
+If `framework/migrations.toml` contains two entries with the same `id`, or if any entry's `procedure_file` references a path that doesn't exist in the fetched archive, or if any entry's `id` is not a slug (`^[a-z0-9]+(-[a-z0-9]+)*$`, lowercase letters and digits with single hyphens between) or its `procedure_file` is not exactly `framework/migrations/{id}.md`, abort the loop before applying anything, with one line for each failure:
 
 - `migration {id}: duplicate id in framework/migrations.toml` once for each `id` two or more entries share;
-- `migration {id}: procedure file missing from archive` for a `procedure_file` the archive lacks.
+- `migration {id}: procedure file missing from archive` for a `procedure_file` the archive lacks;
+- `migration {id}: unsafe id or procedure_file` for an entry whose `id` or `procedure_file` fails the rule above. `extract-archive` skips links, so the staging tree holds none, and a slug's path stays under `framework/migrations/` by construction (`BE-INPUT-004`).
 
-`last_applied` keeps its prior value, since nothing ran. `/audit`'s Family 10 (`scripts/audit/migration-coverage.sh`, its 10f and 10c) catches these at maintainer time; this guard is the runtime safety net.
+`last_applied` keeps its prior value, since nothing ran. `/audit`'s Family 10 (`scripts/audit/migration-coverage.sh`, its 10f and 10c) catches the first two at maintainer time and no audit check holds the third; this guard is the runtime safety net.
 
 ## Frontmatter Migration
 

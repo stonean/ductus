@@ -33,7 +33,7 @@ Field semantics:
 - `target_paths` — array of paths or globs (relative to adopter project root). Read by Family 10 to verify the removed convention is actually absent from current `framework/`.
 - `procedure_file` — path (relative to repo root) to the markdown procedure file. Always present; there is no declarative-step DSL (Q4).
 
-Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break on `id`. File order in the TOML is not authoritative — TOML parsers don't guarantee array-of-tables order preservation across rewrites.
+Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break on `id`. File order in the TOML is not authoritative: the order comes from `introduced_in` and `id`, so where an entry sits in the file carries no meaning.
 
 ### `.ductus/config.toml` `[migrations]` section
 
@@ -44,9 +44,9 @@ Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break
 last_applied = "substitute-seed-placeholders"
 ```
 
-Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applied every active entry (most of which are no-ops because their targets are absent), then wrote the section with `last_applied = <newest entry's id>`. Since spec 071's task 20 a greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run. Since task 16 a first adoption does the same, which Pre-flight Checks decides from finding no signal an earlier run leaves (scenario `a-first-adoption-runs-no-migration`).
+An absent section reads as "no migrations applied". A greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run. Since task 16 a first adoption does the same, which Pre-flight Checks decides from finding no signal an earlier run leaves (scenario `a-first-adoption-runs-no-migration`).
 
-Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md`.
+Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md` (`framework/bootstrap/ductus-procedure.md` §Stale-reference behavior).
 
 ### Procedure file shape (`framework/migrations/{id}.md`)
 
@@ -66,7 +66,7 @@ Each file is a small markdown procedure with a fixed top-level shape. The bootst
 4. **Summary line.** Report `{summary text}` in the post-scaffolding summary.
 ```
 
-Idempotency check is step 1 of every procedure file, mechanically. The bootstrap loop does not enforce idempotency itself — the procedure file owns it. Family 10 does not verify idempotency (untestable from static state); discipline + integration tests cover it.
+Idempotency check is step 1 of every procedure file, mechanically. The bootstrap loop does not enforce idempotency itself — the procedure file owns it. Family 10 does not verify idempotency, which static state cannot show.
 
 ### Bootstrap loop placement and shape
 
@@ -83,6 +83,8 @@ Take the pre-run `git status --porcelain -- specs/` first, and again when the se
    any later step, abort the loop with one line for each failure —
      - `migration {id}: duplicate id in framework/migrations.toml`
      - `migration {id}: procedure file missing from archive`
+     - `migration {id}: unsafe id or procedure_file` (`id` not a slug, or `procedure_file`
+       not exactly `framework/migrations/{id}.md`)
    `last_applied` keeps its prior value.
 2. Resolve the active config file once; read its `[migrations].last_applied`
    (absence is null).
@@ -107,8 +109,8 @@ Take the pre-run `git status --porcelain -- specs/` first, and again when the se
 
 SemVer compare is a small shell helper, not a runtime primitive. Two options the procedure file can use:
 
-- `sort -V` on a two-line input (BSD/GNU coreutils both support `-V`).
-- A 10-line Python one-liner via `python3 -c 'from packaging.version ...'` if `sort -V` proves insufficient for pre-release tags.
+- `sort -V` on a two-line input. Run on macOS `sort` (2.3-Apple) on 2026-11-19, `printf '0.10.0\n0.4.0\n' | sort -V` orders `0.4.0` first, as SemVer does; GNU `sort -V` support is an assumption, unrun here.
+- A 10-line Python one-liner via `python3 -c 'from packaging.version ...'` when `sort -V` is insufficient for pre-release tags: the same `sort -V` run orders `0.4.0` before `0.4.0-rc1`, the reverse of SemVer, which puts the pre-release first.
 
 The bootstrap loop's filter operation is the only consumer of SemVer compare; it lives in the consolidated `## Pre-run Migrations` prose, not in a script. The procedure files themselves never compare versions.
 
@@ -134,11 +136,11 @@ When the release reaches an entry's `sunset_after` (current ductus ≥ `sunset_a
 3. Delete `framework/migrations/{id}.md`.
 4. `/audit`'s Family 10 verifies steps 1 and 3 (10a, 10c, 10e) and the archived entry's target paths (10b, which reads the `**Target paths:**` line and fails an archived entry without one). It does not verify that the recipe text was appended.
 
-`CHANGELOG.md` holds seven archived entries: two archived by 043 on 2026-07-22, and five, long past their `sunset_after`, archived on 2026-11-17 when 10e was added (owner decision).
+`CHANGELOG.md` holds seven archived entries (seven `###` headings under `## Archived migrations`, counted 2026-11-19): `skills-to-workflows` and `workflow-filename-rename` archived by `2fcb5f93` (043, 2026-07-22), and five archived by `c061c1f0` on 2026-11-17 when 10e was added (owner decision).
 
 ### Family 10 design (`scripts/audit/migration-coverage.sh`)
 
-Shell script under the existing `scripts/audit/` directory. Follows the same contract as Families 1–9: stdout findings, exit 0/1, read-only. The sketch below shows the first three checks; the script's header states every one. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17); 10f (task 19) fails an `id` two entries share:
+Shell script under the existing `scripts/audit/` directory. Follows the contract `scripts/audit/README.md` §Contract gives every family: stdout findings, exit 0/1, read-only. The sketch below shows the first three checks; the script's header states every one. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17); 10f (task 19) fails an `id` two entries share:
 
 ```bash
 # 10a no-orphan-procedure-files
@@ -220,7 +222,7 @@ Q9. A check that walks `git log -- framework/templates/ framework/commands/` to 
 
 ### Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)
 
-The existing `enforce-manifest` invocation in `framework/bootstrap/ductus.md` already removes the legacy `skills/` directory and legacy workflow filenames as a side effect. Leaving those two migrations out of the registry (since `enforce-manifest` handles them) would be coherent but creates two places to look for "what does bootstrap clean up on every run?" Decision: register both anyway, and modify `enforce-manifest`'s contract so it no longer handles legacy-cleanup work (just slash-command manifest enforcement). This keeps the registry as the *one* source of truth for adopter-cleanup, at the cost of trimming `enforce-manifest`. The trim is a small refactor of the primitive's expected-list construction — no behavior change for the slash-command-manifest path.
+Leaving the legacy `skills/` directory and legacy workflow filenames to `enforce-manifest` would have been coherent but left two places to look for "what does bootstrap clean up on every run?". Decision: register both, and keep `enforce-manifest` generic. As built, `runtime/src/primitives/enforce_manifest.rs`'s module doc states that adopter cleanup of historical conventions is owned by the registry-driven Pre-run Migrations loop, and the primitive removes whatever files the caller's `expected` list omits.
 
 ## Known Limitations
 
@@ -234,8 +236,8 @@ Family 10 verifies registry/state consistency, not registry/diff coverage. A mai
 
 ### CHANGELOG.md append at sunset is maintainer-discipline
 
-When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. 10e makes the sunset itself not depend on anyone remembering it: five entries sat past their `sunset_after` for up to 49 minor releases before it existed. Family 10 still cannot verify that the CHANGELOG received the recipe: a maintainer who deletes the TOML entry and procedure file without appending breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate for that step.
+When a migration sunsets, three actions land in one commit: delete TOML entry, append CHANGELOG entry, delete procedure file. 10e makes the sunset itself not depend on anyone remembering it: five entries, each with `sunset_after` 0.10.0, were still registered at version 0.59.11 when `c061c1f0` archived them, 49 minor releases past it (0.59 less 0.10), before it existed. Family 10 still cannot verify that the CHANGELOG received the recipe: a maintainer who deletes the TOML entry and procedure file without appending breaks the "adopters skipping past sunset have a recipe" promise. Code review is the gate for that step.
 
 ### Procedure file content format is loosely specified
 
-The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) procedure files are small enough that code review catches deviations, (c) the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.
+The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) procedure files are small enough that code review catches deviations, (c) no non-comment line under `runtime/src` names `framework/migrations/`, so the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.
