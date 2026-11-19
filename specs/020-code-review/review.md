@@ -1,28 +1,19 @@
 ---
 spec: 020-code-review
-last-run: 2026-11-19T02:29:42Z
-reviewed-against: 59d02adcf4fff32d4988d43b77fb5df859ca7582
-diff-base: 7dbd960507100f7d0bf34b17626405604e9ea012
+last-run: 2026-11-19T22:35:55Z
+reviewed-against: 5de7c1f98d3545515a679f09b569df3260be2644
+diff-base: ba3c205e68dd43e4ae6c746c62ca52161d905fb0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 6
-unread:
-  - framework/reference/review.md
-  - runtime/src/primitives/write_review.rs
-  - runtime/src/schema/primitives.rs
-  - specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md
-excluded: 98
+examined: 5
+scope: 5
+unread: []
+excluded: 44
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
-re-reads: 2
-diff-checked: 0
-not-re-read: 0
-budget-stop: false
 reviewed-digest:
-  data-model.md: 61bef581d1ee7851e3fa31b2f17c91151a1ff47ed62295c9f6cf885d17624893
+  data-model.md: 1625833bc1e1572da569f7c582ededc4ea9b59efe55b3f6d459efb59becd9632
   scenarios/every-loaded-rule-file-has-a-pass.md: 4e31f3bd59ad2c2145b8cb24ceaf8561580ffab2ad3143de1087f65b5109a0f3
   scenarios/review-flag-parsing-is-specified.md: a19fe0f4f50c954363f7cca4d913a81d96374535d31a986792243be5263631c1
   scenarios/review-reports-a-defect-under-its-owner.md: ef91f01e38d96520853db62f5ee62b9b8893d41582f055f4f01a25d5a796b665
@@ -65,9 +56,9 @@ criteria-verdicts:
     digest: 08d9a0ed5efc065e5ccfca189c8b754468e218e3eefaafa73f2dc44b49b8dca6
 blocking: false
 dispositions:
-  fixed: 7
+  fixed: 0
   deferred: 0
-  waived: 1
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "other — the Context of scenarios every-loaded-rule-file-has-a-pass and review-reports-a-defect-under-its-owner states in the present tense what task 14 and task 15 changed: that the reference names a rule file in only one pass, that the quality pass's definition does not say it enforces `quality-cross.md`, that `/review` applies no Not-flagged clause, and that 18 yields sit in files no pass applies today. — `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md:9`"
@@ -90,15 +81,23 @@ decisions:
     reason: The list records what 020 delivered, and the relocation is stated beside it, in the 057 note and the Frontmatter schema section; rewording a delivered task list changes no requirement and makes no claim about the tree.
     decided-at: 2026-11-19T02:29:42Z
     decided-by: rule
+  - key: "other — the `[review] tech-stack-verified` halt is carried by step 1's tech-stack branch, so the `review-owed: false` stop and the empty-scope branch never read the key, while the Config bullet and the data model say the halt comes at step 1 before any pass; the claim is wider than the branch that carries it. — ``framework/commands/review.md``"
+    outcome: waived
+    reason: The empty branches write no alignment decision and read no flag, so no malformed value is read as `false` there and CFG-ENV-008's no-silent-fallback holds; step 1's own sentence says the halt is where the flag is read, and rewording the claim is not mechanical enough to spend a fix round on a low-confidence note.
+    decided-at: 2026-11-19T22:35:21Z
+    decided-by: rule
+  - key: other — the sentence added to the `[review] tech-stack-verified` Config bullet leaves its first line longer than the neighbouring bullets' wrap. — ``framework/commands/review.md``
+    outcome: waived
+    reason: Cosmetic only, the markdown lint passes, and a rewrap would start a fix round and regenerate two copies for no requirement.
+    decided-at: 2026-11-19T22:35:21Z
+    decided-by: rule
 ---
 
 # Review — 020-code-review
 
 ## Summary
 
-Window 7dbd9605 (base-source reopen, 066 task 27a) to 59d02adc. The window held two artifacts, spec.md (27,002 bytes) and data-model.md (15,522), each read whole by the passes; the other four scope entries are this run's own fixes (framework/reference/review.md, runtime/src/primitives/write_review.rs, runtime/src/schema/primitives.rs, 022's scenario review-runtime-acceleration), uncommitted when written, which the passes did not read and the fix rounds re-read, so examined is 2 of 6 and unread names those four. The nine backend and cross rule files were read whole (285,795 bytes) and all five passes ran: no finding. The criteria step judged all 16 criteria one by one against the tree and history. AC8, AC9, AC10 and AC16 were judged not met first: AC8, AC10 and AC16 were true when written and superseded (two of AC8's three flatten parsers went with check-review-agreement; 1ffcef35 made the README's Commands section a list; 066 task 27 added the criteria step to the subagent), and their annotations were corrected by rule; AC9 never held as a process exit status, and the owner chose correcting the claim, with framework/reference/review.md §Output corrected to match. All four were judged met on their new text. Seven observations were fixed, round 1's NOTE among them, and one waived by rule; three stored decisions are retained, each keyed to a file outside the scope. Unexamined: the decisions schema field by field against 058 and 076, the --all Resolved Question's quote of the old drift predicate, and AC7's --fix, which edits code only in a host.
-
-2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+Window ba3c205e (base-source reopen) to HEAD. Scope 5 entries: framework/commands/review.md, specs/020-code-review/data-model.md and specs/020-code-review/spec.md, each read whole after its window diff, and the two generated copies .claude/commands/ductus/review.md and .pi/prompts/ductus-review.md, read as their window diffs (each equal to the source's change), not whole, so examined is 5 of 5 on that reading. The window's change: this run's own fix(020) commit making a present non-boolean [review] tech-stack-verified halt step 1 (CFG-ENV-008, found by analyze), the waiver example's rule IDs, the Excluded from scope row's pointer to write-review's description, and the status flip. The three security rule files (194,749 bytes) were read whole by the security pass and the nine other rule files, AGENTS.md's Gotchas to Design Principles and system.md by the other four passes: no finding. The criteria step judged all 16 criteria one by one: 16 met (AC9's exit status taken from the criterion's own annotation and write_review.rs tests, not driven). Two NOTE observations, both waived by rule; two stored decisions retained as still holding, two retained as naming files the scope does not hold. No fix round: this run wrote no fix after start-fix-rounds' base. Unexamined: framework/reference/review.md section 'Resolve target and scope' item 4 was not edited and does not mention the new halt.
 
 16 of 16 acceptance criteria judged met.
 
@@ -124,33 +123,27 @@ Window 7dbd9605 (base-source reopen, 066 task 27a) to 59d02adc. The window held 
 
 ## Acceptance criteria
 
-- AC1 — met: framework/commands/review.md exists with frontmatter description/argument-hint like analyze.md; .claude/commands/ductus/review.md is tracked and scripts/gen-claude-commands.sh --check exits 0 (in sync)
-- AC2 — met: driven: runtime/target/release/ductus write-review on a fixture wrote specs/001-demo/review.md with ## MUST violations (blocking), ## SHOULD violations (advisory), ## Low-confidence findings holding a MUST, a SHOULD and a low-confidence finding respectively
-- AC3 — met: discover-rule-files on this repo (no [rules] surfaces) selects security-backend.md and security-frontend.md (plus security-cross.md) as authoritative; selection is now suffix/[rules] surfaces/stack-driven so a backend-only project loads only the backend file, as the spec's own Resolved Questions stack-detection answer says; five passes are steps 3-7 of framework/commands/review.md
-- AC4 — met: relocation holds: write-review writes last-run, must-violations, should-violations, blocking, waivers into review.md frontmatter only (fixture driven); framework/templates/spec/spec.md ships status+dependencies only; validate-frontmatter --path on a spec.md with a residual review: block returns severity blocking
-- AC5 — met: driven: check-review-gate gives not-reviewed (absent review.md), record-unreadable (unparseable) and must-violations (blocking true); check-artifacts review-state-drift blocking on done spec with blocking true or null last-run, none when review.md absent, validate-frontmatter hard-fail on unreadable record; the CI step extracted from framework/templates/ci/adopter-generators.yml exits 1 on blocking:true and on the high-water-mark bound (057 commit 099f4c23, predicate was a review: block grep before d2bfac5a)
-- AC6 — met: driven: two write-review runs on identical input with different --reviewed-at/--reviewed-against produced review.md files differing only in last-run and reviewed-against (diff)
-- AC7 — met: framework/reference/review.md sections Apply --fix and Auto-fix scope (auto-fixable yes, no signature/schema/status-code/message change, no test deletion, within scope) which the Flags table in framework/commands/review.md points at; behavior-changing fixes excluded by those rules (prose contract, not driven: --fix edits code in a host)
-- AC8 — met: `RawWaiverFull` in `runtime/src/primitives/write_review.rs` keeps `#[serde(flatten)]` extras, and a fixture's custom `co-waived-by` field survived a `write-review` re-render; waivers live in `review.md` (057), an applied one kept and an expired one dropped, `process-waivers` expiring one whose rule stopped firing; the clause corrected from 'the three raw parsers', two of which went with `check-review-agreement` (by rule)
-- AC9 — met: `write-review`'s result carries `exit-code` from `i32::from(blocking)`, driven 1 with a MUST and 0 without; `main.rs` routes `WriteReview` through the ungated `emit_result` and `run_exec` returns success on a complete walk, while `framework/templates/ci/adopter-generators.yml`'s audit-record gate reads the record's `blocking`, as the corrected annotation states (owner decision)
-- AC10 — met: `README.md`'s Commands list names `/review` under **Pipeline — advance state** with a one-line purpose; `30e1fbaa`'s README held the `/review` table row under `### Pipeline (advance state)` and `1ffcef35` (2026-08-30) made the section a list, as the annotation states (by rule)
-- AC11 — met: framework/commands/review.md step 1 and framework/reference/review.md Resolve target and scope item 4 halt on a missing/empty/inconsistent AGENTS.md Tech Stack before the passes (steps 3-7), skip when [review] tech-stack-verified = true, persist via gate-confirm, no auto-reset; the key is a recognized config key (discover-rule-files on this repo's config emits no unknown-key notice)
-- AC12 — met: driven: write-review --empty-scope on a fresh fixture wrote 0/0/0 counts, blocking:false, result exit-code 0 and no examined key; with a not-met criterion the same call blocks (exit-code 1), the 066 qualification stated in framework/reference/review.md Resolve target and scope item 3
-- AC13 — met: driven: same rule BE-X-001 on src/a.py as should 1-2 and must 2-3 yielded one MUST (src/a.py:2-3) and the non-overlapping 10-12 SHOULD only; must-violations 1, should-violations 1, the lower-severity duplicate absent from counts and report
-- AC14 — met: framework/commands/review.md section Parsing $ARGUMENTS covers every Flags-table flag (--since with no value and unrecognized flags are errors), argument-hint names all twelve; check-command-flags returns findings 0 over 17 files and scripts/audit/command-flag-hint-parity.sh exits 0; proven to fail: on a scratch copy with [--since=<ref>] removed from the hint the primitive returns a flag-unsurfaced finding for --since
-- AC15 — met: examined/scope half holds in review.md alone: write-review omits examined when unstated (fixture empty-scope record has no examined key), scope derived by the primitive; test examined_and_scope_are_written_to_the_record_alone passes; Family 31 is gone (no Family 31 in scripts/audit, check-review-agreement retired per framework/bootstrap/configure/claude.md) and no gate reads examined, matching the annotation
-- AC16 — met: `framework/commands/review.md` step 3 and `framework/reference/review.md` Passes in a subagent run steps 3 to 7.2 in one subagent and continue at 7.3 with findings, observations, criterion verdicts and coverage; `cargo test --test review_command` passes with steps 3 to 7 `performReview` and 7.2 `verifyCriteria` under `ductus exec` (annotation added by rule, from 066 task 27)
+- AC1 — met: framework/commands/review.md (frontmatter, Purpose/Instructions in /analyze shape); generated copies .claude/commands/ductus/review.md and .pi/prompts/ductus-review.md carry the same diff.
+- AC2 — met: write-review (runtime/src/primitives/write_review.rs) writes specs/NNN/review.md with MUST/SHOULD/low-confidence buckets (low-confidence field; step 11 of command).
+- AC3 — met: command step 2 discover-rule-files + step 3 security pass over loaded security-*.md; five passes steps 3-7; framework/reference/review.md §Load rules (surface selection, the cross files always).
+- AC4 — met: record fields last-run, must-violations, should-violations, blocking, waivers live in review.md frontmatter (write_review.rs), as the relocation annotation states.
+- AC5 — met: check-review-gate (implement step 11), analyze review-state-drift, framework/templates/ci/adopter-generators.yml audit-record gate (comments lines 15-29, 152-167 describe review.md reads and the baseline).
+- AC6 — met: runtime test idempotent_rerun_reproduces_identical_review_md in write_review.rs.
+- AC7 — met: framework/reference/review.md "## Auto-fix scope"; command Flags row --fix.
+- AC8 — met: process-waivers + process_waivers.rs tests expires_when_file_is_gone, expires_when_rule_no_longer_fires, code_moving_within_file_does_not_expire; write_review.rs prune_expired and test expired_waiver_pruned_from_spec_frontmatter; scenarios/waiver-expiry.md exists.
+- AC9 — met: write_review.rs result exit_code = i32::from(blocking), tests assert 0 and 1 (e.g. result.exit_code == 1); CI gates on the record. I did not drive the CLI to confirm it exits 0 on a blocking record; the annotation states it and I take it as stated.
+- AC10 — met: README.md Commands list, "**Pipeline - advance state**" at line 93 names /review with one-line purpose (line 98).
+- AC11 — met: reference §Resolve target and scope item 4 (tech-stack check, missing/empty/inconsistent halts, exit 1, gate-confirm persist, no auto-reset); command text (framework/commands/review.md Config bullet and step 1) skips when [review] tech-stack-verified is true and now halts on a present non-boolean value before any pass naming key, file and value; data-model.md states the same (CFG-ENV-008); both generated copies carry the change (2 matching diff lines each). Note: the reference's item 4 does not mention the non-boolean halt, only the command and data-model do; not a criterion failure.
+- AC12 — met: write_review.rs empty-scope branch (module doc; AC12 test "the row renders on an empty scope too"); command step 1 scope-count zero path; blocking only through a criterion not met.
+- AC13 — met: write_review.rs dedup_findings, tests cross_pass_dedup_highest_severity_wins and dedup_keeps_non_overlapping_same_rule_file.
+- AC14 — met: command "### Parsing $ARGUMENTS" section, Flags table, argument-hint lists every flag (--all --fix --security|--simplicity|--quality --since --waive --defer ...); scripts/audit/command-flag-hint-parity.sh holds hint and table in agreement; scenario review-flag-parsing-is-specified.md exists.
+- AC15 — met: write_review.rs records examined (args.examined) against a self-derived scope; annotation on supersession matches.
+- AC16 — met: command step 3 (llm:performReview) states the subagent split and step 7.3 continuation; framework/reference/review.md "### Passes in a subagent" says short reads are named in Summary and kept out of examined; Pi runs it itself.
 
 ## Observations
 
-- convention — spec.md's Blocking message note quotes the gate's and the drift check's texts as emitted today and points at `framework/commands/implement.md` step 5 and `framework/commands/analyze.md` for them, though step 5 is the write-code step, the drift section is in `framework/reference/analyze.md`, and the emitted texts differ from the quotes — `specs/020-code-review/spec.md` — **fixed** (decided by the rule)
-- convention — data-model.md's `reviewed-against` row says it is read for one thing, the mechanical-sweep rename exemption, though `compute-review-scope` also reads it as the end of a committed record's window to credit what the record read (081) — `specs/020-code-review/data-model.md` — **fixed** (decided by the rule)
-- convention — data-model.md says its frontmatter example is written in that order on every run, but the example omits fields the table says every run writes and `write-review` orders them differently — `specs/020-code-review/data-model.md` — **fixed** (decided by the rule)
-- convention — spec.md's Resolved Question on the quality-pass confidence threshold says it is fixed at 80, while the quality pass records a `high` or `low` tier — `specs/020-code-review/spec.md` — **fixed** (decided by the rule)
-- other — spec.md's Tasks list still directs edits to a `review:` block in spec frontmatter and the spec template, which 057 removed — `specs/020-code-review/spec.md` — **waived**: The list records what 020 delivered, and the relocation is stated beside it, in the 057 note and the Frontmatter schema section; rewording a delivered task list changes no requirement and makes no claim about the tree. (decided by the rule)
-- convention — framework/reference/review.md §Output says CI can gate on review's exit code without parsing the report, but `ductus write-review` and `ductus exec` exit 0 once the record is written and CI gates on the record's `blocking` — `framework/reference/review.md` — **fixed** (decided by the rule)
-- convention — `write_review.rs`'s module doc, `WriteReviewResult.blocking`'s doc and 022's scenario `review-runtime-acceleration` say `blocking` is true exactly when `must-violations` exceeds zero, though since 066's task 27 a criterion judged not met sets it too — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
-- convention — round 1's re-read: the module doc of `runtime/src/primitives/write_review.rs`, edited this run, ran one line far past its wrap width — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
+- other — the `[review] tech-stack-verified` halt is carried by step 1's tech-stack branch, so the `review-owed: false` stop and the empty-scope branch never read the key, while the Config bullet and the data model say the halt comes at step 1 before any pass; the claim is wider than the branch that carries it. — ``framework/commands/review.md`` — **waived**: The empty branches write no alignment decision and read no flag, so no malformed value is read as `false` there and CFG-ENV-008's no-silent-fallback holds; step 1's own sentence says the halt is where the flag is read, and rewording the claim is not mechanical enough to spend a fix round on a low-confidence note. (decided by the rule)
+- other — the sentence added to the `[review] tech-stack-verified` Config bullet leaves its first line longer than the neighbouring bullets' wrap. — ``framework/commands/review.md`` — **waived**: Cosmetic only, the markdown lint passes, and a rewrap would start a fix round and regenerate two copies for no requirement. (decided by the rule)
 
 ## Skipped passes
 
@@ -158,104 +151,50 @@ Window 7dbd9605 (base-source reopen, 066 task 27a) to 59d02adc. The window held 
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/implement.md` — 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/review.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `.ductus/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.github/workflows/runtime-acquisition.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime-release.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime.yml` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `.pi/prompts/ductus-amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-implement.md` — 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
-- `AGENTS.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `docs/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
-- `docs/slash-commands.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/bootstrap/ductus-procedure.md` — 027-bootstrap-migration-registry
-- `framework/bootstrap/ductus.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `framework/bootstrap/govern.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `framework/commands/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `framework/commands/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/commands/review.md` — 066-audit-records-and-the-completion-gate
-- `framework/constitution.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/migrations.toml` — 027-bootstrap-migration-registry
-- `framework/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `runtime/CHANGELOG.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 073-decided-rule-departures-are-recorded
-- `runtime/src/interpreter/mod.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/interpreter/payload.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/main.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/check_review_gate.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/classify_spec_edit.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/compute_review_scope.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/criterion_verdicts.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/invalidate_review.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/line_citations.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/mod.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/descriptions.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/schema/extensions.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/implement-basic/.govern.session.toml` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/implement-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/review-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/implement-basic.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/review-basic.jsonl` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/tests/mcp.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/tests/review_command.rs` — 066-audit-records-and-the-completion-gate
-- `scripts/audit/README.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/done-spec-criteria.sh` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/migration-coverage.sh` — 027-bootstrap-migration-registry
-- `scripts/mutation/criteria-in-review-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `scripts/mutation/fix-round-record.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/line-citation-strip-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reopen-measure.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reviews-follow-what-changed.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/scope-attribution.py` — 066-audit-records-and-the-completion-gate
-- `scripts/tests/test-migration-coverage.sh` — 027-bootstrap-migration-registry
-- `specs/000-slash-commands/analysis.md` — 000-slash-commands
-- `specs/000-slash-commands/plan.md` — 000-slash-commands
-- `specs/000-slash-commands/review.md` — 000-slash-commands
-- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/scenarios/validation-gates.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/spec.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/007-govern-workflow/plan.md` — 007-govern-workflow
-- `specs/015-tarball-fetch/plan.md` — 015-tarball-fetch
-- `specs/022-deterministic-runtime/data-model.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/026-framework-self-audit/analysis.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 026-framework-self-audit
-- `specs/027-bootstrap-migration-registry/plan.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/review.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/a-projects-own-constitution-is-not-relocated.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/spec.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/048-govern-acquired-runtime/data-model.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/plan.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/spec.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/tasks.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/analysis.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/073-decided-rule-departures-are-recorded/plan.md` — 073-decided-rule-departures-are-recorded
-- `specs/079-review-and-analysis-work-converges/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/review.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/plan.md`
+- `framework/reference/review.md`
+- `runtime/CHANGELOG.md`
+- `runtime/src/main.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 
