@@ -1,16 +1,15 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-19T01:12:39Z
-reviewed-against: 14713cefea941f002828a2806c42e5fc4b0fcc6f
-diff-base: d10c2c45063cd2a55fe0020691fe01dfbb7468d9
+last-run: 2026-11-19T22:36:00Z
+reviewed-against: b2421e14591b4065b58696417e4a74b02cab4be0
+diff-base: bb47ec0f0e5c7b645514b06083169606882b12d8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 3
-unread:
-  - runtime/CHANGELOG.md
-excluded: 12
+examined: 7
+scope: 7
+unread: []
+excluded: 144
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 0
@@ -34,6 +33,7 @@ reviewed-digest:
   scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
   scenarios/process-waivers-file-lists.md: 3fb3b9e54f414691d28d984ba76cd48c7e1de4fe2ee67259a44ea8559da447dc
   scenarios/process-waivers-notices-flatten-stored-text.md: a0fe96d2f894add12b9ed470dfdc011ce1383b1528871c8d68ec64bb85d64c03
+  scenarios/record-paths-are-quoted-only-when-they-need-it.md: 729b1dccb47871d2a8f4fe1dc7e0cbe1449d92eb8c28004a1490859e88ff491d
   scenarios/review-base-includes-the-transition-commit.md: 10d6d341e7338ac19fc9f35c9d2f79960ebc73aca7bf5e702adad17924cd8518
   scenarios/review-scope-includes-uncommitted-work.md: 9864ae8c8bb85d0ab1606b222b983f6fe449f89b21580af7b0a1c4e644e45bba
   scenarios/review-scope-plan-affected-table-format.md: 501c1d9737e6d2b928318c02e1d13164817ba7c1054854cd599f14707caba767
@@ -268,13 +268,28 @@ decisions:
     reason: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim.
     decided-at: 2026-11-19T01:12:39Z
     decided-by: rule
+  - key: the `yaml_string` doc comment says it is used for every string value in the waiver and decision lists and does not name the record paths it now quotes — `runtime/src/primitives/write_review.rs`
+    outcome: waived
+    reason: "the stale clause is incomplete, not false: ordinary paths stay unquoted as it says, and fixing a doc comment in `runtime/src/primitives/write_review.rs`, also in 079's window, costs a landing and a re-read round for no behavior"
+    decided-at: 2026-11-19T22:36:00Z
+    decided-by: rule
+  - key: a private `yaml_quoted` in `runtime/src/primitives/create_scenario.rs` quotes like the shared one but lacks the line-hazard escape; pre-existing — `runtime/src/primitives/create_scenario.rs`
+    outcome: waived
+    reason: pre-existing and outside this change's files; a private quoting helper in another primitive is not what the scenario governs
+    decided-at: 2026-11-19T22:36:00Z
+    decided-by: rule
+  - key: "`render_rule_fields` in `runtime/src/primitives/write_analysis.rs` flattens a rule file name through `single_line` before `yaml_string` for `rule-digest` keys, a map the scenario does not name — `runtime/src/primitives/write_analysis.rs`"
+    outcome: waived
+    reason: rule-digest keys are rule file names, a map the scenario does not name, and flattening them predates this change and loses nothing a path needs
+    decided-at: 2026-11-19T22:36:00Z
+    decided-by: rule
 ---
 
 # Review — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-066's second review, of the window from d10c2c45 (base-source last-review, the first review's record) holding three uncommitted entries: runtime/CHANGELOG.md, whose four 066 entries for tasks 7, 14, 20 and 22 gain the BREAKING label and a sentence naming what is breaking against 0.59.11, and the plan's new BE-COMPAT-001 paragraph and grounding citations in the plan and spec, both made for 066's analysis. One agent that held the nine loaded backend and cross rule files read whole (285,795 bytes) ran all five passes over them, and read plan.md and spec.md whole and each CHANGELOG hunk with its whole entry; runtime/CHANGELOG.md is unread, read at its hunks only. It checked every claim the new text makes against the tree: each list named as inline at ductus-v0.59.11 against that tag's result structs, each commit and task named, the attributions to 080's task 5 and 073's task 14, and each symbol and test the citations name; the exec walker's reasons at 680e4739 were checked by the host in analyze_tally.rs. No finding. One observation, waived by the rule with its reason, and the two stored decisions on plan.md's Affected Files carried, each still standing. The criteria step judged AC1 to AC6 again, each met against the tree after d10c2c45, their text unchanged, the tests proving each re-run. Nothing was fixed, so no fix round ran.
+066's third review, of the window from bb47ec0f (base-source reopen, the owner-approved reopen for the quoting scenario) holding seven entries: the CHANGELOG, write_analysis.rs, write_review.rs, the quoting mutation list, the scenario, spec.md and tasks.md. Three readers ran from one shared brief: A the security pass over the three security rule files (194,749 bytes, read whole), B the reuse, quality, efficiency and simplicity passes over the other nine rule files (213,777 bytes, read whole), AGENTS.md's Gotchas to Design Principles and specs/system.md, with a verdict on each stored decision naming an in-scope file, and C the criteria step. Each read the diff files whole (scope 19,540 bytes, CHANGELOG 16,272 bytes, B the CHANGELOG entries in the tree) and the two large Rust files at their hunks and the quoting functions, not whole. The 079 hunk in write_review.rs (the excluded section lists paths only) was read as code in the file. No finding. Three observations, waived by the rule with their reasons. The three stored decisions naming in-scope files (write_analysis.rs, write_review.rs, runtime/CHANGELOG.md) still hold and are carried. The criteria step judged AC1 to AC6 met against the tree and drove their tests (2969 lib tests under primitives pass); their ticks already matched, so no mark-criterion call changed a box. The mutation list scripts/mutation/record-path-quoting-066.py ran 5 mutants, 5 killed. Nothing was fixed, so no fix round ran.
 
 0 fix round(s): 0 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
@@ -302,18 +317,18 @@ decisions:
 
 ## Acceptance criteria
 
-- AC1 — met: write_analysis.rs run() derives blocking, refuses unparseable spec frontmatter; check_review_gate.rs run_with_lint puts every review check before analyze_half_block (NotAnalyzed, AnalyzeFindings); cargo test --lib check_review_gate (96) and write_analysis (100) pass; driven on the binary
-- AC2 — met: write_analysis.rs UNEXAMINED_REASONS/refuse_unknown_reasons and the by_reason sum, schema/primitives.rs parse_reason_count; driven (2+3 gave unexamined 5, bogus reason and x=y refused); tests a_reason_outside_the_closed_set_is_refused, the_reason_list_is_the_data_models_table pass
-- AC3 — met: write_review.rs render_contracts always writes reviewed-digest; analyze_subjects.rs freshness_of/exempt_renames, compute_review_scope.rs contracts_against_digest; the gate no longer compares it; tests an_empty_contract_digest_is_current_but_an_absent_one_is_not, a_stale_digest_puts_its_contract_in_scope_and_owes_no_review pass (write_review 156, compute_review_scope 134)
-- AC4 — met: check_review_gate.rs already_done_block runs before markdown_lint_block on the exact value done; driven (done gave already-done); test a_done_spec_is_not_held_against_a_later_lint_violation passes
-- AC5 — met: check_review_gate.rs cross_spec_impact_states/cross_spec_impact_block ordered after scenario_question_block and before the review record; driven (discharged/undischarged/target-missing/self-reference/outside-project); tests a_blockquoted_signpost_discharges_the_obligation, a_spec_md_linked_outside_the_project_is_reported_and_never_read pass; d10c2c45's must_violations_block change touches only the review half, which AC5 does not claim
-- AC6 — met: line_citations.rs strips_to with anchor_suffix_end now requiring -L so only #LN and #LN-LM are strips, matching the criterion exactly, shared by mechanical_sweep.rs, classify_spec_edit.rs and analyze_subjects.rs; tests a_range_anchor_needs_its_second_l (line_citations 12 pass), a_strip_only_commit_leaves_the_records_current, mechanical_sweep_parity (5) pass
+- AC1 — met: `write_analysis.rs` derives blocking and refuses unparseable frontmatter; `check_review_gate.rs` ReviewGateBlock NotAnalyzed/AnalyzeFindings; tests blocking_is_set_by_either_gating_tier, blocking_analyze_findings_block_and_name_both_tiers pass
+- AC2 — met: `write_analysis.rs` folds unexamined_by_reason into the total over a closed set; `schema/primitives.rs` parse_reason_count; tests a_reason_outside_the_closed_set_is_refused, the_breakdown_is_written_and_sorted pass
+- AC3 — met: `write_review.rs` render_contracts writes reviewed-digest; tests the_review_record_digests_its_durable_contracts, a_contract_change_since_the_review_holds_done_only_on_the_analysis pass; this window's quoting keeps ordinary keys byte-identical
+- AC4 — met: `check_review_gate.rs` short-circuits on exactly done first; tests a_done_spec_short_circuits_without_claiming_to_have_passed, a_done_spec_is_not_held_against_a_later_lint_violation pass
+- AC5 — met: `check_review_gate.rs` cross-spec-impact check; tests an_undischarged_impact_outranks_a_missing_review, a_blockquoted_signpost_discharges_the_obligation pass
+- AC6 — met: `line_citations.rs` strips_to shared by `classify_spec_edit.rs` and `mechanical_sweep.rs`; tests a_citation_stripped_from_a_scenario_is_mechanical, a_strip_only_commit_leaves_the_records_current pass
 
 ## Observations
 
-- other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md` — **waived**: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim. (decided by the rule)
-- other — plan.md Affected Files omits files f65ef759 changed for task 25: docs/analyze.md, framework/reference/implement.md, runtime/src/primitives/mod.rs, scripts/mutation/reopen-measure.py and 079's spec.md — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims and is the owner's plan decision, not a mechanical edit; every one of these files is already in the window through the commit that changed it (decided by the rule)
-- other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
+- the `yaml_string` doc comment says it is used for every string value in the waiver and decision lists and does not name the record paths it now quotes — `runtime/src/primitives/write_review.rs` — **waived**: the stale clause is incomplete, not false: ordinary paths stay unquoted as it says, and fixing a doc comment in `runtime/src/primitives/write_review.rs`, also in 079's window, costs a landing and a re-read round for no behavior (decided by the rule)
+- a private `yaml_quoted` in `runtime/src/primitives/create_scenario.rs` quotes like the shared one but lacks the line-hazard escape; pre-existing — `runtime/src/primitives/create_scenario.rs` — **waived**: pre-existing and outside this change's files; a private quoting helper in another primitive is not what the scenario governs (decided by the rule)
+- `render_rule_fields` in `runtime/src/primitives/write_analysis.rs` flattens a rule file name through `single_line` before `yaml_string` for `rule-digest` keys, a map the scenario does not name — `runtime/src/primitives/write_analysis.rs` — **waived**: rule-digest keys are rule file names, a map the scenario does not name, and flattening them predates this change and loses nothing a path needs (decided by the rule)
 
 ## Skipped passes
 
@@ -321,18 +336,150 @@ decisions:
 
 ## Excluded from scope
 
-- `.github/workflows/runtime-acquisition.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime-release.yml` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `framework/bootstrap/ductus.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `framework/bootstrap/govern.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 029-bootstrap-runtime-autowire
-- `specs/048-govern-acquired-runtime/data-model.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/clarify.md`
+- `.claude/commands/ductus/consolidate.md`
+- `.claude/commands/ductus/fold.md`
+- `.claude/commands/ductus/help.md`
+- `.claude/commands/ductus/implement.md`
+- `.claude/commands/ductus/plan.md`
+- `.claude/commands/ductus/prune.md`
+- `.claude/commands/ductus/review.md`
+- `.claude/commands/ductus/specify.md`
+- `.claude/commands/ductus/target.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/consolidate.md`
+- `.ductus/reference/fold.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/review.md`
+- `.ductus/reference/specify.md`
+- `.ductus/reference/status.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-clarify.md`
+- `.pi/prompts/ductus-consolidate.md`
+- `.pi/prompts/ductus-fold.md`
+- `.pi/prompts/ductus-help.md`
+- `.pi/prompts/ductus-implement.md`
+- `.pi/prompts/ductus-plan.md`
+- `.pi/prompts/ductus-prune.md`
+- `.pi/prompts/ductus-review.md`
+- `.pi/prompts/ductus-specify.md`
+- `.pi/prompts/ductus-target.md`
+- `framework/commands/analyze.md`
+- `framework/commands/clarify.md`
+- `framework/commands/consolidate.md`
+- `framework/commands/fold.md`
+- `framework/commands/help.md`
+- `framework/commands/implement.md`
+- `framework/commands/plan.md`
+- `framework/commands/prune.md`
+- `framework/commands/review.md`
+- `framework/commands/specify.md`
+- `framework/commands/target.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/consolidate.md`
+- `framework/reference/fold.md`
+- `framework/reference/plan.md`
+- `framework/reference/review.md`
+- `framework/reference/specify.md`
+- `framework/reference/status.md`
+- `runtime/Cargo.toml`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/io.rs`
+- `runtime/src/main.rs`
+- `runtime/src/primitives/append_inbox.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_corpus_links.rs`
+- `runtime/src/primitives/check_orphaned_references.rs`
+- `runtime/src/primitives/check_promotion_coverage.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/classify_spec_edit.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/merge_managed_block.rs`
+- `runtime/src/primitives/mod.rs`
+- `runtime/src/primitives/prune_plan.rs`
+- `runtime/src/primitives/prune_tasks.rs`
+- `runtime/src/primitives/read_spec.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/rewrite_spec_links.rs`
+- `runtime/src/primitives/rule_sections.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/tests/bounded_list_gates.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `runtime/tests/exec_stderr_gone.rs`
+- `runtime/tests/golden/implement-basic.jsonl`
+- `runtime/tests/golden/plan-basic.jsonl`
+- `runtime/tests/golden/review-basic.jsonl`
+- `runtime/tests/mcp.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/exec-arguments.py`
+- `scripts/mutation/installed-file-modes.py`
+- `scripts/mutation/owner-reviews-067.py`
+- `scripts/mutation/prune-open-region.py`
+- `scripts/mutation/prune-review-fixes-041.py`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/reopen-measure.py`
+- `scripts/mutation/review-022-task-44.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/rewrite-spec-links.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/stderr-warnings-022.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/spec.md`
+- `specs/022-deterministic-runtime/scenarios/a-closed-stdout-is-a-quiet-exit.md`
+- `specs/022-deterministic-runtime/scenarios/append-inbox-comment-aware-write.md`
+- `specs/022-deterministic-runtime/scenarios/host-protocol-conformance.md`
+- `specs/022-deterministic-runtime/scenarios/installed-files-are-not-group-writable.md`
+- `specs/022-deterministic-runtime/scenarios/skipscanner-inline-code-exemption.md`
+- `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/041-task-pruning/data-model.md`
+- `specs/041-task-pruning/scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+- `specs/041-task-pruning/spec.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/046-scenario-open-question-visibility/spec.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/055-shared-constitution/plan.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-none-list-item-is-no-open-question.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphan-check-skips-ignored-local-state.md`
+- `specs/067-analyze-and-audit-checks/scenarios/promotion-coverage-header-without-a-key.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 
