@@ -329,12 +329,14 @@ its version and date.
   walker sends no request for a rule whose verdict is current.
   `rule-assessments-not-checked` now also counts each rule left unjudged, on
   the interactive path as under `ductus exec`.
-- **`check-review-gate` blocks `done` while the analysis names an unjudged rule
+- **BREAKING: `check-review-gate` blocks `done` while the analysis names an unjudged rule
   (spec 082).** After `analyze-stale`, a current, passing `analysis.md` that
   lists any rule in `unjudged-rules` blocks with `blocked-by: unjudged-rules`,
   naming the rules and sending the operator to `/{project}:analyze`, which
   judges only them. A record with no `unjudged-rules` field blocks on nothing
   new.
+  Breaking under `BE-COMPAT-001`: `blocked-by` gains `unjudged-rules`, a new
+  value of a response enum the schema does not document as open to new values.
 - **`check-artifacts` runs `/{project}:analyze`'s Spec integrity and Plan
   consistency checks.** Two new blocking families, `spec-integrity` (no
   Acceptance Criteria section, no criterion from `clarified` on, an empty or
@@ -432,7 +434,7 @@ its version and date.
   `scripts/audit/deprecation-removal.sh` (Family 40) calls it in place of its
   own parse (spec 067).
 
-- **`check-artifact-size` measures the four project files.** `--project-files`
+- **BREAKING: `check-artifact-size` measures the four project files.** `--project-files`
   (`project-files` over MCP) adds `AGENTS.md` and the spec root's `system.md`,
   `events.md` and `errors.md` to the check, against the same
   `[artifacts] read-size-bytes`; `feature` becomes optional, and a call naming
@@ -455,7 +457,9 @@ its version and date.
   inline past the read size finds none. The staged exit reads
   `skipped-count`, and under `ductus exec` the walker restores the lists
   before the tally reads them.
-- **`/review` re-reads the fixes it makes.** Before the record is final, an
+  Breaking under `BE-COMPAT-001`: `oversized`, `skipped` and `notices`, inline
+  in 0.59.11, are absent inline past the read size.
+- **BREAKING: `/review` re-reads the fixes it makes.** Before the record is final, an
   independent agent re-reads each round of fixes the review made, unless it
   changed only markdown in the spec's own directory other than `analysis.md`,
   its scenarios and its data model, from a brief the runtime writes: the
@@ -484,6 +488,9 @@ its version and date.
   off, waiving each such round with that reason; an empty one counts as
   unset, and a malformed one halts the run before its first fix. Spec 078;
   spec 066, tasks 15 and 17.
+  Breaking under `BE-COMPAT-001`: `blocked-by` gains `fix-round-not-re-read`,
+  a new value of a response enum the schema does not document as open to new
+  values.
 - **`classify-spec-edit`: whether an edit reopens a `done` spec, from the
   diff.** A new primitive, an MCP tool and CLI subcommand, comparing `base`
   (`HEAD` by default) with the working tree, untracked files included. It
@@ -736,10 +743,13 @@ its version and date.
 
 ### Changed
 
-- **`ductus check-step-references` exits non-zero on a finding, a skip or a
+- **BREAKING: `ductus check-step-references` exits non-zero on a finding, a skip or a
   subject it could not establish (spec 026 task 8).** It exited 0 whatever it
   found, and nothing read its exit status: the audit reads the JSON. The result
   is printed either way.
+  Breaking for a script that read a zero exit as clean: `ductus check-step-
+  references` now exits non-zero on a finding, a skip or a subject it could
+  not establish.
 - **The citation walk follows a markdown anchor link `[text](#slug)` to the
   heading it names in the document holding the link (spec 026 task 8).**
   `cited_tools` shares it, and still starts from the whole command file, so no
@@ -754,6 +764,35 @@ its version and date.
   still read `dashboard`.
   Breaking under `BE-COMPAT-001`: a result field removed. A caller that read
   `rendered-markdown` from `dashboard` reads it from `render-status`.
+- **BREAKING: `dashboard` is held to `[artifacts] read-size-bytes` (spec 080,
+  AC7).** Its `specs` and `tags-union` grow with the corpus and 0.59.11 returned
+  them whole. They stay inline while the result fits; past it `form` is `file`,
+  both are absent, `specs-count` and `tags-union-count` stay inline, and
+  `lists-file` names the file under `.ductus/results/` holding them whole. A
+  malformed read size halts the call, as it halts every reader of the setting.
+  `/{project}:review --all` reads `specs[].status` from that file when `form` is
+  `file`. Breaking under `BE-COMPAT-001`: `specs` and `tags-union`, inline in
+  0.59.11, are absent inline past the read size.
+- **`/analyze` step 16 reports a `prune-plan` result with an `unexamined-tail`
+  as examined in part (spec 041 task 29).** A result carrying `unexamined-tail`
+  examined only part of `plan.md`, yet the step said nothing of it, so a plan
+  with a section outside the design record after the tail read as having none.
+  The step now says to report it so, naming `from-line` and `cause`, never as a
+  plan with no section outside the design record. No primitive changes.
+- **A first adoption runs no migration, and names each spec it cannot read (spec
+  027 task 16, scenario `a-first-adoption-runs-no-migration`; owner, 2026-11-16).**
+  Pre-run Migrations skipped only a greenfield run, so a first adoption into a
+  project that keeps its own spec root ran every active entry though no
+  earlier run had left anything to convert; a scratch adoption into a project
+  with two specs without frontmatter ran all 14 and two migration primitives
+  exited 1 on both specs. A first adoption, which Pre-flight Checks decides
+  from finding no signal an earlier `ductus` run leaves, now applies nothing,
+  asks nothing and seeds `[migrations] last_applied` with the newest active
+  entry's id, as a greenfield run does; an update, a legacy adopter with a spec
+  root and no config file included, runs its pending entries as before.
+  Post-Scaffolding Output names each feature `spec.md` with no frontmatter
+  (`no frontmatter: {path} — ...`), which `/analyze` reads as a hard fail.
+  `98d9e331`
 - **Five command steps gate on a bounded list's `-count`, and nine read its contents from `lists-file` in the form's file case (spec 080).**
   `/fold` steps 1 and 11, `/consolidate` step 4, `/analyze` step 6 and `/clarify`
   step 2 read `unfolded-count`, `rewritten-count`, `updated-count`,
@@ -777,7 +816,7 @@ its version and date.
   `implement-basic` and `review-basic` are re-blessed (the plan step 9 prompt
   and the fixture commit shas).
 - **`review.md`'s `Excluded from scope` section lists each excluded path without the specs that claimed it (spec 079, scenario `the-excluded-section-lists-paths-only`, task 39; owner decision, option b).** Those claimant lists were 88.8% of the section's bytes (paths 1,039,676 of 9,469,301 bytes across the 76 `specs/*/review.md` records at `b7b07500`, method: section split on level-2 headings, UTF-8 byte length) and no primitive, command or check reads them. A fix round's left-out path keeps its round. Projected over those 76 records the corpus total falls from 10,982,629 to 2,595,832 bytes and the records over 50,000 bytes from 32 to 13 (`measure.py` projection, not a rewrite: a record written before keeps its claimant lists until its spec's next review). Nothing the primitives report changes: `compute-review-scope`'s `excluded` result already listed paths only, and `excluded` stays a count in the record's frontmatter. The claimant lists, read nowhere else, are removed from `compute_review_scope`'s internal `excluded` map and window claims, and `commit_attribution`'s `name_of` goes with them. `write-review`'s description is 29 bytes shorter (7,993 to 7,964); `compute-review-scope`'s, 36 bytes shorter (4,399 to 4,363), no longer says a credited path is listed "under the spec whose review read it".
-- **Six shipped rules change tier under the same ID (specs 070 and 068).**
+- **BREAKING: Six shipped rules change tier under the same ID (specs 070 and 068).**
   `performance-frontend.md`'s `FE-BUNDLE-002`, `FE-IMAGE-001`,
   `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` move from MUST to SHOULD,
   so a finding under one is an advisory warning where 0.59.11's blocked
@@ -788,6 +827,9 @@ its version and date.
   blocking `/analyze` finding where 0.59.11 warned, until it commits to
   cursor-based pagination or records a departure. Offset pagination over a
   static or append-only-at-tail collection stays permitted.
+  Breaking for a spec or plan whose list endpoint over a collection accepting
+  concurrent inserts or deletes proposes offset pagination: `BE-PAGE-003` is
+  now a blocking `/analyze` finding where 0.59.11 warned.
 - **Each `--{name}-json` flag's `--help` states the JSON its file holds, and no
   subcommand's help prints a developer note (spec 022 task 53; scenario
   `every-mcp-argument-has-a-cli-form`, deferred from 003 task 8).** The help
@@ -821,7 +863,7 @@ its version and date.
   caller that reads `selected` itself takes `discover_rule_files::compute`, as
   `check-departures` now does.
 
-- **067's primitives contain every path drawn from committed text, and five results are bounded (spec 067's review, `BE-INPUT-004`, `BE-PAYLOAD-001`).** A path a primitive builds from text the repository holds is refused before it is probed, listed or opened, as a path argument is, and reported as the primitive reports an unreadable one, never read:
+- **BREAKING: 067's primitives contain every path drawn from committed text, and five results are bounded (spec 067's review, `BE-INPUT-004`, `BE-PAYLOAD-001`).** A path a primitive builds from text the repository holds is refused before it is probed, listed or opened, as a path argument is, and reported as the primitive reports an unreadable one, never read:
   - `derive-dependencies` and `derive-references` name a tracked spec that is or runs through a link leaving the project in `unparseable`, and `--write` never replaces it with a regular file holding the outside content. `derive-references` still reads a registered service's `.ductus/config.toml` outside the project, by contract (specs 030 and 040).
   - `validate-frontmatter` reports a `scenarios/`, scenario, `review.md` or `analysis.md` that leaves the project as a hard-fail finding, and a `scenarios/` that exists and cannot be listed as one saying no scenario was checked, where it read as `clean: true`.
   - `traverse-deps` treats a `dependencies:` name that is absolute, holds a `..` segment or runs through a link leaving the project as a missing dependency and a cycle-walk sink.
@@ -829,9 +871,13 @@ its version and date.
   - A spec that links siblings and has no `dependencies:` key is `unwritable` in `derive-dependencies`, not in sync.
   - `validate-frontmatter`'s `findings`, `check-rule-ids`' five lists, `check-orphaned-references`' three, `check-command-flags`' five and `check-promotion-coverage`' three move to the file `lists-file` names past `[artifacts] read-size-bytes`, each list absent and its `-count` inline (`findings-count`, `citations-count`, `missing-count`, `deprecated-count`, `retired-count` and `not-installed-count` absent at zero, `examined-count`, `skipped-count`, `with-flags-table-count`, `with-argument-hint-count`, `unclassified-entries-count`, `unmatched-keys-count`, `missing-sections-count`), and `form` says which. `/analyze` steps 2, 5 and 9 and Families 30 and 38 read the lists from that file, as the bootstrap's Pre-run Migrations step 8 now reads `check-orphaned-references`' and `/analyze` step 3 reads `traverse-deps`', and `ductus exec` restores them from it.
   - `DERIVE_REFERENCES`' description states the report-only run and the CLI's exit on drift.
+
+  Breaking under `BE-COMPAT-001`: a spec, scenario or listed path behind a
+  link leaving the project, read in 0.59.11, is now refused, reported unread
+  or halts the call.
 - **`check-artifacts` reads what its placeholder, plan-reference and completeness checks name (spec 067's review).** A criterion is a placeholder only when it is wholly one bracketed span, so `<b>bold</b> output … the <i>` is a criterion; a branch-scoped spec's plan is matched by its `{identifier}.{n}`; a `+` or `N)` list item lists a file; a `plan.md` or `tasks.md` that is a link out of the project is no missing artifact, and a `scenarios/` link out is never listed. `check-corpus-links`' stderr line for a skipped file says `skipped:`.
 
-- **A `ductus exec` extension request is bounded whole (spec 022 tasks 36
+- **BREAKING: a `ductus exec` extension request is bounded whole (spec 022 tasks 36
   and 37; spec 060's and spec 020's analyses, `BE-PAYLOAD-001`).**
   `writeCode`, `assessSpecQuality` (one request per loaded rule of the step's
   tier; the count grows with the rule files), `askClarifyQuestion`, `routeFold`, `verifyCriteria` and
@@ -853,8 +899,11 @@ its version and date.
   inline; a file that cannot be written halts the walk with
   `request-lists-unwritable`. Spec 022's data model states the shapes,
   including a new `performReview` section.
+  Breaking under `BE-COMPAT-001`: an extension request over the read size,
+  carried whole in 0.59.11, now carries no body and moves its lists to
+  `request-lists-file`.
 
-- **`writeSpecBody` and `routeInboxItem` are bounded whole, and `payload.rs` contains its reads (spec 022 task 41; 022's review of 2026-11-17, `BE-PAYLOAD-001`, `BE-INPUT-004`).**
+- **BREAKING: `writeSpecBody` and `routeInboxItem` are bounded whole, and `payload.rs` contains its reads (spec 022 task 41; 022's review of 2026-11-17, `BE-PAYLOAD-001`, `BE-INPUT-004`).**
   Both were the two extension requests the bound missed. `writeSpecBody` past
   `[artifacts] read-size-bytes` drops `template-content` and `existing-content`,
   names the file the host reads in `template-path` and a new `existing-path`,
@@ -878,8 +927,12 @@ its version and date.
   read, where the request used to drop them silently; past the read size it
   moves to the lists file with `unexaminable-count` inline. A scope path missing
   from disk is still skipped, as before.
+  Breaking under `BE-COMPAT-001`: a spec root, `spec.md` or scenario behind a
+  link leaving the project, read in 0.59.11, now halts the walk with `path-
+  outside-project`, and a config that does not parse halts the first
+  assessment step.
 
-- **Claude's canonical allow set retires four entries no framework step runs
+- **BREAKING: Claude's canonical allow set retires four entries no framework step runs
   (spec 022 task 43; 022's review of 2026-11-17, owner decision).**
   `Bash(git push *)`, `Bash(gh api *)`, `Bash(git commit *)` and
   `Bash(git config --unset core.hooksPath)` leave `CANONICAL_ALLOW_STATIC`,
@@ -887,8 +940,11 @@ its version and date.
   `/configure` revokes them from an existing settings file, and a canonical
   `merge-permissions` call passing one in `allow` is refused as a conflicting
   revoke.
+  Breaking under `BE-COMPAT-001`: a canonical `merge-permissions` call passing
+  one of the four in `allow`, accepted in 0.59.11, is now refused as a
+  conflicting revoke.
 
-- **A `prune-tasks` or `prune-plan` result carries `form` and `lists-file`
+- **BREAKING: a `prune-tasks` or `prune-plan` result carries `form` and `lists-file`
   once, and a file-form walk deserializes back (spec 041's review).** The two
   keys moved from the one-feature summary and the walk to the result, so the
   halves share no key and serde's flatten no longer consumes them for the
@@ -898,8 +954,11 @@ its version and date.
   `PRUNE_TASKS` state that a malformed `[artifacts] read-size-bytes` halts
   the call before any write; the parity suite's recorded descriptions
   follow.
+  Breaking under `BE-COMPAT-001`: `form` and `lists-file` moved from the one-
+  feature summary and the walk to the result, and `prune-plan`'s walk entries
+  no longer carry `form: inline`.
 
-- **`prune-plan`'s single-feature `sections` is bounded (spec 041's
+- **BREAKING: `prune-plan`'s single-feature `sections` is bounded (spec 041's
   analysis, `BE-PAYLOAD-001`).** It is inline while the result fits
   `[artifacts] read-size-bytes`; past it `form` is `file`, `sections` is
   absent, `sections-count` stays inline in both forms, and `lists-file` names
@@ -907,8 +966,11 @@ its version and date.
   `prune-tasks` already did for one feature. A malformed read size now halts
   an applying call before its removal. A walk's entries carry `sections-count`
   and `form: inline`. `/{project}:prune` reads `sections` from `lists-file`.
+  Breaking under `BE-COMPAT-001`: `sections`, inline in 0.59.11, is absent
+  inline past the read size, and a malformed read size now halts an applying
+  call.
 
-- **`resolve-anchor`'s and `read-deprecation-labels`' results are bounded
+- **BREAKING: `resolve-anchor`'s and `read-deprecation-labels`' results are bounded
   (spec 067 task 35, `BE-PAYLOAD-001`).** `resolve-anchor`'s `references` and
   `unresolved`, and `read-deprecation-labels`' `labels` and `unreadable`, grow
   with the references or labels in the files they read. They stay inline
@@ -919,8 +981,10 @@ its version and date.
   `.ductus/results/` holding them whole. Families 39 and 40, `/analyze` step 4
   and the `ductus exec` walker read the lists from that file, and a file
   `/audit` cannot read, or one lacking a list, is a `(precondition)` finding.
+  Breaking under `BE-COMPAT-001`: `resolve-anchor`'s `references` and
+  `unresolved`, inline in 0.59.11, are absent inline past the read size.
 
-- **`check-corpus-links` refuses a link out of the repository (spec 067 task
+- **BREAKING: `check-corpus-links` refuses a link out of the repository (spec 067 task
   33, `BE-INPUT-004`).** Links are contained to the repository's work tree
   when the project sits in a git repository (a project in a subdirectory links
   up into its repository), else to the project root. A target that leaves it
@@ -929,14 +993,18 @@ its version and date.
   spec-root directory, that is or lies under such a link is never read or
   listed and is recorded in `skipped` as `outward-link`. A target inside the
   base resolves as before.
+  Breaking under `BE-COMPAT-001`: a link out of the repository, probed in
+  0.59.11, is now `broken` and never read.
 
-- **`check-artifacts`' path probes refuse a link out of the project (spec 067
+- **BREAKING: `check-artifacts`' path probes refuse a link out of the project (spec 067
   task 33, `BE-INPUT-004`).** `criterion-path-existence` and
   `body-path-existence` no longer stat a path that runs through a symbolic
   link resolving outside the project, as the sibling-link family never
   follows one; such a candidate is recorded `outside-project`.
+  Breaking under `BE-COMPAT-001`: a candidate behind a link leaving the
+  project, statted in 0.59.11, is now an `outside-project` skip.
 
-- **`check-step-references`' result is bounded (spec 026 task 6,
+- **BREAKING: `check-step-references`' result is bounded (spec 026 task 6,
   `BE-PAYLOAD-001`).** Its lists, `findings`, `examined`, `with-steps`,
   `not-a-procedure` and `skipped`, grow with the command files it reads. They
   stay inline while the result fits `[artifacts] read-size-bytes`; past it
@@ -947,8 +1015,11 @@ its version and date.
   `guidance` stay inline, and an empty list is `[]` inline where it was
   absent, as `check-corpus-links`' is. Family 34 reads the lists from that file, and a file
   it cannot read, or one lacking a list, is a `(precondition)` finding.
+  Breaking under `BE-COMPAT-001`: `findings`, `examined`, `with-steps`, `not-
+  a-procedure` and `skipped`, inline in 0.59.11, are absent inline past the
+  read size, and an empty list is `[]` inline where it was absent.
 
-- **`prune-project` bounds its result and names an unexamined tail (spec
+- **BREAKING: `prune-project` bounds its result and names an unexamined tail (spec
   075's review).** `entries`, each with its `hits`, is inline while the result
   fits `[artifacts] read-size-bytes`; past it `form` is `file`, `entries` is
   absent, `entries-count` stays inline, and `lists-file` names the file under
@@ -958,8 +1029,11 @@ its version and date.
   (`from-line`, `cause`), so the lines from there on read as not examined
   rather than walked (QUAL-CLAIM-001). `/{project}:prune --project`'s preview
   reads both.
+  `prune-project` is new in this release, so no 0.59.11 caller reads
+  `entries`; a caller on an earlier build of this release finds it absent
+  inline past the read size.
 
-- **`discover-rule-files`' notices and `dashboard`'s unknown config keys are
+- **BREAKING: `discover-rule-files`' notices and `dashboard`'s unknown config keys are
   bounded (spec 022, task 32).** Each is a line per key in `.ductus/config.toml`
   that this version does not read, so it grows with the config. Every
   `discover-rule-files` call is now held to `[artifacts] read-size-bytes`,
@@ -972,14 +1046,19 @@ its version and date.
   `unknown-keys-count`, and past the bound `unknown-keys` moves to the lists
   file under `config`. `/{project}:status` renders from the model and is
   unaffected.
+  Breaking under `BE-COMPAT-001`: `notices` and a non-empty `unreadable`,
+  inline in 0.59.11, are absent inline past the read size, and a malformed
+  read size now halts a call without `rules`.
 
-- **`derive-dependencies` and `derive-references` name a rewrite they refuse, and exit non-zero on it (spec 067, tasks 14 and 25).** A rewrite whose result would not parse as YAML is never written. Each primitive lists such a spec in the new `unwritable`, absent when empty, with `unwritable-count` beside it, absent at zero, whether or not `staged` holds the spec. Both CLIs exit non-zero on a non-empty `unwritable`, report-only and with `--write` alike, and name each spec on stderr, so the shipped pre-commit hook stops the commit, an unstaged spec included, where before both exited 0 over a stale index. `derive-dependencies` moves `unwritable` to the file `lists-file` names past the read size, its count inline, and the exec `/analyze` tally counts a non-empty `unwritable` and a non-empty `unparseable` as one advisory finding each.
+- **BREAKING: `derive-dependencies` and `derive-references` name a rewrite they refuse, and exit non-zero on it (spec 067, tasks 14 and 25).** A rewrite whose result would not parse as YAML is never written. Each primitive lists such a spec in the new `unwritable`, absent when empty, with `unwritable-count` beside it, absent at zero, whether or not `staged` holds the spec. Both CLIs exit non-zero on a non-empty `unwritable`, report-only and with `--write` alike, and name each spec on stderr, so the shipped pre-commit hook stops the commit, an unstaged spec included, where before both exited 0 over a stale index. `derive-dependencies` moves `unwritable` to the file `lists-file` names past the read size, its count inline, and the exec `/analyze` tally counts a non-empty `unwritable` and a non-empty `unparseable` as one advisory finding each.
+  Breaking for a script or hook that read exit 0 over a stale index: both CLIs
+  now exit non-zero on an unwritable spec.
 
 - **`validate-frontmatter` chooses its schema row by the path it is given (spec 067 task 18).** A `.md` file under a `scenarios/` directory takes the scenario row (`section`, or the legacy `spec-ref`, a non-empty string; no `status` or `dependencies`), a `spec.md` the spec row and its run also checks every scenario beside it, each finding keyed by its `scenarios/{file}` path and an unreadable or fenceless scenario a hard fail, and a `review.md` or `analysis.md` that record's checks. Any other path (a `plan.md`, a `tasks.md`) is now refused with an error naming the four kinds, where it was checked against the spec row, and a `spec.md` whose frontmatter is not valid YAML no longer ends the run, so its records and scenarios are still checked.
 
 - **`plan-consistency` names a `plan.md` it cannot read (spec 067 task 31).** A plan the family could not read was passed over silently; it is now an `artifact-unreadable` skip below `done` and a blocking finding at `done`, as every family records an artifact it could not read.
 
-- **`derive-references` bounds its result (spec 067, task 32).** Its six
+- **BREAKING: `derive-references` bounds its result (spec 067, task 32).** Its six
   spec lists grow with the corpus, since a service rename drifts every
   referencing spec at once, yet they came back inline whatever their length.
   Each now carries its `-count` in both forms, with `unwritable-count` absent
@@ -989,6 +1068,9 @@ its version and date.
   CLI still exits non-zero on an unwritable spec and still names it on
   stderr, gating and reporting on the whole derivation. A malformed read
   size halts a writing call before it rewrites any spec.
+  Breaking under `BE-COMPAT-001`: the six spec lists, inline in 0.59.11, are
+  absent inline past the read size, and a malformed read size now halts a
+  writing call.
 
 - **Rule judging runs in a fresh subagent where the host can start one
   (specs 020 and 060).** Review's five passes and analyze's steps 11 and 12
@@ -1026,7 +1108,7 @@ its version and date.
   `applied` and `expired`. Breaking under `BE-COMPAT-001`: the four lists,
   inline in 0.59.11, are absent inline past the read size.
 
-- **`write-review`'s departure waivers are bounded by the review scope,
+- **BREAKING: `write-review`'s departure waivers are bounded by the review scope,
   follow their entry, and yield no deferral (spec 073, review round 1).** An
   entry waives its rule only at files the run's resolved scope holds (a scope
   entry, or a file the plan names), so a finding outside it stays counted, and
@@ -1039,6 +1121,8 @@ its version and date.
   `superseded-deferrals` (bounded as `malformed-departures` is). A parent commit or rename diff that cannot be read
   makes the attribution `unattributed`, where it was the newest commit that
   held the entry.
+  Breaking for a caller that defers a violation of a rule a spec's `departs:`
+  entry names: the call is now refused.
 
 - **`check-review-gate`'s and `check-artifacts`' descriptions restore what
   triggers a block and two family rules (spec 079, task 36).** The gate says
@@ -1113,7 +1197,7 @@ its version and date.
   `watermark` covers; `check-command-flags` when `guidance` is set. The
   `check_artifact_size` `run` doc comment no longer calls an unreadable index
   an error. Descriptions only: no result changes.
-- **`write-analysis`'s `contradictions` is bounded to the read size, and a
+- **BREAKING: `write-analysis`'s `contradictions` is bounded to the read size, and a
   caller's bare `unexamined` total is never lost (spec 082).** The result gains
   `form`, `contradictions-count` (inline in both forms) and `lists-file`: past
   `[artifacts] read-size-bytes` `contradictions` is absent and the file holds
@@ -1123,6 +1207,9 @@ its version and date.
   before the derived reasons join it, so `unexamined` is always the sum of the
   breakdown (a bare 5 with two unjudged rules records 7), and the body no
   longer renders a total with no breakdown.
+  Breaking for a call under a malformed `[artifacts] read-size-bytes`, which
+  `write-analysis` ignored in 0.59.11: it now fails, after the record is
+  written.
 - **`ductus exec` counts a single-tier rule's finding in the rule's own tier
   (spec 082).** The walker honored the host's `finding.severity` over the
   asked tier, so a host labelling a MUST-only rule's failure `should` (or a
@@ -1185,12 +1272,14 @@ its version and date.
   repository's ignore rules ignore is recorded `gitignored`, no longer a
   finding. The closed reason set gains `status-gated` and `gitignored`, both
   excluded by construction (spec 067 task 17).
-- **A path citation that leaves the project is skipped as `outside-project`,
+- **BREAKING: a path citation that leaves the project is skipped as `outside-project`,
   no longer `root-absent`.** The two path families resolve a candidate
   lexically and record one that leaves the project without probing it, as
   before; the reason is new and sits with the targets that could not be read,
   where `root-absent` says an excluded-by-construction top-level segment is
   missing here (spec 067, spec 045).
+  Breaking under `BE-COMPAT-001`: a skip reason `root-absent`, recorded in
+  0.59.11 for a path leaving the project, is now `outside-project`.
 - **`check-artifacts` opens nothing through a link that leaves the project.**
   It walks the feature directory as every other feature-argument primitive
   does, but records each link in it that resolves outside the project as a
@@ -1208,14 +1297,16 @@ its version and date.
   (`BE-PAYLOAD-001`). Breaking under `BE-COMPAT-001` for `write-review` past
   the read size, where a stale freshness no longer carries the `paths` it
   carried in 0.59.11; `check-review-gate`'s list is new.
-- **Every destination-judging writer refuses the runtime pointer's directory
+- **BREAKING: every destination-judging writer refuses the runtime pointer's directory
   (spec 022).** `apply-manifest`, `enforce-manifest`, `merge-managed-block`,
   `append-task`, `create-scenario` and `merge-permissions` refuse a path under
   `.ductus/bin`, at any depth, as they refuse Claude Code's protected
   directories: the pointer there runs at every session start and on Claude's
   status and help hooks, and `apply-manifest` and `merge-managed-block` could
   replace it. No primitive wrote it; `/ductus` places it with the shell.
-- **`/configure` no longer grants thirteen Claude allow entries that can run or
+  Breaking under `BE-COMPAT-001`: a call writing under `.ductus/bin`, accepted
+  in 0.59.11, is now refused.
+- **BREAKING: `/configure` no longer grants thirteen Claude allow entries that can run or
   write anything, and retires them from existing settings (spec 022).**
   `curl *`, `make *`, `./.githooks/pre-commit`, `scripts/install-hooks.sh`,
   `./scripts/install-hooks.sh`, `git diff *`, `git log *`, `git show *`,
@@ -1228,6 +1319,8 @@ its version and date.
   anything), and its retired list gains both and `Bash(git diff *)`, so a
   first run in Manual mode prompts for its downloads and extraction. A
   command an adopter ran through one of them now prompts.
+  Breaking under `BE-COMPAT-001`: a `merge-permissions` call passing one of
+  the thirteen in `allow`, accepted in 0.59.11, is now refused.
 - **BREAKING: `apply-manifest` refuses an entry that would be written with a
   known placeholder unsubstituted (spec 022).** With a non-empty
   substitutions map, an `update` or `create` entry whose substituted text
@@ -1274,13 +1367,16 @@ its version and date.
   that claims it only by touching that spec's directory reviews that
   directory's files. A commit naming no spec is attributed as before (spec
   081).
-- **A review or an analysis runs once implementation is complete.** `write-review` and
+- **BREAKING: a review or an analysis runs once implementation is complete.** `write-review` and
   `write-analysis` refuse while the spec's `tasks.md` holds an unchecked box under any
   heading, and `/review` and `/analyze` stop at their first step naming the boxes, since
   nothing can say whether a task still open would change what a run read. A task list
   schedules no run: what a spec owes is prose on its pending task, and the tasks template
   and `/plan` say so. A box under a task the run's own deferral names does not refuse, since
   it is the work the record holds. A spec with no `tasks.md` is unaffected. Spec 079.
+  Breaking under `BE-COMPAT-001`: a `write-review` or `write-analysis` call on
+  a spec whose `tasks.md` holds an unchecked box, accepted in 0.59.11, now
+  fails.
 - **A command's reference holds what a step does with a result, and no more.**
   `framework/commands/` and `framework/reference/` together total 465,214
   bytes at `79cd59a3` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
@@ -1295,7 +1391,7 @@ its version and date.
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
   from the review reference (spec 079).
-- **A finding a review leaves open stays in reach, and a broken contract left open
+- **BREAKING: a finding a review leaves open stays in reach, and a broken contract left open
   holds `done`.** `review.md` gains `open-findings`, listing each counted violation's
   file and each broken contract's that the run did not fix, a person did not waive
   and no deferral releases. The next review's scope holds each wherever its window
@@ -1303,6 +1399,9 @@ its version and date.
   `check-review-gate` blocks on a listed break, as `review-owed`, naming it. A break a
   person waived passes, and `write-review --empty-scope` refuses over an earlier
   record counting a finding (spec 079).
+  Breaking under `BE-COMPAT-001`: `check-review-gate` now blocks a spec whose
+  record lists a broken contract left open, as `review-owed`, and `write-
+  review --empty-scope` refuses over a record counting a finding.
 - **Each primitive's description says what it does without the prose.**
   `check-artifacts` states its severity tiers rather than pointing at the analyze
   reference, `resolve-constitutions` states that a malformed entry halts, and
@@ -1348,12 +1447,13 @@ its version and date.
   with that mark, and unless fixed it counts in `review.md`'s new `contract-breaks`.
   A security or leak observation now renders first. `ductus exec` still writes no
   disposition at all.
-- **`diff-cross-spec` reports this spec's impact, not the corpus's.** Its window
+- **BREAKING: `diff-cross-spec` reports this spec's impact, not the corpus's.** Its window
   now starts at the spec's last reopen rather than its first spec-directory
   commit, and it keeps a sibling path only when a commit belonging to the spec
   changed it or it carries an uncommitted change. A spec never `in-progress` still
   starts at its first commit. The result's `first-commit` is renamed
   `window-base`.
+  Breaking under `BE-COMPAT-001`: `first-commit` is renamed `window-base`.
 - **A fix round reads only the review's own fixes.** `brief-re-read` now drops
   a path only commits another spec claims changed, found through each snapshot's
   parent with nothing reported by the agent, and returns it as `excluded`, unless
@@ -1373,7 +1473,7 @@ its version and date.
   `measure-reopenings`. A return to `in-progress` used to start a new one, so the
   earlier code left the window and reached `done` unread; runs on both sides of the
   trip now count together, so a second clean review is over the bound.
-- **The pre-`done` gate blocks on a review a spec owes, ahead of every analyze
+- **BREAKING: the pre-`done` gate blocks on a review a spec owes, ahead of every analyze
   check.** `check-review-gate`'s `blocked-by` gains `review-owed`, which names what
   changed since the last review and clears once a review's record is committed.
   `review.md`'s missing-map, outstanding-finding and fix-round checks move ahead of
@@ -1382,6 +1482,8 @@ its version and date.
   records together. `compute-review-scope`'s `review-owed` no longer counts a path
   in another spec's directory, which that spec's review reads. A window that cannot
   be read passes, with guidance saying so.
+  Breaking under `BE-COMPAT-001`: `blocked-by` gains `review-owed`, a new
+  value of a response enum the schema does not document as open to new values.
 - **A window no longer goes wrong on a rename, a revert or a shallow clone.** A spec
   is found through history by its number, so a slug changed mid-reopening keeps its
   window and `diff-cross-spec` no longer reads its old directory as another spec's.
@@ -1555,7 +1657,7 @@ its version and date.
   server's `redirect_uri` matching under both IDs until the file is
   re-synced. Spec 077; spec 008, tasks 32, 40, 42 and
   43.
-- **A finding is fixed, deferred or waived: `routed` is now `deferred`, and
+- **BREAKING: a finding is fixed, deferred or waived: `routed` is now `deferred`, and
   `discarded` is now `waived`.** `review.md`'s and `analysis.md`'s
   `dispositions:` map counts `deferred` and `waived` where it counted `routed`
   and `discarded`, and a stored decision's `outcome` is `deferred` or
@@ -1585,6 +1687,9 @@ its version and date.
   its task checked or gone, its spec `done` or gone, or a rule file — while
   its finding still fires, under `lapsed`, and the finding needs a new
   disposition. Spec 076.
+  Breaking under `BE-COMPAT-001`: `dispositions.routed` and
+  `dispositions.discarded`, and the outcomes `routed` and `discarded`, are
+  renamed `deferred` and `waived`, and a deferral naming no work is refused.
 - **BREAKING: `compute-review-scope` and `diff-cross-spec` results stay within one
   read.** Each result now carries `form` and each list's count
   (`scope-count`, `modified-since-count` and `plan-affected-count`;
@@ -1609,7 +1714,7 @@ its version and date.
   `spec.md`, a criterion's wording included, still stales it. A record
   written before this release over a spec with a ticked criterion reads stale
   once, until the spec's next `/analyze`. Spec 066, task 9.
-- **`compute-review-scope` reads every path a plan cell names, and sets
+- **BREAKING: `compute-review-scope` reads every path a plan cell names, and sets
   deleted files apart.** An Affected Files cell naming several backticked
   paths (`` `a.md` / `b.md` ``) puts each in `plan-affected`, where only the
   first counted; a later span that is a command, a flag or an anchor stays
@@ -1618,6 +1723,8 @@ its version and date.
   review that reads every readable file is no longer counted short in
   `examined`. A script reading `scope` no longer finds deleted paths there.
   Spec 066, task 10.
+  Breaking under `BE-COMPAT-001`: `scope` no longer lists a path deleted since
+  the diff base, which 0.59.11 listed there; read `deleted`.
 
 - **The security, configuration and performance rules close the gaps a
   re-read round found.** Each new obligation is an `/analyze` finding for a
@@ -1891,7 +1998,7 @@ its version and date.
   `a-malformed-disabled-entry-fails-fast`, commits `a32af25b`, `036f03cb`,
   `bee36927`.
 
-- **A `.ductus/config.toml` or session file that does not parse, or an invalid
+- **BREAKING: a `.ductus/config.toml` or session file that does not parse, or an invalid
   `[paths] specs-root`, halts the call, naming the file (spec 022, task 12;
   `CFG-ENV-008`).** In 0.59.11 the readers were best-effort: `Host::load` (the
   `[host]` block and the session file's `cli-config-dir`) and `Paths::load`
@@ -1914,6 +2021,9 @@ its version and date.
   default that does not parse and names it in `unreadable`, so `/target`
   repairs it. A script or CI step that ran past the warning fails until the
   file is corrected. Commit `92120f45`.
+  Breaking for a caller that ran past the warning: a `.ductus/config.toml` or
+  session file that does not parse, or an invalid `[paths] specs-root`, now
+  fails the call.
 - **BREAKING: every path argument is resolved through its symbolic links
   before the containment check (spec 022, task 4; `BE-INPUT-004`, scenario
   `a-path-argument-resolves-inside-its-base`).** The lexical check read a
@@ -2012,7 +2122,7 @@ its version and date.
   that names such a primitive runs it through the CLI. The amendment applies
   to every host and names no runtime identifier. Spec 022, task 19;
   `80a1ca97`.
-- **The bootstrap bounds and verifies every fetch it makes (spec 061, task 24;
+- **BREAKING: the bootstrap bounds and verifies every fetch it makes (spec 061, task 24;
   spec 022, task 8).** The latest-release redirect read, the version pin, both
   migration-registry reads, the self-update fetch and the per-language
   `.gitignore` fetch pass `--proto '=https' --tlsv1.2` and `--connect-timeout
@@ -2030,12 +2140,16 @@ its version and date.
   "the latest release" however `latest` was given. Spec 061, task 24; spec
   022, tasks 6 and 8; `cc3d18aa`, `fdcdb129`, `db8fb327`, `17424d39`,
   `4ed8340d`.
-- **`install.sh` bounds both of its requests (spec 022, task 6; spec 061).**
+  Breaking for a run that relied on a bootstrap fetch over plain `http`, a TLS
+  version below 1.2 or no time bound: each now fails.
+- **BREAKING: `install.sh` bounds both of its requests (spec 022, task 6; spec 061).**
   The latest-release header read and the bootstrap download take
   `--connect-timeout 10` (`CONNECT_TIMEOUT_SECONDS`) and `--max-time 60`
   (`REQUEST_TIMEOUT_SECONDS`), so a hung connection fails and the installer
   halts naming the URL (`BE-TIMEOUT-001`). The halt for a named tag below the
   floor says "from --ref". Spec 022, task 6; `a016b9d4`, `cc3d18aa`.
+  Breaking for an `install.sh` run whose request hangs: it now fails after 10
+  s to connect or 60 s in all, halting naming the URL.
 - **The shipped CI template's `actions/checkout` pin moves a major release,
   v4.4.0 to v7.0.1 (spec 022, task 7).**
   `framework/templates/ci/adopter-generators.yml` pins commit
@@ -2161,7 +2275,7 @@ its version and date.
   now stops silently when no inbox exists. The Antigravity rules-mirror call
   this round added went with that agent's removal (see "Auggie, Antigravity and
   OpenCode are no longer supported agents").
-- **`derive-dependencies` and `derive-references` keep a key's whole block when
+- **BREAKING: `derive-dependencies` and `derive-references` keep a key's whole block when
   they splice it, and never write a splice that does not parse (spec 067,
   review round 1; `2be18da6`).** A key's continuation counted only indented
   lines, so an indentless block sequence (`- item` at column 0, the default of
@@ -2177,6 +2291,8 @@ its version and date.
   changed: such a refused rewrite is named in `unwritable`, and the CLIs exit
   non-zero on it (the entry "`derive-dependencies` and `derive-references`
   name a rewrite they refuse").
+  Breaking under `BE-COMPAT-001`: a splice whose result does not parse,
+  written in 0.59.11, is now refused and the spec named in `unparseable`.
 - **BREAKING: `check-promotion-coverage` refuses an empty `sections` (spec 067,
   review round 1, `2be18da6`).** With none, every count was zero by
   construction, not a measurement. The CLI, the MCP tool and `ductus exec` now
@@ -2216,7 +2332,7 @@ its version and date.
   since dropped); an installed copy stays within it for a project name of up to
   54 characters (27 `{project}` placeholders, so 27 bytes per name character
   beyond nine). `/target` step 4's read of it now fits one call on those
-  hosts. The file measures 48,763 bytes at the release head `8e4dc677`.
+  hosts. The file measures 49,021 bytes at `a7a7f898` (`git show a7a7f898:framework/constitution.md | wc -c`), 48,763 at `8e4dc677`.
 - **A plan or task-list edit that adds no unchecked task does not reopen a
   `done` spec, and does not stale its analysis (spec 041, scenario
   `a-plan-edit-does-not-reopen-a-done-spec`, task 21; specs 047, 063, 066;
@@ -2371,7 +2487,7 @@ its version and date.
   when neither is set. A later entry adds a test that fails when the capture
   is removed, and another redacts a proxy value whose credentials hold `://`
   whole. Spec 048. `d4b75e66`
-- **`/{project}` bounds every `--version` probe, accepts only a well-formed
+- **BREAKING: `/{project}` bounds every `--version` probe, accepts only a well-formed
   pin, and the shipped pre-commit hook echoes a sanitized version (spec
   048).**
   The bootstrap runs each `--version` probe, of the store or of a `[runtime]
@@ -2381,6 +2497,8 @@ its version and date.
   ASCII digits, since later steps interpolate the pin into URLs and file
   names. The shipped pre-commit hook echoes the binary's first `--version`
   line cut to 80 printable characters. Spec 048. `d4b75e66`
+  Breaking for a run whose pin is not one `MAJOR.MINOR.PATCH` line of ASCII
+  digits, or whose `--version` probe outlasts 10 s: it now halts.
 - **BREAKING: `apply-manifest`'s and `enforce-manifest`'s `--*-json` files
   must lie inside a staging directory (spec 048; `BE-INPUT-004`).**
   The CLI read a `--entries-json`, `--pinned-json`, `--substitutions-json` or
@@ -2567,7 +2685,7 @@ its version and date.
 
 ### Removed
 
-- **Windows is no longer a published platform (spec 048, AC25; owner
+- **BREAKING: Windows is no longer a published platform (spec 048, AC25; owner
   decision, 2026-11-19).** A release now publishes `ductus-{target}.tar.gz`
   and its `.sha256` for `aarch64-apple-darwin`, `x86_64-apple-darwin`,
   `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` only, with no
@@ -2579,6 +2697,8 @@ its version and date.
   nothing and keeps the pointer's copy current. The Windows asset 0.59.11 and
   earlier published stays on those releases, and the runtime's own Windows
   code stays.
+  Breaking for an adopter on Windows: `/ductus` halts at acquisition until the
+  runtime is built from source and `[runtime] path` names it.
 - **The `parity:` frontmatter key is gone from every shipped command and from
   `framework/bootstrap/ductus.md`, with the TODO captures under
   `runtime/tests/parity/` (spec 022's AC7; owner decision, 2026-11-19).** It
@@ -2589,7 +2709,20 @@ its version and date.
   compare each command's envelope stream byte for byte are unchanged.
   `apply-manifest` still accepts the key in a command file, so a newer binary
   at a project's `[runtime] path` can apply an older release's archive.
-- **Auggie, Antigravity and OpenCode are no longer supported agents.**
+- **Five overdue migrations leave the registry: `gitignore-marker-rename`,
+  `governance-config-rename`, `spec-and-plan-sunset`, `rule-files-relocate` and
+  `workflows-sunset` (spec 027; owner decisions, 2026-11-17).** Their
+  `sunset_after` (0.10.0, and 0.25.0 for `workflows-sunset`) was at or below
+  0.59.11, so Pre-run Migrations already skipped each at 0.59.11, which skips
+  an entry once the release reaches its `sunset_after`; they stayed registered
+  because nothing prompted their archival. `framework/migrations.toml` now
+  holds 15 entries (14 at `ductus-v0.59.11`), none with a `sunset_after`; the
+  procedure files are deleted, and each recipe, with its **Target paths:**
+  line, is appended to the repository's `CHANGELOG.md` under Archived
+  migrations for an adopter far enough behind to apply one by hand. Family 10's
+  new check 10e fails an active entry at or past its `sunset_after`. Not
+  breaking: no adopter on 0.59.11 or later could run one. `c061c1f0`
+- **BREAKING: Auggie, Antigravity and OpenCode are no longer supported agents.**
   `install.sh` and `/ductus` accept `claude` and `pi` only:
   `install.sh auggie`, `antigravity`, `agy` or `opencode`, and `/ductus
   --agents=` naming one of them, halt as an unknown agent and list the valid
@@ -2610,6 +2743,9 @@ its version and date.
   registration that host holds, by hand. `check-corpus-links` with `scope:
   repository` no longer excludes those directories as generated command
   copies, so a copy left tracked there has its links checked.
+  Breaking for an adopter on one of those agents: `install.sh` and `/ductus
+  --agents=` naming one halt as an unknown agent, and `/ductus` no longer
+  updates its tree.
 
 - **BREAKING: `run-generator` is no longer an MCP tool (spec 022, task 14
   (b)).** It runs any project file with `bash`, so a host that auto-approves
@@ -2638,6 +2774,36 @@ its version and date.
   tasks and criteria nest fences in lists. `check-corpus-links` still reads
   links inside HTML comments. No file in this repository's spec corpus reads
   differently (the corpus run over every spec found no difference).
+- **The remaining hand-rolled fence toggles close a fence as `SkipScanner` does
+  (spec 022 task 61).** `extract_section_body` (the section reader of the
+  `ductus exec` fill-step payload) and the link harvester behind
+  `derive-dependencies`, `derive-references` and `check-review-gate`'s pointer
+  reading toggled a fence on any line starting with three backticks. Each now
+  closes a fence only on a run of its own character at least as long as its
+  opener with nothing after it, as `SkipScanner` and `check-corpus-links` read
+  it: a `~~~` fence is a fence, a shorter run or an info-string line inside a
+  longer fence no longer ends it, and a backtick line whose info string holds a
+  backtick opens none. So a link inside a `~~~` fence, or after a shorter run
+  inside a longer fence, no longer creates a `dependencies:` edge or a
+  `references:` entry, and one on a line a mis-read backtick line had opened a
+  fence over now does. The command parser's test walker reads a fence the same
+  way, from column 0 as before.
+- **The descriptions and schema doc comments of thirteen primitives state
+  examined-and-clean by a bounded list's `-count` (spec 080 task 61).**
+  `check-artifacts`, `check-command-flags`, `check-corpus-links`,
+  `check-orphaned-references`, `check-step-references`, `check-unfolded-specs`,
+  `derive-dependencies`, `derive-references`, `derive-routing-candidates`,
+  `prune-plan`, `read-spec`, `resolve-anchor` and `rewrite-spec-links` said it
+  by an empty list, which is absent in the file form past `[artifacts]
+  read-size-bytes`, so a caller read an absent list as an empty one. They now
+  say a zero `-count`, which both forms carry (`derive-dependencies` and
+  `derive-references`: a zero `updated-count` with zero `unparseable-count`,
+  `unwritable-count` and `refused-count`). Four more descriptions
+  (`brief-re-read`, `label-criteria`, `read-re-read` and `write-analysis`) were
+  true in the file form and only lose backticks. A test in
+  `runtime/tests/bounded_list_gates.rs` scans every served primitive's
+  description against its own bounded lists, with a stale-checked allowlist of
+  four non-defects, and fails on the old wording. Text only: no result changes.
 - **A line directly under a criterion belongs to it (spec 022).** `read-spec`'s
   acceptance-criteria walk folds a line that follows a criterion with no blank
   line between, and starts no other block (heading, list item, thematic break,
@@ -2656,11 +2822,13 @@ its version and date.
   logged and skipped a blank or unparseable line but ended in an `io-error`
   envelope and exit 74 on one that was not valid UTF-8. It now skips that line
   whole, never decoding it lossily.
-- **`append-inbox` refuses text that would open an HTML comment (spec 022).**
+- **BREAKING: `append-inbox` refuses text that would open an HTML comment (spec 022).**
   Text holding a `<!--` outside backticks with no `-->` after it made the new
   bullet's own line a comment opener, so the reader skipped the bullet and the
   rest of the file. It is refused with an error naming the fix; a closed inline
   comment or a backticked delimiter is accepted.
+  Breaking under `BE-COMPAT-001`: text holding an unclosed `<!--`, accepted in
+  0.59.11, is now refused.
 - **A file `merge-managed-block` creates is mode 0644 (spec 022).** It landed at
   the tempfile's 0600; a `.gitignore` or `CLAUDE.md` it creates is committed and
   not secret. A rewrite keeps the file's mode, and `merge-permissions`' personal
@@ -2708,7 +2876,7 @@ its version and date.
 - **`check-promotion-coverage` keeps a table's keys when a later header has an
   empty first cell (spec 067).** An entry the earlier table covers is no longer
   reported unclassified.
-- **`prune-tasks` and `prune-plan` no longer delete past an unclosed fenced
+- **BREAKING: `prune-tasks` and `prune-plan` no longer delete past an unclosed fenced
   block or HTML comment (spec 041).** A file that ends inside one is reported
   with `unexamined-tail` (`from-line`, and `cause` `open-fence` or
   `open-comment`), an apply of it writes nothing (`applied: false`), and a walk
@@ -2716,6 +2884,9 @@ its version and date.
   heading was swallowed into the open block, so a prune removed a pending task
   or a design-record section. A result for a file with no open region carries
   no new key.
+  Breaking under `BE-COMPAT-001`: `prune-tasks` and `prune-plan` over a file
+  ending inside an open fence or comment, which applied in 0.59.11, now write
+  nothing (`applied: false`).
 - **`relocate-audit-records` carries each key's whole value (spec 057).** It
   keeps the indented lines of a key it carries from an existing `review.md` or
   `analysis.md` (`waivers:`, `decisions:`, `reviewed-digest:`,
@@ -2760,7 +2931,7 @@ its version and date.
   is `key=value`. An invocation that passed a bare argument and relied on its
   being ignored now fails, a narrowing of accepted input (`BE-COMPAT-001`). No
   framework file or test passed one.
-- **`merge-permissions` refuses a settings path whose link under a config
+- **BREAKING: `merge-permissions` refuses a settings path whose link under a config
   directory leads into a protected one, and an archive's staging path may not
   contain the working directory (spec 022 task 43; 022's review of 2026-11-17,
   `BE-INPUT-004`).** `check_no_protected` let a config-directory path pass by
@@ -2769,6 +2940,9 @@ its version and date.
   was written. Every judgment now runs, and only the config-directory verdict
   is skipped. `extract-archive` and `fetch-archive` refuse a `dest` that
   contains the working directory, as they already refused one inside it.
+  Breaking under `BE-COMPAT-001`: a settings path through such a link, and a
+  `dest` containing the working directory, accepted in 0.59.11, are now
+  refused.
 - **`apply-manifest`'s `create` and `skip-if-conflict` strategies,
   `create-plan-artifacts` and `migrate-session-file` create their destination
   exclusively (spec 022 task 43; 022's review of 2026-11-17, `BE-RACE-003`).**
@@ -2777,7 +2951,7 @@ its version and date.
   the check is now kept, and reported `skipped-exists`, `kept` or
   `kept-existing`. The raw-write allowlist check sees production code that
   follows a mid-file test module, which it used to skip.
-- **A project file the runtime reads under a fixed name, or through a path a
+- **BREAKING: a project file the runtime reads under a fixed name, or through a path a
   config key or committed text builds, is refused or reported unread when a
   symbolic link leads it out of the project (spec 022 task 42; `BE-INPUT-004`,
   the owner's class decision of 2026-11-17).** Contained now:
@@ -2797,7 +2971,10 @@ its version and date.
   points at, and holds `from` to the feature-directory name rule before it
   reads anything (`BE-INPUT-002`): `--from .` re-pointed every `./` link in a
   fixture corpus, and now exits with an invalid-argument error.
-- **The spec-root listing is contained before it is read (spec 022 task 48;
+  Breaking under `BE-COMPAT-001`: a project file behind a link leaving the
+  project, read in 0.59.11, is now refused or reported unread, and `rewrite-
+  spec-links --from .` is an invalid argument.
+- **BREAKING: the spec-root listing is contained before it is read (spec 022 task 48;
   `BE-INPUT-004`, the owner's class decision of 2026-11-17).**
   `list_feature_dirs` refuses a spec root that is, or runs through, a symbolic
   link leaving the project, instead of listing the outside directory.
@@ -2807,7 +2984,9 @@ its version and date.
   `diff-cross-spec` and the fix-round primitives return the invalid-path error;
   `derive-routing-candidates` skips its spec-corpus source as unreadable, and
   the derivation reads as incomplete.
-- **Five more project-file reads and probes are contained, and the containment
+  Breaking under `BE-COMPAT-001`: a spec root that is or runs through a link
+  leaving the project, listed in 0.59.11, now returns `invalid-path`.
+- **BREAKING: five more project-file reads and probes are contained, and the containment
   test holds every feature-argument site (spec 022 task 46; 022's review of
   2026-11-17, `BE-INPUT-004`).** `resolve-anchor` no longer reads
   `framework/bootstrap/ductus.md` through a link that leaves the project (it
@@ -2824,16 +3003,23 @@ its version and date.
   `discover-rule-files`, `create-feature` and `dashboard`) and
   `rewrite-spec-links`' scenario target, so removing any one site's check fails
   a named case.
-- **`append-inbox` refuses text that is only a list marker (spec 022 task 44,
+  Breaking under `BE-COMPAT-001`: a spec root or feature directory that is a
+  link leaving the project, read in 0.59.11, now returns `invalid-path` or is
+  `unparseable`.
+- **BREAKING: `append-inbox` refuses text that is only a list marker (spec 022 task 44,
   from 022's review).** A bare checkbox (`- [ ]`, `- [x]`) passed the empty-text
   check before the marker was stripped, so it was written as an empty bullet
   that `remove-inbox-item` could not name. The text is now checked again after
   the strip and refused as an invalid argument, as scenario
   `append-primitive-marker-normalization` requires.
-- **`ductus exec` labels only a command file that leaves the project
+  Breaking under `BE-COMPAT-001`: text that is only a list marker, accepted in
+  0.59.11, is now refused.
+- **BREAKING: `ductus exec` labels only a command file that leaves the project
   `command-file-outside-project` (spec 022 task 44, from 022's review).** A
   project root that cannot be resolved was reported under the same code; it now
   halts as `config-unreadable`, with the underlying error.
+  Breaking for a caller that matched `command-file-outside-project` for a
+  project root that cannot be resolved: it now gets `config-unreadable`.
 - **BREAKING: an installed command file is read only from inside the project
   (spec 022 task 40, from 064's analysis; BE-INPUT-004).** `ductus exec`, the
   `writeCode` payload's constitution excerpts, `render-help` (and `ductus hook
@@ -2875,7 +3061,7 @@ its version and date.
   a digit-led target that is not `MAJOR.MINOR.PATCH` malformed; `write-review`
   names an empty `diff-base` among the empty-scope routes; and `write-session`
   says `own-path` is absent on a host-config write. Text only.
-- **`prune-tasks` and `append-task` no longer write a counter their own reader
+- **BREAKING: `prune-tasks` and `append-task` no longer write a counter their own reader
   refuses, and a `#` comment in `tasks.md`'s frontmatter is no heading (spec
   041's review).** A task numbered `4294967295` made `prune-tasks --apply`
   write `next-task: 0`, and `append-task` advanced past one the same way;
@@ -2884,8 +3070,10 @@ its version and date.
   a YAML comment in the frontmatter replaced the title on `--reset`, and a
   keep-pending prune inserted a blank line after the block's opening `---`;
   both now find the heading below the frontmatter and keep the block as it was.
+  Breaking under `BE-COMPAT-001`: a task numbered `4294967295`, accepted in
+  0.59.11, is now refused with `malformed-tasks`.
 
-- **`prune-project` opens nothing through a symbolic link leaving the project
+- **BREAKING: `prune-project` opens nothing through a symbolic link leaving the project
   (spec 041 task 25, BE-INPUT-004).** Each project file is checked with
   `validate_contained` before it is read, and one that is, or lies under, such
   a link reads the new file state `outside-project`: neither read nor written,
@@ -2895,8 +3083,11 @@ its version and date.
   behind such a link unread and names it in the search's `outside-project`,
   with `outside-project-count`; the list moves to the `lists-file` under the
   key `outside-project` past the read size, the count staying inline.
+  Breaking under `BE-COMPAT-001`: a project file behind a link leaving the
+  project, read in 0.59.11, now reads `outside-project`, and a `create` home
+  behind one fails the call with `invalid-path`.
 
-- **The session files open through canonical containment (spec 022, task
+- **BREAKING: the session files open through canonical containment (spec 022, task
   34).** Every read of a session file, the lock and the sessions directory
   goes through the project's containment check: another session's file that
   is a symbolic link leaving the project is left unread and listed in
@@ -2905,6 +3096,9 @@ its version and date.
   as an invalid path, never read or replaced. The `Host` config read, the
   `ductus exec` seed and `migrate-session-file`'s destination take the same
   check (BE-INPUT-004, from 062's review).
+  Breaking under `BE-COMPAT-001`: a session file, lock or sessions directory
+  behind a link leaving the project, read in 0.59.11, is now left unread or
+  refused as an invalid path.
 - **`append-task` no longer loses a concurrent append (spec 022, task 35).**
   Its read of `tasks.md`, its numbering and its write are held under a lock,
   `.ductus/locks/append-task.lock`, with the session lock's backoff and
@@ -2944,13 +3138,15 @@ its version and date.
   racing calls exactly one writes and the other gets `scenario already
   exists`.
 
-- **The bootstrap's acquisition names both digests on a mismatch, and its
+- **BREAKING: the bootstrap's acquisition names both digests on a mismatch, and its
   framework archive fetch is HTTPS-only and bounded (spec 048).** A checksum
   mismatch halts with a reason naming the expected digest (the sidecar's) and
   the computed one. The framework archive `curl` takes the same
   `--proto '=https' --tlsv1.2` and connect and total time bounds as the
   runtime downloads. The digest comparisons, against the sidecar and of the
   pointer with the resolved binary, ignore case.
+  Breaking for a run whose framework archive fetch relied on plain `http`: it
+  now fails.
 - **A test now proves `fetch-archive` reads `SSL_CERT_FILE` and `SSL_CERT_DIR`
   at startup (spec 048 task 30).** Removing `init_proxy_env`'s capture passed
   every test, since the platform store's fallback reads the same variables at
@@ -2967,18 +3163,23 @@ its version and date.
   part of them; a scheme now ends only after scheme characters. The five
   `--*-json` flags' `--help` text says the file is read from a staging
   directory (spec 048 task 30).
-- **`retire-feature --allow-sequential` no longer deletes every spec on a
+- **BREAKING: `retire-feature --allow-sequential` no longer deletes every spec on a
   name that is no feature directory (spec 052).** `--feature .` resolved to
   the spec root and removed it. The flag now widens the accepted forms to the
   sequential one only: a `feature` that `parse_feature_dir` does not accept
   is refused before anything touches the filesystem, with or without it.
-- **`retire-feature` refuses a name holding a path separator, and a spec
+  Breaking under `BE-COMPAT-001`: `retire-feature` with `--feature .` or any
+  name `parse_feature_dir` does not accept, accepted in 0.59.11, is now
+  refused.
+- **BREAKING: `retire-feature` refuses a name holding a path separator, and a spec
   consolidated into itself (spec 052).** A sequential name leaves its slug
   ungrammared, so `--feature 012-x/scenarios --allow-sequential` parsed as
   sequential and deleted the spec's scenarios: both arguments now pass the
   feature-name screen `rewrite-spec-links` applies to its `to`. A `feature`
   that is its own `fold-target` was removed too, its spec.md satisfying the
   guard meant to prove the content had a home; it is now refused.
+  Breaking under `BE-COMPAT-001`: a name holding a path separator, or a spec
+  consolidated into itself, accepted in 0.59.11, is now refused.
 - **`lint-markdown` lints only the paths it is given.** It passes
   `--no-globs`, so the config's `globs` (`**/*.md` in the shipped config) are no
   longer appended: a violation elsewhere in the repository is not reported, and
@@ -2986,10 +3187,12 @@ its version and date.
   report `clean: false` with no violations, the gate naming that nothing was
   examined. Given no paths, the config's globs still apply.
 
-- **`ductus exec` screens its command name.** A name outside the slug grammar
+- **BREAKING: `ductus exec` screens its command name.** A name outside the slug grammar
   (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), such as one holding `/` or `..`, is refused
   with an `invalid-command-name` error naming it before any candidate path is
   built, in `exec` and in the `writeCode` payload's command-file lookup.
+  Breaking under `BE-COMPAT-001`: a command name outside the slug grammar,
+  accepted in 0.59.11, is now refused with `invalid-command-name`.
 
 - **A closed stdout is a quiet exit, not a panic.** A subcommand whose stdout
   reader has gone (`ductus dashboard | true`) exits 141 (`128 + SIGPIPE`),
@@ -3019,7 +3222,7 @@ its version and date.
 - **A deferral's task is matched at the task level.** `write-review` and `write-analysis`
   left out the section of any numbered heading matching the deferred task, so in a phased
   task list a phase numbered like it exempted the open boxes under it. Spec 079.
-- **A `[services]` entry with no `repo` or `path` halts, as does a config that
+- **BREAKING: a `[services]` entry with no `repo` or `path` halts, as does a config that
   does not parse.** `resolve-references`, `derive-references`,
   `classify-spec-edit` and `dashboard` read the registry through one reader,
   which names the file, and the entry's alias and field. `derive-references`
@@ -3028,6 +3231,9 @@ its version and date.
   the project itself. `resolve-references`' result is bounded by `[artifacts]
   read-size-bytes`, past which its two lists move to the file `lists-file`
   names. Spec 030, task 15.
+  Breaking for a caller that read a config that does not parse as no registry,
+  or a `[services]` entry with no `repo` or `path` as a service: both now
+  halt.
 
 - **A repo registered under two aliases is reported.** `resolve-references`
   returns `duplicate-repos`, each repo the `[services]` registry holds under two
@@ -3037,13 +3243,15 @@ its version and date.
   nothing saying so, though the data model and `/link` called it a finding.
   Spec 030, task 14.
 
-- **A review whose `diff-base` names no commit records nothing.** `write-review`
+- **BREAKING: a review whose `diff-base` names no commit records nothing.** `write-review`
   refuses a `diff-base` its scope cannot be derived from, naming it, and leaves
   `review.md` as it was, where it recorded `scope: 0` beside whatever `examined`
   the run claimed, a window no check could tell from an empty one. An empty
   `diff-base`, a spec that never entered `in-progress`, still records `scope: 0`,
   and now counts as an empty scope, so it refuses over an earlier record counting
   a finding. Spec 079, task 20.
+  Breaking under `BE-COMPAT-001`: a `diff-base` naming no commit, which
+  recorded `scope: 0` in 0.59.11, now fails and records nothing.
 
 - **A waiver notice prints a stored waiver's text on one line.**
   `process-waivers`' expired, retained and duplicate notices, which `/review`
@@ -3052,12 +3260,14 @@ its version and date.
   longer reaches the terminal raw. Which waivers apply, expire or are
   retained is unchanged. Spec 066, task 13.
 
-- **What a review finds on the exec path, and what the rule waived earlier, holds
+- **BREAKING: What a review finds on the exec path, and what the rule waived earlier, holds
   `done`.** A `performReview` pass can mark an observation `contract-break`, so an
   exec run records and lists a broken contract, and the gate's hold fires for it.
   `write-review` refuses a waived break while the rule's own stored waiver for its
   key stands, so an observation the rule waived and a later run judged a broken
   contract is fixed, deferred or waived by a person. Spec 079.
+  Breaking under `BE-COMPAT-001`: a run waiving a break while the rule's
+  stored waiver for its key stands, accepted in 0.59.11, is now refused.
 - **`--waive` writes what it says.** `write-review` takes `new-waivers`, each a rule
   and a reason, and records the `waivers:` entry from the run's findings, so a waived
   finding stays waived on the next run. It used to clear only the run it was given
@@ -3067,11 +3277,14 @@ its version and date.
 - **A contract edited before the review's window is read.** `compute-review-scope`
   adds each contract the record's digest says changed, so a reopening's review reads
   a scenario edited while the spec was `done` before refreshing its digest. Spec 079.
-- **`/analyze` reports two states on a `done` spec nothing read.** A review cut off
+- **BREAKING: `/analyze` reports two states on a `done` spec nothing read.** A review cut off
   with its fix-round loop open is blocking review-state drift, and a
   `cross-spec-impact:` entry no back-link discharges is the advisory
   `cross-spec-impact-drift`. Disposition drift's message names the `--since` that reads
   the findings again, since a plain re-run stops or reads nothing. Spec 079.
+  Breaking for a `done` spec a 0.59.11 `/analyze` passed: one whose review was
+  cut off with its fix-round loop open now reads as blocking review-state
+  drift.
 - **A record says one thing.** A person's stored decision now decides the count and the
   body as well as the `decisions:` list when the rule waives the observation again,
   and a run's own `review.md` leaves its `scope`, so its two writes state one
@@ -3080,20 +3293,25 @@ its version and date.
   `/{project}:<command>` rather than `/ductus:<command>`, and `check-artifact-size`'s
   fixes name the command rather than print a placeholder. Spec 079.
 
-- **A `done` spec owes nothing in `tasks.md`.** `check-review-gate` blocks `done` over
+- **BREAKING: a `done` spec owes nothing in `tasks.md`.** `check-review-gate` blocks `done` over
   an unchecked box, as `unchecked-task`, and `/analyze` reports a `done` spec holding
   one as blocking review-state drift. It used to pass, with `/implement`'s count the only
   guard, which sees no box outside a numbered task. A release step left as a box is
   ticked or removed before `done`. Spec 079.
+  Breaking under `BE-COMPAT-001`: a `done` spec holding an unchecked box,
+  which the gate passed in 0.59.11, now blocks as `unchecked-task`.
 - **One test of what `tasks.md` adds.** `classify-spec-edit` and `prune-plan` disagreed
   in both directions. Both now compare an unchecked line by its text under any heading:
   a box added, reworded or unticked reopens a `done` spec, including one in a `tasks.md`
   new since `HEAD`, and a box moved, or a task above it renamed, does not. `/status`'s
   count of specs with no unchecked task reads the same test. Spec 079.
-- **An empty scope clears no finding it did not read.** `write-review` refuses over a
+- **BREAKING: an empty scope clears no finding it did not read.** `write-review` refuses over a
   record counting a finding whenever the window holds nothing but the run's own record,
   as a `ductus exec` run's does without the flag, and over a record it cannot read. An
   empty run's summary names a break it holds. Spec 079.
+  Breaking under `BE-COMPAT-001`: a `write-review` over a record counting a
+  finding, with a window holding only the run's own record, or over a record
+  it cannot read, accepted in 0.59.11, now fails.
 - **A run's two writes store one waiver, and a stored break stays one.** A `new-waivers`
   anchor an earlier write of the run stored applies and is not stored again, and a fix
   clearing its finding lets the last write finish. A decision on a broken contract is
@@ -3124,7 +3342,7 @@ its version and date.
   `excluded`, `contract-breaks` and `fix-rounds-open` beside `last-run: null`, and
   `open-findings` stays for the next scope. Spec 079.
 
-- **`fetch-archive` screens every connect-time lookup, so a redirect hop
+- **BREAKING: `fetch-archive` screens every connect-time lookup, so a redirect hop
   cannot rebind to an internal address (spec 022, task 2; `BE-INPUT-016`).**
   Only the initial host was pinned to the addresses the SSRF screen resolved.
   A redirect target was screened, then resolved again, unscreened, when the
@@ -3143,6 +3361,8 @@ its version and date.
   target is named in the error the CLI and MCP print, and every error renders
   its URL, the sidecar's remote leading token and the archive path on one line
   (`BE-INPUT-011`). Commits `00e4bd3f`, `d21aaf0c`, `307b920c`.
+  Breaking under `BE-COMPAT-001`: a redirect hop that resolved to an internal
+  address at connect time, fetched in 0.59.11, is now refused.
 - **`/analyze` states the two citation messages it had dropped (spec 008).**
   `Spec at {path} references unknown rule {ID}` (Blocking) and `Spec at {path}
   references deprecated rule {ID}; targeted for removal in {version}`
@@ -3160,11 +3380,13 @@ its version and date.
   UTF-8 is refused (`UnsafeArchivePath`) rather than checked by its lossy text
   and written by its raw bytes; on Windows such a name fails as `Io`. Spec
   022; `2aec1962`, `22d34767`, `93fcc6b9`.
-- **`prune-tasks --all --apply` refuses as a whole when one feature fails the
+- **BREAKING: `prune-tasks --all --apply` refuses as a whole when one feature fails the
   path check (spec 022; scenario
   `a-path-argument-resolves-inside-its-base`).** The walk wrote earlier
   features before a later one failed the check; it now computes every
   reduction and status first. Spec 022; `e2f4e1b2`.
+  Breaking under `BE-COMPAT-001`: a `prune-tasks --all --apply` that wrote
+  earlier features before a later one failed the path check now writes none.
 
 - **BREAKING: `create-feature` claims its directory atomically and refuses
   one outside the project (spec 051; `BE-RACE-003`).**
