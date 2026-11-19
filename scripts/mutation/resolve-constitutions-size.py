@@ -139,6 +139,6 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '            let err = crate::primitives::flatten_line(&err.to_string());',
         '            let err = err.to_string();',
-        'write_review::tests::a_malformed_config_still_produces_a_report',
+        'write_review::tests::a_malformed_registry_entry_still_produces_a_report',
     ),
 ]
