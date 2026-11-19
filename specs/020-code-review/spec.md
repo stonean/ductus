@@ -39,7 +39,8 @@ Adds `/ductus:review`, a verb-named slash command that audits implementation cod
 > analyze record in `analysis.md` beside the review one. The same vacuity had
 > reached audit Family 19 and `mechanical_sweep_parity`, both re-pointed in the
 > same change. `/{project}` does not install CI files, so an adopter's copy is
-> detected and reported by the migration procedure rather than rewritten.
+> detected and reported by the migration procedure rather than rewritten
+> (`framework/migrations/audit-record-relocate.md`, step 5).
 >
 > **Audit Family 31 is gone.** It reconciled the two copies of the record, which
 > is a check with no subject once there is one copy; AC15 is annotated below.
@@ -63,12 +64,14 @@ Principles** rule that framework features must not depend on human diligence.
 
 ## Motivation
 
-The constitution references quality standards but no command enforces them on
-implementation code. `/ductus:analyze` ensures spec/plan/tasks artifacts are
-internally consistent; nothing checks whether the code that landed actually
-satisfies the spec, the security rules added in spec 008, or basic quality
-expectations. Adopters currently have to remember to run external review
-tools — a discipline dependency the framework should remove.
+Before this spec the constitution referenced quality standards but no command
+enforced them on implementation code: the command set it was written against
+(`git ls-tree --name-only 30e1fbaa~1 framework/commands/`) held none that read
+code. `/ductus:analyze` kept spec/plan/tasks artifacts internally consistent;
+nothing checked whether the code that landed satisfied the spec, the security
+rules added in spec 008, or basic quality expectations. Adopters had to
+remember to run external review tools — a discipline dependency the framework
+should remove.
 
 ## Acceptance Criteria
 
@@ -156,8 +159,10 @@ and replaced the CI step's block-presence predicate.
 
 - **MUST waivers and second sign-off** — single-author waivers remain the
   framework standard; `/ductus:review` does not require a second `co-waived-by`
-  field. Ductus has no runtime that could verify a second value belongs to a
-  different person, so encoding the requirement in frontmatter would be
+  field. Nothing in ductus can verify that a second value belongs to a
+  different person — a waiver's `waived-by` is the author's own
+  `git config user.email` (`framework/reference/review.md` §Waivers), which the
+  runtime records as given — so encoding the requirement in frontmatter would be
   performative — exactly the "depend on human diligence" anti-pattern
   §pipeline-boundaries exists to avoid. The real second review happens at
   PR-merge time, where the waiver and the unfixed finding land in the diff
@@ -189,14 +194,15 @@ and replaced the CI step's block-presence predicate.
 - **`--all` scope** — `--all` reviews every feature whose status is
   `in-progress` or `done`. Excluding `done` would make the blocking gate
   retroactively blind to new MUST rules added after a feature shipped: the
-  existing `/ductus:analyze` drift check only fires when `review.blocking` is
-  already `true` or `review.last-run` is missing, so rules introduced after
-  the last review never re-flip the flag on shipped code. The §drift-prevention
+  `/ductus:analyze` drift check then fired only when `review.blocking` was
+  already `true` or `review.last-run` was missing, so rules introduced after
+  the last review never re-flipped the flag on shipped code. The §drift-prevention
   "done specs are frozen archaeology" rule this argued against — deleted since,
   by 023's `living-specs` scenario — applied to the spec body, never to the
   code the spec describes; that code keeps living and should stay compliant
   with current rules. Single-target `/ductus:review` already accepts
-  `done` (the gate halts only when status is *not* in `{in-progress, done}`);
+  `done` (step 1 of `framework/commands/review.md` halts only when status is
+  *not* in `{in-progress, done}`);
   `--all` simply enumerates the same set the gate already permits.
 
 ## Frontmatter schema
@@ -234,7 +240,8 @@ The merged record also carried the fields that had lived only on `review.md`'s
 side — `diff-base`, `captured-issues`, `skipped-passes` — plus `examined`,
 `scope` and `reviewed-digest`, which 022 added later. No field was dropped in
 the merge; where both copies carried a key, the spec block's value won, because
-it was the copy every gate actually read.
+it was the copy every gate actually read (057's `data-model.md`, the
+`relocate-audit-records` result's `disagreements`).
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
 > `captured-issues` is gone, with the inbox write it counted. Each observation
@@ -333,9 +340,12 @@ authority, and `30e1fbaa` holds the original bytes.
 code block is invisible to every link check, anchor resolver and audit family,
 so it rots with no signal — and it is read in full by every contributor and
 every agent that opens this file, in every session, while a pointer costs one
-line. This one had fallen more than half behind: 561 lines against a
-`framework/commands/review.md` that had grown to 894. It was found by a person
-reading the spec, which is the only instrument that has ever found one.
+line. This one had fallen more than half behind: its copy of
+`framework/commands/review.md` ran 429 lines against a source of 896, and the
+section's three copies ran 561 (`wc -l` of each at `fc70afc6~1`, the section
+counted from its heading; `fc70afc6`'s message says 894, the source's size at
+`6fe820ee`). It was found by a person
+reading the spec, who logged it to the inbox item `fc70afc6` discharged.
 [§drift-prevention](../../framework/constitution.md#drift-prevention)'s
 *Canonical sources* names the command source as authoritative for command
 behavior and requires a pointer rather than a copy; the rule and a worked
