@@ -1,19 +1,19 @@
 ---
 spec: 081-reviews-and-checks-follow-what-changed
-last-run: 2026-11-13T17:45:31Z
-analyzed-against: 61ad8aa57fd04690bb54c5e541f7282104102ed2
+last-run: 2026-11-19T13:05:36Z
+analyzed-against: 8792ca12000d52a9ab662bf84671bc4b202c29b9
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
-unexamined: 7
+advisory: 1
+unexamined: 8
 analyzed-digest:
-  plan.md: ee827e9f7f5cca4ff8beaaf746f738fa85b2c6cb4f11eb7ee92d6df56bdc08a0
-  review.md: 07ffb070b8c4f377273ea894bc748f85a6b57db89cec50c929adc3bd780f7391
-  spec.md: 9c27ac95515a282631e7abb26ceed2c7ae64830e383b991ed427adb248f11b20
-  tasks.md: 94e25ca06a794be5deb2d2dfcba00ac9b0999e043cf62fdfac183349f28e322b
+  plan.md: d18908f5f4b8b1e0f0cb2915ad381e2036ed29d7d5668ac2f9e5decfc2de5b34
+  review.md: 4b29eba29ed0855dc13de2bdbc81b1d95e0896f7a855e33ed2c64b962c69ee34
+  spec.md: 43a3c37a0cba9075e79dbb6b9cc84e3c15be891f63bf33fafa73ec70623cf984
+  tasks.md: d992fa4122c9c50a4cb49cf2328dea0158f491b3da2b122e6c19a175088f2b70
 unexamined-by-reason:
   not-a-live-claim: 3
-  root-absent: 4
+  root-absent: 5
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
   api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
@@ -24,38 +24,28 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
+  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
+  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The change is breaking"}
   BE-DEPS-007: {verdict: addressed, cite: "plan.md#Check selection in this repository's CI"}
   BE-INPUT-001: {verdict: addressed, cite: "plan.md#Credit for a read"}
-  BE-INPUT-002: {verdict: addressed, cite: "plan.md#Credit for a read"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#The gate"}
   BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#The change is breaking"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
   SEC-DEPS-001: {verdict: addressed, cite: "plan.md#Check selection in this repository's CI"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 15
   deferred: 0
-  waived: 3
+  waived: 1
   undispositioned: 0
 decisions:
-  - key: grounding — Resolved Questions (which commit-subject-less review owes the code) state as fact that the pipeline prescribes no commit-subject convention, with no citation to the artifact that settles it.
+  - key: decision-reasons — Resolved Question 'Which paths are the project's artifacts?' rejects the spec root alone because it 'made editing the agent files owe a build', a cost of work started with no stated result the option would have delivered or the chosen one gives up (Decision reasons).
     outcome: waived
-    reason: "A claim of absence: neither the constitution nor any command source prescribes a commit-subject convention, so there is no one primary source to cite, and the Resolved Question records the owner's decision taken on that premise (owner, 2026-11-11). Choosing what to cite is a judgment, not a mechanical edit."
-    decided-at: 2026-11-13T17:45:31Z
-    decided-by: rule
-  - key: grounding — Plan Attribution states as fact that fix rounds and diff-cross-spec read CommitClaims but not attribute_window, citing no file or command that shows it.
-    outcome: waived
-    reason: The claim names the symbols it rests on (`CommitClaims`, `attribute_window`, `diff-cross-spec`), the file-and-symbol form §grounding asks for less the path; this run's review read compute_review_scope.rs whole and its callers, and the plan records the design as it stands. Adding a path is a citation choice, not a mechanical edit.
-    decided-at: 2026-11-13T17:45:31Z
-    decided-by: rule
-  - key: grounding — Resolved Question on review.md states as fact that the gate already orders a reopening's review ahead of its analysis, with no citation.
-    outcome: waived
-    reason: "The order is stated by check-review-gate's compiled description, the canonical source for a primitive's behavior (§drift-prevention): the review record's checks, then the analyze record's. The Resolved Question records a decision taken on it; choosing to add the pointer is a citation choice, not a mechanical edit."
-    decided-at: 2026-11-13T17:45:31Z
+    reason: "Not the cost the rule targets: 081's subject is which checks a change owes, so the build an agent-file edit would owe under the spec-root-only set is the result this decision sets (AC6), not pipeline work the option would start. The entry states what the chosen set gives up (a project's own docs/ still runs code CI). Round 3's reader, over the same text, judged it a result reason. Rewording it is a decision, not a mechanical edit."
+    decided-at: 2026-11-19T13:05:36Z
     decided-by: rule
 ---
 
@@ -63,7 +53,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 7 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 8 unexamined target(s). Dispositions: 15 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -75,9 +65,7 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Resolved Questions (which commit-subject-less review owes the code) state as fact that the pipeline prescribes no commit-subject convention, with no citation to the artifact that settles it. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **waived**: A claim of absence: neither the constitution nor any command source prescribes a commit-subject convention, so there is no one primary source to cite, and the Resolved Question records the owner's decision taken on that premise (owner, 2026-11-11). Choosing what to cite is a judgment, not a mechanical edit. (decided by the rule)
-- grounding — Plan Attribution states as fact that fix rounds and diff-cross-spec read CommitClaims but not attribute_window, citing no file or command that shows it. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **waived**: The claim names the symbols it rests on (`CommitClaims`, `attribute_window`, `diff-cross-spec`), the file-and-symbol form §grounding asks for less the path; this run's review read compute_review_scope.rs whole and its callers, and the plan records the design as it stands. Adding a path is a citation choice, not a mechanical edit. (decided by the rule)
-- grounding — Resolved Question on review.md states as fact that the gate already orders a reopening's review ahead of its analysis, with no citation. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **waived**: The order is stated by check-review-gate's compiled description, the canonical source for a primitive's behavior (§drift-prevention): the review record's checks, then the analyze record's. The Resolved Question records a decision taken on it; choosing to add the pointer is a citation choice, not a mechanical edit. (decided by the rule)
+- decision-reasons — Resolved Question 'Which paths are the project's artifacts?' rejects the spec root alone because it 'made editing the agent files owe a build', a cost of work started with no stated result the option would have delivered or the chosen one gives up (Decision reasons). — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **waived**: Not the cost the rule targets: 081's subject is which checks a change owes, so the build an agent-file edit would owe under the spec-root-only set is the result this decision sets (AC6), not pipeline work the option would start. The entry states what the chosen set gives up (a project's own docs/ still runs code CI). Round 3's reader, over the same text, judged it a result reason. Rewording it is a decision, not a mechanical edit. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -90,8 +78,22 @@ decisions:
 ## Unexamined targets
 
 - not-a-live-claim: 3
-- root-absent: 4
+- root-absent: 5
 
 ## Fixed in this run
 
-*None.*
+- grounding — Resolved Questions, 'Which review owes the code of a commit whose subject names no spec?': 'the pipeline prescribes no commit-subject convention' is stated as fact about the existing pipeline with no citation to a command or artifact (the plan's Attribution section repeats it). — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- grounding — Resolved Questions, 'Which paths are the project's artifacts?': '.ductus/reference/ is generated from framework/reference/' is stated as fact about the existing system with no citation to the generator or installer. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- grounding — Trade-offs, 'Repointing Family 19': 'Family 19 was built after gvrn-v0.26.1 and gvrn-v0.26.2 shipped with 022 scenarios added after its review' is a historical claim about the existing system with no cited commit, tag listing or artifact. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Attribution: 'Fix rounds and diff-cross-spec read CommitClaims but not attribute_window, so they are unchanged' is a claim about current code behavior that names symbols but carries no citation or marker showing it was checked. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Resolved Question 'Does a review that rewrites review.md still stale the analysis?' states that the gate already orders a reopening's review ahead of its analysis, with no citation. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- grounding — Technical Decisions name symbols in claims about current code without their file: ProjectRepository::to_project, contracts_against_digest, review_freshness, attribute_window, split_changes, check-review-gate's module and ReviewGateBlock. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — What makes a review owed names record_is_held, a closure 33688944 removed; the owed rule is owes_a_review in compute_review_scope.rs. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — What makes a review owed says reviewed-against keeps its one reader, the rename exemption, while the credit for a read in compute_review_scope.rs reads it too. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Check selection in this repository's CI and Affected Files say framework-checks.yml and the release audit check out at depth 1, while both check out full history again (100d78c2, c016f6f5). — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Attribution names first_named, which is no longer a symbol. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Overview says the workflows reuse a cached runtime binary, while they cache runtime/target, as the trade-off on caching only the binary says. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Resolved Question 'When a commit several specs claim changes code, who owes its review?' gives its 10-and-4 counts with no method. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- grounding — Resolved Question 'Which review owes the code of a commit whose subject names no spec?' gives its 58-commit measurement with no method. — `specs/081-reviews-and-checks-follow-what-changed/spec.md` — **fixed** (decided by the rule)
+- grounding — Check selection in this repository's CI gives its depth-1 measurement at debcc8cf with no method. — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
+- grounding — Check selection in this repository's CI: the claim that a checkout's fresh mtimes read to cargo as a change, so every file must be dated back before the restored build, describes cargo's external behavior and carries no citation, command or assumption marker (Grounding). — `specs/081-reviews-and-checks-follow-what-changed/plan.md` — **fixed** (decided by the rule)
