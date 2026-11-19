@@ -1,5 +1,5 @@
 ---
-next-task: 39
+next-task: 40
 ---
 
 # 079 — Review and analysis work converges Tasks
@@ -21,3 +21,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] AGENTS.md's local-checks rule names the command where it says to run `framework-checks.yml`'s and `generators.yml`'s steps, and its `runtime/` list runs step (u)'s mutation-anchor check before the commit: a comment 063's review moved in `host_config.rs` broke mutation M9's anchor, which no runtime check caught until the workflow steps ran after committing (`99c6affe`)
 
 - **Done when**: Running the command on `framework-checks.yml` and `generators.yml` at a clean HEAD reports every step PASS or SKIP with the counts per workflow, its test passes and fails under each case's mutant, and AGENTS.md's local-checks rule names it.
+
+## 39. The excluded section lists paths only
+
+- [ ] Implement the behavior described in `scenarios/the-excluded-section-lists-paths-only.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
