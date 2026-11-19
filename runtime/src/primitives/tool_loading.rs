@@ -79,14 +79,9 @@ pub fn text_step_tools(text: &str) -> Result<BTreeSet<&'static str>, ParseError>
 #[must_use]
 pub fn section_tools(text: &str) -> BTreeSet<&'static str> {
     let lines: Vec<&str> = text.split_inclusive('\n').collect();
-    let headings = atx_headings(&lines);
-    let Some(&(start, level, _)) = headings.iter().find(|h| h.2 == "Instructions") else {
+    let Some((start, end)) = instructions_bounds(&lines) else {
         return BTreeSet::new();
     };
-    let end = headings
-        .iter()
-        .find(|h| h.0 > start && h.1 <= level)
-        .map_or(lines.len(), |h| h.0);
     let mut first = start + 1;
     while first < end && lines[first].trim().is_empty() {
         first += 1;
@@ -464,6 +459,19 @@ pub fn add_tool_search_line(
     Ok(out)
 }
 
+/// The line index of the `Instructions` heading and of the next heading of
+/// the same or a higher level, or the line count: the section a command's
+/// steps sit in, sub-headings included. None when there is no such heading.
+fn instructions_bounds(lines: &[&str]) -> Option<(usize, usize)> {
+    let headings = atx_headings(lines);
+    let &(start, level, _) = headings.iter().find(|h| h.2 == "Instructions")?;
+    let end = headings
+        .iter()
+        .find(|h| h.0 > start && h.1 <= level)
+        .map_or(lines.len(), |h| h.0);
+    Some((start, end))
+}
+
 /// The lines of a command's numbered steps under `## Instructions`: each
 /// numbered line with its continuation lines, sub-steps and bullets. A step
 /// ends at a blank line followed by unindented text that is no list item, so
@@ -472,14 +480,9 @@ pub fn add_tool_search_line(
 /// ([`SkipScanner`]).
 fn step_lines(text: &str) -> String {
     let lines: Vec<&str> = text.split_inclusive('\n').collect();
-    let headings = atx_headings(&lines);
-    let Some(&(start, level, _)) = headings.iter().find(|h| h.2 == "Instructions") else {
+    let Some((start, end)) = instructions_bounds(&lines) else {
         return String::new();
     };
-    let end = headings
-        .iter()
-        .find(|h| h.0 > start && h.1 <= level)
-        .map_or(lines.len(), |h| h.0);
     let mut skip = SkipScanner::default();
     let mut out = String::new();
     let mut in_step = false;
