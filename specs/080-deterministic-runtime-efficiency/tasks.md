@@ -16,6 +16,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 60. A step gates on a bounded list by its count
 
-- [ ] Implement the behavior described in `scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
+- [x] Implement the behavior described in `scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
