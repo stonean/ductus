@@ -343,6 +343,19 @@ its version and date.
   no decision, an Affected Files section listing nothing outside comments). The three judged items stay with the host in
   step 15, and an exec walk records them unexamined under the new reason
   `integrity-not-checked` (spec 067).
+- **`check-artifacts` reports a path cited by line number, in a new blocking
+  family, `line-number-citations`, that examines a spec at every status (spec
+  067, AC5).** A citation of a path by its line number in a spec's `spec.md`,
+  `plan.md`, `tasks.md`, `data-model.md`, `research.md` or a scenario (a line
+  drifts as the code moves; spec 050's AC24 forbids one) is a Blocking
+  finding, counted in `blocking-findings`, in a `draft` spec as in a `done`
+  one, with no history read and nothing grandfathered. A line inside a fenced
+  block and a blockquote line are skipped; an HTML comment is read. The
+  finding of a bare `:N` code span says to write a port with its host. An
+  artifact that cannot be read is recorded as the other families record one.
+  0.59.11 had no such family, so a citation it passed now blocks the spec's
+  next `/analyze`. Removing a citation the family flags is a mechanical edit,
+  by the definition spec 066's mechanical-edit rule shares.
 - **`check-rule-ids` reports a citation of a shipped rule whose file is not
   installed as `not-installed`, not missing.** A project with
   `surfaces = ["backend"]` never receives `security-frontend.md`, so a
@@ -471,13 +484,6 @@ its version and date.
   off, waiving each such round with that reason; an empty one counts as
   unset, and a malformed one halts the run before its first fix. Spec 078;
   spec 066, tasks 15 and 17.
-- **`check-review-freshness`: whether a spec's review is still current.** A
-  new primitive, an MCP tool and CLI subcommand, that asks of one spec at any
-  status the comparison `/implement`'s completion gate makes before `done`:
-  `current`, `stale` with the changed scenarios or data model,
-  `undeterminable` for a record with no `reviewed-digest` or a `review.md`
-  that does not parse, or `never-run`, with whether `review.md` exists.
-  Read-only; `/configure` allows it with the other tools. Spec 066, task 11.
 - **`classify-spec-edit`: whether an edit reopens a `done` spec, from the
   diff.** A new primitive, an MCP tool and CLI subcommand, comparing `base`
   (`HEAD` by default) with the working tree, untracked files included. It
@@ -497,6 +503,64 @@ its version and date.
   task, and says so when the history is shallow or nothing closed. `/status`
   shows the counts on every run through `dashboard`'s new `reopenings` block.
   `/configure` allows it with the other tools. Spec 079, task 7.
+- **`render-status`: the pipeline view `/{project}:status` shows, without
+  `dashboard`'s structured payload (spec 080).** A new primitive, an MCP tool
+  and CLI subcommand, taking no arguments and read-only but for the file named
+  below. Its `rendered-markdown` is the view as one markdown fragment (the
+  target block, the table of every spec, the summary, the cross-service
+  references readout, the specs with work left grouped by next action and the
+  `/{project}:target` prompt), rendered from the same read `dashboard` makes,
+  and `project` is the slash-command namespace the view's hints name. The
+  result is held to `[artifacts] read-size-bytes`: past it `form` is `file`,
+  `lists-file` names the file under `.ductus/results/` whose `view` holds every
+  line of the whole view, and the view is cut (done rows collapse to a count
+  first). A read size that is not a positive whole number is an error.
+  `/{project}:status` calls it in place of `dashboard`, and Pi's bridge calls
+  it for its `/{project}:status` handler. `/configure` allows it with the other
+  tools.
+- **`read-section`: named sections of a markdown document, in one call (spec
+  080).** A new primitive, an MCP tool and CLI subcommand taking `path` and one
+  or more `heading` values (`--path` and `--heading` on the CLI). Each section
+  comes back in the order asked, from its heading line, matched by exact text,
+  to the next heading of the same or a higher level, outside fenced blocks and
+  HTML comments; `not-found` lists the headings the document lacks, and a path
+  leaving the project is refused. Past `[artifacts] read-size-bytes` `form` is
+  `file`, `sections` is absent, `sections-count` stays inline and `lists-file`
+  holds the sections. Each command that sends a step to a section of its
+  reference carries a line saying to call it with the path and every section
+  the step names, in place of reading the whole reference. `/configure` allows
+  it with the other tools.
+- **`render-help`: the guide `/{project}:help` prints, with no model turn (spec
+  080).** A new primitive, an MCP tool and CLI subcommand, taking no arguments.
+  It reads the installed help copy, the first of
+  `{cli-config-dir}/commands/{project}/help.md` and
+  `{cli-config-dir}/prompts/{project}-help.md` that exists, and returns `guide`
+  (the markdown between the copy's first `---` line after its `## Instructions`
+  heading and the last such line, each line wholly an HTML comment removed)
+  and `project`, the slash-command namespace, read without any spec. No
+  installed copy, or a copy with no such text, is an error naming what it
+  looked for. Pi's bridge calls it for its `/{project}:help` handler.
+  `/configure` allows it with the other tools.
+- **`merge-status-hook` installs Claude Code's status and help hooks, and a new
+  `ductus hook` subcommand answers them (spec 080).** `merge-status-hook` (MCP
+  tool and CLI subcommand, `path` the settings file, repo-relative) runs
+  `claude --version` with a timeout first. On 2.1.101 or later it adds, under
+  `hooks.UserPromptExpansion`, one entry matched to `{project}:status` running
+  `"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus" hook status` and one matched to
+  `{project}:help` running `"$CLAUDE_PROJECT_DIR/.ductus/bin/ductus" hook help`
+  (`ductus.exe` on Windows), each recognized by its command alone so one
+  already present is not added again, and every other key and entry stays. The
+  result's `action` is `created`, `updated` or `unchanged`; on an older
+  version, or one it cannot read, it writes nothing and returns `skipped` with
+  a `reason` and `claude-version` (null when none was read). `ductus hook
+  status` and `ductus hook help` read the hook's input on stdin and print a
+  block response whose reason is the pipeline view as fixed-width text, or the
+  guide, so a typed `/{project}:status` or `/{project}:help` is answered with
+  no model turn; each exits 1, with the error on stderr, when it cannot render.
+  `/ductus` (step 10, for the `claude` agent) and `/configure` call
+  `merge-status-hook` with `{cli-config-dir}/settings.local.json`, and
+  `/configure` allows it with the other tools. The write is not guarded by the
+  changed-since-read check (spec 080's departure).
 - **On Pi, a command runs under the colon spelling every ductus text uses.**
   The commands, references, constitution and rules name a command
   `/{project}:<name>`, and Pi names it after its prompt template's file,
@@ -596,8 +660,10 @@ its version and date.
   keeps line endings, and creates a missing home from its compiled-in
   template at mode 0644. It is wired as an MCP tool, a CLI subcommand and an
   `ductus exec` dispatch, listed in `framework/runtime-tools.txt`, and
-  allowed in the `claude` and `auggie` configure blocks (the other layouts
-  read the tool from the MCP server or the Pi bridge). Later entries bound
+  allowed in the `claude` and `auggie` configure blocks when it landed. This
+  release drops Auggie (the entry "Auggie, Antigravity and OpenCode are no
+  longer supported agents"), so the `auggie` block no longer exists and only
+  `claude`'s allows it; Pi reads the tool from its bridge. Later entries bound
   its result, contain its reads (spec 041, task 25) and write a file only
   when it is unchanged since it was read (task 27). Spec 041, task 23.
   `2f61d67d`
@@ -639,6 +705,27 @@ its version and date.
   `memory-routing-leaves-claude-md`, the 0.60.0 entry pushed before it, so
   an adopter who ran `/{project}` between the two pushes still runs it. Spec
   071, tasks 23 and 24. `f056b209`, `47e68233`, `77fff147`, `0f31a124`
+- **Migration `substitute-seed-placeholders` (0.60.0) fills the placeholders a
+  bootstrap through 0.59.11 left literal in `AGENTS.md` and `CLAUDE.md` (spec
+  027, scenario `seed-files-keep-no-literal-placeholder`, task 17).**
+  Through 0.59.11 the bootstrap mapped the `skip` rows for both files to
+  `apply-manifest`'s `skip-if-conflict` strategy, which substitutes nothing, so
+  an adoption on the runtime path wrote them with `{project-name}`,
+  `{One-line project description.}` and `{project}` as they stood. Both rows
+  map to `create` since spec 071 task 20, which substitutes, but that reaches
+  new adoptions only: the files are installed once and never rewritten. The
+  migration replaces every occurrence of each of the three tokens, matched
+  exactly, with the value this run's substitutions map holds for it, in each
+  of the two files that exists, keeping every other byte, the line endings and
+  the mode, and writing atomically. Every other brace token (`{name}`,
+  `{slug}`, `{NNN-feature-name}`) is left alone. A file that holds none of the
+  three is converged and reports nothing; a pinned file is reported with one
+  line and not written; a token with no value in the map is left and reported.
+  It carries no `sunset_after`, since nothing else would ever fill the tokens
+  in an adopter who skips this window, and its id sorts after
+  `strip-inbox-guidance`, the 0.60.0 entry pushed before it, so an adopter who
+  ran `/{project}` between the two pushes still runs it. Spec 027, task 17.
+  `98d9e331`
 - **The Pi trust reminder joins the First run and Update mode messages (spec
   064, task 16).**
   When Pi is among the adopted or updated agents, `/{project}` now says that
@@ -658,6 +745,15 @@ its version and date.
   `cited_tools` shares it, and still starts from the whole command file, so no
   installed command's tool-search line or always-loaded set changes; a tool a
   section invokes now loads when only a link reaches the section.
+- **BREAKING: `dashboard` no longer returns `rendered-markdown`; the pipeline
+  view is `render-status`'s (spec 080, task 4).** 0.59.11's `dashboard`
+  returned the view as `rendered-markdown` beside its structured payload. It
+  now returns the payload alone, and `render-status` (see its entry) returns
+  `rendered-markdown` and `project` for the same read. `/{project}:status`
+  calls `render-status`; `/{project}:review --all` and `/{project}:target`
+  still read `dashboard`.
+  Breaking under `BE-COMPAT-001`: a result field removed. A caller that read
+  `rendered-markdown` from `dashboard` reads it from `render-status`.
 - **Five command steps gate on a bounded list's `-count`, and nine read its contents from `lists-file` in the form's file case (spec 080).**
   `/fold` steps 1 and 11, `/consolidate` step 4, `/analyze` step 6 and `/clarify`
   step 2 read `unfolded-count`, `rewritten-count`, `updated-count`,
@@ -1186,10 +1282,16 @@ its version and date.
   and `/plan` say so. A box under a task the run's own deferral names does not refuse, since
   it is the work the record holds. A spec with no `tasks.md` is unaffected. Spec 079.
 - **A command's reference holds what a step does with a result, and no more.**
-  `framework/commands/` and `framework/reference/` together fell from 553,352
-  bytes before these cuts to 421,717, `framework/reference/review.md` from 67,168 to 45,232
-  and `framework/reference/analyze.md` from 78,632 to 48,691 (`wc -c` at `101a6e8e`), each
-  within one read. Each primitive's rules are in `ductus <name> --help`. `write-review`,
+  `framework/commands/` and `framework/reference/` together total 465,214
+  bytes at `79cd59a3` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
+  253,797 over the 17 command files and 211,417 over the 13 references), where the
+  17 command files of `ductus-v0.59.11` totalled 486,072 and no reference existed
+  (the same `wc -c` over `git show <rev>:<path>`). The cuts reached 421,717 at
+  `101a6e8e`, mid-release, from 553,352 before them, and later changes in the
+  release grew the files again. `framework/reference/review.md` is 55,570 bytes
+  at `79cd59a3` and `framework/reference/analyze.md` 63,924, so each is over
+  one 50,000-byte read; they were 45,232 and 48,691 at `101a6e8e`, from 67,168
+  and 78,632 before the cuts. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
   finding and when its work is complete, which their descriptions used to cite
   from the review reference (spec 079).
@@ -1205,9 +1307,11 @@ its version and date.
   `check-artifacts` states its severity tiers rather than pointing at the analyze
   reference, `resolve-constitutions` states that a malformed entry halts, and
   `brief-re-read` names the three lists that move to the file. `derive-boundary`,
-  `mark-task` and `check-stuck` state their rules in `--help`, `dashboard` names
-  `rendered-markdown`, and `framework/reference/status.md` no longer restates that
-  view line by line. Commands and references no longer describe a hand-walk (spec 079).
+  `mark-task` and `check-stuck` state their rules in `--help`, `dashboard` named
+  `rendered-markdown` (spec 080 later moved that field to `render-status`, which
+  the entry on `dashboard`'s result records), and
+  `framework/reference/status.md` no longer restates that view line by line.
+  Commands and references no longer describe a hand-walk (spec 079).
 - **A report's body says what its record holds.** A person's waiver agreeing with the
   rule's makes no new decision, so `write-review` now renders the rule's reason and
   label rather than the person's words beside a record still naming the rule. Deferring
@@ -1625,7 +1729,12 @@ its version and date.
   rules become 297, and the review renumbers, removes or deprecates no
   existing ID (specs 008, 017, 034, 036, 037, 038, 039).**
   The counts are `### {ID}` headings across the eleven files at the review's
-  commit; later entries in this release add rules and move some. Three passes
+  commit; later entries in this release add rules and move some, so the
+  release ships 310 across twelve files at `79cd59a3` (`security-cross.md` is
+  new), against 208 across eleven at `ductus-v0.59.11` (`### {ID}` headings,
+  `grep -h '^### ' framework/rules/*.md | wc -l`, the line count of
+  `runtime/src/primitives/shipped_rule_ids.txt`, which a test holds to the
+  files). Three passes
   fetched every external claim from its source, and a fourth re-checked each
   rule changed after them. New obligations are `/analyze` findings for a spec
   that meets a rule's trigger: `BE-AUTHN-022` (re-authentication for a
@@ -1782,6 +1891,29 @@ its version and date.
   `a-malformed-disabled-entry-fails-fast`, commits `a32af25b`, `036f03cb`,
   `bee36927`.
 
+- **A `.ductus/config.toml` or session file that does not parse, or an invalid
+  `[paths] specs-root`, halts the call, naming the file (spec 022, task 12;
+  `CFG-ENV-008`).** In 0.59.11 the readers were best-effort: `Host::load` (the
+  `[host]` block and the session file's `cli-config-dir`) and `Paths::load`
+  (`[paths] specs-root`, behind every spec-root lookup) logged a one-line
+  warning to stderr for a file that did not parse, or a `specs-root` that
+  failed validation, and used the default (`.claude`, the repository's
+  directory name, `specs`), so the call went on against a layout nobody had
+  configured. Each reader now returns an error naming the file, with the parse
+  error or, for `specs-root`, the rejected value and the reason, and a
+  primitive that resolves the spec root or the host halts on it: a CLI call
+  exits 1 with the error on stderr, an MCP call returns it as the tool's
+  error, and a `ductus exec` walk halts. `check-orphaned-references`' read of
+  `[migrations] last_applied` halts the same way, `write-review` and
+  `write-analysis` too (the spec root their record goes under cannot be read),
+  and the exec seed reads the shared default session file strictly. A missing
+  file, an absent table or key and an empty or blank `specs-root` still mean
+  the default. The MCP server still starts over a host config that does not
+  parse, flags no tool as always loaded and names the file, and every
+  primitive that reads it halts; `write-session` still replaces a shared
+  default that does not parse and names it in `unreadable`, so `/target`
+  repairs it. A script or CI step that ran past the warning fails until the
+  file is corrected. Commit `92120f45`.
 - **BREAKING: every path argument is resolved through its symbolic links
   before the containment check (spec 022, task 4; `BE-INPUT-004`, scenario
   `a-path-argument-resolves-inside-its-base`).** The lexical check read a
@@ -1807,8 +1939,10 @@ its version and date.
   counts them, is shared across a whole resolution, so a chain of links that
   each name the next twice is refused in well under a second rather than
   taking exponential time, and a name appended after a `..` past a missing
-  directory is resolved when it exists. A malformed config is warned about
-  once per call instead of once per feature. The `writeCode` boundary matches
+  directory is resolved when it exists. A malformed config is no longer warned
+  about once per feature: it halts the call (the entry "A `.ductus/config.toml`
+  or session file that does not parse, or an invalid `[paths] specs-root`,
+  halts the call"). The `writeCode` boundary matches
   where each edit path lands, and its `OutOfBoundary` reason names a symlink
   taking it outside the boundary or the project, or one that cannot be
   resolved. A project that links a spec directory, or a file in one, to a
@@ -2402,6 +2536,34 @@ its version and date.
   to the highest Rust 1.89-compatible versions: ten packages move, among
   them `openssl-probe`, `rustix`, `unicode-width`, `utf8_iter`, `xattr` and
   `zip`, and `utf_types` 1.0.0 is added. No manifest change. `99c704fd`
+- **Lockfile, net from 0.59.11 to the release head: 66 packages change
+  version, 11 are added and none is removed (the lockfile's 257 package
+  entries become 268), and the four advisories it took are named.**
+  Counted as the `[[package]]` name and version pairs of `runtime/Cargo.lock`
+  at `ductus-v0.59.11` against `79cd59a3` (`git diff ductus-v0.59.11 HEAD --
+  runtime/Cargo.lock`); the lockfile entries above record the steps and their
+  intermediate versions, and these are the net ones. The crate's own
+  dependencies move: `rmcp` 3.5.1 to 3.11.0, `zip` 9.0.4 to 9.7.3, `tokio`
+  1.53.3 to 1.54.1, `toml` 1.1.8 to 1.2.1, `clap` 4.6.7 to 4.6.8, `flate2`
+  1.1.10 to 1.1.11, `regex` 1.13.1 to 1.13.2 and `pulldown-cmark` 0.13.4 to
+  0.13.6. Among the rest: `rustls-webpki` 0.103.15 to 0.103.17,
+  `webpki-root-certs` 1.0.9 to 1.0.12, `aws-lc-rs` 1.18.2 to 1.19.0,
+  `aws-lc-sys` 0.46.0 to 0.47.0, `libz-sys` 1.1.30 to 1.1.33, `cc` 1.8.0 to
+  1.11.2, `nix` 0.31.3 to 0.32.0, `typed-path` 0.12.3 to 0.13.0, `uuid` 1.28.0
+  to 1.29.3, `rmcp-macros` 3.5.1 to 3.11.0 and the `icu_*` crates 2.3 to 2.4.
+  The 11 added crates are `constant_time_eq`, `lock_api`, `parking_lot`,
+  `parking_lot_core`, `redox_syscall`, `scopeguard`, `temp-env`,
+  `unicode-general-category`, `unicode-normalization`, `utf_types` and
+  `zeroize_derive`. The one manifest change is the dev-dependency `temp-env`
+  0.3.6 (the `fetch-archive` startup-capture test's entry). Four advisories are
+  addressed: RUSTSEC-2026-0382 and RUSTSEC-2026-0383 (`rustls-webpki` and
+  `webpki-root-certs`, the first entry above), RUSTSEC-2026-0418 (`libz-sys`,
+  under Fixed) and RUSTSEC-2026-0433, published 2026-10-28: `pulldown-cmark`
+  0.13.5 parses nested image wikilinks in quadratic time when
+  `ENABLE_WIKILINKS` is set, and 0.13.6 fixes it. The runtime enables only
+  `ENABLE_TABLES`, so the path was not reachable here, but `cargo audit`
+  fails on 0.13.5, which the scheduled runtime-currency run found.
+  `750fde09`
 
 ### Removed
 
@@ -2427,11 +2589,6 @@ its version and date.
   compare each command's envelope stream byte for byte are unchanged.
   `apply-manifest` still accepts the key in a command file, so a newer binary
   at a project's `[runtime] path` can apply an older release's archive.
-- **BREAKING: `check-review-freshness` is retired, with the self-audit's Family 19.**
-  Both asked only whether a `done` spec's scenarios and data model still
-  matched its review's digest, which no longer owes a review. The runtime no
-  longer serves the tool, and `/ductus:configure` revokes its
-  `mcp__ductus__check-review-freshness` allow entry (spec 081).
 - **Auggie, Antigravity and OpenCode are no longer supported agents.**
   `install.sh` and `/ductus` accept `claude` and `pi` only:
   `install.sh auggie`, `antigravity`, `agy` or `opencode`, and `/ductus
