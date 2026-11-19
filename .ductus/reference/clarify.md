@@ -62,7 +62,7 @@ Before mutating anything, surface the inconsistency to the user:
 
 Rendered by a **feature-targeted** run in whichever gate branch it takes, whenever the feature's scenarios carry unresolved questions. It reports; it never resolves, never writes, and never gates.
 
-**Deriving the list.** It is `read-spec`'s `scenario-open-questions` field — already loaded at step 2, so no extra call and no extra read. A scenario file that cannot be read or parsed contributes nothing and is not escalated into a defect: nothing can be proven about a file that will not parse. It is still named, from `read-spec`'s `scenario-files-unreadable`, appended as `(N scenario file(s) could not be read: {slug}, … — these were not examined)`. Reporting zero questions over a scenario nothing could read would assert exactly what was never checked.
+**Deriving the list.** It is `read-spec`'s `scenario-open-questions` field, read with `scenario-files-unreadable` from the file its `lists-file` names when its `form` is `file` — already loaded at step 2, so no extra call. A scenario file that cannot be read or parsed contributes nothing and is not escalated into a defect: nothing can be proven about a file that will not parse. It is still named, from `read-spec`'s `scenario-files-unreadable`, appended as `(N scenario file(s) could not be read: {slug}, … — these were not examined)`. Reporting zero questions over a scenario nothing could read would assert exactly what was never checked.
 
 **Wording.** Name every carrying scenario and its count — no cap, since a truncated list reads as "these are the ones that need attention" while hiding others — then the command that resolves them:
 
