@@ -2,7 +2,7 @@
 #
 # One [[migrations]] entry per active convention removal. Each entry's
 # procedure body lives at `framework/migrations/{id}.md`. The bootstrap
-# procedure in `framework/bootstrap/ductus.md` iterates this file on every
+# procedure in `framework/bootstrap/ductus-procedure.md` iterates this file on every
 # `/ductus` run and applies entries newer than the adopter's active config
 # `[migrations].last_applied` field.
 #

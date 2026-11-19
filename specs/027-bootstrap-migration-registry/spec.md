@@ -21,25 +21,25 @@ This spec introduces (a) a machine-readable registry of convention removals, (b)
 
 ## Registry Shape
 
-A new file at `framework/migrations.toml` (location and format are open questions — see below) lists every active convention removal. Each entry carries:
+A new file at `framework/migrations.toml` lists every active convention removal. Each entry carries:
 
-- **id** — stable identifier the adopter's `.ductus/config.toml` references. Format is an open question.
+- **id** — stable slug the adopter's `.ductus/config.toml` references.
 - **introduced_in** — the ductus version (or framework commit) that shipped the removal.
 - **sunset_after** — the ductus version past which this migration drops from the active registry into the adopter changelog.
 - **summary** — one-line human-readable description (e.g., "spec-and-plan.md → spec.md").
-- **procedure** — either an inline declarative step (rename, delete, replace-token-in-file) or a reference to a markdown procedure file under `framework/migrations/{id}.md` for entries that need user prompting or branching logic.
+- **procedure_file** — path to the markdown procedure at `framework/migrations/{id}.md`; there is no declarative-step form.
 - **idempotency** — every entry must be a no-op when its target artifact is absent. This is an invariant, not a field.
 
 ## Adopter State
 
-`.ductus/config.toml` gains a single new field (section name open):
+`.ductus/config.toml` gains a single new field:
 
 ```toml
 [migrations]
 last_applied = "<entry-id>"
 ```
 
-When the field is absent, bootstrap treats it as "no migrations have been applied" and runs every active entry — except on a **greenfield** run, one that began with no config file at any tier and no spec root, which has nothing to migrate: it applies nothing, asks nothing, and seeds the field with the newest active entry's id (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, steps 3–4, since spec 071's task 20; until then a brand-new project was prompted to approve every active entry, each a no-op). A **first adoption**, which Pre-flight Checks decides from finding no signal an earlier `ductus` run leaves, does the same though it keeps a spec root of its own: that spec root and any root `constitution.md` are the project's, so no entry has anything to convert (scenario `a-first-adoption-runs-no-migration`). When present, bootstrap runs only entries newer than the recorded id (registry order is authoritative; alphabetical or chronological is an open question). After all applicable entries succeed, bootstrap updates the field to the id of the newest entry in the active registry.
+When the field is absent, bootstrap treats it as "no migrations have been applied" and runs every active entry — except on a **greenfield** run, one that began with no config file at any tier and no spec root, which has nothing to migrate: it applies nothing, asks nothing, and seeds the field with the newest active entry's id (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, steps 3–4, since spec 071's task 20; until then a brand-new project was prompted to approve every active entry, each a no-op). A **first adoption**, which Pre-flight Checks decides from finding no signal an earlier `ductus` run leaves, does the same though it keeps a spec root of its own: that spec root and any root `constitution.md` are the project's, so no entry has anything to convert (scenario `a-first-adoption-runs-no-migration`). When present, bootstrap runs only entries newer than the recorded id in registry order, which is `introduced_in` by SemVer comparison and then `id`. After all applicable entries succeed, bootstrap updates the field to the id of the newest entry in the active registry.
 
 **Scope: an entry applies once per repository, not once per contributor.** The marker lives in the committed config file, so the first contributor to run `/ductus` applies the pending entries and commits the advanced marker; everyone who pulls afterwards reads it, sees nothing pending, and skips. That is correct for repo-shared state — the edit genuinely happened once, for everyone.
 
@@ -49,12 +49,12 @@ A cleanup that must reach every contributor belongs on the command that owns the
 
 ## Bootstrap Loop
 
-The Pre-run Migrations section in `framework/bootstrap/ductus.md` is replaced by a single procedure that:
+The archive half's Pre-run Migrations, in `framework/bootstrap/ductus-procedure.md`, is a single procedure that:
 
-1. Reads `framework/migrations.toml` from the fetched archive.
+1. Reads `framework/migrations.toml` from the fetched archive, and aborts before applying anything when two entries share an `id` or an entry's `procedure_file` is missing from the archive (its duplicate-id and reference-integrity guard).
 2. Reads `.ductus/config.toml` `[migrations].last_applied`.
-3. For each registry entry newer than `last_applied`, executes the entry's procedure (declarative step or referenced markdown).
-4. Updates `.ductus/config.toml` `[migrations].last_applied` to the newest entry id.
+3. For each registry entry newer than `last_applied`, executes the entry's procedure file, `framework/migrations/{id}.md`.
+4. After each entry's procedure completes, updates `.ductus/config.toml` `[migrations].last_applied` to that entry's `id`, before the next entry begins (AC9).
 5. Reports in the post-scaffolding summary each line an applied entry's procedure emits, its summary line among them, verbatim and in order; the registry's `summary` field describes the entry and is not printed.
 
 Entries past their `sunset_after` version are excluded from this loop entirely — they live in the adopter changelog only.
@@ -72,7 +72,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 - **10a**, no orphan procedure file: every `framework/migrations/{id}.md` has a registry entry.
 - **10b**, no stale target path: every `framework/`-prefixed `target_paths` entry of the active registry, and of each archived entry in `CHANGELOG.md` (its `**Target paths:**` line), names something absent from current `framework/`. The others are adopter-relative and unverifiable here.
 - **10c**, no broken procedure reference: every `procedure_file` exists.
-- **10d**, since task 15: no entry added after another sorts before it, which reads the registry's git history.
+- **10d**, since task 15: no entry added after another sorts before it, which reads the registry's git history; the two decided pairs `scripts/audit/migration-coverage.sh`'s `EXEMPT` set holds (`criterion-label-backfill` before `ductus-rename` and before `runtime-store-path`) are exempt.
 - **10e**: no active entry is past its `sunset_after` against the release `version` names (owner, 2026-11-17). Whether a removal shipped with its migration is a property of a diff, not of the current state, so it is not this family's to check — see the detection-mechanism resolution below. A `version` or `sunset_after` that is no release is a finding too, with a remedy for that value rather than an archival.
 - **10f**, since task 19: no `id` names two entries, which Pre-run Migrations' duplicate-id guard aborts on and the other checks pass (AC25).
 
@@ -83,7 +83,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 - [x] AC1: `framework/migrations.toml` exists with one `[[migrations]]` array-of-tables entry per active convention removal. Each entry carries the fields: `id` (slug), `introduced_in` (SemVer string), `sunset_after` (SemVer string or omitted), `summary` (one-line string), `target_paths` (array of strings), `procedure_file` (path string).
 - [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/ductus.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename. — **superseded by AC14's archival**: all six are now in CHANGELOG.md's Archived migrations, `skills-to-workflows` and `workflow-filename-rename` by 2fcb5f93 and the other four by c061c1f0, so none is still registered
 - [x] AC3: Each back-filled entry's `introduced_in` matches the ductus version (or framework commit) where the removal actually shipped, derived from `git log` at registry-introduction time.
-- [x] AC4: Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform).
+- [x] AC4: Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform). — **Never true as written:** the registry first shipped in `gvrn-v0.7.3`, so the six entries' uniform `sunset_after` of 0.10.0 is three minors on, not two (`71d72ee1` assumed it would ship at 0.8.0); all six are now archived in `CHANGELOG.md`.
 - [x] AC5: Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced. — **superseded by AC14's archival** for all six: archiving an entry moves its procedure into CHANGELOG.md and deletes the file
 
 ### Adopter state
@@ -95,7 +95,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 ### Bootstrap loop
 
-- [x] AC10: `framework/bootstrap/ductus.md` Pre-run Migrations section is replaced by a single procedure that iterates the registry; no per-migration prose blocks remain in `ductus.md`.
+- [x] AC10: The Pre-run Migrations procedure in `framework/bootstrap/ductus-procedure.md` iterates the registry, and no per-migration prose block remains in it or in `framework/bootstrap/ductus.md`.
 - [x] AC11: When pending migrations exist, bootstrap emits a single batch prompt listing each pending entry by `id` and `introduced_in`, then asks `Apply now? (Y/n)`. Decline emits a warning summary and makes no filesystem changes.
 - [x] AC12: The post-scaffolding summary lists each applied migration by its `summary` field — **narrowed**: it carries the lines each applied entry's procedure emits, its summary line among them, verbatim and in order (`framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output), not the registry's `summary` field. Entries with no work to do (target artifact absent) emit nothing — the procedure file's per-entry idempotency check is invariant.
 
@@ -111,7 +111,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
   - [x] AC17: **No orphan procedure files**: every `framework/migrations/{id}.md` has a matching TOML entry with `procedure_file` pointing at it. Failures: orphan files exist.
   - [x] AC18: **No stale target paths**: every `target_paths` entry across `framework/migrations.toml` *and* archived entries in `CHANGELOG.md` (each entry's `**Target paths:**` line, without which the entry is itself a failure) refers to a path that does *not* exist in current `framework/`. Failures: a registry entry says "removed" but the path still exists.
   - [x] AC19: **No broken procedure references**: every TOML entry's `procedure_file` field points at an existing `framework/migrations/{id}.md`. Failures: dangling references.
-  - [x] AC31: **No late entry sorting early** (10d): every entry sorts, by (`introduced_in`, then `id`), after every entry first present in an earlier commit of `framework/migrations.toml`, entries added in one commit exempt from each other; a shallow checkout, whose history it cannot read, is a failure. Failures: an entry an adopter's `last_applied` would skip forever.
+  - [x] AC31: **No late entry sorting early** (10d): every entry sorts, by (`introduced_in`, then `id`), after every entry first present in an earlier commit of `framework/migrations.toml`, entries added in one commit exempt from each other, and the two decided pairs `scripts/audit/migration-coverage.sh`'s `EXEMPT` set holds (`criterion-label-backfill` before `ductus-rename` and before `runtime-store-path`) exempt; a shallow checkout, whose history it cannot read, is a failure. Failures: an entry an adopter's `last_applied` would skip forever.
   - [x] AC32: **No overdue sunset** (10e): no active entry's `sunset_after` is at or below the release the repository's `version` file names, and a missing or malformed `version` is a failure. Failures: an entry Pre-run Migrations already skips, still owed its archival (AC13, AC14).
   - [x] AC33: **No duplicate ids** (10f): no `id` names two `[[migrations]]` entries. Failures: an `id` Pre-run Migrations' duplicate-id guard aborts on (AC25).
 - [x] AC20: Family 10 exits `0` when every check passes, `1` otherwise. Output format matches the other families (header + findings rows on stdout). The orchestrator `scripts/audit/run-all.sh` invokes Family 10.
@@ -152,7 +152,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 - **Procedure declaration** — every entry references a markdown procedure file at `framework/migrations/{id}.md`; no declarative step DSL. The TOML entry stays pure metadata (`id`, `introduced_in`, `sunset_after`, `summary`, `target_paths`, `procedure_file`). All migration logic — skip conditions, prompts, pinned-file exclusions, collision handling, summary reporting — lives in the markdown procedure file. Of the six existing migrations only one (gitignore marker rename) is genuinely one-step-declarative; the rest have twists that would require inventing a small DSL for one consumer. `/audit`'s migration-coverage check uses the `target_paths` metadata field, not the procedure body, so opaque procedure files are fine.
 - **Sunset format** — SemVer version string, same format as `introduced_in`. An entry expires when current ductus ≥ `sunset_after`. Omitted/null means "active indefinitely." Mirrors `introduced_in` for self-consistency; matches the mental model "active across `[introduced_in, sunset_after)`." Calendar dates decouple from release cadence; count-of-releases is just an indirect encoding of the same field. Default sunset policy is a maintainer-authoring convention documented separately, not part of this field's type.
 - **Sunset archive location** — `CHANGELOG.md` at the repo root. Paths disambiguate; the runtime crate's `runtime/CHANGELOG.md` stays where Cargo expects it. Adopters who hit a removed convention with no active migration browse the repo root first; that's where the recipe-of-record belongs. Category separation: `framework/` holds in-force conventions, the repo-root `CHANGELOG.md` holds the historical record. Append-only, one file, easy to grep — no directory traversal needed. When a migration sunsets: its procedure file is appended to `CHANGELOG.md` under a heading, the procedure file is deleted, and the TOML entry is removed in the same commit. The bootstrap loop never reads `CHANGELOG.md` — it's for humans, not tooling.
-- **Back-filled migration values** — hybrid: accurate `introduced_in` per git history (one-time `git log` for six entries), uniform `sunset_after = registry_introduction_version + 2 minor versions` for the back-fill. Accurate `introduced_in` makes the eventual CHANGELOG entries read correctly. Uniform sunset because we lack per-entry signal; +2 minor versions gives adopters two release cycles of grace. Spec doesn't pin the actual `registry_introduction_version` — acceptance criterion phrases it relative to whatever release ships the registry.
+- **Back-filled migration values** — hybrid: accurate `introduced_in` per git history (one-time `git log` for six entries), uniform `sunset_after = registry_introduction_version + 2 minor versions` for the back-fill. Accurate `introduced_in` makes the eventual CHANGELOG entries read correctly. Uniform sunset because we lack per-entry signal; +2 minor versions gives adopters two release cycles of grace. Spec doesn't pin the actual `registry_introduction_version` — acceptance criterion phrases it relative to whatever release ships the registry. As built, the uniform value was 0.10.0, three minors after `gvrn-v0.7.3`, the release that first shipped the registry, rather than two (AC4).
 - **Batch behavior** — single prompt at start listing all pending migrations with `introduced_in` annotation, then run sequentially. `last_applied` updates after each migration completes (not at the very end), so an aborted batch resumes from the next run. Inner per-migration interactions (e.g., spec-and-plan's per-file Y/n) are unaffected — the outer prompt only gates "attempt the batch." Declining the outer prompt emits a warning summary and makes no filesystem changes.
 - **`/audit` detection mechanism** — Family 10 runs static checks: no-orphan-procedure-files (every `framework/migrations/{id}.md` has a TOML entry), no-stale-target-paths (every registry/archive `target_paths` refers to something absent from current `framework/`), no-broken-procedure-references (every TOML `procedure_file` points at an existing markdown file), since 2026-11-17, no-overdue-sunset (10e, owner decision), and, since task 19, no-duplicate-ids (10f, owner decision, 2026-11-18). The "removal must ship with a migration" enforcement moves to a separate pre-commit hook (out of scope for this spec — captured as follow-on) because it's fundamentally a diff operation against HEAD, not a static-state check. Family 10 reads history in one place only: task 15's 10d compares the registry's order with the order its entries were added, which no current-state check can see (048's review, 2026-10-29), so it needs a full-depth checkout.
 - **Removal target type taxonomy** — no type field; per-entry free-form is sufficient. Motivation evaporated when Q4 dropped the declarative DSL (no defaults to drive). No consumer benefits from a type enum: the bootstrap loop and Family 10 both read `target_paths` + `procedure_file`, and humans reading `CHANGELOG.md` get the human-readable framing from the `summary` string. Adding a taxonomy creates maintenance cost (categorizing each new entry, evolving the enum) without a corresponding consumer.

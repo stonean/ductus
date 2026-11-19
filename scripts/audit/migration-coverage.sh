@@ -84,9 +84,39 @@ for m in data.get("migrations", []):
 PY
 )
 
+# registered_procedures — each entry's parsed procedure_file value, one per
+# line, then END. The value is read by tomllib, so a path that appears only in
+# a TOML comment, or as another key's value, names no entry. END as the last
+# line is the proof the parse finished: output without it, empty or partial, is
+# a failed parse, never an empty or complete registry.
+# A function, since bash 3.2 misparses a heredoc holding backticks inside $().
+registered_procedures() {
+  python3 <<'PY'
+import tomllib
+with open("framework/migrations.toml", "rb") as f:
+    data = tomllib.load(f)
+for m in data.get("migrations", []):
+    pf = m.get("procedure_file")
+    if isinstance(pf, str) and pf:
+        print(pf)
+print("END")
+PY
+}
+
 # 10a no-orphan-procedure-files: every framework/migrations/*.md must
-# have a matching TOML entry whose procedure_file ends with that filename.
+# have a matching TOML entry whose parsed procedure_file is that path.
+REGISTERED=""
+REGISTERED_OK=0
 if [ -d "$PROCEDURES_DIR" ]; then
+  REGISTERED=$(registered_procedures)
+  if [ "$(printf '%s\n' "$REGISTERED" | tail -n 1)" = "END" ]; then
+    REGISTERED=$(printf '%s\n' "$REGISTERED" | sed '$d')
+    REGISTERED_OK=1
+  else
+    emit "$REGISTRY" "10a's parse did not finish: the registered procedure files could not be read" "re-run with python3 3.11+"
+  fi
+fi
+if [ "$REGISTERED_OK" = 1 ]; then
   for f in "$PROCEDURES_DIR"/*.md; do
     # A glob match is a path this family did not write; one resolving outside
     # the repository is reported and not probed further (026 plan, BE-INPUT-004).
@@ -103,7 +133,7 @@ if [ -d "$PROCEDURES_DIR" ]; then
         ;;
     esac
     [ -e "$f" ] || continue
-    if ! grep -qF "procedure_file = \"$f\"" "$REGISTRY"; then
+    if ! printf '%s\n' "$REGISTERED" | grep -qxF -- "$f"; then
       emit "$f" "orphan procedure file (no [[migrations]] entry references it)" \
         "add a [[migrations]] entry with procedure_file = \"$f\", or delete the file"
     fi

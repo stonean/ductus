@@ -80,17 +80,19 @@ Files manifest, and it runs on every invocation regardless of which feature is
 targeted. One rule, one primitive, two call sites: `analyze` is where an
 adopter meets it, and the batch-end call is where it runs closest to the cause.
 
-**Attribution is available in one call site and not the other, and the result
-says which.** `framework/migrations.toml` — the registry carrying each entry's
+**The primitive attributes at neither call site, and the result says so.**
+`framework/migrations.toml` — the registry carrying each entry's
 `target_paths` — is **not** in the Shared Files manifest; it lives in staging
-during a `/{project}` run and is absent from an adopter checkout. So the
-batch-end call can name the entry whose move most likely orphaned a reference,
-while the `analyze` call has only `.ductus/config.toml`'s
+during a `/{project}` run and is absent from an adopter checkout. The primitive
+reads the project tree, so at both call sites it has only `.ductus/config.toml`'s
 `[migrations].last_applied` — a watermark naming the newest applied entry, not
-a map from paths to the migrations that moved them. The primitive therefore
-reports **which mode it ran in**: attributed against the registry, or
-watermark-only. Rendering the two identically would be `QUAL-CLAIM-001` in the
-check itself — a finding that reads as an attribution nobody computed.
+a map from paths to the migrations that moved them — and reports `attribution`
+as `watermark`. At the batch-end call the host holds the staging registry,
+`{framework-root}/framework/migrations.toml`, and names the entry whose move
+most likely orphaned each finding against it
+(`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, step 8).
+Rendering the two modes identically would be `QUAL-CLAIM-001` in the check
+itself — a finding that reads as an attribution nobody computed.
 
 **A dangling reference is reported, not repaired.** The batch names the file,
 the missing path, and the migration whose move most likely orphaned it. It does
@@ -161,7 +163,9 @@ report-not-repair rule above applies: name them, let the operator decide.
   advisory→blocking promotion path this check inherits. No new command, no new
   surface.
 
-  The bootstrap call site is kept rather than replaced, because the registry it
-  holds is what makes attribution possible at all (see the Behavior section):
-  the same primitive runs richer there and degrades explicitly, never silently,
-  when `analyze` calls it without a registry to attribute against.
+  The bootstrap call site is kept rather than replaced, because the staging
+  registry the host holds there is what makes attribution possible at all (see
+  the Behavior section): the primitive reports `watermark` at both call sites,
+  so the degraded mode is explicit, never silent, at both: `analyze` has no
+  registry to attribute against, and the bootstrap host attributes against the
+  staging registry.

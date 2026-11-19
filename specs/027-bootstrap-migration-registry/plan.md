@@ -4,7 +4,7 @@ Implements [027 — Bootstrap Migration Registry](spec.md).
 
 ## Overview
 
-The implementation consolidates two scattered sets of adopter-cleanup prose in `framework/bootstrap/ductus.md` — the `## Pre-run Migrations` section (`.governance.toml`, gitignore marker, `spec-and-plan.md`, rule-file relocation) and the `## Workflow recommendation` legacy-cleanup sub-sections (`skills/` directory, workflow filename rename) — into one registry-driven loop. Six bespoke prose blocks become six TOML entries plus six small markdown procedure files plus one consolidated bootstrap step. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
+The implementation drives adopter cleanup from one registry-driven loop, the `## Pre-run Migrations` section of `framework/bootstrap/ductus-procedure.md`: each convention removal is a TOML entry plus a small markdown procedure file, and the loop is the only bootstrap step that applies one. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
 
 No new runtime primitive at v1 (Q11). Per-entry idempotency is preserved as an invariant: every procedure file's first action is a target-presence check that exits silently when nothing to do.
 
@@ -18,7 +18,7 @@ TOML array-of-tables, one entry per active migration:
 [[migrations]]
 id = "spec-and-plan-sunset"
 introduced_in = "0.4.0"
-sunset_after  = "0.X.0"  # registry_introduction_version + 2 minor versions; see §Back-fill sunset values are uniform, not per-entry-tuned
+sunset_after  = "0.X.0"  # chosen per entry when it is written
 summary       = "Rename specs/*/spec-and-plan.md → specs/*/spec.md (lightweight-track sunset)"
 target_paths  = ["specs/*/spec-and-plan.md"]
 procedure_file = "framework/migrations/spec-and-plan-sunset.md"
@@ -27,9 +27,9 @@ procedure_file = "framework/migrations/spec-and-plan-sunset.md"
 Field semantics:
 
 - `id` — slug, stable, lowercase-hyphenated. The `.ductus/config.toml` `[migrations].last_applied` references this string.
-- `introduced_in` — SemVer string; back-filled per `git log` for the existing six entries.
+- `introduced_in` — SemVer string, the release the removal shipped in.
 - `sunset_after` — SemVer string or omitted. Entry expires when current ductus ≥ `sunset_after`. Omitted means "active indefinitely."
-- `summary` — one-line human-readable description used by the post-scaffolding summary line and the eventual CHANGELOG heading.
+- `summary` — one-line human-readable description of the entry, never printed; the post-scaffolding summary carries the lines each applied procedure emits.
 - `target_paths` — array of paths or globs (relative to adopter project root). Read by Family 10 to verify the removed convention is actually absent from current `framework/`.
 - `procedure_file` — path (relative to repo root) to the markdown procedure file. Always present; there is no declarative-step DSL (Q4).
 
@@ -56,7 +56,7 @@ Each file is a small markdown procedure with a fixed top-level shape. The bootst
 # {id}
 
 **Introduced in:** {ductus version}
-**Summary:** {one-line summary, matches TOML `summary` field}
+**Summary:** {one-line summary}
 
 ## Procedure
 
@@ -70,44 +70,38 @@ Idempotency check is step 1 of every procedure file, mechanically. The bootstrap
 
 ### Bootstrap loop placement and shape
 
-The `## Pre-run Migrations` section in `framework/bootstrap/ductus.md` (lines ~190–250) and the two scattered "Legacy X cleanup" sub-sections inside `## Workflow recommendation` (lines ~570–598) collapse into one new `## Pre-run Migrations` section with this shape:
+The loop is the `## Pre-run Migrations` section of `framework/bootstrap/ductus-procedure.md`, which `framework/bootstrap/ductus.md` reaches at its step 3a, after the archive is extracted and before the first manifest pass. Its shape:
 
 ```markdown
 ## Pre-run Migrations
 
-Read `framework/migrations.toml` from the fetched archive. Read `.ductus/config.toml`'s
-`[migrations].last_applied` (treat absence as null).
+Take the pre-run `git status --porcelain -- specs/` first, and again when the section ends.
 
-Filter the registry to entries where:
-  - `introduced_in` is newer than `last_applied` (SemVer compare, lex tie-break on id), AND
-  - current ductus version is less than `sunset_after` (or `sunset_after` is absent).
-
-If the filtered list is empty, emit nothing and proceed.
-
-Otherwise, prompt once with text of the form:
-
-      N framework migrations are pending since your last /ductus run:
-        - {id} (introduced {introduced_in})
-        ...
-      Apply now? (Y/n)
-
-On decline: emit `warning: N migrations skipped; pipeline commands may fail on
-legacy artifacts until applied. Re-run /ductus to apply.` and proceed without
-filesystem changes.
-
-On confirm: for each entry in filter order:
-  1. Read `framework/migrations/{id}.md` from the fetched archive.
-  2. Execute its `## Procedure` steps.
-  3. Update `.ductus/config.toml` `[migrations].last_applied = "{id}"` atomically
-     (tempfile + rename, matching existing `.ductus/config.toml` write semantics).
-  4. If the procedure aborts (rare — only via explicit user "stop everything"
-     path inside the procedure), halt the loop. The next /ductus run resumes
-     from the next-pending entry.
+1. Read `framework/migrations.toml` from the fetched archive. Abort with
+   `Failed to read framework/migrations.toml; cannot run pre-run migrations.` when it is
+   missing or malformed. Then apply the Duplicate-id and reference-integrity guard: before
+   any later step, abort the loop with one line for each failure —
+     - `migration {id}: duplicate id in framework/migrations.toml`
+     - `migration {id}: procedure file missing from archive`
+   `last_applied` keeps its prior value.
+2. Resolve the active config file once; read its `[migrations].last_applied`
+   (absence is null).
+3. Filter the registry to entries where `introduced_in` is newer than `last_applied`'s
+   (SemVer compare, lex tie-break on id) AND the current ductus version is less than
+   `sunset_after` (or it is absent).
+4. A greenfield run or a first adoption seeds `last_applied` with the newest passing
+   entry's id and applies nothing. Otherwise an empty filtered list emits nothing and
+   proceeds.
+5. Prompt once: `N framework migrations are pending ...  Apply now? (Y/n)`.
+6. On decline: emit the skipped-migrations warning; no filesystem changes.
+7. On confirm, for each entry in filter order: read `framework/migrations/{id}.md`,
+   execute its `## Procedure`, then update `[migrations].last_applied = "{id}"`
+   atomically; a procedure that aborts halts the loop, and the next run resumes.
+8. After the loop, invoke `check-orphaned-references` once and report each finding,
+   attributing it against the staging registry; the batch does not halt.
 ```
 
-The loop runs **before** the existing `## Workflow recommendation` section (since some legacy migrations affect workflows the recommendation flow then reads). It runs **after** the `## Project Configuration` section (so `.ductus/config.toml` is already loaded).
-
-The two legacy-cleanup sub-sections inside `## Workflow recommendation` (the "Legacy `skills/` directory cleanup" subsection and the "Legacy workflow cleanup" item) are deleted entirely — their work is now done by the registry-driven loop earlier in the procedure. The `enforce-manifest` invocation at line 36 keeps its other duties (slash-command manifest enforcement) but loses its legacy-cleanup roles (those move to the registry).
+`ductus.md` holds the step 3a pointer and the `[migrations]` schema in §Project Configuration.
 
 ### SemVer comparison (no new primitive)
 
@@ -148,11 +142,8 @@ Shell script under the existing `scripts/audit/` directory. Follows the same con
 
 ```bash
 # 10a no-orphan-procedure-files
-for f in framework/migrations/*.md; do
-  id=$(basename "$f" .md)
-  grep -q "^id *= *\"$id\"" framework/migrations.toml || \
-    echo "Family 10 | $f | orphan procedure file (no TOML entry) | add a [[migrations]] entry or delete the file"
-done
+# Parse each entry's procedure_file with tomllib (a path in a comment names no entry).
+# Every framework/migrations/*.md must be one of them.
 
 # 10b no-stale-target-paths
 # Parse target_paths from migrations.toml AND from CHANGELOG.md archived entries.
@@ -172,7 +163,7 @@ Wiring: append one line to `scripts/audit/run-all.sh` after the Family 9 invocat
 run_check "Family 10 — migration coverage" "scripts/audit/migration-coverage.sh"
 ```
 
-And append a numbered step to `framework/commands/audit.md`'s Markdown-only reference (step 11), matching the existing pattern. No new MCP primitive — `run-all.sh` is the orchestrator; `/audit` itself invokes it via `run-generator`.
+And append item 10 to `framework/reference/audit.md`, matching the existing pattern. No new MCP primitive — `run-all.sh` is the orchestrator; `/audit` itself invokes it via `run-generator`.
 
 ### CHANGELOG.md seed format
 
@@ -200,12 +191,13 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/migrations.toml` | Create | Registry; back-filled with six entries |
-| `framework/bootstrap/ductus.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.ductus/config.toml` `[migrations]` section to the §Project Configuration schema |
+| `framework/migrations.toml` | Create | Registry; one entry per active removal |
+| `framework/bootstrap/ductus-procedure.md` | Modify | The `## Pre-run Migrations` section: the registry-driven loop, its guard and its step 8 check |
+| `framework/bootstrap/ductus.md` | Modify | The step 3a pointer to Pre-run Migrations; the `.ductus/config.toml` `[migrations]` section in the §Project Configuration schema |
 | `scripts/audit/migration-coverage.sh` | Create | Family 10 — its checks, 10a to 10f |
-| `scripts/tests/test-migration-coverage.sh` | Create | Cases for 10d, 10e and 10b's archived half, each failing when its check is removed |
+| `scripts/tests/test-migration-coverage.sh` | Create | Cases for 10a to 10f, each failing when its check is removed |
 | `scripts/audit/run-all.sh` | Modify | Append Family 10 invocation |
-| `framework/commands/audit.md` | Modify | Append step for Family 10 in the Markdown-only reference |
+| `framework/reference/audit.md` | Modify | Append item 10 for Family 10 |
 | `CHANGELOG.md` | Create | Adopter-facing archive: each archived entry's recipe and its target paths |
 | `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` | Create | Cross-spec impact: 026 is `done`; Family 10 extension lands as a scenario with back-link to 027 |
 | `specs/027-bootstrap-migration-registry/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `→ in-progress` and `→ done` during implementation |
@@ -228,13 +220,13 @@ Q9. A check that walks `git log -- framework/templates/ framework/commands/` to 
 
 ### Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)
 
-The existing `enforce-manifest` invocation in ductus.md line 36 already removes the legacy `skills/` directory and legacy workflow filenames as a side effect. Leaving those two migrations out of the registry (since `enforce-manifest` handles them) would be coherent but creates two places to look for "what does bootstrap clean up on every run?" Decision: register both anyway, and modify `enforce-manifest`'s contract so it no longer handles legacy-cleanup work (just slash-command manifest enforcement). This keeps the registry as the *one* source of truth for adopter-cleanup, at the cost of trimming `enforce-manifest`. The trim is a small refactor of the primitive's expected-list construction — no behavior change for the slash-command-manifest path.
+The existing `enforce-manifest` invocation in `framework/bootstrap/ductus.md` already removes the legacy `skills/` directory and legacy workflow filenames as a side effect. Leaving those two migrations out of the registry (since `enforce-manifest` handles them) would be coherent but creates two places to look for "what does bootstrap clean up on every run?" Decision: register both anyway, and modify `enforce-manifest`'s contract so it no longer handles legacy-cleanup work (just slash-command manifest enforcement). This keeps the registry as the *one* source of truth for adopter-cleanup, at the cost of trimming `enforce-manifest`. The trim is a small refactor of the primitive's expected-list construction — no behavior change for the slash-command-manifest path.
 
 ## Known Limitations
 
-### Back-fill sunset values are uniform, not per-entry-tuned
+### Sunset values are chosen per entry, with no signal behind them
 
-All six back-filled entries get the same `sunset_after = registry_introduction_version + 2 minor versions`. We don't have per-entry signal on how long each migration needs to stay active. Maintainers can tune individual entries later by editing their `sunset_after` value. The cost is that low-impact migrations (gitignore marker) and high-impact ones (rule-file relocation) sunset together; in practice the manual recipe in `CHANGELOG.md` covers either case.
+The six back-filled entries, which shared one uniform `sunset_after`, are all archived in `CHANGELOG.md`; each entry's `sunset_after` is chosen when it is written, and 10e fails one past it. Nothing derives how long a migration needs to stay active, so the manual recipe in `CHANGELOG.md` covers an adopter who skips past one.
 
 ### "Removal must ship with migration" is discipline-only at v1
 
@@ -246,4 +238,4 @@ When a migration sunsets, three actions land in one commit: delete TOML entry, a
 
 ### Procedure file content format is loosely specified
 
-The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) six entries are small enough that code review catches deviations, (c) the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.
+The procedure file shape above is a convention, not a parsed schema. A maintainer who writes a procedure file without a "Summary line" step would silently break the post-scaffolding summary contract. Acceptable for v1 because (a) the existing migration prose is the back-fill source, (b) procedure files are small enough that code review catches deviations, (c) the runtime never parses procedure files (the bootstrap loop reads and dispatches; the LLM/host executes them). If procedure files proliferate, a parseable shape (matching 022's parseable command convention) is a natural promotion path.

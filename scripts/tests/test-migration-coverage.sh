@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Test surface for scripts/audit/migration-coverage.sh checks 10d, 10e, 10f
-# and 10b's archived half (Family 10).
+# Test surface for scripts/audit/migration-coverage.sh checks 10a, 10d, 10e,
+# 10f and 10b's archived half (Family 10).
 #
 # 10d holds the registry's ordering key, (introduced_in, id), against the order
 # entries were added: Pre-run Migrations runs only entries after an adopter's
@@ -42,6 +42,16 @@
 #      each pass it, with a coverage line
 #   P. 10e: an entry whose sunset_after is no release fails with a remedy for
 #      that value rather than an archival
+#   Q. 10a: a framework/migrations/*.md no entry names fails, naming it, while
+#      the file an entry names passes
+#   R. 10a: an orphan whose path appears only in a TOML comment fails, since
+#      10a reads the parsed procedure_file values, not the raw text
+#   T. 10a: a registry that parses as TOML but whose entries the check cannot
+#      read, after it printed one path, fails with the "parse did not finish"
+#      finding rather than using the partial list
+#   S. 10f: a registry whose id is no string, which the history and duplicate
+#      comparisons cannot read, fails with the "produced no output" finding
+#      rather than passing
 #
 # Every fixture holds a version file (0.59.0), since 10e reads it.
 #
@@ -370,6 +380,52 @@ if printf '%s' "$out" | grep -q 'archive it'; then
   fail "P: a malformed sunset_after was given the archival remedy: $out"
 else
   pass "P: a malformed sunset_after is not given the archival remedy"
+fi
+
+dir="$(make_repo q)"
+entry "$dir" alpha 0.60.0
+printf '# orphan\n' > "$dir/framework/migrations/orphan.md"
+commit "$dir"
+run_check "$dir"
+expect "Q: a procedure file no entry names fails, naming it" 1 \
+  "^migration-coverage \| framework/migrations/orphan.md \| orphan procedure file"
+if printf '%s' "$out" | grep -q 'alpha.md'; then
+  fail "Q: the procedure file an entry names was reported: $out"
+else
+  pass "Q: the procedure file an entry names passes"
+fi
+
+dir="$(make_repo r)"
+entry "$dir" alpha 0.60.0
+printf '# procedure_file = "framework/migrations/orphan.md"\n' >> "$dir/framework/migrations.toml"
+printf '# orphan\n' > "$dir/framework/migrations/orphan.md"
+commit "$dir"
+run_check "$dir"
+expect "R: an orphan whose path appears only in a TOML comment fails" 1 \
+  "^migration-coverage \| framework/migrations/orphan.md \| orphan procedure file"
+
+dir="$(make_repo s)"
+printf '[[migrations]]\nid = ["a"]\nintroduced_in = "0.60.0"\nsummary = "s"\ntarget_paths = ["adopter/x"]\nprocedure_file = "framework/migrations/a.md"\n' \
+  > "$dir/framework/migrations.toml"
+printf '# a\n' > "$dir/framework/migrations/a.md"
+commit "$dir"
+run_check "$dir"
+expect "S: an id that is no string fails with 10f's produced-no-output finding" 1 \
+  "10f produced no output: the duplicate-id comparison could not run"
+
+dir="$(make_repo t)"
+printf 'migrations = [{ id = "a", introduced_in = "0.60.0", procedure_file = "framework/migrations/a.md" }, 1]\n' \
+  > "$dir/framework/migrations.toml"
+printf '# a\n' > "$dir/framework/migrations/a.md"
+printf '# orphan\n' > "$dir/framework/migrations/orphan.md"
+commit "$dir"
+run_check "$dir"
+expect "T: a parse that prints, then raises, fails rather than using the partial list" 1 \
+  "10a's parse did not finish: the registered procedure files could not be read"
+if printf '%s' "$out" | grep -q 'orphan procedure file'; then
+  fail "T: the partial list was used as complete: $out"
+else
+  pass "T: no orphan is reported from a partial list"
 fi
 
 if [ "$failures" -ne 0 ]; then
