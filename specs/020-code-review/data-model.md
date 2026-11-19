@@ -186,6 +186,8 @@ tech-stack-verified = true
 | --- | --- | --- | --- |
 | `tech-stack-verified` | boolean | `false` (when key absent) | When `true`, `/ductus:review` skips the tech-stack alignment pre-flight on every run until the operator removes the line. There is no auto-reset. |
 
+A present `tech-stack-verified` whose value is not a TOML boolean (`"true"`, `"yes"`, `1`) fails fast (`CFG-ENV-008`): `/ductus:review` halts at step 1, before any pass, naming the setting, the file and the offending value, and never reads it as `false` or `true`; an absent key is the default `false`.
+
 An unrecognized key under `[review]` is warned by name, never refused and never silently dropped (`CFG-ENV-012`): `discover-rule-files`, which review's step 2 invokes, returns a notice line naming each one (`ductus discover-rule-files --help`), and `dashboard`'s config summary lists it under `unknown-keys`.
 
 The section is open-schema; future review-related persisted decisions can land under `[review]` without schema migration. `re-reads-off`, which switches the fix-round loop off with its reason, is defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md).
