@@ -43,7 +43,7 @@ Each is wired at the six Rust sites plus `framework/runtime-tools.txt` per AGENT
 
 `framework/bootstrap/hooks/ductus-pre-commit` stays shell, because git invokes hooks as executables, but reduces to a wrapper: resolve the runtime through the `.ductus/bin/ductus` pointer, invoke the two primitives and `label-criteria`, re-stage the rewritten specs. Its staged-spec detection matches a staged path by shape, any single leading segment then a feature directory in either form `parse_feature_dir` accepts, so the hook holds no configured spec root to get wrong (specs 040, 051 and 059; `f4c3bbd3`); it also runs the corpus-link and project-file size checks after the writes.
 
-Retired alongside the scripts: `scripts/tests/test-gen-spec-deps.sh` (786 lines) and `scripts/tests/test-gen-cross-service-refs.sh` (568), replaced by Rust tests that run on every platform the runtime builds for — including Windows, where the bash suites never ran.
+Retired alongside the scripts: `scripts/tests/test-gen-spec-deps.sh` (786 lines) and `scripts/tests/test-gen-cross-service-refs.sh` (568), replaced by Rust tests, which `cargo test` runs on every platform `runtime.yml` tests: Linux and macOS, since 048 task 33 removed its Windows jobs.
 
 Consequent updates: the Shared Files manifest and the four `framework/bootstrap/configure/*.md` permission blocks drop their `gen-*.sh` entries; `framework/migrations.toml` gains an entry retiring the scripts from adopter trees; and 022's §Bash script relationships' first bullet is rewritten to record the promotion and why the old rule lapsed.
 
