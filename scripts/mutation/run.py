@@ -23,19 +23,20 @@ EXPECTED_SURVIVORS maps an id to the reason no portable test can kill it.
 
 Each selected mutation is written over its file, the filtered unit tests run
 in the dev profile, and the file is restored, even when the run is
-interrupted by an exception or Ctrl-C. A run killed outright (SIGKILL, or an
-agent stopped mid-run) skips the restore and leaves its mutant applied: compare
-runtime/src with the newest ductus-mutation-* copy under $TMPDIR and restore
-the differing file from it before trusting the tree. A mutation is KILLED when
+interrupted by an exception, Ctrl-C or SIGTERM. A run killed outright
+(SIGKILL) skips the restore and leaves its mutant applied: compare
+runtime/src and runtime/tests with the same directories of the newest
+ductus-mutation-* copy under $TMPDIR and restore the differing file from it
+before trusting the tree. A mutation is KILLED when
 a test fails, SURVIVED when every test passes, and an ERROR when cargo fails
 another way (a compile error, say), which is never counted as killed.
-runtime/src is copied before the first mutation and compared with the copy
-after the last.
+runtime/src and runtime/tests (a few mutants write there) are copied before
+the first mutation and compared with the copies after the last.
 
 --check validates every selected anchor and exits without running cargo.
 
 The exit status is 0 only when at least one mutation is selected, every ID
-names one, every anchor is valid, runtime/src is restored byte for byte, no
+names one, every anchor is valid, both trees are restored byte for byte, no
 mutation errored, and the survivors are exactly the expected ones among those
 selected. Do not edit anything under runtime/ while it runs:
 each restore writes back the file as it was read before the mutation, so an
@@ -47,6 +48,7 @@ import ast
 import filecmp
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -55,6 +57,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
+TREES = ("src", "tests")
 
 
 def load(list_path):
@@ -153,8 +156,11 @@ def main(argv):
         print(f"{len(selected)} mutation(s), {len(bad)} with an invalid anchor")
         return 1 if bad else 0
 
-    snapshot = Path(tempfile.mkdtemp(prefix="ductus-mutation-")) / "src"
-    shutil.copytree(RUNTIME / "src", snapshot)
+    snapshot = Path(tempfile.mkdtemp(prefix="ductus-mutation-"))
+    for tree in TREES:
+        shutil.copytree(RUNTIME / tree, snapshot / tree)
+    # SIGTERM raises like Ctrl-C does, so the `finally` blocks restore the file.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     results = []
     try:
         for mutation in selected:
@@ -164,8 +170,8 @@ def main(argv):
             results.append((mutation[0], verdict))
             print(f"{mutation[0]}: {verdict} {detail} ({elapsed:.0f}s)".replace("  ", " "), flush=True)
     finally:
-        restored = same_tree(snapshot, RUNTIME / "src")
-        print(f"runtime/src restored: {'yes' if restored else 'NO, compare it with ' + str(snapshot)}")
+        restored = all(same_tree(snapshot / tree, RUNTIME / tree) for tree in TREES)
+        print(f"runtime/src and runtime/tests restored: {'yes' if restored else 'NO, compare them with ' + str(snapshot)}")
 
     survivors = {name.split()[0] for name, verdict in results if verdict == "SURVIVED"}
     errors = [name for name, verdict in results if verdict == "ERROR"]
@@ -178,7 +184,7 @@ def main(argv):
         print(f"{i}: expected to survive ({expected[i]}) but did not; update the list")
     ok = restored and not bad and not errors and survivors == expected_here
     if restored:
-        shutil.rmtree(snapshot.parent)
+        shutil.rmtree(snapshot)
     return 0 if ok else 1
 
 
