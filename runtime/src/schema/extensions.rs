@@ -755,8 +755,6 @@ pub enum ValidationError {
     OutOfBoundary {
         /// Offending edit path.
         path: String,
-        /// Boundary patterns the path was checked against.
-        boundary: Vec<String>,
         /// Why the path was rejected: `is not within {boundary:?}` for a
         /// clean path matching no pattern, a description naming the
         /// traversal segment / absolute prefix that disqualified the path
@@ -877,14 +875,12 @@ pub fn validate_write_code_boundary(
         if let Some(reason) = boundary_rejection_reason(&edit.path) {
             return Err(ValidationError::OutOfBoundary {
                 path: edit.path.clone(),
-                boundary: boundary.to_vec(),
                 reason,
             });
         }
         if !path_in_boundary(&edit.path, boundary) {
             return Err(ValidationError::OutOfBoundary {
                 path: edit.path.clone(),
-                boundary: boundary.to_vec(),
                 reason: format!("is not within {boundary:?}"),
             });
         }
@@ -967,7 +963,6 @@ pub fn validate_write_code_resolution(
         };
         return Err(ValidationError::OutOfBoundary {
             path: edit.path.clone(),
-            boundary: boundary.to_vec(),
             reason,
         });
     }

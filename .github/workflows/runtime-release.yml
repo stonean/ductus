@@ -305,8 +305,10 @@ jobs:
       matrix:
         # Natively-matching runners: this job executes what it installs,
         # which is the half of acquisition a digest check cannot prove. That
-        # is why it differs from the build matrix above, which cross-compiles
-        # two targets and never runs them.
+        # is why it differs from the build matrix above in one leg: the build
+        # cross-compiles aarch64-unknown-linux-gnu on an x86_64 runner and never
+        # runs it. x86_64-apple-darwin runs under Rosetta 2 on Apple Silicon in
+        # both.
         include:
           - target: aarch64-apple-darwin
             runner: macos-latest

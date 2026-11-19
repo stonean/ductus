@@ -126,7 +126,7 @@ stop_server() {
   feeder=""
   return 0
 }
-trap 'stop_server; rm -f "$store" "$store.tmp" "$store.old"; rm -rf "$work"' EXIT
+trap 'stop_server; rm -f "$store" "$store.tmp.$$" "$store.old"; rm -rf "$work"' EXIT
 
 last_rc=0
 # measure <case> <destination> <command>: runs the command in this shell, at
@@ -190,7 +190,7 @@ require_ok() {
 }
 
 # The bootstrap's spellings, run at the project root.
-store_cmd="cp '$new' ~/.ductus/bin/ductus$ext.tmp && mv -f ~/.ductus/bin/ductus$ext.tmp ~/.ductus/bin/ductus$ext"
+store_cmd="cp '$new' ~/.ductus/bin/ductus$ext.tmp.\$\$ && mv -f ~/.ductus/bin/ductus$ext.tmp.\$\$ ~/.ductus/bin/ductus$ext || { rm -f ~/.ductus/bin/ductus$ext.tmp.\$\$; false; }"
 ln_cmd="ln -sf ~/.ductus/bin/ductus$ext $pointer"
 cp_cmd="cp ~/.ductus/bin/ductus$ext $pointer"
 store_aside_cmd="mv -f ~/.ductus/bin/ductus$ext ~/.ductus/bin/ductus$ext.old && $store_cmd"
@@ -206,7 +206,7 @@ start_server "$store" store
 measure store-running "$store" "$store_cmd"
 echo "store directory: $(ls -A "$store_dir" | tr '\n' ' ')"
 stop_server
-rm -f "$store.tmp"
+rm -f "$store.tmp.$$"
 
 cp "$old" "$store"
 start_server "$store" store-aside
@@ -214,7 +214,7 @@ measure store-running-moved-aside "$store" "$store_aside_cmd"
 measure store-running-remove-moved-aside "$store.old" "rm -f ~/.ductus/bin/ductus$ext.old"
 echo "store directory: $(ls -A "$store_dir" | tr '\n' ' ')"
 stop_server
-rm -f "$store.tmp" "$store.old"
+rm -f "$store.tmp.$$" "$store.old"
 
 if $native; then
   w_new="$(cygpath -w "$new")"

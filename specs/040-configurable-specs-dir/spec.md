@@ -14,7 +14,7 @@ The name `specs` is baked into the framework in three layers:
 
 - **Constitution and templates** — the §spec-phase layout, rule-file paths (`specs/rules/`), the inbox (`specs/inbox.md`), shared docs (`specs/system.md`, `events.md`, `errors.md`), and the per-feature `specs/{NNN-feature}/` convention. The literal `specs/` appears across roughly three dozen framework markdown files.
 - **Command sources** — every pipeline command reads and writes under `specs/`, and the session file records `path = "specs/{NNN-slug}"`.
-- **Runtime** — the optional [022-deterministic-runtime](../022-deterministic-runtime/spec.md) primitives hardcode the root (e.g., `repo.join("specs")` in the dashboard primitive, plus boundary derivation and spec reads).
+- **Runtime** — the [022-deterministic-runtime](../022-deterministic-runtime/spec.md) primitives, optional when this spec was written, hardcode the root (e.g., `repo.join("specs")` in the dashboard primitive, plus boundary derivation and spec reads).
 
 There is no place for an adopter to choose a different name. That is a real problem because `specs/` is one character away from `spec/` — the directory RSpec and many Ruby/Rails projects already own for tests. An adopter integrating ductus into a Rails repo cannot adopt without the two trees sitting confusingly side by side, and an adopter who would prefer a clearer name (`governance/`, `design/`, `gov-specs/`) has no supported way to pick one. The collision is not purely cosmetic: tooling, editor search scopes, and CI globs that target `spec/` can sweep in `specs/` content and vice versa.
 

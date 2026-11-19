@@ -70,9 +70,9 @@ jobs:
         # Runners must match the target **natively**, because this job
         # executes the binary it installs — that is the half of acquisition
         # a digest check cannot prove. This is the one place the matrix
-        # deliberately differs from runtime-release.yml, which cross-compiles
-        # aarch64-linux and x86_64-darwin from the wrong host and never runs
-        # what it builds.
+        # deliberately differs from runtime-release.yml's build matrix, which
+        # cross-compiles aarch64-linux on an x86_64 runner and never runs it;
+        # x86_64-darwin runs under Rosetta 2 on Apple Silicon in both.
         #
         # If a leg sits queued with no runner assigned, the label is the
         # first thing to check — that is a missing runner, not a hang, and

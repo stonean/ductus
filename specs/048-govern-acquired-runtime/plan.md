@@ -103,10 +103,13 @@ The `version` file, the publish gate, and the `.tar.gz` packaging touch only `ru
 | `runtime/tests/fetch_archive_startup_env.rs` | Create | The startup capture of the proxy variables, one test per named mutation (task 30) |
 | `runtime/tests/fetch_archive_cert_env_startup.rs` | Create | The certificate variables are read at startup, proved where the verifier reads them (task 30) |
 | `framework/bootstrap/hooks/ductus-pre-commit` | Modify | The guard's probes bounded by a watchdog; the printable, bounded version echo (task 30) |
-| `scripts/measure-replace-under-server.sh` | Create | The CI measurement of replacing the store and the pointer under a running server (tasks 29, 31) |
+| `scripts/measure-replace-under-server.sh` | Create | The CI measurement of replacing the store and the pointer under a running server (tasks 29, 31); it spells step 6's per-run tempfile (048's review) |
 | `.github/workflows/runtime.yml` | Modify | No job runs on Windows: the build-and-test matrix holds `ubuntu-latest` and `macos-latest`, and task 32's `windows-unelevated` job is gone (task 33) |
 | `runtime/Cargo.toml`, `runtime/Cargo.lock` | Modify | `rustls` and `rustls-native-certs` as direct dependencies, `webpki-root-certs` for tests (task 18), and `temp-env` as a dev-dependency (task 30). They and this plan's workflow changes come under the supply-chain commitments 022's plan states in its sections *Dependency pinning, provenance, and upgrades* and *`runtime.yml` CI workflow* (`BE-DEPS-001` to `004`, `006` and `007`) |
-| `docs/runtime.md` | Modify | The environment-variable inventory: when each variable is read, and the proxy trust boundary (task 18) |
+| `docs/runtime.md` | Modify | The environment-variable inventory: when each variable is read, and the proxy trust boundary (task 18); the four published targets (task 34) |
+| `framework/bootstrap/govern.md` | Modify | The retired bootstrap path, kept byte-identical to `ductus.md` for pre-rename adopters' self-update (`/ductus:audit` Family 21) |
+| `runtime/README.md` | Modify | The four published targets named (task 34) |
+| `runtime/src/schema/extensions.rs` | Modify | No Windows release target given as a reason (task 34); `ValidationError::OutOfBoundary` drops its unread `boundary` field (048's review) |
 
 ## Trade-offs
 

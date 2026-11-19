@@ -413,7 +413,7 @@ When `.ductus/config.toml` has a `[runtime]` `path` key, the project has taken r
    | Linux | x86_64 | `x86_64-unknown-linux-gnu` |
    | Linux | arm64 | `aarch64-unknown-linux-gnu` |
 
-   A host matching no row, a Windows host included, halts naming the platform and the `[runtime]` key — supplying a binary is the escape hatch for an unpublished platform.
+   A host matching no row, a Windows host included, is an unpublished platform and halts under **Failure**, its platform and architecture standing in for `{triple}`. That halt names the store path and the `[runtime]` key: supplying a binary is the escape hatch for an unpublished platform.
 
 4. **Fetch the archive and its sidecar** from the release, into `{tempdir}`:
 
@@ -440,19 +440,19 @@ When `.ductus/config.toml` has a `[runtime]` `path` key, the project has taken r
 
    List the archive before extracting it, and halt under **Failure**, naming the listing, unless it is exactly one line, which begins with `-` (a regular file, not a link) and whose last field, the entry's name, is exactly `ductus` with no directory part: the one member `runtime-release.yml` packs. Then extract that member alone; an extraction that exits non-zero halts under **Failure** too. Only then create the store directory, so a halt here leaves nothing in the store. The extraction writes that fixed name under the fresh `{tempdir}` and nothing else, so no entry name the archive carries becomes a path (`BE-INPUT-004`); no primitive can screen this step, since the runtime is what it installs.
 
-   Write the extracted binary to `{store-path}` via **tempfile + rename** — the same atomic write every other ductus write uses — so a concurrent `/ductus` run in another project sees the old binary or the new one, never a partial file. Copy it to a tempfile beside the destination, then rename that over it with the shell's `mv -f`:
+   Write the extracted binary to `{store-path}` via **tempfile + rename** — the same atomic write every other ductus write uses — so a concurrent `/ductus` run in another project sees the old binary or the new one, never a partial file. Copy it to a tempfile of this run's own beside the destination, named by the shell's process ID (`$$`) so no two runs write one tempfile, then rename that over it with the shell's `mv -f`:
 
    ```text
-   cp {tempdir}/ductus {store-path}.tmp && mv -f {store-path}.tmp {store-path}
+   cp {tempdir}/ductus {store-path}.tmp.$$ && mv -f {store-path}.tmp.$$ {store-path} || { rm -f {store-path}.tmp.$$; false; }
    ```
 
-   Spell it this way on every platform: the shell's `mv -f` is what replaces a store a running `ductus mcp` server holds. It succeeded on Linux and macOS with the server still running. The measurement is `scripts/measure-replace-under-server.sh`, and 048's §Edge Cases records its method. Then `chmod +x {store-path}`.
+   Spell it this way on every platform: the shell's `mv -f` is what replaces a store a running `ductus mcp` server holds. It succeeded on Linux and macOS with the server still running. The measurement is `scripts/measure-replace-under-server.sh`, and 048's §Edge Cases records its method. A copy or rename that fails removes its own tempfile and exits non-zero, leaving the store as it was, and halts under **Failure**. Then `chmod +x {store-path}`.
 
 7. **Re-probe** the store path (`~/.ductus/bin/ductus --version`) and confirm it reports `{pin}`. A binary that installs but does not run is an acquisition failure, not a success.
 
 ##### Failure
 
-A network failure, an unpublished asset for the host platform, a missing sidecar, a checksum mismatch, an archive whose listing is not that one binary, or a failed extraction of it (step 6) **aborts the run**. Nothing is written into the store or the pointer, and the run does **not** degrade to the markdown path — a requirement that quietly is not one would leave both execution paths alive, which is the cost the requirement exists to end.
+A network failure, an unpublished asset for the host platform, a missing sidecar, a checksum mismatch, an archive whose listing is not that one binary, or a failed extraction or install of it (step 6) **aborts the run**. Nothing is written into the store or the pointer, and the run does **not** degrade to the markdown path — a requirement that quietly is not one would leave both execution paths alive, which is the cost the requirement exists to end.
 
 For a checksum mismatch the halt's `{reason}` names both digests, the expected (the sidecar's) and the computed.
 
