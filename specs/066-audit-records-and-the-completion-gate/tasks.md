@@ -1,5 +1,5 @@
 ---
-next-task: 28
+next-task: 29
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -55,3 +55,9 @@ Owed after this task (2026-11-19): nothing. 066 itself is `done` (`0c4d20fc`), a
 - [x] (f) Each new behavior has a test its mutant turns red, listed in `scripts/mutation/criteria-in-review-066.py`; the whole `cargo test` and every push workflow's steps pass
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested, each new behavior proven by a test its mutant turns red; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 28. Record paths are quoted only when they need it (scenario record-paths-are-quoted-only-when-they-need-it)
+
+- [ ] Implement the behavior described in `scenarios/record-paths-are-quoted-only-when-they-need-it.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
