@@ -907,6 +907,9 @@ fn rewrite_folds_into(line: &str, from: &str, to_feature: &str) -> (String, u32)
 
 /// Re-point every markdown link on one body line whose target names `from`
 /// as a whole path segment, pushing each kept-tail reference onto `kept`.
+///
+/// A line that is a reference-style definition ([`rewrite_definition`]) is
+/// the whole line: it holds no inline link after the definition.
 fn rewrite_body_line(
     line: &str,
     from: &str,
@@ -914,6 +917,9 @@ fn rewrite_body_line(
     in_target: Option<usize>,
     kept: &mut Vec<String>,
 ) -> (String, u32) {
+    if let Some(done) = rewrite_definition(line, from, target, in_target, kept) {
+        return done;
+    }
     let mut out = String::with_capacity(line.len());
     let mut rest = line;
     let mut count = 0;
@@ -928,9 +934,12 @@ fn rewrite_body_line(
             break;
         };
         let (target_text, after) = tail.split_at(close);
-        match rewrite_link_target(target_text, from, target, in_target) {
+        let (before, destination, title) = split_destination(target_text);
+        match rewrite_link_target(destination, from, target, in_target) {
             Some(moved) => {
+                out.push_str(before);
                 out.push_str(&moved.text);
+                out.push_str(title);
                 if moved.kept_tail {
                     kept.push(moved.text);
                 }
@@ -942,6 +951,54 @@ fn rewrite_body_line(
     }
     out.push_str(rest);
     (out, count)
+}
+
+/// A link reference definition (`[label]: destination "title"`) whose
+/// destination names `from`, re-pointed as an inline link is, or `None` when
+/// the line is not one or names something else. At most three spaces of
+/// indent, and a label that is not empty and does not open with `^`: a
+/// footnote definition is prose, not a link.
+fn rewrite_definition(
+    line: &str,
+    from: &str,
+    target: &FoldTarget,
+    in_target: Option<usize>,
+    kept: &mut Vec<String>,
+) -> Option<(String, u32)> {
+    let body = line.trim_start_matches(' ');
+    if line.len() - body.len() > 3 {
+        return None;
+    }
+    let label_and_rest = body.strip_prefix('[')?;
+    let close = label_and_rest.find(']')?;
+    let label = &label_and_rest[..close];
+    if label.trim().is_empty() || label.starts_with('^') {
+        return None;
+    }
+    let after = label_and_rest[close + 1..].strip_prefix(':')?;
+    let (lead, destination, trail) = split_destination(after);
+    let moved = rewrite_link_target(destination, from, target, in_target)?;
+    let colon_end = line.len() - after.len();
+    let text = format!("{}{lead}{}{trail}", &line[..colon_end], moved.text);
+    if moved.kept_tail {
+        kept.push(moved.text);
+    }
+    Some((text, 1))
+}
+
+/// A link target split into what precedes the destination (whitespace and an
+/// opening `<`), the destination, and what follows it (a `>` and a title).
+/// The title is never re-pointed and is no part of a kept-tail reference.
+fn split_destination(text: &str) -> (&str, &str, &str) {
+    let start = text.len() - text.trim_start().len();
+    let rest = &text[start..];
+    if let Some(inner) = rest.strip_prefix('<')
+        && let Some(end) = inner.find('>')
+    {
+        return (&text[..=start], &inner[..end], &inner[end..]);
+    }
+    let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+    (&text[..start], &rest[..end], &rest[end..])
 }
 
 /// Re-point every path token on one referrer line that names `from` as its
@@ -3271,5 +3328,121 @@ mod tests {
             "{:?}",
             result.skipped
         );
+    }
+
+    /// A reference-style definition in a spec-root file is re-pointed as an
+    /// inline link is, its title and spacing kept
+    /// (scenarios/a-definition-and-a-title-follow-the-link-grammar.md).
+    #[test]
+    fn a_reference_definition_is_re_pointed_like_an_inline_link() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n\
+             [ref]: ../1234.1-staged/spec.md\n  [r2]: <../1234.1-staged/spec.md#a> \"Title\"\n",
+        );
+        write(
+            tmp.path(),
+            "060-beta/scenarios/x.md",
+            "---\nsection: S\n---\n\n[ref]: ../../1234.1-staged/spec.md\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(beta.contains("\n[ref]: ../050-alpha/spec.md\n"), "{beta}");
+        assert!(
+            beta.contains("\n  [r2]: <../050-alpha/spec.md#a> \"Title\"\n"),
+            "{beta}"
+        );
+        let scenario = read(tmp.path(), "060-beta/scenarios/x.md");
+        assert!(
+            scenario.contains("\n[ref]: ../../050-alpha/spec.md\n"),
+            "{scenario}"
+        );
+        let counts: Vec<(&str, u32)> = result
+            .rewritten
+            .iter()
+            .map(|file| (file.path.as_str(), file.count))
+            .collect();
+        assert_eq!(
+            counts,
+            [
+                ("specs/060-beta/scenarios/x.md", 1),
+                ("specs/060-beta/spec.md", 2)
+            ]
+        );
+        assert!(result.mentions.is_empty(), "{:?}", result.mentions);
+    }
+
+    /// A footnote definition is prose and a bare `<path>` is raw HTML, not an
+    /// autolink: neither is a link, so both stay as written, and `mentions`
+    /// lists them.
+    #[test]
+    fn a_footnote_definition_and_a_bare_angle_path_are_left_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let beta = "---\nstatus: done\ndependencies: []\n---\n\n\
+                    [^1]: 1234.1-staged\n<../1234.1-staged/spec.md>\n";
+        write(tmp.path(), "060-beta/spec.md", beta);
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(read(tmp.path(), "060-beta/spec.md"), beta);
+        let found: Vec<u32> = result.mentions.iter().map(|m| m.line).collect();
+        assert_eq!(found, [6, 7], "{:?}", result.mentions);
+    }
+
+    /// A link's title is not part of its destination: it is not re-pointed
+    /// and it never reaches a kept-tail reference.
+    #[test]
+    fn a_link_title_is_not_part_of_the_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n\
+             [t](../1234.1-staged/plan.md \"T (x)\")\n\
+             [u](../1234.1-staged/spec.md 'x')\n\
+             [v](../x.md \"see ../1234.1-staged/spec.md\")\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(
+            beta.contains("[t](../050-alpha/plan.md \"T (x)\")\n"),
+            "{beta}"
+        );
+        assert!(beta.contains("[u](../050-alpha/spec.md 'x')\n"), "{beta}");
+        assert!(
+            beta.contains("[v](../x.md \"see ../1234.1-staged/spec.md\")\n"),
+            "{beta}"
+        );
+        let kept: Vec<(u32, &str)> = result
+            .kept_tails
+            .iter()
+            .map(|k| (k.line, k.reference.as_str()))
+            .collect();
+        assert_eq!(kept, [(6, "../050-alpha/plan.md")]);
+    }
+
+    #[test]
+    fn a_destination_with_leading_space_is_still_re_pointed_and_keeps_its_space() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n[s]( ../1234.1-staged/spec.md)\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(beta.contains("[s]( ../050-alpha/spec.md)\n"), "{beta}");
     }
 }

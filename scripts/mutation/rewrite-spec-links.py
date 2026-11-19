@@ -412,4 +412,32 @@ MUTATIONS = [
         '',
         'rewrite_spec_links',
     ),
+    (
+        'M56 a reference-style definition is not re-pointed',
+        'src/primitives/rewrite_spec_links.rs',
+        '    if let Some(done) = rewrite_definition(line, from, target, in_target, kept) {\n        return done;\n    }\n',
+        '',
+        'rewrite_spec_links::tests::a_reference_definition_is_re_pointed_like_an_inline_link',
+    ),
+    (
+        'M57 a footnote definition is treated as a link definition',
+        'src/primitives/rewrite_spec_links.rs',
+        "    if label.trim().is_empty() || label.starts_with('^') {\n",
+        '    if label.trim().is_empty() {\n',
+        'rewrite_spec_links::tests::a_footnote_definition_and_a_bare_angle_path_are_left_alone',
+    ),
+    (
+        'M58 a link title is taken as part of its destination',
+        'src/primitives/rewrite_spec_links.rs',
+        '    (&text[..start], &rest[..end], &rest[end..])\n}\n',
+        '    let _ = end;\n    (&text[..start], rest, "")\n}\n',
+        'rewrite_spec_links::tests::a_link_title_is_not_part_of_the_path',
+    ),
+    (
+        'M59 the text before a link destination is dropped',
+        'src/primitives/rewrite_spec_links.rs',
+        '                out.push_str(before);\n',
+        '',
+        'rewrite_spec_links::tests::a_destination_with_leading_space_is_still_re_pointed_and_keeps_its_space',
+    ),
 ]
