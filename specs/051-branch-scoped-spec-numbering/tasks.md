@@ -18,6 +18,6 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 
 ## 38. A definition and a title follow the link grammar (scenario a-definition-and-a-title-follow-the-link-grammar)
 
-- [ ] Implement the behavior described in `scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
+- [x] Implement the behavior described in `scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
