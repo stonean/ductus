@@ -71,30 +71,30 @@ The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it ru
 
 ## 38. A none list item is no open question
 
-- [ ] Implement the behavior described in `scenarios/a-none-list-item-is-no-open-question.md`
+- [x] Implement the behavior described in `scenarios/a-none-list-item-is-no-open-question.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
 ## 39. A plan heading is matched without regard to case
 
-- [ ] Implement the behavior described in `scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
+- [x] Implement the behavior described in `scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
 ## 40. A bare port span names its remedy
 
-- [ ] Implement the behavior described in `scenarios/a-bare-port-span-names-its-remedy.md`
+- [x] Implement the behavior described in `scenarios/a-bare-port-span-names-its-remedy.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
 ## 41. The orphan check skips git-ignored local state
 
-- [ ] Implement the behavior described in `scenarios/orphan-check-skips-ignored-local-state.md`
+- [x] Implement the behavior described in `scenarios/orphan-check-skips-ignored-local-state.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
 ## 42. A header without a key keeps the previous table's keys
 
-- [ ] Implement the behavior described in `scenarios/promotion-coverage-header-without-a-key.md`
+- [x] Implement the behavior described in `scenarios/promotion-coverage-header-without-a-key.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
