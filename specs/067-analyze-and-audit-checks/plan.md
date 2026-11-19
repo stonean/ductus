@@ -80,7 +80,7 @@ The owner's answer (c) to the reopen-avoidance audit (2026-11-12): a rule alone 
 - **Fenced code and blockquotes are skipped, nothing else.** A line the shared `SkipScanner` reports inside a fence is not read, nor is a line opening with `>`. An HTML comment is read, since AC5 excludes only fences and blockquotes.
 - **Not status-gated.** The rule holds at every status, so a `draft` spec citing a line is as wrong as a `done` one.
 - **An artifact it cannot read** is recorded as the other families record one (`record_unreadable_artifact`).
-- **No history is read.** Nothing is grandfathered: `050-constitution`'s sweep removes this repository's citations before the family ships, and an adopter's are reported when that spec's analysis next runs, which neither the shipped CI template nor the hook does on its own (owner, 2026-11-17).
+- **No history is read.** Nothing is grandfathered: `050-constitution`'s sweep removes this repository's citations before the family ships, and an adopter's are reported when that spec's analysis next runs, which neither the shipped CI template nor the hook does on its own, since neither `framework/templates/ci/adopter-generators.yml` nor `framework/bootstrap/hooks/ductus-pre-commit` calls `check-artifacts` (owner, 2026-11-17).
 
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
@@ -150,4 +150,4 @@ The rule counts a new value in a response set the schema documents as closed as 
 - **Splitting each mixed scenario across specs** — rejected: it would rewrite each such requirement document to move part of its Behavior, when a pointer serves every reader.
 - **Reporting only a citation added since the spec's diff base** — rejected (owner, 2026-11-17): the family would read history to tell new from old and leave every existing citation unreported, where the strip removes them once.
 - **Detecting a prose line reference** ("lines 100-103") — rejected: a pattern broad enough to find one also flags a requirement such as the shipped hook's `# managed-by: ductus` sentinel on line 2 (`framework/bootstrap/ductus-procedure.md` §Hook Installation), so prose stays the rule's alone.
-- **Known limit:** a host whose last label is also a listed extension, such as `docs.rs` with a port, reads as a citation, the definition's own limit.
+- **Known limit:** a host whose last label is also a listed extension, such as `docs.rs` with a port, reads as a citation, the definition's own limit: `line_citations::find` takes a path with no `/` by its listed extension alone.

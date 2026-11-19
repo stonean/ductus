@@ -19,7 +19,7 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 
 ## Motivation
 
-022's data model had reached 99,953 bytes against a 50,000-byte read size, and trimming could not close the gap: measured by eight-word overlap, only 2 KB of its prose repeated another file. Its content was contract. The deterministic checks were one of its two largest slices with a single subject, so they became a spec of their own.
+022's data model had reached 99,953 bytes (`wc -c` at `fd8e44a6`, 2026-10-15) against a 50,000-byte read size, and trimming could not close the gap, since its content was contract. The deterministic checks were one of its two largest slices with a single subject, so they became a spec of their own.
 
 ## Artifact checks
 
