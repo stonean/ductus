@@ -1,15 +1,15 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-19T01:18:09Z
-analyzed-against: 6983d5af510e00a5de0d5a8444103e7a4c92ef1f
+last-run: 2026-11-19T22:38:28Z
+analyzed-against: 26d83ea4a5bf32620187190929fc90383f23afc4
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 9
 analyzed-digest:
-  data-model.md: b4209d91ef5401225341a84cb8ce4b75063516a20781258c2f2df09b1a05450c
-  plan.md: f2bb05f06fcc5323d50e6d44f38124d733c347d8d74dfc6766819a6fd1f080d2
-  review.md: fd43076da2bdafc626732af4f01131beb63a834997864597152a0a8fff1f5d5f
+  data-model.md: fc24ea0cd15beb50bc7d41645b824ba14194688459f145778be3269011ed482f
+  plan.md: a95511d4561cbb23cb1c45e6312a147f703c04efe038f0efea4b85f14803eb81
+  review.md: 1782658978960ffd452e4d92ecf004672a12a54a9c53cf85b9cf412c45a759ed
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -24,6 +24,7 @@ analyzed-digest:
   scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
   scenarios/process-waivers-file-lists.md: 3fb3b9e54f414691d28d984ba76cd48c7e1de4fe2ee67259a44ea8559da447dc
   scenarios/process-waivers-notices-flatten-stored-text.md: a0fe96d2f894add12b9ed470dfdc011ce1383b1528871c8d68ec64bb85d64c03
+  scenarios/record-paths-are-quoted-only-when-they-need-it.md: 729b1dccb47871d2a8f4fe1dc7e0cbe1449d92eb8c28004a1490859e88ff491d
   scenarios/review-base-includes-the-transition-commit.md: 10d6d341e7338ac19fc9f35c9d2f79960ebc73aca7bf5e702adad17924cd8518
   scenarios/review-scope-includes-uncommitted-work.md: 9864ae8c8bb85d0ab1606b222b983f6fe449f89b21580af7b0a1c4e644e45bba
   scenarios/review-scope-plan-affected-table-format.md: 501c1d9737e6d2b928318c02e1d13164817ba7c1054854cd599f14707caba767
@@ -37,7 +38,7 @@ analyzed-digest:
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
   spec.md: d08ad3fe3c22460d41bf0a9a26c3d9f8f3847d548ec29c6d4fe3869e5c89636e
-  tasks.md: 300a3103c4f5b152951ed6a2d7a82e84c3a00b06075e1851e3c934f801530f54
+  tasks.md: f534c65bba3e67010d10dd047939c4ac34f856da9c294fdf6437ce80246c70d1
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
@@ -56,25 +57,25 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  BE-COND-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-011: {verdict: addressed, cite: "scenarios/process-waivers-notices-flatten-stored-text.md#Behavior"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-RACE-003: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  CFG-CONST-001: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
-  CFG-ENV-008: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  CFG-CONST-003: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
 blocking: false
 dispositions:
-  fixed: 9
+  fixed: 0
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -84,7 +85,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 9 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -113,12 +114,4 @@ dispositions:
 
 ## Fixed in this run
 
-- grounding — The Motivation stated 022's data model at 99,953 bytes and only 2 KB of its prose repeated another file, with no commit or method for either; the size now cites wc -c at fd8e44a6, and the overlap figure, recorded nowhere, and the unsourced 'one of its two largest slices' are dropped (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
-- grounding — A stripped line-number citation decision said a host such as docs.rs with a port still reads as one, citing nothing; it now names EXTENSIONS, which lists rs (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- grounding — The Trade-offs said 022's 44,823 bytes are the same either way, beside a wc -c date that covered only the two data models; the figures now cite 391af75b, where all three held (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- grounding — The Resolved Question on two new specs said 022's 44,823 bytes are the same either way, with no method; it now cites wc -c at 391af75b (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
-- grounding — The closed-set decision's BE-COMPAT-001 paragraph said every reason the exec walker and the analyze steps supply is in the set, citing no source; it now names the emitters read at 680e4739 (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- grounding — The Overview said the primitives ship under 022, which no artifact states; it now says they were built under 022 before 08f0b199 split them out, whose message lists them (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- grounding — The bounded-results decision said 055's test sets the analysis record aside, naming no test; it now names write_review_and_write_analysis_keep_the_unmeasured_resolution in resolve_constitutions.rs, and cites rewrite_spec_links.rs for writing before it bounds (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- grounding — The gate-containment decision said parse_feature_dir already rules out .. and an absolute name, naming no file; it and the plan's other symbols cited in claims about existing code (classify_cross_spec_entry, holds_done_until_reviewed, design_subjects_match, exempt_renames, render_paths, bound_lists, RecordFreshness) now name their files (§Grounding (advisory)). — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- rule-assessment — BE-COMPAT-001: the plan described tasks 7, 14, 20 and 22's bounded results, each ceasing past the read size to carry inline a list that was inline at ductus-v0.59.11, without classifying the change as additive or breaking; the 'Freshness paths go to a file past the read size' section now classifies them breaking past the read size, as 063's plan does its own, and runtime/CHANGELOG.md labels them (6983d5af) — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+*None.*
