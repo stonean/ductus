@@ -43,7 +43,7 @@
 //! correct, and invisible to a table-shaped check. Widening to "any `--x` in
 //! any body" would report every prose mention of another command's flags.
 //!
-//! That narrowing is why an empty `findings` means *every tabled flag is
+//! That narrowing is why a zero `findings-count` means *every tabled flag is
 //! surfaced*, never *every documented flag is surfaced*. [`examined`] and
 //! [`with_flags_table`] are what let a caller say which of those it is
 //! (`QUAL-CLAIM-001`).
@@ -78,7 +78,7 @@ const COMMANDS_DIR: &str = "framework/commands";
 /// file that cannot be written. The check itself returns no error: an unreadable command file, a command directory that
 /// cannot be listed, and a directory or file that is a link leaving the
 /// project (never listed or opened, `BE-INPUT-004`) are each a
-/// [`CommandFlagSkip`], so an empty `findings` is not mistaken for a verified
+/// [`CommandFlagSkip`], so a zero `findings-count` is not mistaken for a verified
 /// tree.
 pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFlagsResult> {
     bound(repo, compute(repo))

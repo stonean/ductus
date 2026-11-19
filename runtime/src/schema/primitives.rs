@@ -2459,7 +2459,7 @@ pub struct ReadSpecResult {
     ///
     /// Present so a caller can tell *"every scenario was examined and none
     /// carries a question"* from *"a scenario could not be examined"* — an
-    /// empty `scenario-open-questions` alone means both. An unreadable
+    /// zero `scenario-open-questions-count` alone means both. An unreadable
     /// scenario is never escalated into a `done`-blocking finding (nothing
     /// can be proven about a file that will not parse), but it is reported
     /// rather than dropped, per `QUAL-CLAIM-001` (spec 046).
@@ -5159,8 +5159,8 @@ pub struct PrunePlanSummary {
     pub missing: bool,
     /// The spec's frontmatter status.
     pub status: String,
-    /// `##` sections read, inside the design record and out, so an empty
-    /// `sections` over none reads differently from one over sections all in
+    /// `##` sections read, inside the design record and out, so a zero
+    /// `sections-count` over none reads differently from one over sections all in
     /// the record. Named apart from a walk's `examined`, which counts
     /// features, because the two halves of a result share one key space.
     pub sections_examined: u32,
@@ -7267,8 +7267,8 @@ pub struct CheckArtifactsResult {
     /// Deliberately **not** widened to account for [`Self::skipped`]:
     /// redefining it would silently change the verdict the families
     /// predating spec 045 produce. The assurance lives in the pair —
-    /// `clean` with an empty `skipped` is verified-clean, `clean` with a
-    /// non-empty `skipped` is partially examined.
+    /// `clean` with a zero `skipped-count` is verified-clean, `clean` with a
+    /// non-zero one is partially examined.
     pub clean: bool,
     /// Targets no family could examine. Every family records here a target
     /// it could not examine, with a reason from the closed set
@@ -7708,7 +7708,7 @@ pub struct OrphanedReference {
     pub migration: String,
 }
 
-/// A referrer the check could not read, recorded so an empty `findings` is
+/// A referrer the check could not read, recorded so a zero `findings-count` is
 /// never mistaken for a verified-clean tree.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -7878,7 +7878,7 @@ pub struct CheckCorpusLinksResult {
     /// Entries in `broken`, in either form.
     pub broken_count: usize,
     /// Markdown files actually read, repo-relative — the subject the verdict
-    /// describes. Zero examined with zero broken is not a clean corpus.
+    /// describes. A zero `examined-count` with a zero `broken-count` is not a clean corpus.
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub examined: Option<Vec<String>>,
@@ -7926,7 +7926,7 @@ pub struct CheckCorpusLinksResult {
     /// a bare `examined` list does not say which one ran.
     pub scope: LinkScope,
     /// Set when the scan could not establish a subject at all: the spec root
-    /// is absent or unreadable, so zero examined means *nothing was looked
+    /// is absent or unreadable, so a zero `examined-count` means *nothing was looked
     /// at* rather than *nothing is broken*. Empty otherwise.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub guidance: String,
@@ -7997,7 +7997,7 @@ pub struct ReferenceReach {
     pub exempt: Vec<ExemptSection>,
 }
 
-/// A file the check could not read, recorded so an empty `findings` is never
+/// A file the check could not read, recorded so a zero `findings-count` is never
 /// mistaken for a verified-clean corpus.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -8069,7 +8069,7 @@ pub struct CheckStepReferencesResult {
     /// resolved: a numbered list elsewhere in the file restarts at 1 and is a
     /// different list. (A command's reference, whose
     /// sub-procedures restart the same way, is its own file under
-    /// `framework/reference/` and outside this step subject.) Present so an empty `findings` is not read as *every
+    /// `framework/reference/` and outside this step subject.) Present so a zero `findings-count` is not read as *every
     /// reference in the file resolves* (`QUAL-CLAIM-001`).
     #[serde(default)]
     pub references_out_of_subject: u32,
@@ -8120,7 +8120,7 @@ pub struct CommandFlagFinding {
     pub reason: String,
 }
 
-/// A command file the check could not read, recorded so an empty `findings`
+/// A command file the check could not read, recorded so a zero `findings-count`
 /// is never mistaken for a verified-clean surface.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -8231,8 +8231,8 @@ pub struct UnfoldedSpec {
 
 /// Result for `check-unfolded-specs`.
 ///
-/// Empty `unfolded` with a non-zero `examined` is **examined and clean**;
-/// empty with `examined` zero means the corpus held no feature directories
+/// A zero `unfolded-count` with a non-zero `examined` is **examined and clean**;
+/// zero with `examined` zero means the corpus held no feature directories
 /// at all, which is not the same claim (`QUAL-CLAIM-001`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -8353,12 +8353,12 @@ pub struct SourceMention {
 
 /// Result for `rewrite-spec-links`.
 ///
-/// An empty `rewritten` with a non-zero `examined` and an empty `skipped` is
-/// **examined and nothing pointed here**. A non-empty `skipped` names
-/// files that were not read, which the claim does not cover; and empty
+/// A zero `rewritten-count` with a non-zero `examined` and a zero `skipped-count` is
+/// **examined and nothing pointed here**. A non-zero `skipped-count` names
+/// files that were not read, which the claim does not cover; and zero
 /// with `examined` zero means no file was scanned at all, which is not the
 /// same claim (`QUAL-CLAIM-001`). A non-zero `refused-count`, inline in both
-/// forms, means the sweep did not complete: no empty `rewritten` or clean
+/// forms, means the sweep did not complete: no zero `rewritten-count` or clean
 /// re-run is claimed until a run's `refused-count` is zero.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

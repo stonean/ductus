@@ -156,7 +156,7 @@ const ATTRIBUTION_WATERMARK: &str = "watermark";
 
 /// The `skipped` reason for a referrer, or a managed path a referrer names,
 /// that is or runs through a symbolic link leaving the project: never read or
-/// probed (`BE-INPUT-004`), and named so an empty `findings` is not read as
+/// probed (`BE-INPUT-004`), and named so a zero `findings-count` is not read as
 /// examined over it.
 pub(crate) const LEAVES_PROJECT: &str = "a link that leaves the project; not read or probed";
 

@@ -47,7 +47,7 @@
 //! so resolving an Instructions reference against them — or the reverse —
 //! would manufacture findings. The subject is therefore the **Instructions**
 //! section alone, and [`references_out_of_subject`] counts the `step N`
-//! mentions elsewhere in each file so an empty `findings` is never read as
+//! mentions elsewhere in each file so a zero `findings-count` is never read as
 //! *every reference in the file resolves* (`QUAL-CLAIM-001`).
 //!
 //! A qualified reference — `groom's step 3` — names another file's procedure

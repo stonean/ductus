@@ -7,9 +7,9 @@
 //! and stops with "nothing to fold" while thousands are pending, so a step
 //! that asks whether a list is empty reads the `-count`.
 //!
-//! The descriptions and schema doc comments of `DESCRIBED` primitives are held
-//! to the same rule, since a caller reads them as the contract for the same
-//! results.
+//! Every served primitive's description and schema doc comments are held to
+//! the same rule against that primitive's own bounded lists, since a caller
+//! reads them as the contract for the same results.
 //!
 //! The bounded list names are derived from the served tools' output schemas
 //! (the property `X` beside `X-count`, in a tool that also has `lists-file`),
@@ -46,9 +46,31 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     ),
 ];
 
-/// Primitives whose descriptions are held to the rule. Others still state an
-/// emptiness by the list and join this set as each is reworded.
-const DESCRIBED: &[&str] = &["derive-dependencies", "derive-references"];
+/// Phrases a description may keep although they name a bounded list's
+/// emptiness (a bare name too), each with the reason it is not the defect:
+/// (tool, matched phrase, reason).
+const ALLOWED_DESCRIPTIONS: &[(&str, &str, &str)] = &[
+    (
+        "compute-review-scope",
+        "empty scope",
+        "defined by a zero `scope-count`, \"never an absent list\": the count is the reading",
+    ),
+    (
+        "discover-rule-files",
+        "non-empty unreadable",
+        "names what the file form moves out of the result, not how to judge a result",
+    ),
+    (
+        "lint-markdown",
+        "no violations",
+        "what a clean lint is, not a reading of the `violations` list",
+    ),
+    (
+        "prune-project",
+        "no entries",
+        "an unreadable file contributes no entries: a fact about the file, not the list",
+    ),
+];
 
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -130,35 +152,43 @@ fn is_array(property: &Value) -> bool {
 /// The names that are a list with an inline `-count` in a tool whose result
 /// can move to a file.
 fn bounded_list_names(schemas: &[(String, serde_json::Map<String, Value>)]) -> BTreeSet<String> {
-    let mut lists = BTreeSet::new();
-    for (_, schema) in schemas {
-        let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
-            continue;
-        };
-        for (name, property) in properties {
-            if is_array(property)
+    schemas
+        .iter()
+        .flat_map(|(_, schema)| bounded_lists_of(schema))
+        .collect()
+}
+
+/// One tool's own bounded lists: the same rule over its one output schema.
+fn bounded_lists_of(schema: &serde_json::Map<String, Value>) -> BTreeSet<String> {
+    let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
+        return BTreeSet::new();
+    };
+    properties
+        .iter()
+        .filter(|(name, property)| {
+            is_array(property)
                 && properties.contains_key("lists-file")
                 && properties.contains_key(&format!("{name}-count"))
-            {
-                lists.insert(name.clone());
-            }
-        }
-    }
-    lists
+        })
+        .map(|(name, _)| name.clone())
+        .collect()
 }
 
 /// Every phrase in `text` that states a bounded list's emptiness by the list:
-/// `empty`, `non-empty`, `no` or `zero` before a backticked name, or a
-/// backticked name followed by `is`/`are` `empty`/`absent`. A hyphenated
-/// `non-zero` is a count's reading and does not match.
-fn emptiness_by_list(text: &str, names: &BTreeSet<String>) -> Vec<String> {
+/// `empty`, `non-empty`, `no` or `zero` before a backticked name (before the
+/// name bare too, when `bare`), or a backticked name followed by `is`/`are`
+/// `empty`/`absent`. A hyphenated `non-zero` or a `-count` is a count's
+/// reading and does not match.
+fn emptiness_by_list(text: &str, names: &BTreeSet<String>, bare: bool) -> Vec<String> {
     let alternation = names
         .iter()
         .map(|name| regex::escape(name))
         .collect::<Vec<_>>()
         .join("|");
+    let tick = if bare { "`?" } else { "`" };
+    let end = if bare { "(?:`|[\\s,.;:)]|$)" } else { "`" };
     let pattern = Regex::new(&format!(
-        "(?i)(?:^|[^-\\w])(?:empty|non-empty|no|zero)\\s+`(?:{alternation})`\
+        "(?i)(?:^|[^-\\w])(?:empty|non-empty|no|zero)\\s+{tick}(?:{alternation}){end}\
          |`(?:{alternation})`\\s+(?:is|are)\\s+(?:empty|absent)"
     ))
     .unwrap();
@@ -166,7 +196,9 @@ fn emptiness_by_list(text: &str, names: &BTreeSet<String>) -> Vec<String> {
         .find_iter(text)
         .map(|found| {
             let phrase = found.as_str();
-            let phrase = phrase.trim_start_matches(|c: char| !c.is_alphanumeric() && c != '`');
+            let phrase = phrase
+                .trim_start_matches(|c: char| !c.is_alphanumeric() && c != '`')
+                .trim_end_matches(|c: char| !c.is_alphanumeric() && c != '`');
             phrase.split_whitespace().collect::<Vec<_>>().join(" ")
         })
         .collect()
@@ -199,7 +231,7 @@ fn the_phrase_scan_finds_an_emptiness_stated_by_the_list_and_only_that() {
     let stated = "An empty `unfolded` with a non-zero `rewritten` means nothing; reading an \n\
                   empty `rewritten` against it, and `unfolded` is empty too.";
     assert_eq!(
-        emptiness_by_list(stated, &names),
+        emptiness_by_list(stated, &names, false),
         [
             "empty `unfolded`",
             "empty `rewritten`",
@@ -209,7 +241,12 @@ fn the_phrase_scan_finds_an_emptiness_stated_by_the_list_and_only_that() {
     let by_count = "A zero `unfolded-count` with a non-zero `examined` means nothing; \
                     reading a zero `rewritten-count`, and the `unfolded` list is read.";
     let none: Vec<String> = Vec::new();
-    assert_eq!(emptiness_by_list(by_count, &names), none);
+    assert_eq!(emptiness_by_list(by_count, &names, false), none);
+    assert_eq!(
+        emptiness_by_list("empty unfolded and a zero unfolded-count", &names, true),
+        ["empty unfolded"]
+    );
+    assert_eq!(emptiness_by_list("empty unfolded", &names, false), none);
 }
 
 #[tokio::test]
@@ -225,7 +262,7 @@ async fn no_command_step_states_a_bounded_lists_emptiness_by_the_list() {
         }
         examined += 1;
         let file = path.file_name().unwrap().to_string_lossy().to_string();
-        for phrase in emptiness_by_list(&fs::read_to_string(&path).unwrap(), &names) {
+        for phrase in emptiness_by_list(&fs::read_to_string(&path).unwrap(), &names, false) {
             *found.entry((file.clone(), phrase)).or_default() += 1;
         }
     }
@@ -261,26 +298,54 @@ async fn no_command_step_states_a_bounded_lists_emptiness_by_the_list() {
 
 #[tokio::test]
 async fn no_primitive_description_states_a_bounded_lists_emptiness_by_the_list() {
-    let names = bounded_list_names(&served_output_schemas().await);
+    let schemas = served_output_schemas().await;
     let descriptions = served_descriptions().await;
-    for tool in DESCRIBED {
-        assert!(
-            descriptions.iter().any(|(name, _)| name == tool),
-            "no description was read for `{tool}`"
-        );
+    let mut bounded_tools = 0;
+    let mut found: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for (tool, schema) in &schemas {
+        let names = bounded_lists_of(schema);
+        if names.is_empty() {
+            continue;
+        }
+        bounded_tools += 1;
+        let texts: Vec<_> = descriptions
+            .iter()
+            .filter(|(name, _)| name == tool)
+            .collect();
+        assert!(!texts.is_empty(), "no description was read for `{tool}`");
+        for (_, text) in texts {
+            for phrase in emptiness_by_list(text, &names, true) {
+                *found.entry((tool.clone(), phrase)).or_default() += 1;
+            }
+        }
     }
-    let found: BTreeSet<(String, String)> = descriptions
-        .iter()
-        .filter(|(tool, _)| DESCRIBED.contains(&tool.as_str()))
-        .flat_map(|(tool, text)| {
-            emptiness_by_list(text, &names)
-                .into_iter()
-                .map(|phrase| (tool.clone(), phrase))
+    assert!(
+        bounded_tools > 20,
+        "only {bounded_tools} tools have a bounded list, so the scan went quiet"
+    );
+    let unlisted: Vec<_> = found
+        .keys()
+        .filter(|(tool, phrase)| {
+            !ALLOWED_DESCRIPTIONS
+                .iter()
+                .any(|(t, p, _)| t == tool && p.eq_ignore_ascii_case(phrase))
         })
         .collect();
     assert!(
-        found.is_empty(),
+        unlisted.is_empty(),
         "a description states a bounded list's emptiness by the list, which is absent when the \
-         result is `form: \"file\"`; say it by the `-count`, which both forms carry: {found:?}"
+         result is `form: \"file\"`; say it by the `-count`, which both forms carry: {unlisted:?}"
+    );
+    let stale: Vec<_> = ALLOWED_DESCRIPTIONS
+        .iter()
+        .filter(|(t, p, _)| {
+            !found
+                .keys()
+                .any(|(tool, phrase)| tool == t && phrase.eq_ignore_ascii_case(p))
+        })
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "an allowed phrase no longer appears, so its entry hides nothing: {stale:?}"
     );
 }

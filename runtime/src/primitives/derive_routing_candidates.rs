@@ -25,7 +25,7 @@
 //!
 //! **No candidates and no candidates *derivable* are different answers.** Each
 //! source lands in `sources-examined` or in `skipped`, never both and never
-//! neither, so an empty `candidates` list means *examined and matched nothing*
+//! neither, so a zero `candidates-count` means *examined and matched nothing*
 //! only when `skipped` is empty (`QUAL-CLAIM-001`).
 //!
 //! Read-only but for the list file past the read size. Defined by

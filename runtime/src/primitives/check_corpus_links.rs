@@ -901,7 +901,7 @@ mod tests {
         assert_eq!(result.broken, [] as [BrokenCorpusLink; 0]);
         assert_eq!(result.excluded_by_construction, 1);
         assert_eq!(result.examined, [] as [String; 0]);
-        // Zero examined is not a clean corpus, and the result says so.
+        // A zero `examined-count` is not a clean corpus, and the result says so.
         assert_ne!(result.guidance, "");
     }
 
