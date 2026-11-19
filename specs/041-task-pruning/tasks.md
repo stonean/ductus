@@ -34,6 +34,6 @@ Owed after this task, in order: 041's review of its change; the pre-done criteri
 
 ## 28. An open fenced block or comment is not examined
 
-- [ ] Implement the behavior described in `scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+- [x] Implement the behavior described in `scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
