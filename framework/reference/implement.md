@@ -12,11 +12,16 @@ The numbered steps in `implement.md`'s Instructions invoke the primitives that a
 - Read the spec file for acceptance criteria and contracts.
 - If a scenario is targeted, read the scenario file for scenario-specific context, behavior, and edge cases. The scenario scopes which part of the feature is the primary focus for this implementation session.
 - **Recompute dependencies (safety net).** Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. A non-zero `unwritable-count` counts specs whose derived `dependencies:` cannot be written without breaking their frontmatter: name each, from `unwritable` or, past the read size, the file `lists-file` names, and say to edit that key by hand, since the pre-commit hook stops every commit until then. A non-zero `unparseable-count` counts specs whose frontmatter never closes: name each the same way, as not derived, never as in sync. Neither stops this command. Do not pass `--write` from this command.
-- Do not read `system.md`, `events.md`, `errors.md` or source code at setup; per task read only the source files its plan Affected Files rows name, and at completion tally the checkboxes with `read-tasks` without re-reading the plan.
 
 ## Stuck-detection details
 
 When `check-stuck` (step 3) reports stuck, surface the cycle to the user with this message: `Task {N} ({title}) has been touched in {count} prior implement runs without completing. Consider decomposing it into smaller subtasks before continuing.` Pause and wait for user direction; do not auto-decompose. The threshold of 3 is fixed (not configurable in v1) — smallest count that distinguishes routine multi-session work from a cycle.
+
+## Progressive context loading
+
+- **At setup:** read only the spec, plan, tasks, and scenario file (if targeted). Do NOT read `system.md`, `events.md`, `errors.md`, or source code yet.
+- **Per task:** read only the source files relevant to that task from the plan's affected files list.
+- **At completion:** tally the `tasks.md` checkboxes (primitive: `read-tasks`). The criteria are `/{project}:review`'s to verify, so none is re-read here. Do NOT re-read the full plan.
 
 ## Walk through tasks (per task, in order)
 
