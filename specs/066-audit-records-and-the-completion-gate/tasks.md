@@ -58,6 +58,6 @@ Owed after this task (2026-11-19): nothing. 066 itself is `done` (`0c4d20fc`), a
 
 ## 28. Record paths are quoted only when they need it (scenario record-paths-are-quoted-only-when-they-need-it)
 
-- [ ] Implement the behavior described in `scenarios/record-paths-are-quoted-only-when-they-need-it.md`
+- [x] Implement the behavior described in `scenarios/record-paths-are-quoted-only-when-they-need-it.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
