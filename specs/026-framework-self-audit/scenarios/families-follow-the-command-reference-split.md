@@ -21,7 +21,7 @@ Each changed family was proven against a seeded defect before 071 landed: a plan
 
 ## Edge Cases
 
-- `audit`'s reference is maintainer-only and in no Shared Files row, so a `§` pointer into it would stay `qualified`, unjudged by Family 39. None exists: `audit.md` names the file as a whole. Family 4 skips it through the command's file-scope marker, and Family 28 reads it as its subject.
+- `audit`'s reference is maintainer-only and in no Shared Files row, so Family 39 would judge a `§` pointer into it as `qualified`, against the documents its line names, as it has judged every `qualified` reference since 067's `shared-constitution-references-are-judged`. None exists: `audit.md` names the file as a whole. Family 4 skips it through the command's file-scope marker, and Family 28 reads it as its subject.
 - A command with no reference (`amend`, `target`, `link`, `help`) has no reference file and is in no family's reference arm.
 
 ## Open Questions
