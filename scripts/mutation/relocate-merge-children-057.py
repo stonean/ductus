@@ -68,8 +68,15 @@ MUTATIONS = [
     (
         'M8 a renamed legacy key loses its lines',
         'src/primitives/relocate_audit_records.rs',
-        '                let _ = writeln!(out, "{current}: {value}");\n            } else {\n                out.push_str(entry.line);\n                out.push(\'\\n\');\n            }\n            for child in &entry.children {',
-        '                let _ = writeln!(out, "{current}: {value}");\n                continue;\n            } else {\n                out.push_str(entry.line);\n                out.push(\'\\n\');\n            }\n            for child in &entry.children {',
+        '                    let _ = writeln!(out, "{current}: {value}");\n                }\n            } else {\n                out.push_str(entry.line);\n                out.push(\'\\n\');\n            }\n            for child in &entry.children {',
+        '                    let _ = writeln!(out, "{current}: {value}");\n                }\n                continue;\n            } else {\n                out.push_str(entry.line);\n                out.push(\'\\n\');\n            }\n            for child in &entry.children {',
         'relocate_audit_records::tests::a_renamed_legacy_key_keeps_its_children',
+    ),
+    (
+        'M9 a legacy key is renamed beside its current spelling',
+        'src/primitives/relocate_audit_records.rs',
+        '                if let Some(kept) = entries.iter().find(|other| other.key == current) {',
+        '                if let Some(kept) = entries.iter().find(|other| other.key == "\\0") {',
+        'relocate_audit_records::tests::a_legacy_key_beside_its_current_spelling_is_dropped_not_duplicated',
     ),
 ]

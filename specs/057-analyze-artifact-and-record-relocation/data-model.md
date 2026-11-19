@@ -70,6 +70,9 @@ A fixed skeleton, rendered whole on every run (AC14), mirroring `review.md`:
 ## Hard failures
 ## Blocking findings
 ## Advisory findings
+## Deferred to other specs
+## Waived rules        (only when a rule was waived)
+## Contradictions
 ## Unexamined targets
 ## Fixed in this run
 ```

@@ -2566,7 +2566,11 @@ its version and date.
   compares a key's whole value for `disagreements`, and no longer ends a
   `review:` or `analyze:` block at a blank line. Before, a multi-line key the
   block did not override was emptied while the call reported success. Input
-  with no multi-line key merges as before.
+  with no multi-line key merges as before. An existing artifact holding both
+  `reviewed-at` and `last-run` keeps `last-run` alone (it was written a second
+  time, a duplicate key `validate-frontmatter` reports as a hard fail), the
+  dropped spelling is named in `disagreements` when its value differs, and a
+  renamed key with an empty value is written without a trailing space.
 - **`ductus exec` no longer fails a walk when a warning cannot reach stderr
   (spec 022; its review of 2026-11-19).** The walker warns on stderr for each
   stdin line or envelope it ignores (a blank or unparseable line, a response

@@ -15,7 +15,7 @@ A key is moved, kept, renamed or dropped together with the lines that belong to 
 ## Edge Cases
 
 - **A one-line flow collection** (`key: [a, b]`) has no indented lines and is carried on its key line.
-- **A multi-line flow collection** is not grouped: its lines stay in order when its key is kept; the record is written in block style, so none is expected.
+- **A multi-line flow collection** is grouped like any other value: its indented continuation lines belong to its key, and are carried, replaced or dropped with it; a continuation at column zero is not grouped, and stays in order when its key is kept. The record is written in block style, so none is expected.
 - **A blank line between two top-level keys** is dropped, as before.
 
 ## Open Questions

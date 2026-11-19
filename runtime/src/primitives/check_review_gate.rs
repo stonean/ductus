@@ -192,7 +192,7 @@ pub(crate) fn run_with_lint(
 
     // Gate check 3: every declared `cross-spec-impact` entry is discharged.
     //
-    // Ahead of the `review:` block because a spec carrying an obligation
+    // Ahead of the review record because a spec carrying an obligation
     // nobody has discharged is not a candidate for `done`, so whether its
     // review is fresh does not yet matter.
     let cross_spec =
@@ -1277,7 +1277,7 @@ fn links_back(path: &Path, specs_root: &str, feature: &str, depth: usize) -> boo
 /// The cross-spec-impact gate check: `Some(blocked)` when any declared entry
 /// is not discharged, `None` when every entry is (including the empty case).
 ///
-/// Ordered ahead of the `review:` block because a spec carrying an obligation
+/// Ordered ahead of the review record because a spec carrying an obligation
 /// nobody has discharged is not a candidate for `done`, so whether its review
 /// is fresh does not yet matter.
 ///
@@ -2066,7 +2066,7 @@ mod tests {
         assert_eq!(result.cross_spec_impact, [] as [CrossSpecImpactEntry; 0]);
     }
 
-    /// The check sits ahead of the `review:` block, so an undischarged
+    /// The check sits ahead of the review record, so an undischarged
     /// obligation is reported even on a spec that has never been reviewed —
     /// whether the review is fresh does not yet matter.
     #[test]
@@ -2779,11 +2779,10 @@ mod tests {
         text.push_str(body);
         fs::write(&spec, text).unwrap();
 
-        // In pipeline order: the review's digest, then its block, and only
-        // then the analysis — which digests the `spec.md` the review just
-        // rewrote. Taking the analyze digest first would leave the fixture
-        // permanently stale, because the `review:` block is one of its
-        // subjects. That is the real ordering constraint, not an artefact of
+        // In pipeline order: the review's digest, then its record, and only
+        // then the analysis — which digests the `review.md` the review just
+        // wrote. Taking the analyze digest first would leave the fixture
+        // permanently stale, because `review.md` is one of its subjects. That is the real ordering constraint, not an artefact of
         // the fixture.
         let contracts = crate::primitives::analyze_subjects::subject_digest(
             &dir,

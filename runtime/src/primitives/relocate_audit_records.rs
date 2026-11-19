@@ -6,8 +6,8 @@
 //!
 //! ## Why a primitive rather than a script
 //!
-//! The corpus is 54 specs in this repository alone, and adopters have their
-//! own. `framework/migrations/criterion-label-backfill.md` settled the same
+//! A corpus holds one spec per feature, each with two blocks to move, and
+//! adopters have their own. `framework/migrations/criterion-label-backfill.md` settled the same
 //! question for the same reason: its sweep runs through the primitive "never by
 //! hand — 700 criteria across 49 specs in this repository's own backfill, where
 //! a hand edit is a silent renumbering waiting to happen." A shell script
@@ -29,10 +29,10 @@
 //! **Silently pick a winner when both sides carry a value.** Every spec in a
 //! pre-migration corpus already has a `review.md`, so "the artifact exists"
 //! is the *normal* case for the review half, not a conflict to refuse — the
-//! block is merged into the artifact's frontmatter instead. The spec block
+//! block is merged into the artifact's frontmatter instead. A key is compared
+//! and carried with its whole value, indented lines included. The spec block
 //! wins on a disagreement, because it is the copy every gate actually read,
-//! a key is compared and carried with its whole value, indented lines
-//! included, and each disagreeing key is **reported**: 031 and 041 are exactly why a
+//! and each disagreeing key is **reported**: 031 and 041 are exactly why a
 //! migration must not resolve that difference quietly.
 //!
 //! `analysis.md` almost never exists before this, so its half is nearly always a
@@ -275,7 +275,8 @@ fn render_artifact(
         let block_values = block_values(lines);
         // Each entry — a key line and the lines of its value — is carried,
         // renamed or dropped as a unit.
-        for entry in entries(existing_fm.lines()) {
+        let entries = entries(existing_fm.lines());
+        for entry in &entries {
             // A key the block spells differently is the same field, so it is
             // compared and dropped rather than carried forward beside its
             // other spelling. See [`LEGACY_ALIASES`].
@@ -291,11 +292,25 @@ fn render_artifact(
                 continue;
             }
             if let Some(current) = legacy_alias(entry.key) {
+                // The artifact already spelling the field the current way
+                // holds the one value there is to keep: the legacy spelling
+                // is dropped, and named when it differs, so no key is written
+                // twice.
+                if let Some(kept) = entries.iter().find(|other| other.key == current) {
+                    if kept.value() != entry.value() {
+                        disagreements.push(format!("{file}:{}", entry.key));
+                    }
+                    continue;
+                }
                 // The block carries no value for this field, so the
                 // artifact's is the only one there is — renamed rather than
                 // emitted under a spelling nothing reads any more.
                 let value = entry.line.split_once(':').map_or("", |(_, v)| v.trim());
-                let _ = writeln!(out, "{current}: {value}");
+                if value.is_empty() {
+                    let _ = writeln!(out, "{current}:");
+                } else {
+                    let _ = writeln!(out, "{current}: {value}");
+                }
             } else {
                 out.push_str(entry.line);
                 out.push('\n');
@@ -971,7 +986,7 @@ mod tests {
         run(&args(), tmp.path()).unwrap();
         let fm = frontmatter_of(&dir.join("review.md"));
         assert!(
-            fm.contains("last-run: \n  at: 2026-07-04T00:00:00Z\n"),
+            fm.contains("last-run:\n  at: 2026-07-04T00:00:00Z\n"),
             "{fm}"
         );
         assert!(!fm.contains("reviewed-at"), "{fm}");
@@ -1047,5 +1062,28 @@ mod tests {
         let fm = frontmatter_of(&dir.join("review.md"));
         assert!(!fm.contains("rule: X"), "{fm}");
         assert!(fm.contains("waivers: []"), "{fm}");
+    }
+
+    /// An artifact holding both spellings of the instant keeps the current
+    /// one only: the legacy spelling is dropped, not renamed into a second
+    /// `last-run`, and a differing value is named.
+    #[test]
+    fn a_legacy_key_beside_its_current_spelling_is_dropped_not_duplicated() {
+        let spec = "---\nstatus: done\ndependencies: []\nreview:\n  must-violations: 0\n---\n\n# 001 — X\n";
+        let tmp = repo(spec);
+        let dir = tmp.path().join("specs/001-x");
+        fs::write(
+            dir.join("review.md"),
+            format!(
+                "{REVIEW_HEAD}reviewed-at: 2026-07-04T00:00:00Z\nlast-run: 2026-07-05T00:00:00Z\n---\n\n# Review — 001-x\n"
+            ),
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.disagreements, ["review.md:reviewed-at"]);
+        let fm = frontmatter_of(&dir.join("review.md"));
+        assert_eq!(fm.matches("last-run:").count(), 1, "{fm}");
+        assert!(fm.contains("last-run: 2026-07-05T00:00:00Z"), "{fm}");
+        assert!(!fm.contains("reviewed-at"), "{fm}");
     }
 }

@@ -8,7 +8,7 @@
 //! subject from "what the analysis read" to "what happened to be committed at
 //! the time". Those coincide only when the working tree is clean, and at the
 //! moment analyze runs it usually is not: `/{project}:review` has just written
-//! `review.md` and the spec's `review:` block, and `mark-task` and
+//! `review.md`, and `mark-task` and
 //! `mark-criterion` rewrote `tasks.md` and `spec.md` minutes before that. The
 //! consequence was a gate that blocked records it should have passed — the
 //! paths the analysis *had* read came back as changes on the next commit — and
