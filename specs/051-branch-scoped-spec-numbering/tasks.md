@@ -1,5 +1,5 @@
 ---
-next-task: 38
+next-task: 39
 ---
 
 # 051 — Branch-scoped spec numbering Tasks
@@ -15,3 +15,9 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] A test per primitive in which a file changes between its read and its write shows the write refused and the other writer's change kept, each failing under its mutant
 
 - **Done when**: Neither primitive overwrites a change made between its read and its write, and a refused referrer is named in the result, proven by tests their mutants turn red; the whole `cargo test` passes; and 051's next review reads the change.
+
+## 38. A definition and a title follow the link grammar (scenario a-definition-and-a-title-follow-the-link-grammar)
+
+- [ ] Implement the behavior described in `scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
