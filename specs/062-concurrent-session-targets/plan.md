@@ -171,7 +171,9 @@ unidentified read-modify-write that skipped the lock because the directory
 did not exist yet could interleave with it and lose `cli-config-dir` or the
 default's target. The directory is self-ignoring, so taking the lock leaves
 `git status` clean (AC7). Only the read-only peek (`dashboard`, the exec seed)
-locks just when the directory already exists, so a view creates nothing. On a
+locks just when the directory already exists, so a view creates no directory
+and writes no session record; its lock can still create `.lock` and the
+directory's `.gitignore`. On a
 legacy layout nothing is per process and no lock is taken.
 
 The lock is what makes AC4 and AC18 hold. Two processes writing at once each

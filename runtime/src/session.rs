@@ -1182,9 +1182,12 @@ fn resolve_unidentified(repo: &Path) -> Result<Resolution> {
     })
 }
 
-/// What [`resolve`] would answer for `identity` at `now`, with **nothing
-/// written and nothing consumed**: no adoption pinned, no `used-at` refreshed,
-/// no notice delivered, and no sessions directory created.
+/// What [`resolve`] would answer for `identity` at `now`, with **no session
+/// record written and nothing consumed**: no adoption pinned, no `used-at`
+/// refreshed, no notice delivered, and no sessions directory created. When the
+/// sessions directory already exists the view takes its lock, which can create
+/// `.lock` and, once held, the directory's self-ignoring `.gitignore` (see
+/// [`lock_if_shared`]).
 ///
 /// For a caller that must not perform the resolution a command owns: the
 /// `ductus exec` seed, which runs before the walked command's own
