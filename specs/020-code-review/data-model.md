@@ -150,7 +150,7 @@ defect rather than a clean result.
 | `## Acceptance criteria` | Only when the run judged criteria: each judged criterion, met or not met, with its note. Added by 066's task 27 |
 | `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
 | `## Skipped passes` | Always (empty when none) |
-| `## Excluded from scope` | Always (`*None.*` when none). Each path the scope left to another spec, with the specs that claimed it, and each path a fix round left out. Added by 079 |
+| `## Excluded from scope` | Always (`*None.*` when none). The paths the scope and the fix rounds left out, as `ductus write-review --help` states. Added by 079 |
 | `## Unexamined governance` | Always (empty when none). Added by 055 |
 
 ### Finding record
