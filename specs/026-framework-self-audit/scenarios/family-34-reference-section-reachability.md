@@ -10,18 +10,19 @@ Spec 071 (command reference split) records the requirement in its scenario `refe
 
 ## Behavior
 
-- `check-step-references` and Family 34 extend their subject from the Instructions steps to the reference sections they reach: each `framework/reference/<command>.md` is judged against `framework/commands/<command>.md`, by the walk `tool_loading` makes for spec 080, which also follows a markdown anchor link `(#slug)` inside a reached document to the heading it names in that document.
+- `check-step-references` and Family 34 extend their subject from the Instructions steps to the reference sections they reach: each `framework/reference/<command>.md` is judged against `framework/commands/<command>.md`, by the walk `tool_loading` makes for spec 080 started from the numbered steps under the command's `## Instructions` alone (each with its continuation lines, sub-steps and bullets; a citation in the preamble, a note after the steps or any other block reaches nothing), which also follows a markdown anchor link `(#slug)` inside a reached document to the heading it names in that document.
 - A `##` section reached by no step is a finding of kind `unreached-section`, naming the reference, the section and its line. A heading inside a fenced block or an HTML comment is not a section.
 - A kept section carries `<!-- audit:kept <reason> -->` on the line directly beneath its heading and is reported in `reachability` as exempt with that reason, counted, never silent. A marker with no reason is an `empty-exemption` finding and exempts nothing; a marker on a section that is reached is a `stale-exemption` finding; a marker anywhere but directly beneath a `##` heading is a `misplaced-exemption` finding. The exemption cannot outlive its cause.
-- `Severity tiers` and `Record fields` in `framework/reference/analyze.md` are the two sections carrying the marker, for the readers outside the command that 071's scenario names.
+- Four sections carry the marker, for the readers outside the command that 071's scenario names: `Severity tiers` and `Record fields` in `framework/reference/analyze.md`, `Cross-spec context checklist` in `framework/reference/plan.md` and `Blocking semantics` in `framework/reference/review.md`. The last two are cited only from blocks that are no step, so they are exempt rather than reached; a marker on a section a step reaches is stale.
 - A reference with no `##` section is reported as having none, a state of its own beside the examined ones, and a reference whose command or text cannot be read is a `skipped` entry with its reason: neither reads as a pass.
 - The result states `sections-examined`, `sections-exempt`, `sections-unreached` and `references-without-sections` beside `reachability`, a per-reference list moved to the `lists-file` with the other lists past `[artifacts] read-size-bytes`. The CLI exits non-zero when `findings` is not empty or a subject could not be read.
 - The check runs in a tree holding `framework/commands/` and `framework/reference/`; in an adopter's project it examines nothing and reports the skip that the Instructions subject already reports.
-- Measured by `check-step-references` over this repository at the commit that added the check: 74 `##` sections outside fenced blocks and comments in 13 references, 2 exempt, 0 unreached, and 6 references with no section (`audit`, `consolidate`, `log`, `prune`, `specify`, `status`). The designer's independent count by script over the same tree gave 74 sections and the same two unreached before the markers.
+- Measured by `check-step-references` over this repository at the commit that added the step-start rule: 74 `##` sections outside fenced blocks and comments in 13 references, 4 exempt, 0 unreached, and 6 references with no section (`audit`, `consolidate`, `log`, `prune`, `specify`, `status`). A script counting from the numbered steps over the same tree before any marker found those four unreached.
 
 ## Edge Cases
 
 - A section reached only through a section already reached, and one reached only by an anchor link, are reached.
+- A section cited only from the Instructions preamble, a note after the steps or Scope Boundaries is unreached; one cited from a bullet inside a numbered step is reached.
 - A `§` or a bold span naming a `###` subsection reaches that subsection and not its parent `##` section.
 - A marker whose reason is empty on an unreached section yields both `empty-exemption` and `unreached-section`.
 
