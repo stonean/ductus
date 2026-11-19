@@ -199,7 +199,7 @@ Q4. A small DSL of `rename` / `delete` / `regex-replace` step types could expres
 
 ### Considered: `apply-migrations` runtime primitive (deferred)
 
-Q11. A primitive that reads the registry, computes the filter, and dispatches procedure files could replace the bootstrap loop's prose. Deferred to a follow-on once Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication that justifies the maintenance overhead. The loop asks the operator, once for the batch and again wherever a procedure prompts per file, and executes each procedure's prose (§Pre-run Migrations steps 5 and 7.2), which only the host can do: a primitive reaches the operator only by returning a gate for the host to route (`ductus gate-confirm --help`), so one replacing the loop would still hand every prompt and every procedure back to the host.
+Q11. A primitive that reads the registry, computes the filter, and dispatches procedure files could replace the bootstrap loop's prose. Deferred to a follow-on once Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication that justifies the maintenance overhead. The loop asks the operator, once for the batch and again wherever a procedure prompts per file, and executes each procedure's prose (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, steps 5 and 7.2), which only the host can do: a primitive reaches the operator only by returning a gate for the host to route (`ductus gate-confirm --help`), so one replacing the loop would still hand every prompt and every procedure back to the host.
 
 ### Considered: git archaeology inside Family 10 (rejected)
 
