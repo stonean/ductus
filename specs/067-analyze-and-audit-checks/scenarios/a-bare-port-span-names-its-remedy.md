@@ -6,7 +6,7 @@ section: "Artifact checks"
 
 ## Context
 
-A spec says a service listens on `:8080`. The `line-number-citations` family reads a code span holding only `:N` as a line number set apart from its file (owner decision, 2026-11-17) and cannot tell it from a port.
+A spec says a service listens on port 8080 and writes the port alone in a code span, a colon and the number. The `line-number-citations` family reads a code span holding only `:N` as a line number set apart from its file (owner decision, 2026-11-17) and cannot tell it from a port.
 
 ## Behavior
 
