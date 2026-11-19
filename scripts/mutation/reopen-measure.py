@@ -995,4 +995,43 @@ MUTATIONS = [
         '            current.text.push_str(trimmed);',
         'primitives::read_spec::tests::a_continuation_never_adds_an_entry_so_the_mark_index_holds',
     ),
+    (
+        'M320 extract_section_body closes a fence on any fence line',
+        'src/interpreter/payload.rs',
+        [
+            'let mut fences = Fences::default();\n    let mut collected',
+            'if fences.holds(trimmed) {',
+        ],
+        [
+            'let mut fences = Fences::default();\n    let mut toggled = false;\n    let mut collected',
+            'if {\n            let t = trimmed;\n            if t.starts_with("```") {\n                toggled = !toggled;\n                true\n            } else {\n                toggled\n            }\n        } {',
+        ],
+        'interpreter::payload::tests::extract_section_body_keeps_a_heading_inside_a_longer_fence_holding_a_shorter_one',
+    ),
+    (
+        'M321 top_level_literal_markers closes a fence on any fence line',
+        'src/parser/mod.rs',
+        [
+            'let mut fences = Fences::default();\n        let mut markers',
+            'if fences.holds(line) {',
+        ],
+        [
+            'let mut fences = Fences::default();\n        let mut toggled = false;\n        let mut markers',
+            'if {\n            let t = line;\n            if t.starts_with("```") {\n                toggled = !toggled;\n                true\n            } else {\n                toggled\n            }\n        } {',
+        ],
+        'parser::tests::a_numbered_line_inside_a_longer_fence_holding_a_shorter_one_is_no_marker',
+    ),
+    (
+        'M322 spec_links scan_body closes a fence on any fence line',
+        'src/primitives/spec_links.rs',
+        [
+            'let mut fences = Fences::default();\n    let mut in_see_also',
+            'if fences.holds(trimmed) {',
+        ],
+        [
+            'let mut fences = Fences::default();\n    let mut toggled = false;\n    let mut in_see_also',
+            'if {\n            let t = trimmed;\n            if t.starts_with("```") {\n                toggled = !toggled;\n                true\n            } else {\n                toggled\n            }\n        } {',
+        ],
+        'primitives::spec_links::tests::a_longer_fence_holding_a_shorter_one_excludes_to_its_own_close',
+    ),
 ]

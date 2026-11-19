@@ -38,7 +38,7 @@ use serde_json::{Map, Value};
 use crate::host::Host;
 use crate::primitives::bounded_lists::{counted_lists, fits};
 use crate::primitives::read_tasks;
-use crate::primitives::rule_sections::parse_rule_sections;
+use crate::primitives::rule_sections::{Fences, parse_rule_sections};
 use crate::primitives::rule_verdicts;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
@@ -2054,32 +2054,26 @@ fn read_existing_section(
 /// from after the heading line to the next level-1 or level-2 heading (or
 /// EOF). Fenced code blocks inside the body do not terminate it.
 fn extract_section_body(content: &str, section: &str) -> Option<String> {
-    let mut in_fence = false;
+    let mut fences = Fences::default();
     let mut collected: Option<Vec<&str>> = None;
     for line in content.lines() {
         let trimmed = line.trim_start();
-        if trimmed.starts_with("```") {
-            in_fence = !in_fence;
+        if fences.holds(trimmed) {
             if let Some(acc) = collected.as_mut() {
                 acc.push(line);
             }
             continue;
         }
-        if !in_fence {
-            if let Some(rest) = trimmed.strip_prefix("## ") {
-                if collected.is_some() {
-                    break;
-                }
-                if rest.trim().eq_ignore_ascii_case(section) {
-                    collected = Some(Vec::new());
-                    continue;
-                }
-            } else if trimmed.starts_with("# ")
-                && !trimmed.starts_with("## ")
-                && collected.is_some()
-            {
+        if let Some(rest) = trimmed.strip_prefix("## ") {
+            if collected.is_some() {
                 break;
             }
+            if rest.trim().eq_ignore_ascii_case(section) {
+                collected = Some(Vec::new());
+                continue;
+            }
+        } else if trimmed.starts_with("# ") && collected.is_some() {
+            break;
         }
         if let Some(acc) = collected.as_mut() {
             acc.push(line);
@@ -2911,6 +2905,15 @@ mod tests {
         assert!(body.contains("First decision."));
         assert!(body.contains("Second decision."));
         assert!(!body.contains("## Affected Files"));
+    }
+
+    #[test]
+    fn extract_section_body_keeps_a_heading_inside_a_longer_fence_holding_a_shorter_one() {
+        let plan = "## Technical Decisions\n\n````md\n```\n## Not a heading\n```\n## Still not\n````\n\nAfter.\n\n## Affected Files\n\nx\n";
+        let body = extract_section_body(plan, "Technical Decisions").unwrap();
+        assert!(body.contains("## Still not"));
+        assert!(body.contains("After."));
+        assert!(!body.contains("Affected Files"));
     }
 
     #[test]

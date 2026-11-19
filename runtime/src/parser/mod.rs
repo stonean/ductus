@@ -708,6 +708,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::primitives::rule_sections::Fences;
     use crate::schema::procedure::Step;
 
     fn parse_str(source: &str) -> Result<Procedure, ParseError> {
@@ -1153,6 +1154,12 @@ mod tests {
         assert!(!within_edit_distance("cli-config-dir", "gate-confirm", 2));
     }
 
+    #[test]
+    fn a_numbered_line_inside_a_longer_fence_holding_a_shorter_one_is_no_marker() {
+        let source = "## Instructions\n\n1. one\n````md\n```\n9. inside\n```\n8. still inside\n````\n2. two\n";
+        assert_eq!(top_level_literal_markers(source), vec![1, 2]);
+    }
+
     /// Every rewritten command file must parse with step numbers equal to
     /// the document's literal numbering: monotonic 1..N at the top level
     /// (lazy `1.` numbering split by ignore-promotion comments renders as
@@ -1218,14 +1225,12 @@ mod tests {
     /// section, in document order, skipping fenced code blocks.
     fn top_level_literal_markers(source: &str) -> Vec<u32> {
         let mut in_instructions = false;
-        let mut in_fence = false;
+        let mut fences = Fences::default();
         let mut markers = Vec::new();
         for line in source.lines() {
-            if line.starts_with("```") {
-                in_fence = !in_fence;
-                continue;
-            }
-            if in_fence {
+            // A fence is read from column 0, as this walker reads headings and
+            // markers: an indented fence line is no fence here.
+            if fences.holds(line) {
                 continue;
             }
             if line.starts_with("## ") {

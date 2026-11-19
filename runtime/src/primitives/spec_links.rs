@@ -25,6 +25,8 @@
 //! body-authored dependency section, and links under it are meant to induce
 //! edges.
 
+use super::rule_sections::Fences;
+
 /// Whether `line` is a YAML frontmatter delimiter: `---` starting at column
 /// zero, followed by nothing but whitespace.
 ///
@@ -288,7 +290,7 @@ fn scan_body(content: &str, scope: LinkScope) -> Vec<HarvestLine<'_>> {
     let mut out = Vec::new();
     let mut fm_seen = false;
     let mut in_fm = false;
-    let mut in_fence = false;
+    let mut fences = Fences::default();
     let mut in_see_also = false;
 
     for (idx, raw) in content.lines().enumerate() {
@@ -314,11 +316,7 @@ fn scan_body(content: &str, scope: LinkScope) -> Vec<HarvestLine<'_>> {
         }
 
         // Fenced code. The toggle line itself is never harvestable.
-        if trimmed.starts_with("```") {
-            in_fence = !in_fence;
-            continue;
-        }
-        if in_fence {
+        if fences.holds(trimmed) {
             continue;
         }
 
@@ -400,6 +398,12 @@ mod tests {
     #[test]
     fn fenced_code_is_excluded_including_the_fence_lines() {
         let content = "---\nx: 1\n---\nkeep\n```\n](../001-a/spec.md)\n```\nalso keep\n";
+        assert_eq!(texts(content), vec!["keep", "also keep"]);
+    }
+
+    #[test]
+    fn a_longer_fence_holding_a_shorter_one_excludes_to_its_own_close() {
+        let content = "---\nx: 1\n---\nkeep\n````md\n```\n](../001-a/spec.md)\n```\n](../002-b/spec.md)\n````\nalso keep\n";
         assert_eq!(texts(content), vec!["keep", "also keep"]);
     }
 
