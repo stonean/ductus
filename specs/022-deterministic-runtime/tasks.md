@@ -208,36 +208,36 @@ Lands last, after task 42, built on a tree holding tasks 41-43.
 
 ## 54. A code fence closes only on a run as long as its opener (scenario skipscanner-inline-code-exemption)
 
-- [ ] Implement the behavior described in `scenarios/skipscanner-inline-code-exemption.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/skipscanner-inline-code-exemption.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: SkipScanner and check-corpus-links close a fence only on a run of the opener's character at least as long, proven by tests their mutants turn red; the whole cargo test passes; and 022's next review reads the change
 
 ## 55. A lazy continuation line belongs to its criterion (scenario spec-side-parser-hardening)
 
-- [ ] Implement the behavior described in `scenarios/spec-side-parser-hardening.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/spec-side-parser-hardening.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: read-spec folds a line directly under a criterion into its text, proven by a test its mutant turns red; the whole cargo test passes; and 022's next review reads the change
 
 ## 56. Every main.rs exit-path diagnostic goes through ductus::io::warn (scenario a-closed-stdout-is-a-quiet-exit)
 
-- [ ] Implement the behavior described in `scenarios/a-closed-stdout-is-a-quiet-exit.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/a-closed-stdout-is-a-quiet-exit.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: a subcommand whose stderr reader has gone keeps its exit status and stdout output without a panic, proven by tests their mutants turn red; clippy denies print_stderr; and 022's next review reads the change
 
 ## 57. A non-UTF-8 stdin line is skipped while awaiting an envelope (scenario host-protocol-conformance)
 
-- [ ] Implement the behavior described in `scenarios/host-protocol-conformance.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/host-protocol-conformance.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: read_envelope skips a non-UTF-8 line with a warning and keeps waiting, proven by a test its mutant turns red; and 022's next review reads the change
 
 ## 58. append-inbox refuses text that opens an unclosed HTML comment (scenario append-inbox-comment-aware-write)
 
-- [ ] Implement the behavior described in `scenarios/append-inbox-comment-aware-write.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/append-inbox-comment-aware-write.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: append-inbox refuses text whose bullet would open a comment the reader skips, accepts a balanced or backticked delimiter, proven by tests their mutants turn red; and 022's next review reads the change
 
 ## 59. merge-managed-block creates a file at 0644 (scenario installed-files-are-not-group-writable)
 
-- [ ] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`, as its Behavior and Edge Cases now read
+- [x] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`, as its Behavior and Edge Cases now read
 
 - **Done when**: a file merge-managed-block creates is mode 0644 and a rewrite keeps its mode, proven by a test its mutant turns red; and 022's next review reads the change
