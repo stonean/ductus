@@ -10,6 +10,42 @@ its version and date.
 
 ### Added
 
+- **`check-step-references` judges the `##` sections of each reference a command's numbered steps reach (spec 026 task 8, from 071's scenario `reference-sections-are-reached-by-a-step`).**
+  An agent reads a reference section only where a step names it, so a section no
+  step names is never read; 23 of 93 had gone unreached when this was found.
+  Each `framework/reference/<command>.md` is judged against
+  `framework/commands/<command>.md` by the citation walk spec 080's tool loading
+  makes, extracted as `tool_loading::cited_sections` so there is one walker, but
+  started only from the numbered steps under `## Instructions` (each with its
+  continuation lines, sub-steps and bullets): a citation in the command's
+  purpose, scope boundaries, a flags table, the Instructions preamble, a note
+  after the steps or a pipeline-position paragraph reaches nothing. From a step
+  the walk follows a `§` and its heading, a bold span equal to a heading, or a
+  markdown anchor link `(#slug)` to a heading of the document holding it,
+  through reached sections in turn. A `##` section reached by none is an
+  `unreached-section` finding. A section kept for a reader outside the command
+  carries `<!-- audit:kept <reason> -->` directly beneath its heading and is
+  listed exempt with the reason; the marker is an `empty-exemption` finding
+  with no reason, a `stale-exemption` finding on a section a step reaches
+  anyway, and a `misplaced-exemption` finding anywhere else, so an exemption
+  cannot outlive its cause. Four sections carry it: `Severity tiers` and
+  `Record fields` in `framework/reference/analyze.md`, `Cross-spec context
+  checklist` in `framework/reference/plan.md` and `Blocking semantics` in
+  `framework/reference/review.md` (+158, +83 and +86 bytes). The result gains
+  `reachability` (one entry per reference: path, section count, exempt
+  sections), a bounded list that moves to `lists-file` past `[artifacts]
+  read-size-bytes` with `reachability-count` inline, and the counts
+  `sections-examined`, `sections-exempt`, `sections-unreached` and
+  `references-without-sections`. A reference with no `##` section is counted
+  apart, never a pass, and a reference or command that cannot be read is a
+  skip. Family 34 (`scripts/audit/step-reference-integrity.sh`) renders the new
+  findings, so `scripts/audit/run-all.sh` fails on an unreached section. Over
+  this repository: 74 sections in 13 references, 4 exempt, 0 unreached, 6
+  references with no section. With `/plan` step 9's citation of `Validation
+  gate` reverted and the exec-path note left, the check reports it and exits 1.
+  Nothing runs in an adopter's project, where the primitive still reports that
+  it examined nothing. The result is 2,886 bytes inline here (1,404 before) and
+  the `CHECK_STEP_REFERENCES` description grows by 1,093 bytes (1,560 to 2,653).
 - **`tests/bounded_list_gates.rs` fails when a command step states a bounded list's emptiness by the list rather than its `-count` (spec 080, scenario `a-step-gates-on-a-bounded-list-by-its-count`).**
   Past `[artifacts] read-size-bytes` a bounded result is `form: "file"`: each
   moved list is absent and only its `-count` stays inline, so a step that read
@@ -613,6 +649,15 @@ its version and date.
 
 ### Changed
 
+- **`ductus check-step-references` exits non-zero on a finding, a skip or a
+  subject it could not establish (spec 026 task 8).** It exited 0 whatever it
+  found, and nothing read its exit status: the audit reads the JSON. The result
+  is printed either way.
+- **The citation walk follows a markdown anchor link `[text](#slug)` to the
+  heading it names in the document holding the link (spec 026 task 8).**
+  `cited_tools` shares it, and still starts from the whole command file, so no
+  installed command's tool-search line or always-loaded set changes; a tool a
+  section invokes now loads when only a link reaches the section.
 - **Five command steps gate on a bounded list's `-count`, and nine read its contents from `lists-file` in the form's file case (spec 080).**
   `/fold` steps 1 and 11, `/consolidate` step 4, `/analyze` step 6 and `/clarify`
   step 2 read `unfolded-count`, `rewritten-count`, `updated-count`,
