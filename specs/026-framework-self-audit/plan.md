@@ -49,7 +49,7 @@ The first two are runtime primitives, so `scripts/audit/check-zero.sh` builds th
 
 Any non-zero exit produces a `check-zero` finding pointing at the failing script. When check-zero fails, the family checks are skipped — running them against known-stale generator output produces misleading findings. Exit code is `1`; stdout makes the cause unambiguous.
 
-Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `framework-checks.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment) doesn't catch this — a Family 1d sub-check could verify the two lists agree, but that's a follow-on enhancement, not v1 scope (see Known limitation: new generators require manual update in two places).
+Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `framework-checks.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment, `scripts/audit/template-alignment.sh`) doesn't catch this, since it reads neither file — a Family 1d sub-check could verify the two lists agree, but that's a follow-on enhancement, not v1 scope (see Known limitation: new generators require manual update in two places).
 
 ### Per-family script designs
 
@@ -219,7 +219,7 @@ Family 6's curated list of normative rules to track lives in `scripts/audit/ssot
 
 ### Known limitation: new generators require manual update in two places
 
-When a future spec adds a new generator or lint, the author updates `scripts/audit/check-zero.sh` AND the PR workflow's generator-orchestration step — `.github/workflows/framework-checks.yml`, which `048-govern-acquired-runtime` renamed from `markdown-only-pipeline.yml`. Family 5 (template-validate alignment) does not catch this — both files enumerate the same list textually. A follow-on enhancement could add a Family 1d sub-check comparing the two lists; it has not shipped, and this entry is the only place the requirement is recorded. It formerly pointed at the spec's `## Future Considerations` section, which was removed when Family 9 was adopted (see the trade-off above), so the pointer named nothing.
+When a future spec adds a new generator or lint, the author updates `scripts/audit/check-zero.sh` AND the PR workflow's generator-orchestration step — `.github/workflows/framework-checks.yml`, which `048-govern-acquired-runtime` renamed from `markdown-only-pipeline.yml`. Family 5 (template-validate alignment) does not catch this: `scripts/audit/template-alignment.sh` reads neither file, and no family compares the two lists, each of which enumerates the same steps as text (`git grep -l framework-checks.yml -- scripts/audit` finds only `check-zero.sh` and the README). A follow-on enhancement could add a Family 1d sub-check comparing the two lists; it has not shipped, and this entry is the only place the requirement is recorded. It formerly pointed at the spec's `## Future Considerations` section, which was removed when Family 9 was adopted (see the trade-off above), so the pointer named nothing.
 
 ### Known limitation: suppression contract is literal-phrase-fragile
 
