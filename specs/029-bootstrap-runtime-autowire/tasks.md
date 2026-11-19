@@ -17,7 +17,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 18. Prove the review's Branch 2 listing check where only CI and a full run can (029's review, owner decision 2026-11-19)
 
-- [ ] A dispatched runtime-acquisition.yml run against ductus-v0.59.11 passes on all five targets, its listing check included, so the check holds under Linux GNU tar and Windows Git Bash as well as macOS bsdtar
-- [ ] A scratch-adopter bootstrap with --ref=main after the push runs every step to the end, Runtime acquisition Branch 2 listing and extracting the published asset, and halts nowhere
+- [x] A dispatched runtime-acquisition.yml run against ductus-v0.59.11 passes on all five targets, its listing check included, so the check holds under Linux GNU tar and Windows Git Bash as well as macOS bsdtar
+- [x] A scratch-adopter bootstrap with --ref=main after the push runs every step to the end, Runtime acquisition Branch 2 listing and extracting the published asset, and halts nowhere
 
 - **Done when**: both pass on the pushed text, or a failure is fixed and both pass

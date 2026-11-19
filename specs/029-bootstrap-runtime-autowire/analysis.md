@@ -1,7 +1,7 @@
 ---
 spec: 029-bootstrap-runtime-autowire
-last-run: 2026-11-19T00:44:50Z
-analyzed-against: efd3d488116e0752e8e7fb94f5c712c42f6263c5
+last-run: 2026-11-19T00:57:40Z
+analyzed-against: 4ca83a5d7427ffe73bc01004a0f4645a7b14f976
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
@@ -14,7 +14,7 @@ analyzed-digest:
   scenarios/runtime-probe-parity-audit.md: 584a4570a0b5ea5b345fa1b9f9612759f2b6d847087210470a41029782c60d12
   scenarios/state-a-deterministic-path-forcing.md: 6826e091652444615f197ea687ff2e25abad353a806148408c143c4641a561a8
   spec.md: b95d4805e0ef00d9e58108175b60165e9881fb2d1d2755a76a1f84d7616cd799
-  tasks.md: 61479c531cffb8aa19a700f5bb387af7b7019df626b32c8e8c40400ab0d37751
+  tasks.md: 76bb00353b5d397948daf2fd09fe4c1c4d74e16eea9ed76785273fad4d3a2e81
 unexamined-by-reason:
   anchor-target-unjudgeable: 4
   root-absent: 3
