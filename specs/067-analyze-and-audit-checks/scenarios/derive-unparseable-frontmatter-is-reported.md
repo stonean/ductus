@@ -58,8 +58,8 @@ indentless sequence was spliced into invalid frontmatter and reported
 `updated`). Since task 14 such a spec is named in `unwritable`, not here, as
 the data model records.
 
-The contract a caller can then rely on: **an empty `updated` means
-examined-and-clean only when `unparseable`, `unwritable` and `refused` are also empty.** That is the same
+The contract a caller can then rely on: **a zero `updated-count` means
+examined-and-clean only when `unparseable-count`, `unwritable-count` and `refused-count` are also zero.** That is the same
 pairing `check-artifacts` established with `skipped` and `derive-boundary`
 with `guidance`, so this introduces no new idea — it applies the existing one
 where it was missing.

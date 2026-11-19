@@ -31,7 +31,7 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 
 ## Derived frontmatter indexes
 
-`derive-dependencies` and `derive-references` regenerate a spec's `dependencies:` and `references:` from the links in its body. Both report rather than write unless asked, and both name every spec they did not examine or could not parse, so an empty `updated` is never mistaken for a corpus in sync.
+`derive-dependencies` and `derive-references` regenerate a spec's `dependencies:` and `references:` from the links in its body. Both report rather than write unless asked, and both name every spec they did not examine or could not parse, so a zero `updated-count` is never mistaken for a corpus in sync.
 
 ## Link and reference integrity
 

@@ -51,8 +51,8 @@ that principle.
 
 **What it could not examine is reported, not dropped.** A referrer the primitive
 could not read lands in `skipped` with its reason, never in a clean finding
-count — an empty `findings` array means *examined and found nothing* only when
-`skipped` is empty, the same contract `check-artifacts` and
+count — a zero `findings-count` means *examined and found nothing* only when
+`skipped-count` is zero, the same contract `check-artifacts` and
 `derive-routing-candidates` already carry.
 
 ## Edge Cases
