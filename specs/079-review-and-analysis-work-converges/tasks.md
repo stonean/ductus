@@ -24,6 +24,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 39. The excluded section lists paths only
 
-- [ ] Implement the behavior described in `scenarios/the-excluded-section-lists-paths-only.md`
+- [x] Implement the behavior described in `scenarios/the-excluded-section-lists-paths-only.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
