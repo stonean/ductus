@@ -36,7 +36,9 @@ The Agent Registry from [012-multi-agent-govern](../012-multi-agent-govern/spec.
 with its per-agent `layout`, made adding an agent a registry row plus satellite files.
 MCP discovery is a per-agent descriptor that
 [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md)'s State-B
-auto-wire consumes. Claude's registry row assumed two things Pi breaks at the root:
+auto-wire consumes. Claude's registry row (the `claude` row of the Agent Registry and
+MCP registration tables in `framework/bootstrap/ductus.md`: layout `claude-style`, MCP
+target `.mcp.json`) assumed two things Pi breaks at the root:
 that the host can be given a slash-command directory shape under a per-agent config dir,
 and that the host can **run an MCP server** — the pi this spec verified had no MCP
 client, so its tool surface was an extension, and

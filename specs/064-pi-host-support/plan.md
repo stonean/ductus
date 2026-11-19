@@ -154,7 +154,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
   the verbatim bridge copy to `.pi/extensions/ductus.ts`; `--check` covers both, so
   the pre-commit check-zero protects the pi surface. This repo's `.gitignore` gains
   `.pi/*` with negations for `.pi/prompts/` and `.pi/extensions/ductus.ts`, mirroring
-  the `.claude/*` / `!.claude/commands/` convention; the dogfooded copy is committed.
+  that file's `.claude/*` / `!.claude/commands/` lines; the dogfooded copy is committed.
 - `scripts/audit/README.md` updates the three family descriptions to carry the pi
   shapes.
 
@@ -220,7 +220,9 @@ and in the same sitting: all three version sites to `0.59.0` + CHANGELOG heading
 one `cargo build --release --offline` lock refresh, commit, post-commit
 `scripts/audit/run-all.sh`, `git tag ductus-v0.59.0`, push, then read every
 workflow's run for the sha (`in_progress` + `release not found` is wait, not outage).
-The fork's own `0.53.0` bump and tag were never this repository's release.
+The fork's own `0.53.0` bump and tag were never this repository's release: the
+fork's number survives only in the subject of commit `c3f7bda8`, and
+`ductus-v0.53.0` here is `a620733b`, a release of specs 058, 022 and 051.
 
 ### D9 — In-repo smoke test (verification record, AC14)
 
