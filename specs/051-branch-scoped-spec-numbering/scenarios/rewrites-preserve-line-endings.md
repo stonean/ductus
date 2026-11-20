@@ -6,11 +6,11 @@ section: "Fold-back on merge"
 
 ## Context
 
-Fold-back re-points every inbound pointer to a retiring directory by rewriting the `.md` files that name it (`rewrite-spec-links`). The rewrite is line-wise: `content.lines()` splits the file, each line is examined, and `push_line` re-emits it followed by a bare `\n`.
+Fold-back re-points every inbound pointer to a retiring directory by rewriting the `.md` files that name it (`rewrite-spec-links`). The rewrite is line-wise: `content.lines()` splits the file, each line is examined, and `push_line` re-emits it followed by the file's own line ending, which `line_ending_of` (`runtime/src/primitives/mod.rs`) reads once. As found, it followed each line with a bare `\n`.
 
-`str::lines()` strips a trailing `\r` from every line it yields. So on a checkout whose files carry CRLF endings, a rewrite that changes one link re-emits **every** line with LF — converting the whole file, silently, as a side effect of moving a pointer.
+`str::lines()` strips a trailing `\r` from every line it yields. So on a checkout whose files carry CRLF endings, a rewrite that changed one link re-emitted **every** line with LF — converting the whole file, silently, as a side effect of moving a pointer.
 
-Sibling primitives already do this correctly, each having solved it independently:
+Sibling primitives did this correctly when the defect was found, each having solved it independently:
 
 - `create_feature::stamp_fold_target` detects `\r\n` in the template and joins with the ending it found (`runtime/src/primitives/create_feature.rs`).
 - `derive_references` picks its `line_ending` the same way (`runtime/src/primitives/derive_references.rs`).
@@ -23,7 +23,7 @@ The runtime's CI runs on three platforms, so this is not hypothetical — but it
 
 A primitive that rewrites an existing text file preserves that file's line endings. A file read as CRLF is written back as CRLF; a file read as LF is written back as LF. The rewrite's diff is confined to the lines whose content actually changed.
 
-The rule is a property of *rewriting*, not of `rewrite-spec-links`. Measured across the primitives that reassemble a file they did not create: **three carry the detection** — `derive_dependencies`, `derive_references`, and `create_feature::stamp_fold_target`, three independent copies of the same few lines — and **seven do not**:
+The rule is a property of *rewriting*, not of `rewrite-spec-links`. As found, across the primitives that reassemble a file they did not create, **three carried the detection** — `derive_dependencies`, `derive_references`, and `create_feature::stamp_fold_target`, three independent copies of the same few lines — and **seven did not**. All ten now call the shared `line_ending_of` or `with_line_ending`, and `runtime/tests/crlf_preservation.rs` holds each of the seven. What each of the seven made of a CRLF file:
 
 | Writer | What a CRLF file becomes |
 | --- | --- |

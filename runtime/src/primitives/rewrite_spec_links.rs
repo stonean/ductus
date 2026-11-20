@@ -17,6 +17,10 @@
 //!   link whose target carries the retiring directory as a whole path
 //!   segment, at whatever depth the referring file sits (`../050-a/spec.md`
 //!   from a sibling spec, `../../050-a/spec.md` from a scenario).
+//!   An inline link and a reference definition (`[label]: path`) both count; a
+//!   title and the `<...>` around a destination are kept as written, and a
+//!   footnote definition or a bare `<path>`, which is no link, is left and
+//!   listed in `mentions`.
 //! - **Path references in the referrers `check-orphaned-references` reads**
 //!   — `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit` and the
 //!   spec root's `system.md`, from that check's own `referrers` list rather
@@ -3428,6 +3432,41 @@ mod tests {
             .map(|k| (k.line, k.reference.as_str()))
             .collect();
         assert_eq!(kept, [(6, "../050-alpha/plan.md")]);
+    }
+
+    /// A definition follows the grammar's edges: an angle destination with no
+    /// fragment is re-pointed, a kept tail is reported, and an over-indented
+    /// line, an empty label or a directory sharing the prefix is left alone
+    /// (scenarios/a-definition-and-a-title-follow-the-link-grammar.md).
+    #[test]
+    fn a_definition_keeps_to_the_link_grammar_at_its_edges() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let left = "    [x]: ../1234.1-staged/spec.md\n\
+                    []: ../1234.1-staged/spec.md\n\
+                    [p]: ../1234.1-staged-cache/spec.md\n";
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            &format!(
+                "---\nstatus: done\ndependencies: []\n---\n\n\
+                 [a]: <../1234.1-staged/spec.md>\n\
+                 [c]: ../1234.1-staged/plan.md\n{left}"
+            ),
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(beta.contains("\n[a]: <../050-alpha/spec.md>\n"), "{beta}");
+        assert!(beta.contains("\n[c]: ../050-alpha/plan.md\n"), "{beta}");
+        assert!(beta.ends_with(left), "{beta}");
+        let kept: Vec<(u32, &str)> = result
+            .kept_tails
+            .iter()
+            .map(|k| (k.line, k.reference.as_str()))
+            .collect();
+        assert_eq!(kept, [(7, "../050-alpha/plan.md")]);
     }
 
     #[test]

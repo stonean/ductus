@@ -440,4 +440,32 @@ MUTATIONS = [
         '',
         'rewrite_spec_links::tests::a_destination_with_leading_space_is_still_re_pointed_and_keeps_its_space',
     ),
+    (
+        'M60 an angle-bracketed destination is not unwrapped',
+        'src/primitives/rewrite_spec_links.rs',
+        "    if let Some(inner) = rest.strip_prefix('<')\n        && let Some(end) = inner.find('>')\n    {\n        return (&text[..=start], &inner[..end], &inner[end..]);\n    }\n",
+        '',
+        'rewrite_spec_links::tests::a_definition_keeps_to_the_link_grammar_at_its_edges',
+    ),
+    (
+        'M61 a definition indented four spaces is taken as one',
+        'src/primitives/rewrite_spec_links.rs',
+        '    if line.len() - body.len() > 3 {\n        return None;\n    }\n',
+        '',
+        'rewrite_spec_links::tests::a_definition_keeps_to_the_link_grammar_at_its_edges',
+    ),
+    (
+        'M62 a definition with an empty label is taken as one',
+        'src/primitives/rewrite_spec_links.rs',
+        "    if label.trim().is_empty() || label.starts_with('^') {\n",
+        "    if label.starts_with('^') {\n",
+        'rewrite_spec_links::tests::a_definition_keeps_to_the_link_grammar_at_its_edges',
+    ),
+    (
+        'M63 a definition kept tail is not reported',
+        'src/primitives/rewrite_spec_links.rs',
+        '    if moved.kept_tail {\n        kept.push(moved.text);\n    }\n    Some((text, 1))\n',
+        '    Some((text, 1))\n',
+        'rewrite_spec_links::tests::a_definition_keeps_to_the_link_grammar_at_its_edges',
+    ),
 ]

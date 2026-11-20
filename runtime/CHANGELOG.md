@@ -2855,7 +2855,8 @@ its version and date.
   title (and from `<...>`), so a titled link no longer reports a kept tail of
   `spec.md 'x'` and a path quoted in a title is no longer re-pointed. A link
   without a title is rewritten exactly as before. The primitive's description
-  grows by 144 bytes (3,838 to 3,982).
+  grew by 144 bytes at the fix (the constant's string body: 3,838 to 3,982); a later
+  wording change moved it to 3,964.
 - **A list item that says none is no open question (spec 067).** `read-spec`
   and every reader of its parser (`dashboard`, `check-review-gate`,
   `append-question`, `classify-spec-edit`, `check-artifacts`) no longer count
