@@ -31,6 +31,27 @@ They are plain markdown in your project's rule-file directory — the `rules/` d
 
 The security files are mostly **MUST** rules, because the failures they describe are exploitable rather than merely untidy. The backend reliability, observability, performance, and concurrency files default to **SHOULD** where the right approach depends on context, and each states in its header what earns a rule **MUST**. Accessibility is AA because that is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion; a rule that adopts a Level AAA criterion says so and is a **SHOULD**. `quality-cross.md`'s five failure modes are stated in full in the README's [Rules](../README.md#rules) section.
 
+## Where the rules come from
+
+Every rule names its origin on its own `**Source:**` line, and that line is the record: the table below names the families most rules draw on, and the rule file says which rule cites what. A claim a rule makes about an external standard is to be checked against the cited document's current text when the rule is written or amended, never recalled ([008's data model](../specs/008-security-rules/data-model.md), the Source field).
+
+| Source | Mostly in |
+| --- | --- |
+| OWASP — the Cheat Sheet Series, Top 10:2025, API Security Top 10 2023, Web Security Testing Guide v4.2, Dependency-Check | the three security files |
+| W3C accessibility — WCAG 2.2 Level AA (also ISO/IEC 40500:2025) with its Understanding documents, Techniques and ACT rules; WAI-ARIA 1.2 and its Authoring Practices Guide; ARIA in HTML; WCAG-EM 2.0 | `accessibility-frontend.md`, whose header also says which WCAG version each regime that mandates web accessibility names |
+| W3C web platform — Content Security Policy Level 2 and 3, Trusted Types, Subresource Integrity, Fetch Metadata, Permissions Policy, Referrer Policy, Clear Site Data, Trace Context | `security-frontend.md`, `security-backend.md`, `observability-backend.md` |
+| IETF RFCs — HTTP semantics, caching and messaging (9110, 9111, 9112), Problem Details (9457), the OAuth 2.0 Security BCP (9700), the JWT BCP (8725), PKCE (7636), WebSocket (6455), timestamps (3339), the Deprecation and Sunset headers (9745, 8594) | `api-backend.md`, the security files, `reliability-backend.md`, `performance-backend.md` |
+| NIST — SP 800-63B-4 (digital identity), 800-132, 800-38D, 800-52r2, 800-90A, 800-122, 800-190, 800-209 | `security-backend.md`, `security-frontend.md` |
+| MITRE CWE entries | the security files, `concurrency-backend.md`, `configuration-cross.md` |
+| Regulation — GDPR, CCPA, PCI DSS v4.0.1, US Executive Order 14028, the EU Cyber Resilience Act | `security-backend.md`, `security-frontend.md` |
+| API and identity specifications — OpenAPI and the OpenAPI Initiative's best practices, gRPC, the GraphQL specification and the GraphQL Cursor Connections Specification, JSON-RPC 2.0, OpenRPC, Semantic Versioning 2.0.0, OpenID Connect | `api-backend.md`, the security files |
+| API design guides — Google AIPs, the Microsoft Azure REST API Guidelines, Stripe's API documentation | `api-backend.md` |
+| Browser guidance — web.dev, Chrome for Developers, MDN Web Docs | `performance-frontend.md`, `security-frontend.md` |
+| Operations — the Google SRE book, Nygard's *Release It!*, the RED and USE methods, Prometheus, OpenTelemetry, Kubernetes, the AWS Well-Architected Framework and Builders' Library | `reliability-backend.md`, `observability-backend.md`, `performance-backend.md` |
+| Databases and distributed systems — PostgreSQL, MySQL, SQL Server, Oracle and MongoDB documentation; Berenson et al., "A Critique of ANSI SQL Isolation Levels"; Fekete et al. on snapshot isolation; Jepsen; Kleppmann; Kafka, SQS and RabbitMQ documentation | `concurrency-backend.md`, `performance-backend.md`, `reliability-backend.md` |
+| Software design writing — the Twelve-Factor App, *The Pragmatic Programmer*, Fowler's *Refactoring*, Jim Shore's "Fail Fast", "Parse, don't validate", OpenFeature | `configuration-cross.md`, `quality-cross.md` |
+| `ductus`'s own constitution — §grounding, §drift-prevention, §design-principles | `quality-cross.md` |
+
 ## Which rules load
 
 A rule file's **filename suffix** decides which projects load it, and there are exactly three:
