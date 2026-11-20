@@ -2816,16 +2816,15 @@ fn render_extra_field(block: &mut String, indent: &str, key: &str, value: &serde
 ///
 /// Used for every string value in the waiver and decision lists that
 /// `review.md` and `analysis.md` carry in their frontmatter — the known fields
-/// and the open-schema adopter extras alike — and for the paths `review.md`
-/// records (`reviewed-digest` keys, `unread`, `open-findings`), because each is
-/// read back by the next run's parse, and a decision key must come back byte
-/// for byte to match the finding it was stored for. An extra **key** like `@owner` or
-/// `weird: key`, an extra string **value** like `"1234"`, or a known `reason`
-/// that happened to read `true` or `1234` would otherwise render unquoted and
-/// either corrupt the frontmatter or retype the value. Simple timestamps
-/// (`waived-at`), shas, rule IDs, emails, and a path with no such hazard stay
-/// unquoted: they read back unchanged (`serde_norway` has no timestamp type), so quoting them here
-/// would be no-op churn.
+/// and the open-schema adopter extras alike — and for every path `review.md`
+/// records, because each is read back by the next run's parse, and a decision
+/// key must come back byte for byte to match the finding it was stored for. An
+/// extra **key** like `@owner` or `weird: key`, an extra string **value** like
+/// `"1234"`, or a known `reason` that happened to read `true` or `1234` would
+/// otherwise render unquoted and either corrupt the frontmatter or retype the
+/// value. Simple timestamps (`waived-at`), shas, rule IDs, emails, and a path
+/// with no such hazard stay unquoted: they read back unchanged (`serde_norway`
+/// has no timestamp type), so quoting them here would be no-op churn.
 ///
 /// A value carrying a control character or a Unicode line break is always
 /// quoted, and every such character is escaped: the YAML reader refuses a raw
