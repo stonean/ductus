@@ -31,11 +31,11 @@ A tier change is proved by `no_shipped_statement_mixes_tiers` (`runtime/src/prim
 
 ### The API serves its own schema (AC14)
 
-`BE-SCHEMA-001`'s second sentence requires the schema to be served by the API itself: from a documented URL on its own origin, or, for gRPC and JSON-RPC, through the protocol's discovery mechanism (gRPC server reflection, the OpenRPC `rpc.discover` method). The schema must also be committed to the repository. The Verification names the schema's path and how the API serves it, and its *Not flagged* GraphQL clause stays. The Source adds gRPC `doc/server-reflection.md` and the OpenRPC Specification's service discovery method. Eleven specs' review records store a decision keyed on "BE-SCHEMA-001's SDL-versus-introspection split and BE-ERRENV-001's overlap with BE-ERR-002": 017, 019, 022, 025, 034, 036, 037, 038, 039, 050 and 060. Each spec's own next review matches or expires that key, and 068 edits none of their records.
+`BE-SCHEMA-001`'s second sentence requires the schema to be served by the API itself: from a documented URL on its own origin, or, for gRPC and JSON-RPC, through the protocol's discovery mechanism (gRPC server reflection, the OpenRPC `rpc.discover` method). The schema must also be committed to the repository. The Verification names the schema's path and how the API serves it, and its *Not flagged* GraphQL clause stays. The Source adds gRPC `doc/server-reflection.md` and the OpenRPC Specification's service discovery method. Eleven specs' review records store a decision keyed on "BE-SCHEMA-001's SDL-versus-introspection split and BE-ERRENV-001's overlap with BE-ERR-002": 017, 019, 022, 025, 034, 036, 037, 038, 039, 050 and 060 (`grep -l` of that key's text over `specs/*/review.md`). Each spec's own next review matches or expires that key, and 068 edits none of their records.
 
 ### A deprecated gRPC method carries the two headers as metadata (AC16)
 
-`BE-APIVER-002`'s Statement says a deprecated gRPC method sends the headers the rule requires of it as response metadata, named `deprecation` and `sunset` since gRPC metadata names are lowercase, which gRPC carries in the HTTP/2 response headers. Its schema mark stays protobuf `option deprecated = true`. The Source adds gRPC *gRPC over HTTP2* (`doc/PROTOCOL-HTTP2.md`), and the header's reach list already names `BE-APIVER-002`.
+`BE-APIVER-002`'s Statement says a deprecated gRPC method sends the headers the rule requires of it as response metadata, named `deprecation` and `sunset` since gRPC metadata names are lowercase (*gRPC over HTTP2*, `doc/PROTOCOL-HTTP2.md`: Header-Name is `0-9 a-z _ - .`, fetched 2026-11-08 in `a8f419f7`), which gRPC carries in the HTTP/2 response headers. Its schema mark stays protobuf `option deprecated = true`. The Source adds gRPC *gRPC over HTTP2* (`doc/PROTOCOL-HTTP2.md`), and the header's reach list already names `BE-APIVER-002`.
 
 ### Every Source is re-fetched after the edits (AC4)
 
@@ -66,7 +66,7 @@ A change under `framework/rules/` runs `runtime.yml`, whose corpus test reads ev
 
 ## Trade-offs
 
-- **AC11's pointer, rejected by the owner (`719c7a19`).** Pointing §rules at this spec would cost 50 bytes against the constitution's 12 bytes of headroom. It would also name one shipped file's spec, the enumeration 021's Resolved Questions keep out of the constitution, and it resolves only in this repository.
+- **AC11's pointer, rejected by the owner (`719c7a19`).** Pointing §rules at this spec would cost 50 bytes against the constitution's 12 bytes of headroom (`wc -c framework/constitution.md` at `719c7a19`: 49,988 of 50,000). It would also name one shipped file's spec, the enumeration 021's Resolved Questions keep out of the constitution, and it resolves only in this repository.
 - **One task per decision, not one pass over the file.** Each tier change runs the corpus test alone, and each commit says which decision it applies.
 - **The re-fetch after the edits, not before.** Fetching first would leave the claims the decisions add unchecked, or need a second fetch.
 - **No data model**, per the spec's *Rule ID format*: one would become the first-tier source for the file's ID format and would have to be kept complete.
