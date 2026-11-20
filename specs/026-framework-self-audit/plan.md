@@ -100,7 +100,7 @@ Walk every `specs/NNN-*/spec.md`. For each non-`done` spec, parse:
 
 For each pair `(A, B)` where A and B inline-link each other AND share at least one Affected Files row: surface as a bundling candidate. Check the suppression contract per Q5: grep the second-drafted spec's `## Resolved Questions` for the literal phrase `Why split from {A-slug}:`. If found, skip the pair. Otherwise, emit a finding with both resolution paths in the suggested-fix column (fold-one-into-other vs record-split-rationale).
 
-Identifying "second-drafted spec": the spec with the higher NNN prefix. (Pre-026 specs all use `NNN-slug` shape; this rule is mechanically derivable from the directory name.)
+Identifying "second-drafted spec": the spec with the higher NNN prefix. (A sequential spec's directory name starts with its `NNN-` number, per the constitution's Numbering Convention, and a branch-scoped one carries no such number; the rule is mechanically derivable from the directory name.)
 
 **`scripts/audit/introducing-drift.sh`** (Family 8)
 Use `git log --all --pretty=format:"%H %s" -- framework/commands/ scripts/` to build a rename-history catalog. Parse commit messages for rename indicators (`renamed from X to Y`, `X → Y`, etc.). Build the set of old-name tokens (`/capture`, `/elaborate`, `/validate`, etc.).
@@ -211,7 +211,7 @@ The pointer that rejection carried — *"captured in spec's Future Consideration
 
 ### Known limitation: SSOT curated list grows by author discipline
 
-Family 6's curated list of normative rules to track lives in `scripts/audit/ssot-invariants.sh`. New entries are added by hand when drift surfaces. This is a §design-principles violation in miniature (the framework checks something whose check-list itself depends on author discipline). Acceptable for v1 because: (a) the list is small and grows slowly; (b) the rules being tracked are the most-canonical ones (status state machine, open-question counting), which rarely change; (c) the alternative (deriving the SSOT list from artifact analysis) is itself a research problem. A future scenario can promote SSOT-detection from a hardcoded list to a derived signal.
+Family 6's curated list of normative rules to track lives in `scripts/audit/ssot-invariants.sh`. New entries are added by hand when drift surfaces. This is a §design-principles violation in miniature (the framework checks something whose check-list itself depends on author discipline). Acceptable for v1 because: (a) the list is three entries today, the header of `scripts/audit/ssot-invariants.sh`; (b) the rules being tracked are the most-canonical ones (status state machine, open-question counting), which rarely change; (c) the alternative (deriving the SSOT list from artifact analysis) is itself a research problem. A future scenario can promote SSOT-detection from a hardcoded list to a derived signal.
 
 ### Known limitation: Family 8 heuristic emits false positives
 

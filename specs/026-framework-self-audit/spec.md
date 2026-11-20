@@ -84,7 +84,7 @@ After a command, file, or identifier is renamed via the mechanical sweep ([023's
 
 The audit flags each introducing-spec body that retains references to old names in current-tense or imperative prose (sentences using `is`/`provides`/`exposes` rather than `was`/`provided`/`introduced`) and lists the affected sentences.
 
-Background: the 2026-05-17 living-specs sweep left bare-backticked old names in ~9 specs (011, 014, 017, 020, 021, 022, 023, 024, 000) because mechanical substitution would break sentences, and nine separate `/ductus:amend` cycles would be procedurally heavy. The audit surfaces the rest, so the past-tense rewrite rides along when authors touch those specs for other reasons, whose back-edge fires anyway.
+Background: the 2026-05-17 living-specs sweep left bare-backticked old names in ~9 specs (011, 014, 017, 020, 021, 022, 023, 024, 000, by the count made at the time, which this spec does not re-derive) because mechanical substitution would break sentences, and nine separate `/ductus:amend` cycles would be procedurally heavy. The audit surfaces the rest, so the past-tense rewrite rides along when authors touch those specs for other reasons, whose back-edge fires anyway.
 
 #### 9. Primitive-promotion candidates
 
