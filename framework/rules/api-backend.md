@@ -202,8 +202,8 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-REPR-003
 
-> A JSON payload MUST NOT carry a number with greater magnitude or precision than a binary64 (double-precision) number provides: an integer outside the range −(2^53 − 1) to 2^53 − 1, such as a 64-bit identifier, or a value with more precision than binary64 provides. Such a value MUST be encoded as a JSON string, documented in the schema as a string-encoded number. This goes beyond RFC 7493 §2.2 on purpose: it advises against such a number and recommends a string, where a lost digit corrupts data silently.
+> A JSON payload MUST NOT carry a number with greater magnitude or precision than a binary64 (double-precision) number provides: an integer outside the range −(2^53 − 1) to 2^53 − 1, such as a 64-bit identifier, or a value with more precision than binary64 provides. Such a value MUST be encoded as a JSON string, documented in the schema as a string-encoded number.
 
-**Verification:** Any spec or plan that introduces a JSON API field holding a number with greater magnitude or precision than binary64 provides MUST encode and document it as the Statement requires. `/{project}:analyze` flags a spec that declares such a field — an `int64` or `uint64` identifier, a high-precision decimal — as a JSON number without bounding its values within −(2^53 − 1) to 2^53 − 1; an `int64` field whose spec states that bound is not flagged.
+**Verification:** Any spec or plan that introduces a JSON API field holding a number with greater magnitude or precision than binary64 provides MUST encode and document it as the Statement requires. `/{project}:analyze` flags a spec that declares such a field — an `int64` or `uint64` identifier, a high-precision decimal — as a JSON number, other than an integer field whose spec bounds its values within −(2^53 − 1) to 2^53 − 1.
 
-**Source:** RFC 7493 §2.2, RFC 8259 §6
+**Source:** RFC 7493 §2.2, which advises against such a number and recommends a string, so the Statement's MUST goes beyond it on purpose, RFC 8259 §6

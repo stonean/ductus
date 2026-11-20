@@ -10,14 +10,14 @@ The owner decided on 2026-11-19 how the audit findings on `BE-REPR-003` and `BE-
 
 ## Behavior
 
-- `BE-REPR-003` keeps its MUST and says in one clause that it goes beyond RFC 7493 section 2.2 on purpose. RFC 7493 section 2.2 (fetched 2026-11-19) says I-JSON messages SHOULD NOT include numbers of greater magnitude or precision than an IEEE 754 double provides and RECOMMENDS a JSON string for exact interchange; it has no MUST NOT.
-- Its Verification flags a field that holds such a number, declared as a JSON number, only when the spec does not bound its values within −(2^53 − 1) to 2^53 − 1. An `int64` field whose spec states that bound is not flagged.
+- `BE-REPR-003` keeps its MUST, and its Source says in one clause that the MUST goes beyond RFC 7493 section 2.2 on purpose, since a rule's Statement carries no reason (008's data model). RFC 7493 section 2.2 (fetched 2026-11-19) says I-JSON messages SHOULD NOT include numbers of greater magnitude or precision than an IEEE 754 double provides and RECOMMENDS a JSON string for exact interchange; it has no MUST NOT.
+- Its Verification flags a field that holds such a number, declared as a JSON number, other than an integer field whose spec bounds its values within −(2^53 − 1) to 2^53 − 1. An `int64` field whose spec states that bound is not flagged.
 - `BE-PATCH-001` accepts a project patch format documented in `specs/system.md` or in the spec that introduces the endpoint, provided it defines how an absent field and an explicit `null` each apply. Its Verification already passes exactly that: it flags a `PATCH` spec that accepts a plain `application/json` body with no stated absent-versus-`null` semantics, wherever the format is documented, so it is unchanged.
 - `BE-COND-001` stays a MUST as written.
 
 ## Edge Cases
 
-- A field whose spec states the safe-integer bound is not flagged whatever its declared type; the Statement still requires the string encoding for a value outside the bound.
+- An integer field whose spec states the safe-integer bound is not flagged whatever its declared width; the Statement still requires the string encoding for a value outside the bound, and for a value with more precision than binary64, which no magnitude bound excuses.
 - A project format documented in neither `specs/system.md` nor the spec that introduces the endpoint is not accepted.
 
 ## Open Questions

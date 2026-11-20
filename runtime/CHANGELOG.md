@@ -2745,6 +2745,17 @@ its version and date.
   discard the spec does not declare or does not record, and the MUST for
   every other message is unchanged. It turns no passing `/analyze` into a
   finding.
+- **`api-backend.md`: `BE-REPR-003` flags an unbounded integer only, and
+  `BE-PATCH-001` accepts a format its endpoint's spec documents (spec 068
+  task 8; owner, 2026-11-19).** `BE-REPR-003` stays a MUST, and its Source
+  says the MUST goes beyond RFC 7493 §2.2 on purpose, which advises against
+  such a number and recommends a string. Its Verification no longer flags an
+  integer field whose spec bounds its values within −(2^53 − 1) to
+  2^53 − 1; a high-precision decimal stays flagged, since no magnitude bound
+  keeps its precision. `BE-PATCH-001`'s project patch format may be
+  documented in the spec that introduces the endpoint as well as in
+  `specs/system.md`, which its Verification already passed. Neither turns a
+  passing `/analyze` into a finding.
 
 ### Removed
 
