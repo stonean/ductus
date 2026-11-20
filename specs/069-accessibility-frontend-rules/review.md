@@ -1,20 +1,19 @@
 ---
 spec: 069-accessibility-frontend-rules
-last-run: 2026-11-20T04:20:00Z
-reviewed-against: 80f5352da93a9e29b1b3031cfcff632c46e24df0
-diff-base: fa4ae5c75b7d68e907f18cee94eb8f8157f83f52
+last-run: 2026-11-20T13:11:01Z
+reviewed-against: f21743416fdb789b055682e1fcc74ce7e17d13aa
+diff-base: 07bd04639ba5874d97d964ad1432e2ec8fb8a263
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 5
-scope: 6
-unread:
-  - runtime/CHANGELOG.md
-excluded: 34
+examined: 4
+scope: 4
+unread: []
+excluded: 26
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
-re-reads: 2
+fix-rounds: 1
+re-reads: 1
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
@@ -55,17 +54,48 @@ blocking: false
 dispositions:
   fixed: 3
   deferred: 0
-  waived: 0
+  waived: 6
   undispositioned: 0
+decisions:
+  - key: "`FE-SEMHTML-004`'s tightened Verification says help repeats 'in the same relative order' where the Statement says relative to other page content; the flag ('breaks any of the four') and the Statement govern, and the owner's byte bar leaves no room to restore 24 bytes — `framework/rules/accessibility-frontend.md`"
+    outcome: waived
+    reason: the Statement governs what the rule requires and the Verification's flag is unchanged
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
+  - key: "`FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md`"
+    outcome: waived
+    reason: no case or requirement changed, only a reason clause, and the owner's 51,200-byte bar asks for the cut
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
+  - key: "`plan.md` 'The file stays one read' records how the size was reached, which a design record would leave to commits; the owner asked for the measured result to be stated in the plan — `specs/069-accessibility-frontend-rules/plan.md`"
+    outcome: waived
+    reason: the owner's instruction of 2026-11-20 is to record the measured result and that the file was tightened to meet the 2026-11-08 cap
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
+  - key: "`specs/069-accessibility-frontend-rules/analysis.md` is stale against HEAD because this window changed its design subjects; the analysis that follows this review regenerates it — `specs/069-accessibility-frontend-rules/analysis.md`"
+    outcome: waived
+    reason: the analysis run after this review regenerates the record, which no hand edit may touch
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
+  - key: "`FE-A11YFORM-002`'s Not-flagged clause ends in a garbled phrase and `FE-KBD-001`'s lists a flagged case, both untouched by this window — `framework/rules/accessibility-frontend.md`"
+    outcome: waived
+    reason: outside the window and outside the owner's no-claim-changed instruction
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
+  - key: the five task-6 clauses appear in the rule file, the scenario, the spec's Resolved Question and the changelog; they record the flagged side, the not-flagged side and the release note, and no claim contradicts another — `specs/069-accessibility-frontend-rules/spec.md`
+    outcome: waived
+    reason: each copy records a different side of the decision and the changelog is release notes
+    decided-at: 2026-11-20T13:10:54Z
+    decided-by: rule
 ---
 
 # Review — 069-accessibility-frontend-rules
 
 ## Summary
 
-Review of 069's second reopening (task 6, the owner's rule decision of 2026-11-19) over `fa4ae5c7..80f5352d` (base-source `reopen`), scope 6 (the plan's five in-scope entries at the window's start, and `specs/069-accessibility-frontend-rules/plan.md`, which this run's fix added), examined 5. Three readers each read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`; the reuse, quality, efficiency and simplicity passes over the other nine rule files (`accessibility-frontend.md` among them), `AGENTS.md` and `specs/system.md`; and the criteria step over the spec, plan, tasks, scenario and rule file. In scope they read `framework/rules/accessibility-frontend.md` (all 40 rules), `specs/069-accessibility-frontend-rules/spec.md`, `specs/069-accessibility-frontend-rules/tasks.md`, the scenario and `specs/069-accessibility-frontend-rules/plan.md` whole. `runtime/CHANGELOG.md` (610,176 bytes) was read only at its `[Unreleased]` entry naming 069 (803 bytes), so it is named unread. The criteria step judged AC1 to AC14 met; AC4's sources were not re-fetched in this run, and it rests on the fetches recorded 2026-11-08 and 2026-11-19. 0 MUST, 0 SHOULD, no stored decisions. Three observations, each fixed by the rule: `FE-LAYOUT-002`'s clause reason, `plan.md`'s stale design record, and the missing byte measurement. Task 6's measurement (`wc -c`; bytes of each rule section from its heading's next line to the next heading, at `fa4ae5c7` then after the fix): `FE-KBD-004` 1,079 to 1,313; `FE-A11YFORM-003` 971 to 1,122; `FE-A11YFORM-006` 1,192 to 1,507; `FE-LAYOUT-002` 1,078 to 1,317; `FE-MOTION-002` 796 to 918; the file 50,939 to 52,000 bytes. Fix rounds: two, the rule file and spec and plan edits (exempt) and the `runtime/CHANGELOG.md` sentence, each re-read clean by an independent agent, then empty; budget-stop false. Commit `fix(069): FE-LAYOUT-002's Not-flagged reason matches its Statement, and the plan records task 6 and the rule file's size` holds the fixes.
+Review of 069's second pass over `07bd0463` to the head of this run (base-source `last-review`), scope 4, examined 4: the window holds the owner's correction of 2026-11-20 (`framework/rules/accessibility-frontend.md` tightened from 52,000 to 51,183 bytes to meet the 51,200-byte bar of 2026-11-08, with no claim dropped), the plan's and spec's source citations, and the previous analysis record. Two readers read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`, and the other passes over the other nine rule files (the seven it first read in part were then read whole), `AGENTS.md`, `specs/system.md` and the four in-scope files, checking each of the 20 reworded Verification lines of the rule file against its pre-image. `runtime/CHANGELOG.md` and the scenario were read at the 069 entry and whole. No criterion owed a verdict by `compute-review-scope`; the 14 verdicts of the first pass are carried (spec text unchanged for the criteria, and the reader confirmed the tightening falsifies none of AC1 to AC14). 0 MUST, 0 SHOULD, no stored decisions. Nine observations: three fixed (the `FE-A11YFORM-006` and `FE-MOTION-002` clause wording, the plan's `FE-LAYOUT-002` size boundary), six waived by the rule. Measurement (`wc -c`; each rule section from the line after its `### FE-` heading to the next heading of any level, at `fa4ae5c7` then now): `FE-KBD-004` 1,079 to 1,162; `FE-A11YFORM-003` 971 to 1,063; `FE-A11YFORM-006` 1,192 to 1,472; `FE-LAYOUT-002` 1,019 to 1,218; `FE-MOTION-002` 796 to 854; the file 50,939 to 51,183. Fix rounds: one, the wording fixes (`plan.md` exempt), re-read clean by an independent agent, then empty; budget-stop false.
 
-2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
 14 of 14 acceptance criteria judged met.
 
@@ -108,9 +138,15 @@ Review of 069's second reopening (task 6, the owner's rule decision of 2026-11-1
 
 ## Observations
 
-- `FE-LAYOUT-002`'s new Not-flagged clause gave its reason as the Statement barring only truncation with no way to reveal it, though the Statement also bars clipping and overlap as their own items; the clause and `spec.md`'s Resolved Question now say a way to reveal the text answers the truncation bar — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
-- `plan.md`'s design record described the state before task 6 (its Overview, its deliverables) and asserted a 51,200-byte bound the file passes at 52,000 bytes; it now records task 6's clauses and the owner's 2026-11-19 settlement that rule files are not size-limited reads — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
-- task 6's Done-when asks for bytes before and after per rule and per file, and no committed artifact carried them; the Summary of `review.md` now does — `specs/069-accessibility-frontend-rules/tasks.md` — **fixed** (decided by the rule)
+- `FE-A11YFORM-006`'s tightened Not-flagged clause said 'loading nothing' where the case is a handler that loads no different page, which changed the carve-out's wording; the clause is restored to the case as stated in the scenario — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
+- `FE-MOTION-002`'s tightened Not-flagged clause said 'those thresholds' with no antecedent; it names the general flash and red flash thresholds again — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
+- `plan.md` gave the `FE-LAYOUT-002` section size without a boundary, so it could not be re-derived (the figure counted the next category heading); the plan states the boundary and the sizes measured by it — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
+- `FE-SEMHTML-004`'s tightened Verification says help repeats 'in the same relative order' where the Statement says relative to other page content; the flag ('breaks any of the four') and the Statement govern, and the owner's byte bar leaves no room to restore 24 bytes — `framework/rules/accessibility-frontend.md` — **waived**: the Statement governs what the rule requires and the Verification's flag is unchanged (decided by the rule)
+- `FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md` — **waived**: no case or requirement changed, only a reason clause, and the owner's 51,200-byte bar asks for the cut (decided by the rule)
+- `plan.md` 'The file stays one read' records how the size was reached, which a design record would leave to commits; the owner asked for the measured result to be stated in the plan — `specs/069-accessibility-frontend-rules/plan.md` — **waived**: the owner's instruction of 2026-11-20 is to record the measured result and that the file was tightened to meet the 2026-11-08 cap (decided by the rule)
+- `specs/069-accessibility-frontend-rules/analysis.md` is stale against HEAD because this window changed its design subjects; the analysis that follows this review regenerates it — `specs/069-accessibility-frontend-rules/analysis.md` — **waived**: the analysis run after this review regenerates the record, which no hand edit may touch (decided by the rule)
+- `FE-A11YFORM-002`'s Not-flagged clause ends in a garbled phrase and `FE-KBD-001`'s lists a flagged case, both untouched by this window — `framework/rules/accessibility-frontend.md` — **waived**: outside the window and outside the owner's no-claim-changed instruction (decided by the rule)
+- the five task-6 clauses appear in the rule file, the scenario, the spec's Resolved Question and the changelog; they record the flagged side, the not-flagged side and the release note, and no claim contradicts another — `specs/069-accessibility-frontend-rules/spec.md` — **waived**: each copy records a different side of the decision and the changelog is release notes (decided by the rule)
 
 ## Skipped passes
 
@@ -118,37 +154,29 @@ Review of 069's second reopening (task 6, the owner's rule decision of 2026-11-1
 
 ## Excluded from scope
 
-- `framework/rules/api-backend.md`
-- `framework/rules/concurrency-backend.md`
 - `framework/rules/configuration-cross.md`
-- `framework/rules/reliability-backend.md`
-- `framework/rules/security-backend.md`
-- `framework/rules/security-cross.md`
-- `framework/rules/security-frontend.md`
-- `runtime/src/primitives/shipped_rule_ids.txt`
-- `scripts/audit/README.md`
-- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
+- `runtime/CHANGELOG.md`
+- `specs/008-security-rules/analysis.md`
+- `specs/008-security-rules/plan.md`
+- `specs/008-security-rules/review.md`
 - `specs/008-security-rules/spec.md`
-- `specs/008-security-rules/tasks.md`
-- `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md`
+- `specs/017-derive-dont-ask/analysis.md`
+- `specs/017-derive-dont-ask/data-model.md`
+- `specs/017-derive-dont-ask/plan.md`
+- `specs/017-derive-dont-ask/review.md`
 - `specs/017-derive-dont-ask/spec.md`
-- `specs/017-derive-dont-ask/tasks.md`
-- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md`
-- `specs/026-framework-self-audit/spec.md`
-- `specs/038-concurrency-backend-rules/scenarios/a-declared-loss-tolerant-message-owes-no-outbox.md`
-- `specs/038-concurrency-backend-rules/spec.md`
-- `specs/038-concurrency-backend-rules/tasks.md`
+- `specs/039-reliability-backend-rules/analysis.md`
 - `specs/039-reliability-backend-rules/plan.md`
-- `specs/039-reliability-backend-rules/scenarios/expendable-messages-may-be-dropped-when-recorded.md`
+- `specs/039-reliability-backend-rules/review.md`
 - `specs/039-reliability-backend-rules/spec.md`
-- `specs/039-reliability-backend-rules/tasks.md`
-- `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
-- `specs/067-analyze-and-audit-checks/spec.md`
-- `specs/068-api-backend-rules/scenarios/repr-003-bounded-numbers-and-patch-001-format-home.md`
+- `specs/068-api-backend-rules/analysis.md`
+- `specs/068-api-backend-rules/plan.md`
+- `specs/068-api-backend-rules/review.md`
 - `specs/068-api-backend-rules/spec.md`
-- `specs/068-api-backend-rules/tasks.md`
+- `specs/077-security-cross-rules/analysis.md`
 - `specs/077-security-cross-rules/data-model.md`
 - `specs/077-security-cross-rules/plan.md`
+- `specs/077-security-cross-rules/review.md`
 - `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
 - `specs/077-security-cross-rules/spec.md`
 - `specs/077-security-cross-rules/tasks.md`
