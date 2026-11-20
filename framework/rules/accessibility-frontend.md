@@ -34,7 +34,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Across a set of web pages, more than one way MUST be available to locate a page that is not the result of, or a step in, a process; navigation repeated on multiple pages MUST keep the same relative order, and help mechanisms (human contact details or mechanism, self-help, automated contact) repeated on multiple pages the same order relative to other page content, unless the user changes it; and components with the same functionality MUST be identified consistently.
 
-**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation, help in the same relative order, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the four.
+**Verification:** Any spec or plan that introduces or changes a set of pages' navigation, help, or repeated components MUST commit to more than one way to each page outside a process, a fixed relative order for repeated navigation, help in the same order relative to other page content, and one name per function across the set. `/{project}:analyze` flags a spec that breaks any of the four.
 
 **Source:** WCAG 2.2 §2.4.5 (Multiple Ways), §3.2.3 (Consistent Navigation), §3.2.4 (Consistent Identification), §3.2.6 (Consistent Help)
 
@@ -178,7 +178,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Inputs that collect information about the user MUST carry the HTML `autocomplete` token matching their purpose (`name`, `given-name`, `email`, `tel`, `street-address`, `postal-code`, `country`, `bday`, `username`, and the rest of WCAG 2.2's Input Purposes list). Credential, one-time-code, and payment fields carry the same obligation under `FE-PII-002`.
 
-**Verification:** Any spec or plan that introduces a form collecting personal data (identity, contact, address, birth date) MUST name the `autocomplete` token per field. `/{project}:analyze` flags affected-files snippets with inputs whose `type`, `name`, or `id` indicates personal data (`email`, `tel`, `name`, `address`, `postal`/`zip`) but that carry no `autocomplete` attribute or `autocomplete="off"`. **Not flagged:** a field about someone other than the user (a recipient's name or address).
+**Verification:** Any spec or plan that introduces a form collecting personal data (identity, contact, address, birth date) MUST name the `autocomplete` token per field. `/{project}:analyze` flags affected-files snippets with inputs whose `type`, `name`, or `id` indicates personal data (`email`, `tel`, `name`, `address`, `postal`/`zip`) but that carry no `autocomplete` or `autocomplete="off"`. **Not flagged:** a field about someone other than the user (a recipient's name or address).
 
 **Source:** WCAG 2.2 §1.3.5 (Identify Input Purpose), WCAG 2.2 §7 (Input Purposes for User Interface Components), W3C Understanding 1.3.5, HTML Living Standard (Autofill, the `autocomplete` attribute)
 
@@ -220,7 +220,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Every `<img>` element MUST have an `alt` attribute. Informational images MUST have descriptive alt text; purely decorative images MUST have `alt=""` (empty string). SVG icons used as interactive triggers MUST give the control an accessible name by one of the means `FE-ARIA-002` lists. Where the technology can present it, information MUST be conveyed as text rather than as an image of text; an image of text MAY convey it where the user can customize it or its presentation is essential, as a logotype's is.
 
-**Verification:** Any spec or plan that introduces image rendering MUST commit to an alt-text policy, and to rendering text as text but where the Statement's MAY applies. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking an `alt` attribute, and images of text the MAY does not cover; an unnamed SVG-only control is flagged under `FE-ARIA-002`.
+**Verification:** Any spec or plan that introduces image rendering MUST commit to an alt-text policy, and to rendering text as text but where the Statement's MAY applies. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking `alt`, and images of text the MAY does not cover; an unnamed SVG-only control is flagged under `FE-ARIA-002`.
 
 **Source:** WCAG 2.2 §1.1.1 (Non-text Content), §1.4.5 (Images of Text), W3C Technique H67 (Using null alt text and no title attribute on img elements for images that assistive technology should ignore), WebAIM "Alternative Text"
 
