@@ -10,8 +10,8 @@ with `/{project}:analyze`, and its schema (see *`prune-plan`* below). The
 `PruneGate`, `PruneAction`, `SizeSummary`, `PruneSection`,
 `PruneTasksSummary`, `PruneTasksLine`, `PruneTasksResult`, `PrunePlanArgs`,
 `PlanRemoval`, `PlanFinding`, `PlanSection`, `PrunePlanSummary`,
-`PrunePlanResult`, `PruneWalk`, `PruneWalkEntry`, `SkippedFeature` and
-`SkipReason` — live in
+`PrunePlanResult`, `PruneWalk`, `PruneWalkEntry`, `SkippedFeature`,
+`SkipReason`, `UnexaminedTail` and `TailCause` — live in
 `runtime/src/schema/primitives.rs` with `serde::{Serialize, Deserialize}`
 derives; their serialized JSON is the stable host contract, consistent with
 the primitive-schema convention in
@@ -35,8 +35,9 @@ simply the first `Structure` block, not a separate field. Structure detection is
 level 3, `### N.`, under `## …` phase containers). `task_level` is 2 or 3
 accordingly. Every line goes through `SkipScanner`; a fenced block or HTML
 comment still open at the end of the file leaves the lines from its opener on
-in no block, so the result reports them as its **unexamined tail** (the
-`unexamined-tail` bullet below), never as structure.
+inside the block holding the opener, so no later one is read, and the result
+reports them as its **unexamined tail** (the `unexamined-tail` bullet below),
+never as structure.
 
 ```rust
 enum PruneMode { KeepPending, Reset }
@@ -201,7 +202,8 @@ Result for one feature (a **compact summary — never the file body**):
 
 - `mode` — `"keep-pending"` or `"reset"`, echoing the resolved mode.
 - `applied` — whether a write happened (`false` on preview, on
-  `nothing-to-prune`, and on a blocked reset).
+  `nothing-to-prune`, on a blocked reset, and on a file with an
+  `unexamined-tail`).
 - `gate` — `"not-applicable"` for keep-pending; for reset, `"allowed"`
   (status is `done`, or `force` supplied) or `"blocked-needs-force"` (status
   is not `done` and `force` absent). A blocked reset is a **domain outcome**,
@@ -223,7 +225,7 @@ Result for one feature (a **compact summary — never the file body**):
 - `unexamined-tail` — present only when `tasks.md` ends inside an open fenced
   block (`cause: open-fence`) or HTML comment (`open-comment`). `from-line` is
   the 1-based line of the whole file the region opens on: it and every later
-  line are in no section and were not examined, so the file never reads as
+  line were not read as sections, so the file never reads as
   clean. An apply, in either mode, writes nothing (`applied: false`) until the
   region is closed, and the preview still reports the sections it read. Absent
   means no region was open, never that none was checked.
@@ -302,8 +304,9 @@ Preamble and structural blocks are always kept; a `###` or deeper heading
 stays inside the section that holds it.
 
 A fenced block or HTML comment still open at the end of the file leaves the
-lines from its opener on in no block, so the result reports them as its
-**unexamined tail** (the `unexamined-tail` bullet below), never as structure.
+lines from its opener on inside the block holding the opener, so no later
+section is read, and the result reports them as its **unexamined tail** (the
+`unexamined-tail` bullet below), never as structure.
 
 A section's **text** is its lines from the heading to its last non-blank
 line, joined by `\n`. The digest and the size both read the text, so a
@@ -533,7 +536,8 @@ beside its `sections` and no `form`; the bound applies to the walk, never to
 an entry.
 
 A `PruneTasksLine` is the summary without its per-section records — `gate`,
-`status`, `applied`, the two counts, the two sizes and `path`. A corpus
+`status`, `applied`, the two counts, the two sizes, `path` and
+`unexamined-tail` when present. A corpus
 preview prices a spec by its counts; the records would carry every task
 section in the corpus, 842 of them and 161,841 bytes over this repository's
 60 specs when the walk was built, against 15,373 bytes as lines, status included. `status` is

@@ -224,9 +224,10 @@ impl BoundedPruneResult for PrunePlanResult {
 }
 
 /// Every feature's preview, in corpus order. A feature is listed when its
-/// plan holds a section outside the record, or when it is a `done` spec whose
-/// tree already requires a reopen — the one thing a walk must not drop, since
-/// `/{project}:prune` names that reopen on the spec's row. Any other feature
+/// plan holds a section outside the record, when its `plan.md` carries an
+/// `unexamined-tail`, or when it is a `done` spec whose tree already requires a
+/// reopen — the one thing a walk must not drop, since `/{project}:prune` names
+/// that reopen on the spec's row. Any other feature
 /// is examined and left out, and one with no `plan.md` is skipped with that
 /// reason.
 fn walk(args: &PrunePlanArgs, repo: &Path, root: &str) -> Result<PruneWalk<PrunePlanSummary>> {

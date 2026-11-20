@@ -69,7 +69,7 @@ Prune formalizes that `tasks.md` is disposable and that a plan's claims live onl
 
 ## Edge Cases
 
-- **Already lean / template-state.** When keep-pending finds no spent section and no plan section is proposed, prune makes no write and reports nothing to prune; `--reset` on an already template-state file is an idempotent no-op.
+- **Already lean / template-state.** When keep-pending finds no spent section and no plan section is proposed, prune makes no write and reports nothing to prune; `--reset` on an already template-state file is an idempotent no-op. A file with an `unexamined-tail` is never lean: prune reports it as not examined from that line (`scenarios/an-open-fenced-block-or-comment-is-not-examined.md`).
 - **Missing `tasks.md`.** With no plan either — the `draft` and `clarified` case — prune stops and directs the user to `/{project}:plan`; it never creates a task list from nothing. With a plan, it reduces the plan and reports the missing task list.
 - **No session target.** Prune stops and directs the user to `/{project}:target`.
 - **Sections with no checkboxes.** Structural or prose blocks (including the top-level heading and the template guidance comment) carry no checkbox, so they are never classified spent — spent requires ≥1 checkbox, all checked — and are always preserved.

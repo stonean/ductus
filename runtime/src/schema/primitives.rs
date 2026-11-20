@@ -4900,9 +4900,8 @@ pub struct PruneTasksSummary {
     /// Repo-relative path to the tasks file.
     pub path: String,
     /// Present when `tasks.md` ends inside an open fenced block or HTML
-    /// comment, so the lines from `from-line` on are in no section and were
-    /// not examined; an apply of it writes nothing. Absent when no region
-    /// was open.
+    /// comment, so no section from `from-line` on was read; an apply of it
+    /// writes nothing. Absent when no region was open.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unexamined_tail: Option<UnexaminedTail>,
 }
@@ -5194,9 +5193,8 @@ pub struct PrunePlanSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reopen_required: Option<bool>,
     /// Present when `plan.md` ends inside an open fenced block or HTML
-    /// comment, so the lines from `from-line` on are in no section and were
-    /// not examined; an apply of it removes nothing. Absent when no region
-    /// was open.
+    /// comment, so no section from `from-line` on was read; an apply of it
+    /// removes nothing. Absent when no region was open.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unexamined_tail: Option<UnexaminedTail>,
 }
@@ -5372,7 +5370,7 @@ pub struct ProjectFile {
     pub unexamined_tail: Option<UnexaminedTail>,
 }
 
-/// Why the lines of a file's tail are in no entry.
+/// Why the lines of a file's tail were not read as entries or sections.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum TailCause {
@@ -5386,12 +5384,13 @@ pub enum TailCause {
     UnterminatedManagedRegion,
 }
 
-/// The part of a file no entry covers because a region never closes.
+/// The part of a file not read as entries or sections because a region never
+/// closes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct UnexaminedTail {
     /// 1-based line the open region begins on; that line and every one after
-    /// it are in no entry.
+    /// it were not read as entries or sections.
     pub from_line: usize,
     /// What is left open.
     pub cause: TailCause,

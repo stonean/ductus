@@ -303,8 +303,8 @@ pub(crate) fn one_feature_or_all<'a>(
 }
 
 /// Every feature's reduction, in corpus order, one line each carrying the
-/// spec's status. A feature with nothing to reduce is examined and left out;
-/// one with no `tasks.md` is skipped with that reason. Under `apply` each
+/// spec's status. A feature with nothing to reduce and no `unexamined-tail` is
+/// examined and left out; one with no `tasks.md` is skipped with that reason. Under `apply` each
 /// permitted reduction is written, and a `--reset` stays gated per spec.
 /// Every reduction is computed and every status read before the first
 /// write, so a feature that fails either stops the walk with the corpus
@@ -501,7 +501,8 @@ fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Resu
     // reset) only when the gate permits it. keep-pending is never gated.
     let gate_permits = !matches!(gate, PruneGate::BlockedNeedsForce);
     // A file that ends inside an open region is never written: the lines
-    // after the opener sit in no block, so no section after it was judged.
+    // after the opener sit inside the block holding it, so no later section
+    // was judged.
     let applied = args.apply && !nothing_to_prune && gate_permits && unexamined_tail.is_none();
 
     Ok(Reduction {
