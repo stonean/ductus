@@ -156,7 +156,7 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-PATCH-001
 
-> `PATCH` endpoints MUST declare their patch document format by media type — JSON Merge Patch (`application/merge-patch+json`, RFC 7396), JSON Patch (`application/json-patch+json`, RFC 6902), or a project format documented in `specs/system.md` that defines how an absent field and an explicit `null` each apply. The server MUST apply a patch atomically: when any change in the document cannot be applied, none is applied, and no partially modified representation is ever observable.
+> `PATCH` endpoints MUST declare their patch document format by media type — JSON Merge Patch (`application/merge-patch+json`, RFC 7396), JSON Patch (`application/json-patch+json`, RFC 6902), or a project format documented in `specs/system.md` or in the spec that introduces the endpoint, that defines how an absent field and an explicit `null` each apply. The server MUST apply a patch atomically: when any change in the document cannot be applied, none is applied, and no partially modified representation is ever observable.
 
 **Verification:** Any spec or plan that introduces a `PATCH` endpoint MUST name its patch media type (or the documented project format) and commit to all-or-nothing application. `/{project}:analyze` flags `PATCH` specs that accept a plain `application/json` body with no stated absent-versus-`null` semantics, and plans that apply patch operations one by one without a transaction or equivalent all-or-nothing guard.
 
@@ -202,8 +202,8 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 ### BE-REPR-003
 
-> A JSON payload MUST NOT carry a number with greater magnitude or precision than a binary64 (double-precision) number provides: an integer outside the range −(2^53 − 1) to 2^53 − 1, such as a 64-bit identifier, or a value with more precision than binary64 provides. Such a value MUST be encoded as a JSON string, documented in the schema as a string-encoded number.
+> A JSON payload MUST NOT carry a number with greater magnitude or precision than a binary64 (double-precision) number provides: an integer outside the range −(2^53 − 1) to 2^53 − 1, such as a 64-bit identifier, or a value with more precision than binary64 provides. Such a value MUST be encoded as a JSON string, documented in the schema as a string-encoded number. This goes beyond RFC 7493 §2.2 on purpose: it advises against such a number and recommends a string, where a lost digit corrupts data silently.
 
-**Verification:** Any spec or plan that introduces a JSON API field holding a number with greater magnitude or precision than binary64 provides MUST encode and document it as the Statement requires. `/{project}:analyze` flags a spec that declares such a field — an `int64` or `uint64` identifier, a high-precision decimal — as a JSON number.
+**Verification:** Any spec or plan that introduces a JSON API field holding a number with greater magnitude or precision than binary64 provides MUST encode and document it as the Statement requires. `/{project}:analyze` flags a spec that declares such a field — an `int64` or `uint64` identifier, a high-precision decimal — as a JSON number without bounding its values within −(2^53 − 1) to 2^53 − 1; an `int64` field whose spec states that bound is not flagged.
 
 **Source:** RFC 7493 §2.2, RFC 8259 §6
