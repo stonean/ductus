@@ -15,7 +15,7 @@ Five categories ship — `TIMEOUT`, `RETRY`, `BREAKER`, `DRAIN`, `BULK` — with
 Modeled on `performance-backend.md` / `observability-backend.md` / `concurrency-backend.md`:
 
 - **Header.** Title `# Reliability Rules — Backend` and one paragraph: the scope (server-side resilience under partial failure); these verify design-time commitments enforced by `/{project}:analyze`; a rule is **MUST** only for a scale-independent availability or cascading-failure risk, the rest **SHOULD**; the ID-format / category-declaration line stating IDs follow `BE-{CATEGORY}-{NNN}` with categories `TIMEOUT` (timeouts and deadlines), `RETRY` (retries and dead-lettering), `BREAKER` (circuit breakers), `DRAIN` (graceful shutdown), `BULK` (backpressure, bulkheads, and graceful degradation); and a pointer to constitution §rules for severity, ID permanence, and how review selects or excludes the file (008's `rules-are-as-short-as-their-required-content`).
-- **Categories disjoint** from the other backend files (verified: `TIMEOUT`/`RETRY`/`BREAKER`/`DRAIN`/`BULK` appear in none).
+- **Categories disjoint** from the other backend files (`grep -h '^## BE-' framework/rules/*-backend.md` lists each of `TIMEOUT`/`RETRY`/`BREAKER`/`DRAIN`/`BULK` as a section heading only in `reliability-backend.md`).
 
 ### Rule set
 
