@@ -6,7 +6,7 @@ Implements [039 — Backend reliability rules](spec.md).
 
 A rule-introducing, markdown-tier feature — the 034/037/038 path exactly. It adds one rule file, `framework/rules/reliability-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md`), and wires it into the `/ductus` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update. Landing this set resolves 034's forward-reference to a future `reliability-backend.md` (AC #8).
 
-Five categories ship — `TIMEOUT`, `RETRY`, `BREAKER`, `DRAIN`, `BULK` — with thirteen rules, four of them MUST — eight and three at launch; the 2026-10-19 rule-file review added `BE-RETRY-003`, `BE-RETRY-004`, `BE-RETRY-005` (MUST) and `BE-BULK-002` and revised the launch eight in place (task 5), and that day's owner decisions added `BE-TIMEOUT-003` and reworded `BE-RETRY-005` without its monitoring and alerting requirement (task 7). Verification is **design-time commitment** framing enforced by `/ductus:analyze` against feature artifacts, matching 034/037/038.
+Five categories ship — `TIMEOUT`, `RETRY`, `BREAKER`, `DRAIN`, `BULK` — with thirteen rules, four of them MUST. Verification is **design-time commitment** framing enforced by `/ductus:analyze` against feature artifacts, matching 034/037/038.
 
 ## Technical Decisions
 
