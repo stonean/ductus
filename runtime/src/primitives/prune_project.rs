@@ -319,7 +319,8 @@ enum Open {
 /// Segment `content` into entries by the grammar in 041's `data-model.md`
 /// §`prune-project`, with the tail no entry covers when the file ends inside an
 /// open HTML comment or an unterminated managed region: its lines are neither
-/// entries nor silently dropped, since the file's record names where they begin.
+/// entries, a heading entry's included, nor silently dropped, since the file's
+/// record names where they begin.
 /// An unterminated fence is not such a tail; it becomes one block entry.
 fn segment(
     rel: &str,
@@ -354,7 +355,9 @@ fn segment(
         };
         segmenter.step(i, line, skipped, fence);
     }
-    segmenter.close(segmenter.lines.len());
+    // An entry still open when a comment never closes ends before it, so the
+    // tail's lines are covered by no entry, a heading entry's included.
+    segmenter.close(comment_from.unwrap_or(segmenter.lines.len()));
     // A managed region opens before any comment inside it, so it names the
     // earlier line.
     let tail = match (&segmenter.managed, comment_from) {
@@ -1645,6 +1648,12 @@ Codes use `snake_case`.
                 cause: TailCause::OpenComment
             })
         );
+        // A heading entry open when the comment starts ends before it.
+        let under_heading =
+            "## Gotchas\n\n### Heading entry\nbody\n\n<!-- never closed\nmore text\n";
+        let (shape, tail) = tail_of(under_heading);
+        assert_eq!(shape, vec![(EntryKind::Heading, 3, 4)]);
+        assert_eq!(tail.map(|t| t.from_line), Some(6));
         // A comment that closes leaves nothing unexamined.
         let closed =
             "## Gotchas\n\n- first\n\n<!-- closed -->\n\n<!-- spans\n   lines -->\n\n- last\n";

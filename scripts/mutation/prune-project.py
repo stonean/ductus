@@ -156,6 +156,13 @@ MUTATIONS = [
         'prune_project::tests::a_non_utf8_tracked_file_is_searched_bytewise',
     ),
     (
+        'M22 a heading entry open when a comment never closes runs through the unexamined tail',
+        'src/primitives/prune_project.rs',
+        '    segmenter.close(comment_from.unwrap_or(segmenter.lines.len()));',
+        '    segmenter.close(segmenter.lines.len());',
+        'prune_project::tests::an_unterminated_comment_names_where_the_unexamined_tail_begins',
+    ),
+    (
         'M21 the file record does not carry the tail',
         'src/primitives/prune_project.rs',
         '            file.unexamined_tail = tail;',

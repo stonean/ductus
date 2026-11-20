@@ -780,6 +780,7 @@ its version and date.
   with a section outside the design record after the tail read as having none.
   The step now says to report it so, naming `from-line` and `cause`, never as a
   plan with no section outside the design record. No primitive changes.
+- **`prune-project` ends a heading entry before a comment that never closes (spec 041; found reviewing task 28).** A `###` heading entry open when a `<!--` with no `-->` began kept the unexamined lines in its span, so an apply replacing or removing that entry rewrote text the result said was not examined. The entry now ends before the comment and the tail is covered by no entry, as the data model states. Not breaking: a result's entry for such a file ends earlier.
 - **A first adoption runs no migration, and names each spec it cannot read (spec
   027 task 16, scenario `a-first-adoption-runs-no-migration`; owner, 2026-11-16).**
   Pre-run Migrations skipped only a greenfield run, so a first adoption into a
