@@ -1,34 +1,55 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-19T17:26:34Z
-reviewed-against: e74e3a58d570251f1e6d8d7040f465505dc3889c
-diff-base: 62e6df62353711d4efd8990fe49a6f015f6c65a9
+last-run: 2026-11-20T01:29:52Z
+reviewed-against: cafa2af19338302355ba432deca95c9421ffcfd3
+diff-base: 13a1bf1a9b3f745c2744edc18b153901b437643a
 must-violations: 0
 should-violations: 0
-low-confidence: 0
-examined: 2
-scope: 6
+low-confidence: 1
+examined: 15
+scope: 40
 unread:
-  - runtime/src/primitives/apply_manifest.rs
-  - runtime/src/primitives/mark_task.rs
+  - runtime/CHANGELOG.md
+  - runtime/src/interpreter/mod.rs
+  - runtime/src/interpreter/payload.rs
+  - runtime/src/main.rs
+  - runtime/src/parser/mod.rs
+  - runtime/src/primitives/check_artifacts.rs
+  - runtime/src/primitives/check_corpus_links.rs
+  - runtime/src/primitives/classify_spec_edit.rs
+  - runtime/src/primitives/merge_managed_block.rs
+  - runtime/src/primitives/merge_permissions.rs
+  - runtime/src/primitives/mod.rs
+  - runtime/src/primitives/read_spec.rs
+  - runtime/src/primitives/rule_sections.rs
+  - runtime/src/schema/descriptions.rs
+  - runtime/src/schema/primitives.rs
+  - runtime/src/schema/protocol.rs
+  - runtime/tests/mcp.rs
+  - scripts/mutation/exec-arguments.py
+  - scripts/mutation/installed-file-modes.py
+  - scripts/mutation/reopen-measure.py
+  - scripts/mutation/review-022-fixes-2026-11-19.py
+  - scripts/mutation/review-022-task-44.py
+  - scripts/mutation/stderr-warnings-022.py
   - specs/022-deterministic-runtime/plan.md
   - specs/022-deterministic-runtime/spec.md
-excluded: 0
+excluded: 125
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 0
+fix-rounds: 2
+re-reads: 2
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: b18e13ef537f7a75101dfbe3f866554a1a881724627e42b31000403b5b9d9829
-  scenarios/a-closed-stdout-is-a-quiet-exit.md: ef3db93cc91fecfca53ab67300605cbdf3823c916fe6f1131933740434ad0ca5
+  data-model.md: e4be8376fa45508fac584713626627e428e0a7e79a81920c46825796f82eecd8
+  scenarios/a-closed-stdout-is-a-quiet-exit.md: bdbf9b74de48542168e7cac7bc0f5890eed478fde5957c1bd08738b569354957
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: f3c4072fc69ebfa829d92ae21c7043b7e3aa2a4be3db175b7df56204882e6fb4
   scenarios/a-done-when-clause-reads-to-its-end.md: b2d6b2ab8cbd208eec3ac811edc662c296792d51ec7ab1e0c49ec2c8acb045e9
   scenarios/a-path-argument-resolves-inside-its-base.md: 503e9dd4b66563bb317c4deaf4e9cee88275c3c5e3a71a50628704f208a4ac3d
   scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md: 5fec39041378aa1786a94cf59eb1676dd33b7f15b5371815ac92d1e8382c4c72
-  scenarios/append-inbox-comment-aware-write.md: c15499bda1cef7c531d2d135e20a5b265761841f1abb15db5f4225d286eb65b8
+  scenarios/append-inbox-comment-aware-write.md: 5df79036e979479b03037efd26f74d513c2ef128e579e33e198e4cf8b885366a
   scenarios/append-primitive-marker-normalization.md: 26c5064dcdf3f697885faac80332207d079bfd7db2d14c0769254da21e5e4246
   scenarios/append-task-honours-slug-with-explicit-body.md: 4e52f43a5f6463d13e9509b34ff017ffb72eec230e8636beb2bc39dace87bc86
   scenarios/apply-manifest-substitution-contract.md: d207e610fe23640c400a4e08205172c699555fde5852c9de1e4405cf1ca72a60
@@ -46,7 +67,7 @@ reviewed-digest:
   scenarios/coverage-expansion-primitives.md: 8fbe190c64b21c9f0edf92d764bdf9138d4f122830eea60df726d526859578d6
   scenarios/coverage-residue-cleanup.md: 0c6315ac8f0f041f624b0a389bbfca855d9886bb06703cef4ee5ffd513770d17
   scenarios/criterion-label-assignment.md: 57e455a91d0b76c6a3a5bdea80288300c246d00d53425730be88896e89c25305
-  scenarios/dashboard-primitive.md: 70d8a91916780bab45ed495f1c7f197d1ebd83f27caba0b1a4a2ea9849434fca
+  scenarios/dashboard-primitive.md: df9303f3a1872924761448ba4dc99eed173e01f2f7b8d7a6f1dca4c2b6e85bb5
   scenarios/derive-boundary-uncommitted-spec-dir.md: 64edf042d36ea149576e46e44ddf9bd4bce4e6eea12c59a092a31781baec5c6b
   scenarios/done-when-authoring-forms.md: 8cf2c40315fc62905b424b74ae21f5396a3201af5f4e2427e8ec11a36092a695
   scenarios/every-mcp-argument-has-a-cli-form.md: 942f7dac34955cf0f4714e53045b295e2aa9d47667ec56fb0d174ae2ae1f8191
@@ -59,9 +80,9 @@ reviewed-digest:
   scenarios/framework-list-dedup.md: e01884c811f286768f80cf0a616088c569bb1961ab07db670b47e843f39d91fd
   scenarios/govern-bootstrap.md: 5ffb4022ff53b32e9288a4f15fff7cd3441a2cea1bf42f07fbd080c264529089
   scenarios/groom-command-acceleration.md: dd6052b3d7ee1b1f8528913b82eabfbaf6debe4de51043824b2fcd5d040ed27e
-  scenarios/host-protocol-conformance.md: 13c3a2d89eedf4f79e66c9d4e8e97a9b7361e6fd1fa340a76c46730c28e4d542
+  scenarios/host-protocol-conformance.md: 6e17ebe8c14b713320a249729de266c2126161ba61ba21416b558628bb13bf0d
   scenarios/implement-completion-gate.md: d094ebf57e1f453690a6dc01fd28282df377b3c4362daf90f95f76183d635292
-  scenarios/installed-files-are-not-group-writable.md: 3a29eb614d5bd804698622713e8d18e29d8b68f3030d342a4e1f1be30c276cc4
+  scenarios/installed-files-are-not-group-writable.md: ca14be0b2cca81724fdb32c2757e67374c375b542eacf7d86baf175da2c30cbc
   scenarios/lint-markdown-lints-only-what-it-is-given.md: 92efe81c7326ae4daa08f1f40596afe6221a30433a45ccc7998ab5fadff28ddf
   scenarios/lint-markdown-tool-resolution.md: 79a8b063c83b9de05358a3aa25eab94c9ce930737b73d29638c57f9b6ab8f6af
   scenarios/mark-task-backtick-headings.md: a405d3e4b08ef15de8037541c05a93f70a5553f4a72407b917aed4e50ba20507
@@ -84,11 +105,11 @@ reviewed-digest:
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: dd72b20cb886ee804141895d169ebb90eb5c548df260fb02cb1643dd2a6f777a
   scenarios/scaffolding-primitives.md: c3495b99e2f440822fed57cb08ba0cd668e9093fd786ad37e616a8508417c699
-  scenarios/scenario-open-question-signal.md: 58fb1c80f5dacc4e4d2fb3619de1b626363283f71ed460910c10ac80f0ecfd65
+  scenarios/scenario-open-question-signal.md: 92ec638cae624784afd957acecbd10ecb060ae3a2dcf4a864253c865ab50d6b0
   scenarios/scenario-question-parser-fix.md: bdcaf5f9bb7d0ff795d6e3a6a5045a79afc63b55d8ce4b3331f807c337bf2ada
   scenarios/severity-is-a-closed-set-not-a-string.md: d4ea4d23382e2968d72df879d89c7617ffe0b1a8f4049430a25cf70d5f1bd25f
-  scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
-  scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
+  scenarios/skipscanner-inline-code-exemption.md: 20cf003798a71e271115f0425b78f4d61c52cd2e56e42311d52ccf3660133348
+  scenarios/spec-side-parser-hardening.md: c32c2f69ce6d17a120ea927ceec6b87bf79350b46ae217c78023780778de71fc
   scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
   scenarios/the-cli-surface-nothing-pins.md: 634128f508bb6cc3d94913216ce5aefa3571a93bae2e2d45ecb8a0accf22dcc6
   scenarios/the-constitutions-registry-validates-its-values.md: 161cf85126b357e1c7fe6e63be2de5d80e96842a26acb3ed299af55f4bd92acc
@@ -154,9 +175,9 @@ criteria-verdicts:
     digest: 0be735b38d4da9a57fb5e26cc0e413ab9f8205df60f8a956bc614eff1187107d
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 15
   deferred: 0
-  waived: 2
+  waived: 12
   undispositioned: 0
 decisions:
   - key: "reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs`"
@@ -594,11 +615,6 @@ decisions:
     reason: The limits are stated in the module doc, a grep of non-test code found no std::fs::write or File::create rewriting a project file read first, and the check is a review aid, not a claim of proof.
     decided-at: 2026-11-17T16:58:33Z
     decided-by: rule
-  - key: other — main.rs error paths use eprintln!, which panics when stderr is a pipe whose reader has gone, so a failing run can exit 101 instead of 1; the closed-stdout scenario scopes itself to stdout and names the eprintln sites as unchanged — `runtime/src/main.rs:455`
-    outcome: waived
-    reason: a-closed-stdout-is-a-quiet-exit scopes its behavior to the stdout result writers and states main.rs still writes errors with eprintln, and the run is already failing when these fire
-    decided-at: 2026-11-17T16:58:33Z
-    decided-by: rule
   - key: other — the CLI flag hydration is a table of 21 hydrate_field calls and tests prove only the shared helper and two primitives, so a call dropped or pointed at the wrong argument (applied against expired waivers, say) fails no test; every_mcp_argument_has_a_cli_form pins clap presence only — `runtime/src/main.rs:339`
     outcome: waived
     reason: d3192610 records the hydration helper proved red with its assignment removed, and each of the 21 calls pairs a flag with its same-named field, so a swap shows in review as a name mismatch
@@ -767,11 +783,6 @@ decisions:
   - key: perf — a performReview or writeCode request is serialized and measured twice per build, once by the body step and once by bound_lists, and each measure re-reads the config for the read size — `runtime/src/interpreter/payload.rs:507`
     outcome: waived
     reason: one request per host round trip, each measured twice at the size of the request itself, against a model call that takes seconds
-    decided-at: 2026-11-17T16:58:33Z
-    decided-by: rule
-  - key: other — main.rs reports its failure paths with over thirty eprintln! calls, which panic when the stderr reader has gone, where the stdout writes go through write_stdout_line (task 27) and warn_unknown_keys writes stderr without panicking — `runtime/src/main.rs:285`
-    outcome: waived
-    reason: each call is on a path that is already failing, so a closed stderr changes the exit status from 1 to a panic's 101 on a run that had failed anyway, and no result or write is lost
     decided-at: 2026-11-17T16:58:33Z
     decided-by: rule
   - key: other — the two CLI json-flag tests drive 2 of the 14 hydration arms task 24 added (fired-json and fix-rounds-json), so deleting or mis-wiring another arm leaves both green while the flag is ignored; the commit records a mutant for each test, not for each arm — `runtime/src/main.rs:1774`
@@ -1044,15 +1055,75 @@ decisions:
     reason: Those sites lock stderr once across a loop of lines, which a one-line warn would not do.
     decided-at: 2026-11-19T15:52:41Z
     decided-by: rule
+  - key: security — `await_llm_response` and `await_gate_response` in `runtime/src/interpreter/mod.rs` write a host-supplied request-id raw into a stderr warning — `runtime/src/interpreter/mod.rs`
+    outcome: waived
+    reason: the id comes from the operator's own agent host over a local stdio protocol and the line is a diagnostic, not a log store; the same class as the low-confidence finding recorded for `report_broken_links`
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — `merge-managed-block` sets 0644 by path after the rename, so a same-user process swapping the path for a symlink in that window would have the chmod follow it — `runtime/src/primitives/merge_managed_block.rs`
+    outcome: waived
+    reason: not exploitable beyond the operator's own account on a local tool, and `merge-managed-block` replacing an in-project symlink is a recorded owner decision
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: convention — the `CHECK_STEP_REFERENCES` description omits that a command source or reference that is, or runs through, a symbolic link leaving the project is a skip, and that the subject includes two bootstrap files — `runtime/src/schema/descriptions.rs`
+    outcome: waived
+    reason: no loaded rule requires a description to carry them and the code is correct; its exit clause, which was wrong, is fixed
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — the `DERIVE_DEPENDENCIES` and `DERIVE_REFERENCES` descriptions say a zero `updated-count` means examined-and-clean when `unwritable-count` and `refused-count` are also zero, and those two are absent at zero — `runtime/src/schema/descriptions.rs`
+    outcome: waived
+    reason: the same descriptions say absent at zero earlier, so a reader resolves it, and no check is made to pass that should not
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: design — `load_scope_files` in `runtime/src/interpreter/payload.rs` drops an in-project file it cannot read from `scope-files` without naming it in `unexaminable` — `runtime/src/interpreter/payload.rs`
+    outcome: waived
+    reason: the data model documents that an unreadable path is skipped; naming it is a design choice with its own request field and test, not a defect of this window
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: convention — `AGENTS.md`'s `eprintln!` gotcha still names `warn_unknown_keys` and not `ductus::io::warn` and the `print_stderr` lint — `AGENTS.md`
+    outcome: waived
+    reason: "`AGENTS.md` is 49,793 of 50,000 bytes and the owner's decision of 2026-11-19 is that it takes no edit"
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — `specs/022-deterministic-runtime/analysis.md` records digests that no longer equal the tree's, so AC18's recorded pass predates the current text — `specs/022-deterministic-runtime/analysis.md`
+    outcome: waived
+    reason: this run's analysis supersedes the record
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — AC17's no-install-nag claim holds, but every command carries a stop-and-restart halt message for a missing server — `framework/commands/status.md`
+    outcome: waived
+    reason: "a statement of fact: there is no install instruction and no runtime detection, and the criterion says the no-nag half holds"
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — AC8 says `ductus exec` completes the six commands in seconds, and no test asserts a time bound — `runtime/tests/parity.rs`
+    outcome: waived
+    reason: the criterion's second sentence leaves the extension points' own time to the host, and `parity.rs` states that no per-command bound is applied; measured here at 12 ms to 1.1 s
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — the `line-number-citations` family is a new blocking check at every status with no BREAKING mark in `runtime/CHANGELOG.md` — `runtime/CHANGELOG.md`
+    outcome: waived
+    reason: "the owner's rulings of 2026-11-19 name no class for a new blocking check and its neighbours `spec-integrity` and `plan-consistency` are unmarked: reported to the owner, not changed"
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: convention — the `prune-project` changelog entry is marked BREAKING while its body says the primitive is new in this release — `runtime/CHANGELOG.md`
+    outcome: waived
+    reason: marked by the owner's ruling that every bounded-list entry is BREAKING
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
+  - key: other — the changelog's command and reference byte totals (254,439 and 465,917 at `1a7b6911`) are stale against the tree — `runtime/CHANGELOG.md`
+    outcome: waived
+    reason: re-measured at the release bump by the owner's decision
+    decided-at: 2026-11-20T01:29:41Z
+    decided-by: rule
 ---
 
 # Review — 022-deterministic-runtime
 
 ## Summary
 
-Second review of 022, over the window from the first review's record (`62e6df62`, base-source last-review) to `e74e3a58`, owed because the analysis round's second fix changed code. That fix replaced an adopter project's name in three `runtime/src/primitives/apply_manifest.rs` test strings and a `runtime/src/primitives/mark_task.rs` comment; the window also holds the analysis round's grounding citations in the plan and spec, the spec's new `BE-TIMEOUT-001` departure (owner decision), and two scenario sentences. Twelve rule files were loaded, as in the first review, and read whole by the same two pass parts, which read the whole 97,554-byte window diff and the two scenarios whole. The two code files, `specs/022-deterministic-runtime/plan.md` and `specs/022-deterministic-runtime/spec.md` were read at their window hunks only, so 2 of the 6 scope entries count as examined. 0 MUST, 0 SHOULD, 0 low-confidence. 3 observations: 1 fixed, the plan's markdownlint-cli2 version, which the tree installs at 0.24.0 rather than 0.24.1; and 2 stored decisions on `apply_manifest.rs` that still stand. All 24 criteria were judged again against `e74e3a58` and are met; no note cites a file the window changed. The whole `cargo test` at `e74e3a58` passed (3,626 passed, 0 failed, 2 ignored).
+Window `13a1bf1a`..HEAD of the reopening (base-source `reopen`, not overridden): 40 scope entries, 35 at the start and 5 this run's own fixes added. The five passes ran in ten independent readers over the full rule set: security by two readers over the three `security-*.md` files (code diff and the 20 changed description constants), reuse, quality, efficiency and simplicity by two readers over the nine other rule files and `AGENTS.md` Gotchas to Design Principles, the changelog's added and changed statements by two readers who checked about 80 claims against code, tests or driven fixtures, the data model and the eight in-scope scenarios by two readers each read whole, and the 24 criteria by two readers (a third reader judged them too, with the same verdicts). Every rule file was read whole by its readers; `AGENTS.md` lines 123 to 216 were read whole. One SHOULD (`QUAL-CLAIM-001`, `read-spec` reading a `scenarios/` directory it cannot list as zero scenarios) and 15 observations were fixed in the run (12 more waived by the rule with their reasons); one low-confidence `BE-INPUT-011` finding stays recorded. 0 MUST, 0 SHOULD. All 24 criteria met. Two fix rounds were re-read by independent agents: the first found two SHOULD (a wrong byte figure in `runtime/CHANGELOG.md`, and `since-sha`'s empty case undocumented at the source), fixed in the second, whose re-read was clean; the loop ended on an empty round. Coverage: `examined` counts the 15 entries read whole (`runtime/Cargo.toml`, `runtime/src/io.rs`, `runtime/src/primitives/append_inbox.rs`, `runtime/src/primitives/spec_links.rs`, `runtime/tests/exec_stderr_gone.rs`, `tasks.md`, `data-model.md` and the 8 scenarios). The 25 `unread` entries had their whole window diff read (code, scripts, scenarios and contract hunks, the 20 changed description constants whole, the changelog's added and changed statements whole) with the surrounding function or file in part: `runtime/src/primitives/mod.rs`, `runtime/src/main.rs`, `runtime/src/interpreter/payload.rs`, `runtime/src/interpreter/mod.rs` and the other large files were opened around each hunk, and the unchanged remainder of `runtime/src/schema/descriptions.rs` (about 100 KB) was not read line by line; `spec.md` was read for its criteria and its one window hunk, `plan.md` was read for the logging decision only, and this run's own five added entries were read as fix-round diffs. No rule file or tool read stopped short. The settled owner decisions of 2026-11-19 were applied as stated: the `AGENTS.md` gotcha on `ductus::io::warn` is waived (the file takes no more bytes), the unreleased changelog's stale command and reference byte totals are the release bump's to re-measure, and a missing BREAKING mark on the new `line-number-citations` blocking family is the owner's ruling to make. Two stored decisions about `eprintln!` in `runtime/src/main.rs` no longer hold (no `eprintln!` remains) and are dropped; 48 others in scope still hold and 127 naming files outside the window are retained.
 
-1 fix round(s): 0 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 1.
+2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
 24 of 24 acceptance criteria judged met.
 
@@ -1066,7 +1137,13 @@ Second review of 022, over the window from the first review's record (`62e6df62`
 
 ## Low-confidence findings
 
-*None.*
+### LOW-CONFIDENCE: BE-INPUT-011 — report_broken_links writes a link target taken from committed markdown to stderr with control characters unescaped
+
+- **File**: `runtime/src/main.rs:report_broken_links`
+- **Rule**: User-supplied values written to logs MUST be sanitized for control characters (`\r`, `\n`, `\t`, ANSI escape sequences) before being emitted, OR the log emitter MUST encode each field as a structured value (JSON, key-value pairs with quoted strings).
+- **Finding**: `report_broken_links` interpolates `link.target` and `link.path` into a plain-text stderr line, and an ESC byte passes `link_targets`; driven on the release binary the raw ESC reached stderr while the JSON on stdout escapes it. Low confidence: a human diagnostic for a hook on a local tool, the line pre-existing in shape.
+- **Auto-fixable**: yes
+- **Suggested fix**: Format `link.target` and `link.path` with `{:?}` in `report_broken_links`.
 
 ## Waived findings
 
@@ -1078,36 +1155,60 @@ Second review of 022, over the window from the first review's record (`62e6df62`
 
 ## Acceptance criteria
 
-- AC1 — met: `runtime/src/main.rs` declares `Command::Mcp` and `Command::Exec` (to `run_mcp_server` and `run_exec`), `lists_every_manifest_tool_and_canonical_set` (tests/mcp.rs) and `exec_drives_a_deterministic_procedure_to_complete` (tests/exec_subprocess.rs) passed, and the host's whole `cargo test` at `e74e3a58` passed 3626, 0 failed.
-- AC2 — met: `lists_every_manifest_tool_and_canonical_set` (tests/mcp.rs) holds the served tools set-equal to `tool_names()` and to `framework/runtime-tools.txt`, whose `# cli-only: run-generator` line `the_manifest_names_the_cli_only_primitives` holds; the window touches none of it.
-- AC3 — met: `runtime/README.md` 'JSON-over-stdio protocol' and `specs/022-deterministic-runtime/data-model.md` document the envelopes, with `runtime/tests/exec_subprocess.rs` (15 tests) and `walker.rs` (16) covering them; the window touches neither.
-- AC4 — met: `bash scripts/lint-procedure-parseability.sh` exits 0 at `e74e3a58`, `runtime/legacy-prose-commands.txt` allows only `amend`, `help`, `audit` and `ductus-procedure`, and the six `*_basic_stream_matches_golden` tests in `runtime/tests/parity.rs` pass.
-- AC5 — met: `framework/commands/{analyze,implement,plan,specify}.md` carry the `llm:assessSpecQuality|writeCode|writeSpecBody` markers and `runtime/src/schema/extensions.rs` defines each request and response type; the window touches neither.
-- AC6 — met: met on its annotation (workflow renamed to `framework-checks.yml` by 048, which carried the check across): its step '(f) Procedure parseability' runs `scripts/lint-procedure-parseability.sh` (exit 0 here), `markdown-only-pipeline.yml` is absent, and framework-checks passed on `36d371c4` (run 44548781875) and no `.github/` file changed since.
-- AC7 — met: met on its annotation (delivered in part: each command runs end to end and matches its committed golden; the LLM-driven comparison is retired with the prose-walked path and its scaffolding removed, owner 2026-11-19): `runtime/tests/parity.rs` holds the six `*_basic_stream_matches_golden` cases over `runtime/tests/golden/*.jsonl`, they pass in the host's 3626-test run, and only `runtime/tests/parity/cross-service` remains under `runtime/tests/parity/`.
-- AC8 — met: `runtime/tests/parity.rs` drives `ductus exec` over the six commands with a stub host, all passing in the 3626-test run (13 tests finished in about 1s at the earlier run), and the criterion assigns remaining wall-clock to the host's semantic work; the window does not touch it.
-- AC9 — met: met on its annotation (guarantee removed by 048, which made the runtime a requirement): `framework/constitution.md` §runtime-boundary principle 3 and `docs/runtime.md` 'When acquisition fails' state the runtime is required with no silent degradation, so the no-binary cycle is retired on the tree.
-- AC10 — met: `lists_every_manifest_tool_and_canonical_set` holds `framework/runtime-tools.txt` set-equal to the served tools, and `bash scripts/lint-tool-coverage.sh` at `e74e3a58` exits 0 ('17 command file(s) examined, 15 naming a runtime tool, 15 of them carrying the pointer').
-- AC11 — met: `.github/workflows/runtime.yml` runs `cargo build --release --locked` and `cargo test --release --locked` (fails on a test failure) on ubuntu and macos; the earlier pending run 44548781766 completed success on all four jobs, the newest run 44561959809 on `62e6df62` succeeded, and the later commits `603c50ed` and `e74e3a58` change only a comment and test strings in `runtime/src/primitives/` and specs, with the host's whole `cargo test` passing 3626 at `e74e3a58` (no run of it exists yet).
-- AC12 — met: met on its annotation (that workflow no longer exists, 048 replaced it with the acquisition workflow): `.github/workflows/markdown-only-pipeline.yml` is absent and `.github/workflows/runtime-acquisition.yml` exists with newest run 44534767355 (workflow_dispatch) concluding success.
-- AC13 — met: `write_atomic_bytes` and `guarded::write_guarded` (used by `mark_task`, `mark_criterion`, `set_status`) write a same-directory `NamedTempFile`, sync and persist it over the target; proved by `tests/atomic_writes.rs` `mark_task_rename_is_atomic_under_parallel_reads`, `mark_criterion_rename_is_atomic_under_parallel_reads`, `set_status_rename_is_atomic_under_parallel_reads` and `set_status::tests::a_failed_write_leaves_the_spec_unchanged_and_no_tempfile`, all ok in `cargo-test-022.log`.
-- AC14 — met: `ductus --version` prints `ductus 0.59.11`, matching `runtime/Cargo.toml`; `emit_exec_parse_error` in `runtime/src/main.rs` emits an `error` envelope with `runtime-version` and a message naming a possible version mismatch, proved by `exec_emits_terminal_error_envelope_on_unparseable_command_file` (`tests/exec_subprocess.rs`, ok).
-- AC15 — met: `.github/workflows/runtime-release.yml` matrix builds exactly `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` with a `.sha256` per archive, latest run 39039762658 success; README `## The runtime` describes acquisition (`/ductus` downloads, verifies the checksum); the newest release `ductus-v0.59.11` (2026-10-17) predates the Windows drop and still lists an `x86_64-pc-windows-msvc` asset, which is history and not the workflow's current matrix.
-- AC16 — met: met on its annotation (delivered as written; the pointer remains, optionality removed by 048): `framework/bootstrap/ductus-procedure.md` completion output carries a pointer to `[The runtime](https://github.com/stonean/ductus#the-runtime)` in its numbered next steps (`you do not install it`) and in the Tip line; it no longer says optional, as annotated.
-- AC17 — met: met on its annotation (delivered as written, no-nag half still holds; markdown-only first-class guarantee retired by 048): grep of `framework/commands/*.md` for install-nag or missing-runtime wording finds none (only an unrelated `prune.md` AGENTS.md line).
-- AC18 — met: `analysis.md` still records `hard-fail: 0`, `blocking-findings: 0`, `blocking: false` (analyzed-against `027cc14b`, pre-window); at HEAD `e74e3a58` `validate-frontmatter` is clean and `check-artifacts --feature 022-deterministic-runtime` gives 2 advisory scenario-consistency findings (`done-when-authoring-forms.md`, `scenario-question-parser-fix.md`) and no blocking; the analysis this program runs after the review judges it again.
-- AC19 — met: workflow `.github/workflows/framework-checks.yml` step (c) runs `npx markdownlint-cli2`; newest completed run is 44561959700 on `62e6df62` (success, two commits before HEAD), and HEAD `e74e3a58` plus `603c50ed` have no run listed, so the window's markdown edits (plan, spec, two scenarios) are judged from the file and that run, not a run on HEAD; `runtime` run 44548781766 (on `36d371c4`) has since completed success.
-- AC20 — met: `validate_substitution_key` in `runtime/src/primitives/apply_manifest.rs` rejects empty keys and keys containing `{` or `}` before any write; tests `placeholder_shaped_substitution_key_is_rejected_with_zero_writes`, `empty_substitution_key_is_rejected` and `bare_keys_with_punctuation_and_spaces_are_accepted` ok; `runtime/CHANGELOG.md` `## [0.43.0]` carries the BREAKING entry. The window only renamed a fixture value in three `apply_manifest.rs` test strings; host `cargo test` at HEAD passed 3,626.
-- AC21 — met: `ApplyManifestResult`/entry fields in `runtime/src/schema/primitives.rs` carry `substitutions_applied: Option<u32>` per entry (null when never run) plus aggregate `substitutions_applied` and `entries_substituted` (checked by the `r_value["entries-substituted"]` round-trip, `substitution_counts_separate_examined_from_unexamined` ok); the bare-key contract is in the `apply_manifest.rs` module docs, the `substitutions` doc comment, and `The substitution map is keyed bare` in both `framework/bootstrap/ductus.md` and `govern.md`; `ductus-procedure.md` line `N substitutions across M files` surfaces both counts.
-- AC28 — met: `every_registry_primitive_has_a_clap_subcommand` in `runtime/src/main.rs` compares `BTreeSet`s of clap subcommand names against `PRIMITIVE_REGISTRY` in both directions and excludes `mcp`, `exec`, `parse`, `hook`, `help` via `NON_PRIMITIVE_SUBCOMMANDS` with reasons; ran ok in `cargo-test-022.log`; `runtime/src/schema/registry.rs` now says every surface is covered and `AGENTS.md` carries no `unpinned` claim (grep).
-- AC29 — met: `validate_no_traversal` in `runtime/src/primitives/mod.rs` has a `# The config-sourced path boundary` section stating the hand-edit trust, the originating-writer rule and `Nothing enforces this`; `resolve_constitutions.rs` and `resolve_references.rs` classify docs cite it via `super::validate_no_traversal` rather than restating.
-- AC31 — met: `dashboard` returns `inbox-standing` (`{state: clean, outstanding: 0, path: specs/inbox.md}` run on WT) and `render_status` ends its summary with `Inbox: ✓ clean` after Counts/Tags/Reopenings and before `Next actions:`; `pipeline_view.rs` renders all four states (outstanding with oldest date, age undeterminable, clean, `? no readable ... nothing examined`); `inbox_standing::tests::*` (blame, shallow, absent, unblameable) all ok.
+- AC1 — met: `ductus --help` lists `mcp` and `exec`; `ductus mcp` over stdio answered tools/list with 73 tools; `runtime/tests/mcp.rs` and `runtime/tests/exec_subprocess.rs` drive both surfaces.
+- AC2 — met: `ductus mcp` tools/list returned 73 bare-named tools, none `run-generator`, set-equal to `framework/runtime-tools.txt`; all 13 library primitives present; held by `lists_every_manifest_tool_and_canonical_set` and `run_generator_is_not_an_mcp_tool` in `runtime/tests/mcp.rs`; `# cli-only: run-generator` matches `CLI_ONLY_PRIMITIVES`.
+- AC3 — met: `runtime/README.md` JSON-over-stdio protocol section (closed envelope table) and `specs/022-deterministic-runtime/data-model.md` give every envelope shape; `ProtocolMessage` in `runtime/src/schema/protocol.rs`; exercised by `runtime/tests/exec_subprocess.rs`.
+- AC4 — met: `ductus parse --check` exits 0 for status, target, analyze, implement, plan, specify (and clarify, review, groom, which have since been rewritten); only amend, help, audit and `ductus-procedure.md` return legacy-prose (2), all in `runtime/legacy-prose-commands.txt`.
+- AC5 — met: `runtime/src/schema/extensions.rs` has request and response types for `assessSpecQuality`, `writeCode`, `writeSpecBody`; `<!-- llm:... -->` markers sit in `framework/commands/analyze.md` steps 11-12, `implement.md` step 5, `plan.md` steps 4-6 and `specify.md` step 6; data-model sections exist.
+- AC6 — met: `framework-checks.yml` step (f) runs `scripts/lint-procedure-parseability.sh`; `ductus parse --check` run on every command and bootstrap file gives 0 or an allowlisted 2, none Invalid; `markdown-only-pipeline.yml` is absent, `framework-checks.yml` exists; the renaming claim is true.
+- AC7 — met: `runtime/tests/parity.rs` has `*_basic_stream_matches_golden` for status, target, analyze, implement, plan, specify (+review, ductus) against `runtime/tests/golden/*.jsonl`; no LLM-capture scaffolding remains (`runtime/tests/parity/` holds only `cross-service`); parity.rs header states the owner decision. I did not run the suite.
+- AC8 — met: No test bounds time (plan says none is applied); `render-status` on the 82-spec corpus took 1.1 s and `check-artifacts` 0.6 s; `runtime/tests/parity.rs` completes all six commands under a stub host; the criterion's second sentence disclaims the LLM's own time.
+- AC9 — met: Annotation holds: the runtime is required (constitution §runtime-boundary principle 3; `framework/bootstrap/ductus-procedure.md` State B acquires it; `markdown-only-pipeline.yml` gone, `runtime-acquisition.yml` and the acquire legs in `runtime-release.yml` exist).
+- AC10 — met: `framework/runtime-tools.txt` names exactly the 73 served tools plus the cli-only line (parsed set difference empty); `bash scripts/lint-tool-coverage.sh` exits 0: 17 command files examined, 15 naming a tool, 15 with the pointer.
+- AC11 — met: `.github/workflows/runtime.yml` runs `cargo build --release --locked`, `cargo test --release --locked` on ubuntu and macOS, plus clippy, fmt and audit jobs; `ductus_command`-driven tests exercise primitives and `runtime/src/interpreter/mod.rs` asserts `dispatch_primitive` handles every registry name.
+- AC12 — met: Annotation holds: `.github/workflows/markdown-only-pipeline.yml` does not exist; `runtime-acquisition.yml` and `runtime-release.yml`'s acquire matrix replaced it.
+- AC13 — met: `runtime/src/primitives/mod.rs` write_atomic_bytes (NamedTempFile in the target dir, sync_all, persist) is reached by mark_task/mark_criterion/set_status via `guarded::write_guarded` -> `write_if_unchanged`; `runtime/tests/atomic_writes.rs` has a parallel-read test for each of the three.
+- AC14 — met: `ductus --version` prints 0.59.11 (CARGO_PKG_VERSION); `runtime/src/main.rs` emit_exec_parse_error emits an `error` envelope with runtime-version and a 'version mismatch is a possible cause' message, proved by `runtime/tests/exec_subprocess.rs` (asserts both).
+- AC15 — met: `.github/workflows/runtime-release.yml` matrix has exactly the four listed targets (no Windows; `grep pc-windows` empty), builds `ductus-{target}.tar.gz` plus `.sha256` and verifies it; README.md `## The runtime` section covers acquisition and install; 048 AC25 records the Windows drop.
+- AC16 — met: `framework/bootstrap/ductus-procedure.md` Post-Scaffolding output (lines ~405 and ~427) points at the README 'The runtime' section; its optionality text is gone and it says the runtime is acquired and required, as the criterion's superseding note states.
+- AC17 — met: grep of `framework/commands/*.md` finds no runtime-detect or install-nag text; the only runtime-absence text is the uniform 'stop and say to restart or re-run `/ductus`' pointer, which `scripts/lint-tool-coverage.sh` requires (exit 0); the first-class markdown-only half is stated as retired by 048.
+- AC18 — met: `specs/022-deterministic-runtime/analysis.md` records hard-fail 0 and blocking-findings 0 and `check-artifacts` at HEAD reports 0 blocking; the record's digests predate later spec edits and this run's `/analyze` record supersedes it
+- AC19 — met: `node_modules/.bin/markdownlint-cli2` over the repo glob (884 files, includes `framework/commands/*.md` and `specs/022-deterministic-runtime/**`) reports 0 issues.
+- AC20 — met: `runtime/src/primitives/apply_manifest.rs` run() calls validate_substitution_key (empty, `{` or `}`) first, before resolve_root or any write; tests placeholder_shaped_substitution_key_is_rejected_with_zero_writes, empty_substitution_key_is_rejected and a legal `One-line project description.` key substituting; `runtime/CHANGELOG.md` [0.43.0] marks it BREAKING; `data-model.md` Versioning section states the pre-1.0 minor rule.
+- AC21 — met: `ManifestEntryResult.substitutions_applied: Option<u32>` (skip-if-none) and `ApplyManifestResult.substitutions_applied` + `entries_substituted` in `runtime/src/schema/primitives.rs`; bare-key contract in apply_manifest.rs module docs, framework/bootstrap/ductus.md and govern.md section 'The substitution map is keyed bare' (the two files are byte-identical), counts surfaced in `ductus-procedure.md` line ~331 ('N substitutions across M files').
+- AC28 — met: `runtime/src/main.rs` test every_registry_primitive_has_a_clap_subcommand compares clap names (minus NON_PRIMITIVE_SUBCOMMANDS = mcp, exec, parse, hook, help, each reasoned in its doc) to PRIMITIVE_REGISTRY as BTreeSets, failing on missing and phantom; `--help` subcommand set equals manifest+run-generator+those four; `runtime/src/schema/registry.rs` says every surface is covered; AGENTS.md has no 'unpinned' claim and no manual `--help` step prescribed for it.
+- AC29 — met: `runtime/src/primitives/mod.rs` validate_no_traversal doc carries 'The config-sourced path boundary' (human-chosen writers may skip; an originating writer moves the table to the validated tier in the same change; 'Nothing enforces this'); both `classify` fns in `resolve_constitutions.rs` and `resolve_references.rs` cite it and state their own obligation (`framework/commands/link.md` records the path as typed).
+- AC31 — met: `runtime/src/primitives/inbox_standing.rs` standing() yields NoFile/Clean/Outstanding with `oldest` Some(git-blame date) or None; `pipeline_view.rs` inbox_line renders all four states and is pushed last into the summary items (render-status at HEAD shows 'Inbox: ✓ clean' after Reopenings, before 'Next actions:' and the target prompt); `dashboard` returns `inbox-standing`; tests in inbox_standing.rs (absent, template-only, unblameable, shallow cut) and pipeline_view.rs; nothing gates on it.
 
 ## Observations
 
-- other — `specs/022-deterministic-runtime/plan.md` said markdownlint-cli2's `--help` was read at 0.24.1 and assumed unchanged at the 0.24.0 pin, but this tree installs and runs 0.24.0 (`node_modules/markdownlint-cli2/package.json`) — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
-- other — reapply_source_mode returns true both when it chmodded and when it left a symbolic-link destination alone, so a link destination whose mode was never re-applied is not named in modes-kept while its entry reads unchanged; the doc comment states the link is deliberately left alone because the bytes compared were its target's. — `runtime/src/primitives/apply_manifest.rs:484-509` — **waived**: The doc comment and the test an_unchanged_destination_that_is_a_link_is_not_chmodded_through state it as the design: the mode is a property of the file the link names, which the destination check did not judge. (decided by the rule)
-- perf — apply-manifest reads each update or create source twice (the placeholder pre-pass, then the walk or the host-destination check) when the substitutions map is non-empty — `runtime/src/primitives/apply_manifest.rs:158-162` — **waived**: the an-unsubstituted-placeholder-is-not-a-clean-run scenario states the cost (one extra read per entry, a pre-write pass over every entry) and the owner chose it on 2026-11-12; sources are small local files (decided by the rule)
+- security — `await_llm_response` and `await_gate_response` in `runtime/src/interpreter/mod.rs` write a host-supplied request-id raw into a stderr warning — `runtime/src/interpreter/mod.rs` — **waived**: the id comes from the operator's own agent host over a local stdio protocol and the line is a diagnostic, not a log store; the same class as the low-confidence finding recorded for `report_broken_links` (decided by the rule)
+- bug — a `scenarios/` directory that exists and refuses a listing read as zero scenarios and a zero `scenario-files-unreadable-count` in `read-spec`, against the data model's claim that a zero count means every scenario was read (`QUAL-CLAIM-001`, SHOULD, fixed in the run with `a_scenarios_directory_that_refuses_a_listing_is_reported_not_read_as_clean`) — `runtime/src/primitives/read_spec.rs` — **fixed** (decided by the rule)
+- other — `section_headings` in `runtime/src/interpreter/payload.rs` was a fourth hand-rolled fence toggle that task 61 missed: a heading-like line inside a four-backtick block holding a triple-backtick example, or inside a `~~~` fence, was offered as a fold destination — `runtime/src/interpreter/payload.rs` — **fixed** (decided by the rule)
+- convention — `merge-permissions` creates its personal settings file owner-only (installed-files-are-not-group-writable), but no test pinned it (`QUAL-TEST-001`) — `runtime/src/primitives/merge_permissions.rs` — **fixed** (decided by the rule)
+- convention — `append-inbox`'s `run` doc and `AppendInboxArgs.text` doc omitted the refusal of text opening an HTML comment it does not close — `runtime/src/primitives/append_inbox.rs` — **fixed** (decided by the rule)
+- other — `write_stdout_line` in `runtime/src/main.rs` wrote its failure line with an inline `let _ = writeln!` although `warn` exists — `runtime/src/main.rs` — **fixed** (decided by the rule)
+- other — the closing paragraph of `scripts/mutation/stderr-warnings-022.py` named one killing test for every mutation, and `scripts/mutation/installed-file-modes.py` did not describe M9 and M10 — `scripts/mutation/stderr-warnings-022.py` — **fixed** (decided by the rule)
+- other — the module doc of `runtime/src/schema/protocol.rs` cited a major-version rule that §runtime-boundary does not state — `runtime/src/schema/protocol.rs` — **fixed** (decided by the rule)
+- convention — `specs/022-deterministic-runtime/plan.md`'s logging decision still said main.rs error paths keep `eprintln!` and that `read_envelope` has two warnings — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+- bug — the data model's note that all commit shas are 40-character hex omitted the empty string `derive-boundary` and `check-stuck` return for no commit — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
+- bug — the `skipscanner-inline-code-exemption` scenario said a backticked delimiter neither opens nor closes a skip region, but an open comment ends at the first `-->` on a line — `specs/022-deterministic-runtime/scenarios/skipscanner-inline-code-exemption.md` — **fixed** (decided by the rule)
+- bug — the `spec-side-parser-hardening` scenario's continuation edge case was wider than `parse_checkboxes` and its parenthetical omitted the thematic break — `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md` — **fixed** (decided by the rule)
+- bug — the `a-closed-stdout-is-a-quiet-exit` scenario said every exit-path write in `main.rs` goes through `ductus::io::warn` — `specs/022-deterministic-runtime/scenarios/a-closed-stdout-is-a-quiet-exit.md` — **fixed** (decided by the rule)
+- bug — the `scenario-open-question-signal` scenario said the callout lists question-carrying scenarios with no cap, but it collapses to a count past the read size — `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md` — **fixed** (decided by the rule)
+- bug — the `CHECK_STEP_REFERENCES` description said the CLI exits non-zero on a finding or a skip, and `main.rs` also exits non-zero on a non-empty guidance — `runtime/src/schema/descriptions.rs` — **fixed** (decided by the rule)
+- bug — `runtime/CHANGELOG.md` entries stated eight things the code or history falsify (the `unparseable` and `unwritable` list, the allowlist count, the constitution name-length bound, the probe halt, the digest-key count's method, the manifest change, the `[services]` reader, a broken code span) and carried a stale `2 unreached` figure and a missing BREAKING mark on `validate-frontmatter`'s refusal — `runtime/CHANGELOG.md` — **fixed** (decided by the rule)
+- other — `merge-managed-block` sets 0644 by path after the rename, so a same-user process swapping the path for a symlink in that window would have the chmod follow it — `runtime/src/primitives/merge_managed_block.rs` — **waived**: not exploitable beyond the operator's own account on a local tool, and `merge-managed-block` replacing an in-project symlink is a recorded owner decision (decided by the rule)
+- convention — the `CHECK_STEP_REFERENCES` description omits that a command source or reference that is, or runs through, a symbolic link leaving the project is a skip, and that the subject includes two bootstrap files — `runtime/src/schema/descriptions.rs` — **waived**: no loaded rule requires a description to carry them and the code is correct; its exit clause, which was wrong, is fixed (decided by the rule)
+- other — the `DERIVE_DEPENDENCIES` and `DERIVE_REFERENCES` descriptions say a zero `updated-count` means examined-and-clean when `unwritable-count` and `refused-count` are also zero, and those two are absent at zero — `runtime/src/schema/descriptions.rs` — **waived**: the same descriptions say absent at zero earlier, so a reader resolves it, and no check is made to pass that should not (decided by the rule)
+- design — `load_scope_files` in `runtime/src/interpreter/payload.rs` drops an in-project file it cannot read from `scope-files` without naming it in `unexaminable` — `runtime/src/interpreter/payload.rs` — **waived**: the data model documents that an unreadable path is skipped; naming it is a design choice with its own request field and test, not a defect of this window (decided by the rule)
+- convention — `AGENTS.md`'s `eprintln!` gotcha still names `warn_unknown_keys` and not `ductus::io::warn` and the `print_stderr` lint — `AGENTS.md` — **waived**: `AGENTS.md` is 49,793 of 50,000 bytes and the owner's decision of 2026-11-19 is that it takes no edit (decided by the rule)
+- other — `specs/022-deterministic-runtime/analysis.md` records digests that no longer equal the tree's, so AC18's recorded pass predates the current text — `specs/022-deterministic-runtime/analysis.md` — **waived**: this run's analysis supersedes the record (decided by the rule)
+- other — AC17's no-install-nag claim holds, but every command carries a stop-and-restart halt message for a missing server — `framework/commands/status.md` — **waived**: a statement of fact: there is no install instruction and no runtime detection, and the criterion says the no-nag half holds (decided by the rule)
+- other — AC8 says `ductus exec` completes the six commands in seconds, and no test asserts a time bound — `runtime/tests/parity.rs` — **waived**: the criterion's second sentence leaves the extension points' own time to the host, and `parity.rs` states that no per-command bound is applied; measured here at 12 ms to 1.1 s (decided by the rule)
+- other — the `line-number-citations` family is a new blocking check at every status with no BREAKING mark in `runtime/CHANGELOG.md` — `runtime/CHANGELOG.md` — **waived**: the owner's rulings of 2026-11-19 name no class for a new blocking check and its neighbours `spec-integrity` and `plan-consistency` are unmarked: reported to the owner, not changed (decided by the rule)
+- convention — the `prune-project` changelog entry is marked BREAKING while its body says the primitive is new in this release — `runtime/CHANGELOG.md` — **waived**: marked by the owner's ruling that every bounded-list entry is BREAKING (decided by the rule)
+- other — the changelog's command and reference byte totals (254,439 and 465,917 at `1a7b6911`) are stale against the tree — `runtime/CHANGELOG.md` — **waived**: re-measured at the release bump by the owner's decision (decided by the rule)
 
 ## Skipped passes
 
@@ -1115,7 +1216,131 @@ Second review of 022, over the window from the first review's record (`62e6df62`
 
 ## Excluded from scope
 
-*None.*
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/clarify.md`
+- `.claude/commands/ductus/consolidate.md`
+- `.claude/commands/ductus/prune.md`
+- `.claude/commands/ductus/review.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/clarify.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/review.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-clarify.md`
+- `.pi/prompts/ductus-consolidate.md`
+- `.pi/prompts/ductus-prune.md`
+- `.pi/prompts/ductus-review.md`
+- `framework/commands/analyze.md`
+- `framework/commands/clarify.md`
+- `framework/commands/consolidate.md`
+- `framework/commands/prune.md`
+- `framework/commands/review.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/clarify.md`
+- `framework/reference/plan.md`
+- `framework/reference/review.md`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/check_command_flags.rs`
+- `runtime/src/primitives/check_orphaned_references.rs`
+- `runtime/src/primitives/check_review_gate.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/derive_routing_candidates.rs`
+- `runtime/src/primitives/prune_plan.rs`
+- `runtime/src/primitives/prune_tasks.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/rewrite_spec_links.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/tests/bounded_list_gates.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `runtime/tests/derive_dependencies_golden.rs`
+- `runtime/tests/derive_references_golden.rs`
+- `runtime/tests/golden/review-basic.jsonl`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/owner-reviews-067.py`
+- `scripts/mutation/prune-open-region.py`
+- `scripts/mutation/prune-review-fixes-041.py`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/reviews-follow-what-changed.py`
+- `scripts/mutation/rewrite-spec-links.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/020-code-review/analysis.md`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/review.md`
+- `specs/026-framework-self-audit/analysis.md`
+- `specs/026-framework-self-audit/plan.md`
+- `specs/026-framework-self-audit/review.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/041-task-pruning/data-model.md`
+- `specs/041-task-pruning/scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+- `specs/041-task-pruning/spec.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/analysis.md`
+- `specs/051-branch-scoped-spec-numbering/plan.md`
+- `specs/051-branch-scoped-spec-numbering/review.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/rewrites-preserve-line-endings.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
+- `specs/057-analyze-artifact-and-record-relocation/review.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/review.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/analysis.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/review.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-none-list-item-is-no-open-question.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
+- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-references-results-are-bounded.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`
+- `specs/067-analyze-and-audit-checks/scenarios/shared-constitution-references-are-judged.md`
+- `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/review.md`
+- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/analysis.md`
+- `specs/080-deterministic-runtime-efficiency/plan.md`
+- `specs/080-deterministic-runtime-efficiency/review.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 
