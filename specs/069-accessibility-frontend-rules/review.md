@@ -1,25 +1,59 @@
 ---
 spec: 069-accessibility-frontend-rules
-last-run: 2026-11-09T00:22:58Z
-reviewed-against: 25a9936b206661cc1123f32ed028c783feacec00
-diff-base: 841b85f3f2ba9b883c096273e19cd0de780120f3
+last-run: 2026-11-20T04:20:00Z
+reviewed-against: 80f5352da93a9e29b1b3031cfcff632c46e24df0
+diff-base: fa4ae5c75b7d68e907f18cee94eb8f8157f83f52
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 4
-scope: 4
-excluded: 52
+examined: 5
+scope: 6
+unread:
+  - runtime/CHANGELOG.md
+excluded: 34
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 1
+fix-rounds: 2
+re-reads: 2
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
-reviewed-digest: {}
+reviewed-digest:
+  scenarios/verifications-flag-only-what-the-statement-covers.md: 4a7f7d2da98dd304b9da859c1eacb3b59fc65695a4a8b1ca3825ec806b7b26df
+criteria-judged: 14
+criteria-met: 14
+criteria-verdicts:
+  - label: AC1
+    digest: 2c82752f4110d488e55e7ed15a13d14d2ec71cdb45723900b5e685ac34eca39e
+  - label: AC2
+    digest: 1a2925496c666f85dc20203b36a1240fa04bef23366a780e309df52355993f48
+  - label: AC3
+    digest: 2b2c8b08457ec07769512f91da5fa9e1f267b8c121c2d68a38ec6525b05c8b85
+  - label: AC4
+    digest: f30780448763dbe10b57d317a304421fd8e934efcc0fdc4bd0a528275e8febe7
+  - label: AC5
+    digest: d4db9fbd295a2475609ad60547613e1cf86eff2e5fed191cea84ad9783c41307
+  - label: AC6
+    digest: f091ee61cad75a4f205d2ae290754c41c55a64619e6a14069ca333040d08c4df
+  - label: AC7
+    digest: 4e21bc5d03d7d97a883bf82f12a09e98b2c85d2533bb4dd8313f19fa69a50870
+  - label: AC8
+    digest: 426578dd8ac8879e254882bfa1773a7b121b318c19554dd9b338916042cc3d94
+  - label: AC9
+    digest: ec6a629bc7d938effdf228899bdb42b34ee6f984d13c332c536053123c3852f0
+  - label: AC10
+    digest: 499ab37e4375aaac14c3536b87704c7170e48f5257e4766dcf145a23ac475c6a
+  - label: AC11
+    digest: f6da642fe44729fd0ffea6ad57ce071d386b7313107b74529b599e5266e7e1b0
+  - label: AC12
+    digest: c6d3dcf87dbb11909d77a22a659277cf97b567ce6c30c3c6f9b6e988abc525aa
+  - label: AC13
+    digest: 7c9a8e3f97185e9409cff975e4bc7f9a29c8efbb75f230692a3459d1ca58a031
+  - label: AC14
+    digest: 5808dab9b973d1121e48ef9dd8173f4c67c787c863b5449d0828de96269478cd
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 3
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -29,7 +63,11 @@ dispositions:
 
 ## Summary
 
-Review of 069's first reopening over `841b85f3..25a9936b` (base-source `reopen`, the parent of `f59604aa`, the commit that took 069 in-progress), scope 4, examined 4. `framework/rules/accessibility-frontend.md` was read whole, all 40 rules, against the loaded rule files, the rule schema in `specs/008-security-rules/data-model.md` (§Rule entry fields, §Verification phrasing, §Severity classification) and 069's AC1–AC14; `spec.md`, `plan.md` and `tasks.md` were read whole, each concrete claim against the rule file. AC13 and AC14, ticked before task 4's 22 edits (`12b26fab`), were re-verified against the file at HEAD: by script against the WCAG 2.2 copy fetched 2026-11-08, all 55 Level A and AA criteria are cited, and all 69 titled criterion citations match the copy's number and title, the header's §4.1.1 and §5.2.2 aside as the header uses them, with each stated Level AAA matching; `FE-ARIA-001` cites §4.1.2 and carries no MUST against restating an implicit role. The window's external claims were re-checked by script against task 4's copies (`12b26fab` names each document and URL): the 38 passages behind task 1's §4.1.2 citation, task 2's disclaimer and seven-criterion text, and task 4's corrections are each in their copy, as is the *ARIA in HTML* §3.2 passage a corrected Resolved Question keeps. Claims the window left unchanged rest on task 4's check of every claim, which this run did not repeat. `check-rule-ids` resolves all 43 cited IDs (AC9), `no_shipped_statement_mixes_tiers` passes and `scripts/lint-rule-ids.sh` exits 0. 0 MUST, 0 SHOULD. Four observations, each fixed by the rule: `FE-SEMHTML-004`'s Verification counts its four commitments, `spec.md`'s ARIA scope row and the second review's Resolved Question follow tasks 1 and 4, and `plan.md`'s design record matches the tree; task 2's spent bullet in `tasks.md` still says 2.5.4's exceptions are "as MAY" and is left as written. The rule file is 50,939 bytes (`wc -c`), under the owner's 51,200-byte bar. Fix rounds: round 1 (the rule file; `spec.md` and `plan.md` exempt) re-read clean by an independent agent, then empty; budget-stop false. The loop ran in a detached worktree of `25a9936b`, because another session's uncommitted `runtime/` files sat in the main tree; they are outside this record and were not read. The primitives ran from a copy of `runtime/target/release/ductus` as built 2026-11-08T23:50:57Z, driven over stdio. The 52 excluded paths are 51 from 080's commits and `specs/079-review-and-analysis-work-converges/tasks.md` from 079's `8b3a9c01`.
+Review of 069's second reopening (task 6, the owner's rule decision of 2026-11-19) over `fa4ae5c7..80f5352d` (base-source `reopen`), scope 6 (the plan's five in-scope entries at the window's start, and `specs/069-accessibility-frontend-rules/plan.md`, which this run's fix added), examined 5. Three readers each read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`; the reuse, quality, efficiency and simplicity passes over the other nine rule files (`accessibility-frontend.md` among them), `AGENTS.md` and `specs/system.md`; and the criteria step over the spec, plan, tasks, scenario and rule file. In scope they read `framework/rules/accessibility-frontend.md` (all 40 rules), `specs/069-accessibility-frontend-rules/spec.md`, `specs/069-accessibility-frontend-rules/tasks.md`, the scenario and `specs/069-accessibility-frontend-rules/plan.md` whole. `runtime/CHANGELOG.md` (610,176 bytes) was read only at its `[Unreleased]` entry naming 069 (803 bytes), so it is named unread. The criteria step judged AC1 to AC14 met; AC4's sources were not re-fetched in this run, and it rests on the fetches recorded 2026-11-08 and 2026-11-19. 0 MUST, 0 SHOULD, no stored decisions. Three observations, each fixed by the rule: `FE-LAYOUT-002`'s clause reason, `plan.md`'s stale design record, and the missing byte measurement. Task 6's measurement (`wc -c`; bytes of each rule section from its heading's next line to the next heading, at `fa4ae5c7` then after the fix): `FE-KBD-004` 1,079 to 1,313; `FE-A11YFORM-003` 971 to 1,122; `FE-A11YFORM-006` 1,192 to 1,507; `FE-LAYOUT-002` 1,078 to 1,317; `FE-MOTION-002` 796 to 918; the file 50,939 to 52,000 bytes. Fix rounds: two, the rule file and spec and plan edits (exempt) and the `runtime/CHANGELOG.md` sentence, each re-read clean by an independent agent, then empty; budget-stop false. Commit `fix(069): FE-LAYOUT-002's Not-flagged reason matches its Statement, and the plan records task 6 and the rule file's size` holds the fixes.
+
+2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+14 of 14 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -51,12 +89,28 @@ Review of 069's first reopening over `841b85f3..25a9936b` (base-source `reopen`,
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: framework/rules/accessibility-frontend.md header lists the 11 categories and the 40 rule IDs use only them
+- AC2 — met: the 11 categories are disjoint from those of performance-frontend.md and security-frontend.md
+- AC3 — met: 40 rules each with one-tier Statement, Verification and Source; scripts/lint-rule-ids.sh exits 0; the five Not-flagged clauses sit in Verifications and change no Statement
+- AC4 — met: every rule has a Source; claims were re-fetched 2026-11-08 (12b26fab) and task 6's one new WCAG quote 2026-11-19 (spec.md Resolved Questions); this run fetched nothing
+- AC5 — met: 58 distinct section numbers cited in Sources, titles and levels match WCAG 2.2, 2.3.3 and 2.4.13 labelled AAA
+- AC6 — met: SHOULDs are FE-KBD-005, FE-MOTION-003, FE-A11YTEST-002 and FE-A11YTEST-003; the only MUST with no section citation is FE-A11YTEST-001, the named exception
+- AC7 — met: no Statement requires continuous integration; FE-A11YTEST-001 requires a check before each release
+- AC8 — met: FE-KBD-002 holds 2.4.7 and 3:1 for an author-styled indicator; 2.4.13 appears only in FE-KBD-005 (SHOULD)
+- AC9 — met: all 43 cited FE and BE IDs resolve to one heading each under framework/rules
+- AC10 — met: framework/constitution.md has no backfill mention and does not name accessibility-frontend.md
+- AC11 — met: framework/bootstrap/ductus.md manifest row ships the file and discover_rule_files.rs keeps the -frontend.md surface
+- AC12 — met: no data-model.md in specs/069-accessibility-frontend-rules; header keeps FE-{CATEGORY}-{NNN}
+- AC13 — met: all 55 Level A and AA criteria are cited in Sources; the header disclaims a conformance claim
+- AC14 — met: FE-ARIA-001 cites WCAG 2.2 4.1.2 and no Statement restricts restating an implicit role
+
 ## Observations
 
-- bug: FE-SEMHTML-004's Verification closed with "flags a spec that breaks any of the three" over the four commitments it lists, a count left behind when task 4 split help's order from navigation's — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
-- convention: spec.md's Rule set scope row for ARIA said ARIA fills gaps in native semantics "rather than overriding them", while FE-ARIA-001 forbids overriding them only where ARIA in HTML forbids it, as task 4 corrected — `specs/069-accessibility-frontend-rules/spec.md` — **fixed** (decided by the rule)
-- convention: spec.md's Resolved Question on the second review's loosenings said in the present tense that FE-ARIA-001 permits role="list" on a styled list, the MAY AC14's edit removed, and gave the Dialog pattern's next-step exception without its condition that users be very unlikely to need to re-invoke the dialog immediately — `specs/069-accessibility-frontend-rules/spec.md` — **fixed** (decided by the rule)
-- convention: plan.md's design record said the spec needed no change for AC14 and FE-ARIA-001's other clauses were unchanged, which the stale Resolved Question and task 4's override and combobox corrections disprove, named only 008's task bullets as naming FE-ARIA-001 outside the spec where stored review decisions name it too, gave 2.5.4's exceptions as MAY where the rule states them as an unless clause, and said Enforcement still pointed at Open Questions — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
+- `FE-LAYOUT-002`'s new Not-flagged clause gave its reason as the Statement barring only truncation with no way to reveal it, though the Statement also bars clipping and overlap as their own items; the clause and `spec.md`'s Resolved Question now say a way to reveal the text answers the truncation bar — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
+- `plan.md`'s design record described the state before task 6 (its Overview, its deliverables) and asserted a 51,200-byte bound the file passes at 52,000 bytes; it now records task 6's clauses and the owner's 2026-11-19 settlement that rule files are not size-limited reads — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
+- task 6's Done-when asks for bytes before and after per rule and per file, and no committed artifact carried them; the Summary of `review.md` now does — `specs/069-accessibility-frontend-rules/tasks.md` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -64,58 +118,40 @@ Review of 069's first reopening over `841b85f3..25a9936b` (base-source `reopen`,
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/analyze.md` — 080-deterministic-runtime-efficiency
-- `.claude/commands/ductus/implement.md` — 080-deterministic-runtime-efficiency
-- `.claude/commands/ductus/review.md` — 080-deterministic-runtime-efficiency
-- `.pi/prompts/ductus-analyze.md` — 080-deterministic-runtime-efficiency
-- `.pi/prompts/ductus-implement.md` — 080-deterministic-runtime-efficiency
-- `.pi/prompts/ductus-review.md` — 080-deterministic-runtime-efficiency
-- `README.md` — 080-deterministic-runtime-efficiency
-- `framework/bootstrap/ductus.md` — 080-deterministic-runtime-efficiency
-- `framework/bootstrap/govern.md` — 080-deterministic-runtime-efficiency
-- `framework/commands/analyze.md` — 080-deterministic-runtime-efficiency
-- `framework/commands/implement.md` — 080-deterministic-runtime-efficiency
-- `framework/commands/review.md` — 080-deterministic-runtime-efficiency
-- `runtime/src/interpreter/mod.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/interpreter/payload.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/main.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/bounded_lists.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/check_artifacts.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/check_corpus_links.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/check_review_gate.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/check_unfolded_specs.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/dashboard.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/derive_boundary.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/lint_markdown.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/mark_task.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/measure_reopenings.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/prune_plan.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/prune_tasks.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/read_spec.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/read_tasks.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/primitives/rewrite_spec_links.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/schema/descriptions.rs` — 080-deterministic-runtime-efficiency
-- `runtime/src/schema/primitives.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/common/corpus.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/config_unknown_keys.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/crlf_preservation.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/golden/implement-basic.jsonl` — 080-deterministic-runtime-efficiency
-- `runtime/tests/golden/plan-basic.jsonl` — 080-deterministic-runtime-efficiency
-- `runtime/tests/golden/review-basic.jsonl` — 080-deterministic-runtime-efficiency
-- `runtime/tests/mcp.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/mixed_corpus.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/result_sizes.rs` — 080-deterministic-runtime-efficiency
-- `runtime/tests/specs_root_override.rs` — 080-deterministic-runtime-efficiency
-- `scripts/audit/broken-relative-links.sh` — 080-deterministic-runtime-efficiency
-- `scripts/audit/lib.sh` — 080-deterministic-runtime-efficiency
-- `scripts/audit/manifest-destination-links.sh` — 080-deterministic-runtime-efficiency
-- `scripts/audit/review-freshness.sh` — 080-deterministic-runtime-efficiency
-- `scripts/measure-result-sizes.sh` — 080-deterministic-runtime-efficiency
-- `specs/079-review-and-analysis-work-converges/tasks.md` — 079-review-and-analysis-work-converges
-- `specs/080-deterministic-runtime-efficiency/data-model.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/plan.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/research.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/tasks.md` — 080-deterministic-runtime-efficiency
+- `framework/rules/api-backend.md`
+- `framework/rules/concurrency-backend.md`
+- `framework/rules/configuration-cross.md`
+- `framework/rules/reliability-backend.md`
+- `framework/rules/security-backend.md`
+- `framework/rules/security-cross.md`
+- `framework/rules/security-frontend.md`
+- `runtime/src/primitives/shipped_rule_ids.txt`
+- `scripts/audit/README.md`
+- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
+- `specs/008-security-rules/spec.md`
+- `specs/008-security-rules/tasks.md`
+- `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md`
+- `specs/017-derive-dont-ask/spec.md`
+- `specs/017-derive-dont-ask/tasks.md`
+- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/038-concurrency-backend-rules/scenarios/a-declared-loss-tolerant-message-owes-no-outbox.md`
+- `specs/038-concurrency-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/tasks.md`
+- `specs/039-reliability-backend-rules/plan.md`
+- `specs/039-reliability-backend-rules/scenarios/expendable-messages-may-be-dropped-when-recorded.md`
+- `specs/039-reliability-backend-rules/spec.md`
+- `specs/039-reliability-backend-rules/tasks.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/068-api-backend-rules/scenarios/repr-003-bounded-numbers-and-patch-001-format-home.md`
+- `specs/068-api-backend-rules/spec.md`
+- `specs/068-api-backend-rules/tasks.md`
+- `specs/077-security-cross-rules/data-model.md`
+- `specs/077-security-cross-rules/plan.md`
+- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
+- `specs/077-security-cross-rules/spec.md`
+- `specs/077-security-cross-rules/tasks.md`
 
 ## Unexamined governance
 
