@@ -51,6 +51,11 @@ const ALLOWED: &[(&str, &str, &str)] = &[
 /// (tool, matched phrase, reason).
 const ALLOWED_DESCRIPTIONS: &[(&str, &str, &str)] = &[
     (
+        "brief-re-read",
+        "`paths` is not empty",
+        "defines `kind` by the primitive's own division of the round, which both forms carry as `kind`: no caller reads `paths` to learn it",
+    ),
+    (
         "compute-review-scope",
         "empty scope",
         "defined by a zero `scope-count`, \"never an absent list\": the count is the reading",
@@ -79,8 +84,8 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// The served tools' output schemas, from a server rooted at the repository.
-async fn served_output_schemas() -> Vec<(String, serde_json::Map<String, Value>)> {
+/// The served tools, from a server rooted at the repository.
+async fn served_tools() -> Vec<rmcp::model::Tool> {
     let (server_side, client_side) = tokio::io::duplex(64 * 1024);
     let server = GovRuntimeServer::new(workspace_root());
     tokio::spawn(async move {
@@ -89,11 +94,13 @@ async fn served_output_schemas() -> Vec<(String, serde_json::Map<String, Value>)
         }
     });
     let client = ().serve(client_side).await.unwrap();
-    client
-        .list_tools(Option::default())
+    client.list_tools(Option::default()).await.unwrap().tools
+}
+
+/// The served tools' output schemas.
+async fn served_output_schemas() -> Vec<(String, serde_json::Map<String, Value>)> {
+    served_tools()
         .await
-        .unwrap()
-        .tools
         .into_iter()
         .filter_map(|tool| {
             let schema = tool.output_schema.as_ref()?;
@@ -119,16 +126,8 @@ async fn served_descriptions() -> Vec<(String, String)> {
             _ => {}
         }
     }
-    let (server_side, client_side) = tokio::io::duplex(64 * 1024);
-    let server = GovRuntimeServer::new(workspace_root());
-    tokio::spawn(async move {
-        if let Ok(service) = server.serve(server_side).await {
-            let _ = service.waiting().await;
-        }
-    });
-    let client = ().serve(client_side).await.unwrap();
     let mut out = Vec::new();
-    for tool in client.list_tools(Option::default()).await.unwrap().tools {
+    for tool in served_tools().await {
         let name = tool.name.to_string();
         if let Some(description) = &tool.description {
             out.push((name.clone(), description.to_string()));
@@ -177,7 +176,8 @@ fn bounded_lists_of(schema: &serde_json::Map<String, Value>) -> BTreeSet<String>
 /// Every phrase in `text` that states a bounded list's emptiness by the list:
 /// `empty`, `non-empty`, `no` or `zero` before a backticked name (before the
 /// name bare too, when `bare`), or a backticked name followed by `is`/`are`
-/// `empty`/`absent`. A hyphenated `non-zero` or a `-count` is a count's
+/// `empty`/`absent` (`was`/`were` and `not` too, and `field` or `list` after the
+/// name). A hyphenated `non-zero` or a `-count` is a count's
 /// reading and does not match.
 fn emptiness_by_list(text: &str, names: &BTreeSet<String>, bare: bool) -> Vec<String> {
     let alternation = names
@@ -189,7 +189,7 @@ fn emptiness_by_list(text: &str, names: &BTreeSet<String>, bare: bool) -> Vec<St
     let end = if bare { "(?:`|[\\s,.;:)]|$)" } else { "`" };
     let pattern = Regex::new(&format!(
         "(?i)(?:^|[^-\\w])(?:empty|non-empty|no|zero)\\s+{tick}(?:{alternation}){end}\
-         |`(?:{alternation})`\\s+(?:is|are)\\s+(?:empty|absent)"
+         |`(?:{alternation})`(?:\\s+(?:field|list))?\\s+(?:is|are|was|were)\\s+(?:not\\s+)?(?:empty|non-empty|absent)"
     ))
     .unwrap();
     pattern
@@ -247,6 +247,14 @@ fn the_phrase_scan_finds_an_emptiness_stated_by_the_list_and_only_that() {
         ["empty unfolded"]
     );
     assert_eq!(emptiness_by_list("empty unfolded", &names, false), none);
+    assert_eq!(
+        emptiness_by_list(
+            "when the `unfolded` field was non-empty, or `rewritten` is not empty",
+            &names,
+            false
+        ),
+        ["`unfolded` field was non-empty", "`rewritten` is not empty"]
+    );
 }
 
 #[tokio::test]

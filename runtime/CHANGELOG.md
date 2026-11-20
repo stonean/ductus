@@ -53,11 +53,12 @@ its version and date.
   derives the bounded list names from the served tools' output schemas (a list
   property beside its `X-count`, in a tool that also has `lists-file`), scans
   `framework/commands/*.md` for `empty`, `non-empty`, `no` or `zero` before such a
-  name, or the name followed by `is empty` or `is absent`, and fails on one not in
+  name, or the name followed by `is`, `are`, `was` or `were` and `empty`,
+  `non-empty` or `absent` (with `not`, and a `field` or `list` between), and fails on one not in
   a short allow-list that states a reason for each entry. It also fails on an
   allow-list entry that no longer appears. It fails on the command text before
   this change ("non-empty `updated`", "empty `rewritten`", "empty `unfolded`") and
-  passes after it. A phrase that names no list (clarify's "when the field is
+  passes after it. A phrase that names no list (a bare "when the field is
   empty") is outside what a phrase scan can see.
 - **BREAKING: `append-question`, `append-task`, `label-criteria`, `mark-criterion`, `mark-task`, `set-status`, `append-inbox`, `remove-inbox-item`, `merge-managed-block` and `merge-permissions` write a file only when it is unchanged since they read it (spec 022 task 38; the owner's BE-TXN-002 class decision, 2026-11-16).**
   Each read its file, computed the replacement and renamed it over the file
@@ -793,14 +794,16 @@ its version and date.
   Post-Scaffolding Output names each feature `spec.md` with no frontmatter
   (`no frontmatter: {path} — ...`), which `/analyze` reads as a hard fail.
   `98d9e331`
-- **Five command steps gate on a bounded list's `-count`, and nine read its contents from `lists-file` in the form's file case (spec 080).**
+- **Command steps gate on a bounded list's `-count`, and read its contents from `lists-file` in the form's file case (spec 080).**
   `/fold` steps 1 and 11, `/consolidate` step 4, `/analyze` step 6 and `/clarify`
-  step 2 read `unfolded-count`, `rewritten-count`, `updated-count`,
+  steps 2 and 13 read `unfolded-count`, `rewritten-count`, `updated-count`,
   `open-questions-count` and `scenario-open-questions-count`, which both forms
-  carry. `/fold` steps 1 and 11, `/implement` steps 1 and 9, `/target`'s
-  `read-tasks` step and step 3, `/review` step 1 and `/analyze` steps 1 and 8
-  say to read the list from the file `lists-file` names when `form` is `file`,
-  in the phrase the existing steps use. No primitive changes.
+  carry. `/fold` steps 1 and 11, `/consolidate` step 4, `/implement` steps 1
+  and 9, `/target`'s `read-tasks` step and step 3, `/review`'s `--all`
+  enumeration and step 9, `/analyze` steps 1, 8 and 18 and `/clarify`'s
+  reference paragraph deriving the scenario question list say to read the list
+  from the file `lists-file` names when `form` is `file`, in the phrase the
+  existing steps use.
 - **Every `##` section of a command reference is reached by a step of its command, or is gone (spec 071, scenario `reference-sections-are-reached-by-a-step`).**
   Measured at `b7b07500` over the 12 shipped references that have a command, 23 of
   93 sections were named by no command text, no reached section and no anchor
