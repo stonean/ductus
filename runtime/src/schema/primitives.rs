@@ -2986,7 +2986,8 @@ pub struct CheckStuckResult {
     /// Whether `commit-count >= threshold` and the same task is still
     /// incomplete.
     pub stuck: bool,
-    /// Sha the spec's reopening started at (origin of the count).
+    /// Sha the spec's reopening started at (origin of the count); the empty
+    /// string when the start cannot be placed.
     pub since_sha: String,
     /// Threshold echoed from args.
     pub threshold: u32,
@@ -7130,7 +7131,8 @@ pub struct AppendInboxArgs {
     /// Single-line bullet text, appended as `- [ ] {text}`. Pass the item
     /// content only — the primitive renders the marker, and a caller-supplied
     /// leading marker is stripped so it cannot double. Embedded newlines are
-    /// rejected (structure injection into inbox.md).
+    /// rejected (structure injection into inbox.md), and so is text that opens
+    /// an HTML comment (`<!--` outside backticks) it does not close on the line.
     #[arg(long)]
     pub text: String,
 }
