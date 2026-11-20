@@ -1588,7 +1588,8 @@ its version and date.
   `BE-DEPS-006` (build-input pinning) to `SEC-DEPS-001`, and `BE-AUTHN-020`
   (OAuth grant and response types, the PKCE method and public-client refresh
   tokens) to `SEC-AUTHN-003`; this release removes both (see Removed). A
-  project upgrading from 0.59.11 meets those two as new
+  project upgrading from 0.59.11 meets their successors, `SEC-DEPS-001` and
+  `SEC-AUTHN-003`, as new
   MUST rules: `SEC-DEPS-001` flags an action referenced by tag or branch
   outside a workflow onboarded to a GitHub Actions workflow dependency
   lockfile, a reusable workflow called by `{owner}/{repo}` and a tag or
