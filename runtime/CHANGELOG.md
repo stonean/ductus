@@ -2756,6 +2756,14 @@ its version and date.
   documented in the spec that introduces the endpoint as well as in
   `specs/system.md`, which its Verification already passed. Neither turns a
   passing `/analyze` into a finding.
+- **`concurrency-backend.md`'s `BE-COORD-003` flags a dual write only for a
+  message the spec does not declare loss-tolerant (spec 038 task 8; owner,
+  2026-11-19).** Its Verification asks for an outbox, change-data capture or
+  a single source of truth, and flags a commit and a publish made as separate
+  steps, only for a message or event the spec does not declare
+  loss-tolerant, as its Statement binds an operation that must both commit
+  and publish. The Statement is unchanged. It turns no passing `/analyze`
+  into a finding.
 
 ### Removed
 
