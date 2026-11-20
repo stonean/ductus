@@ -1584,11 +1584,11 @@ its version and date.
   `BE-AUTHN-009` (constant-time comparison) to `SEC-AUTHN-001`, and
   `BE-AUTHN-013` (OAuth and OIDC client `state`, PKCE, `nonce` and exact
   `redirect_uri`) to `SEC-AUTHN-002`. Two more were added to
-  `security-backend.md` after 0.59.11 and move before a release ships them,
-  deprecated the same way for a project that tracks `main`: `BE-DEPS-006`
-  (build-input pinning) to `SEC-DEPS-001`, and `BE-AUTHN-020` (OAuth grant and
-  response types, the PKCE method and public-client refresh tokens) to
-  `SEC-AUTHN-003`. A project upgrading from 0.59.11 meets those two as new
+  `security-backend.md` after 0.59.11 and moved before a release shipped them:
+  `BE-DEPS-006` (build-input pinning) to `SEC-DEPS-001`, and `BE-AUTHN-020`
+  (OAuth grant and response types, the PKCE method and public-client refresh
+  tokens) to `SEC-AUTHN-003`; this release removes both (see Removed). A
+  project upgrading from 0.59.11 meets those two as new
   MUST rules: `SEC-DEPS-001` flags an action referenced by tag or branch
   outside a workflow onboarded to a GitHub Actions workflow dependency
   lockfile, a reusable workflow called by `{owner}/{repo}` and a tag or
@@ -1606,9 +1606,9 @@ its version and date.
   in a URL fragment under `SEC-AUTHN-003` rather than `FE-STORAGE-003`. In
   every shape, `/analyze` reports a package a build step's command runs by a
   mutable reference, such as `npx tool@latest`, under `SEC-DEPS-001` rather
-  than `BE-DEPS-002` or `FE-DEPS-004`. A spec citing an old ID draws an
-  Advisory finding until 0.62.0 and a Blocking one after, so re-point it to
-  the successor. Until spec 020's owner routing lands, `/review`, which
+  than `BE-DEPS-002` or `FE-DEPS-004`. A spec citing `BE-AUTHN-009` or
+  `BE-AUTHN-013` draws an Advisory finding until 0.62.0 and a Blocking one
+  after, so re-point it to the successor. Until spec 020's owner routing lands, `/review`, which
   applies Statements and no routing, reports one defect under two IDs: a
   moved case under the old ID and its successor; where `security-backend.md`
   is loaded, a sensitive value in a log line, an error report or telemetry
@@ -1757,9 +1757,8 @@ its version and date.
   outside a lockfile, a `./` local action whose path a checkout of a branch
   or tag holds, a larger runner's custom image set to `Latest`, and
   `specs/system.md`, and sets aside a GitHub-hosted runner label that selects
-  a GitHub-owned or partner image and a `$/` local action, as the deprecated
-  `BE-DEPS-006`'s kept Statement now does too, with a `./` one checked out at
-  the running commit or a full SHA, so a waiver of `runs-on: ubuntu-latest`
+  a GitHub-owned or partner image and a `$/` local action, with a `./` one
+  checked out at the running commit or a full SHA, so a waiver of `runs-on: ubuntu-latest`
   can go; and `SEC-LOG-001` adds
   product-analytics events and session-replay recordings. In
   `security-backend.md`: `BE-LOG-008` adds the same two carriers;
@@ -2687,6 +2686,38 @@ its version and date.
   `ENABLE_TABLES`, so the path was not reachable here, but `cargo audit`
   fails on 0.13.5, which the scheduled runtime-currency run found.
   `750fde09`
+- **`security-backend.md` and `security-frontend.md` flag what their sources
+  support (spec 008 task 45; owner, 2026-11-19).** `BE-API-013` bars PII from
+  a URL's query only, as CWE-598 has it, in what the server accepts and in
+  what it sends; credentials stay barred from the query and the path, and
+  from the fragment of a URL the server sends. The opaque identifier an
+  RFC 8058 one-click `List-Unsubscribe` URI carries may appear in that URI,
+  as `FE-STORAGE-003` already allowed, so a backend-only project is no longer
+  flagged for the link. `FE-STORAGE-003` keeps its bar on PII in a query, a
+  fragment and a path segment, and its hand-off now gives `BE-API-013` only
+  PII in a query, so a project with both files keeps today's result for PII
+  in a path, and a backend-only project no longer flags it. `BE-AUTHN-022`
+  accepts, for an account with no local authenticator bound, a fresh sign-in
+  round trip through its external identity provider as the re-authentication
+  a security-settings change requires. `FE-STORAGE-006` keeps tokens and
+  credentials out of the Cache API and lets a service worker cache other
+  user-specific authenticated content, PII included, when the spec states the
+  cache is partitioned per user and purged at sign-out. `FE-DEPS-008` takes
+  the registry-signature check at any point before the dependencies are built
+  into a production artifact, by the package manager's own mechanism, and a
+  spec may state that its package manager has none. `BE-API-015` (a) and
+  `BE-DATA-012`'s Verification are reworded with the same behavior. None of
+  these turns a passing `/analyze` into a finding.
+- **BREAKING: `FE-DEPS-009` flags what its Statement requires (spec 008 task
+  45; owner, 2026-11-19).** Its Verification flagged an omitted defence only
+  in a project with private packages or a high dependency-churn rate. It now
+  flags a missing private-registry scope where private packages exist and a
+  missing lockfile integrity check in every project, and (c) requires the
+  plan to name where a new dependency's name is checked: an allowlist, a
+  lockfile-diff review step or a tool. Breaking for a spec or plan covering
+  frontend dependency management, in a project without `security-backend.md`,
+  that omits the integrity check or names no such place: each is now a
+  blocking `/analyze` finding.
 
 ### Removed
 
@@ -2766,6 +2797,18 @@ its version and date.
   CLI, `.ductus/bin/ductus run-generator --script <script>`. An agent that
   called the MCP tool must use the CLI. Spec 022, task 14; `cc4b3bd9`,
   `1a762901`, `48b0d744`.
+- **BREAKING: `BE-AUTHN-020` and `BE-DEPS-006` are removed from
+  `security-backend.md` (spec 008 task 45; owner, 2026-11-19).** Both were
+  added after 0.59.11 and deprecated on `main` when spec 077 moved them to
+  `security-cross.md`, so no tagged release shipped them. `SEC-AUTHN-003`
+  holds the OAuth grant and response types, the PKCE method and public-client
+  refresh tokens, and `SEC-DEPS-001` build-input pinning, both unchanged. The
+  two IDs leave the shipped rule index, so `/analyze` reports a spec that
+  cites either as a blocking unknown-rule finding unless the spec lists the ID
+  under `retired-rules:`, as 008, 017 and 077 now do for their records of the
+  move. Breaking for a project tracking `main` whose spec cites either ID:
+  re-point it to the successor. The deprecations left for 0.62.0 are
+  `BE-AUTHN-009` and `BE-AUTHN-013`.
 
 ### Fixed
 
