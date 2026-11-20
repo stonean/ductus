@@ -62,7 +62,7 @@ A check that fails is fixed inside that task, since it is inside this spec.
 | `framework/rules/api-backend.md` | Modify | The posture and `ERRENV` reach in the header; three tiers; versionless; the self-served schema; gRPC deprecation metadata; Source corrections from the re-fetch |
 | `specs/068-api-backend-rules/spec.md` | Modify | AC11's wording (`719c7a19`) and the ticked criteria |
 
-A change under `framework/rules/` runs `runtime.yml`, whose corpus test reads every shipped Statement, and `framework-checks.yml`.
+A change under `framework/rules/` runs `runtime.yml`, whose corpus test reads every shipped Statement (its trigger paths in `.github/workflows/runtime.yml` name the shipped rule files), and `framework-checks.yml`, which has no `paths:` filter (its header comment).
 
 ## Trade-offs
 
