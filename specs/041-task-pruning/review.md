@@ -1,49 +1,86 @@
 ---
 spec: 041-task-pruning
-last-run: 2026-11-16T01:54:12Z
-reviewed-against: 1edf32d27401567636dce89224e2f9b28d0a5214
-diff-base: c2d62cf2dbabfe7dc6e4c731b30d61865435f4ee
+last-run: 2026-11-20T00:43:51Z
+reviewed-against: 45c0665bef4e7b2522bbaf2443059a089df7cd65
+diff-base: ef2fb4e8403b886743ea20960b40ed50f03ac1d5
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 9
-scope: 22
+examined: 17
+scope: 21
 unread:
-  - AGENTS.md
-  - framework/commands/prune.md
   - runtime/CHANGELOG.md
-  - runtime/src/primitives/mod.rs
-  - runtime/src/primitives/prune_plan.rs
-  - runtime/src/primitives/prune_project.rs
-  - runtime/src/primitives/prune_tasks.rs
-  - runtime/src/schema/descriptions.rs
-  - runtime/src/schema/paths.rs
   - runtime/src/schema/primitives.rs
-  - runtime/src/session.rs
-  - specs/022-deterministic-runtime/plan.md
-  - specs/022-deterministic-runtime/tasks.md
-excluded: 70
+  - runtime/src/primitives/prune_project.rs
+  - scripts/mutation/prune-project.py
+excluded: 91
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 1
+fix-rounds: 2
+re-reads: 2
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: a0070f57393f898ae607087b2de92769bee86dc9a3071d022f29b77485ce7e32
+  data-model.md: 8da08307a7f78ceeea3992437bbb46b31f0a399ee4150449387a1bbb4da60b77
   scenarios/a-plan-edit-does-not-reopen-a-done-spec.md: d212af7304352b7080514a22d93fa67f76e350b7989670730c16045c50dc2051
   scenarios/a-pruned-task-number-is-never-reissued.md: 7d97f1b790d2b12d3b1630cc78f24eac2aff167c9ab932b436964f0f50205d06
   scenarios/a-suffixed-task-number-is-a-task.md: 362cf9e7efe74c12c39d20cd82d2347148695310611c9895b5d7694dad611f17
+  scenarios/an-open-fenced-block-or-comment-is-not-examined.md: 4f9252380ba21bb4bd80e3f0ca308a75cc3fe001b7f688ecae7d1a84f08a00c5
   scenarios/plan-records-the-design-as-it-stands.md: b3bfd54321552fcc9e32f91dfa5b24a21a923685937f661a38e78b8ed67d5658
   scenarios/prune-all-walks-every-spec.md: 0bcf1f2b448c089721deab6e96dba269082c23a092c0b8aaca56ee90244aefab
   scenarios/prune-reduces-the-spec-directory.md: c485de78348784233c118c59c649bc38d6b33ba4b6d9a05e0a8daa9c656f57c0
   scenarios/prune-walks-the-project-files.md: 8cb1a20f84195213bb7ddac0789d75a3a557a3872fdc480cf868115d06125a3e
+criteria-judged: 21
+criteria-met: 21
+criteria-verdicts:
+  - label: AC1
+    digest: 9f050a47d6b52ba69ad98dca64013b58fcec10897a64db63cb5d081b007c4944
+  - label: AC2
+    digest: c80b5006d5e9027514b4398d238a32fdeea50bf46757e161c919607a7a78f524
+  - label: AC3
+    digest: 34c9290f480390def128cd8b87f020cfa5626b9f643e1d50ea4e21894b15aaa0
+  - label: AC4
+    digest: eec18ed499c9a988f5eb4c4bf3e640c19b197768b6dfef087a45e2a2092211e0
+  - label: AC5
+    digest: 6fd5f15fc8ec2788feb3b7184e7ca7ba376c148c5c4135ea3614ecf7e9c52865
+  - label: AC6
+    digest: 9705c5b6ee10f7cf1096fdd2dd4132a5c206ddbdaf74a12427e2eaf046c4082c
+  - label: AC7
+    digest: c80bf0600e0deb0dded57acb4c29cf8fb9f7fa74d88ba177bb62a2f4152833d5
+  - label: AC8
+    digest: bd4e3a8c6875707047e32acb7086f8af49ad631fb9af85417af8f83a2cdf1704
+  - label: AC9
+    digest: 0b50354ae4870989ed4c3eec5e6d1d1303ee184fecc83caae4fc9623a589c88f
+  - label: AC10
+    digest: e8b21b31ef579797acfecd644debbf3063aed9702a265a2fbb7ca91bc11f2835
+  - label: AC11
+    digest: cf3886c3b6bcadfb22577c9fbf2779a3139265ab911bb3c1663bc8efc89ba08f
+  - label: AC12
+    digest: 7585d9d0936462194fbe2300536325059eb61a1e3f3e92b6a92fd578102d5082
+  - label: AC13
+    digest: 1a1f907788205a43f9f4b0953c19a8954ea2f0f567fbc3832a4f4271d76797a6
+  - label: AC14
+    digest: a61d9089be169aea9fee866b809d6adaf92a1070c8733aa13953285e4272082c
+  - label: AC15
+    digest: 7251092d6a5e4b037fc47925840cd204e7856c469a11ec99be7e2532f62d95a3
+  - label: AC16
+    digest: f7919d0e9a33d3590016a4d662665b92f7fede79775f87baa21d4a118a98b398
+  - label: AC17
+    digest: e58fb58b1d607efc59e5ce0202f08c76dafe2c997cf45ce4b646b00ce5d9527b
+  - label: AC18
+    digest: d2032eb9382fc36598f77ef4907b1afc8281c807bf4215b1f7c0f135f0345642
+  - label: AC19
+    digest: 0971bd8e7f193fad51836a14d7fec145ecb2036ba5447b8eb72af14628449c6e
+  - label: AC20
+    digest: de03f1ce630ff02e0501143c417418bde819d7a320b0520dc34456d737c529aa
+  - label: AC21
+    digest: 72c83d3baf107c61f90402e59a68b10ce4e27720284bfd284aba11cc5a488c35
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 9
   deferred: 0
-  waived: 4
+  waived: 5
   undispositioned: 0
 decisions:
   - key: "contract: the two flattened Option result halves allow neither or both; an untagged enum would keep exactly one — `runtime/src/schema/primitives.rs:2864`"
@@ -84,11 +121,6 @@ decisions:
   - key: "contract: an applying prune-tasks walk that errors on a later spec returns no record of the reductions it already wrote — `runtime/src/primitives/prune_tasks.rs:176`"
     outcome: waived
     reason: each write is atomic and idempotent, so re-running the walk resumes; the data model and plan now say so
-    decided-at: 2026-10-01T18:24:24Z
-    decided-by: andy@stone.dev
-  - key: "edge: a reset also drops anything above the H1, and its H1 search scans fenced and commented lines — `runtime/src/primitives/prune_tasks.rs:477`"
-    outcome: waived
-    reason: a tasks.md opens with its H1 by construction from the template, and no file here has content above it or a heading only inside a fence
     decided-at: 2026-10-01T18:24:24Z
     decided-by: andy@stone.dev
   - key: "test: no prune-plan test that a preview on a done spec errors when HEAD cannot be read, or on a malformed decisions list — `runtime/src/primitives/prune_plan.rs:299`"
@@ -238,15 +270,37 @@ decisions:
     reason: 022 task 38 puts append-task, mark-task and merge-managed-block on the guard, with 051 task 37 for rewrite-spec-links, so every runtime writer of a prune's files takes the compare-and-set lock (owner, 2026-11-16)
     decided-at: 2026-11-16T01:54:12Z
     decided-by: andy@stone.dev
+  - key: "test: `scripts/mutation/prune-open-region.py` has no mutant for the frontmatter line offset of `OpenRegion::tail` or for prune-plan's `.tail(0)` — `scripts/mutation/prune-open-region.py`"
+    outcome: waived
+    reason: the tests the_tail_line_counts_the_frontmatter and the plan tail test assert the figure, so a mutant would be redundant
+    decided-at: 2026-11-20T00:43:45Z
+    decided-by: rule
+  - key: "pipeline-machinery: `/analyze` step 16's sentence about `unexamined-tail` has no record field to land in, since `UNEXAMINED_REASONS` in `runtime/src/primitives/write_analysis.rs` has no reason for a partly examined plan, in `framework/commands/analyze.md` — `framework/commands/analyze.md`"
+    outcome: waived
+    reason: the analysis record's closed reason set belongs to 066 and 067, and the step reports the partial examination in the run
+    decided-at: 2026-11-20T00:43:45Z
+    decided-by: rule
+  - key: "quality: each prune apply leaves 0-byte gitignored lock files under `.ductus/locks/`, which AC7's no gitignored sidecar might be read to exclude, from the write guard in `runtime/src/primitives/mod.rs` — `runtime/src/primitives/mod.rs`"
+    outcome: waived
+    reason: the lock files hold no pruned content, and AC7 bars a backup of it
+    decided-at: 2026-11-20T00:43:45Z
+    decided-by: rule
+  - key: "quality: the last sentence of `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs` can be read as saying a later rewrite's re-check writes nothing, which only the home-to-create check guarantees — `runtime/src/schema/descriptions.rs`"
+    outcome: waived
+    reason: "low confidence: the sentence's nearest antecedent is the home to create, which it states correctly, and the wording predates this window"
+    decided-at: 2026-11-20T00:43:45Z
+    decided-by: rule
 ---
 
 # Review — 041-task-pruning
 
 ## Summary
 
-041's review of task 27, the window from `c2d62cf2`, 041's last review, to `1edf32d2`: task 27's guard (`3e3707fa`), a `§` fix (`1edf32d2`), 041's hunk of `40df6e8b`, task 27's text and `7ab30b27`'s two AGENTS.md rules. One agent ran all five passes and read all nine loaded backend and cross rule files whole. It read 9 of the 22 scope entries whole: 041's spec, plan, data model and tasks, the three mutation lists and the two generated prune copies, each checked equal to its source; and the seven scenarios, outside the scope. The rest were read at the window's hunks with every function or section they touch whole: `ReadSnapshot`, `Stage`, `read_observed`, `write_within` and the new tests in `mod.rs`; `reduce`, `Reduction`, `plan_walk` and `write_walk`; the prune-plan and prune-project applies; the lock functions in `session.rs`; the three descriptions; the CHANGELOG entry; prune.md steps 5 to 10 and the Project files section; and AGENTS.md's hunk. It also read 022's plan §Compare before persist as part of the contract. One MUST, BE-TXN-002, deferred by the owner to 022 task 38: the compare-and-set is atomic only among writers that take its lock, and append-task, mark-task, merge-managed-block and rewrite-spec-links still write a prune's files without it; 022 task 38 and 051 task 37 put them on the guard. Its contract break, fixed in the run: 041's spec, data model, the helper's doc comment, the three descriptions, the CHANGELOG and 022's plan claimed atomicity among runtime writers; each now states the guard's own property, atomic among the writers that go through it, with any writer that does not as the residual. Three chores fixed: the plan's bounded-lists sentence miscounted its lists; the uncalled `lock_compare_and_set` wrapper is folded into one function taking the timeout; and the `changed-since-read` wire string is asserted, with mutant M14. The rule waived four observations with their reasons. Of the stored decisions on files the run read, 20 stand and are carried; three no longer fire and expire.
+Review of 041-task-pruning, diff-base ef2fb4e8, scope 21 entries, 17 examined. Passes read by four parts: security (three security rule files, whole), the other four passes (nine rule files, AGENTS.md Gotchas to the end, system.md), the criteria step (AC1 to AC21, each judged met by two readers after reading the spec, plan, data model and all eight scenarios), and a fourth part that finished the whole reads of framework/commands/analyze.md, framework/reference/analyze.md and runtime/src/schema/descriptions.rs. Read in part and so unread: runtime/CHANGELOG.md (the 041 entries only), runtime/src/schema/primitives.rs (the prune types and the 5b20aaa4 hunks), runtime/src/primitives/prune_project.rs (non-test code and the fix hunk, tests not read) and scripts/mutation/prune-project.py (the new mutant's hunk; run.py --check finds 0 invalid anchors). Installed copies were read by diff against their sources, which were read whole (prune.md) or whole by the fourth part (analyze.md and its reference), with the generator in sync. Fixed in the run: the open-region wording in prune_tasks.rs, the two walk doc comments, the UnexaminedTail and TailCause docs, three data-model enumerations, prune.md step 5's nothing-to-prune exit (19887 to 19947 bytes), spec Edge Cases, the plan-record sentence in framework/reference/analyze.md that contradicted AC17, and prune-project's heading entry running through an open comment's tail (test extended, mutant M22 killed). Two fix rounds, both re-read clean. The stored decision on prune_tasks.rs's H1 search no longer holds and is dropped; twelve in-scope decisions carry.
 
-1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+21 of 21 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -266,24 +320,48 @@ decisions:
 
 ## Deferred findings
 
-### DEFERRED: BE-TXN-002 — the compare-and-set is atomic only among writers that take the compare-and-set lock; runtime writers that do not (append-task, mark-task, mark-criterion, set-status) can still land between the re-read and the rename, and the stated lock order is held by no caller
+*None.*
 
-- **File**: `runtime/src/primitives/mod.rs:1316-1450`
-- **Rule**: A concurrent read-modify-write of persisted state MUST prevent lost updates — via an optimistic version/ETag check, a `SELECT … FOR UPDATE` row lock, an atomic in-place or conditional write (`UPDATE … SET n = n + 1`, compare-and-set), or an isolation level that detects the conflict and aborts one writer.
-- **Finding**: write_within holds .ductus/locks/compare-and-set.lock from the re-read through the rename. append_task.rs line 90 takes only lock_append_task and writes with write_atomic; mark_task.rs, mark_criterion.rs and set_status.rs take no lock and write with write_atomic; no prune applier takes lock_append_task (grep of session::lock across runtime/src/primitives: only append_task.rs and mod.rs). So a prune-tasks apply and an append-task on one tasks.md are both runtime writers that exclude nothing between them: an append landing after the re-read and before the rename is replaced, and a prune landing between append-task's read and write is replaced by it. ReadSnapshot's doc comment, the PRUNE_TASKS, PRUNE_PLAN and PRUNE_PROJECT descriptions, 041 data-model.md The write guard, 041 plan.md and 022 plan.md Compare before persist all state the compare and rename are atomic among runtime writers and that a caller holding append-task's lock takes this one second, naming only a writer outside the runtime as the residual; no caller holds both locks, so that order and the BE-LOCK-002 order claim are vacuous, and the residual is wider than stated.
-- **Auto-fixable**: no
-- **Deferred**: to `specs/022-deterministic-runtime/tasks.md` task 38
+## Acceptance criteria
+
+- AC1 — met: framework/commands/prune.md steps 1-3 resolve the session target and preview prune-tasks and prune-plan on it with no argument; runtime/tests/walker.rs prune_command_gate_blocks_on_the_exec_path walks steps 1-3.
+- AC2 — met: prune_tasks.rs reduce_keep_pending drops spent sections; fixture cut tasks.md 251 to 163 bytes; test keep_pending_drops_spent_preserves_pending_and_prose.
+- AC3 — met: Block::classification and reduce_keep_pending keep Pending and NoCheckbox blocks verbatim; fixture kept a 1-of-2 ticked section byte-for-byte; tests keep_pending_drops_spent_preserves_pending_and_prose, suffixed_task_pending_stays_with_its_phase.
+- AC4 — met: Driven: keep-pending (flat and phased) and reset output start with the next-task frontmatter then the H1 and lint with 0 issues; check-artifacts reports no task-consistency finding; tests keep_pending_phased_drops_spent_and_empty_phase, reset_output_parses_as_zero_tasks.
+- AC5 — met: prune.md step 6 invokes gate-confirm before step 7's apply; runtime/tests/walker.rs prune_command_gate_blocks_on_the_exec_path (denial leaves tasks.md byte-identical) and prune_command_applies_after_a_confirmed_gate.
+- AC6 — met: reduce_reset emits frontmatter, the existing H1 and CANONICAL_EMPTY_TASKS_BODY; fixture reset gave tasks-count 0 and a second reset nothing-to-prune; tests reset_produces_template_state_when_done, a_reset_keeps_the_frontmatter_block, canonical_empty_body_matches_template.
+- AC7 — met: The only write path is ReadSnapshot::write_if_unchanged (tempfile and rename) via Reduction::write; no backup code; the fixture tree held only the 0-byte gitignored compare-and-set lock files, which hold no pruned content.
+- AC8 — met: prune_tasks.rs reduce sets PruneGate::BlockedNeedsForce when status is not done and force is absent; fixture reset on in-progress returned blocked-needs-force and wrote nothing, --force wrote; tests reset_blocked_on_non_done_without_force, reset_forced_on_non_done_writes.
+- AC9 — met: nothing_to_prune is new_content equal to content and applied requires it false; fixture second apply returned nothing-to-prune; prune.md step 5 stops with nothing to prune except for a result carrying unexamined-tail; tests keep_pending_no_op_when_nothing_spent, a_prune_that_removes_nothing_writes_no_counter.
+- AC10 — met: prune.md step 1 directs to /target with no session target, step 2 for a missing feature directory, step 3 directs to /plan when neither tasks.md nor plan.md exists; tests missing_tasks_file_errors and walker.rs's missing-plan walk; the no-target stop is command prose with no test.
+- AC11 — met: prune_tasks.rs run and Reduction::write produce and write the reduction inside the runtime and PruneTasksSummary has no body field; reset writes the compiled CANONICAL_EMPTY_TASKS_BODY pinned by canonical_empty_body_matches_template; no markdown-only fallback remains in framework/commands/prune.md.
+- AC12 — met: framework/constitution.md §Tasks Phase states tasks.md is an ephemeral work-tracking artifact distinct from the durable spec.md, data-model.md, scenarios and rules, stated directly.
+- AC13 — met: SkipScanner (primitives/mod.rs) is used by parse_tasks in read_tasks.rs, mark_task.rs and tasks_counter.rs; driven: the shipped template gives read-tasks tasks-count 0 and append-task task-number 1; test reset_output_parses_as_zero_tasks.
+- AC14 — met: check_artifacts.rs check_scenario_consistency flags a scenario only when no revision of tasks.md ever named it (ever_tasked_slugs); driven: a done spec whose scenario tasks were pruned gives no finding; tests a_task_pruned_by_keep_pending_satisfies_the_mapping, a_task_removed_by_a_reset_satisfies_the_mapping.
+- AC15 — met: framework/commands/prune.md step 8 writes the moves first, confirms a section's moves and removal together through gate-confirm, leaves a declined section byte-for-byte and routes knowledge as the criterion says; host procedure, the primitive side is tested by a_digest_mismatch_refuses_the_whole_apply.
+- AC16 — met: prune_plan.rs DESIGN_RECORD, is_design_record (ASCII case-insensitive), segment() through OpenRegion, PlanSection with no text, claim() refusing the whole apply on stale-sections; driven on a fixture; tests a_heading_inside_a_fence_or_a_comment_is_not_a_section, headings_compare_case_insensitively, a_digest_mismatch_refuses_the_whole_apply.
+- AC17 — met: prune.md step 4 keeps a decided section; prune_plan.rs outside_record sets decided only for a person's well-formed waiver under the exact key; driven; tests a_stored_waiver_sets_decided, a_waiver_the_rule_made_does_not_set_decided; framework/reference/analyze.md Plan record now agrees.
+- AC18 — met: framework/commands/analyze.md step 16 records every listed section as an Advisory at planned or later under the result's own finding; plan_section_finding in prune_plan.rs builds the message, test a_preview_reports_each_section_outside_the_record_and_writes_nothing; the step is host procedure.
+- AC19 — met: Driven on a done fixture: reopen-required false after a plan-only edit and after a checked box, true after an added unchecked box; reopen_required and adds_unchecked_box in read_tasks.rs; prune.md steps 5, 8, 9; tests an_added_unchecked_task_reopens, a_changed_design_record_section_does_not_reopen.
+- AC20 — met: framework/constitution.md §Plan Phase states the plan records the design as it stands with the template's own sections as the design record and homes for the rest; framework/templates/spec/plan.md names every section and the tasks template carries the working-notes guidance; test design_record_matches_the_plan_template.
+- AC21 — met: tasks_counter.rs and prune_tasks.rs write max(held, highest+1) when a section is removed and a reset keeps the frontmatter; append_task.rs next_task_number takes the larger of the counter and highest+1 and advances it only when a counter exists; driven; tests a_pruned_top_number_is_not_reissued_by_the_next_append, a_file_without_a_counter_gains_none.
 
 ## Observations
 
-- bug — 041's own contract overclaims what the guard does: spec.md Edge Cases (Concurrent invocations) says that among runtime writers one project-wide lock makes the compare and the rename atomic, and tasks.md task 27 says a prune never drops an append-task, mark-task or other writer landing in the window. append-task, mark-task, mark-criterion and set-status are runtime writers that take no compare-and-set lock, so the code does not meet the sentence (see the BE-TXN-002 finding). The fix lands in 041's spec.md, data-model.md and plan.md, the runtime descriptions and doc comments, and 022's plan.md Compare before persist, which is another spec's directory. — `specs/041-task-pruning/spec.md:79` (breaks the spec's contract) — **fixed** (decided by the rule)
-- other — plan.md's bounded-lists sentence says Three lists are not held to the read size but names four (stale-sections, stale-entries, created, kept); a count stated beside an enumeration drifts, and the constitution prefers a set stated without a count. — `specs/041-task-pruning/plan.md:279` — **fixed** (decided by the rule)
-- other — dead code: session.rs lock_compare_and_set (pub) has no caller; ReadSnapshot::write_within calls lock_compare_and_set_within directly because it needs the test timeout. Only doc comments and 022's plan name it. — `runtime/src/session.rs:449` — **fixed** (decided by the rule)
-- other — test gap: nothing asserts the wire string of the new skip reason, though prune.md step 7, data-model.md and the CHANGELOG tell the host to look for reason changed-since-read in skipped; the walk test compares the enum, so a serde rename of the variant would pass every test and break the host contract. — `runtime/src/schema/primitives.rs:8759` — **fixed** (decided by the rule)
-- other — prune.md's Scope Boundaries and AC7 say prune writes no gitignored sidecar; every apply now also creates the gitignored lock file .ductus/locks/compare-and-set.lock (no content), beside the list files already waived. The lock file holds no pruned content, so recovery is still git history. — `framework/commands/prune.md:35` — **waived**: AC7 and the Scope Boundaries sentence bar a backup of pruned content; the list file holds each section's heading, size, digest and finding, never its text (PlanSection has no text field, checked in schema/primitives.rs), so pruned content stays recoverable only from git (decided by the rule)
-- perf — the lock hold is stated as one re-read and one rename, but a path that has become a FIFO between the first read and the re-read would block std::fs::read while the project-wide compare-and-set lock is held, stalling every guarded writer until the 10 s wait elapses for each; a regular file is bounded. — `runtime/src/primitives/mod.rs:1439` — **waived**: contrived (an operator-placed FIFO at a project document in a local single-operator tool), pre-existing, and BE-TIMEOUT-001 leaves local file I/O alone (decided by the rule)
-- other — BE-COMPAT-001 classification lives in the CHANGELOG only: the new skip reason is a new value of an existing response enum (breaking under the rule) and written and refused are new fields (additive), while the commit message calls the two fields the breaking part; 041's plan and data model state no classification. The CHANGELOG classifies the change BREAKING for the enum value and the new error, which agrees with the rule. — `runtime/CHANGELOG.md:13` — **waived**: every runtime change carries its classification in the CHANGELOG by this project's convention, the CHANGELOG entry agrees with BE-COMPAT-001, and a commit message is history, not a live artifact (decided by the rule)
-- perf — reduce copies tasks.md out of its snapshot (text().map(str::to_string)), so each feature in an all walk holds the file three times (snapshot bytes, content, new_content) until write_walk runs. — `runtime/src/primitives/prune_tasks.rs:406` — **waived**: one copy of a task list of a few KB per spec, held for the length of one walk on a local call (decided by the rule)
+- quality: the lines after an open region sit inside the block holding the opener, which the comment above `let applied` in `reduce` in `runtime/src/primitives/prune_tasks.rs` and the data model's segmentation text called "in no block" — `runtime/src/primitives/prune_tasks.rs` — **fixed** (decided by the rule)
+- quality: the doc comments on `walk` in `runtime/src/primitives/prune_tasks.rs` and `runtime/src/primitives/prune_plan.rs` omitted the `unexamined-tail` listing condition — `runtime/src/primitives/prune_plan.rs` — **fixed** (decided by the rule)
+- quality: the schema doc comments on `UnexaminedTail`, `TailCause` and the two summaries said "in no entry", which describes `prune-project` only, in `runtime/src/schema/primitives.rs` — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
+- quality: `specs/041-task-pruning/data-model.md` enumerations omitted `UnexaminedTail`, `TailCause`, the `PruneTasksLine` field and the open-region case of `applied` — `specs/041-task-pruning/data-model.md` — **fixed** (decided by the rule)
+- quality: `framework/commands/prune.md` step 5's nothing-to-prune exit could read a result carrying `unexamined-tail` as clean — `framework/commands/prune.md` — **fixed** (decided by the rule)
+- quality: `framework/reference/analyze.md` Plan record said a waiver leaves a prune still proposing the section, contradicting AC17 — `framework/reference/analyze.md` — **fixed** (decided by the rule)
+- quality: `specs/041-task-pruning/spec.md` Edge Cases said prune reports nothing to prune whenever nothing is spent, with no exception for an `unexamined-tail` — `specs/041-task-pruning/spec.md` — **fixed** (decided by the rule)
+- quality: the installed copies `.claude/commands/ductus/prune.md` and `.pi/prompts/ductus-prune.md` lacked the step 5 clause until generated — `.claude/commands/ductus/prune.md` — **fixed** (decided by the rule)
+- reuse: the four-line `unexamined_count` computation is repeated in both walks in `runtime/src/primitives/prune_plan.rs` — `runtime/src/primitives/prune_plan.rs` — **waived**: the walks differ in what they list and how; a shared skeleton would be generic over both results for one loop
+- test: `scripts/mutation/prune-open-region.py` has no mutant for the frontmatter line offset of `OpenRegion::tail` or for prune-plan's `.tail(0)` — `scripts/mutation/prune-open-region.py` — **waived**: the tests the_tail_line_counts_the_frontmatter and the plan tail test assert the figure, so a mutant would be redundant (decided by the rule)
+- pipeline-machinery: `/analyze` step 16's sentence about `unexamined-tail` has no record field to land in, since `UNEXAMINED_REASONS` in `runtime/src/primitives/write_analysis.rs` has no reason for a partly examined plan, in `framework/commands/analyze.md` — `framework/commands/analyze.md` — **waived**: the analysis record's closed reason set belongs to 066 and 067, and the step reports the partial examination in the run (decided by the rule)
+- quality: each prune apply leaves 0-byte gitignored lock files under `.ductus/locks/`, which AC7's no gitignored sidecar might be read to exclude, from the write guard in `runtime/src/primitives/mod.rs` — `runtime/src/primitives/mod.rs` — **waived**: the lock files hold no pruned content, and AC7 bars a backup of it (decided by the rule)
+- quality: `prune-project` kept a heading entry open across a comment that never closes, so an entry covered the unexamined tail and an apply could rewrite text no one examined, against the data model's segmentation, in `runtime/src/primitives/prune_project.rs` — `runtime/src/primitives/prune_project.rs` (breaks the spec's contract) — **fixed** (decided by the rule)
+- quality: the last sentence of `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs` can be read as saying a later rewrite's re-check writes nothing, which only the home-to-create check guarantees — `runtime/src/schema/descriptions.rs` — **waived**: low confidence: the sentence's nearest antecedent is the home to create, which it states correctly, and the wording predates this window (decided by the rule)
 
 ## Skipped passes
 
@@ -291,76 +369,97 @@ decisions:
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/analyze.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `.ductus/reference/fold.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `.pi/prompts/ductus-analyze.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `docs/analyze.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/bootstrap/ductus-procedure.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/commands/analyze.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `framework/reference/fold.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/interpreter/mod.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/main.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/bounded_lists.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_artifacts.rs` — 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_command_flags.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_corpus_links.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_departures.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_orphaned_references.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_promotion_coverage.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_review_gate.rs` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_rule_ids.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/check_unfolded_specs.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/derive_dependencies.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/derive_references.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/read_spec.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/resolve_anchor.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/rewrite_spec_links.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/traverse_deps.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/validate_frontmatter.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/command-flag-hint-parity.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/deprecation-removal.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/promotion-coverage.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/audit/shipped-anchor-resolution.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/containment-and-bounds-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/corpus-link-containment.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/gate-cross-spec-containment.py` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `scripts/mutation/outward-link-reads-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/owner-reviews-067-checks.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/owner-reviews-067.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/mutation/reopen-measure.py` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `scripts/mutation/root-prefixed-references.py` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `scripts/tests/test-anchor-and-label-families.sh` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/026-framework-self-audit/tasks.md` — 026-framework-self-audit
-- `specs/050-constitution/analysis.md` — 050-constitution
-- `specs/050-constitution/plan.md` — 050-constitution
-- `specs/050-constitution/review.md` — 050-constitution
-- `specs/050-constitution/scenarios/the-constitution-fits-one-read.md` — 050-constitution
-- `specs/050-constitution/spec.md` — 050-constitution
-- `specs/051-branch-scoped-spec-numbering/spec.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/051-branch-scoped-spec-numbering/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/057-analyze-artifact-and-record-relocation/spec.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/057-analyze-artifact-and-record-relocation/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/scenarios/the-cross-spec-impact-gate.md` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/data-model.md` — 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/plan.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/review.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/anchor-reference-kinds.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-historical-roots.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/shared-constitution-references-are-judged.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/sibling-link-grammar-is-the-shared-one.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/spec.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/tasks.md` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/080-deterministic-runtime-efficiency/analysis.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/spec.md` — 080-deterministic-runtime-efficiency
+- `.claude/commands/ductus/review.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/clarify.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/review.md`
+- `.pi/prompts/ductus-review.md`
+- `framework/commands/review.md`
+- `framework/reference/audit.md`
+- `framework/reference/clarify.md`
+- `framework/reference/plan.md`
+- `framework/reference/review.md`
+- `runtime/src/interpreter/payload.rs`
+- `runtime/src/main.rs`
+- `runtime/src/parser/mod.rs`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_command_flags.rs`
+- `runtime/src/primitives/check_corpus_links.rs`
+- `runtime/src/primitives/check_orphaned_references.rs`
+- `runtime/src/primitives/check_review_gate.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/derive_routing_candidates.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/spec_links.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/tests/bounded_list_gates.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `runtime/tests/derive_dependencies_golden.rs`
+- `runtime/tests/derive_references_golden.rs`
+- `runtime/tests/golden/review-basic.jsonl`
+- `runtime/tests/mcp.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/reopen-measure.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/020-code-review/analysis.md`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/review.md`
+- `specs/022-deterministic-runtime/data-model.md`
+- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`
+- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
+- `specs/057-analyze-artifact-and-record-relocation/review.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/review.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/plan.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 
