@@ -2729,6 +2729,14 @@ its version and date.
   makes PKCE RECOMMENDED for a confidential client and lets PKCE or the
   OpenID Connect `nonce` stand in for `state`; its Statement and Verification
   are unchanged. Neither turns a passing `/analyze` into a finding.
+- **`configuration-cross.md`'s `CFG-ENV-013` sets aside a throwaway
+  credential (spec 017 task 47; owner, 2026-11-19).** A credential for a
+  throwaway local or test resource that grants no access to a production or
+  shared system, such as a `docker-compose.yml` `POSTGRES_PASSWORD: postgres`
+  or a committed `.env.test` key for a local emulator, is not a secret under
+  the rule, in its Statement and its Verification. The rule stays a MUST, and
+  its permission to commit an encrypted copy is as strict as before. It turns
+  no passing `/analyze` into a finding.
 
 ### Removed
 
