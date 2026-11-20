@@ -1,16 +1,36 @@
 ---
 spec: 080-deterministic-runtime-efficiency
-last-run: 2026-11-16T14:29:02Z
-reviewed-against: eef21069a521cf2fadea3376de5c3ac519b0d866
-diff-base: fb319f2db72dc18bc2cdaa63c18fa2773031637b
+last-run: 2026-11-20T00:22:56Z
+reviewed-against: d904dcdfe252762eabeaa5de040c5160311953d0
+diff-base: dd17d2cdad1da41a78737c1037ba451b523df8eb
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 7
-scope: 8
+examined: 20
+scope: 41
 unread:
-  - specs/080-deterministic-runtime-efficiency/analysis.md
-excluded: 70
+  - .claude/commands/ductus/analyze.md
+  - .claude/commands/ductus/clarify.md
+  - .claude/commands/ductus/consolidate.md
+  - .claude/commands/ductus/fold.md
+  - .claude/commands/ductus/implement.md
+  - .claude/commands/ductus/review.md
+  - .claude/commands/ductus/target.md
+  - .ductus/reference/clarify.md
+  - .pi/prompts/ductus-analyze.md
+  - .pi/prompts/ductus-clarify.md
+  - .pi/prompts/ductus-consolidate.md
+  - .pi/prompts/ductus-fold.md
+  - .pi/prompts/ductus-implement.md
+  - .pi/prompts/ductus-review.md
+  - .pi/prompts/ductus-target.md
+  - runtime/CHANGELOG.md
+  - runtime/src/schema/descriptions.rs
+  - runtime/src/schema/primitives.rs
+  - runtime/tests/golden/implement-basic.jsonl
+  - runtime/tests/golden/review-basic.jsonl
+  - runtime/tests/mcp.rs
+excluded: 112
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -20,6 +40,7 @@ not-re-read: 0
 budget-stop: false
 reviewed-digest:
   data-model.md: 8d6d914d57d77dc1dd020c6209abeb647abc79a4708a0e97cbb83a40b7329d08
+  scenarios/a-step-gates-on-a-bounded-list-by-its-count.md: bdf77659a5e3c0b7dac784691889a9a0160fbe5859a072adb33f7a4134217e83
   scenarios/configure-types-no-permission-entries.md: 6c764c4d44c20f0b7d88582dbd52de2d9c1efd915080813f41eb858e16ca7313
   scenarios/groom-derives-routing-candidates.md: 516690b45261a38cad315305e8b1ca19fa51a072137a7bfbb1a12c9217fe42da
   scenarios/help-answers-with-no-model-turn.md: 8962bafa8cbf7224dc43d5d73a0507d3bd1088492c5977c287eac52acff33189
@@ -27,11 +48,58 @@ reviewed-digest:
   scenarios/reference-reads-follow-the-cited-sections.md: 66a004c23e55c8e1a4823a5fa13370220af42c42563194fc693c7067998d9c5f
   scenarios/rules-load-without-shell-reads.md: 052d22a0ed61649128bdada4bf6cef556aba1568aa64f6d6055eb5dbe84b92dd
   scenarios/the-search-goes-out-with-the-first-call.md: fb2cfb2453ca185c97d8fd9e81daad0c09fe92280d925c2ee2b52d6273dc000e
+criteria-judged: 22
+criteria-met: 22
+criteria-verdicts:
+  - label: AC1
+    digest: 3af472e783b942747e431d2c3ee85263b381696287f711c0ab8687d73e41b9b6
+  - label: AC2
+    digest: 1552ebc297093f9cf5c0cf65b09beae9f9c9cbe5d98af0fd39caa7a6138d1f79
+  - label: AC20
+    digest: 2e89f7966d96052857fecdbff0468f21386628ba4a206ae877c137c682a23e0b
+  - label: AC16
+    digest: b48e4c9de27f4d4f512deaf3221ac7718efc3aefb2bad3cc49f17c64fff93bdc
+  - label: AC25
+    digest: cbbec455e4eef636bfbda802de0a6ac8834d1ba7cf49923197153f6cabcc1a9d
+  - label: AC26
+    digest: ad64a9caa4503c923a4fea21ad38b3f6ba4d0e2ff85d01eee5622ced95d0006a
+  - label: AC9
+    digest: 18e0c96ba36accf939bfe4e0eec1b8ce46c17fe74b2b4f0ba9d8e0846040f00a
+  - label: AC27
+    digest: b0fb2439b3b5acbfb087990d6d074826308690fb59e4128b6df42cbbbdcfeca8
+  - label: AC28
+    digest: e9bf3da3e7152a570b4e7ea84b5e7539b54df1c93f7c52e11f5cf918c3438503
+  - label: AC17
+    digest: 2e907f5943fd5011b9bb2a48adf8d8968fa6281fe5725af0343f7020b21bda60
+  - label: AC18
+    digest: a257d006dbce830646a45b26db874e59a3ec266c9ed8ea1632947979b6c81a70
+  - label: AC19
+    digest: de8bca5564d154781aad259e8425a0057e9bff9483ed588d1e8569b3d0987a2c
+  - label: AC6
+    digest: 2a3305b0a6cca1b51ab77e131980388d0a1fb40eb2c8e9ce1091ff935d3f25c1
+  - label: AC13
+    digest: 0b72fc93b34d5d139a3ee1a4d3510331873f6ff660ceb6978c238762e6cf074c
+  - label: AC21
+    digest: 72d960f617aed7af193c11c7ff7b8d97555bc872f392a3b39cb7975be318f977
+  - label: AC29
+    digest: 780e661f2a0cf639598fe49036836f9a1b8632650a2762e4017d6d8819f70ce0
+  - label: AC23
+    digest: bee719d50c6cd9b95c53a01fd97c3c046e1fae6ded55f72c80fa8608377ec8ae
+  - label: AC7
+    digest: 55ce61c237cb43bf6d1621d5ac20e07f46e79b99c27eaba9ab78fcc56055b3b0
+  - label: AC24
+    digest: e4b885063193ba254f51b5dc6b94c716ad864bb82df549cf501a3072e88c880a
+  - label: AC8
+    digest: 7fd60619dd594f411fd5dc62882e83242b5989d40206afd7fb4e8159b971d6e8
+  - label: AC14
+    digest: 4c965d0d7c0061e5619421d1819d6a1aa5f99b3784f1c5e576977ad388902897
+  - label: AC15
+    digest: ddf1dbb2a4994d93e6be70ed102627f70581e812ccbc197e6e66c2d1fdcb9823
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 5
   deferred: 0
-  waived: 4
+  waived: 5
   undispositioned: 0
 decisions:
   - key: "other: with a pinned `target.md`, a tool can load from neither side when the session's `cli-config-dir` names another agent — `runtime/src/primitives/apply_manifest.rs`"
@@ -434,15 +502,42 @@ decisions:
     reason: It keeps the case total over every string the next line compares, so a later change to the default expansion cannot send an empty string to the integer test, and it reads as the empty-counts-as-unset rule the plan states.
     decided-at: 2026-11-16T14:29:02Z
     decided-by: rule
+  - key: "other: `framework/commands/review.md` step 7.1, `framework/commands/plan.md` step 1 and `framework/commands/clarify.md` steps 5 and 6 read `read-spec` and `traverse-deps` lists with no file-form clause, outside the steps the owner's 2026-11-19 decision names — `framework/commands/review.md`"
+    outcome: waived
+    reason: "`read-spec` without `include-body` returns a result bounded by one spec's criteria and section headings: the largest over this repository's 76 specs is 29,265 bytes against the 50,000-byte bound (measured with `read-spec` per spec directory, 2026-11-19), so the file form is not reachable in these steps; the plan's corpus-growing section now states the bound"
+    decided-at: 2026-11-20T00:22:56Z
+    decided-by: rule
+  - key: "other: `specs/080-deterministic-runtime-efficiency/tasks.md` task 62 says seventeen steps and task 64 names `framework/commands/prune.md` among four blocks, though prune needed no edit and the plan states the set — `specs/080-deterministic-runtime-efficiency/tasks.md`"
+    outcome: waived
+    reason: tasks.md is spent once checked (constitution §tasks-phase); the plan and the spec's Resolved Question carry the set, and the plan now says why `framework/commands/prune.md` and `framework/commands/groom.md` do not change
+    decided-at: 2026-11-20T00:22:56Z
+    decided-by: rule
+  - key: "convention: commits 2ff7f188, 4ac7a847 and 2a58fa0c do not note each layout's impact in their messages as AGENTS.md asks — `AGENTS.md`"
+    outcome: waived
+    reason: both registry layouts' generated copies are in those commits and `scripts/gen-claude-commands.sh --check` exits 0, so the impact is on the record; commit messages are not rewritten
+    decided-at: 2026-11-20T00:22:56Z
+    decided-by: rule
+  - key: "other: four file-form descriptions in `runtime/src/schema/descriptions.rs` (`BRIEF_RE_READ`, `LABEL_CRITERIA`, `READ_RE_READ`, `WRITE_ANALYSIS`) dropped the backticks round list names, so they format list names unlike their siblings — `runtime/src/schema/descriptions.rs`"
+    outcome: waived
+    reason: the text is true and no larger; the backticks are the cost of a scan that cannot tell a file-form statement from a defect, and an allow-list entry per true statement would hide more
+    decided-at: 2026-11-20T00:22:56Z
+    decided-by: rule
+  - key: "other: `specs/080-deterministic-runtime-efficiency/research.md` records the AC14 and AC23 result and schema sizes at ddc4703f on 2026-11-15, before the description rewordings of this reopening — `specs/080-deterministic-runtime-efficiency/research.md`"
+    outcome: waived
+    reason: each figure states its commit and date (grounding), so it is point-in-time, not false; AC23 requires only that sizes and a total be recorded, and `scripts/measure-result-sizes.sh` re-measures on demand
+    decided-at: 2026-11-20T00:22:56Z
+    decided-by: rule
 ---
 
 # Review — 080-deterministic-runtime-efficiency
 
 ## Summary
 
-080's review of its reopening's window, from the reopen at `fb319f2d` to HEAD: the retired bounded-lists table (`61272c59`), 022 task 38's hunk of 080's `spec.md` (`7ba38698`), the analysis that deferred `CFG-CONST-004` to task 59 (`2d5ca882`), and task 59 itself (`33e0bb6b`), the window's only code. One agent ran all five passes and read all nine loaded backend and cross rule files whole. It read 7 of the 8 scope entries whole: the generator script, its test and `docs/runtime.md`, and 080's spec, plan, data model and tasks; and the seven scenarios, outside the scope. 080's `analysis.md` was not read, as analyze's own record. No rule finding: the timeout's floor is the named constant `MIN_GEN_TIMEOUT_SECONDS` beside its default, the check reads it and the refusal names it; case F fails under each of three mutants the reviewer drove; every wait stays bounded; the departure entry matches `merge-status-hook` and `merge-permissions` as they now are; and each primitive 080 bounds states its bound in its description. Six observations: two chores fixed (`eef21069`: case F's 'accepted' branches could never run and now can; the data model's 'below' pointed at the retired table and now states both count exceptions), and four waived by the rule with their reasons, two under their stored decisions. The fix round was re-read by an independent agent against the whole contract: spec, data model and all seven scenarios, 53,593 bytes, read whole; clean, and the loop's closing round was empty. Of the four stored decisions on files the run read, three stand and are carried, and one, that no test drove an all-zero timeout, no longer holds.
+Window: base dd17d2cd (reopen), 41 scope entries, 22 criteria owing (every criterion: the stored record predates the criteria step). Only 080's own commits belong to this review (the other specs' commits in the window are their reviews): `fix(080)` commits for the bounded-list gates, the descriptions and schema doc comments, the four more steps and the golden re-bless, plus the plan and spec edits. Four readers: security pass (three security rule files whole), reuse/quality/efficiency/simplicity (nine other rule files whole, AGENTS.md Gotchas through Design Principles, system.md), and the criteria step in two parts over all 22 criteria, each judged against code and the whole `cargo test` (exit 0, no failure). Findings: none under a loaded rule. Two observations showed 080's own code breaking the scenario (`framework/commands/clarify.md` step 13, `framework/commands/consolidate.md` step 4) and were fixed in the run with the guard scan widened; the fix round was re-read clean. Unread: 15 generated copies under `.claude/commands/ductus/`, `.pi/prompts/` and `.ductus/reference/clarify.md` (generated, `scripts/gen-claude-commands.sh --check` exits 0, sources read), `runtime/CHANGELOG.md`, `runtime/src/schema/descriptions.rs`, `runtime/src/schema/primitives.rs` and `runtime/tests/mcp.rs` (changed hunks and named constants read, not the files), and the two goldens (hunks, lines truncated). Readers read `research.md`, `plan.md`, `runtime/src/primitives/pipeline_view.rs`, `runtime/src/primitives/tool_loading.rs` and `framework/bootstrap/ductus.md` in part for the criteria. Of the stored decisions, eleven naming in-scope files still hold and carry unchanged.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+22 of 22 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -464,14 +559,43 @@ decisions:
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: runtime/src/hook.rs `status` + runtime/src/primitives/merge_status_hook.rs `hook_command` (command is the `.ductus/bin/ductus` pointer, `hook status`); runtime/tests/hook_status.rs `the_view_is_shown_as_a_block_that_suppresses_the_original_prompt` asserts decision block + reason (ok in cargotest.log); no-model-turn observed live in research.md 'Typed /ductus:status in Claude Code (task 8)'.
+- AC2 — met: merge_status_hook.rs `merge` (matcher `{project}:status`, recognised by command); unit tests `no_file_is_created_holding_both_entries` and `a_second_run_is_unchanged_and_leaves_one_of_each_entry` (exactly one of each after a re-run, bytes unchanged), both ok in cargotest.log; framework/bootstrap/configure/claude.md step 6 invokes merge-status-hook.
+- AC20 — met: merge_status_hook.rs `gate`/`MIN_CLAUDE_VERSION` (2,1,101) via `probe_version`; tests `an_older_version_is_skipped_and_writes_nothing`, `an_unreadable_version_is_skipped_with_its_reason`, `a_skip_leaves_the_merged_permissions_intact`, `the_version_gate_compares_numerically_and_admits_its_bound` and tests/merge_status_hook.rs (real probe on inherited PATH) all ok; configure/claude.md steps 6-7 say skipped hook and its `reason` are reported.
+- AC16 — met: hook.rs `HookSpecificOutput.suppress_original_prompt` always true in `BlockResponse::showing`; hook_status.rs `the_view_is_shown_as_a_block_that_suppresses_the_original_prompt` asserts hookSpecificOutput equals {hookEventName, suppressOriginalPrompt:true}; absence of 'Original prompt:' observed live in research.md task 8 first/second run.
+- AC25 — met: main.rs `Command::Hook` -> `emit_result`, whose Err arm prints stderr and returns ExitCode 1 (never 2); hook_status.rs `a_view_that_cannot_be_rendered_exits_1_with_the_error_on_stderr_alone` asserts code 1, empty stdout, error on stderr (ok); model-path fallback observed in research.md task 8 'Pointer moved aside' runs (fresh session reports the server did not start).
+- AC26 — met: Claude: configure/claude.md step 6 and bootstrap/ductus.md step 10 + '### Status hook' run merge-status-hook idempotently by command (test `a_file_holding_only_status_s_entry_gains_help_s`); research.md 'An adopter bootstrap across the change (task 11)' shows 0.59.11 -> main upgrade gaining the entry. Pi: ductus.md Bridge strategy 'update' copies framework/bootstrap/pi/ductus-bridge.ts each run; apply_manifest.rs test `the_pi_bridge_survives_pis_substitutions` (ok) asserts zero substitutions; research.md 'A Pi adopter upgrade across the change' records the fix and the re-run listing the extension commands.
+- AC9 — met: framework/bootstrap/pi/ductus-bridge.ts registers `{project}-status` and `{project}:status` via registerCommand, handler calls `render-status` on the bridge's `ductus mcp` stdio child (the ductus binary) and `sendMessage({display:true},{triggerTurn:false})`; scripts/tests/pi-bridge-harness.mjs check 'registers {project}-status, whose handler shows the view and triggers no turn' (helper `shownWithoutATurn` requires exactly one message, display true, triggerTurn false) - harness not run by me (read-only), not in cargotest.log; observed on real pi 1.0.4/1.5.0 in research.md 'Pi's registered /{project}-status (task 12)'.
+- AC27 — met: research.md 'Pi's registered /{project}-status (task 12)' **Context** paragraph records the run could not execute a model turn (waived, expired pi login), so the answer is taken from pi's docs/message-types.md: the displayed message reaches context, and sendMessage with triggerTurn:false adds context without a turn; names the source as documentation.
+- AC28 — met: Conditional criterion whose antecedent is false (research.md records the view DID reach context, so no compact form is owed); the bridge adds none, and the harness helper `shownWithoutATurn` (scripts/tests/pi-bridge-harness.mjs) fails if a status run sends other than one message; plan.md line on 'Context' states the condition. Met by the condition not firing, not by a compact-form test.
+- AC17 — met: runtime/src/primitives/pipeline_view.rs text_table (two-space gaps, no pipes/emphasis); proved by pipeline_view::tests::the_text_table_aligns_its_columns_with_two_space_gaps_and_no_markdown (asserts no '**', no '|', no trailing space, 2-space gap before each column) - ok in cargotest.log
+- AC18 — met: pipeline_view.rs summary()/summary_block()/compose(); the_summary_is_one_item_per_line_and_ends_with_the_one_target_hint asserts Counts/Tags/Reopenings/Inbox lines, one ' 004-delta · s1' line per question, exactly one ':target' and last line = hint, both formats - ok
+- AC19 — met: pipeline_view.rs markdown_table on Format::Markdown (render_status.rs uses it); both_renderings_carry_the_same_facts_from_one_model asserts equal parsed rows and equal lines outside the table - ok
+- AC6 — met: pipeline_view.rs build() next_actions (skips done and target) + next_actions_block + prompt as last block; pipeline_view::tests::the_specs_with_work_left_are_grouped_by_next_action_without_the_target and render_status::tests::the_result_is_the_view_alone (ends_with target prompt) - ok; framework/commands/status.md steps 1-2 only emit rendered-markdown and say not to recompute
+- AC13 — met: runtime/src/primitives/render_status.rs + RenderStatusResult (schema/primitives.rs); the_result_is_the_view_alone asserts keys == [rendered-markdown, project, form]; framework/commands/review.md line ~121 still reads dashboard specs[].status (from lists-file when form is file)
+- AC21 — met: runtime/src/mcp/server.rs flag_always_loaded/ALWAYS_LOAD_META + tool_loading.rs AlwaysLoaded::resolve; runtime/tests/mcp.rs the_tools_targets_steps_name_are_always_loaded_and_no_other_is derives expected set from framework/commands/target.md and asserts flagged == expected == tools with _meta - ok
+- AC29 — met: tool_loading.rs add_tool_search_line via apply-manifest tool-search-line entries written by scripts/gen-claude-commands.sh (write_claude_manifest); apply_manifest::tests::a_flagged_copy_carries_the_line_and_parses_to_its_sources_procedure asserts line text and steps(written)==steps(plain) (exec dispatches nothing new); Pi copies use substitute() only, command sources have no 'select:' (grep 0); .claude copies carry the line - ok. Note: target.md's copy also gets a line for tools it cites that are not always-loaded (read-tasks, check-review-gate); the criterion says nothing against that
+- AC23 — met: specs/080-deterministic-runtime-efficiency/research.md 'Loaded schema sizes (AC23)': 73 per-tool rows (description + input schema chars, I re-summed rows: 186,233) and the stated total 186,233, from runtime/tests/result_sizes.rs via scripts/measure-result-sizes.sh
+- AC7 — met: runtime/src/primitives/bounded_lists.rs place(); runtime/tests/mcp.rs every_result_that_grows_with_the_corpus_moves_its_lists_past_the_read_size_via_mcp drives all 16 research.md members + derive-references (incl. read-tasks) inline vs read-size 1 and asserts form file, lists absent, counts match, file holds lists, entries>0 - ok. Bound is forced by shrinking read-size, not by a corpus that outgrows 50,000
+- AC24 — met: pipeline_view.rs render()/compose()/CUT_ORDER (done rows -> row cut -> names -> lists to counts), render_status.rs places the whole view in lists-file; unit tests past_the_bound_the_done_rows_collapse..., still_over_the_bound..., with_no_row_left..., past_the_rows_and_names_each_list_collapses_in_its_order, each_line_standing_for_a_cut_names_the_file; runtime/tests/status_view_bound.rs both_surfaces_hold_the_whole_result_to_the_read_size_on_disk (120-spec generated corpus, render-status and hook status, bytes<=bound, file holds whole view, hook names no file) - all ok
+- AC8 — met: research.md 'Command cost (AC8)': 17 commands (all of framework/commands except maintainer-only audit, which /ductus installs no copy of: ductus.md 'withheld with the command') with method, units, population, date 2026-11-09 at 14c88044; scripts/measure-command-cost.py
+- AC14 — met: scripts/measure-result-sizes.sh runs ignored test runtime/tests/result_sizes.rs (every PRIMITIVE_REGISTRY name via MCP on generated corpora, no claude/model call found in either); research.md 'Result sizes (AC14)' records the output with commit and time
+- AC15 — met: scripts/measure-command-cost.py drives 'claude -p --output-format stream-json'; no .github workflow references it (grep of .github finds only result_sizes comments in runtime.yml); research.md 'The claude -p harness's first run (task 16)' records that a custom slash command runs under -p
+
 ## Observations
 
-- other — a DUCTUS_GEN_TIMEOUT_SECONDS of 20 or more digits passes the range check, because bash's integer test errors and reads false: the comment above it, 'All digits, so a decimal comparison', overstates, and the runtime is then stopped at once and reported as not answering within that many seconds. Driven on a stub runtime with 99999999999999999999. The documented range (a whole number of at least the floor) names no maximum, so CFG-ENV-005 and CFG-CONST-004 name no bound the value breaks, and CFG-ENV-008's fail-fast text is the nearest rule. — `scripts/gen-claude-commands.sh:104-105` — **waived**: A contrived value a maintainer sets by hand; `sleep` then rejects it, so every runtime call is stopped at once and the generator fails, which is no silent pass. (decided by the rule)
-- other — case F's two 'was accepted' branches cannot run: with the stub runtime the generator fails in write mode at its prune loop (rm of a missing .claude/commands/ductus/*.md) whether or not the check refused, so an accepted value surfaces as a different failure message that quotes the rm error. Case F still fails with the behavior removed (the check reverted to -eq 0, the refusal no longer naming the floor, and the check reading a bare 1 each fail it, run in scratch copies), but the message it prints then is misleading and the two branches are dead. — `scripts/tests/test-gen-claude-commands.sh:173-196` — **fixed** (decided by the rule)
-- other — data-model.md's Bounded results still says a count is present in both forms 'except dashboard's session lists and derive-dependencies' unwritable, below', but the table below it retired in 61272c59, so the word points at nothing. Both exceptions hold in the code: dashboard.rs sets the session counts only in the file branch and only for a non-empty list, and derive-dependencies' description says unwritable-count is absent at zero. — `specs/080-deterministic-runtime-efficiency/data-model.md:190` — **fixed** (decided by the rule)
-- other — the DASHBOARD description in runtime/src/schema/descriptions.rs says session-notices and session-unreadable are absent when non-empty past the read size but not that their counts exist only in the file form, and READ_SPEC's does not say scenario-files-unreadable is absent when empty; the data model's closing sentence names the description as the home of each exception. Both facts hold in the code (dashboard.rs lines 106-113, read_spec.rs line 45). The fix lands in 022's shared descriptions surface, not in 080's directory. — `runtime/src/schema/descriptions.rs:83` — **waived**: An observation about the pipeline's own machinery made while reviewing framework work: it is a description wording change in runtime/ that a runtime batch carries, and the data model states each exception beside its owning list. (decided by the rule)
-- doc — plan.md's Affected Files omits scripts/tests/test-gen-claude-commands.sh, which task 26 created and task 59 edited, beside the files the stored decision names. — `specs/080-deterministic-runtime-efficiency/plan.md:204-264` — **waived**: The plan's bounded-results decision covers those files, which rows to add is a judgment, and check-artifact-size's advisory on this plan asks for finished rows to be trimmed rather than added. (decided by the rule)
-- other — the case pattern at the top of the timeout check lists an empty string beside the non-digit pattern, but the value comes from a defaulted expansion that is never empty, so that alternative cannot match. — `scripts/gen-claude-commands.sh:99-101` — **waived**: It keeps the case total over every string the next line compares, so a later change to the default expansion cannot send an empty string to the integer test, and it reads as the empty-counts-as-unset rule the plan states. (decided by the rule)
+- bug: `framework/commands/clarify.md` step 13 gated the scenario-question report on `scenario-open-questions` being non-empty, a list absent in file form; the step now reads `scenario-open-questions-count`, as step 2 does — `framework/commands/clarify.md` (breaks the spec's contract) — **fixed** (decided by the rule)
+- bug: `framework/commands/consolidate.md` step 7 reports `rewritten`, `skipped`, `kept-tails` and `mentions` with no file-form clause; step 4 now reads them from the file `lists-file` names when `form` is `file` — `framework/commands/consolidate.md` (breaks the spec's contract) — **fixed** (decided by the rule)
+- other: `framework/commands/review.md` step 7.1, `framework/commands/plan.md` step 1 and `framework/commands/clarify.md` steps 5 and 6 read `read-spec` and `traverse-deps` lists with no file-form clause, outside the steps the owner's 2026-11-19 decision names — `framework/commands/review.md` — **waived**: `read-spec` without `include-body` returns a result bounded by one spec's criteria and section headings: the largest over this repository's 76 specs is 29,265 bytes against the 50,000-byte bound (measured with `read-spec` per spec directory, 2026-11-19), so the file form is not reachable in these steps; the plan's corpus-growing section now states the bound (decided by the rule)
+- convention: `specs/080-deterministic-runtime-efficiency/plan.md`, the spec's Resolved Question and `runtime/CHANGELOG.md` stated the changed steps as a count (twelve) that task 64 moved, and the plan's Affected Files row omitted the description scan — `specs/080-deterministic-runtime-efficiency/plan.md` — **fixed** (decided by the rule)
+- other: the phrase scan in `runtime/tests/bounded_list_gates.rs` missed a name followed by `field was non-empty` or `is not empty`, so it passed over clarify step 13 — `runtime/tests/bounded_list_gates.rs` — **fixed** (decided by the rule)
+- convention: `runtime/tests/bounded_list_gates.rs` repeated the in-process server setup in two helpers and started two servers — `runtime/tests/bounded_list_gates.rs` — **fixed** (decided by the rule)
+- other: `specs/080-deterministic-runtime-efficiency/tasks.md` task 62 says seventeen steps and task 64 names `framework/commands/prune.md` among four blocks, though prune needed no edit and the plan states the set — `specs/080-deterministic-runtime-efficiency/tasks.md` — **waived**: tasks.md is spent once checked (constitution §tasks-phase); the plan and the spec's Resolved Question carry the set, and the plan now says why `framework/commands/prune.md` and `framework/commands/groom.md` do not change (decided by the rule)
+- convention: commits 2ff7f188, 4ac7a847 and 2a58fa0c do not note each layout's impact in their messages as AGENTS.md asks — `AGENTS.md` — **waived**: both registry layouts' generated copies are in those commits and `scripts/gen-claude-commands.sh --check` exits 0, so the impact is on the record; commit messages are not rewritten (decided by the rule)
+- other: four file-form descriptions in `runtime/src/schema/descriptions.rs` (`BRIEF_RE_READ`, `LABEL_CRITERIA`, `READ_RE_READ`, `WRITE_ANALYSIS`) dropped the backticks round list names, so they format list names unlike their siblings — `runtime/src/schema/descriptions.rs` — **waived**: the text is true and no larger; the backticks are the cost of a scan that cannot tell a file-form statement from a defect, and an allow-list entry per true statement would hide more (decided by the rule)
+- other: `specs/080-deterministic-runtime-efficiency/research.md` records the AC14 and AC23 result and schema sizes at ddc4703f on 2026-11-15, before the description rewordings of this reopening — `specs/080-deterministic-runtime-efficiency/research.md` — **waived**: each figure states its commit and date (grounding), so it is point-in-time, not false; AC23 requires only that sizes and a total be recorded, and `scripts/measure-result-sizes.sh` re-measures on demand (decided by the rule)
 
 ## Skipped passes
 
@@ -479,76 +603,118 @@ decisions:
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/clarify.md` — 022-deterministic-runtime
-- `.claude/commands/ductus/consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `.claude/commands/ductus/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `.claude/commands/ductus/plan.md` — 022-deterministic-runtime
-- `.ductus/reference/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `.pi/prompts/ductus-clarify.md` — 022-deterministic-runtime
-- `.pi/prompts/ductus-consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `.pi/prompts/ductus-fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `.pi/prompts/ductus-plan.md` — 022-deterministic-runtime
-- `framework/commands/clarify.md` — 022-deterministic-runtime
-- `framework/commands/consolidate.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `framework/commands/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `framework/commands/plan.md` — 022-deterministic-runtime
-- `framework/reference/fold.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `runtime/CHANGELOG.md` — 022-deterministic-runtime, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
-- `runtime/src/primitives/append_inbox.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/append_question.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/append_task.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/bounded_lists.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/guarded.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/label_criteria.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/mark_criterion.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/mark_task.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/merge_managed_block.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/merge_permissions.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/mod.rs` — 022-deterministic-runtime, 057-analyze-artifact-and-record-relocation
-- `runtime/src/primitives/relocate_audit_records.rs` — 057-analyze-artifact-and-record-relocation
-- `runtime/src/primitives/remove_inbox_item.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/rewrite_spec_links.rs` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `runtime/src/primitives/set_status.rs` — 022-deterministic-runtime
-- `runtime/src/primitives/write_analysis.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/write_review.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/descriptions.rs` — 022-deterministic-runtime, 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
-- `runtime/src/schema/primitives.rs` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 067-analyze-and-audit-checks
-- `runtime/tests/line_ending_discipline.rs` — 022-deterministic-runtime
-- `runtime/tests/mcp.rs` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation, 067-analyze-and-audit-checks
-- `scripts/mutation/compare-and-set-022.py` — 022-deterministic-runtime
-- `scripts/mutation/compare-and-set-057.py` — 057-analyze-artifact-and-record-relocation
-- `scripts/mutation/compare-and-set-066.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/run.py` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/data-model.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/tasks.md` — 022-deterministic-runtime
-- `specs/041-task-pruning/analysis.md` — 041-task-pruning
-- `specs/041-task-pruning/plan.md` — 041-task-pruning
-- `specs/041-task-pruning/spec.md` — 041-task-pruning
-- `specs/051-branch-scoped-spec-numbering/analysis.md` — 051-branch-scoped-spec-numbering
-- `specs/051-branch-scoped-spec-numbering/data-model.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `specs/051-branch-scoped-spec-numbering/review.md` — 051-branch-scoped-spec-numbering
-- `specs/051-branch-scoped-spec-numbering/spec.md` — 051-branch-scoped-spec-numbering
-- `specs/052-spec-supersession-and-consolidation/spec.md` — 051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation
-- `specs/057-analyze-artifact-and-record-relocation/analysis.md` — 057-analyze-artifact-and-record-relocation
-- `specs/057-analyze-artifact-and-record-relocation/data-model.md` — 057-analyze-artifact-and-record-relocation
-- `specs/057-analyze-artifact-and-record-relocation/plan.md` — 057-analyze-artifact-and-record-relocation
-- `specs/057-analyze-artifact-and-record-relocation/review.md` — 057-analyze-artifact-and-record-relocation
-- `specs/057-analyze-artifact-and-record-relocation/spec.md` — 057-analyze-artifact-and-record-relocation
-- `specs/057-analyze-artifact-and-record-relocation/tasks.md` — 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
-- `specs/066-audit-records-and-the-completion-gate/analysis.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 066-audit-records-and-the-completion-gate
-- `specs/067-analyze-and-audit-checks/analysis.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/data-model.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/plan.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/review.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/spec.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/tasks.md` — 057-analyze-artifact-and-record-relocation, 067-analyze-and-audit-checks
+- `.claude/commands/ductus/help.md`
+- `.claude/commands/ductus/prune.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/implement.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/review.md`
+- `.pi/prompts/ductus-help.md`
+- `.pi/prompts/ductus-prune.md`
+- `framework/commands/help.md`
+- `framework/commands/prune.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/implement.md`
+- `framework/reference/plan.md`
+- `framework/reference/review.md`
+- `runtime/Cargo.toml`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/interpreter/payload.rs`
+- `runtime/src/io.rs`
+- `runtime/src/main.rs`
+- `runtime/src/parser/mod.rs`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/append_inbox.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_review_gate.rs`
+- `runtime/src/primitives/classify_spec_edit.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/merge_managed_block.rs`
+- `runtime/src/primitives/mod.rs`
+- `runtime/src/primitives/prune_plan.rs`
+- `runtime/src/primitives/prune_tasks.rs`
+- `runtime/src/primitives/read_spec.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/rule_sections.rs`
+- `runtime/src/primitives/spec_links.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `runtime/tests/exec_stderr_gone.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/mutation/exec-arguments.py`
+- `scripts/mutation/installed-file-modes.py`
+- `scripts/mutation/prune-open-region.py`
+- `scripts/mutation/prune-review-fixes-041.py`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/reopen-measure.py`
+- `scripts/mutation/review-022-task-44.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/stderr-warnings-022.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/020-code-review/analysis.md`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/review.md`
+- `specs/022-deterministic-runtime/data-model.md`
+- `specs/022-deterministic-runtime/scenarios/a-closed-stdout-is-a-quiet-exit.md`
+- `specs/022-deterministic-runtime/scenarios/append-inbox-comment-aware-write.md`
+- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`
+- `specs/022-deterministic-runtime/scenarios/host-protocol-conformance.md`
+- `specs/022-deterministic-runtime/scenarios/installed-files-are-not-group-writable.md`
+- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
+- `specs/022-deterministic-runtime/scenarios/skipscanner-inline-code-exemption.md`
+- `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/041-task-pruning/data-model.md`
+- `specs/041-task-pruning/scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+- `specs/041-task-pruning/spec.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
+- `specs/057-analyze-artifact-and-record-relocation/review.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/review.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 
