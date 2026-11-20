@@ -2775,8 +2775,9 @@ its version and date.
   of context says a change of content is not always one; `FE-LAYOUT-002` a
   fixed-height `overflow: hidden` container whose full text is revealable;
   and `FE-MOTION-002` a cycle the spec bounds below the general and red flash
-  thresholds. No Statement changes, and none turns a passing `/analyze` into
-  a finding.
+  thresholds. `FE-LAYOUT-002`'s clause gives its reason as a way to reveal the
+  text answering the Statement's truncation bar. No Statement changes, and none
+  turns a passing `/analyze` into a finding.
 
 ### Removed
 
