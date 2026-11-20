@@ -24,7 +24,7 @@ A pre-tag audit of the shipped rule files on 2026-11-19 found rules that flagged
 
 ## Edge Cases
 
-- **`FE-STORAGE-003` follows separately.** Its Not-flagged clause still hands PII in a path to `BE-API-013`, which no longer judges it. The owner decides how it follows.
+- **`FE-STORAGE-003` keeps its PII bar.** Its Statement, flags and Source are unchanged; its Not-flagged hand-off to `BE-API-013` names PII in a query parameter only, so PII in a path stays `FE-STORAGE-003`'s. Its fragment and non-served-endpoint hand-offs from `BE-API-013` remain true, since it still bars PII there.
 - **`SEC-DATA-001`.** Spec 077 narrows it the same way for `security-cross.md`, so a project loading both files is told one thing.
 - **A project citing a removed ID.** An adopting project that cites `BE-AUTHN-020` or `BE-DEPS-006` gets an unknown-rule finding from `check-rule-ids`, unless its spec lists the ID under `retired-rules:`. The changelog names each successor.
 
