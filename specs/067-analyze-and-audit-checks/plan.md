@@ -141,7 +141,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `runtime/src/primitives/check_promotion_coverage.rs` | Specify | `check-promotion-coverage` (a header row keeps the previous table's keys, task 42) |
 | `runtime/src/primitives/read_spec.rs` | Modify | The one open-question parser skips a none list item (task 38) |
 | `runtime/src/primitives/mod.rs` | Modify | `section_line_indices_by`, the case-insensitive heading scan `plan-consistency` uses (task 39) |
-| `scripts/mutation/owner-reviews-067.py` | Modify | M96 to M104, the mutants of tasks 38 to 42 |
+| `scripts/mutation/owner-reviews-067.py` | Modify | M96 to M105, the mutants of tasks 38 to 42 |
 
 ## Data Model
 
