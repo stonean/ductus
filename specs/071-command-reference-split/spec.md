@@ -280,15 +280,21 @@ Checked 2026-10-25 by reading each consumer.
   `primitive-promotion-candidates`, and `lint-procedure-parseability`, which
   globs `framework/commands/` and `framework/bootstrap/` only.
 - `check-command-flags` (Family 30): every Flags table is in the kept part.
-- The `writeCode` payload: it reads the command's `Reference:` line, which is
-  in the kept part of every command.
-- `check-artifact-size`: its subjects are spec artifacts only.
+- The `writeCode` payload: `parse_command_references` in
+  `runtime/src/interpreter/payload.rs` reads the command file's `Reference:`
+  line, which is in the kept part of every command.
+- `check-artifact-size`: its subjects are a feature's spec artifacts and the
+  project files `AGENTS.md`, `system.md`, `events.md` and `errors.md` (the
+  module doc comment of `runtime/src/primitives/check_artifact_size.rs`), and
+  neither a command nor a reference file is one.
 - `adopter_destinations` in `check_artifacts.rs`: it derives destinations from
   the Shared Files table, so the new rows register by themselves, and a
   `.ductus/reference/…` path then counts as shipped.
 - The name and frontmatter checks: Family 16's command rows,
   `readme-command-parity`, `gen-help-tables`, and `host-namespace-parity`.
-- `ssot-invariants`: clarify's Gate section is in the kept part.
+- `ssot-invariants`: clarify's Gate section is in the kept part
+  (`scripts/audit/ssot-invariants.sh` names its canonical source as
+  `framework/commands/clarify.md` §Gate).
 - `lint-tool-coverage.sh` skips the reference section. After the move that
   skip has nothing to skip, and it is removed as dead code.
 
