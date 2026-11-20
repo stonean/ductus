@@ -22,7 +22,7 @@ The `/audit` command procedure was planned as parseable per spec 022's conventio
 
 Why not add new `/audit`-specific primitives:
 
-- Each family check is a one-off (registry equivalence, manifest parity, etc.) with no obvious reuse across other commands. New primitives would carry the maintenance burden of testing, schema definition, and MCP wiring without earning their keep.
+- Each family check is a one-off (registry equivalence, manifest parity, etc.) with no obvious reuse across other commands (an assumption: no command but `/audit` runs a family script). New primitives would carry the maintenance burden of testing, schema definition, and MCP wiring (the seven registration sites `docs/developing-ductus.md` §Adding or removing a runtime primitive lists) without earning their keep.
 - `run-generator` already exists and already understands the contract `/audit` needs.
 - Shell scripts under `scripts/audit/` are easy to read, easy to modify when checks evolve, and easy to test by invoking directly. Future maintainers do not have to recompile the runtime to fix a check.
 
@@ -189,7 +189,7 @@ The runtime write boundary that `/ductus:implement` derives from git history wil
 
 ### Considered: add `/audit`-specific runtime primitives
 
-Each family check could become a primitive (`audit-cross-doc`, `audit-manifest-parity`, …). The runtime would gain richer typed interfaces and the procedure would shrink. Rejected because: (a) primitives carry maintenance overhead (schema, MCP wiring, tests) that earns its keep only when reused across commands — these are one-offs; (b) shell scripts can be modified by future maintainers without recompiling the runtime; (c) primitive promotion is a documented path for when reuse surfaces. v1 ships the simpler design and lets data drive promotion. Family 34 is the exception, for the reason the Overview gives.
+Each family check could become a primitive (`audit-cross-doc`, `audit-manifest-parity`, …). The runtime would gain richer typed interfaces and the procedure would shrink. Rejected because: (a) primitives carry maintenance overhead (schema, MCP wiring, tests: the seven sites `docs/developing-ductus.md` §Adding or removing a runtime primitive lists) that earns its keep only when reused across commands — these are one-offs; (b) shell scripts can be modified by future maintainers without recompiling the runtime; (c) primitive promotion is a documented path for when reuse surfaces. v1 ships the simpler design and lets data drive promotion. Family 34 is the exception, for the reason the Overview gives.
 
 ### Considered: single bash entrypoint `scripts/audit.sh`
 
