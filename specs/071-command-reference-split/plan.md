@@ -214,10 +214,12 @@ walker's `markers-path` binding for it in `runtime/src/interpreter/mod.rs`,
 read `resolve-anchor`; and this repository's audit runs against the new binary
 at the release gate, where Family 39 reads `resolve-anchor`, Family 34
 `check-step-references`, and Families 26 and 35
-`check-corpus-links --scope repository`. Family 36 and both pre-commit hooks,
-this repository's and the shipped `ductus-pre-commit`, which is the one
-consumer an adopter runs, call `check-corpus-links` on the default spec-corpus
-scope, which this change leaves as it was.
+`check-corpus-links --scope repository`. Both pre-commit hooks, this
+repository's `.githooks/pre-commit` and the shipped
+`framework/bootstrap/hooks/ductus-pre-commit`, which is the one consumer an
+adopter runs, call `check-corpus-links` on the default spec-corpus scope in
+their last `check-corpus-links > /dev/null` call, which this change leaves as
+it was.
 
 ### Ownership
 
@@ -248,7 +250,8 @@ pointer the rewrite changed. It is re-blessed filtered to that test, and the
 diff is confirmed to be the two shas and that prompt only. No
 `## Instructions` step is added or removed, so no step number moves and no
 other golden should. The install golden, `ductus-basic`, records progress
-envelopes only, so the fixture change does not move it.
+envelopes only (`runtime/tests/golden/ductus-basic.jsonl` holds `progress` and
+`complete` records and no other type), so the fixture change does not move it.
 
 ### Bytes loaded per invocation, measured after the split
 
@@ -332,7 +335,10 @@ to a follow-up.
   the heading" is one grep.
 - **Converting commands to skills**, which load supporting files on demand
   natively, was out of scope: it changes command names, install paths and
-  layouts on both agents.
+  layouts on both agents (`framework/bootstrap/ductus.md` §Derived values, rows
+  Command/skill path and Invocation, state the per-layout paths and names, and
+  `specs/064-pi-host-support/spec.md`'s host table states that a skill gets no
+  `$ARGUMENTS` substitution).
 - **Installing the reference under each agent's commands directory** was
   rejected: every `.md` file there registers as a command (the Command/skill
   path and Slash-command cleanup glob rows of Derived values in

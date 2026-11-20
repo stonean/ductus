@@ -139,8 +139,10 @@ body expansion supports `$ARGUMENTS`, and a skill gets no substitution), so an
 `$ARGUMENTS` that moves stops being substituted. A moved sentence
 that used it to name the argument names it in words instead. The move also
 ends a quieter defect: a host substitutes every `$ARGUMENTS` in the body,
-including one that only documents the token, so reference prose describing it
-was rewritten with whatever the user typed.
+including one that only documents the token (an assumption read from the
+host table above, which states the body expansion for Pi's prompt templates
+and names no exception for a documenting occurrence), so reference prose
+describing it was rewritten with whatever the user typed.
 
 ## Behavior
 
