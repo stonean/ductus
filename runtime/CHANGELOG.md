@@ -2735,8 +2735,9 @@ its version and date.
   shared system, such as a `docker-compose.yml` `POSTGRES_PASSWORD: postgres`
   or a committed `.env.test` key for a local emulator, is not a secret under
   the rule, in its Statement and its Verification. The rule stays a MUST, and
-  its permission to commit an encrypted copy is as strict as before. It turns
-  no passing `/analyze` into a finding.
+  its permission to commit an encrypted copy is as strict as before: the
+  Verification says a secret committed encrypted still owes every condition.
+  It turns no passing `/analyze` into a finding.
 - **`reliability-backend.md`'s `BE-RETRY-005` lets a declared-expendable
   message be dropped (spec 039 task 8; owner, 2026-11-19).** A message the
   spec declares expendable may be dropped once its redelivery bound is
