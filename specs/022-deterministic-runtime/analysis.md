@@ -1,21 +1,21 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-11-19T18:06:29Z
-analyzed-against: 318c190de20d86af7a6eb727dd3d910c772497d7
+last-run: 2026-11-20T01:38:31Z
+analyzed-against: 0a282913b0546db2381ddb112233ae9293bcc391
 hard-fail: 0
 blocking-findings: 0
-advisory: 12
+advisory: 15
 unexamined: 85
 analyzed-digest:
-  data-model.md: b18e13ef537f7a75101dfbe3f866554a1a881724627e42b31000403b5b9d9829
-  plan.md: 4a83e54cb924cfd2150c0889a50bc4230ce9322453c45a124bbe22f30f907cd9
-  review.md: e97a192ec4477954d9cdbd7f0cad4cdc7268a316a1ca8ce3a26ec40eb4f19709
-  scenarios/a-closed-stdout-is-a-quiet-exit.md: ef3db93cc91fecfca53ab67300605cbdf3823c916fe6f1131933740434ad0ca5
+  data-model.md: e4be8376fa45508fac584713626627e428e0a7e79a81920c46825796f82eecd8
+  plan.md: 3f9d3fb5c9f9f91114c2751966da5bb29c83e7ec2438246187a66df7a5620922
+  review.md: 97ceb087fc4c4d3584ecaf277dfbae1ee2697d45b358457680de2ad59f36362d
+  scenarios/a-closed-stdout-is-a-quiet-exit.md: bdbf9b74de48542168e7cac7bc0f5890eed478fde5957c1bd08738b569354957
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: f3c4072fc69ebfa829d92ae21c7043b7e3aa2a4be3db175b7df56204882e6fb4
   scenarios/a-done-when-clause-reads-to-its-end.md: b2d6b2ab8cbd208eec3ac811edc662c296792d51ec7ab1e0c49ec2c8acb045e9
   scenarios/a-path-argument-resolves-inside-its-base.md: 503e9dd4b66563bb317c4deaf4e9cee88275c3c5e3a71a50628704f208a4ac3d
   scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md: 5fec39041378aa1786a94cf59eb1676dd33b7f15b5371815ac92d1e8382c4c72
-  scenarios/append-inbox-comment-aware-write.md: c15499bda1cef7c531d2d135e20a5b265761841f1abb15db5f4225d286eb65b8
+  scenarios/append-inbox-comment-aware-write.md: 5df79036e979479b03037efd26f74d513c2ef128e579e33e198e4cf8b885366a
   scenarios/append-primitive-marker-normalization.md: 26c5064dcdf3f697885faac80332207d079bfd7db2d14c0769254da21e5e4246
   scenarios/append-task-honours-slug-with-explicit-body.md: 4e52f43a5f6463d13e9509b34ff017ffb72eec230e8636beb2bc39dace87bc86
   scenarios/apply-manifest-substitution-contract.md: d207e610fe23640c400a4e08205172c699555fde5852c9de1e4405cf1ca72a60
@@ -33,7 +33,7 @@ analyzed-digest:
   scenarios/coverage-expansion-primitives.md: 8fbe190c64b21c9f0edf92d764bdf9138d4f122830eea60df726d526859578d6
   scenarios/coverage-residue-cleanup.md: 0c6315ac8f0f041f624b0a389bbfca855d9886bb06703cef4ee5ffd513770d17
   scenarios/criterion-label-assignment.md: 57e455a91d0b76c6a3a5bdea80288300c246d00d53425730be88896e89c25305
-  scenarios/dashboard-primitive.md: 70d8a91916780bab45ed495f1c7f197d1ebd83f27caba0b1a4a2ea9849434fca
+  scenarios/dashboard-primitive.md: df9303f3a1872924761448ba4dc99eed173e01f2f7b8d7a6f1dca4c2b6e85bb5
   scenarios/derive-boundary-uncommitted-spec-dir.md: 64edf042d36ea149576e46e44ddf9bd4bce4e6eea12c59a092a31781baec5c6b
   scenarios/done-when-authoring-forms.md: 8cf2c40315fc62905b424b74ae21f5396a3201af5f4e2427e8ec11a36092a695
   scenarios/every-mcp-argument-has-a-cli-form.md: 942f7dac34955cf0f4714e53045b295e2aa9d47667ec56fb0d174ae2ae1f8191
@@ -46,9 +46,9 @@ analyzed-digest:
   scenarios/framework-list-dedup.md: e01884c811f286768f80cf0a616088c569bb1961ab07db670b47e843f39d91fd
   scenarios/govern-bootstrap.md: 5ffb4022ff53b32e9288a4f15fff7cd3441a2cea1bf42f07fbd080c264529089
   scenarios/groom-command-acceleration.md: dd6052b3d7ee1b1f8528913b82eabfbaf6debe4de51043824b2fcd5d040ed27e
-  scenarios/host-protocol-conformance.md: 13c3a2d89eedf4f79e66c9d4e8e97a9b7361e6fd1fa340a76c46730c28e4d542
+  scenarios/host-protocol-conformance.md: 6e17ebe8c14b713320a249729de266c2126161ba61ba21416b558628bb13bf0d
   scenarios/implement-completion-gate.md: d094ebf57e1f453690a6dc01fd28282df377b3c4362daf90f95f76183d635292
-  scenarios/installed-files-are-not-group-writable.md: 3a29eb614d5bd804698622713e8d18e29d8b68f3030d342a4e1f1be30c276cc4
+  scenarios/installed-files-are-not-group-writable.md: ca14be0b2cca81724fdb32c2757e67374c375b542eacf7d86baf175da2c30cbc
   scenarios/lint-markdown-lints-only-what-it-is-given.md: 92efe81c7326ae4daa08f1f40596afe6221a30433a45ccc7998ab5fadff28ddf
   scenarios/lint-markdown-tool-resolution.md: 79a8b063c83b9de05358a3aa25eab94c9ce930737b73d29638c57f9b6ab8f6af
   scenarios/mark-task-backtick-headings.md: a405d3e4b08ef15de8037541c05a93f70a5553f4a72407b917aed4e50ba20507
@@ -71,11 +71,11 @@ analyzed-digest:
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: dd72b20cb886ee804141895d169ebb90eb5c548df260fb02cb1643dd2a6f777a
   scenarios/scaffolding-primitives.md: c3495b99e2f440822fed57cb08ba0cd668e9093fd786ad37e616a8508417c699
-  scenarios/scenario-open-question-signal.md: 58fb1c80f5dacc4e4d2fb3619de1b626363283f71ed460910c10ac80f0ecfd65
+  scenarios/scenario-open-question-signal.md: 92ec638cae624784afd957acecbd10ecb060ae3a2dcf4a864253c865ab50d6b0
   scenarios/scenario-question-parser-fix.md: bdcaf5f9bb7d0ff795d6e3a6a5045a79afc63b55d8ce4b3331f807c337bf2ada
   scenarios/severity-is-a-closed-set-not-a-string.md: d4ea4d23382e2968d72df879d89c7617ffe0b1a8f4049430a25cf70d5f1bd25f
-  scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
-  scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
+  scenarios/skipscanner-inline-code-exemption.md: 20cf003798a71e271115f0425b78f4d61c52cd2e56e42311d52ccf3660133348
+  scenarios/spec-side-parser-hardening.md: c32c2f69ce6d17a120ea927ceec6b87bf79350b46ae217c78023780778de71fc
   scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
   scenarios/the-cli-surface-nothing-pins.md: 634128f508bb6cc3d94913216ce5aefa3571a93bae2e2d45ecb8a0accf22dcc6
   scenarios/the-constitutions-registry-validates-its-values.md: 161cf85126b357e1c7fe6e63be2de5d80e96842a26acb3ed299af55f4bd92acc
@@ -89,7 +89,7 @@ analyzed-digest:
   scenarios/writecode-payload-bundling.md: f7d9803245a4ce80944bce99df469356646005d213816a1cf9dda26a64537b41
   scenarios/writecode-payload-canonicalize-paths.md: 635d30397102d2ab90aed011a4499395c13b469d281126fc944b9930fc16522f
   spec.md: 8bd43e0cadc341c6c7f0038386f2997e986a50eec5c4231607c7716046ca343c
-  tasks.md: 5923f99f40a76b942f41ba847eb9fb5643b5a93c72a9d9ce5cc777ee1005ea98
+  tasks.md: 4de4f2998f65d298bbe436bf3f730f634332cf2cae457012b590d534297f3018
 unexamined-by-reason:
   never-existed: 13
   not-a-live-claim: 12
@@ -112,7 +112,7 @@ rule-verdicts:
   BE-ASYNC-001: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
   BE-AUTHZ-004: {verdict: addressed, cite: "plan.md#Agent reach: what ductus installs grants only what its steps need"}
   BE-AUTHZ-007: {verdict: addressed, cite: "data-model.md#Primitive request/response schemas"}
-  BE-BULK-002: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
+  BE-BULK-002: {verdict: addressed, cite: "data-model.md#`dashboard` — fields added since (addendum)"}
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-COORD-002: {verdict: addressed, cite: "plan.md#`runtime.yml` CI workflow"}
   BE-DATA-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
@@ -123,11 +123,11 @@ rule-verdicts:
   BE-DEPS-004: {verdict: addressed, cite: "plan.md#Dependency pinning, provenance, and upgrades"}
   BE-DEPS-005: {verdict: addressed, cite: "plan.md#Dependency pinning, provenance, and upgrades"}
   BE-DEPS-007: {verdict: addressed, cite: "plan.md#Dependency pinning, provenance, and upgrades"}
-  BE-ERR-002: {verdict: addressed, cite: "plan.md#Error semantics and exit codes"}
+  BE-ERR-002: {verdict: addressed, cite: "data-model.md#Outbound (runtime → host) messages"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#Outbound (runtime → host) messages"}
   BE-ERR-005: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Extension-point schemas (initial release)"}
-  BE-INPUT-002: {verdict: addressed, cite: "data-model.md#Severity tiers — three closed sets, not one"}
+  BE-INPUT-002: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#Trade-offs"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
   BE-INPUT-006: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
@@ -147,20 +147,20 @@ rule-verdicts:
   BE-RACE-003: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-REPR-001: {verdict: addressed, cite: "data-model.md#Notes"}
   BE-RETRY-001: {verdict: addressed, cite: "plan.md#Release workflow"}
+  BE-RETRY-002: {verdict: addressed, cite: "plan.md#Release workflow"}
   BE-RETRY-003: {verdict: addressed, cite: "plan.md#Release workflow"}
   BE-SCHEMA-002: {verdict: addressed, cite: "plan.md#MCP surface: one tool per primitive, no orchestration tools"}
   BE-TIMEOUT-001: {verdict: waived, reason: "`ductus exec`'s waits for an `llm-response` or a `gate-response` are on the host that spawned the runtime and holds both of its pipes, and a gate waits on a person, so no bound fits either wait; the walk ends when the host closes stdin, which `read_envelope` reports as the end of input (owner decision, 2026-11-19)", decided-by: "andy@stone.dev", decided-at: "2026-11-19T17:20:03Z"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#Compare before persist"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#Compare before persist"}
-  CFG-CONST-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
+  CFG-CONST-001: {verdict: addressed, cite: "plan.md#Compare before persist"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
-  CFG-CONST-004: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-001: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-004: {verdict: addressed, cite: "plan.md#Release workflow"}
   CFG-ENV-006: {verdict: addressed, cite: "plan.md#Dependency selection"}
-  CFG-ENV-007: {verdict: addressed, cite: "data-model.md#Per-project file resolution"}
+  CFG-ENV-007: {verdict: addressed, cite: "plan.md#Path arguments: a lexical screen, then canonical containment"}
   CFG-ENV-008: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-009: {verdict: addressed, cite: "plan.md#`fetch-archive` transport"}
   CFG-ENV-010: {verdict: addressed, cite: "plan.md#Versioning: built-in from `Cargo.toml`"}
@@ -169,9 +169,9 @@ rule-verdicts:
   SEC-LOG-001: {verdict: addressed, cite: "plan.md#Dependency selection"}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   deferred: 0
-  waived: 12
+  waived: 15
   undispositioned: 0
 decisions:
   - key: grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today
@@ -219,20 +219,35 @@ decisions:
     reason: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did
     decided-at: 2026-11-17T19:34:20Z
     decided-by: rule
-  - key: grounding — Technical Decisions, Parser strategy, says pulldown-cmark 'handles the surface lexing (code spans, fenced blocks, lists, headings, HTML blocks) correctly' (and Dependency selection says it was chosen 'for correctness on edge cases'), with no source; only the Trade-offs entry hedges the library's reputation as assumed.
-    outcome: waived
-    reason: the rationale for the 2026-05 parser dependency choice, recorded in Parser strategy and hedged as assumed in Trade-offs; the same class as the stored rmcp and pulldown-cmark-defaults discards
-    decided-at: 2026-11-19T17:30:43Z
-    decided-by: rule
-  - key: grounding — Motivation states that most of the analyze and implement wall-clock time is spent on mechanical work with no semantic content, an unsourced claim about how existing commands spend time.
-    outcome: waived
-    reason: a motivation stated when the spec was written, describing the problem the runtime was built to solve rather than current behavior; the same class as the stored 2-4 minutes and 11-of-13 waivers
-    decided-at: 2026-11-19T18:06:29Z
-    decided-by: rule
   - key: "rule-assessment — BE-PAYLOAD-004: fetch-archive's download (up to MAX_FETCH_BYTES, 256 MiB) and extract-archive's read (up to MAX_EXTRACT_BYTES, 2 GiB) are large bodies, but the plan never states they are streamed in bounded chunks and names no chunk or buffer size constant."
     outcome: waived
     reason: "SHOULD tier and advisory: the rule guards per-request memory in a service holding many bodies at once, while the runtime is one local process that fetches and extracts one release archive per bootstrap run, with MAX_FETCH_BYTES capping the download and MAX_EXTRACT_BYTES and MAX_EXTRACT_ENTRIES the extraction"
     decided-at: 2026-11-19T18:06:29Z
+    decided-by: rule
+  - key: grounding — spec.md says Go has adequate MCP libraries (Resolved Questions, Implementation language), with no citation or assumption marker
+    outcome: waived
+    reason: "advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims"
+    decided-at: 2026-11-20T01:38:31Z
+    decided-by: rule
+  - key: grounding — spec.md puts a host's integration at about a few hundred lines of code (Surfaces, Subprocess interpreter), with no source
+    outcome: waived
+    reason: "advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims"
+    decided-at: 2026-11-20T01:38:31Z
+    decided-by: rule
+  - key: grounding — plan.md says Claude's three single-slash Read rules anchor at the project rather than the temp directory (Agent reach, The seeds), a host permission-semantics claim with no citation
+    outcome: waived
+    reason: "advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims"
+    decided-at: 2026-11-20T01:38:31Z
+    decided-by: rule
+  - key: grounding — plan.md says a host reads through any link on a path (Agent reach, destination bullet), with no citation or assumption marker
+    outcome: waived
+    reason: "advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims"
+    decided-at: 2026-11-20T01:38:31Z
+    decided-by: rule
+  - key: grounding — plan.md says a just-uploaded release asset can answer 404 from the download host for a brief window (Release workflow, verify-installer fetch), with no source or measurement
+    outcome: waived
+    reason: "advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims"
+    decided-at: 2026-11-20T01:38:31Z
     decided-by: rule
 ---
 
@@ -240,7 +255,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 12 advisory; not blocking. 85 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 12 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 15 advisory; not blocking. 85 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 15 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -252,17 +267,20 @@ decisions:
 
 ## Advisory findings
 
-- scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history; append the task that implements it — `specs/022-deterministic-runtime/scenarios/done-when-authoring-forms.md` — **waived**: written after the fact for behavior shipped in the same commit (959d897d, fix(022): recognize all done-when authoring forms in read-tasks); implemented and tested, read_tasks.rs recognizes_all_done_when_authoring_forms (operator decision, 2026-10-16)
-- scenario-consistency — scenario scenario-question-parser-fix.md has no task in tasks.md and never had one in its history; append the task that implements it — `specs/022-deterministic-runtime/scenarios/scenario-question-parser-fix.md` — **waived**: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
-- artifact-size — `specs/022-deterministic-runtime/plan.md` is 108738 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/plan.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
-- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 63230 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
-- grounding — Motivation states as fact that a /ductus:analyze invocation takes 2-4 minutes of LLM wall-clock time today, with no measurement, command or hedge beside it (the later hedge in Surfaces, 'unmeasured here', does not reach this sentence). — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
-- grounding — Motivation states that /ductus:analyze has '11 of 13 check sections' mechanical, a count of the existing command's sections with no citation to the command source. — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
-- grounding — Motivation states that most of the analyze and implement wall-clock time is spent on mechanical work with no semantic content, an unsourced claim about how existing commands spend time. — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation stated when the spec was written, describing the problem the runtime was built to solve rather than current behavior; the same class as the stored 2-4 minutes and 11-of-13 waivers (decided by the rule)
-- grounding — Resolved Questions, Implementation language, reason (1): states rmcp is 'the most mature MCP SDK and is the reference implementation', a claim about an external project carrying no source or assumption marker (reasons 2 is hedged, this one is not). — `specs/022-deterministic-runtime/spec.md` — **waived**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
-- grounding — Technical Decisions, Dependency selection: calls rmcp 'Anthropic's reference MCP SDK' and states tokio is 'required by rmcp', both claims about an external crate with no source cited. — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a dependency choice, the same class as the stored rmcp discard
-- grounding — Technical Decisions, Known limitations: states which pulldown-cmark extensions (tables, footnotes, definition lists) are off by default, a claim about an external library's defaults with no citation to its documentation or a command. — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
-- grounding — Technical Decisions, Parser strategy, says pulldown-cmark 'handles the surface lexing (code spans, fenced blocks, lists, headings, HTML blocks) correctly' (and Dependency selection says it was chosen 'for correctness on edge cases'), with no source; only the Trade-offs entry hedges the library's reputation as assumed. — `specs/022-deterministic-runtime/plan.md` — **waived**: the rationale for the 2026-05 parser dependency choice, recorded in Parser strategy and hedged as assumed in Trade-offs; the same class as the stored rmcp and pulldown-cmark-defaults discards (decided by the rule)
+- scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history — `specs/022-deterministic-runtime/scenarios/done-when-authoring-forms.md` — **waived**: written after the fact for behavior shipped in the same commit (959d897d, fix(022): recognize all done-when authoring forms in read-tasks); implemented and tested, read_tasks.rs recognizes_all_done_when_authoring_forms (operator decision, 2026-10-16)
+- scenario-consistency — scenario scenario-question-parser-fix.md has no task in tasks.md and never had one in its history — `specs/022-deterministic-runtime/scenarios/scenario-question-parser-fix.md` — **waived**: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
+- artifact-size — `specs/022-deterministic-runtime/plan.md` is 108851 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/plan.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
+- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 63378 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **waived**: 022's plan and data model are the design record of the runtime core and its shared surfaces; prune-plan finds no section outside the design record, and no slice of 022 can reach done on its own to split off, so each reader reads them in parts by offset, as this run's judges did (decided by the rule)
+- grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
+- grounding — spec.md says 11 of 13 analyze check sections are mechanical — `specs/022-deterministic-runtime/spec.md` — **waived**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
+- grounding — spec.md and plan.md call rmcp the reference MCP SDK — `specs/022-deterministic-runtime/spec.md` — **waived**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
+- grounding — plan.md says tokio is required by rmcp — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a dependency choice, the same class as the stored rmcp discard
+- grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **waived**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
+- grounding — spec.md says Go has adequate MCP libraries (Resolved Questions, Implementation language), with no citation or assumption marker — `specs/022-deterministic-runtime/spec.md` — **waived**: advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims (decided by the rule)
+- grounding — spec.md puts a host's integration at about a few hundred lines of code (Surfaces, Subprocess interpreter), with no source — `specs/022-deterministic-runtime/spec.md` — **waived**: advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims (decided by the rule)
+- grounding — plan.md says Claude's three single-slash Read rules anchor at the project rather than the temp directory (Agent reach, The seeds), a host permission-semantics claim with no citation — `specs/022-deterministic-runtime/plan.md` — **waived**: advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims (decided by the rule)
+- grounding — plan.md says a host reads through any link on a path (Agent reach, destination bullet), with no citation or assumption marker — `specs/022-deterministic-runtime/plan.md` — **waived**: advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims (decided by the rule)
+- grounding — plan.md says a just-uploaded release asset can answer 404 from the download host for a brief window (Release workflow, verify-installer fetch), with no source or measurement — `specs/022-deterministic-runtime/plan.md` — **waived**: advisory form check that is no chore: grounding the claim needs a fetched external source or a measurement this run cannot make, and the claim is a design-time statement of the same class the record already waives for the neighbouring claims (decided by the rule)
 - rule-assessment — BE-PAYLOAD-004: fetch-archive's download (up to MAX_FETCH_BYTES, 256 MiB) and extract-archive's read (up to MAX_EXTRACT_BYTES, 2 GiB) are large bodies, but the plan never states they are streamed in bounded chunks and names no chunk or buffer size constant. — `specs/022-deterministic-runtime/plan.md` — **waived**: SHOULD tier and advisory: the rule guards per-request memory in a service holding many bodies at once, while the runtime is one local process that fetches and extracts one release archive per bootstrap run, with MAX_FETCH_BYTES capping the download and MAX_EXTRACT_BYTES and MAX_EXTRACT_ENTRIES the extraction (decided by the rule)
 
 ## Deferred to other specs
@@ -286,5 +304,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — Technical Decisions, Release workflow (bounds list): states the adopter CI template 'names its own' download timeouts, 'starts at the same numbers' and that 'neither reads the other', a claim about an existing artifact the plan does not name by path. — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, No data persistence outside session file + markdown: states the session file was 'consolidated in 0.10.0' from the earlier per-host JSON files and moved to .ductus/session.toml 'since 042 and 049', historical claims with no changelog entry or commit cited. — `specs/022-deterministic-runtime/plan.md` — **fixed** (decided by the rule)
+*None.*
