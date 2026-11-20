@@ -1,5 +1,5 @@
 ---
-next-task: 47
+next-task: 48
 ---
 
 # 017 — Derive, Don't Ask Tasks
@@ -17,3 +17,11 @@ Landed on 2026-11-14 after 000's review record; with the real `markdownlint-cli2
 - [x] `scripts/tests/test-pre-commit-staging.sh` holds a case whose staged MD028 the hook refuses, and the case fails with the behavior removed
 
 - **Done when**: A commit staging a blank line inside a blockquote (MD028) is refused by the hook naming the violation, a commit carrying only violations `--fix` repairs still lands with them fixed, and `generators.yml`'s and `framework-checks.yml`'s steps pass locally.
+
+### 47. The owner's rule decision of 2026-11-19 for `framework/rules/configuration-cross.md`
+
+- [ ] `CFG-ENV-013`: a credential for a throwaway local or test resource that grants no access to a production or shared system is not a secret under this rule, stated in the Statement and the Verification (a `docker-compose.yml` `POSTGRES_PASSWORD: postgres`, a committed `.env.test` key for a local emulator). The encrypted-copy permission stays as strict as it is
+- [ ] The blockquote in `spec.md` saying `SEC-DEPS-001` takes over the deprecated `BE-DEPS-006` is corrected, since spec 008 removes that never-tagged stub now; first check no criterion in another spec asserts the signpost
+- [ ] Left as it is: `CFG-ENV-011` stays a MUST
+
+- **Done when**: each item is stated in the rule file as decided, the spec records the requirement (a scenario, and a Resolved Questions entry per decision with its reason) and corrects any criterion the change makes false, any external claim the new text makes is fetched and not recalled, bytes before and after are measured per rule and per file, `runtime/CHANGELOG.md` `[Unreleased]` gains an entry per changed rule, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
