@@ -2,11 +2,22 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.60.0] — 2026-11-20
 
-Changelog obligations written as their changes land, from 2026-11-02. The
-release commit adds the other changes since 0.59.11 and gives this section
-its version and date.
+A minor release with breaking changes: 109 of the 287 entries below are
+marked BREAKING, under Added, Changed, Removed and Fixed. Auggie, Antigravity
+and OpenCode are no longer supported agents and Windows is no longer a
+published platform; Claude Code and Pi remain, and on Pi a command now runs
+under the colon spelling too. A twelfth rule file, `security-cross.md`,
+ships, the eleven others were re-reviewed against their sources, and
+`BE-AUTHN-020` and `BE-DEPS-006`, added after 0.59.11, are removed before a
+release shipped them. A review judges every acceptance criterion and is owed
+for code, an analysis for the project's artifacts. Six migrations are new
+(`claude-md-import-syntax`, `constitution-import`,
+`memory-routing-leaves-claude-md`, `remove-legacy-constitutions-region`,
+`strip-inbox-guidance` and `substitute-seed-placeholders`), and the MSRV
+stays 1.89. Entries from 2026-11-02 on were written as their changes
+landed; those for the 419 commits before were drafted from history.
 
 ### Added
 
@@ -346,8 +357,9 @@ its version and date.
   no decision, an Affected Files section listing nothing outside comments). The three judged items stay with the host in
   step 15, and an exec walk records them unexamined under the new reason
   `integrity-not-checked` (spec 067).
-- **`check-artifacts` reports a path cited by line number, in a new blocking
-  family, `line-number-citations`, that examines a spec at every status (spec
+- **BREAKING: `check-artifacts` reports a path cited by line number, in a
+  new blocking family, `line-number-citations`, that examines a spec at every
+  status (spec
   067, AC5).** A citation of a path by its line number in a spec's `spec.md`,
   `plan.md`, `tasks.md`, `data-model.md`, `research.md` or a scenario (a line
   drifts as the code moves; spec 050's AC24 forbids one) is a Blocking
@@ -1385,14 +1397,14 @@ its version and date.
   a spec whose `tasks.md` holds an unchecked box, accepted in 0.59.11, now
   fails.
 - **A command's reference holds what a step does with a result, and no more.**
-  `framework/commands/` and `framework/reference/` together total 465,917
-  bytes at `1a7b6911` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
-  254,439 over the 17 command files and 211,478 over the 13 references), where the
+  `framework/commands/` and `framework/reference/` together total 466,360
+  bytes at `ffb3db9b` (`cat framework/commands/*.md framework/reference/*.md | wc -c`:
+  254,809 over the 17 command files and 211,551 over the 13 references), where the
   17 command files of `ductus-v0.59.11` totalled 486,072 and no reference existed
   (the same `wc -c` over `git show <rev>:<path>`). The cuts reached 421,717 at
   `101a6e8e`, mid-release, from 553,352 before them, and later changes in the
   release grew the files again. `framework/reference/review.md` is 55,547 bytes
-  at `1a7b6911` and `framework/reference/analyze.md` 63,924, so each is over
+  at `ffb3db9b` and `framework/reference/analyze.md` 63,997, so each is over
   one 50,000-byte read; they were 45,232 and 48,691 at `101a6e8e`, from 67,168
   and 78,632 before the cuts. Each primitive's rules are in `ductus <name> --help`. `write-review`,
   `write-analysis` and `process-decisions` now state when a deferral releases a
@@ -2305,6 +2317,20 @@ its version and date.
   construction, not a measurement. The CLI, the MCP tool and `ductus exec` now
   return a missing-argument error asking for at least one level-2 section
   (`--section` on the CLI).
+- **BREAKING: `resolve-anchor` judges a reference on a line naming another
+  document, which can now be unresolved (spec 067, task 19, scenario
+  `shared-constitution-references-are-judged`; `8651d466`).** A reference on a
+  line naming a readable document is judged against the documents the line
+  names, a registered shared constitution's markers, the citing file's
+  headings and the constitution's markers. One it cannot judge carries
+  `unjudged`, `anchor-target-unjudgeable` or `anchor-target-unreadable`,
+  counted beside the kinds. The markers file is recognized by its resolved
+  path, never a basename, a malformed `[constitutions.*]` registry is an
+  error, and a code span holding a path and one reference is a reference. The
+  result's shape change is additive; the meaning change is breaking under
+  `BE-COMPAT-001`. Family 39 now covers every spec's `spec.md`, `plan.md` and
+  scenarios beside `framework/`, and fails on an unresolved judged reference
+  or one naming an unreadable document.
 - **BREAKING: `resolve-anchor` resolves a heading only where a word ends, and
   not inside a fenced block or an HTML comment (spec 067, scenario
   `pointers-into-shipped-files-are-judged`; spec 071, `36b3ddb6`,
@@ -2337,7 +2363,7 @@ its version and date.
   The cut fits one read on a host whose read tool caps one read at 51,200 bytes
   (OpenCode's and Pi's stopped after line 500 at 53,811; OpenCode support is
   since dropped); an installed copy stays within 50,000 bytes for a project name of up to 42 characters (29 `{project}` placeholders at 49,021 bytes, so 29 bytes per name character beyond nine). `/target` step 4's read of it now fits one call on those
-  hosts. The file measures 49,021 bytes at `a7a7f898` (`git show a7a7f898:framework/constitution.md | wc -c`), 48,763 at `8e4dc677`.
+  hosts. The file measures 49,021 bytes at `a7a7f898` (`git show a7a7f898:framework/constitution.md | wc -c`), 48,763 at `8e4dc677`, and 49,021 at `ffb3db9b`.
 - **A plan or task-list edit that adds no unchecked task does not reopen a
   `done` spec, and does not stale its analysis (spec 041, scenario
   `a-plan-edit-does-not-reopen-a-done-spec`, task 21; specs 047, 063, 066;
@@ -2663,16 +2689,16 @@ its version and date.
   version, 11 are added and none is removed (the lockfile's 257 package
   entries become 268), and the four advisories it took are named.**
   Counted as the `[[package]]` name and version pairs of `runtime/Cargo.lock`
-  at `ductus-v0.59.11` against `79cd59a3` (`git diff ductus-v0.59.11 HEAD --
+  at `ductus-v0.59.11` against `3441e4cb` (`git diff ductus-v0.59.11 HEAD --
   runtime/Cargo.lock`); the lockfile entries above record the steps and their
   intermediate versions, and these are the net ones. The crate's own
-  dependencies move: `rmcp` 3.5.1 to 3.11.0, `zip` 9.0.4 to 9.7.3, `tokio`
-  1.53.3 to 1.54.1, `toml` 1.1.8 to 1.2.1, `clap` 4.6.7 to 4.6.8, `flate2`
+  dependencies move: `rmcp` 3.5.1 to 3.11.0, `zip` 9.0.4 to 9.8.1, `tokio`
+  1.53.3 to 1.54.1, `toml` 1.1.8 to 1.2.1, `clap` 4.6.7 to 4.6.9, `flate2`
   1.1.10 to 1.1.11, `regex` 1.13.1 to 1.13.2 and `pulldown-cmark` 0.13.4 to
   0.13.6. Among the rest: `rustls-webpki` 0.103.15 to 0.103.17,
   `webpki-root-certs` 1.0.9 to 1.0.12, `aws-lc-rs` 1.18.2 to 1.19.0,
   `aws-lc-sys` 0.46.0 to 0.47.0, `libz-sys` 1.1.30 to 1.1.33, `cc` 1.8.0 to
-  1.11.2, `nix` 0.31.3 to 0.32.0, `typed-path` 0.12.3 to 0.13.0, `uuid` 1.28.0
+  1.11.3, `nix` 0.31.3 to 0.32.0, `typed-path` 0.12.3 to 0.13.0, `uuid` 1.28.0
   to 1.29.3, `rmcp-macros` 3.5.1 to 3.11.0 and the `icu_*` crates 2.3 to 2.4.
   The 11 added crates are `constant_time_eq`, `lock_api`, `parking_lot`,
   `parking_lot_core`, `redox_syscall`, `scopeguard`, `temp-env`,
@@ -2706,7 +2732,9 @@ its version and date.
   cache is partitioned per user and purged at sign-out. `FE-DEPS-008` takes
   the registry-signature check at any point before the dependencies are built
   into a production artifact, by the package manager's own mechanism, and a
-  spec may state that its package manager has none. `BE-API-015` (a) and
+  spec may state that its package manager has none; where
+  `security-backend.md` is loaded, its `BE-DEPS-004` still owns the
+  frontend's verification, as part of installation. `BE-API-015` (a) and
   `BE-DATA-012`'s Verification are reworded with the same behavior. None of
   these turns a passing `/analyze` into a finding.
 - **BREAKING: `FE-DEPS-009` flags what its Statement requires (spec 008 task
