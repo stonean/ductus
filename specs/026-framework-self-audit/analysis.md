@@ -1,7 +1,7 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-20T00:38:07Z
-analyzed-against: e5d736196d8cb84fd10f0708ba9399a3e182bccd
+last-run: 2026-11-20T04:13:44Z
+analyzed-against: 845fc374a60454561d932d41daad3345406b39f7
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
@@ -27,7 +27,7 @@ analyzed-digest:
   scenarios/family-35-manifest-destination-links.md: 28297923f8f5f4ec6833696028c4076e247cfadb3d945b0a2446acc18237cc11
   scenarios/family-36-self-url-resolution.md: e4c14882f66a90cee309b539ffe60ecfeef564eb7ad024ab39a537314c0e051f
   scenarios/family-39-shipped-anchor-resolution.md: c25191adf85b75351517d55c89a55a24a5d083e325f894f680c04ace54401e8f
-  scenarios/family-40-deprecated-rules-are-removed-on-time.md: 689441c4d67ea3b73b147f0bf319db6ef7a50034ea46218ef67799dee0f5732e
+  scenarios/family-40-deprecated-rules-are-removed-on-time.md: 935bc33b74d6967e7836ea0605ad73e053d70cc72c7dae02462d39445e4a67e8
   scenarios/host-namespace-parity.md: e8a67c95e2e596cf9a231bbfa26545c4beee96af1a043fd83608899e16087790
   scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
   scenarios/readme-command-parity.md: 899fdc8ebb306541496892772ec4540b4be968aed55ee366c87185cdcc5304b6
@@ -39,26 +39,21 @@ unexamined-by-reason:
   root-absent: 10
   ships-to-adopter: 5
 rule-digest:
-  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
-  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
-  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
-  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  accessibility-frontend.md: 39a0edea7e2cad9ed30c6e3d5c2edccddfecd8a6b77151df4c71c9b20a901cd4
+  api-backend.md: 8e496f92a50b68b1ae8b1954e30a85dd142dc65d3b3882089f9c48560096d800
+  concurrency-backend.md: 2650d82125bd67945fd327f7fb9f76c57ca10d165925733139afa3cd50562dd4
+  configuration-cross.md: 75143f9bd0dec8d62b3a8ed592f9a8c29a4192d863330fb7a92424029878fa50
   observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
   performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
-  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
-  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
-  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+  reliability-backend.md: 26c045df79b6a99319bd7dfa09490b4a2d5ac742eee70a6b3ad0235d49093d2a
+  security-backend.md: 511a68b25ceb148f8292cda2a829aaff03a38bc3453732e33a70bd5d6acf5df5
+  security-cross.md: 26e287f06cdca2744d0972cbf7cf6a48f27d869526dd86c7c375ac4bdc0dadce
+  security-frontend.md: 5fddb21530faa805cb00f23c929e9402548ed0d6a0ed3e8e9a910561b74a45a3
 rule-verdicts:
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/family-34-step-reference-integrity.md#Edge Cases"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
-  QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/link-check-consolidation.md#Edge Cases"}
-  QUAL-GROUND-001: {verdict: addressed, cite: "scenarios/family-17-contract-binding.md#Behavior"}
-  QUAL-STUB-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
-  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
 blocking: false
 dispositions:
   fixed: 0
