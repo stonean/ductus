@@ -332,7 +332,7 @@ its schema.
   name a section the pinned reference lacks. The step then meets the missing
   section the way it meets a missing file: reported, not improvised. Pinning
   one half of a pair is the adopter's choice, and `[pinned] files` already
-  documents that a pinned file stops receiving updates.
+  documents that a pinned file stops receiving updates (`framework/bootstrap/ductus.md`, the `pinned.files` paragraph of its Project Configuration: a listed file's `update` strategy is treated as `skip`).
 - **A file an adopter put in `.ductus/reference/` by hand.** The directory is
   `ductus`-owned and enforced, so it is removed unless pinned, the same rule
   the commands directory follows.

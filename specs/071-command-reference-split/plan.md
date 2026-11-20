@@ -129,8 +129,8 @@ same `substitute` function, pruning a file with no source and checking both in
 `--check`. All thirteen are written, `audit` included: the maintainer-only
 rule withholds files from adopters, and this repository dogfoods `audit`
 already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
-`git add .ductus/reference/` beside its other generator outputs
-(`.githooks/pre-commit:94-95`). `.gitignore` ignores only `session.toml`,
+`git add .ductus/reference/` beside its other generator outputs (its
+`generated_outputs` list in `.githooks/pre-commit`). `.gitignore` ignores only `session.toml`,
 `sessions/` and `bin/` under `.ductus/`, so the directory is tracked.
 
 ### Audit families
