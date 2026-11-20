@@ -6,7 +6,7 @@ section: "Check families"
 
 ## Context
 
-A rule that `ductus` ships is retired in two steps, per constitution §rules: a `**DEPRECATED in {version}:**` label names the release that deprecates it and its removal target, and the rule is removed in that target release. 077 wrote the first such labels in shipped rule files: `security-backend.md`'s `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020` read "**DEPRECATED in 0.60.0:** … removed in 0.62.0", and the changelog, `docs/rules.md` and 008's `data-model.md` repeat the promise.
+A rule that `ductus` ships is retired in two steps, per constitution §rules: a `**DEPRECATED in {version}:**` label names the release that deprecates it and its removal target, and the rule is removed in that target release. 077 wrote the first such labels in shipped rule files: `security-backend.md`'s `BE-AUTHN-009` and `BE-AUTHN-013` read "**DEPRECATED in 0.60.0:** … removed in 0.62.0", and the changelog, `docs/rules.md` and 008's `data-model.md` repeat the promise.
 
 Nothing held a release to it. No task, script or workflow scheduled the removal, and nothing compared a label's removal version with `version`, so the removal depended on whoever cut that release remembering it, which §design-principles rules out. A release that ships past the target leaves every adopter an Advisory naming a removal that did not happen; a removal without a sweep turns each live citation of the old ID into a Blocking "unknown rule" finding at `/{project}:analyze`. 077's re-read found the gap (077 task 8, owner, 2026-11-02).
 
