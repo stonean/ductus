@@ -808,9 +808,11 @@ its version and date.
 - **Every `##` section of a command reference is reached by a step of its command, or is gone (spec 071, scenario `reference-sections-are-reached-by-a-step`).**
   Measured at `b7b07500` over the 12 shipped references that have a command, 23 of
   93 sections were named by no command text, no reached section and no anchor
-  link; 74 sections remain, 2 unreached by design (`framework/reference/analyze.md`
-  `Severity tiers` and `Record fields`, each read by a document outside the
-  command). `/plan` step 9 names `Validation gate` and step 10 carries the
+  link; 74 sections remain, 0 unreached and 4 exempt by design (`Severity tiers` and
+  `Record fields` in `framework/reference/analyze.md`, `Cross-spec context
+  checklist` in `framework/reference/plan.md` and `Blocking semantics` in
+  `framework/reference/review.md`, each read by a document outside the
+  command's steps). `/plan` step 9 names `Validation gate` and step 10 carries the
   next-step line, `/implement` step 5 names `Walk through tasks`, `/review` step
   11 names `Output` and step 1 names the base-override rules of `Window and
   coverage`, and `/specify` steps 6 and 10 carry the one-question-per-list-item

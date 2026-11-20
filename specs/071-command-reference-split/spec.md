@@ -42,8 +42,9 @@ reference has to be **installed**.
 
 Every command's `## Markdown-only reference` section, and nothing else, with
 one exception: `review.md`'s top-level sections after its reference — Blocking
-semantics, Blocking message, Waivers, Auto-fix scope, Output, Idempotency and
-Notes for adopters — move with it. They are policy that `write-review` and
+semantics, Blocking message, Waivers, Auto-fix scope, Output and Notes
+for adopters — move with it (Idempotency went in the 2026-11-19 deletion of
+sections no step reaches). They are policy that `write-review` and
 `process-waivers` already apply, read on the `--waive`, `--fix` and
 blocking-message paths. `audit.md`'s two short sections after its reference
 (*Boundary with `/ductus:analyze`* and *Output*) are not reference and stay.
@@ -241,8 +242,11 @@ Checked 2026-10-25 by reading each consumer.
   or a marker in the markers file, and is reported unresolved otherwise. The
   citing file's own headings count so that a pointer line can also cite a
   section of its own file; no reference needs that today. A line naming
-  several documents, or one the manifest does not map, stays counted and
-  unjudged, as does a mapped source that cannot be read. The marker fallback is
+  several documents, or one the manifest does not map, stays `qualified`
+  and is judged by 067's later rule (its scenario
+  `shared-constitution-references-are-judged`): against every readable
+  document it names, the citing file's headings and the markers. A mapped
+  source that cannot be read is recorded unexamined, not reported broken. The marker fallback is
   required: measured 2026-10-25, the corpus held 16 references on lines naming
   exactly one mapped document, and every one was a constitution marker beside
   a path such as `specs/inbox.md`. A headings-only rule would have reported all
@@ -332,7 +336,7 @@ its schema.
 ## Acceptance Criteria
 
 - [x] AC1: No file under `framework/commands/` contains a `## Markdown-only reference` heading.
-- [x] AC2: Each of the thirteen commands measured above has a `framework/reference/<command>.md` holding its moved sections, `review.md`'s trailing sections included, and opening with a **Where a named section lives** paragraph.
+- [x] AC2: Each of the thirteen commands measured above has a `framework/reference/<command>.md` opening with a **Where a named section lives** paragraph, then holding the moved sections a step reaches or marks kept; a reference with none is its opening paragraph alone.
 - [x] AC3: Every pointer that read "the markdown-only reference below", in any wording, names a `.ductus/reference/<command>.md` file, together with the full `§` heading when it points at one section; each named heading exists in that file.
 - [x] AC4: No `framework/reference/*.md` file contains `{cli-config-dir}`, a hardcoded agent config directory, or `$ARGUMENTS` used as the argument token, and `placeholder-roundtrip.sh` fails when one is introduced.
 - [x] AC5: `framework/bootstrap/ductus.md`'s Shared Files manifest carries one `update` row per shipped reference file, mapping `framework/reference/<command>.md` to `.ductus/reference/<command>.md`, with `audit` withheld, and Family 16 fails when a reference file lacks a row or a row lacks a source.
@@ -342,7 +346,7 @@ its schema.
 - [x] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [x] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
 - [x] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
-- [x] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly; outside a pair a heading must end where a word ends; and a line inside a ` ``` ` fenced block or an HTML comment is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
+- [x] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly; outside a pair a heading must end where a word ends; and a line inside a ` ``` ` fenced block or an HTML comment is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one stays `qualified` and is judged by 067's later rule against every readable document it names, the citing file's headings and the markers, and a mapped source that cannot be read is recorded unexamined, not reported broken. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
 - [x] AC13: The installer's pointers at `.ductus/reference/review.md` §Resolve target and scope, item 5, name a section that exists there.
 - [x] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [x] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
