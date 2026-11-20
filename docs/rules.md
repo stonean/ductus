@@ -33,11 +33,11 @@ The security files are mostly **MUST** rules, because the failures they describe
 
 ## Where the rules come from
 
-Every rule names its origin on its own `**Source:**` line, and that line is the record: the table below names the families most rules draw on, and the rule file says which rule cites what. A claim a rule makes about an external standard is to be checked against the cited document's current text when the rule is written or amended, never recalled ([008's data model](../specs/008-security-rules/data-model.md), the Source field).
+A rule names its origin on its own `**Source:**` line, a field 008's data model makes optional but recommended, and that line is the record: the table below names the families most rules draw on, and the rule file says which rule cites what. A claim a rule makes about an external standard is to be checked against the cited document's current text when the rule is written or amended, never recalled ([008's data model](../specs/008-security-rules/data-model.md), the Source field).
 
 | Source | Mostly in |
 | --- | --- |
-| OWASP — the Cheat Sheet Series, Top 10:2025, API Security Top 10 2023, Web Security Testing Guide v4.2, Dependency-Check | the three security files |
+| OWASP — the Cheat Sheet Series, Top 10:2025, API Security Top 10 2023, Web Security Testing Guide v4.2, Dependency-Check | `security-backend.md`, `security-frontend.md`, `security-cross.md` |
 | W3C accessibility — WCAG 2.2 Level AA (also ISO/IEC 40500:2025) with its Understanding documents, Techniques and ACT rules; WAI-ARIA 1.2 and its Authoring Practices Guide; ARIA in HTML; WCAG-EM 2.0 | `accessibility-frontend.md`, whose header also says which WCAG version each regime that mandates web accessibility names |
 | W3C web platform — Content Security Policy Level 2 and 3, Trusted Types, Subresource Integrity, Fetch Metadata, Permissions Policy, Referrer Policy, Clear Site Data, Trace Context | `security-frontend.md`, `security-backend.md`, `observability-backend.md` |
 | IETF RFCs — HTTP semantics, caching and messaging (9110, 9111, 9112), Problem Details (9457), the OAuth 2.0 Security BCP (9700), the JWT BCP (8725), PKCE (7636), WebSocket (6455), timestamps (3339), the Deprecation and Sunset headers (9745, 8594) | `api-backend.md`, the security files, `reliability-backend.md`, `performance-backend.md` |
