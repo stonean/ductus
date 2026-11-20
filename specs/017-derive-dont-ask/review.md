@@ -1,16 +1,16 @@
 ---
 spec: 017-derive-dont-ask
-last-run: 2026-11-19T13:42:29Z
-reviewed-against: 892c1b0798ae11436211e9dd455226516afbefbe
-diff-base: 27588f3052fa359b114945518991248f3f74b579
+last-run: 2026-11-20T04:19:58Z
+reviewed-against: da7bd813e09e3b6a3da1d9ce65a3dac241abad80
+diff-base: fa4ae5c75b7d68e907f18cee94eb8f8157f83f52
 must-violations: 0
 should-violations: 0
-low-confidence: 1
-examined: 6
-scope: 7
+low-confidence: 0
+examined: 5
+scope: 6
 unread:
-  - framework/bootstrap/govern.md
-excluded: 156
+  - runtime/CHANGELOG.md
+excluded: 34
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
@@ -19,9 +19,10 @@ diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 6221b688b8c41291ac1c053202731955b40775d672e65258e91ab1525609322e
+  data-model.md: dadd28edc909a348e9b5042e89d03c3f60f1d31c8de3eeb1ee0ca6c9a835574d
   scenarios/a-commit-stages-only-its-own-generated-files.md: 8626b701ad07371d0907c6a1a3a1ad4ee682c4d0d1622b3f503a76ae2bc189dc
   scenarios/a-secret-at-rest-is-flagged-in-every-project-shape.md: 6c52e86d521006fe5655e4a4fd704efad69ad5d9a6eec3bf70701b7962cdecf9
+  scenarios/a-throwaway-credential-is-not-a-secret.md: e2167e26e43b1d9f1d6d0a6fb47928594a4c9b41d25d3b55bea4988c1a1e8fa5
   scenarios/detect-dependency-cycles.md: 799b70962ea172c7d17b580e8b90ba0f9b19ed89139dac4353fb8afd8c2c91a8
   scenarios/generator-sync-claim-honesty.md: 5be65fb004623287403f9f61b9d13fe8a7b8079d623ff9cd70c85aebf6d0ee65
   scenarios/ranged-and-inventoried-config-values-from-any-source.md: 8a6671d9417b0183141f771c438c8a7d985b69b82b23e476e3bd2ec602a0e963
@@ -90,9 +91,9 @@ criteria-verdicts:
     digest: 256e50c06ce582db3ad9ea074332c075a5634071b090c6715a96766a5fc3fe3b
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 3
   deferred: 0
-  waived: 8
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "other: CFG-ENV-001 does not say whether an empty value on an optional value with a default is absent or malformed — `framework/rules/configuration-cross.md`"
@@ -203,11 +204,6 @@ decisions:
   - key: "other: 036's ticked task 2 names the manifest slot it used at the time — `specs/036-quality-cross-rules/tasks.md`"
     outcome: waived
     reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
-    decided-at: 2026-10-20T16:20:20Z
-    decided-by: andy@stone.dev
-  - key: "other: configuration-cross.md's header names only analyze as enforcing it; which review pass applies the file is open — `framework/rules/configuration-cross.md`"
-    outcome: deferred
-    target: specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md
     decided-at: 2026-10-20T16:20:20Z
     decided-by: andy@stone.dev
   - key: "other: 033's task 10 names no acceptance criterion for the chosen mechanism to amend — `specs/033-rule-surface-setting/tasks.md`"
@@ -595,14 +591,23 @@ decisions:
     reason: No runtime primitive resolves a canonical path today, and the step is one comparison the agent makes with `realpath`; a primitive would be a new feature, not a fix to this change.
     decided-at: 2026-11-19T13:39:22Z
     decided-by: rule
+  - key: "other: the throwaway-credential carve-out is scoped to `CFG-ENV-013` only, so `CFG-ENV-001` (an application default), `CFG-ENV-010` (a client artifact) and `BE-DATA-003`, `BE-DATA-008` and `BE-DATA-012` in `framework/rules/security-backend.md` keep the unqualified word secret, and `CFG-ENV-009`'s Not-flagged routes a compiled-in credential to `CFG-ENV-013`; whether the decision reaches those siblings is a new owner decision, and no analysis result flips to a finding. — `framework/rules/configuration-cross.md`"
+    outcome: waived
+    reason: the owner's decision of 2026-11-19 is scoped to CFG-ENV-013 and the siblings flag different placements; extending the carve-out is a separate decision owned by 017 for the CFG-ENV rules and 008 for the BE-DATA rules, so it goes to the owner through the parent, not through this review
+    decided-at: 2026-11-20T04:19:48Z
+    decided-by: rule
+  - key: "other: the fix-round re-read noted that the scenario `a-throwaway-credential-is-not-a-secret` says `CFG-ENV-011` stays a MUST, where `CFG-ENV-013` is evidently meant. — `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md`"
+    outcome: waived
+    reason: "the sentence is right: task 47's third item records that CFG-ENV-011 stays a MUST, an owner decision of 2026-11-19, and the scenario's second bullet says so beside the encrypted-copy permission"
+    decided-at: 2026-11-20T04:19:48Z
+    decided-by: rule
 ---
 
 # Review — 017-derive-dont-ask
 
 ## Summary
 
-Window `27588f30` to `9b034410`, base-source `reopen`: `0c9f4341` reopened 017 and 018 together (owner decision: the spec-017 hook migration is retired), and `0e33dc54` retired it in the four bootstrap files. A review is owed because the last record predates the criteria step (066 task 27), so all 28 criteria were judged. One shared run, from a clean worktree of `origin/main`, reviewed 017's and 018's window. Scope: 7 entries, examined 6. `framework/bootstrap/govern.md` is unread: it is byte-identical to `framework/bootstrap/ductus.md` (`cmp`), which the security pass read whole and the other passes read at its `## Instructions` section, the one `0e33dc54` touched. The security pass read the three security rule files, the three distinct bootstrap files and the artifacts whole. The other passes read the nine other rule files, `framework/bootstrap/ductus-procedure.md`, the hook and the artifacts whole. Security found one MUST, BE-INPUT-004 at high confidence: the Frontmatter Migration in `framework/bootstrap/ductus-procedure.md` rewrote globbed spec files in place with no containment check, the residue 029's review left to 017 and 018. It was fixed in this run (owner decision): §Walk now resolves the canonical project root, `specs/` and each match, and goes on only when `specs/` lies under the root and the match under `specs/`, by whole path components. The security pass re-run found no gap. One low-confidence BE-INPUT-004 stands on `[runtime] path` in `framework/bootstrap/ductus.md`: the key names a binary anywhere, so no base directory exists to contain it, as 029 recorded. Observations: four fixed by the rule (Q7's adopter-hook list, the data model's sentinel paragraph, §Hook Installation's two read-only checks, the scenario's generator messages), and two waived by the rule (the migration's literal `specs/`, and its hand-run `realpath`). Stored decisions: six whose issues still stand are carried, and two no longer fire. Criteria step: 28 of 28 met. AC22 was first judged not met, since `.githooks/pre-commit` is created once and never updated after 018; it now carries a superseded-by-018 annotation and was judged met on it.
- Fix rounds: one, the shared fixes (committed in `2780cf84` ahead of this record), re-read clean by an independent agent; the next round was empty.
+Window fa4ae5c7 to the commit before this record, base-source reopen: the owner decisions of 2026-11-19 reopened 017 (task 47: CFG-ENV-013 sets aside a throwaway local or test credential; the BE-DEPS-006 signpost corrected; retired-rules lists BE-DEPS-006). From a clean worktree of origin/main at 84e090b9. Scope 6 entries (the five of the decision commits plus `specs/017-derive-dont-ask/data-model.md`, which this run fixed), examined 5: `framework/rules/configuration-cross.md`, the scenario `a-throwaway-credential-is-not-a-secret`, `spec.md`, `tasks.md` and the data model were read whole by the passes. `runtime/CHANGELOG.md` (610,176 bytes) is unread as a file: the passes read the window diff whole (11,021 bytes) and the 017-bearing entries in part, so it is named unread, not counted. The security pass read the three security rule files whole (193,813 bytes) and found no violation; the other passes read the nine other rule files whole (216,167 bytes), AGENTS.md Gotchas to Design Principles and `specs/system.md`, and 017 spec, plan, data model and all ten scenarios whole, and found none. The criteria step judged all 28 criteria met against the tree; AC19 was judged on validate-frontmatter over specs 000 to 019 and the analyze reference without re-driving a full analysis. Five observations: three fixed in one commit (the data model records the carve-out; the Verification says a secret, not a throwaway credential, owes the encrypted-copy conditions; Q10 names every place the removed ID appears), and two waived by the rule (the carve-out is scoped to CFG-ENV-013 only, an owner question about its siblings; the scenario sentence CFG-ENV-011 stays a MUST is right). One fix round, re-read clean with one NOTE waived. Stored decisions: eight still hold and are carried, one no longer fires (the header decision, discharged by 020), 91 name files outside this scope and are retained. Not examined: the fetched sources behind CFG-ENV-013 Source, settled for this round.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
@@ -618,13 +623,7 @@ Window `27588f30` to `9b034410`, base-source `reopen`: `0c9f4341` reopened 017 a
 
 ## Low-confidence findings
 
-### LOW-CONFIDENCE: BE-INPUT-004 — The committed `[runtime] path` value is resolved, executed with `--version` and linked or copied to the pointer with no canonicalization or containment check
-
-- **File**: `framework/bootstrap/ductus.md`
-- **Rule**: User-supplied values MUST NOT be used directly in filesystem paths. Filesystem operations MUST resolve the canonical path and verify it falls within the expected base directory before opening the file.
-- **Finding**: Unchanged: the key deliberately names a binary anywhere, so no expected base directory exists; 048's plan records the trust boundary for BE-INPUT-003 only.
-- **Auto-fixable**: no
-- **Suggested fix**: Record the trust boundary and waive with 048's reasoning, or canonicalize and require a regular executable file.
+*None.*
 
 ## Waived findings
 
@@ -636,49 +635,42 @@ Window `27588f30` to `9b034410`, base-source `reopen`: `0c9f4341` reopened 017 a
 
 ## Acceptance criteria
 
-- AC1 — met: met: `framework/templates/spec/` holds spec, plan, tasks, data-model, research and scenario, and grep finds no `title:` frontmatter in any.
-- AC2 — met: met on its annotation (delivered, since retired): `framework/templates/spec/spec-and-plan.md` is absent from the tree, as the record says.
-- AC3 — met: met: `framework/templates/spec/scenario.md` carries only `section:`, and no template, command or reference except the legacy fallback in `framework/commands/target.md` names `spec-ref`.
-- AC4 — met: met: grep of `framework/templates`, `framework/commands` and `framework/reference` finds no `tags` instruction, the constitution names it only as a stale field, and a driven `ductus read-spec` on a fixture returned `tags` while `runtime/src/primitives/pipeline_view.rs` renders the tags line.
-- AC5 — met: met: grep for the `[simple]` marker across `framework/` finds nothing, and the constitution's cost levers section has no such bullet.
-- AC6 — met: met: `framework/commands/groom.md` and `framework/reference/groom.md` have no `promote-to-rule`, and step 2 routes every inbox item on each pass.
-- AC7 — met: met on its annotation (delivered, then superseded by 041, commit `68e92047` exists): `framework/templates/spec/plan.md` now holds the optional `## Open Questions Resolved` design-record section.
-- AC8 — met: met on its annotation (superseded in part, commit `619ae729` exists): `AGENTS.md` has no mirror instruction and its generator line is the later run-before-invoking gotcha.
-- AC9 — met: met: `create_feature` derives the slug from the argument and `create_scenario` derives its H1 from the slug and writes only `section:`, with no `title:` written by any scaffold primitive.
-- AC10 — met: met on its annotation (met at v1, since retired): `scripts/gen-readme-table.sh` is absent and `README.md` carries no Feature Specs table.
-- AC11 — met: met: `bash scripts/gen-help-tables.sh --dry-run` reports `No changes (16 command(s) in sync)` with exit 0 and `framework/commands/help.md` has marker pairs, and a fixture with a stale row exits 1 `Would update`.
-- AC12 — met: met on its annotation (delivered, two generators since gone): `.githooks/pre-commit` runs `gen-configure-mcp.sh`, `gen-claude-commands.sh`, `gen-help-tables.sh`, `derive-dependencies --write` and `derive-references --write` and halts when the runtime is unreachable, `scripts/install-hooks.sh` sets `core.hooksPath`, and `scripts/tests/test-pre-commit-staging.sh` passes.
-- AC13 — met: met on its annotation (superseded in part by Q7): `framework/commands/clarify.md` step 4, `plan.md` sub-step 1.1, `implement.md`, `amend.md` and `target.md` invoke report-only `derive-dependencies`, and a fixture run returned `drift: true`, `wrote: false` with nothing rewritten.
-- AC14 — met: met: `framework/commands/implement.md` step 2 invokes `derive-boundary`, whose `runtime/src/primitives/derive_boundary.rs` diffs from the spec dir's first commit (7 `derive_boundary` tests pass under `cargo test --lib derive_boundary`), and `framework/templates/spec/plan.md` documents Affected Files as a planning aid only.
-- AC15 — met: `framework/commands/analyze.md` and `framework/reference/analyze.md` hold no checkbox fix and no Fix Mode heading; `--fix` survives only as the guarded `set-status` revert of a drifted `done` spec (a later addition that is not checkbox state).
-- AC16 — met: Root `constitution.md` absent (`ls`), `CLAUDE.md` holds `@framework/constitution.md`, `README.md` links `framework/constitution.md`, and `scripts/` has no root-constitution generator.
-- AC17 — met: `framework/commands/clarify.md` steps 4 and 8, `framework/reference/plan.md` §Cross-spec impact check with `plan.md` sub-step 1.1, and `implement.md` sub-step 1.1 plus step 10 `diff-cross-spec` (its `--help` describes the outside-spec-dir window) deliver the scans.
-- AC18 — met: `framework/rules/configuration-cross.md` holds CFG-CONST/ENV rules each with a Verification (scripted check of all 19 rules); `framework/constitution.md` §constants and §env-vars are one-line pointers.
-- AC19 — met: `ductus validate-frontmatter --path` on the 000 to 019 `spec.md` files returned `clean: true`, 0 findings each, and `framework/reference/analyze.md` raises no `title`, `tags` or `spec-ref` finding; the full analyze run itself was not re-driven.
-- AC20 — met: `specs/017-derive-dont-ask/spec.md` frontmatter carries only `status`, `dependencies` and `next-criterion`, with no `title:` or `tags:`.
-- AC21 — met: Met on the criterion's own annotation: `framework/bootstrap/hooks/pre-commit` ships, `install.sh` is absent (deleted in `ff4eae28`), `framework/bootstrap/ductus-procedure.md` §Hook Installation inlines its actions, and the shipped stub calls only `ductus-pre-commit`, so 'initially gen-spec-deps.sh' is the dated part.
-- AC22 — met: Met as annotated: `framework/bootstrap/ductus.md` §Shared Files has `framework/bootstrap/hooks/pre-commit` under create and `framework/bootstrap/hooks/ductus-pre-commit` under update, `framework/bootstrap/ductus-procedure.md` §Hook Installation tells an existing outer hook apart by a non-comment line naming `ductus-pre-commit`, and `ff4eae28` (split) plus `c686a81f` (the line test) are the cited commits.
-- AC23 — met: Met on its own supersession annotation (by 022): `.ductus/scripts/` is absent in the tree, and `derive-dependencies` and `derive-references` run from the CLI (`runtime/tests/derive_dependencies_golden.rs`); the unannotated first half ('update strategy', 'project-relative path') is the superseded part.
-- AC24 — met: `.github/workflows/generators.yml` runs the generators and both derivations with `--write` then fails on `git status --porcelain`, and `framework/templates/ci/adopter-generators.yml` does the same with a sha256-verified release binary, matching the criterion's dated dry-run annotation.
-- AC25 — met: Judged on its annotation: `framework/commands/review.md` and `framework/reference/review.md` §Observations dispositions route an observation through fix, defer or waive with an undispositioned state, and neither file writes the inbox.
-- AC26 — met: `framework/reference/groom.md` §Groom decision tree is walked by `framework/commands/specify.md` step 2, `framework/reference/analyze.md`, `framework/reference/review.md` and `framework/reference/implement.md` disposition handling, not only by groom.
-- AC27 — met: `framework/rules/configuration-cross.md` header lists `FLAG`, rules CFG-FLAG-001 (MUST), 002 (SHOULD), CFG-ENV-008 (MUST), 009 (SHOULD), 010 (MUST), 011 (MUST), 012 (SHOULD) each carry Statement, Verification and Source, and `specs/017-derive-dont-ask/data-model.md` registers FLAG and enumerates every rule with a tier matching the Statements (scripted check).
-- AC28 — met: `framework/rules/configuration-cross.md` CFG-ENV-013 is MUST with Statement, Verification and Source, CFG-ENV-009 and CFG-ENV-010 and `framework/rules/security-backend.md` BE-DATA-003, BE-DATA-008 and BE-DATA-012 each name `CFG-ENV-013` as owner, and `data-model.md` § Rule set lists it as MUST.
+- AC1 — met: framework/templates/spec holds spec, plan, tasks, data-model, research, scenario (spec-and-plan absent); grep finds no title: in any
+- AC2 — met: met on its annotation (delivered, since retired): framework/templates/spec/spec-and-plan.md is absent from the tree
+- AC3 — met: framework/templates/spec/scenario.md frontmatter holds only section:, no spec-ref
+- AC4 — met: no tags instruction in framework/templates, commands or reference; constitution names tags only as a stale field (text-first-artifacts), no Starter Tag Vocabulary; runtime/src/primitives/pipeline_view.rs still reads it as annotated
+- AC5 — met: grep for the [simple] marker across framework/ finds nothing, and the constitution cost-levers section has no such bullet
+- AC6 — met: no promote-to-rule anywhere under framework/ (commands/groom.md, reference/groom.md included)
+- AC7 — met: met on its annotation (delivered, then superseded by 041): framework/templates/spec/plan.md now carries the optional ## Open Questions Resolved design-record section
+- AC8 — met: met on its annotation: AGENTS.md has no mirror-constitutions instruction; its generator line is the later run-before-invoking gotcha for scripts/gen-claude-commands.sh
+- AC9 — met: runtime/src/primitives/create_scenario.rs writes only section: and derives its H1 from the slug (title_from_slug), and create_feature.rs derives the slug from its argument, so no title: is written or prompted
+- AC10 — met: met on its annotation (since retired): scripts/gen-readme-table.sh is absent and README.md carries no Feature Specs marker or table
+- AC11 — met: driven: bash scripts/gen-help-tables.sh --dry-run reports No changes (16 command(s) in sync) exit 0; framework/commands/help.md carries marker pairs (commands-pipeline etc.)
+- AC12 — met: met on its annotation: .githooks/pre-commit runs gen-configure-mcp, gen-claude-commands, gen-help-tables and derive-dependencies/derive-references --write and halts on an unreachable runtime; scripts/install-hooks.sh sets core.hooksPath; scripts/tests/test-pre-commit-staging.sh driven, all PASS
+- AC13 — met: met on its annotation (superseded in part by Q7): clarify.md step 4, plan.md sub-step 1.1, implement.md sub-step 1.1, amend.md step 3 and target.md step 5 invoke report-only derive-dependencies (no --write)
+- AC14 — met: framework/commands/implement.md step 2 invokes derive-boundary (runtime/src/primitives/derive_boundary.rs; cargo test --lib derive_boundary 10 passed); framework/templates/spec/plan.md marks Affected Files Planning aid only
+- AC15 — met: no checkbox fix or Fix Mode heading in framework/commands/analyze.md or framework/reference/analyze.md; the surviving --fix is the guarded done-spec status revert, not checkbox state
+- AC16 — met: root constitution.md absent; CLAUDE.md holds @framework/constitution.md; no root-constitution generator under scripts/
+- AC17 — met: clarify.md step 8 lists sibling-linked specs; plan.md sub-step 1.1 with reference/plan.md Cross-spec impact check; implement.md sub-step 1.1 and step 10 diff-cross-spec surface files outside the spec dir
+- AC18 — met: framework/rules/configuration-cross.md holds 19 rules each with a Verification (scripted check), covering the listed topics; framework/constitution.md constants and env-vars sections are one-line pointers to it
+- AC19 — met: driven: ductus validate-frontmatter on specs 000 to 019 spec.md returned clean true, 0 findings each; framework/reference/analyze.md raises no title/tags/spec-ref finding; the full analyze run was not re-driven
+- AC20 — met: specs/017-derive-dont-ask/spec.md frontmatter carries status, dependencies, next-criterion and retired-rules, no title: or tags:
+- AC21 — met: met on its annotation: framework/bootstrap/hooks/pre-commit ships, install.sh is absent, ductus-procedure.md Hook Installation exists, stub calls ductus-pre-commit
+- AC22 — met: met as annotated: ductus.md manifest has hooks/pre-commit as create and hooks/ductus-pre-commit as update; ductus-procedure.md Hook Installation holds the detection ladder
+- AC23 — met: met on its supersession annotation: .ductus/scripts/ is absent and derive-dependencies/derive-references run as runtime primitives (runtime/tests/derive_dependencies_golden.rs)
+- AC24 — met: met on its annotation: .github/workflows/generators.yml runs the generators and both derivations with --write then fails on git status --porcelain; framework/templates/ci/adopter-generators.yml downloads a sha256-verified release binary and does the same
+- AC25 — met: met on its annotation: framework/reference/review.md Observations routes an observation to fix, defer or waive with an undispositioned state, and no review step writes the inbox
+- AC26 — met: framework/reference/groom.md Groom decision tree is also walked by specify.md step 2, reference/analyze.md, reference/review.md and reference/implement.md disposition handling, not only by groom
+- AC27 — met: configuration-cross.md header declares FLAG; CFG-FLAG-001 MUST, CFG-FLAG-002 SHOULD, CFG-ENV-008 MUST, 009 SHOULD, 010 MUST, 011 MUST (still MUST at HEAD), 012 SHOULD each carry Statement, Verification and Source; data-model.md registers FLAG and enumerates all 19 rules with matching tiers (scripted check)
+- AC28 — met: CFG-ENV-013 is MUST with Statement, Verification and Source and the throwaway carve-out leaves the case it owns intact; CFG-ENV-009/010 and security-backend.md BE-DATA-003, BE-DATA-008 and BE-DATA-012 each name CFG-ENV-013 (verified per rule body); data-model.md Rule set lists it as MUST
 
 ## Observations
 
-- convention — 017's Q7 says the adopter hook "runs only the two derivations", but the shipped `framework/bootstrap/hooks/ductus-pre-commit` also runs `label-criteria`, `check-corpus-links` and `check-artifact-size --project-files --staged`, and the "Adopter projects' pre-commit hook" paragraph repeats the omission — `specs/017-derive-dont-ask/spec.md` — **fixed** (decided by the rule)
-- convention — the "Hook sentinel comment" section's first paragraph states in the present tense that `/ductus` reads the sentinel to choose `update` or skip, which no step does since 018 and which its own Post-018 paragraph then contradicts — `specs/017-derive-dont-ask/data-model.md` — **fixed** (decided by the rule)
-- convention — Hook Installation describes the inner hook as holding the derivation orchestration plus `label-criteria`, omitting the two blocking read-only checks (`check-corpus-links`, `check-artifact-size --project-files --staged`) the shipped hook runs after the writes, so an adopter is not told a commit can be refused by them — `framework/bootstrap/ductus-procedure.md` — **fixed** (decided by the rule)
-- convention — the scenario quotes `gen-configure-mcp.sh`'s message as "mcp-allow blocks in sync", but the script prints `No changes (mcp-allow block in sync)` — `specs/017-derive-dont-ask/scenarios/generator-sync-claim-honesty.md` — **fixed** (decided by the rule)
-- quality — Frontmatter Migration walks the literal `specs/` and tests `specs/` existence rather than the configured `[paths] specs-root`, so a project with a renamed spec root and bold-prefix specs is skipped silently — `framework/bootstrap/ductus-procedure.md` — **waived**: The Frontmatter Migration serves pre-017 projects, which predate `[paths] specs-root` (040), so the literal `specs/` is their spec root; 029's review waived the same by this reason. (decided by the rule)
-- convention — the new Frontmatter Migration containment screen has the agent run `realpath` by hand, a shell step where a runtime primitive would be the sanctioned form, though `/bin/realpath` exists on macOS and no primitive covers it — `framework/bootstrap/ductus-procedure.md` — **waived**: No runtime primitive resolves a canonical path today, and the step is one comparison the agent makes with `realpath`; a primitive would be a new feature, not a fix to this change. (decided by the rule)
-- other: "shipped" still describes the CI template in 017's AC24, plan.md's Affected Files row and 022's task 3 text — `specs/017-derive-dont-ask/spec.md` — **waived**: AC24 calls it a shipped example, the Affected Files row says adopters copy it, and 022's task 3 text is a spent task; none claims it is installed.
-- convention: a language with no github/gitignore template, such as markdown, prints a fetch failure on every run — `framework/bootstrap/ductus.md` — **waived**: the run names the failed URL and writes nothing for it, which is the procedure's stated outcome; the subject's markdown language is an input no project has a template for
-- convention: the Closing restart gives no single form for Pi wired in the run beside Claude already registered — `framework/bootstrap/ductus-procedure.md` — **waived**: the per-agent forms compose into an accurate notice, as the subject's run shows, so no host reads it wrong
-- convention: the Pi Bridge step says verbatim while the per-agent apply-manifest call carries a substitutions map — `framework/bootstrap/ductus.md` — **waived**: the Bridge step's verbatim copy is its own call, and the subject's bridge matched the framework source byte for byte
-- convention: the detection step counts deferred mcp__ductus__ tool names as State A — `framework/bootstrap/ductus.md` — **waived**: an artifact of the test harness, whose tool list belonged to another project's session; a real adopter session lists only its own
-- convention: the Frontmatter Migration's specs/**/spec.md walk reports specs/templates/spec.md as already frontmatter on every run — `framework/bootstrap/ductus-procedure.md` — **waived**: the template has frontmatter, so the walk skips it with a report line and writes nothing
+- other: `specs/017-derive-dont-ask/data-model.md` Rule set enumerated `CFG-ENV-013` without the 2026-11-19 throwaway-credential carve-out the Statement now carries; the bullet and the preface now state it. — `specs/017-derive-dont-ask/data-model.md` — **fixed** (decided by the rule)
+- other: `CFG-ENV-013`'s new Verification clause said a copy committed encrypted owes every condition, attaching the permission's conditions to a throwaway credential that is not a secret; reworded to say a secret committed encrypted owes them, the owner's as-strict-as-before intent, with the `[Unreleased]` entry in `runtime/CHANGELOG.md` saying so. — `framework/rules/configuration-cross.md` — **fixed** (decided by the rule)
+- other: Q10 in `specs/017-derive-dont-ask/spec.md` said only its own entry is why `retired-rules:` lists `BE-DEPS-006`, but task 47 and the scenario `the-adopter-ci-template-can-run` name the ID too; the clause now names all three. — `specs/017-derive-dont-ask/spec.md` — **fixed** (decided by the rule)
+- other: the throwaway-credential carve-out is scoped to `CFG-ENV-013` only, so `CFG-ENV-001` (an application default), `CFG-ENV-010` (a client artifact) and `BE-DATA-003`, `BE-DATA-008` and `BE-DATA-012` in `framework/rules/security-backend.md` keep the unqualified word secret, and `CFG-ENV-009`'s Not-flagged routes a compiled-in credential to `CFG-ENV-013`; whether the decision reaches those siblings is a new owner decision, and no analysis result flips to a finding. — `framework/rules/configuration-cross.md` — **waived**: the owner's decision of 2026-11-19 is scoped to CFG-ENV-013 and the siblings flag different placements; extending the carve-out is a separate decision owned by 017 for the CFG-ENV rules and 008 for the BE-DATA rules, so it goes to the owner through the parent, not through this review (decided by the rule)
+- other: the fix-round re-read noted that the scenario `a-throwaway-credential-is-not-a-secret` says `CFG-ENV-011` stays a MUST, where `CFG-ENV-013` is evidently meant. — `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md` — **waived**: the sentence is right: task 47's third item records that CFG-ENV-011 stays a MUST, an owner decision of 2026-11-19, and the scenario's second bullet says so beside the encrypted-copy permission (decided by the rule)
 
 ## Skipped passes
 
@@ -686,162 +678,40 @@ Window `27588f30` to `9b034410`, base-source `reopen`: `0c9f4341` reopened 017 a
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/implement.md` — 066-audit-records-and-the-completion-gate
-- `.claude/commands/ductus/review.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `.ductus/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `.ductus/reference/review.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `.github/workflows/runtime-acquisition.yml` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime-release.yml` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `.github/workflows/runtime.yml` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `.pi/prompts/ductus-amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-implement.md` — 066-audit-records-and-the-completion-gate
-- `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
-- `AGENTS.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `README.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `docs/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
-- `docs/runtime.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `docs/slash-commands.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/commands/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `framework/commands/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/commands/review.md` — 066-audit-records-and-the-completion-gate
-- `framework/constitution.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/migrations.toml` — 027-bootstrap-migration-registry
-- `framework/reference/audit.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `framework/reference/implement.md` — 066-audit-records-and-the-completion-gate
-- `framework/reference/review.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/CHANGELOG.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 073-decided-rule-departures-are-recorded
-- `runtime/README.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `runtime/src/interpreter/mod.rs` — 066-audit-records-and-the-completion-gate
-- `runtime/src/interpreter/payload.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/main.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/check_review_gate.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/classify_spec_edit.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/compute_review_scope.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/criterion_verdicts.rs` — 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/primitives/derive_routing_candidates.rs` — 079-review-and-analysis-work-converges
-- `runtime/src/primitives/invalidate_review.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/line_citations.rs` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/mod.rs` — 020-code-review, 066-audit-records-and-the-completion-gate
-- `runtime/src/primitives/write_review.rs` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/descriptions.rs` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/src/schema/extensions.rs` — 022-deterministic-runtime, 048-govern-acquired-runtime, 066-audit-records-and-the-completion-gate
-- `runtime/src/schema/primitives.rs` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/tests/fixtures/implement-basic/.govern.session.toml` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/implement-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/fixtures/review-basic/stdin.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/implement-basic.jsonl` — 066-audit-records-and-the-completion-gate
-- `runtime/tests/golden/review-basic.jsonl` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/tests/mcp.rs` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `runtime/tests/review_command.rs` — 066-audit-records-and-the-completion-gate
-- `scripts/audit/README.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/done-spec-criteria.sh` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/audit/migration-coverage.sh` — 027-bootstrap-migration-registry
-- `scripts/audit/promotion-coverage.sh` — 067-analyze-and-audit-checks
-- `scripts/mutation/criteria-in-review-066.py` — 000-slash-commands, 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `scripts/mutation/fix-round-record.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/line-citation-strip-066.py` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reopen-measure.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/reviews-follow-what-changed.py` — 066-audit-records-and-the-completion-gate
-- `scripts/mutation/scope-attribution.py` — 066-audit-records-and-the-completion-gate
-- `scripts/tests/test-migration-coverage.sh` — 027-bootstrap-migration-registry
-- `specs/000-slash-commands/analysis.md` — 000-slash-commands
-- `specs/000-slash-commands/plan.md` — 000-slash-commands
-- `specs/000-slash-commands/review.md` — 000-slash-commands
-- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/scenarios/validation-gates.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/000-slash-commands/spec.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/003-bootstrap-automation/analysis.md` — 003-bootstrap-automation
-- `specs/003-bootstrap-automation/plan.md` — 003-bootstrap-automation, 012-multi-agent-govern
-- `specs/003-bootstrap-automation/review.md` — 003-bootstrap-automation
-- `specs/003-bootstrap-automation/spec.md` — 003-bootstrap-automation, 012-multi-agent-govern
-- `specs/003-bootstrap-automation/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 022-deterministic-runtime, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
-- `specs/007-govern-workflow/analysis.md` — 007-govern-workflow
-- `specs/007-govern-workflow/plan.md` — 007-govern-workflow
-- `specs/007-govern-workflow/review.md` — 007-govern-workflow
-- `specs/007-govern-workflow/scenarios/ductus-self-update-precheck.md` — 007-govern-workflow
-- `specs/007-govern-workflow/spec.md` — 003-bootstrap-automation, 007-govern-workflow
-- `specs/007-govern-workflow/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
-- `specs/012-multi-agent-govern/analysis.md` — 012-multi-agent-govern
-- `specs/012-multi-agent-govern/plan.md` — 003-bootstrap-automation, 012-multi-agent-govern
-- `specs/012-multi-agent-govern/review.md` — 012-multi-agent-govern
-- `specs/012-multi-agent-govern/spec.md` — 003-bootstrap-automation, 012-multi-agent-govern
-- `specs/012-multi-agent-govern/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
-- `specs/013-text-first-artifacts/analysis.md` — 013-text-first-artifacts
-- `specs/013-text-first-artifacts/plan.md` — 013-text-first-artifacts, 026-framework-self-audit
-- `specs/013-text-first-artifacts/spec.md` — 013-text-first-artifacts, 026-framework-self-audit
-- `specs/015-tarball-fetch/plan.md` — 015-tarball-fetch
-- `specs/018-adopter-owned-pre-commit/plan.md` — 018-adopter-owned-pre-commit, 056-bootstrap-archive-boundary-split
-- `specs/018-adopter-owned-pre-commit/spec.md` — 018-adopter-owned-pre-commit, 056-bootstrap-archive-boundary-split
-- `specs/020-code-review/analysis.md` — 020-code-review
-- `specs/020-code-review/data-model.md` — 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `specs/020-code-review/plan.md` — 020-code-review
-- `specs/020-code-review/review.md` — 020-code-review, 022-deterministic-runtime
-- `specs/020-code-review/spec.md` — 020-code-review, 022-deterministic-runtime, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/data-model.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/scenarios/every-mcp-argument-has-a-cli-form.md` — 003-bootstrap-automation, 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` — 020-code-review, 022-deterministic-runtime
-- `specs/022-deterministic-runtime/spec.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/022-deterministic-runtime/tasks.md` — 003-bootstrap-automation, 022-deterministic-runtime
-- `specs/026-framework-self-audit/analysis.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 013-text-first-artifacts, 026-framework-self-audit
-- `specs/027-bootstrap-migration-registry/analysis.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/plan.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/review.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/a-first-adoption-runs-no-migration.md` — 007-govern-workflow, 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/a-projects-own-constitution-is-not-relocated.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/scenarios/seed-files-keep-no-literal-placeholder.md` — 027-bootstrap-migration-registry
-- `specs/027-bootstrap-migration-registry/spec.md` — 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
-- `specs/027-bootstrap-migration-registry/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 056-bootstrap-archive-boundary-split
-- `specs/029-bootstrap-runtime-autowire/analysis.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/review.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire
-- `specs/048-govern-acquired-runtime/data-model.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/plan.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/spec.md` — 022-deterministic-runtime, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/tasks.md` — 022-deterministic-runtime, 048-govern-acquired-runtime, 062-concurrent-session-targets, 067-analyze-and-audit-checks
-- `specs/056-bootstrap-archive-boundary-split/analysis.md` — 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/plan.md` — 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/review.md` — 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/scenarios/the-walker-places-every-archive-half-section.md` — 018-adopter-owned-pre-commit, 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/spec.md` — 056-bootstrap-archive-boundary-split
-- `specs/056-bootstrap-archive-boundary-split/tasks.md` — 003-bootstrap-automation, 007-govern-workflow, 012-multi-agent-govern, 018-adopter-owned-pre-commit, 027-bootstrap-migration-registry, 056-bootstrap-archive-boundary-split
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/062-concurrent-session-targets/data-model.md` — 062-concurrent-session-targets
-- `specs/062-concurrent-session-targets/review.md` — 062-concurrent-session-targets
-- `specs/062-concurrent-session-targets/scenarios/first-writers-create-the-ignore-file-once.md` — 048-govern-acquired-runtime, 062-concurrent-session-targets
-- `specs/062-concurrent-session-targets/spec.md` — 048-govern-acquired-runtime, 062-concurrent-session-targets
-- `specs/066-audit-records-and-the-completion-gate/analysis.md` — 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 020-code-review, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/plan.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 000-slash-commands, 020-code-review, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/067-analyze-and-audit-checks/review.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md` — 048-govern-acquired-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/spec.md` — 048-govern-acquired-runtime, 067-analyze-and-audit-checks
-- `specs/073-decided-rule-departures-are-recorded/plan.md` — 073-decided-rule-departures-are-recorded
-- `specs/079-review-and-analysis-work-converges/analysis.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/plan.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/review.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/analysis.md` — 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/plan.md` — 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/review.md` — 081-reviews-and-checks-follow-what-changed
-- `specs/081-reviews-and-checks-follow-what-changed/spec.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed
+- `framework/rules/accessibility-frontend.md`
+- `framework/rules/api-backend.md`
+- `framework/rules/concurrency-backend.md`
+- `framework/rules/reliability-backend.md`
+- `framework/rules/security-backend.md`
+- `framework/rules/security-cross.md`
+- `framework/rules/security-frontend.md`
+- `runtime/src/primitives/shipped_rule_ids.txt`
+- `scripts/audit/README.md`
+- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
+- `specs/008-security-rules/spec.md`
+- `specs/008-security-rules/tasks.md`
+- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/038-concurrency-backend-rules/scenarios/a-declared-loss-tolerant-message-owes-no-outbox.md`
+- `specs/038-concurrency-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/tasks.md`
+- `specs/039-reliability-backend-rules/plan.md`
+- `specs/039-reliability-backend-rules/scenarios/expendable-messages-may-be-dropped-when-recorded.md`
+- `specs/039-reliability-backend-rules/spec.md`
+- `specs/039-reliability-backend-rules/tasks.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/068-api-backend-rules/scenarios/repr-003-bounded-numbers-and-patch-001-format-home.md`
+- `specs/068-api-backend-rules/spec.md`
+- `specs/068-api-backend-rules/tasks.md`
+- `specs/069-accessibility-frontend-rules/scenarios/verifications-flag-only-what-the-statement-covers.md`
+- `specs/069-accessibility-frontend-rules/spec.md`
+- `specs/069-accessibility-frontend-rules/tasks.md`
+- `specs/077-security-cross-rules/data-model.md`
+- `specs/077-security-cross-rules/plan.md`
+- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
+- `specs/077-security-cross-rules/spec.md`
+- `specs/077-security-cross-rules/tasks.md`
 
 ## Unexamined governance
 
