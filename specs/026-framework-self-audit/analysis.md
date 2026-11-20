@@ -1,17 +1,17 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-11-19T13:52:43Z
-analyzed-against: 1c92e0a9b9f61e8d2ae46af1cfe42b6eb25f8f6f
+last-run: 2026-11-20T00:38:07Z
+analyzed-against: e5d736196d8cb84fd10f0708ba9399a3e182bccd
 hard-fail: 0
 blocking-findings: 0
-advisory: 1
+advisory: 0
 unexamined: 43
 analyzed-digest:
-  plan.md: 24f26aa3009899d20702b630f90c2b5489d2507c397c7312d197f78af71e3297
-  review.md: 390822fead1440a5ff6fb4d8ce15dd9364e06e094ae54abe0ad4b5d092fa452b
+  plan.md: 28b085603764101444ec34df6b0f9655ecaf383dd2bf1974665c1630b27876ca
+  review.md: 3fdaec6c2b944b2e8975bc8545f2f64c62dbaa62b2a749fddf350e57302fec0e
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 4d4a93fd968898006fa4780beb8088e48616ed1ceae54574ac38a3a02ad9583b
-  scenarios/families-follow-the-command-reference-split.md: 12e2262fecdcf34d018c78f9dfe65fcebc769ba9eabfca3859c172163da4b073
+  scenarios/families-follow-the-command-reference-split.md: 0d900d455decf8f126bdf8ef6da61284ca98641cfbfe89ac334e80f22df7e63c
   scenarios/family-10-migration-coverage.md: a535ac8c1e4dce26084c03066fc88978f0668f05e15f3600d87dbb6bf85ecf9a
   scenarios/family-17-contract-binding.md: 1ab3dfbc5c53ca5ab082b587a299b1951c8dd3c3e29148db5ed3a5df50903faf
   scenarios/family-18-marker-list-parity.md: 296f55313954ec984b5260945b92639d15b8458f707f90e94e0bd1bbc0f052c0
@@ -22,7 +22,8 @@ analyzed-digest:
   scenarios/family-26-broken-relative-links.md: 9e03cfe250dbffe6128229b1bb064c8b574b61ead93ed1ce5fd2fe12ec8e615d
   scenarios/family-27-done-spec-unchecked-criteria.md: c7c66e810ae27435c40bb372d7295b101f480e897f91a648db3d0902cacf57b1
   scenarios/family-28-audit-family-registry-parity.md: bf80f1d64718deb87a7dec79c69e9248e8c1ab4a41e65c638488fdd9fcd5e529
-  scenarios/family-34-step-reference-integrity.md: 8598c2bd4072742f934254d0ea46094ec1388a6d0206defa6a123c0553e29015
+  scenarios/family-34-reference-section-reachability.md: 2e27857310f2c77e7e87dd8028c537978b0cdbce8f0eec87a6287538b7b98e29
+  scenarios/family-34-step-reference-integrity.md: 69728c803782a37219f79c1c6b8c53c35eb470fadebb8fcdbd523c0b86adbb0d
   scenarios/family-35-manifest-destination-links.md: 28297923f8f5f4ec6833696028c4076e247cfadb3d945b0a2446acc18237cc11
   scenarios/family-36-self-url-resolution.md: e4c14882f66a90cee309b539ffe60ecfeef564eb7ad024ab39a537314c0e051f
   scenarios/family-39-shipped-anchor-resolution.md: c25191adf85b75351517d55c89a55a24a5d083e325f894f680c04ace54401e8f
@@ -30,8 +31,8 @@ analyzed-digest:
   scenarios/host-namespace-parity.md: e8a67c95e2e596cf9a231bbfa26545c4beee96af1a043fd83608899e16087790
   scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
   scenarios/readme-command-parity.md: 899fdc8ebb306541496892772ec4540b4be968aed55ee366c87185cdcc5304b6
-  spec.md: 8004fa3202742f54227d651b14c0a663f9b9b6beab9423244f3ed7874c7353a3
-  tasks.md: e2c71bb4ef7aadd29dfbf42eb4bbce549aea67fea36d6f6ab44e6e16e5efc460
+  spec.md: 60bd01e45b7fd32a2cfa857b820e4da8013595360ac357c368c32c3c15949dbe
+  tasks.md: 46bda8be17eee413a340b0646ca836ed529acc1413817bc6d02c347581168706
 unexamined-by-reason:
   never-existed: 4
   not-a-live-claim: 24
@@ -52,26 +53,25 @@ rule-digest:
   security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
 rule-verdicts:
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
-  SEC-DEPS-001: {verdict: addressed, cite: "plan.md#CI integration"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/family-34-step-reference-integrity.md#Edge Cases"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/link-check-consolidation.md#Edge Cases"}
+  QUAL-GROUND-001: {verdict: addressed, cite: "scenarios/family-17-contract-binding.md#Behavior"}
+  QUAL-STUB-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
+  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Every family contains the paths it did not write as a literal"}
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 0
   deferred: 0
-  waived: 1
+  waived: 0
   undispositioned: 0
-decisions:
-  - key: "grounding — AC22: the 031 and 041 incident (\"both carried `should-violations: 1` in `spec.md` while their own `review.md` recorded `0`, for weeks\", and the 031 root cause of a hand-moved waiver) is stated as fact about past artifacts with no commit, query or artifact citation (§Grounding)."
-    outcome: waived
-    reason: An acceptance criterion's text is not edited during an analysis, since the edit changes the criterion's digest and owes a new review, and the review's criteria step judges each criterion against the tree, as the owner decided for 020's AC15. AC22 is annotated superseded by 057, so the 031 and 041 incident it recounts is the historical record of why the retired check existed.
-    decided-at: 2026-11-19T13:52:43Z
-    decided-by: rule
 ---
 
 # Analysis — 026-framework-self-audit
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 43 unexamined target(s). Dispositions: 3 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 43 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -83,7 +83,7 @@ decisions:
 
 ## Advisory findings
 
-- grounding — AC22: the 031 and 041 incident ("both carried `should-violations: 1` in `spec.md` while their own `review.md` recorded `0`, for weeks", and the 031 root cause of a hand-moved waiver) is stated as fact about past artifacts with no commit, query or artifact citation (§Grounding). — `specs/026-framework-self-audit/spec.md` — **waived**: An acceptance criterion's text is not edited during an analysis, since the edit changes the criterion's digest and owes a new review, and the review's criteria step judges each criterion against the tree, as the owner decided for 020's AC15. AC22 is annotated superseded by 057, so the 031 and 041 incident it recounts is the historical record of why the retired check existed. (decided by the rule)
+*None.*
 
 ## Deferred to other specs
 
@@ -102,6 +102,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — Technical Decisions, Check zero (and Known limitation: new generators require manual update in two places): states as fact that Family 5 (template-validate alignment) does not catch a generator or lint added to one of the two lists and not the other because both files enumerate the same list textually, citing no script or symbol and carrying no assumption marker — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
-- grounding — Every family contains the paths it did not write as a literal: names `bounded_lists::place` and `validate_contained` in a claim about current code without their files. — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, Check zero: "`scripts/audit/check-zero.sh` builds the runtime before running them" is stated as fact about the existing script and cites no file-and-symbol, command or assumption marker (§Grounding). — `specs/026-framework-self-audit/plan.md` — **fixed** (decided by the rule)
+*None.*
