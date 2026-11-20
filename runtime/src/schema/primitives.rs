@@ -7959,7 +7959,7 @@ pub struct StepReferenceFinding {
     /// Repo-relative path of the file the finding is in.
     pub file: String,
     /// 1-based line the reference sits on; `0` for a whole-file finding
-    /// (`discontinuous`, `no-steps-extracted`), which names no single line.
+    /// (`discontinuous`), which names no single line.
     pub line: usize,
     /// `unresolved`, `self-reference`, `discontinuous`, `unreached-section`,
     /// `empty-exemption`, `stale-exemption` or `misplaced-exemption` — a

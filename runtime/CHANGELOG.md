@@ -24,15 +24,15 @@ its version and date.
   markdown anchor link `(#slug)` to a heading of the document holding it,
   through reached sections in turn. A `##` section reached by none is an
   `unreached-section` finding. A section kept for a reader outside the command
-  carries `<!-- audit:kept <reason> -->` directly beneath its heading and is
-  listed exempt with the reason; the marker is an `empty-exemption` finding
+  carries `<!-- audit:kept <reason> -->` on the first non-blank line beneath
+  its heading and is listed exempt with the reason; the marker is an `empty-exemption` finding
   with no reason, a `stale-exemption` finding on a section a step reaches
   anyway, and a `misplaced-exemption` finding anywhere else, so an exemption
   cannot outlive its cause. Four sections carry it: `Severity tiers` and
   `Record fields` in `framework/reference/analyze.md`, `Cross-spec context
   checklist` in `framework/reference/plan.md` and `Blocking semantics` in
   `framework/reference/review.md` (+158, +83 and +86 bytes). The result gains
-  `reachability` (one entry per reference: path, section count, exempt
+  `reachability` (one entry per reference: `reference`, section count, exempt
   sections), a bounded list that moves to `lists-file` past `[artifacts]
   read-size-bytes` with `reachability-count` inline, and the counts
   `sections-examined`, `sections-exempt`, `sections-unreached` and
@@ -45,7 +45,7 @@ its version and date.
   gate` reverted and the exec-path note left, the check reports it and exits 1.
   Nothing runs in an adopter's project, where the primitive still reports that
   it examined nothing. The result is 2,886 bytes inline here (1,404 before) and
-  the `CHECK_STEP_REFERENCES` description grows by 1,093 bytes (1,560 to 2,653).
+  the `CHECK_STEP_REFERENCES` description grows by 1,254 bytes (1,560 to 2,814).
 - **`tests/bounded_list_gates.rs` fails when a command step states a bounded list's emptiness by the list rather than its `-count` (spec 080, scenario `a-step-gates-on-a-bounded-list-by-its-count`).**
   Past `[artifacts] read-size-bytes` a bounded result is `form: "file"`: each
   moved list is absent and only its `-count` stays inline, so a step that read

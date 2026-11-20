@@ -65,7 +65,7 @@
 //! `framework/commands/<command>.md` through the walk spec 080's tool loading
 //! makes ([`cited_sections`]), so one walker decides what a citation reaches.
 //! A section kept for a reader outside the command carries
-//! `<!-- audit:kept <reason> -->` directly beneath its heading: it is
+//! `<!-- audit:kept <reason> -->` on the first non-blank line beneath its heading: it is
 //! reported exempt with its reason, and the marker is a finding when its
 //! reason is empty, when its section is reached anyway, or when it sits
 //! anywhere else, so an exemption cannot outlive its cause. A reference with
@@ -509,6 +509,7 @@ fn judge_sections(
         let marker = (section.line + 1..lines.len())
             .find(|&i| !lines[i].trim().is_empty())
             .and_then(|i| kept_regex().captures(lines[i]).map(|cap| (i, cap)));
+        let at = marker.as_ref().map_or(section.line + 2, |(i, _)| i + 1);
         let reason = marker.as_ref().map(|(i, cap)| {
             attached.insert(*i);
             cap.get(1).map_or("", |m| m.as_str()).trim().to_string()
@@ -517,7 +518,7 @@ fn judge_sections(
         let mut exempted = false;
         match reason {
             Some(reason) if reason.is_empty() => out.findings.push(finding(
-                section.line + 2,
+                at,
                 "empty-exemption",
                 format!(
                     "{rel}: the `audit:kept` marker under `{}` states no reason, so it exempts \
@@ -526,7 +527,7 @@ fn judge_sections(
                 ),
             )),
             Some(_) if is_reached => out.findings.push(finding(
-                section.line + 2,
+                at,
                 "stale-exemption",
                 format!(
                     "{rel}: `{}` is reached by its command, so its `audit:kept` marker exempts \
@@ -936,6 +937,11 @@ mod tests {
         );
         assert_eq!(found.reachability[0].exempt, vec![]);
         assert_eq!(found.sections_unreached, 2);
+        // A finding names its marker's own line, a blank line or not between
+        // the heading and the marker.
+        let line_of = |kind: &str| found.findings.iter().find(|f| f.kind == kind).unwrap().line;
+        assert_eq!(line_of("stale-exemption"), 3);
+        assert_eq!(line_of("empty-exemption"), 9);
     }
 
     /// Only a numbered step starts the walk: a citation in the Instructions
@@ -1134,7 +1140,7 @@ mod tests {
     }
 
     /// A result exactly at the read size fits; one byte under it moves the
-    /// five lists whole to the file the result names, their counts staying.
+    /// six lists whole to the file the result names, their counts staying.
     #[test]
     fn the_lists_are_in_a_file_past_the_read_size() {
         let tmp = project();

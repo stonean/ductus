@@ -48,3 +48,14 @@ fn an_unreached_section_exits_1_and_a_reached_one_exits_0() {
     assert!(stdout.contains("unreached-section"), "{stdout}");
     assert!(stdout.contains("Orphan"), "{stdout}");
 }
+
+#[test]
+fn a_skipped_subject_with_no_finding_exits_1() {
+    let tmp = tempfile::tempdir().unwrap();
+    tree(tmp.path(), "## Top\n\nText.\n");
+    fs::remove_dir_all(tmp.path().join("framework/reference")).unwrap();
+    let (code, stdout) = run(tmp.path());
+    assert!(stdout.contains("\"findings-count\":0"), "{stdout}");
+    assert!(stdout.contains("\"skipped-count\":1"), "{stdout}");
+    assert_eq!(code, Some(1), "{stdout}");
+}

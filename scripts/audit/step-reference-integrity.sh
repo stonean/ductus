@@ -143,7 +143,7 @@ FIX = {
     "unreached-section": "cite the section from the step that needs it, delete it if it only restates, or mark it with an audit:kept comment stating the reader outside the command that keeps it",
     "empty-exemption": "state the reason in the audit:kept comment, or remove it",
     "stale-exemption": "remove the audit:kept comment: the section is reached",
-    "misplaced-exemption": "move the audit:kept comment to the line directly beneath its ## heading, or remove it",
+    "misplaced-exemption": "move the audit:kept comment to the first non-blank line beneath its ## heading, or remove it",
 }
 
 for f in d.get("findings", []):

@@ -4,7 +4,7 @@ the anchor-link arm of the citation walk in `tool_loading`). Each mutation
 removes one part of the rule: the reach test, the exemption, one of the three
 exemption findings, the no-sections count, the skip, the `##` level, the
 start set of the section walk (numbered steps only), the walk's following of a reached section and of an anchor link, and the CLI's
-exit status, and the sixth list's place in the bounded result. The tests that kill them are named per mutation.
+exit status (over a finding and over a skip), the line an exemption finding names, and the sixth list's place in the bounded result. The tests that kill them are named per mutation.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/step-references-reach.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -143,5 +143,19 @@ MUTATIONS = [
         '        } else if after_blank && !content.starts_with([\' \', \'-\', \'*\']) {\n',
         '        } else if false {\n',
         'check_step_references::tests::only_a_numbered_step_reaches_a_section',
+    ),
+    (
+        'M19 an exemption finding names the line before its marker when a blank line separates them',
+        'src/primitives/check_step_references.rs',
+        '        let at = marker.as_ref().map_or(section.line + 2, |(i, _)| i + 1);\n',
+        '        let at = section.line + 2;\n',
+        'check_step_references::tests::an_empty_stale_or_misplaced_exemption_is_a_finding',
+    ),
+    (
+        'M20 the CLI exits zero over a skipped subject',
+        'src/main.rs',
+        '                r.findings_count > 0 || r.skipped_count > 0 || !r.guidance.is_empty()\n',
+        '                r.findings_count > 0 || !r.guidance.is_empty()\n',
+        '--test check_step_references_cli',
     ),
 ]
