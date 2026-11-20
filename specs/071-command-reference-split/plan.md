@@ -278,7 +278,7 @@ are the tree's at that sha, not the split's alone.
 
 Per invocation the commands load 255,509 fewer bytes in total, 59.3%.
 `analyze`, the case that motivated the change, drops from 111,742 to 26,481
-bytes. That is still above the ~20KB compaction window, which the spec leaves
+bytes. That is still above the ~20KB compaction window (the spec's Motivation gives its basis), which the spec leaves
 to a follow-up.
 
 ## Affected Files

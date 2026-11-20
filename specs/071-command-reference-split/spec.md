@@ -24,8 +24,11 @@ only a handful of those sections, through a step that names one.
 The size had a second cost. On Claude Code, compaction keeps only the first
 5,000 tokens of an invoked skill. Its documentation states that rule for
 skills; command files load the same way, so this spec assumes it applies to
-them too. For `analyze.md` the cut fell near Instructions step 14, so a
-compacted session kept neither the later steps nor any of the reference.
+them too. Taking the window as about 20,000 bytes, at four bytes a token (a
+second assumption), the cut fell near Instructions step 14 of `analyze.md`:
+measured at `bb372676` with `git show bb372676:framework/commands/analyze.md`,
+step 14 begins at byte 19,475 and step 15 at byte 20,716. A compacted session
+kept neither the later steps nor any of the reference.
 
 The precedent is
 [056 — Bootstrap archive-boundary split](../056-bootstrap-archive-boundary-split/spec.md),
