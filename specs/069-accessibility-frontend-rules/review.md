@@ -1,7 +1,7 @@
 ---
 spec: 069-accessibility-frontend-rules
-last-run: 2026-11-20T13:11:01Z
-reviewed-against: f21743416fdb789b055682e1fcc74ce7e17d13aa
+last-run: 2026-11-20T13:14:39Z
+reviewed-against: 3b4c2e6e586464cadcd63c419ef9bf27df41bc71
 diff-base: 07bd04639ba5874d97d964ad1432e2ec8fb8a263
 must-violations: 0
 should-violations: 0
@@ -12,8 +12,8 @@ unread: []
 excluded: 26
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 1
+fix-rounds: 3
+re-reads: 2
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
@@ -52,16 +52,11 @@ criteria-verdicts:
     digest: 5808dab9b973d1121e48ef9dd8173f4c67c787c863b5449d0828de96269478cd
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 4
   deferred: 0
-  waived: 6
+  waived: 5
   undispositioned: 0
 decisions:
-  - key: "`FE-SEMHTML-004`'s tightened Verification says help repeats 'in the same relative order' where the Statement says relative to other page content; the flag ('breaks any of the four') and the Statement govern, and the owner's byte bar leaves no room to restore 24 bytes — `framework/rules/accessibility-frontend.md`"
-    outcome: waived
-    reason: the Statement governs what the rule requires and the Verification's flag is unchanged
-    decided-at: 2026-11-20T13:10:54Z
-    decided-by: rule
   - key: "`FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md`"
     outcome: waived
     reason: no case or requirement changed, only a reason clause, and the owner's 51,200-byte bar asks for the cut
@@ -93,9 +88,9 @@ decisions:
 
 ## Summary
 
-Review of 069's second pass over `07bd0463` to the head of this run (base-source `last-review`), scope 4, examined 4: the window holds the owner's correction of 2026-11-20 (`framework/rules/accessibility-frontend.md` tightened from 52,000 to 51,183 bytes to meet the 51,200-byte bar of 2026-11-08, with no claim dropped), the plan's and spec's source citations, and the previous analysis record. Two readers read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`, and the other passes over the other nine rule files (the seven it first read in part were then read whole), `AGENTS.md`, `specs/system.md` and the four in-scope files, checking each of the 20 reworded Verification lines of the rule file against its pre-image. `runtime/CHANGELOG.md` and the scenario were read at the 069 entry and whole. No criterion owed a verdict by `compute-review-scope`; the 14 verdicts of the first pass are carried (spec text unchanged for the criteria, and the reader confirmed the tightening falsifies none of AC1 to AC14). 0 MUST, 0 SHOULD, no stored decisions. Nine observations: three fixed (the `FE-A11YFORM-006` and `FE-MOTION-002` clause wording, the plan's `FE-LAYOUT-002` size boundary), six waived by the rule. Measurement (`wc -c`; each rule section from the line after its `### FE-` heading to the next heading of any level, at `fa4ae5c7` then now): `FE-KBD-004` 1,079 to 1,162; `FE-A11YFORM-003` 971 to 1,063; `FE-A11YFORM-006` 1,192 to 1,472; `FE-LAYOUT-002` 1,019 to 1,218; `FE-MOTION-002` 796 to 854; the file 50,939 to 51,183. Fix rounds: one, the wording fixes (`plan.md` exempt), re-read clean by an independent agent, then empty; budget-stop false.
+Review of 069's second pass over `07bd0463` to the head of this run (base-source `last-review`), scope 4, examined 4: the window holds the owner's correction of 2026-11-20 (`framework/rules/accessibility-frontend.md` tightened from 52,000 to 51,182 bytes to meet the 51,200-byte bar of 2026-11-08, with no claim dropped), the plan's and spec's source citations, and the previous analysis record. Two readers read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`, and the other passes over the other nine rule files (the seven it first read in part were then read whole), `AGENTS.md`, `specs/system.md` and the four in-scope files, checking each of the 20 reworded Verification lines of the rule file against its pre-image. `runtime/CHANGELOG.md` and the scenario were read at the 069 entry and whole. No criterion owed a verdict by `compute-review-scope`; the 14 verdicts of the first pass are carried (spec text unchanged for the criteria, and the reader confirmed the tightening falsifies none of AC1 to AC14). 0 MUST, 0 SHOULD, no stored decisions. Nine observations: four fixed (the `FE-A11YFORM-006` and `FE-MOTION-002` clause wording, `FE-SEMHTML-004` regaining help's order relative to other page content, the plan's `FE-LAYOUT-002` size boundary), five waived by the rule. Measurement (`wc -c`; each rule section from the line after its `### FE-` heading to the next heading of any level, at `fa4ae5c7` then now): `FE-KBD-004` 1,079 to 1,162; `FE-A11YFORM-003` 971 to 1,053; `FE-A11YFORM-006` 1,192 to 1,472; `FE-LAYOUT-002` 1,019 to 1,218; `FE-MOTION-002` 796 to 854; the file 50,939 to 51,182. Fix rounds: three, the first two re-read clean by independent agents (the clause wording, then `FE-SEMHTML-004`) and the third, a plan edit, exempt, then empty; budget-stop false.
 
-1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+3 fix round(s): 2 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 3.
 
 14 of 14 acceptance criteria judged met.
 
@@ -141,7 +136,7 @@ Review of 069's second pass over `07bd0463` to the head of this run (base-source
 - `FE-A11YFORM-006`'s tightened Not-flagged clause said 'loading nothing' where the case is a handler that loads no different page, which changed the carve-out's wording; the clause is restored to the case as stated in the scenario — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
 - `FE-MOTION-002`'s tightened Not-flagged clause said 'those thresholds' with no antecedent; it names the general flash and red flash thresholds again — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
 - `plan.md` gave the `FE-LAYOUT-002` section size without a boundary, so it could not be re-derived (the figure counted the next category heading); the plan states the boundary and the sizes measured by it — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
-- `FE-SEMHTML-004`'s tightened Verification says help repeats 'in the same relative order' where the Statement says relative to other page content; the flag ('breaks any of the four') and the Statement govern, and the owner's byte bar leaves no room to restore 24 bytes — `framework/rules/accessibility-frontend.md` — **waived**: the Statement governs what the rule requires and the Verification's flag is unchanged (decided by the rule)
+- `FE-SEMHTML-004`'s tightened Verification said help repeats 'in the same relative order', dropping 'relative to other page content', which task 4 corrected from the WCAG 2.2 §3.2.6 copy; the Verification keeps help's order relative to other page content again — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
 - `FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md` — **waived**: no case or requirement changed, only a reason clause, and the owner's 51,200-byte bar asks for the cut (decided by the rule)
 - `plan.md` 'The file stays one read' records how the size was reached, which a design record would leave to commits; the owner asked for the measured result to be stated in the plan — `specs/069-accessibility-frontend-rules/plan.md` — **waived**: the owner's instruction of 2026-11-20 is to record the measured result and that the file was tightened to meet the 2026-11-08 cap (decided by the rule)
 - `specs/069-accessibility-frontend-rules/analysis.md` is stale against HEAD because this window changed its design subjects; the analysis that follows this review regenerates it — `specs/069-accessibility-frontend-rules/analysis.md` — **waived**: the analysis run after this review regenerates the record, which no hand edit may touch (decided by the rule)
