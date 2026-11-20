@@ -2718,6 +2718,17 @@ its version and date.
   frontend dependency management, in a project without `security-backend.md`,
   that omits the integrity check or names no such place: each is now a
   blocking `/analyze` finding.
+- **`security-cross.md`'s `SEC-DATA-001` bars PII from a URL's query only
+  (spec 077 task 13; owner, 2026-11-19).** As `BE-API-013` now does,
+  credentials stay barred from a URL's query, path and fragment and must
+  travel in a request header or body, and PII is barred from its query, as
+  CWE-598 has it. The opaque identifier an RFC 8058 one-click
+  `List-Unsubscribe` URI carries may appear in that URI. `SEC-AUTHN-002`'s
+  Source now says its `state` on every authorization request and PKCE for
+  every authorization-code flow go beyond RFC 9700 on purpose, since RFC 9700
+  makes PKCE RECOMMENDED for a confidential client and lets PKCE or the
+  OpenID Connect `nonce` stand in for `state`; its Statement and Verification
+  are unchanged. Neither turns a passing `/analyze` into a finding.
 
 ### Removed
 
