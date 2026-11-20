@@ -2737,6 +2737,14 @@ its version and date.
   the rule, in its Statement and its Verification. The rule stays a MUST, and
   its permission to commit an encrypted copy is as strict as before. It turns
   no passing `/analyze` into a finding.
+- **`reliability-backend.md`'s `BE-RETRY-005` lets a declared-expendable
+  message be dropped (spec 039 task 8; owner, 2026-11-19).** A message the
+  spec declares expendable may be dropped once its redelivery bound is
+  exhausted, when the drop is recorded where the responsible team can see
+  it, and it needs no dead-letter destination. `/analyze` still flags a
+  discard the spec does not declare or does not record, and the MUST for
+  every other message is unchanged. It turns no passing `/analyze` into a
+  finding.
 
 ### Removed
 
