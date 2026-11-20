@@ -2764,6 +2764,19 @@ its version and date.
   loss-tolerant, as its Statement binds an operation that must both commit
   and publish. The Statement is unchanged. It turns no passing `/analyze`
   into a finding.
+- **`accessibility-frontend.md`: five Verifications flag only what their
+  Statements cover (spec 069 task 6; owner, 2026-11-19).** Each gains a
+  Not-flagged case: `FE-KBD-004` a region the user opened, such as a modal
+  dialog and its backdrop, and a fixed or sticky element the spec states
+  overlaps no focusable content; `FE-A11YFORM-003` a field about someone
+  other than the user, such as a recipient's name or address;
+  `FE-A11YFORM-006` a `change` or `input` handler that only updates the
+  page's content or its URL query, since WCAG 2.2's definition of a change
+  of context says a change of content is not always one; `FE-LAYOUT-002` a
+  fixed-height `overflow: hidden` container whose full text is revealable;
+  and `FE-MOTION-002` a cycle the spec bounds below the general and red flash
+  thresholds. No Statement changes, and none turns a passing `/analyze` into
+  a finding.
 
 ### Removed
 
