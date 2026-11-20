@@ -1,15 +1,18 @@
 ---
 spec: 067-analyze-and-audit-checks
-last-run: 2026-11-19T13:12:22Z
-analyzed-against: 963049a5642e30b14efbf3ddd0810b19b92c1739
+last-run: 2026-11-20T00:33:23Z
+analyzed-against: f5b398c7bb096fe0a0bee93f15fa34dd669ae53c
 hard-fail: 0
 blocking-findings: 0
 advisory: 2
-unexamined: 58
+unexamined: 59
 analyzed-digest:
-  data-model.md: dc423389548141d67554f1bfd29e4ac69833154f5ace0d89b3f763dd430dc1dc
-  plan.md: 24d7ae63c7a1c7a9e042a6e94775636f182cb5938e5f54caac9185b60b354fd7
-  review.md: 0cce7b45690d92a669d9338500ceec6b2f7c8bfbbce34143d07c3a298769ada4
+  data-model.md: 63e7b39d87041a7e99d43393137ee54c05f88f9f49aa861869304425cdd826c1
+  plan.md: 73486a38b15a35b59f600cf02e8e0076547e0b14c2e913e9a14d051db8470ed0
+  review.md: 434dee577edc085a9a9e145d64650bf950048b0d1147077554acd5e018870f35
+  scenarios/a-bare-port-span-names-its-remedy.md: 063077e093ba121795cc3ebeca465d1865c2062bc04c46e16092ab96abbf3493
+  scenarios/a-none-list-item-is-no-open-question.md: 890489963e11ff0727be863414613e80b5946acde2bdd7fe9af20281974170d9
+  scenarios/a-plan-heading-is-matched-without-regard-to-case.md: 78eb3cfc25de466287a5a36b032a3456646381d652e39bc7964f65d379aab04e
   scenarios/a-record-cites-a-removed-rule.md: 20b5adcfb587c0ad32b99376a81f772f92a2e31fd040d1948712a4039dc74474
   scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: 73b4360b8740a08f023125fdae8fe14b859bc2ac7e60a8a39642ea51e3d08d1a
   scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md: 596fd2546524b3b353e1c077e85e496a3be0d52b44fec54480808571a36c6569
@@ -21,39 +24,41 @@ analyzed-digest:
   scenarios/argument-hint-needs-a-token.md: 130b949e9ca72ab34b48e43d2179fbed5d21ef111b40213180c72ae41bc28ae7
   scenarios/block-element-scanner.md: 0b96c1dc41bd91f898e535c17c8964ef9da5ccf39411d888d8e244c82afe9c38
   scenarios/body-path-existence-family.md: f6150c2ef9a8ae7602a0127d074a311de792f1044d063d1e6d8ee4a6085496e6
-  scenarios/check-artifacts-skipped-targets.md: f8a8465285abab1ccf0c222164f63ff918b4b5663901ecf6b5d07e4d5ad5ee2b
+  scenarios/check-artifacts-skipped-targets.md: cb69629c3febe0a856debfb6acf31e4910ecd556c1fe3192356901bf99603487
   scenarios/criterion-adopter-scope-destinations.md: 43230ed75b6a8962c2db0d8024e0bfb9a9e72b8b372e6cfce945aa15c64e8e2e
   scenarios/criterion-negated-creation-phrasing.md: ca25bb4673581651b0ad883dc160b79e460c8007ec052dac7de3cb306075f802
   scenarios/criterion-non-assertion-phrasings.md: 5626be63a44cf409f82e3f5def18223129fe3dbde20c68d22eb9fe96b7032536
   scenarios/criterion-path-existence-family.md: 3b7a9b04d1dfed381bfb6dbf11d962d12423df113e91fc1eef0c90ac0a80597a
   scenarios/deprecation-labels-are-read-by-the-runtime.md: 7a1de6ee12d3a7668f702453cc8ad4149f2bfdc5e8804a1e01b8746607994c1f
-  scenarios/derive-references-results-are-bounded.md: c2db6bbd00c15efdf9ad2ec6059e6c5b69e30d10a1959933e12fb0c0872281bd
-  scenarios/derive-references-unstaged-drift-is-reported.md: 163ae170a657e8937515851f4f7ddf4e6e577c59944005d6f44c4431e1517c89
-  scenarios/derive-unparseable-frontmatter-is-reported.md: db33d516db986ee67600e1c6bc9f4e4d8b1370bd2a2d0e92a23f96d8e3628368
+  scenarios/derive-references-results-are-bounded.md: 475d74a78aff712f07bf9e6309d017c2c5a8d1e588ba401a8011c4bca81ff3c3
+  scenarios/derive-references-unstaged-drift-is-reported.md: 9c7793fcf9bdb001970373a0d86a3fe36f1655b443b863cdd617c08df26644fb
+  scenarios/derive-unparseable-frontmatter-is-reported.md: c9b8bf191c904f96d75fbd62627d7837c14a224b3562487b9325224c88b6004b
   scenarios/disposition-drift-is-advisory.md: 567cae5608f75ddc2f1b14d3db198958003022ddaacbb6d997bbf17c7a122436
   scenarios/every-agents-generated-copies-are-excluded.md: 1c8123ced029eea21a1e14606164a1f0cf26db8c00b9cfc5f7fb4c9e734f3fa6
   scenarios/frontmatter-severity-tiers-on-both-sides.md: 8451df2cbe9705e75bf6d1ce36d548810e258be85d5fd4108a9a5cc7c56a8912
   scenarios/generated-reference-copies-are-excluded.md: 4fdeb0ad57aa757a6ed8297c7bbfd1d7ba620a0b89bf6fc520eedc8ef6f71018
   scenarios/link-adjacent-drift-family.md: 41814ebc48e3744fdb053d09ad024bb9da2bc998d3a4767d3b6a2338b4fd7b44
   scenarios/orphan-check-adopter-authored-references.md: f489b8688ad92e92846bc0c5d74d68239c7478a47aedd954aaac38dbd09c7340
-  scenarios/orphaned-reference-check.md: f788fea631a7aadb2782fa33aa9f6f54db2b67a64c10f0abfca3a4282a454807
+  scenarios/orphan-check-skips-ignored-local-state.md: b590f79ca5c3d6ff9a6bea692ef5b6b31ee8a1fb19e7000e25c64e3f74623f10
+  scenarios/orphaned-reference-check.md: 005c1bfd4220ccbcdb9bfba254eb5ddd8d6bded1cf12bf203e695171f4680c0a
   scenarios/orphaned-reference-historical-roots.md: d77aba08251b5a3acf157ec6180088f8f77e307e8675fce1e5f20e9402ca5b17
   scenarios/per-agent-scaffold-paths-ship-to-adopter.md: 136825c7b3f5131194dbc009e80a1728573b511c0c9fb71cb27e4f5f5314ddef
   scenarios/pointers-into-shipped-files-are-judged.md: 2ebbb6da986b1762caa108b52b3146b13283d2859361154f549c47dfe6d80d0c
+  scenarios/promotion-coverage-header-without-a-key.md: b978b3e92d6151538e2f2dfa90889bd3a56dcd56908e9e563f886a314e5f1271
   scenarios/scenario-consistency-reads-tasks-history.md: 333b581457ce1c94ef2b00f8bad3afbe22e109ef6cde1231b7e5bdc414cef33b
-  scenarios/shared-constitution-references-are-judged.md: 5a930ca02dca49ac14b929ed058f8f701311db1f8123127766689bc928a8f732
+  scenarios/shared-constitution-references-are-judged.md: ebffc6f1f353774b98cc94ac002218de9457f77111e15a7693b6191341e061b5
   scenarios/sibling-link-grammar-is-the-shared-one.md: 2b4a939505c289b47181ab8c1415318f084fde77bc7f14b4f45af527d4f6570f
   scenarios/sibling-symlink-trust-boundary.md: 27d33965efbc41edd42671597d39605ec4826fce87520b69641c11c39088c0bb
   scenarios/spec-integrity-and-plan-consistency-are-run.md: d6f36ae1fdf21bd78aa8aadbdbcc44ec6a4a8d1e8649583085e522bbdc916893
   scenarios/status-gated-families-are-not-silent.md: 1833246fc09413e940f018c8201286f35ca0ae386a567e7c52c8eac53c7d4059
   scenarios/the-promotion-coverage-line.md: 0d91757bfa43a8311441fd9d1319714c3756e192f0cb6c2dc22bfb35b245d48f
-  scenarios/traverse-deps-cycle-check.md: b752045f0614cbba344c7164ccd7e10d76a16b4a39dc28e9ce19d5da83d219c2
-  spec.md: 5e4c62dec19e3b8625147638065a2607d4e0d49d26612be154e9fb989b80f3d4
-  tasks.md: a8024e9ec0a2743958903ba7e7044e5dfedd95db502d3e1565593705eae8d0e1
+  scenarios/traverse-deps-cycle-check.md: cb48f788ea342102b3a02a737206b6b798523af71e910173a9e5875fde8cb7c6
+  spec.md: a114fc1802ecfed9a1dda78db02da13dcab57c29318c23a3d061823e96fbbbe4
+  tasks.md: c568c17cf913999f048175bd449f254b5165fcbc94b25e222213d12226e19d53
 unexamined-by-reason:
   never-existed: 15
   not-a-live-claim: 15
-  root-absent: 20
+  root-absent: 21
   ships-to-adopter: 8
 rule-digest:
   accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
@@ -72,9 +77,10 @@ rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Primitive interface changes, classified under `BE-COMPAT-001`"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`validate-frontmatter` — full frontmatter schema check"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-INPUT-002: {verdict: addressed, cite: "scenarios/sibling-link-grammar-is-the-shared-one.md#Behavior"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#A path that leaves the project is `outside-project`, not `root-absent`"}
+  BE-INPUT-008: {verdict: addressed, cite: "data-model.md#067 — Analyze and Audit Checks Data Model"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-LOCK-002: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`check-artifacts` — deterministic artifact-check families for one feature"}
@@ -83,15 +89,11 @@ rule-verdicts:
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
   BE-TXN-004: {verdict: addressed, cite: "plan.md#The derivations refuse a spec that changed since they read it"}
-  CFG-CONST-002: {verdict: addressed, cite: "plan.md#Step 15 judges the reasons behind recorded decisions, advisory, with its own exec reason"}
-  CFG-CONST-003: {verdict: addressed, cite: "data-model.md#`derive-dependencies` / `derive-references` — the frontmatter index derivations"}
   QUAL-CLAIM-001: {verdict: addressed, cite: "data-model.md#`check-artifacts` — deterministic artifact-check families for one feature"}
-  QUAL-DELEG-001: {verdict: addressed, cite: "data-model.md#`check-promotion-coverage` — how much of a rules file is routed to its canonical source"}
-  QUAL-GROUND-001: {verdict: addressed, cite: "data-model.md#`check-rule-ids` — verify cited rule IDs exist and aren't deprecated"}
-  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Step 15 judges the reasons behind recorded decisions, advisory, with its own exec reason"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "scenarios/sibling-link-grammar-is-the-shared-one.md#Behavior"}
 blocking: false
 dispositions:
-  fixed: 10
+  fixed: 0
   deferred: 0
   waived: 2
   undispositioned: 0
@@ -112,7 +114,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 58 unexamined target(s). Dispositions: 10 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 2 advisory; not blocking. 59 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -139,18 +141,9 @@ decisions:
 
 - never-existed: 15
 - not-a-live-claim: 15
-- root-absent: 20
+- root-absent: 21
 - ships-to-adopter: 8
 
 ## Fixed in this run
 
-- grounding — §One subject per spec said neither 066 nor 022 links 067 and 022 names it only as a backticked slug; both link it from a blockquoted signpost, which `derive-dependencies` takes no edge from, and the plan now says so, citing each spec's `dependencies:` and the run's no-cycle result (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — §A path that leaves the project said nothing in the runtime classifies the skip reasons, with no search behind it; it now cites the search and the one class list, `EXCLUDED_BY_CONSTRUCTION` in `scripts/analyze/analyze_lib.py` (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — Two decisions said steps 16 to 21 are cited by number with no source; the step 15 decision now names `runtime/src/interpreter/analyze_tally.rs`, both analyze documents and the plans of 041, 063 and 082, and the integrity-split decision points at it (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — The line-number-citations Resolved Question named the `# managed-by: ductus` sentinel on line 2 with no artifact; it now cites `framework/bootstrap/ductus-procedure.md` §Hook Installation, as the plan's matching trade-off does (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
-- grounding — §Check-artifacts walks the feature directory said `create-feature` and `decisions` call `validate_feature_contained`, leaving out `check-artifacts`' own call before its walk; it now names all three (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — §The routing gate keeps offering 022 cited `AGENTS.md`'s routing entry, which no entry is named; it now cites the Workflow entry on shared runtime surfaces (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — The frontmatter-checks section said `resolve-anchor` classifies the references that are not claims about the markers file, which understates AC2's judging of every reference against what it points at; it now says that (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
-- grounding — The Motivation gave 99,953 bytes with no measurement, and an eight-word overlap of 2 KB that does not re-derive at `fd8e44a6` (about 12 KB across all tracked markdown, 4.9 KB with one file); it now cites `wc -c` at `fd8e44a6` and drops the figure, as 066's copy did (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
-- grounding — The line-number-citations decision said neither the shipped CI template nor the hook reports an adopter's citations, with no source; it now names both files, neither of which calls `check-artifacts` (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- grounding — The known-limit trade-off said a host such as `docs.rs` with a port reads as a citation with no source; it now names `line_citations::find`'s listed-extension rule for a path with no slash (§Grounding (advisory)). — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+*None.*
