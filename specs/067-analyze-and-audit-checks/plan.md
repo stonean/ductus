@@ -34,7 +34,7 @@ Since review round 1 (`2be18da6`) the primitive refuses an empty `sections` on b
 
 - **The list is not a citation.** The scan reads the body when the file has frontmatter, so a listed ID is checked only by the body citations it exempts and a mistyped entry exempts only its own mistyped citation. Scanning the whole file would report every listed ID `retired` from the list line alone.
 - **Only a `spec.md` is read for the list**, so the same list in a `plan.md` exempts nothing, as the scenario's "any other artifact" requires.
-- **A list that cannot be read fails closed.** A non-list value, a non-string entry, or frontmatter that does not parse yields no exemption, so the citation stays the blocking `missing`; `validate-frontmatter` treats `retired-rules` as an unknown field the open-schema rule admits and checks its shape nowhere, since a malformed list can only add findings, never hide one.
+- **A list that cannot be read fails closed.** A non-list value, a non-string entry, or frontmatter that does not parse yields no exemption, so the citation stays the blocking `missing`; `validate-frontmatter` treats `retired-rules` as an unknown field the open-schema rule admits and checks its shape nowhere (`ductus validate-frontmatter --help`), since a malformed list can only add findings, never hide one.
 - **A loaded definition wins.** A listed ID a loaded rule file still defines is `found` (or `deprecated`), as today, so the list exempts nothing until the rule is gone.
 - **Retired passes without an unexamined record.** The rule was removed, so there is no text to assess and nothing the run could not read; the step 5 tally counts `missing` alone.
 
