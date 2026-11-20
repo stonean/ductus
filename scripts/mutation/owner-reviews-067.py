@@ -10,7 +10,7 @@ and `gitignored` skip, and `validate-frontmatter`'s row chosen by path, and `res
 qualified, registered and span references with the exec tally's unjudged
 counts, `check-artifacts`' unreadable `plan.md` under `plan-consistency`,
 `check-rule-ids`' loaded files deciding before its shipped index, and
-`derive-references`' bounded result (task 32: M93 to M95).
+`derive-references`' bounded result (task 32: M93 to M95), and the none list item, the plan headings matched without regard to case, the port hint, the ignored local state and the promotion table's header row (tasks 38 to 42: M96 to M105).
 
 Task 32's two CLI behaviors live in `src/main.rs`, which `cargo test --lib`
 does not build: the gate reading `unwritable-count`, and the stderr lines
@@ -788,5 +788,12 @@ MUTATIONS = [
         '                found = true;\n                in_section = true;',
         '                in_section = true;',
         'section_line_indices_by_reports_whether_a_heading_matched',
+    ),
+    (
+        'M105 emphasis marks inside a none item are not ignored',
+        'src/primitives/read_spec.rs',
+        '        .replace([\'*\', \'_\'], "")\n        .trim()\n        .trim_end_matches',
+        '        .trim_matches([\'*\', \'_\'])\n        .trim()\n        .trim_end_matches',
+        'a_none_list_item_is_no_open_question',
     ),
 ]

@@ -12,7 +12,7 @@ section: "Artifact checks"
 
 - The family matches each of the two headings without regard to case.
 - A plan with no such heading is reported as lacking the section, naming the heading, and is told apart from a section that exists and holds nothing, which keeps its present message.
-- Every other reader of a section by heading keeps its exact match: `mark-criterion`, `label-criteria`, `read-spec`, `check-command-flags` and `check-step-references`.
+- Every other reader of a section by heading keeps its exact match, `mark-criterion`, `label-criteria`, `read-spec`, `check-command-flags` and `check-step-references` among them.
 
 ## Edge Cases
 

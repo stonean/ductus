@@ -10,7 +10,7 @@ section: "Artifact checks"
 
 ## Behavior
 
-- A list item under a spec's or a scenario's `## Open Questions` whose whole text is `none`, `n/a` or `none yet`, or begins with `none —` and a space, and does not end in a question mark, is a placeholder, not a question, with emphasis marks and a trailing period ignored and case ignored. Every reader of the parser agrees: `read-spec`, `dashboard`, `check-review-gate`, `append-question`'s dedup, `classify-spec-edit` and `check-artifacts`. The three scaffold placeholders stay skipped (spec 046).
+- A list item under a spec's or a scenario's `## Open Questions` whose whole text is `none`, `n/a` or `none yet`, or begins with `none —` and a space, and does not end in a question mark, is a placeholder, not a question, with emphasis marks (wherever they stand), a trailing period or exclamation mark, and case ignored. Every reader of the parser agrees: `read-spec`, `dashboard`, `check-review-gate`, `append-question`'s dedup, `classify-spec-edit` and `check-artifacts`. The three scaffold placeholders stay skipped (spec 046).
 - A list item that merely begins with the word, such as "None of the queues cover retries?", is a question.
 
 ## Edge Cases

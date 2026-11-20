@@ -520,15 +520,14 @@ fn is_thematic_break(trimmed: &str) -> bool {
 /// every new scenario's Open Questions, and its Resolved Questions twin) and
 /// the ways an author writes "none" as a list item, the bullet form of the
 /// prose spellings the reader already reads as no question (spec 046; spec 067
-/// scenario `a-none-list-item-is-no-open-question`). Emphasis marks, a trailing
-/// period and case are ignored. An item that merely begins with the word, or
+/// scenario `a-none-list-item-is-no-open-question`). Emphasis marks (wherever
+/// they stand), a trailing period or exclamation mark and case are ignored. An item that merely begins with the word, or
 /// that is a question, is a question.
 fn is_placeholder_question(text: &str) -> bool {
     let bare = text
+        .replace(['*', '_'], "")
         .trim()
-        .trim_matches(['*', '_'])
         .trim_end_matches(['.', '!'])
-        .trim_matches(['*', '_'])
         .trim()
         .to_lowercase();
     matches!(bare.as_str(), "none" | "n/a" | "none yet")
@@ -1005,6 +1004,8 @@ mod tests {
             "N/A",
             "n/a.",
             "None — all resolved during clarification",
+            "**None** — all resolved during clarification",
+            "None!",
         ] {
             let body = format!("## Open Questions\n\n- {none}\n");
             assert!(

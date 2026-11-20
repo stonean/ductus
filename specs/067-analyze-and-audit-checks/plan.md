@@ -4,7 +4,7 @@ Implements [067 — Analyze and Audit Checks](spec.md).
 
 ## Overview
 
-The primitives this spec specifies shipped under 022, and the first work moved their contract here — twenty-five scenarios, the data-model sections for the checks, and four acceptance criteria — and gave `check-corpus-links` the documented shape it never had. Since then this spec's own scenarios have changed the runtime: `check-artifacts`' scenario-consistency history, skipped targets and body-path family and the logical-line reading they share (tasks 5–11); the review rounds' fixes to the derive splices, the reference prefixes and `check-promotion-coverage`'s refusal; `derive-dependencies`' and `derive-references`' `unwritable` list (tasks 14 and 25); the status-gated path families (task 17); `validate-frontmatter`'s row by path (task 18); `resolve-anchor`'s judgment of references into other documents, with Family 39 gating the whole spec corpus (task 19); the `read-deprecation-labels` primitive (task 21) and `check-rule-ids`' `retired` state (task 22); `spec-integrity` and `plan-consistency` (tasks 23 and 31); the reopen-reason check (task 28); the refusal of a link out of the project (tasks 29, 30 and 33); the bounded results (tasks 32 and 35); the write guard of the two derivations (task 36); and the `line-number-citations` family (task 37). Each interface change is classified under `BE-COMPAT-001` below.
+The primitives this spec specifies shipped under 022, and the first work moved their contract here — twenty-five scenarios, the data-model sections for the checks, and four acceptance criteria — and gave `check-corpus-links` the documented shape it never had. Since then this spec's own scenarios have changed the runtime: `check-artifacts`' scenario-consistency history, skipped targets and body-path family and the logical-line reading they share (tasks 5–11); the review rounds' fixes to the derive splices, the reference prefixes and `check-promotion-coverage`'s refusal; `derive-dependencies`' and `derive-references`' `unwritable` list (tasks 14 and 25); the status-gated path families (task 17); `validate-frontmatter`'s row by path (task 18); `resolve-anchor`'s judgment of references into other documents, with Family 39 gating the whole spec corpus (task 19); the `read-deprecation-labels` primitive (task 21) and `check-rule-ids`' `retired` state (task 22); `spec-integrity` and `plan-consistency` (tasks 23 and 31); the reopen-reason check (task 28); the refusal of a link out of the project (tasks 29, 30 and 33); the bounded results (tasks 32 and 35); the write guard of the two derivations (task 36); and the `line-number-citations` family (task 37); a none list item read as no open question, `plan-consistency`'s plan headings matched without regard to case, the port hint on a bare `:N` span, the orphan check's exemption of git-ignored local state, and `check-promotion-coverage`'s header row that holds no key (tasks 38 to 42). Each interface change is classified under `BE-COMPAT-001` below.
 
 ## Technical Decisions
 
@@ -138,7 +138,10 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `runtime/src/primitives/check_corpus_links.rs` | Specify | `check-corpus-links` |
 | `runtime/src/primitives/check_orphaned_references.rs` | Specify | `check-orphaned-references` |
 | `runtime/src/primitives/check_command_flags.rs` | Specify | `check-command-flags` |
-| `runtime/src/primitives/check_promotion_coverage.rs` | Specify | `check-promotion-coverage` |
+| `runtime/src/primitives/check_promotion_coverage.rs` | Specify | `check-promotion-coverage` (a header row keeps the previous table's keys, task 42) |
+| `runtime/src/primitives/read_spec.rs` | Modify | The one open-question parser skips a none list item (task 38) |
+| `runtime/src/primitives/mod.rs` | Modify | `section_line_indices_by`, the case-insensitive heading scan `plan-consistency` uses (task 39) |
+| `scripts/mutation/owner-reviews-067.py` | Modify | M96 to M104, the mutants of tasks 38 to 42 |
 
 ## Data Model
 
