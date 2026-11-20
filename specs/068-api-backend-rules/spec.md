@@ -44,7 +44,7 @@ Each abbreviation is disjoint from the categories the other `-backend.md` files 
 - **Collection bounds**: pagination is owned here. `performance-backend.md` `BE-QUERY-003` and `BE-PAYLOAD-001` defer client-facing collection bounds to `BE-PAGE`, and `security-backend.md` `BE-INPUT-006` takes its page-size maximum from the one `BE-PAGE-001` names. The default and maximum page sizes are named constants per `configuration-cross.md` `CFG-CONST-003`.
 - **Retries**: this file states what makes an HTTP operation, or an RPC call carried over HTTP, safe to retry (`BE-IDEMP`) and what a status code means (`BE-STATUS-001`). The retry mechanics — attempt bounds and backoff with jitter (`BE-RETRY-001`), which failures earn a retry and honoring `Retry-After` (`BE-RETRY-003`) — are `reliability-backend.md`'s, owned by [039-reliability-backend-rules](../039-reliability-backend-rules/spec.md), which cites `BE-IDEMP` and `BE-STATUS-001` rather than restating them. A queue consumer or scheduled job carries no `Idempotency-Key`, so its deduplication is `concurrency-backend.md` `BE-COORD-002`, which builds on `BE-IDEMP` for the HTTP case.
 
-Rules in `security-backend.md`, `performance-backend.md`, `concurrency-backend.md`, `reliability-backend.md`, `quality-cross.md`, and `performance-frontend.md` cite into this file, so its IDs carry weight beyond the file itself.
+Rules in `security-backend.md`, `performance-backend.md`, `concurrency-backend.md`, `reliability-backend.md`, `quality-cross.md`, and `performance-frontend.md` cite into this file (`grep -n 'api-backend.md' framework/rules/*.md` finds each), so its IDs carry weight beyond the file itself.
 
 ### Severity posture
 
@@ -54,9 +54,9 @@ One severity constraint binds this file as it binds every rule file: a MUST neve
 
 ## Enforcement
 
-- The rules verify **design-time commitments** — what a spec, plan, or the project's `system.md` or `errors.md` must state — not code patterns, as the file's header declares. `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`, and each rule fires only on its Verification trigger, so a project with no programmatic API draws no findings from it.
+- The rules verify **design-time commitments** — what a spec, plan, or the project's `system.md` or `errors.md` must state — not code patterns, as the file's header declares. `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces` (`framework/reference/analyze.md`, the rules step: `discover-rule-files` with `all` lists every `*.md` file in the rule-file directory), and each rule fires only on its Verification trigger, so a project with no programmatic API draws no findings from it.
 - `/{project}:review` selects the file under the **backend** surface by its suffix (`discover-rule-files`), and its content is then authoritative review criteria: MUST blocking, SHOULD advisory. How a project narrows that follows constitution §rules, which the file's header points at, and the selection composes with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
-- `ductus` installs and updates the file as a shared file, through its entry in the bootstrap's Shared Files manifest.
+- `ductus` installs and updates the file as a shared file, through its entry in the Shared Files manifest of `framework/bootstrap/ductus.md`.
 
 ## Rule ID format
 
