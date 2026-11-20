@@ -2745,7 +2745,7 @@ its version and date.
   discard the spec does not declare or does not record, and the MUST for
   every other message is unchanged. It turns no passing `/analyze` into a
   finding.
-- **`api-backend.md`: `BE-REPR-003` flags an unbounded integer only, and
+- **`api-backend.md`: `BE-REPR-003` exempts a bounded integer field, and
   `BE-PATCH-001` accepts a format its endpoint's spec documents (spec 068
   task 8; owner, 2026-11-19).** `BE-REPR-003` stays a MUST, and its Source
   says the MUST goes beyond RFC 7493 §2.2 on purpose, which advises against
@@ -2754,7 +2754,8 @@ its version and date.
   2^53 − 1; a high-precision decimal stays flagged, since no magnitude bound
   keeps its precision. `BE-PATCH-001`'s project patch format may be
   documented in the spec that introduces the endpoint as well as in
-  `specs/system.md`, which its Verification already passed. Neither turns a
+  `specs/system.md`; its Verification already passed any format with stated
+  absent-versus-`null` semantics, wherever documented. Neither turns a
   passing `/analyze` into a finding.
 - **`concurrency-backend.md`'s `BE-COORD-003` flags a dual write only for a
   message the spec does not declare loss-tolerant (spec 038 task 8; owner,
