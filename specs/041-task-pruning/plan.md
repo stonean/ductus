@@ -109,8 +109,8 @@ checkboxes, so the block needs no change in them. Read at its source, that is
 (behind `read-tasks`, `check-artifacts`, `decisions`, the review gate, the
 review and analysis records, `classify-spec-edit` and `measure-reopenings`),
 `mark_task.rs`, and `check_stuck.rs`' `first_incomplete_subtask_index`, each
-matching ATX headings and checkbox lines through `SkipScanner`; `dashboard`
-reads only whether the file exists, and `validate-frontmatter`'s `artifact_kind`
+matching ATX headings and checkbox lines through `SkipScanner`; `dashboard`'s
+`has_tasks` reads only whether the file exists (`is_file`), and `validate-frontmatter`'s `artifact_kind`
 has no row for `tasks.md`, so it is never checked as one. The block shifts
 `first_incomplete_subtask_index`'s line index, so a prune that adds one reads to
 `check-stuck` as the file having advanced, which a rewritten file has. A test
