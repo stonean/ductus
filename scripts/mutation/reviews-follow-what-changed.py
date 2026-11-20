@@ -120,7 +120,7 @@ MUTATIONS = [
         'M14 a commit naming no spec and touching none is no one\'s',
         'src/primitives/compute_review_scope.rs',
         '            window.take_unclaimed(&records, oid, claims.paths);\n            continue;',
-        '            for path in claims.paths {\n                window.others.entry(path).or_default().insert(String::from("no spec"));\n            }\n            continue;',
+        '            window.others.extend(claims.paths);\n            continue;',
         'compute_review_scope::tests::a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it',
     ),
     # -- the gate reads the owed rule ------------------------------------------

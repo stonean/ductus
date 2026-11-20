@@ -6,7 +6,7 @@ section: "Behavior"
 
 ## Context
 
-AC3 makes the record name every path a review's scope and its fix rounds left out. The first delivery also named each path's claiming specs, which were 88.8% of the section's bytes across the 76 `specs/*/review.md` records at `b7b07500` (method: section split on level-2 headings, UTF-8 byte length), and which no primitive, command or check reads.
+AC3 makes the record name every path a review's scope and its fix rounds left out. The first delivery also named each path's claiming specs, which were 88.6% of the section's bytes across the 76 `specs/*/review.md` records at `b7b07500` (method: section split on level-2 headings, UTF-8 byte length), and which no primitive, command or check reads.
 
 ## Behavior
 

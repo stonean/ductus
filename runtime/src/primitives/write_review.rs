@@ -850,8 +850,8 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// read its scope.
 ///
 /// The paths the scope left out come with it, so the record names what it did
-/// not read. An `unread` entry the scope
-/// does not hold is refused here, where the entries are.
+/// not read. An `unread` entry the scope does not hold is refused here, where
+/// the entries are.
 fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<String>)> {
     if args.diff_base.is_empty() {
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
@@ -2816,14 +2816,15 @@ fn render_extra_field(block: &mut String, indent: &str, key: &str, value: &serde
 ///
 /// Used for every string value in the waiver and decision lists that
 /// `review.md` and `analysis.md` carry in their frontmatter — the known fields
-/// and the open-schema adopter extras alike — because each is read back by the
-/// next run's parse, and a decision key must come back byte for byte to match
-/// the finding it was stored for. An extra **key** like `@owner` or
+/// and the open-schema adopter extras alike — and for the paths `review.md`
+/// records (`reviewed-digest` keys, `unread`, `open-findings`), because each is
+/// read back by the next run's parse, and a decision key must come back byte
+/// for byte to match the finding it was stored for. An extra **key** like `@owner` or
 /// `weird: key`, an extra string **value** like `"1234"`, or a known `reason`
 /// that happened to read `true` or `1234` would otherwise render unquoted and
 /// either corrupt the frontmatter or retype the value. Simple timestamps
-/// (`waived-at`), shas, rule IDs, emails, and paths stay unquoted: they read
-/// back unchanged (`serde_norway` has no timestamp type), so quoting them here
+/// (`waived-at`), shas, rule IDs, emails, and a path with no such hazard stay
+/// unquoted: they read back unchanged (`serde_norway` has no timestamp type), so quoting them here
 /// would be no-op churn.
 ///
 /// A value carrying a control character or a Unicode line break is always

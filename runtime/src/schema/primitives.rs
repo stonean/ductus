@@ -1239,8 +1239,8 @@ pub struct ComputeReviewScopeResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted: Option<Vec<String>>,
     /// The `modified-since` paths the scope left out: changed only by commits
-    /// other specs claim (spec 079, AC3). `write-review`'s record names the spec
-    /// that claimed each. Absent in the file form.
+    /// other specs claim (spec 079, AC3). `write-review`'s record lists each path
+    /// alone. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub excluded: Option<Vec<String>>,
     /// In the file form, the file holding the lists whole, from the project

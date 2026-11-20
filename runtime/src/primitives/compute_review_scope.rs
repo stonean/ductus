@@ -371,7 +371,7 @@ fn resolve_base(
 /// Divide the paths changed since the base between the scope and `excluded`.
 /// Only a path a commit in the walk left to another spec leaves the scope. A
 /// path the walk never met, as when `--since` names a commit off to the side of
-/// `HEAD`, has no claimant to name, so it stays and no path goes unread.
+/// `HEAD`, was left to no other spec, so it stays and no path goes unread.
 fn split_changes(
     modified_since: &[String],
     deleted: &BTreeSet<String>,
