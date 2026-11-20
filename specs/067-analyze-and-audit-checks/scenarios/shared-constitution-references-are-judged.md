@@ -6,7 +6,7 @@ section: "Frontmatter, dependency, anchor and rule checks"
 
 ## Context
 
-A project may register a shared constitution under `.ductus/config.toml` `[constitutions.<name>]` (path `../shared/constitution.md`), and its specs cite that document's sections in the qualified form, path and anchor on one line: ``(`../shared/constitution.md` §rule-with-three-parts)``. `/{project}:analyze` step 4 runs `resolve-anchor` with `markers-path` set to the framework constitution alone. Two adopter reports, verified 2026-10-26 at HEAD c0952038 with the 0.59.11 binary:
+A project may register a shared constitution under `.ductus/config.toml` `[constitutions.<name>]` (path `../shared/constitution.md`), and its specs cite that document's sections in the qualified form, path and anchor on one line: ``(`../shared/constitution.md` §rule-with-three-parts)``. Before this scenario's task, `/{project}:analyze` step 4 ran `resolve-anchor` with `markers-path` set to the framework constitution alone, and the primitive behaved as two adopter reports, verified 2026-10-26 at HEAD c0952038 with the 0.59.11 binary, found (each bullet below describes that state, not the current one):
 
 - **Markers matching by basename.** The markers file is recognized by substring on any path token containing its basename, so `../shared/constitution.md`, `team-constitution.md` and `constitution.md.bak` all read as the markers file. A shared-constitution anchor cited after such a path — a backticked `constitution.md`, a `../<owning-repo>/constitution.md` path, an in-tree registered path, a markdown link — comes back `kind: markers`, `resolved: false`. A test landed in 2be18da6 (`a_line_citing_a_nested_markers_file_by_a_relative_path_is_not_qualified`, mutation M31 in `scripts/mutation/owner-reviews-067.py`) locks in that matching.
 - **An inconsistent split by anchor.** In one file, same form: `§two-part` → `qualified`, `resolved: true`; `§rule-with-three-parts` → `markers`, `resolved: false`; a second file's `§word-word-word` anchors the same. The reporter guessed anchor hyphen count (five data points); the basename matching above may be the cause instead. With `markers-path` set to the shared constitution, every one resolves.
@@ -25,10 +25,10 @@ A project may register a shared constitution under `.ductus/config.toml` `[const
 ## Edge Cases
 
 - Minimal fixture: a shared constitution with markers `§a-b` and `§a-b-c`, and one spec citing both in the qualified form. The test asserting both classify alike is proven to fail against the current resolver before the fix.
-- `resolve-constitutions` returns a `..` sibling path, which `resolve-anchor` refuses today (`parent-directory component ('..') not permitted`).
+- `resolve-constitutions` returns a `..` sibling path, which `resolve-anchor` resolves lexically (`normalize_abs` in `runtime/src/primitives/resolve_anchor.rs`) and does not refuse.
 - A registered constitution that cannot be read: the run records `constitution-unresolved`, as 055 AC8 has it, and each reference naming it is unexamined as could not be read.
 - A stored waiver of an `anchor-resolution` finding whose section was since renamed: falls away once registered documents are judged; what remains is 058's decision matching, with 063's primitive-decided `decision-key` as precedent.
-- The constitution's Cross-document references bullet says nothing about shared constitutions or unchecked qualified references, and still says "longest-first", which AC2 says never decided a match.
+- The constitution's Cross-document references bullet once said nothing about shared constitutions or unchecked qualified references and still said "longest-first", which AC2 says never decided a match; it now names a registered shared constitution's marker and says no "longest-first".
 - A code span holding a path and two `§` references, a markdown link, or any word before the path: not a citation; words after the reference are part of it, as in prose, so a multi-word heading can be named, ignored like any other span.
 - A span citation whose path names a document absent from the tree: unexamined, excluded by construction, as on a line.
 - A line or span naming a registered document by its registered path and also naming an in-tree document: each reference is judged against every readable document named, so it resolves when any of them carries the cited section.

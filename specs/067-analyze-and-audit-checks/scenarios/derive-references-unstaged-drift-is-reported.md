@@ -25,19 +25,19 @@ Every honesty field on the references payload reads clean. `drift` is false,
 Nothing in that result lets a caller learn that a tracked spec is carrying a
 reference to a service alias that no longer exists.
 
-The two primitives diverge at enumeration.
+The two primitives diverged at enumeration.
 [`derive_dependencies`](../../../runtime/src/primitives/derive_dependencies.rs)
 walks **every tracked spec**, derives, and then consults the staged set only to
 decide whether to *write* — a spec that was examined and found drifted but left
 alone lands in `unwritten`.
 [`derive_references`](../../../runtime/src/primitives/derive_references.rs)
-narrows the **enumeration** to the staged set, so a tracked-but-unstaged
-drifted spec is never examined at all, and `DeriveReferencesResult` has no
+narrowed the **enumeration** to the staged set, so a tracked-but-unstaged
+drifted spec was never examined at all, and `DeriveReferencesResult` had no
 field that could hold it.
 
 ### The recorded rationale is falsified
 
-Two artifacts justify the split, and both are wrong:
+Two artifacts justified the split, and both were wrong:
 
 > Each spec's `references:` is a pure function of its own body — there is no
 > cross-spec graph here, unlike the dependency cycle check. So `--staged`
@@ -66,7 +66,7 @@ than `derive-dependencies` does, not less. The "enumerated equals written"
 reasoning holds only for a body-derived field, and this is the one derived
 field that has an input outside the body.
 
-Nothing else covers the gap. `check-orphaned-references` has a different
+Nothing else covered the gap. `check-orphaned-references` has a different
 subject entirely — filesystem paths in a fixed set of adopter-owned files — and does not
 look at frontmatter aliases.
 
@@ -137,8 +137,8 @@ corpus, which is the drift the canonical-source map exists to prevent.
   measurement justifies.
 - **The field is additive.** Existing consumers ignore it and the MCP goldens
   that assert the ordinary payload stay byte-identical when it is empty.
-- **`data-model.md` records it.** That file currently scopes `unwritten` to
-  `derive-dependencies` only; the annotation is removed, since the field now
+- **`data-model.md` records it.** That file once scoped `unwritten` to
+  `derive-dependencies` only; the annotation was removed, since the field
   belongs to both result shapes.
 
 ## Open Questions

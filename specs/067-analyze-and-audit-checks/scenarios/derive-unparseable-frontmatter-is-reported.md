@@ -14,8 +14,8 @@ deliberate change, not a review-time edit.
 `splice_references` places the `references:` block at one of two anchors:
 after the whole `dependencies:` entry, its continuation lines and a multi-line
 flow value included, or before the closing `---`. A spec whose frontmatter is
-**unterminated** and which carries **no `dependencies:` key** reaches neither.
-The rewrite is skipped, the spec never enters `updated`, and the result is
+**unterminated** and which carries **no `dependencies:` key** reached neither.
+The rewrite was skipped, the spec never entered `updated`, and the result was
 byte-identical to one for a spec that genuinely needed no change.
 
 That is exactly the shape `QUAL-CLAIM-001` names:
@@ -26,17 +26,17 @@ That is exactly the shape `QUAL-CLAIM-001` names:
 
 The two primitives already report `examined`, `untracked-skipped`, `unwritten`
 and `registered-services` precisely so a caller can tell scope from silence —
-this is the one remaining hole in that surface, and it is the one where the
+this was the one remaining hole in that surface, and it was the one where the
 subject was reachable and still went unexamined.
 
-`derive-dependencies` has the same gap for a different reason: its splice only
-rewrites a `dependencies:` key found **inside** the frontmatter, so on an
-unterminated block the key is never located and the spec is silently left
+`derive-dependencies` had the same gap for a different reason: its splice only
+rewrote a `dependencies:` key found **inside** the frontmatter, so on an
+unterminated block the key was never located and the spec silently left
 alone. Both primitives need the same treatment; fixing one would leave the
 pair inconsistent, which is the drift the shared scanner exists to prevent.
 
-Narrow in practice — it needs an unterminated block, and for `derive-references`
-a missing `dependencies:` key as well — but the failure is silent, and a spec
+Narrow in practice — it needed an unterminated block, and for `derive-references`
+a missing `dependencies:` key as well — but the failure was silent, and a spec
 mid-edit is exactly when a pre-commit hook runs.
 
 ## Behavior

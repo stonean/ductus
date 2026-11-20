@@ -6,7 +6,7 @@ section: "Derived frontmatter indexes"
 
 ## Context
 
-`derive-references` returns its spec lists — `updated`, `unwritten`, `untracked-skipped`, `absent`, `unparseable` and `unwritable` — inline whatever their length, and each grows with the corpus: a service rename drifts every referencing spec at once, and under `staged` each lands in `unwritten` ([derive-references-unstaged-drift-is-reported](derive-references-unstaged-drift-is-reported.md)). `derive-dependencies`, whose result holds the same kinds of list, moves them to a file past `[artifacts] read-size-bytes` (`specs/080-deterministic-runtime-efficiency/data-model.md` §Bounded results). `derive-references` calls no `bounded_lists::place` and its result carries no `form` (`runtime/src/primitives/derive_references.rs`; `DeriveReferencesResult` in `runtime/src/schema/primitives.rs`). 080's measurement found it did not grow because its corpus was in sync and held no references, and it measured `derive-dependencies`' drifted case but not this one (`specs/080-deterministic-runtime-efficiency/research.md` §Result sizes).
+`derive-references` returns its spec lists — `updated`, `unwritten`, `untracked-skipped`, `absent`, `unparseable` and `unwritable` — inline whatever their length, and each grows with the corpus: a service rename drifts every referencing spec at once, and under `staged` each lands in `unwritten` ([derive-references-unstaged-drift-is-reported](derive-references-unstaged-drift-is-reported.md)). `derive-dependencies`, whose result holds the same kinds of list, moves them to a file past `[artifacts] read-size-bytes` (`specs/080-deterministic-runtime-efficiency/data-model.md` §Bounded results). Before this scenario's task, `derive-references` called no `bounded_lists::place` and its result carried no `form`; it now goes through `bounded_lists::place` (`runtime/src/primitives/derive_references.rs`; `DeriveReferencesResult` in `runtime/src/schema/primitives.rs`). 080's measurement had found it did not grow because its corpus was in sync and held no references, and it measured `derive-dependencies`' drifted case but not this one (`specs/080-deterministic-runtime-efficiency/research.md` §Result sizes).
 
 Found by 017's analysis on 2026-11-14 as `BE-PAYLOAD-001` (MUST) on 017's scenario `generator-sync-claim-honesty`, which describes both derivations' lists; the owner placed the bound here the same day.
 
@@ -19,7 +19,7 @@ Found by 017's analysis on 2026-11-14 as `BE-PAYLOAD-001` (MUST) on 017's scenar
 
 ## Edge Cases
 
-- A corpus with no references, or no `[services]` registry, returns every list empty and the result inline, as today.
+- A corpus with no references, or no `[services]` registry, returns every list empty and the result inline.
 - A result exactly at the read size fits, and is inline.
 - The pre-commit hooks, this repository's and the shipped one, send the result to `/dev/null` and read only the exit status and stderr, so the bound changes nothing they see.
 
