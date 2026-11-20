@@ -152,7 +152,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Information MUST NOT be conveyed by color alone. Status, validation state, required-field marking, and selection state MUST be reinforced by a non-color cue: icon, text label, underline, weight, pattern, or position. Instructions MUST NOT identify a component by a sensory characteristic alone: shape, color, size, visual location, orientation, or sound.
 
-**Verification:** Any spec or plan that introduces state indicators (errors, warnings, success, selection, required) MUST commit to a non-color cue per state, and one that writes instructions MUST name each component by more than a sensory characteristic. `/{project}:analyze` flags specs that describe state via color only, affected-files snippets that style validation state without an accompanying icon or text node, and instructions that identify a component only by a sensory characteristic.
+**Verification:** Any spec or plan that introduces state indicators MUST commit to a non-color cue per state, and one that writes instructions MUST name each component by more than a sensory characteristic. `/{project}:analyze` flags specs that describe state via color only, affected-files snippets that style validation state without an accompanying icon or text node, and instructions that identify a component only by a sensory characteristic.
 
 **Source:** WCAG 2.2 §1.4.1 (Use of Color), §1.3.3 (Sensory Characteristics)
 
@@ -202,7 +202,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > A component receiving focus MUST NOT by itself initiate a change of context — submitting a form, opening a new window, moving focus to another component, or navigating to a new page. Changing the setting of a control — selecting an option, checking a box, choosing a radio button, entering text — MUST NOT automatically cause a change of context unless the user is advised of the behavior before using the control.
 
-**Verification:** Any spec or plan that introduces a control whose focus or change triggers navigation, form submission, a new window, or a focus move MUST name the explicit activation that performs it instead, or the advance notice given before the control is used. `/{project}:analyze` flags affected-files snippets with a `focus` handler, or a `change` or `input` handler on a `<select>`, checkbox, radio button, or text field, that navigates (`location` assignment, router navigation), submits the form, calls `window.open`, or moves focus elsewhere. **Not flagged:** a `change` or `input` handler that only updates the page's content or URL query (a filter, sort, or search refresh), moving no focus and opening, submitting, or loading nothing, since WCAG 2.2's definition of "changes of context" says a change of content is not always one.
+**Verification:** Any spec or plan that introduces a control whose focus or change triggers navigation, form submission, a new window, or a focus move MUST name the explicit activation that performs it instead, or the advance notice given before the control is used. `/{project}:analyze` flags affected-files snippets with a `focus` handler, or a `change` or `input` handler on a `<select>`, checkbox, radio button, or text field, that navigates (`location` assignment, router navigation), submits the form, calls `window.open`, or moves focus elsewhere. **Not flagged:** a `change` or `input` handler that only updates the page's content or URL query (a filter, sort, or search refresh), and does not move focus, open a window, submit, or load a different page, since WCAG 2.2's definition of "changes of context" says a change of content is not always one.
 
 **Source:** WCAG 2.2 §3.2.1 (On Focus), §3.2.2 (On Input), WCAG 2.2 definition of "changes of context", W3C Understanding 3.2.1 and 3.2.2 (Techniques G80, H84, G13; Failures F36, F37)
 
@@ -298,7 +298,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > Content MUST NOT flash more than three times in any one-second period, unless the flashing stays below the general flash and red flash thresholds.
 
-**Verification:** Any spec or plan that introduces animation, video, or visual effects with rapid luminance changes MUST commit to the three-flashes limit. `/{project}:analyze` flags specs that describe flashing or strobing effects without a flash-rate commitment, and flags affected-files snippets whose CSS animations or timers complete a full on-and-off cycle of visibility, opacity, or high-contrast colors in less than 333 ms. **Not flagged:** a cycle the spec or snippet bounds below those thresholds.
+**Verification:** Any spec or plan that introduces animation, video, or visual effects with rapid luminance changes MUST commit to the three-flashes limit. `/{project}:analyze` flags specs that describe flashing or strobing effects without a flash-rate commitment, and flags affected-files snippets whose CSS animations or timers complete a full on-and-off cycle of visibility, opacity, or high-contrast colors in less than 333 ms. **Not flagged:** a cycle the spec or snippet bounds below the general flash and red flash thresholds.
 
 **Source:** WCAG 2.2 §2.3.1 (Three Flashes or Below Threshold), WCAG 2.2 definitions of "flash" and "general flash and red flash thresholds", W3C Understanding 2.3.1
 
