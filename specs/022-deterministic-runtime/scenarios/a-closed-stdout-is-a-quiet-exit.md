@@ -12,7 +12,7 @@ Every `ductus` subcommand panics with exit 101 when the reader of its stdout exi
 
 - A subcommand whose stdout reader has gone exits without a panic and without a panic message, at the first write that meets the closed pipe.
 - Its exit status is distinguishable from a primitive failure and from a panic.
-- A subcommand whose stderr reader has gone drops the diagnostic it was writing, keeps its own exit status and the output it wrote to stdout, and does not panic: every exit-path write in `main.rs` goes through `ductus::io::warn`.
+- A subcommand whose stderr reader has gone drops the diagnostic it was writing, keeps its own exit status and the output it wrote to stdout, and does not panic: every exit-path write in `main.rs` drops a failed stderr write, through `ductus::io::warn` or, where a loop writes several lines, a `let _ = writeln!` on a locked stderr.
 - The `mcp` stdio server's handling of a closed transport is unchanged: the fix is at the CLI result-write sites, not a process-wide SIGPIPE reset.
 
 ## Edge Cases

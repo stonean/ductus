@@ -210,6 +210,15 @@ fn collect_scenario_open_questions_unlinked(
     }
     let mut out = Vec::new();
     let mut unreadable = Vec::new();
+    // `list_scenario_files` reads a directory it cannot open as an empty one,
+    // so a `scenarios/` that exists and refuses a listing would report zero
+    // questions and zero unreadable (`QUAL-CLAIM-001`): name it. An absent
+    // directory is the one genuinely empty case.
+    if let Err(err) = std::fs::read_dir(&scenarios_dir)
+        && err.kind() != std::io::ErrorKind::NotFound
+    {
+        unreadable.push("scenarios/".to_string());
+    }
     for name in list_scenario_files(&scenarios_dir) {
         let scenario_path = scenarios_dir.join(&name);
         if covered(&scenario_path) {
@@ -1253,6 +1262,33 @@ dependencies: []
             vec!["broken".to_string()],
             "…but it is reported, so a caller can tell this from a fully-examined clean result"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_scenarios_directory_that_refuses_a_listing_is_reported_not_read_as_clean() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = seed_feature(SPEC_NO_QUESTIONS, &[("fine.md", "# Fine\n")]);
+        let dir = tmp.path().join("specs/046-probe/scenarios");
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // A privileged user (a root CI container) lists it anyway: nothing to prove.
+        let lists = std::fs::read_dir(&dir).is_ok();
+        let result = probe(&tmp);
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        if !lists {
+            assert_eq!(
+                result.scenario_files_unreadable,
+                vec!["scenarios/".to_string()],
+                "a directory that cannot be listed is named, so a zero count means every scenario was read"
+            );
+        }
+    }
+
+    #[test]
+    fn an_absent_scenarios_directory_reports_nothing_unreadable() {
+        let tmp = seed_feature(SPEC_NO_QUESTIONS, &[]);
+        let result = probe(&tmp);
+        assert_eq!(result.scenario_files_unreadable, [] as [String; 0]);
     }
 
     #[test]

@@ -48,7 +48,9 @@ const PROJECT_TEMPLATE: &str = "framework/templates/project/inbox.md";
 /// whitespace-only, only a list marker (a bare checkbox), or carries an
 /// embedded newline (structure injection
 /// into `inbox.md`) — the rule `remove-inbox-item` applies too, so every
-/// bullet written here can be removed (see [`super::validate_inbox_text`]).
+/// bullet written here can be removed (see [`super::validate_inbox_text`]) —
+/// or when it opens an HTML comment (`<!--` outside backticks) it does not
+/// close on the line, which only this primitive refuses.
 /// [`super::PrimitiveError::ChangedSinceRead`] when `inbox.md` changed (or, for the
 /// first bullet, appeared) between the read and the write: nothing is written
 /// (`BE-TXN-002`), and the operator runs it again. Filesystem failures surface

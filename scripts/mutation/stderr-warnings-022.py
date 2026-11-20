@@ -30,9 +30,13 @@ The behaviours and the tests that hold them:
   M11 `read_envelope` decodes a line that is not UTF-8 lossily.
   M12 `read_envelope` fails the walk on a line that is not UTF-8.
 
-  Each is killed by exec_subprocess's
+  M1 to M7 are killed by exec_subprocess's
   `an_ignored_stdin_line_warns_without_failing_the_walk_when_stderr_is_gone`,
-  which drives all six warnings with stderr's reader closed.
+  which drives the six ignore-and-continue warnings with stderr's reader
+  closed; M8 to M10 by exec_stderr_gone's `exec_keeps_its_exit_and_error_envelope`,
+  `check_corpus_links_keeps_its_exit_and_result` and
+  `derive_dependencies_keeps_its_exit_and_result`; M11 and M12 by the `io::tests`
+  named in their entries.
 
 No mutation is an expected survivor.
 """

@@ -22,7 +22,12 @@ ctime clock being finer than that) and
 `an_unchanged_destination_that_is_a_link_is_not_chmodded_through` (M6), and
 `an_unchanged_destination_that_refuses_a_chmod_is_named_and_the_walk_goes_on`
 (M7, M8; macOS only, since `chflags uchg` is the one way an unprivileged test
-can make a chmod fail, so on another platform M7 and M8 survive).
+can make a chmod fail, so on another platform M7 and M8 survive); in
+runtime/src/primitives/merge_managed_block.rs `a_created_file_is_mode_0644`
+(M9, a created file is 0644) and `a_rewrite_keeps_the_existing_mode` (M10, a
+rewrite keeps its mode); and in runtime/src/primitives/merge_permissions.rs
+`a_created_settings_file_is_owner_only` (M11, the personal settings file stays
+at the tempfile's 0600).
 """
 
 EXPECTED_SURVIVORS = {}
@@ -97,5 +102,12 @@ MUTATIONS = [
         '        if action_static == "created" {\n',
         '        if action_static != "unchanged" {\n',
         'merge_managed_block::tests::a_rewrite_keeps_the_existing_mode',
+    ),
+    (
+        'M11 merge-permissions widens a settings file it creates',
+        'src/primitives/merge_permissions.rs',
+        '        guarded::write_guarded(&snapshot, &serialized)?;\n    }\n\n    Ok(MergePermissionsResult {',
+        '        guarded::write_guarded(&snapshot, &serialized)?;\n        {\n            use std::os::unix::fs::PermissionsExt;\n            let _ = std::fs::set_permissions(&target_path, std::fs::Permissions::from_mode(0o644));\n        }\n    }\n\n    Ok(MergePermissionsResult {',
+        'merge_permissions::tests::a_created_settings_file_is_owner_only',
     ),
 ]

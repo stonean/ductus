@@ -271,7 +271,7 @@ fn write_stdout_line(text: &str) -> std::result::Result<(), ExitCode> {
             Err(ExitCode::from(STDOUT_CLOSED_EXIT))
         }
         Err(err) => {
-            let _ = writeln!(io::stderr(), "failed to write result: {err}");
+            warn(format_args!("failed to write result: {err}"));
             Err(ExitCode::from(1))
         }
     }

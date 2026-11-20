@@ -694,6 +694,28 @@ mod tests {
         }
     }
 
+    /// A settings file this primitive creates is owner-only: `write_atomic_bytes`
+    /// leaves a new file at the tempfile's `0600`, and the personal settings
+    /// file holds permissions its owner chose (installed-files-are-not-group-writable).
+    #[cfg(unix)]
+    #[test]
+    fn a_created_settings_file_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let result = run(
+            &args(".claude/settings.local.json", &["Edit"], &[]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.action, "created");
+        let mode = fs::metadata(tmp.path().join(".claude/settings.local.json"))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+
     /// Read a settings file back as JSON.
     fn read_json(path: &std::path::Path) -> Value {
         serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()

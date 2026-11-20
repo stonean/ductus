@@ -14,7 +14,7 @@ Hit concretely during 022 tasks 66–68: task 67's `done-when` in `tasks.md` emb
 
 ## Behavior
 
-- `SkipScanner` does not treat an HTML-comment or code-fence delimiter as active when it falls inside a markdown inline-code span (a backtick-delimited run) on the line: such a delimiter neither opens nor closes a skip region. A region is entered only by a delimiter in ordinary, non-code-span text.
+- `SkipScanner` does not treat an HTML-comment or code-fence delimiter as active when it falls inside a markdown inline-code span (a backtick-delimited run) on the line: such a delimiter never opens a skip region. A region is entered only by a delimiter in ordinary, non-code-span text; an open comment still ends at the first close delimiter on a line, backticked or not, as CommonMark reads it.
 - Every parser built on `SkipScanner` — `read-tasks`, `mark-task`, `dashboard`'s open-question count, and the section / heading / bullet walkers — therefore sees all structure in a document whose prose mentions backticked delimiters. A task whose `done-when` carries a backticked comment-open delimiter no longer hides the following task.
 - A genuine comment or fence — delimiters in ordinary text — is skipped exactly as before; the change narrows only the inline-code case.
 - A code fence opens at a line whose first non-blank characters are a run of three or more backticks or tildes (a backtick run followed by no backtick), and closes at a line holding a run of the same character at least as long as the opener, with nothing after it. A shorter run, a run of the other character and a run followed by an info string are the fence's content. A fence indented to any depth still opens, because tasks and criteria nest fences in lists.

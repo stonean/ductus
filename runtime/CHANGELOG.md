@@ -1060,7 +1060,8 @@ its version and date.
   Breaking for a script or hook that read exit 0 over a stale index: both CLIs
   now exit non-zero on an unwritable spec.
 
-- **`validate-frontmatter` chooses its schema row by the path it is given (spec 067 task 18).** A `.md` file under a `scenarios/` directory takes the scenario row (`section`, or the legacy `spec-ref`, a non-empty string; no `status` or `dependencies`), a `spec.md` the spec row and its run also checks every scenario beside it, each finding keyed by its `scenarios/{file}` path and an unreadable or fenceless scenario a hard fail, and a `review.md` or `analysis.md` that record's checks. Any other path (a `plan.md`, a `tasks.md`) is now refused with an error naming the four kinds, where it was checked against the spec row, and a `spec.md` whose frontmatter is not valid YAML no longer ends the run, so its records and scenarios are still checked.
+- **BREAKING: `validate-frontmatter` chooses its schema row by the path it is given (spec 067 task 18).** A `.md` file under a `scenarios/` directory takes the scenario row (`section`, or the legacy `spec-ref`, a non-empty string; no `status` or `dependencies`), a `spec.md` the spec row and its run also checks every scenario beside it, each finding keyed by its `scenarios/{file}` path and an unreadable or fenceless scenario a hard fail, and a `review.md` or `analysis.md` that record's checks. Any other path (a `plan.md`, a `tasks.md`) is now refused with an error naming the four kinds, where it was checked against the spec row, and a `spec.md` whose frontmatter is not valid YAML no longer ends the run, so its records and scenarios are still checked.
+  Breaking under `BE-COMPAT-001`: a call naming a `plan.md`, a `tasks.md` or any other path, accepted in 0.59.11 against the spec row, is now refused.
 
 - **`plan-consistency` names a `plan.md` it cannot read (spec 067 task 31).** A plan the family could not read was passed over silently; it is now an `artifact-unreadable` skip below `done` and a blocking finding at `done`, as every family records an artifact it could not read.
 
@@ -2298,7 +2299,7 @@ its version and date.
   non-zero on it (the entry "`derive-dependencies` and `derive-references`
   name a rewrite they refuse").
   Breaking under `BE-COMPAT-001`: a splice whose result does not parse,
-  written in 0.59.11, is now refused and the spec named in `unparseable`.
+  written in 0.59.11, is now refused, the spec named in `unwritable`, and the CLIs exit non-zero.
 - **BREAKING: `check-promotion-coverage` refuses an empty `sections` (spec 067,
   review round 1, `2be18da6`).** With none, every count was zero by
   construction, not a measurement. The CLI, the MCP tool and `ductus exec` now
@@ -2335,9 +2336,7 @@ its version and date.
   headings and the RFC 2119 keyword counts of the 53,811-byte file are kept.
   The cut fits one read on a host whose read tool caps one read at 51,200 bytes
   (OpenCode's and Pi's stopped after line 500 at 53,811; OpenCode support is
-  since dropped); an installed copy stays within it for a project name of up to
-  54 characters (27 `{project}` placeholders, so 27 bytes per name character
-  beyond nine). `/target` step 4's read of it now fits one call on those
+  since dropped); an installed copy stays within 50,000 bytes for a project name of up to 42 characters (29 `{project}` placeholders at 49,021 bytes, so 29 bytes per name character beyond nine). `/target` step 4's read of it now fits one call on those
   hosts. The file measures 49,021 bytes at `a7a7f898` (`git show a7a7f898:framework/constitution.md | wc -c`), 48,763 at `8e4dc677`.
 - **A plan or task-list edit that adds no unchecked task does not reopen a
   `done` spec, and does not stale its analysis (spec 041, scenario
@@ -2504,7 +2503,7 @@ its version and date.
   names. The shipped pre-commit hook echoes the binary's first `--version`
   line cut to 80 printable characters. Spec 048. `d4b75e66`
   Breaking for a run whose pin is not one `MAJOR.MINOR.PATCH` line of ASCII
-  digits, or whose `--version` probe outlasts 10 s: it now halts.
+  digits, or whose `--version` probe of a `[runtime] path` binary, or a re-probe, outlasts 10 s: it now halts (a store probe that outlasts it goes to State B or re-acquisition).
 - **BREAKING: `apply-manifest`'s and `enforce-manifest`'s `--*-json` files
   must lie inside a staging directory (spec 048; `BE-INPUT-004`).**
   The CLI read a `--entries-json`, `--pinned-json`, `--substitutions-json` or
@@ -2678,7 +2677,7 @@ its version and date.
   The 11 added crates are `constant_time_eq`, `lock_api`, `parking_lot`,
   `parking_lot_core`, `redox_syscall`, `scopeguard`, `temp-env`,
   `unicode-general-category`, `unicode-normalization`, `utf_types` and
-  `zeroize_derive`. The one manifest change is the dev-dependency `temp-env`
+  `zeroize_derive`. The one dependency change in the manifest is the dev-dependency `temp-env`
   0.3.6 (the `fetch-archive` startup-capture test's entry). Four advisories are
   addressed: RUSTSEC-2026-0382 and RUSTSEC-2026-0383 (`rustls-webpki` and
   `webpki-root-certs`, the first entry above), RUSTSEC-2026-0418 (`libz-sys`,
@@ -2770,6 +2769,11 @@ its version and date.
 
 ### Fixed
 
+- **`read-spec` names a `scenarios/` directory it cannot list (spec 022).** The shared
+  scenario listing read a directory that exists and refuses a listing as one with no
+  scenario, so `scenario-files-unreadable-count` was zero over a subject never read. The
+  scenario-question scan behind `read-spec` and `check-review-gate` now lists it
+  as `scenarios/` in `scenario-files-unreadable`; an absent directory is still empty.
 - **A code fence closes only on a run as long as its opener (spec 022).**
   `SkipScanner` (read by about 25 primitives' structural walkers, among them
   `check-artifacts`' line-citation check) and `check-corpus-links` now open and
@@ -2781,8 +2785,7 @@ its version and date.
   links inside HTML comments. No file in this repository's spec corpus reads
   differently (the corpus run over every spec found no difference).
 - **The remaining hand-rolled fence toggles close a fence as `SkipScanner` does
-  (spec 022 task 61).** `extract_section_body` (the section reader of the
-  `ductus exec` fill-step payload) and the link harvester behind
+  (spec 022 task 61).** `extract_section_body` (the section reader of the `ductus exec` fill-step payload), `section_headings` (the fold destinations `routeFold` offers) and the link harvester behind
   `derive-dependencies`, `derive-references` and `check-review-gate`'s pointer
   reading toggled a fence on any line starting with three backticks. Each now
   closes a fence only on a run of its own character at least as long as its
@@ -2808,8 +2811,7 @@ its version and date.
   (`brief-re-read`, `label-criteria`, `read-re-read` and `write-analysis`) were
   true in the file form and only lose backticks. A test in
   `runtime/tests/bounded_list_gates.rs` scans every served primitive's
-  description against its own bounded lists, with a stale-checked allowlist of
-  four non-defects, and fails on the old wording. Text only: no result changes.
+  description against its own bounded lists, with a stale-checked allowlist of five non-defects, and fails on the old wording. Text only: no result changes.
 - **A line directly under a criterion belongs to it (spec 022).** `read-spec`'s
   acceptance-criteria walk folds a line that follows a criterion with no blank
   line between, and starts no other block (heading, list item, thematic break,
@@ -2848,9 +2850,7 @@ its version and date.
   `write-analysis` recorded a key that read back as a shorter path, so the
   analysis read stale on every run. Each path now goes through `yaml_string`,
   which quotes exactly when the plain form would not read back, and never
-  flattens the path. A path that was bare stays bare byte for byte (997
-  digest keys over the 76 `review.md` and 76 `analysis.md` records of this
-  repository at the fix's base commit, 0 changed), so no stored record changes
+  flattens the path. A path that was bare stays bare byte for byte (999 digest keys, every indented line under a `reviewed-digest:` or `analyzed-digest:` key, over the 76 `review.md` and 76 `analysis.md` records of this repository at the fix's base commit, 0 changed), so no stored record changes
   and no analysis goes stale on that account.
 - **`rewrite-spec-links` re-points a reference-style definition and keeps a link's title out of the path (spec 051, scenario `a-definition-and-a-title-follow-the-link-grammar`).**
   A definition line (`[label]: ../{from}/spec.md`) in a spec-root file was left
@@ -2979,8 +2979,7 @@ its version and date.
   reads anything (`BE-INPUT-002`): `--from .` re-pointed every `./` link in a
   fixture corpus, and now exits with an invalid-argument error.
   Breaking under `BE-COMPAT-001`: a project file behind a link leaving the
-  project, read in 0.59.11, is now refused or reported unread, and `rewrite-
-  spec-links --from .` is an invalid argument.
+  project, read in 0.59.11, is now refused or reported unread, and `rewrite-spec-links --from .` is an invalid argument.
 - **BREAKING: the spec-root listing is contained before it is read (spec 022 task 48;
   `BE-INPUT-004`, the owner's class decision of 2026-11-17).**
   `list_feature_dirs` refuses a spec root that is, or runs through, a symbolic
@@ -3231,7 +3230,7 @@ its version and date.
   task list a phase numbered like it exempted the open boxes under it. Spec 079.
 - **BREAKING: a `[services]` entry with no `repo` or `path` halts, as does a config that
   does not parse.** `resolve-references`, `derive-references`,
-  `classify-spec-edit` and `dashboard` read the registry through one reader,
+  `classify-spec-edit` and `render-status` read the registry through one reader (`dashboard` did until spec 080 moved the references readout),
   which names the file, and the entry's alias and field. `derive-references`
   read a config that did not parse as no registry, so `--write` gave every
   reference `service: null`, and an empty `path` resolved a service against

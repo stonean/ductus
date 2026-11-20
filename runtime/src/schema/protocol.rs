@@ -2,7 +2,8 @@
 //!
 //! Line-delimited JSON; one complete object per line, terminated by `\n`. The
 //! envelope below is the closed protocol surface — adding a discriminator
-//! variant requires a runtime major-version bump per §runtime-boundary.
+//! variant is a breaking schema change, which bumps the minor version before 1.0 and
+//! the major from 1.0 on (022's data model, *Versioning of these schemas*).
 
 #![allow(clippy::module_name_repetitions)]
 

@@ -1295,13 +1295,9 @@ fn folds_into(spec_content: &str) -> Option<String> {
 /// exist.
 fn section_headings(content: &str) -> Vec<String> {
     let mut headings = Vec::new();
-    let mut fenced = false;
+    let mut fences = Fences::default();
     for line in content.lines() {
-        if line.trim_start().starts_with("```") {
-            fenced = !fenced;
-            continue;
-        }
-        if fenced {
+        if fences.holds(line.trim_start()) {
             continue;
         }
         if let Some(text) = line.strip_prefix("## ") {
@@ -2914,6 +2910,15 @@ mod tests {
         assert!(body.contains("## Still not"));
         assert!(body.contains("After."));
         assert!(!body.contains("Affected Files"));
+    }
+
+    #[test]
+    fn section_headings_skips_a_longer_or_tilde_fence_holding_a_heading_like_line() {
+        let body = "## One\n\n````md\n```\n## Not one\n```\n## Not two\n````\n\n~~~\n## Not three\n~~~\n\n## Two\n";
+        assert_eq!(
+            section_headings(body),
+            vec!["One".to_string(), "Two".to_string()]
+        );
     }
 
     #[test]
