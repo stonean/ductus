@@ -1,7 +1,7 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review]
-next-criterion: 16
+next-criterion: 18
 cross-spec-impact: [020-code-review, 066-audit-records-and-the-completion-gate]
 ---
 
@@ -91,6 +91,8 @@ No instruction the agent had loaded prevented any of them, and §design-principl
 - [x] AC14: The loop runs unless `.ductus/config.toml`'s `[review]` table switches it off with a reason; then each round that needed a re-read is recorded as not re-read and waived with that reason, each run prints it, and a switch without a valid reason halts the run naming the setting and the file.
 - [x] AC15: A snapshot, scope or diff-check call that fails, or a prescriptions file that is missing or does not parse, leaves its round counted as needing a re-read; it never reads as an empty scope or a passed check.
 - [x] AC9: This repository's `AGENTS.md` re-read rule points at the framework's statement instead of restating it.
+- [ ] AC16: The re-read brief's severity bar raises a MUST, SHOULD or NOTE only on a case whose trigger is shown possible in the project, from its code, configuration, history or deployment shape. A case shown only by building it is no finding, and `brief-re-read`'s brief says so.
+- [ ] AC17: `start-fix-rounds` records when the run's loop started, and `brief-re-read` returns the rounds briefed so far, the re-reads that found a MUST or SHOULD, and the time since that start. The budget stop of step 12 in `framework/commands/review.md` quotes those figures from the runtime, never from the host's count, and a fixture of three rounds proves them.
 
 ## Applicable Rules
 
