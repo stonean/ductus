@@ -1,7 +1,7 @@
 ---
 spec: 079-review-and-analysis-work-converges
-last-run: 2026-11-21T21:45:28Z
-analyzed-against: 7fdb5302adee09ab93ac7a4339ab9a6f0c272145
+last-run: 2026-11-21T22:14:42Z
+analyzed-against: f02d7ee847d9f5d9d902ff02af99a139b8a340dc
 hard-fail: 0
 blocking-findings: 0
 advisory: 3
@@ -12,7 +12,7 @@ analyzed-digest:
   research.md: 0b2684cba2edfbdf8778e2367ed7811a5aa7be89839395f897f42f28d6dfb993
   review.md: aa2cf09c438fb23f2a01f34366455790213a3bd9159dc21fa54d9cce28917158
   scenarios/the-excluded-section-lists-paths-only.md: 1763a8c3a9dd478a6f39d2813a73d4804c21dc8e9581c401af3fdaf35e6ea8b1
-  spec.md: b66be26b08111a80154f7cd60998b9ffbac17c43fc53c6fc6e11a1e65260793b
+  spec.md: 26cbc83935f083ae9f0b74ea44a6deb067353edf08478a33d95b45b8ad72b8b7
   tasks.md: d7640c1757c590bf6492db53d28d7e89fbe553dbf5883bf920af96ea6cd31fae
 unexamined-by-reason:
   anchor-target-unjudgeable: 1
@@ -84,7 +84,7 @@ section-digest:
   "spec.md#Edge Cases": 7367063714e27280
   "spec.md#Motivation": 81069fbaa0db88c6
   "spec.md#Open Questions": 20edda8881516e4e
-  "spec.md#Resolved Questions": 46637ab21eecd67b
+  "spec.md#Resolved Questions": 01c2e52ac93801a3
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The change is breaking"}
   BE-INPUT-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
@@ -103,7 +103,7 @@ rule-verdicts:
   QUAL-TEST-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
 blocking: false
 dispositions:
-  fixed: 7
+  fixed: 0
   deferred: 0
   waived: 3
   undispositioned: 0
@@ -118,10 +118,10 @@ decisions:
     reason: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides.
     decided-at: 2026-11-20T00:39:18Z
     decided-by: rule
-  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96694 bytes, 2 read pages at the 50000-byte read size
+  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 97290 bytes, 2 read pages at the 50000-byte read size
     outcome: waived
     reason: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing.
-    decided-at: 2026-11-21T21:45:28Z
+    decided-at: 2026-11-21T22:14:42Z
     decided-by: rule
 ---
 
@@ -129,7 +129,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 3 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 3 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 3 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -143,7 +143,7 @@ decisions:
 
 - grounding — Trade-offs, the entry on a person's lasting keep of a plan section, states that 3 of 70 analysis records held any `plan-record` decision with no commit, date or method, so the figure cannot be re-derived. — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides. (decided by the rule)
 - decision-reasons — Resolved Questions, 'Does a record's commit leave code committed after the run unread?': the first rejected option (adding what lies between to the next window) is rejected because a review preceding its commit would owe a second review, 1 of 143 and over the bound, which is a review run and not a result the option gives up or delivers. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
-- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96694 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
+- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 97290 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -160,10 +160,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — Resolved Questions, AGENTS.md's routing rule: /{project}:specify offering its runtime-owning spec as one candidate cited no command source (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- grounding — Motivation: the constitution's blast-radius rule and its no-verdict-is-unknown rule were named with no section (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- grounding — Motivation: AGENTS.md's routing rule was stated in the present tense as sending shared runtime work to 022, 066 and 067, which AC16 rewrote; it now reads as at 7b49fc80 (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- grounding — Resolved Questions, the Excluded from scope section: the search's hit list left out write-review's description in runtime/src/schema/descriptions.rs (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- grounding — The change is breaking: check-review-gate's blocked-by set was called undocumented as open with no source; it is the closed ReviewGateBlock enum (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
-- grounding — Prose cuts come last: the status reference was said to lose what dashboard renders, though render-status renders the view (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
-- grounding — Prose cuts come last: 071's AC2 was cited as naming log, which only its Resolved Question on which commands are split does (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+*None.*
