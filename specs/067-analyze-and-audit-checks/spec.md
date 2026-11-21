@@ -1,7 +1,7 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
-next-criterion: 6
+next-criterion: 8
 cross-spec-impact: [022-deterministic-runtime, 046-scenario-open-question-visibility, 066-audit-records-and-the-completion-gate]
 ---
 
@@ -50,6 +50,8 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 - [x] AC3: `check-artifacts` reports `artifact-unreadable` as a blocking finding on a spec at `done` and as a skipped target below it — the one exception to the rule that an unknown is never escalated into a defect, scoped to the spec's own artifact, since an unreadable scenario carrying unresolved questions would otherwise pass the gate built to catch it.
 - [x] AC4: `check-promotion-coverage` reports all four terms of `unclassified = rule-bearing − (table-keyed ∪ pointer-citing)`, not the difference alone. `sections` is required with no default; a named section that does not occur is reported in `missing-sections` rather than contributing zero; `unmatched-keys` reports a reworded entry whose table key no longer matches; `table-state` separates `no-table` from a computed zero; and a supplied `table-file` that cannot be read is an error. `/{project}:audit` Family 38 renders the coverage line to stderr where it never affects the exit code, and an unmatched key and a missing section are findings.
 - [x] AC5: **Line-number citations are reported.** `check-artifacts` runs a `line-number-citations` family over a spec's `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md` and `scenarios/*.md`. It reports as a blocking finding each `:N`, `:N-M` or `:N:C` suffix after a path ending in a file extension, a listed one when the path holds no `/`, each `#LN` or `#LN-LM` anchor after a path, and each inline code span holding only such a suffix, a line number set apart from its file (owner decision, 2026-11-17), inline code spans included and fenced code and blockquotes excluded. No citation is exempt, a commit-pinned one included, and none is grandfathered. A prose line reference is not detected, and a colon and number after anything but a file path, such as a host's port, is not a citation. The family does not examine `review.md` or `analysis.md`. AC1's family list names it, and `framework/reference/analyze.md` states its scope and severity.
+- [ ] AC6: A hard-fail or blocking finding at a design subject of the spec in hand (`spec.md`, `plan.md`, `data-model.md` or a scenario) is fixed by an edit the operator confirms in the run, only the code that edit owes becoming a task, so step 20's re-check judges the fix. `write-analysis` refuses such a finding recorded as deferred whole to that spec's own `tasks.md`, and refuses, recorded undispositioned, a gating finding at a design subject that one of the run's fixes edited. A fixture proves each refusal and each accepted record.
+- [ ] AC7: `/{project}:analyze` judges whether `plan.md` contradicts the spec's Behavior or acceptance criteria, in the step that judges it against `specs/system.md`, each contradiction a Blocking finding.
 
 ## Open Questions
 
