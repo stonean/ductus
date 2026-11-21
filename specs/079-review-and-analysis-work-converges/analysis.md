@@ -1,35 +1,90 @@
 ---
 spec: 079-review-and-analysis-work-converges
-last-run: 2026-11-20T00:39:18Z
-analyzed-against: c66d13d502a07ed86b003ba4909a3587ee5d1791
+last-run: 2026-11-21T21:45:28Z
+analyzed-against: 7fdb5302adee09ab93ac7a4339ab9a6f0c272145
 hard-fail: 0
 blocking-findings: 0
-advisory: 5
+advisory: 3
 unexamined: 3
 analyzed-digest:
   data-model.md: 06298383706eaad589c60381deb6ec991aa75d1ee934006eeb8ff1d792290580
-  plan.md: 70f90f080fcb0f8c72e1dae8d9e9e7b5ecf58ef913e6085fa33fb7d425fe2638
-  research.md: d992eacf8fdd3a7568c8f20415bb7150eb7bb2581d9164fc55f23d60aa7b5952
+  plan.md: ed634b59e0d57daf552254f0f012769d267041f47ccd989576075ece42c357d2
+  research.md: 0b2684cba2edfbdf8778e2367ed7811a5aa7be89839395f897f42f28d6dfb993
   review.md: aa2cf09c438fb23f2a01f34366455790213a3bd9159dc21fa54d9cce28917158
   scenarios/the-excluded-section-lists-paths-only.md: 1763a8c3a9dd478a6f39d2813a73d4804c21dc8e9581c401af3fdaf35e6ea8b1
-  spec.md: 019cec0a588becf44f550d3faa819134361b359b03760bd184f6e13930fa7ec0
+  spec.md: b66be26b08111a80154f7cd60998b9ffbac17c43fc53c6fc6e11a1e65260793b
   tasks.md: d7640c1757c590bf6492db53d28d7e89fbe553dbf5883bf920af96ea6cd31fae
 unexamined-by-reason:
   anchor-target-unjudgeable: 1
   ships-to-adopter: 2
 rule-digest:
-  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
-  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
-  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
-  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  accessibility-frontend.md: 4d7f5ac09d457c99774f5fc341222a464d2b461cb0467cd58a13dc31c928359b
+  api-backend.md: 8e496f92a50b68b1ae8b1954e30a85dd142dc65d3b3882089f9c48560096d800
+  concurrency-backend.md: 2650d82125bd67945fd327f7fb9f76c57ca10d165925733139afa3cd50562dd4
+  configuration-cross.md: 050a5b8dd375fe4790f5d92753db27ae53ac730db1557cbee84b923b72499ca9
   observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
   performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
-  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: 9873cc885c4bdc76eff79a7269a5a6858a0b84c3010ff4b1bc27e7989f708183
-  security-cross.md: bf70990f24e7e67926772be0d95deb7e1c1492bc12bdcb650a23b25385bcd285
-  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+  reliability-backend.md: 26c045df79b6a99319bd7dfa09490b4a2d5ac742eee70a6b3ad0235d49093d2a
+  security-backend.md: 511a68b25ceb148f8292cda2a829aaff03a38bc3453732e33a70bd5d6acf5df5
+  security-cross.md: 26e287f06cdca2744d0972cbf7cf6a48f27d869526dd86c7c375ac4bdc0dadce
+  security-frontend.md: 5fddb21530faa805cb00f23c929e9402548ed0d6a0ed3e8e9a910561b74a45a3
+section-digest:
+  "data-model.md": e3b0c44298fc1c14
+  "data-model.md#079 — Review and analysis work converges Data Model": df3373784178481d
+  "data-model.md#Constants": f37c400acb2b92f5
+  "data-model.md#`brief-re-read` result and `round.toml`": ea609bb20766adaf
+  "data-model.md#`check-review-gate` result": 7f6a708ee2a6c60c
+  "data-model.md#`classify-spec-edit` (new primitive)": 50af62ec3d4cfdc1
+  "data-model.md#`compute-review-scope` result": 4c7b826e118c1e30
+  "data-model.md#`diff-cross-spec` result": f5a011cdf0f1d685
+  "data-model.md#`measure-reopenings` (new primitive)": af14012fb60274c9
+  "data-model.md#`review.md` frontmatter": 888dcecc8514bf10
+  "data-model.md#`write-review` arguments": 2a258012bcea9512
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#079 — Review and analysis work converges Plan": 3e80813376f513f8
+  "plan.md#A run waits for the work": 0c3dc74561220aea
+  "plan.md#Affected Files": 8aa851eecef098fa
+  "plan.md#Cross-spec impact": e42e9f392be561f0
+  "plan.md#Data Model": 40ce1846aee13dcc
+  "plan.md#Dispositions": e72448959ff5ae0b
+  "plan.md#Fix rounds": c11e610c9207075c
+  "plan.md#One commit-attribution helper": 2f5dd511c27018dc
+  "plan.md#One description per primitive": 53540b37939dfdb2
+  "plan.md#Open Questions Resolved": 943a9d6191d629c0
+  "plan.md#Overview": b45c142aa59f62ae
+  "plan.md#Prose cuts come last": 0a3ba0aeb3df320f
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The change is breaking": bc0d8b2b3ff1587c
+  "plan.md#The constitution": e4c6943316077744
+  "plan.md#The gate reads what a review owes": a1ef714684072d43
+  "plan.md#The measurement": 5f11de2d3b504396
+  "plan.md#The open mark": 749fcf6569d30083
+  "plan.md#The scope": 0adafed4977ec5a5
+  "plan.md#The window": 7e1029758d45868b
+  "plan.md#The workflow-step runner": c7345624328d0309
+  "plan.md#The writers this spec changes are guarded where they are owned": 4ad9db3c2e1d81b4
+  "plan.md#Trade-offs": 611fcc8441fe0424
+  "plan.md#What reopens": ff858a10c62b69af
+  "plan.md#`AGENTS.md`": 0953ae4fedcce8ff
+  "plan.md#`diff-cross-spec`": ba5029839bda78a5
+  "scenarios/the-excluded-section-lists-paths-only.md": 50d3794a575f214e
+  "scenarios/the-excluded-section-lists-paths-only.md#Behavior": 49fdc5f0964a61c6
+  "scenarios/the-excluded-section-lists-paths-only.md#Context": 0237c1f49780b845
+  "scenarios/the-excluded-section-lists-paths-only.md#Edge Cases": 8206bcffe2cfcc32
+  "scenarios/the-excluded-section-lists-paths-only.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/the-excluded-section-lists-paths-only.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/the-excluded-section-lists-paths-only.md#The-excluded-section-lists-paths-only": e9dfd6102a162346
+  "spec.md": 72bdd76ae2334055
+  "spec.md#079 — Review and analysis work converges": 982ad1d8e4fa5fdd
+  "spec.md#Acceptance Criteria": 3e361fa6051a79ea
+  "spec.md#Applicable Rules": edc80fdad54b842a
+  "spec.md#Behavior": 55145a9018734d1c
+  "spec.md#Edge Cases": 7367063714e27280
+  "spec.md#Motivation": 81069fbaa0db88c6
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Resolved Questions": 46637ab21eecd67b
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The change is breaking"}
   BE-INPUT-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
@@ -37,20 +92,20 @@ rule-verdicts:
   BE-INPUT-003: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#The scope"}
-  BE-RACE-003: {verdict: addressed, cite: "plan.md#The writers this spec changes are guarded where they are owned"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The workflow-step runner"}
   BE-TXN-002: {verdict: addressed, cite: "plan.md#The writers this spec changes are guarded where they are owned"}
+  BE-TXN-004: {verdict: addressed, cite: "plan.md#The writers this spec changes are guarded where they are owned"}
   CFG-CONST-001: {verdict: addressed, cite: "data-model.md#Constants"}
   CFG-CONST-002: {verdict: addressed, cite: "data-model.md#Constants"}
   CFG-CONST-003: {verdict: addressed, cite: "data-model.md#Constants"}
   QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Edge Cases"}
-  QUAL-DELEG-001: {verdict: addressed, cite: "spec.md#Resolved Questions"}
-  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#The measurement"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#One commit-attribution helper"}
+  QUAL-TEST-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 7
   deferred: 0
-  waived: 5
+  waived: 3
   undispositioned: 0
 decisions:
   - key: decision-reasons — spec.md Resolved Questions (Does a record's commit leave code committed after the run unread?) rejects adding what lies between to the next window because a review preceding its commit would owe a second review for code it read, a review run as the stated reason
@@ -58,25 +113,15 @@ decisions:
     reason: "Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this"
     decided-at: 2026-11-16T17:59:10Z
     decided-by: rule
-  - key: decision-reasons — spec.md Resolved Questions (Does the gate enforce a review that is owed?) rejects an option for 53 more reviews, 33 of them reading only another spec's text
-    outcome: waived
-    reason: "the run counts are this spec's result under design, review and analysis work converging within its bound: the answer weighs misses against AC1 and over-bound closings, measured over 126 closings, not the reopen an option would start"
-    decided-at: 2026-11-18T13:12:40Z
-    decided-by: rule
-  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96541 bytes, 2 read pages at the 50000-byte read size
-    outcome: waived
-    reason: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing.
-    decided-at: 2026-11-20T00:39:18Z
-    decided-by: rule
   - key: "grounding — Trade-offs, the entry on a person's lasting keep of a plan section: '3 of 70 analysis records held any plan-record decision' gives a count with no query or method cited (Grounding, advisory)."
     outcome: waived
     reason: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides.
     decided-at: 2026-11-20T00:39:18Z
     decided-by: rule
-  - key: "grounding — Technical Decisions, the section on writers this spec changes: 'the rest only read, or write a lists file under .ductus/results/ past the read size' enumerates what every other changed primitive writes with no source cited (Grounding, advisory)."
+  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96694 bytes, 2 read pages at the 50000-byte read size
     outcome: waived
-    reason: The sentence states the other changed primitives' write sets, each in its compiled description (`ductus <name> --help`), which the plan's writers section points at; the enumeration adds no requirement, and a citation per primitive is no chore.
-    decided-at: 2026-11-20T00:39:18Z
+    reason: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing.
+    decided-at: 2026-11-21T21:45:28Z
     decided-by: rule
 ---
 
@@ -84,7 +129,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 3 advisory; not blocking. 3 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 3 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -96,11 +141,9 @@ decisions:
 
 ## Advisory findings
 
-- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96541 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
-- grounding — Trade-offs, the entry on a person's lasting keep of a plan section: '3 of 70 analysis records held any plan-record decision' gives a count with no query or method cited (Grounding, advisory). — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides. (decided by the rule)
-- grounding — Technical Decisions, the section on writers this spec changes: 'the rest only read, or write a lists file under .ductus/results/ past the read size' enumerates what every other changed primitive writes with no source cited (Grounding, advisory). — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The sentence states the other changed primitives' write sets, each in its compiled description (`ductus <name> --help`), which the plan's writers section points at; the enumeration adds no requirement, and a citation per primitive is no chore. (decided by the rule)
-- decision-reasons — Resolved Questions, 'Does a record's commit leave code committed after the run unread?': the rejected 'adding what lies between to the next window' is dismissed because it would have a review preceding its commit owe a second review, the review run being the stated reason; the result given up is not named. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
-- decision-reasons — Resolved Questions, 'Does the gate enforce a review that is owed?': 'leaving the Edge Case's literal test' is rejected for '53 more reviews, 33 of them reading only another spec's text', a review-run count being the reason; the result that test would deliver is not stated. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: the run counts are this spec's result under design, review and analysis work converging within its bound: the answer weighs misses against AC1 and over-bound closings, measured over 126 closings, not the reopen an option would start (decided by the rule)
+- grounding — Trade-offs, the entry on a person's lasting keep of a plan section, states that 3 of 70 analysis records held any `plan-record` decision with no commit, date or method, so the figure cannot be re-derived. — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides. (decided by the rule)
+- decision-reasons — Resolved Questions, 'Does a record's commit leave code committed after the run unread?': the first rejected option (adding what lies between to the next window) is rejected because a review preceding its commit would owe a second review, 1 of 143 and over the bound, which is a review run and not a result the option gives up or delivers. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
+- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 96694 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
 
 ## Deferred to other specs
 
@@ -117,4 +160,10 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- grounding — Resolved Questions, AGENTS.md's routing rule: /{project}:specify offering its runtime-owning spec as one candidate cited no command source (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — Motivation: the constitution's blast-radius rule and its no-verdict-is-unknown rule were named with no section (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — Motivation: AGENTS.md's routing rule was stated in the present tense as sending shared runtime work to 022, 066 and 067, which AC16 rewrote; it now reads as at 7b49fc80 (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — Resolved Questions, the Excluded from scope section: the search's hit list left out write-review's description in runtime/src/schema/descriptions.rs (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- grounding — The change is breaking: check-review-gate's blocked-by set was called undocumented as open with no source; it is the closed ReviewGateBlock enum (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — Prose cuts come last: the status reference was said to lose what dashboard renders, though render-status renders the view (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- grounding — Prose cuts come last: 071's AC2 was cited as naming log, which only its Resolved Question on which commands are split does (§Grounding (advisory)). — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
