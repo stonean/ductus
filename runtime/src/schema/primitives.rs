@@ -3150,8 +3150,9 @@ pub struct AnchorReference {
     /// document, or it is a code span holding a path and the reference:
     /// judged against the documents named unless `unjudged` says why not),
     /// `intra-document` (the anchor
-    /// names a heading in the citing file), or `markers` (a claim about the
-    /// markers file).
+    /// names a heading in the citing file), `markers` (a claim about the
+    /// markers file), or `quoted-heading` (a `§"Heading"` the check does not
+    /// read: its `anchor` is the quoted text, and it carries `unjudged`).
     #[serde(default = "default_anchor_kind")]
     pub kind: String,
     /// Present when the reference was **not judged**, naming the unexamined
@@ -3165,6 +3166,18 @@ pub struct AnchorReference {
     /// `shared-constitution-references-are-judged`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unjudged: Option<String>,
+    /// Present, `true`, on an unresolved reference whose next line completes
+    /// it: the text from its `§` to the end of the line, a space and the next
+    /// line, judged as the reference itself is, resolves. It stays unresolved
+    /// (the remedy is unwrapping the line); an explicit `**§X** in` pair is
+    /// never tried.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub wrapped: bool,
+    /// The scenario file holding the reference, repo-relative. Present only on
+    /// a reference of a scenario under the spec a `ductus exec` analyze walk
+    /// scanned; absent on the spec's own references and on every direct call.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
 }
 
 /// Backfill for [`AnchorReference::kind`] when deserializing a result written
@@ -3229,6 +3242,23 @@ pub struct ResolveAnchorResult {
     /// `anchor-target-unreadable`, could not be read.
     #[serde(default)]
     pub anchor_target_unreadable: u32,
+    /// References of kind `quoted-heading`: a `§` followed by a quoted
+    /// heading, a form this primitive does not read. Each is counted again in
+    /// `anchor-target-unjudgeable`, so none reads as passing.
+    #[serde(default)]
+    pub quoted_heading: u32,
+    /// Unresolved references carrying `wrapped`: the reference its next line
+    /// completes.
+    #[serde(default)]
+    pub wrapped: u32,
+    /// Present only in a `ductus exec` analyze walk of a spec's `spec.md`
+    /// (`/{project}:analyze` step 4): the scenario files under the spec it
+    /// scanned, `0` for a spec with none. A scenario that could not be read is
+    /// not counted here but in `anchor-target-unreadable`. Each scenario's
+    /// references carry its `path`, and its unresolved anchors are listed as
+    /// `<path>: <anchor>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenarios_examined: Option<u32>,
     /// Where `references` and `unresolved` are: in this result, or past the
     /// read size in the file `lists-file` names.
     #[serde(default)]
@@ -9722,6 +9752,8 @@ mod tests {
                     resolved: true,
                     kind: "markers".into(),
                     unjudged: None,
+                    wrapped: false,
+                    path: None,
                 },
                 AnchorReference {
                     anchor: "Workflow".into(),
@@ -9729,6 +9761,8 @@ mod tests {
                     resolved: true,
                     kind: "qualified".into(),
                     unjudged: Some("anchor-target-unjudgeable".into()),
+                    wrapped: false,
+                    path: None,
                 },
             ]),
             unresolved: Some(vec![]),
@@ -9738,6 +9772,9 @@ mod tests {
             cross_document: 0,
             anchor_target_unjudgeable: 1,
             anchor_target_unreadable: 0,
+            quoted_heading: 0,
+            wrapped: 0,
+            scenarios_examined: None,
             form: ListsForm::Inline,
             lists_file: None,
         };

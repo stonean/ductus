@@ -82,6 +82,15 @@ The owner's answer (c) to the reopen-avoidance audit (2026-11-12): a rule alone 
 - **An artifact it cannot read** is recorded as the other families record one (`record_unreadable_artifact`).
 - **No history is read.** Nothing is grandfathered: `050-constitution`'s sweep removes this repository's citations before the family ships, and an adopter's are reported when that spec's analysis next runs, which neither the shipped CI template nor the hook does on its own, since neither `framework/templates/ci/adopter-generators.yml` nor `framework/bootstrap/hooks/ductus-pre-commit` calls `check-artifacts` (owner, 2026-11-17).
 
+### `resolve-anchor` judges a scenario's references, and names the forms it does not read (AC8, AC9)
+
+`/{project}:analyze` step 4 runs `resolve-anchor` on the spec and then on each file under `scenarios/`, each with `markers-path` set to the constitution, and reports a reference with the path of the file that holds it. A scenario file it scans counts as examined; a spec with no scenarios examines none, so that reads apart from scenarios left unscanned. `scripts/analyze/detect.py` runs the same calls.
+
+- **A bare `spec.md` in a scenario names the parent's.** A file whose directory is named `scenarios` takes `spec.md` to mean the `spec.md` beside that directory, since none can sit beside a scenario (`Documents::load`'s `parent_spec`). Any other file reads `spec.md` as before, and `../spec.md` resolves as a path as before. Rejected: requiring `../spec.md`, which reopens the scenario template's owner and has adopters rewrite each citation (owner, 2026-11-21).
+- **A quoted heading after `§` is reported, never left out.** `§"Cache invalidation"` is a reference of kind `quoted-heading`: `resolved` true, `unjudged` `anchor-target-unjudgeable` (a form the check does not read, excluded by construction), counted in `quoted-heading` and in `anchor-target-unjudgeable`. No new `unjudged` reason is added, since the reasons are a closed set `write-analysis` and the tally read.
+- **An unresolved reference its next line completes is `wrapped`.** The text from the `§` to the line's end, a space and the next line, judged as the reference itself is, resolving to a heading makes the unresolved reference carry `wrapped: true`, counted in `wrapped`. It stays unresolved: the remedy is unwrapping the line, and a wrapped reference is never read as passing. An explicit `**§X** in` pair is not tried, its bold delimiting the name.
+- **A path leaving the project stays unjudged inside a registered `[services]` checkout.** 030's services are read for a linked spec's `status:` alone; `RESOLVE_ANCHOR` says so (owner, 2026-11-21).
+
 ### Primitive interface changes, classified under `BE-COMPAT-001`
 
 The rule counts a new value in a response set the schema documents as closed as breaking, and this plan reads a narrowed request or a changed exit status, the CLI's machine-readable contract, as breaking too, by the rule's own intent that schema changes be additive, though the Statement does not list them. The runtime is pre-1.0, so a breaking change ships with a minor bump; the unreleased ones ship with 0.60.0. Commits carrying 067's number that change no interface — the logical-line reading and its markers (`0e484e52`, `0a157563`, `cba81b63`, `3b6e6946`, `3b2f0856`, `830e90cb`), the reference-prefix rules of `check-orphaned-references` and `rewrite-spec-links` (`d1853444`, `3fc5755a`, `54715126`, `38fc39f6`), the derive splices (`2be18da6`), the five fixes of `2e66524d` (tasks 38 to 42: a none item skipped by the one open-question parser, case-insensitive plan headings, a port span's finding wording, ignored local state skipped by `check-orphaned-references`, a header row keeping the table's keys) and the reference sweeps (`13acc295`, `bd4da459`) — change which findings fire, not the shape or the contract.
@@ -113,6 +122,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `7f40a52e` (task 35) | `resolve-anchor`, `read-deprecation-labels` | the results gain a count for each list, `form` and `lists-file`; past the read size the lists move to the file `lists-file` names | breaking: past the read size a list a caller read inline is absent, which is ceasing to populate a response field; the fields are additive |
 | (task 36) | `derive-dependencies`, `derive-references` | under `write` a spec changed since it was read is left unwritten and the result gains `refused` and `refused-count`, both absent at zero and the list absent in the file form; the CLI exits non-zero on a refused spec | breaking: a writing run that exited 0 and overwrote the other writer's change now exits non-zero, and `updated` no longer holds every drifted spec it names; the fields are additive |
 | (task 37) | `check-artifacts` | `family` gains `line-number-citations`, a blocking family, so a spec citing a line by number now blocks its advancement | breaking: a new value of a response set documented closed, and a spec the check passed now blocks |
+| (task 45) | `resolve-anchor` | references gain kind `quoted-heading` and the optional `wrapped`, the result `quoted-heading` and `wrapped` counts; a bare `spec.md` in a scenario is the parent's, so a reference judged unjudged or unresolved against no file is now judged | breaking: a new value of `kind`, documented closed, and a reference that read as unjudged now resolves or is unresolved; the fields are additive |
 
 ## Affected Files
 
@@ -142,6 +152,9 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `runtime/src/primitives/read_spec.rs` | Modify | The one open-question parser skips a none list item (task 38) |
 | `runtime/src/primitives/mod.rs` | Modify | `section_line_indices_by`, the case-insensitive heading scan `plan-consistency` uses (task 39) |
 | `scripts/mutation/owner-reviews-067.py` | Modify | M96 to M105, the mutants of tasks 38 to 42 |
+| `scripts/analyze/detect.py` | Modify | Runs `resolve-anchor` on each scenario beside the spec (task 45) |
+| `scripts/tests/test-analyze-scripts.py` | Modify | Proves the scenario calls (task 45) |
+| `framework/commands/analyze.md` | Modify | Step 4 runs `resolve-anchor` on each scenario and counts them examined (task 45) |
 
 ## Data Model
 

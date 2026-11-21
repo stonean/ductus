@@ -6,6 +6,21 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **BREAKING: `resolve-anchor` reads a scenario's bare `spec.md` as the parent's and reports the forms it does not read (spec 067, AC8, AC9).**
+  In a file under a `scenarios` directory a bare `spec.md` names the `spec.md`
+  of the spec that directory sits in, so a reference beside it is judged
+  instead of unjudged, and may now come back unresolved. A `§` followed by a
+  quoted heading is a reference of the new kind `quoted-heading`, `unjudged`
+  `anchor-target-unjudgeable`, counted in the new `quoted-heading` and in
+  `anchor-target-unjudgeable`; an unresolved reference its next line completes
+  carries the new `wrapped: true` and is counted in the new `wrapped`. A
+  consumer that matches `kind` exhaustively gains a value to handle, and one
+  that rejects unknown fields gains three to accept. `--help` states that a
+  path leaving the project is unjudged even inside a registered `[services]`
+  checkout. `/ductus:analyze` step 4 and `scripts/analyze/detect.py` run it on
+  each scenario and count the files examined. An adopter counted 64 citations
+  of a bare `spec.md` in scenarios across two repositories, each read as
+  unjudged.
 - **`brief-re-read` returns the loop's figures, counted from the round directory (spec 078, AC17).**
   Every result gains `rounds` (round directories holding a `round.toml`, this
   call's included), `re-reads-with-findings` (complete results holding a

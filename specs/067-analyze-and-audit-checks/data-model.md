@@ -156,9 +156,13 @@ Result:
   "cross-document": 29,
   "anchor-target-unjudgeable": 4,
   "anchor-target-unreadable": 0,
+  "quoted-heading": 0,
+  "wrapped": 0,
   "form": "inline"
 }
 ```
+
+Two forms are reported beside the four kinds (AC9). A `§` followed by a quoted heading (`§"Cache invalidation"`) is a reference of kind `quoted-heading`: `anchor` is the quoted text, `resolved` is `true`, `unjudged` is `anchor-target-unjudgeable`, and the result counts it in `quoted-heading` and again in `anchor-target-unjudgeable`, a form the check does not read. An unresolved reference whose text from the `§`, a space and the next line resolves as it would on one line carries `"wrapped": true` (omitted otherwise) and is counted in `wrapped`; it stays in `unresolved`. In a scenario file, a file in a directory named `scenarios`, a bare `spec.md` names the `spec.md` of the spec that directory sits in; `../spec.md` is a path as before. A path leaving the project is never read, a registered `[services]` checkout included, and stays unjudged: 030's services are read for a linked spec's `status:` alone.
 
 The result is bounded (`BE-PAYLOAD-001`, 067 task 35): `references` and `unresolved` are inline while the result fits `[artifacts] read-size-bytes`, and past it `form` is `file`, both are absent, `references-count` and `unresolved-count` stay inline in both forms, and `lists-file` names the JSON file under `.ductus/results/resolve-anchor/{path's file stem}/` holding the two lists whole. Every caller reads them from `lists-file` in the file form: `/{project}:audit` Family 39, `/{project}:analyze` step 4 and the `ductus exec` walker (`restore_lists`).
 

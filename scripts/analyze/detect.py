@@ -10,7 +10,9 @@ resolve-anchor, check-rule-ids, check-departures, derive-dependencies,
 lint-markdown, check-artifacts, check-orphaned-references,
 check-unfolded-specs (steps 2-10), resolve-references when the spec has a
 references: index (step 13), prune-plan and check-artifact-size (steps 16
-and 17). Each result is saved whole, its lists-file merged in, under
+and 17), and resolve-anchor on each scenario under the spec (step 4; spec 067,
+AC8), merged into <work>/det/resolve-anchor.json with scenarios-examined, the
+count of files scanned. Each result is saved whole, its lists-file merged in, under
 <work>/det/<primitive>.json, with <work>/det/meta.json holding HEAD, the
 digest of the feature's files, the rule files and the constitution it ran
 over, and a digest of the working tree's uncommitted state; each run first
@@ -66,6 +68,41 @@ def constitution():
         if os.path.isfile(p):
             return p
     raise lib.Unreadable("no constitution at framework/constitution.md or .ductus/constitution.md")
+
+
+def scenario_anchors(feature, det):
+    """Step 4 on each scenario under the spec (spec 067, AC8): resolve-anchor
+    per file, its references merged into the spec's resolve-anchor.json, each
+    tagged with the path of the file that holds it, and an unresolved anchor of
+    a scenario listed as "<path>: <anchor>". scenarios-examined counts the
+    scenario files scanned, so a spec with no scenarios (0) reads apart from
+    scenarios left unscanned. A scenario whose call returns no result is
+    Unreadable, as a spec-level step is."""
+    spec = f"specs/{feature}/spec.md"
+    merged = lib.read_json(os.path.join(det, "resolve-anchor.json"))
+    if not isinstance(merged.get("references"), list):
+        raise lib.Unreadable("resolve-anchor's result has no references list")
+    for ref in merged["references"]:
+        ref["path"] = spec
+    d = os.path.join("specs", feature, "scenarios")
+    names = sorted(n for n in os.listdir(d) if n.endswith(".md")) if os.path.isdir(d) else []
+    for n in names:
+        path = f"{d}/{n}"
+        try:
+            result, _ = lib.call("resolve-anchor", "--path", path, "--markers-path", constitution(),
+                                 allow_exit=True)
+        except lib.Unreadable as e:
+            raise lib.Unreadable(f"resolve-anchor on {path}: {e}") from e
+        refs = result.get("references")
+        if not isinstance(refs, list):
+            raise lib.Unreadable(f"resolve-anchor on {path} returned no references list")
+        merged["references"] += [{**ref, "path": path} for ref in refs]
+        merged["unresolved"] = (merged.get("unresolved") or []) + [
+            f"{path}: {a}" for a in result.get("unresolved") or []]
+        print(f"resolve-anchor {path}: {summary('resolve-anchor', result)}")
+    merged["scenarios-examined"] = len(names)
+    lib.write_json(os.path.join(det, "resolve-anchor.json"), merged)
+    print(f"resolve-anchor scenarios: examined={len(names)}")
 
 
 def summary(name, r):
@@ -155,6 +192,7 @@ def run(argv):
         print(f"{name}{f' (exit {code})' if code else ''}: {summary(name, result)}")
     if failed:
         raise lib.Unreadable(f"no result from {', '.join(failed)}; the run is not detected")
+    scenario_anchors(feature, det)
     lib.write_json(meta, {"head": lib.head(), "digest": digest, "tree": tree, "exits": exits})
 
 

@@ -81,6 +81,10 @@ Coverage:
      a tracked file edited, outside the feature
   AJ. split.py exits 2 on a budget flag that is not a whole number of at
      least 1, naming the flag, the value and the bound, and takes 1
+  AO. detect.py runs resolve-anchor on each scenario under the spec, tags each
+     reference with its file's path, counts the scenario files as examined (0
+     for a spec with none), and record.py counts their unjudged references
+     unexamined (spec 067, AC8)
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty
@@ -744,6 +748,31 @@ def aj(p, name):
            and r3.returncode == 0, r1.stderr + r2.stderr + r3.stderr)
 
 
+def ao(p, name):
+    ref = {"anchor": "X", "line": 3, "resolved": True, "kind": "qualified",
+           "unjudged": "anchor-target-unjudgeable"}
+    p.answer("resolve-anchor", {"references": [ref], "unresolved": ["Gone"]})
+    r = p.run("detect.py", F)
+    calls = [c for c in p.calls("resolve-anchor") if "--path" in c][-4:]
+    paths = [c[c.index("--path") + 1] for c in calls]
+    want = [f"specs/{F}/spec.md"] + [f"specs/{F}/scenarios/{n}.md" for n in ("one", "three", "two")]
+    det = json.load(open(os.path.join(p.work, "det", "resolve-anchor.json")))
+    tagged = sorted({x["path"] for x in det["references"]})
+    record_setup(p)
+    r2 = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    shutil.rmtree(os.path.join(p.root, "specs", F, "scenarios"))
+    r3 = p.run("detect.py", F)
+    none = json.load(open(os.path.join(p.work, "det", "resolve-anchor.json")))
+    check_(name, r.returncode == 0 and paths == want and all("--markers-path" in c for c in calls)
+           and det["scenarios-examined"] == 3 and len(det["references"]) == 4 and tagged == sorted(want)
+           and det["unresolved"] == ["Gone", f"specs/{F}/scenarios/one.md: Gone",
+                                     f"specs/{F}/scenarios/three.md: Gone", f"specs/{F}/scenarios/two.md: Gone"]
+           and r2.returncode == 0 and "anchor-target-unjudgeable=4" in wa
+           and r3.returncode == 0 and none["scenarios-examined"] == 0 and len(none["references"]) == 1,
+           r.stdout + r.stderr + r2.stderr + r3.stderr + json.dumps([paths, det, wa]))
+
+
 def z(name):
     """detect.py through record.py --write against the real release binary,
     in a fixture project holding one rule file and an unfolded staging spec."""
@@ -876,6 +905,7 @@ def main():
     case("AH. record.py and split.py exit 2 on a result missing what the runtime writes", ah)
     case("AI. split.py refuses detection older than an untracked file", ai)
     case("AJ. split.py names the flag, value and bound of a bad budget", aj)
+    case("AO. detect.py runs resolve-anchor on each scenario and counts them examined", ao)
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)

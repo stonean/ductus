@@ -78,6 +78,12 @@
 //! not a section a pointer can name. Outside a pair, a reference names a
 //! heading its text begins with, ending where a word ends.
 //!
+//! Two forms are reported beside the four kinds rather than left out (067
+//! AC9). A `§` followed by a quoted heading is kind `quoted-heading`, a form
+//! this check does not read, counted as unjudgeable. An unresolved reference
+//! whose next line completes it carries `wrapped`. In a scenario (a file
+//! under a `scenarios` directory) a bare `spec.md` names the parent spec's.
+//!
 //! What stays reported is deliberate. `the bootstrap's §Derived values` and
 //! `spec 022 §Versioning` name another document in prose without naming the
 //! file, so they cannot be verified *or* excluded; reporting them is the
@@ -128,6 +134,12 @@ pub struct Anchors {
     pub anchor_target_unjudgeable: u32,
     /// See [`ResolveAnchorResult::anchor_target_unreadable`].
     pub anchor_target_unreadable: u32,
+    /// See [`ResolveAnchorResult::quoted_heading`].
+    pub quoted_heading: u32,
+    /// See [`ResolveAnchorResult::wrapped`].
+    pub wrapped: u32,
+    /// See [`ResolveAnchorResult::scenarios_examined`].
+    pub scenarios_examined: Option<u32>,
 }
 
 /// `scan` as the primitive's result: inline while it fits `[artifacts]
@@ -155,6 +167,9 @@ pub fn bound(scan: Anchors, path: &str, repo: &Path) -> Result<ResolveAnchorResu
         cross_document: scan.cross_document,
         anchor_target_unjudgeable: scan.anchor_target_unjudgeable,
         anchor_target_unreadable: scan.anchor_target_unreadable,
+        quoted_heading: scan.quoted_heading,
+        wrapped: scan.wrapped,
+        scenarios_examined: scan.scenarios_examined,
         form: ListsForm::Inline,
         lists_file: None,
     };
@@ -166,6 +181,95 @@ pub fn bound(scan: Anchors, path: &str, repo: &Path) -> Result<ResolveAnchorResu
         result.lists_file = Some(file);
     }
     Ok(result)
+}
+
+/// `resolve-anchor` as `/{project}:analyze` step 4 runs it under `ductus exec`
+/// (067 AC8): on `args.path`, and when that is a spec's `spec.md`, on each
+/// file under its `scenarios/` as well, the scans merged before the result is
+/// bounded, so it is held to the read size once. A scenario's references carry
+/// its `path`, its unresolved anchors are listed as `<path>: <anchor>`, its
+/// counts add to the spec's, and `scenarios-examined` is the number of
+/// scenario files scanned (0 for a spec with none). A scenario that cannot be
+/// read is counted in `anchor-target-unreadable` and not examined. Any other
+/// path is scanned alone, with `scenarios-examined` absent.
+///
+/// # Errors
+///
+/// Those [`compute`] returns for `args.path`, and [`bound`].
+pub fn run_with_scenarios(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult> {
+    let mut scan = compute(args, repo)?;
+    let spec = Path::new(&args.path);
+    if spec.file_name() == Some(std::ffi::OsStr::new(SPEC_FILE)) {
+        let dir = spec
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(SCENARIOS_DIR);
+        let mut examined = 0u32;
+        for scenario in scenario_files(repo, &dir) {
+            let scenario_args = ResolveAnchorArgs {
+                path: scenario.clone(),
+                markers_path: args.markers_path.clone(),
+            };
+            let Ok(found) = compute(&scenario_args, repo) else {
+                scan.anchor_target_unreadable = scan.anchor_target_unreadable.saturating_add(1);
+                continue;
+            };
+            examined = examined.saturating_add(1);
+            scan.merge_scenario(&scenario, found);
+        }
+        scan.scenarios_examined = Some(examined);
+    }
+    bound(scan, &args.path, repo)
+}
+
+/// The `.md` files directly under `dir`, repo-relative and sorted; none when
+/// the directory is absent or cannot be read.
+fn scenario_files(repo: &Path, dir: &Path) -> Vec<String> {
+    let dir = dir.to_string_lossy().replace('\\', "/");
+    let Ok(listed) = contained_path(repo, &dir).and_then(|abs| {
+        std::fs::read_dir(abs).map_err(|source| crate::primitives::PrimitiveError::Io {
+            path: dir.clone().into(),
+            source,
+        })
+    }) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = listed
+        .filter_map(std::result::Result::ok)
+        .filter(|entry| is_markdown(&entry.file_name().to_string_lossy()))
+        .map(|entry| format!("{dir}/{}", entry.file_name().to_string_lossy()))
+        .collect();
+    names.sort();
+    names
+}
+
+impl Anchors {
+    /// Add a scenario's scan: its references tagged with `path`, its
+    /// unresolved anchors as `<path>: <anchor>`, its counts.
+    fn merge_scenario(&mut self, path: &str, scan: Anchors) {
+        self.references.extend(
+            scan.references
+                .into_iter()
+                .map(|reference| AnchorReference {
+                    path: Some(path.to_string()),
+                    ..reference
+                }),
+        );
+        self.unresolved
+            .extend(scan.unresolved.into_iter().map(|a| format!("{path}: {a}")));
+        self.unresolved.sort();
+        self.qualified = self.qualified.saturating_add(scan.qualified);
+        self.intra_document = self.intra_document.saturating_add(scan.intra_document);
+        self.cross_document = self.cross_document.saturating_add(scan.cross_document);
+        self.anchor_target_unjudgeable = self
+            .anchor_target_unjudgeable
+            .saturating_add(scan.anchor_target_unjudgeable);
+        self.anchor_target_unreadable = self
+            .anchor_target_unreadable
+            .saturating_add(scan.anchor_target_unreadable);
+        self.quoted_heading = self.quoted_heading.saturating_add(scan.quoted_heading);
+        self.wrapped = self.wrapped.saturating_add(scan.wrapped);
+    }
 }
 
 /// Scan every `§` reference in the file `args` names, every list whole.
@@ -203,8 +307,9 @@ pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
         markers: &markers,
     };
     let mut tally = Tally::default();
-    for (line_no, line) in content.lines().enumerate() {
-        let line_no = u32::try_from(line_no + 1).unwrap_or(u32::MAX);
+    let lines: Vec<&str> = content.lines().collect();
+    for (index, line) in lines.iter().copied().enumerate() {
+        let line_no = u32::try_from(index + 1).unwrap_or(u32::MAX);
         // A line with no `§` yields no reference in either loop below
         // (`span_citation` needs exactly one), so a document it names is not
         // opened for it.
@@ -222,6 +327,30 @@ pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
             _ => None,
         };
         let pairs = documents.shipped.pairs(line);
+        // Order matters. An explicit pair into a shipped document is judged
+        // against that document alone, by equality; a line naming exactly one
+        // shipped document judges against its source, the citing file and the
+        // markers (both 071's); a line naming any other document is judged
+        // against every readable one it names, with the same two fallbacks;
+        // only then a local heading, and last the markers file.
+        let classify = |rest: &str, anchor: &str, pair: Option<bool>| {
+            let cross = pair.or_else(|| {
+                single_shipped.map(|headings| {
+                    names_local_heading(headings, rest)
+                        || names_local_heading(&own_headings, rest)
+                        || markers.contains(anchor)
+                })
+            });
+            if let Some(resolved) = cross {
+                Classified::Cross(resolved)
+            } else if !named.is_empty() {
+                Classified::Qualified(judge(&named, rest, anchor, &ctx))
+            } else if names_local_heading(&own_headings, rest) {
+                Classified::Intra
+            } else {
+                Classified::Markers(markers.contains(anchor))
+            }
+        };
         let mut on_line: Vec<(usize, AnchorReference)> = Vec::new();
         for cap in reference_regex().captures_iter(line) {
             let whole = cap.get(0).map_or(0, |m| m.start());
@@ -240,78 +369,50 @@ pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
                 continue;
             }
             let rest = &line[whole..];
-            // Order matters. An explicit pair into a shipped document is
-            // judged against that document alone, by equality; a line naming
-            // exactly one shipped document judges against its source, the
-            // citing file and the markers (both 071's); a line naming any
-            // other document is judged against every readable one it names,
-            // with the same two fallbacks; only then a local heading, and
-            // last the markers file.
-            let cross = pairs.get(&whole).copied().or_else(|| {
-                single_shipped.map(|headings| {
-                    names_local_heading(headings, rest)
-                        || names_local_heading(&own_headings, rest)
-                        || markers.contains(&anchor)
-                })
-            });
-            let reference = if let Some(resolved) = cross {
-                tally.cross(&anchor, resolved, line_no)
-            } else if !named.is_empty() {
-                let verdict = judge(&named, rest, &anchor, &ctx);
-                tally.qualified(&anchor, verdict, line_no)
-            } else if names_local_heading(&own_headings, rest) {
-                tally.intra(&anchor, line_no)
-            } else {
-                tally.markers(&anchor, markers.contains(&anchor), line_no)
+            let pair = pairs.get(&whole).copied();
+            let classified = classify(rest, &anchor, pair);
+            // An unresolved reference its next line completes is wrapped
+            // (AC9). A pair is not tried: its bold marks where the name ends.
+            let wrapped = pair.is_none()
+                && classified.unresolved()
+                && lines.get(index + 1).is_some_and(|next| {
+                    let next = next.trim_start().trim_start_matches('>').trim_start();
+                    classify(&format!("{rest} {next}"), &anchor, None).resolves()
+                });
+            let mut reference = match classified {
+                Classified::Cross(resolved) => tally.cross(&anchor, resolved, line_no),
+                Classified::Qualified(verdict) => tally.qualified(&anchor, verdict, line_no),
+                Classified::Intra => tally.intra(&anchor, line_no),
+                Classified::Markers(resolved) => tally.markers(&anchor, resolved, line_no),
             };
+            if wrapped {
+                tally.wrap(&mut reference);
+            }
             on_line.push((whole, reference));
         }
-        // A code span whose whole content is a path followed by one `§`
-        // reference is a citation of that path's section (scenario
-        // `shared-constitution-references-are-judged`, decision (c)): judged
-        // against that document, with the line rule's two fallbacks.
-        for span in &code_spans {
-            let Some((token, offset)) = span_citation(&line[span.clone()]) else {
-                continue;
-            };
-            let whole = span.start + offset;
-            let rest = &line[whole..span.end];
-            let Some(cap) = reference_regex().captures(rest) else {
-                continue;
-            };
-            let anchor = cap[1].to_string();
-            let reference = match documents.resolve(&token) {
-                Named::Markers => tally.markers(&anchor, markers.contains(&anchor), line_no),
-                target => {
-                    let verdict = judge(&[(token, target)], rest, &anchor, &ctx);
-                    tally.qualified(&anchor, verdict, line_no)
-                }
-            };
-            on_line.push((whole, reference));
-        }
+        on_line.extend(quoted_references(line, &code_spans, line_no, &mut tally));
+        on_line.extend(span_citations(
+            line,
+            &code_spans,
+            line_no,
+            &mut documents,
+            &ctx,
+            &mut tally,
+        ));
         on_line.sort_by_key(|(at, _)| *at);
         tally
             .references
             .extend(on_line.into_iter().map(|(_, reference)| reference));
     }
 
-    let mut unresolved: Vec<String> = tally.unresolved.into_iter().collect();
-    unresolved.sort();
-    Ok(Anchors {
-        references: tally.references,
-        unresolved,
-        qualified: tally.qualified,
-        intra_document: tally.intra_document,
-        cross_document: tally.cross_document,
-        anchor_target_unjudgeable: tally.unjudgeable,
-        anchor_target_unreadable: tally.unreadable,
-    })
+    Ok(tally.finish())
 }
 
 const KIND_MARKERS: &str = "markers";
 const KIND_QUALIFIED: &str = "qualified";
 const KIND_INTRA_DOCUMENT: &str = "intra-document";
 const KIND_CROSS_DOCUMENT: &str = "cross-document";
+const KIND_QUOTED_HEADING: &str = "quoted-heading";
 
 /// The unexamined reason for a reference this primitive could not judge
 /// because nothing it names holds a section it can read: every document its
@@ -325,6 +426,35 @@ pub(crate) const UNJUDGEABLE: &str = "anchor-target-unjudgeable";
 /// is a registered `[constitutions.*]` entry that did not resolve. Could not
 /// be read: something the run meant to see went unseen.
 pub(crate) const UNREADABLE: &str = "anchor-target-unreadable";
+
+/// What a reference classified as, before it is recorded.
+enum Classified {
+    Cross(bool),
+    Qualified(Verdict),
+    Intra,
+    Markers(bool),
+}
+
+impl Classified {
+    /// Whether it was judged and did not resolve.
+    fn unresolved(&self) -> bool {
+        matches!(
+            self,
+            Self::Cross(false) | Self::Markers(false) | Self::Qualified(Verdict::Unresolved)
+        )
+    }
+
+    /// Whether it was judged, or is a heading of the citing file, and resolved.
+    fn resolves(&self) -> bool {
+        matches!(
+            self,
+            Self::Cross(true)
+                | Self::Markers(true)
+                | Self::Intra
+                | Self::Qualified(Verdict::Resolved)
+        )
+    }
+}
 
 /// The citing file's own headings and the markers file's markers: the two
 /// fallbacks every judged reference outside an explicit pair may resolve by.
@@ -402,9 +532,29 @@ struct Tally {
     cross_document: u32,
     unjudgeable: u32,
     unreadable: u32,
+    quoted_heading: u32,
+    wrapped: u32,
 }
 
 impl Tally {
+    /// The scan: its unresolved anchors sorted, every count as tallied.
+    fn finish(self) -> Anchors {
+        let mut unresolved: Vec<String> = self.unresolved.into_iter().collect();
+        unresolved.sort();
+        Anchors {
+            references: self.references,
+            unresolved,
+            qualified: self.qualified,
+            intra_document: self.intra_document,
+            cross_document: self.cross_document,
+            anchor_target_unjudgeable: self.unjudgeable,
+            anchor_target_unreadable: self.unreadable,
+            quoted_heading: self.quoted_heading,
+            wrapped: self.wrapped,
+            scenarios_examined: None,
+        }
+    }
+
     fn record(
         &mut self,
         anchor: &str,
@@ -422,7 +572,23 @@ impl Tally {
             resolved,
             kind: kind.to_string(),
             unjudged: unjudged.map(str::to_string),
+            wrapped: false,
+            path: None,
         }
+    }
+
+    /// A `§"Heading"`: the form this primitive does not read, counted in
+    /// `quoted-heading` and again as unjudgeable, never resolved or broken.
+    fn quoted(&mut self, anchor: &str, line: u32) -> AnchorReference {
+        self.quoted_heading = self.quoted_heading.saturating_add(1);
+        self.unjudgeable = self.unjudgeable.saturating_add(1);
+        self.record(anchor, line, KIND_QUOTED_HEADING, true, Some(UNJUDGEABLE))
+    }
+
+    /// Mark an unresolved reference as one its next line completes.
+    fn wrap(&mut self, reference: &mut AnchorReference) {
+        self.wrapped = self.wrapped.saturating_add(1);
+        reference.wrapped = true;
     }
 
     fn cross(&mut self, anchor: &str, resolved: bool, line: u32) -> AnchorReference {
@@ -495,6 +661,10 @@ struct Documents<'a> {
     citing_dir: PathBuf,
     /// `markers-path`, lexically normalized; `None` without one.
     markers_rel: Option<PathBuf>,
+    /// For a scenario (a file in a directory named `scenarios`), the
+    /// `spec.md` of the spec that directory sits in, which a bare `spec.md`
+    /// names there (067 AC9). `None` for any other citing file.
+    parent_spec: Option<PathBuf>,
     shipped: Shipped<'a>,
     /// Each registered document's absolute path, with its markers when it
     /// loaded and could be read.
@@ -510,6 +680,9 @@ impl<'a> Documents<'a> {
             .map(Path::to_path_buf)
             .unwrap_or_default();
         let markers_rel = markers_path.and_then(|m| normalize_rel(Path::new(""), m));
+        let parent_spec = (citing_dir.file_name() == Some(std::ffi::OsStr::new(SCENARIOS_DIR)))
+            .then(|| citing_dir.parent().map(|spec_dir| spec_dir.join(SPEC_FILE)))
+            .flatten();
         // The registry is read through `resolve-constitutions` itself, the
         // loading policy for these documents (scenario
         // `shared-constitution-references-are-judged`). A registered path
@@ -533,6 +706,7 @@ impl<'a> Documents<'a> {
             repo_abs,
             citing_dir,
             markers_rel,
+            parent_spec,
             shipped: Shipped::load(repo),
             registered,
             resolved: HashMap::new(),
@@ -578,10 +752,15 @@ impl<'a> Documents<'a> {
             return Named::Absent;
         }
         let bases = [self.citing_dir.clone(), PathBuf::new()];
-        let relatives: Vec<PathBuf> = bases
-            .iter()
-            .filter_map(|base| normalize_rel(base, token))
-            .collect();
+        // In a scenario a bare `spec.md` names the parent spec's: none can
+        // sit beside a scenario, and the root's is no spec's.
+        let relatives: Vec<PathBuf> = match &self.parent_spec {
+            Some(parent) if token == SPEC_FILE => vec![parent.clone()],
+            _ => bases
+                .iter()
+                .filter_map(|base| normalize_rel(base, token))
+                .collect(),
+        };
         if self
             .markers_rel
             .as_ref()
@@ -649,6 +828,11 @@ impl<'a> Documents<'a> {
         }
     }
 }
+
+/// The directory a feature's scenarios live in, and the file a bare name in one
+/// of them reads as the parent's.
+const SCENARIOS_DIR: &str = "scenarios";
+const SPEC_FILE: &str = "spec.md";
 
 /// The installer whose **Shared Files** manifest maps each shipped document to
 /// its framework source. Present only in a framework checkout.
@@ -1033,6 +1217,74 @@ fn pair_regex() -> &'static Regex {
 fn reference_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| Regex::new(r"§([A-Za-z][A-Za-z0-9_-]*)").expect("hard-coded regex compiles"))
+}
+
+/// The code spans of `line` that are a citation: a span whose whole content is
+/// a path followed by one `§` reference cites that path's section (scenario
+/// `shared-constitution-references-are-judged`, decision (c)), judged against
+/// that document with the line rule's two fallbacks. Each comes with the
+/// offset of its `§`.
+fn span_citations(
+    line: &str,
+    code_spans: &[std::ops::Range<usize>],
+    line_no: u32,
+    documents: &mut Documents<'_>,
+    ctx: &Fallbacks<'_>,
+    tally: &mut Tally,
+) -> Vec<(usize, AnchorReference)> {
+    let mut found = Vec::new();
+    for span in code_spans {
+        let Some((token, offset)) = span_citation(&line[span.clone()]) else {
+            continue;
+        };
+        let whole = span.start + offset;
+        let rest = &line[whole..span.end];
+        let Some(cap) = reference_regex().captures(rest) else {
+            continue;
+        };
+        let anchor = cap[1].to_string();
+        let reference = match documents.resolve(&token) {
+            Named::Markers => tally.markers(&anchor, ctx.markers.contains(&anchor), line_no),
+            target => {
+                let verdict = judge(&[(token, target)], rest, &anchor, ctx);
+                tally.qualified(&anchor, verdict, line_no)
+            }
+        };
+        found.push((whole, reference));
+    }
+    found
+}
+
+/// The `§"Heading"` forms on `line`, each reported as a form this check does
+/// not read (AC9) rather than left out of every count, with the offset of its
+/// `§`. The same exclusions as a plain reference apply: a marker comment and a
+/// code span hold none.
+fn quoted_references(
+    line: &str,
+    code_spans: &[std::ops::Range<usize>],
+    line_no: u32,
+    tally: &mut Tally,
+) -> Vec<(usize, AnchorReference)> {
+    let mut found = Vec::new();
+    for cap in quoted_regex().captures_iter(line) {
+        let whole = cap.get(0).map_or(0, |m| m.start());
+        if is_within_marker_comment(line, whole)
+            || code_spans.iter().any(|span| span.contains(&whole))
+        {
+            continue;
+        }
+        found.push((whole, tally.quoted(cap[1].trim(), line_no)));
+    }
+    found
+}
+
+/// A `§` followed by a quoted heading, straight or curly quotes, capturing the
+/// quoted text.
+fn quoted_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new("§[\"\u{201C}]([^\"\u{201D}]+)[\"\u{201D}]").expect("hard-coded regex compiles")
+    })
 }
 
 fn is_within_marker_comment(line: &str, match_start: usize) -> bool {
@@ -2118,5 +2370,124 @@ mod tests {
             &serde_json::to_value(&bounded).unwrap(),
             &lists,
         );
+    }
+
+    /// A tree holding `specs/001-x/spec.md` with `## Surface` and `## Cache
+    /// invalidation`, scanned from the file `path` holding `body` (067 AC8,
+    /// AC9; the adopter report's fixture).
+    fn scan_scenario(path: &str, body: &str) -> Anchors {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join("specs/001-x/scenarios")).unwrap();
+        std::fs::write(
+            root.join("specs/001-x/spec.md"),
+            "# X\n\n## Surface\n\n## Cache invalidation\n",
+        )
+        .unwrap();
+        std::fs::write(root.join("markers.md"), "<!-- §known -->\n").unwrap();
+        let file = root.join(path);
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, body).unwrap();
+        compute(
+            &ResolveAnchorArgs {
+                path: path.into(),
+                markers_path: Some("markers.md".into()),
+            },
+            root,
+        )
+        .unwrap()
+    }
+
+    const SCENARIO: &str = "specs/001-x/scenarios/s.md";
+
+    /// A bare `spec.md` in a scenario is the parent's: judged, not unjudged,
+    /// and unresolved when the parent lacks the heading. `../spec.md` resolved
+    /// before and still does; a bare `spec` names no file and stays reported.
+    #[test]
+    fn a_bare_spec_md_in_a_scenario_names_the_parents() {
+        let r = scan_scenario(
+            SCENARIO,
+            "# S\n\nSee (spec §Surface).\nSee (`spec.md` §Surface).\nSee (`spec.md` §Missing).\nSee (`../spec.md` §Surface).\n",
+        );
+        assert_eq!(
+            verdicts(&r),
+            [
+                ("Surface", false, None),
+                ("Surface", true, None),
+                ("Missing", false, None),
+                ("Surface", true, None),
+            ]
+        );
+        assert_eq!(kinds(&r)[0], KIND_MARKERS);
+        assert_eq!(r.unresolved, ["Missing".to_string(), "Surface".to_string()]);
+        assert_eq!((r.qualified, r.anchor_target_unjudgeable), (3, 0));
+    }
+
+    /// Outside a scenario a bare `spec.md` is read as it always was: with no
+    /// such file beside the citing file or at the root, it is unjudged.
+    #[test]
+    fn a_bare_spec_md_outside_a_scenario_is_unjudged_as_before() {
+        let r = scan_scenario("notes/n.md", "See (`spec.md` §Surface).\n");
+        assert_eq!(
+            verdicts(&r),
+            [("Surface", true, Some("anchor-target-unjudgeable"))]
+        );
+    }
+
+    /// A quoted heading is reported as a form the check does not read: present
+    /// in `references`, counted, never resolved or broken. A plain reference
+    /// beside it is read as before, and one inside a code span is no reference.
+    #[test]
+    fn a_quoted_heading_is_reported_as_a_form_not_read() {
+        let r = scan_scenario(
+            SCENARIO,
+            "# S\n\nSee §\"Cache invalidation\" and `§\"Surface\"` and §known.\n",
+        );
+        assert_eq!(
+            verdicts(&r),
+            [
+                (
+                    "Cache invalidation",
+                    true,
+                    Some("anchor-target-unjudgeable")
+                ),
+                ("known", true, None),
+            ]
+        );
+        assert_eq!(kinds(&r), [KIND_QUOTED_HEADING, KIND_MARKERS]);
+        assert_eq!(
+            (
+                r.quoted_heading,
+                r.anchor_target_unjudgeable,
+                r.unresolved.len()
+            ),
+            (1, 1, 0)
+        );
+    }
+
+    /// An unresolved reference whose next line completes it is wrapped, and
+    /// stays unresolved; one the next line does not complete is not, and a
+    /// resolved one never is.
+    #[test]
+    fn an_unresolved_reference_its_next_line_completes_is_wrapped() {
+        let r = scan_scenario(
+            SCENARIO,
+            "# S\n\nSee `spec.md` §Cache\ninvalidation for more.\n\nSee `spec.md` §Nope\nunrelated text.\n\nSee `spec.md` §Surface\n",
+        );
+        let wrapped: Vec<(&str, bool, bool)> = r
+            .references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.resolved, x.wrapped))
+            .collect();
+        assert_eq!(
+            wrapped,
+            [
+                ("Cache", false, true),
+                ("Nope", false, false),
+                ("Surface", true, false)
+            ]
+        );
+        assert_eq!(r.wrapped, 1);
+        assert_eq!(r.unresolved, ["Cache".to_string(), "Nope".to_string()]);
     }
 }
