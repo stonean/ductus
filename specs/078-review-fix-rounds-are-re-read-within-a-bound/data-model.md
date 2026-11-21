@@ -11,8 +11,9 @@ The shapes [078](spec.md)'s fix-round loop reads and writes: the round directory
 | `{base}/round.toml` | `brief-re-read` | `snapshot` (the tree the re-read reads, and the next round's base), `paths` |
 | `{base}/brief.md` | `brief-re-read` | The re-read's brief, rendered whole by the runtime |
 | `{base}/result.json` | the re-read | Its findings and prescriptions; see **Result file** |
+| `start.toml`, beside the round subdirectories | `start-fix-rounds` | `started-at`, the UTC time the loop started, as the runtime's clock read it (`YYYY-MM-DDTHH:MM:SSZ`) |
 
-`start-fix-rounds` removes the feature's earlier subdirectories, so a run starts from no rounds.
+`start-fix-rounds` removes the feature's earlier subdirectories and `start.toml`, so a run starts from no rounds and records its own start; a subdirectory counts as a round only when it holds a `round.toml`.
 
 ## `start-fix-rounds`
 
@@ -23,6 +24,7 @@ Args: `{ "feature": "042-widget" }`
 Result: `{ "base": "<sha>", "files": 812, "budget": 2 }`
 
 - `base`, `files` and `budget` are as `ductus start-fix-rounds --help` states. The snapshot's author and committer are a fixed `ductus` identity, so no `user.name` is needed, and its parent is none on an unborn `HEAD`; the runtime holds the budget once (`runtime/src/primitives/fix_rounds.rs`, `RE_READ_BUDGET`), and `write-review`'s `budget-stop` derivation reads the same constant.
+- It also writes `start.toml` into the feature's round directory (AC17), which `brief-re-read` reads for `elapsed-seconds`; the result is unchanged.
 - Errors: a `feature` outside the allowlist, one that would leave the spec root, a feature directory that does not exist, a malformed `[review] re-reads-off` or config file, read here before the run writes any fix, a round directory that cannot be cleared, a project no work tree contains, or a libgit2 failure. An error is never a base: the host records the run's first round as not re-read (AC15).
 
 ## `brief-re-read`
@@ -37,14 +39,24 @@ Result:
 { "kind": "re-read", "form": "inline", "paths-count": 2, "exempt-count": 0, "excluded-count": 0,
   "paths": ["runtime/src/x.rs", "specs/042-widget/data-model.md"],
   "snapshot": "<sha>", "brief": ".ductus/review-rounds/042-widget/<base>/brief.md",
-  "result": ".ductus/review-rounds/042-widget/<base>/result.json", "re-reads-off": null, "exempt": [], "excluded": [] }
+  "result": ".ductus/review-rounds/042-widget/<base>/result.json", "re-reads-off": null, "exempt": [], "excluded": [],
+  "rounds": 1, "re-reads-with-findings": 0, "elapsed-seconds": 120, "elapsed-absent-reason": null }
 ```
 
 - `paths` — as `ductus brief-re-read --help` states. Its diff is tree to tree, never `modified-since`, whose diff runs through the index and would report every unstaged edit a snapshot base already holds; the project bound is `compute-review-scope`'s (`runtime/src/primitives/compute_review_scope.rs`, `project_diff_options` and `project_paths`), and the feature's own `review.md` is left out by `runtime/src/primitives/fix_rounds.rs`, `round_paths` (scenario `a-reviews-own-record-is-no-fix-round`).
 - `kind` — as `ductus brief-re-read --help` states: `exempt` holds each analyze subject that is not a durable contract (`runtime/src/primitives/analyze_subjects.rs`, `is_analyze_subject` and not `is_review_contract`), and a round that takes a snapshot makes it the next base, so a later round never re-includes this one's changes.
 - `re-reads-off` — as `ductus brief-re-read --help` states: the `[review] re-reads-off` reason, with no snapshot and no brief.
 - `form`, `paths-count` and `lists-file` — the result's bound (scenario `fix-round-results-have-a-bounded-size`, `BE-PAYLOAD-001`), whose form and maximum size `ductus brief-re-read --help` states: a file-form result's `lists-file` is under `.ductus/results/brief-re-read/{feature}/`, written through `bounded_lists::place` as 066's `compute-review-scope` result is. `round.toml` and the brief carry every path in either form.
-- The brief's contents are as `ductus brief-re-read --help` states; the command that shows the round's change is `git diff --relative {base} {snapshot}`, run from the project root, so no path reaches a shell, and it can also show paths left out of the round. Nothing in the brief comes from the host.
+- `rounds`, `re-reads-with-findings`, `elapsed-seconds` and `elapsed-absent-reason` — the loop's figures (AC17), counted from the round directory and never from the host, in every result whatever its `kind`:
+
+  | Field | Type | Counted as |
+  | --- | --- | --- |
+  | `rounds` | integer, rounds | The feature's round subdirectories holding a `round.toml`, so the round this call briefed is counted and an `exempt`, `empty` or switched-off round, which writes none, is not |
+  | `re-reads-with-findings` | integer, re-reads | The rounds whose `result.json` is `complete` and holds a MUST or SHOULD on a path of its `round.toml`, as `read-re-read` reads it; an incomplete or unparseable result counts as none, and a diff-checked round, which has no result, is not a re-read |
+  | `elapsed-seconds` | integer, whole seconds, or null | The runtime's clock when `brief-re-read` runs, less `start.toml`'s `started-at` |
+  | `elapsed-absent-reason` | string or null | Set exactly when `elapsed-seconds` is null: no readable `start.toml`, as for rounds started before the start was recorded, or a clock earlier than the start. An absent start is never zero seconds (`QUAL-CLAIM-001`) |
+
+- The brief's contents are as `ductus brief-re-read --help` states, severity bar included, whose findings of any severity need a trigger shown possible in the project (AC16); the command that shows the round's change is `git diff --relative {base} {snapshot}`, run from the project root, so no path reaches a shell, and it can also show paths left out of the round. Nothing in the brief comes from the host.
 
 ## Result file
 

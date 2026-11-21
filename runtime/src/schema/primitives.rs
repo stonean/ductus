@@ -1412,6 +1412,24 @@ pub struct BriefReReadResult {
     /// The `[review] re-reads-off` reason when the loop is switched off; then
     /// no snapshot is returned and no brief is written.
     pub re_reads_off: Option<String>,
+    /// The rounds briefed so far in this run: the feature's round directories
+    /// holding a `round.toml`, this call's included when it wrote a brief.
+    /// Counted from the round directory, never by the host (spec 078, AC17).
+    pub rounds: usize,
+    /// How many of those rounds' re-reads found a MUST or SHOULD: a complete
+    /// `result.json` holding one on a path of its round, read as
+    /// `read-re-read` reads it. A re-read not finished counts as none.
+    pub re_reads_with_findings: usize,
+    /// Whole seconds from the run's `start-fix-rounds` call, which recorded
+    /// the start in the round directory, to this call, by the runtime's own
+    /// clock. Null, never zero, when `elapsed-absent-reason` says there is
+    /// none.
+    pub elapsed_seconds: Option<u64>,
+    /// Why `elapsed-seconds` is null: no readable start in the round
+    /// directory, as for rounds started before the start was recorded, or a
+    /// clock reading earlier than the start. Null when `elapsed-seconds` is
+    /// present.
+    pub elapsed_absent_reason: Option<String>,
     /// In the file form, the file holding the lists whole, from the project
     /// root: a JSON object with `paths`, `exempt` and `excluded`, one entry per
     /// line.
@@ -1444,7 +1462,8 @@ pub enum ReReadSeverity {
     /// behavior removed.
     #[serde(rename = "SHOULD")]
     Should,
-    /// A contrived input, a style point, or anything outside the round.
+    /// A style point, or anything outside the round. A case shown only by
+    /// building it is no finding at all (spec 078, AC16).
     #[serde(rename = "NOTE")]
     Note,
 }

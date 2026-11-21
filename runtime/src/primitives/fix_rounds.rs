@@ -7,6 +7,7 @@
 use std::collections::BTreeSet;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use git2::{IndexAddOption, Oid, Signature};
 
@@ -37,6 +38,20 @@ pub(crate) const ROUND_FILE: &str = "round.toml";
 pub(crate) const BRIEF_FILE: &str = "brief.md";
 /// The file a re-read writes its findings and prescriptions to, last.
 pub(crate) const RESULT_FILE: &str = "result.json";
+
+/// The feature's round directory's record of when the run's loop started,
+/// written by `start-fix-rounds` (spec 078, AC17). A file beside the round
+/// subdirectories, never inside one, so a round's own files are unchanged.
+pub(crate) const START_FILE: &str = "start.toml";
+
+/// `start.toml`: when `start-fix-rounds` ran, as the runtime's own clock read
+/// it, in the `YYYY-MM-DDTHH:MM:SSZ` shape the session files use.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct StartRecord {
+    /// The UTC time the loop started.
+    #[serde(rename = "started-at")]
+    pub(crate) started_at: String,
+}
 
 /// `round.toml`: the snapshot a briefed round's re-read reads, and the paths
 /// that changed between the round's base, which names its directory, and that
@@ -310,6 +325,136 @@ pub(crate) fn re_reads_off(repo: &Path) -> Result<Option<String>> {
     Ok(Some(super::collapse_whitespace(&super::flatten_line(
         reason,
     ))))
+}
+
+/// Record that the loop starts `now` in the feature's round directory `dir`
+/// (spec 078, AC17), which [`clear_rounds`] has just emptied.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the file cannot be written.
+pub(crate) fn record_start(dir: &Path, now: SystemTime) -> Result<()> {
+    let record = StartRecord {
+        started_at: crate::session::iso8601_utc(now),
+    };
+    let path = dir.join(START_FILE);
+    // A struct of one string has no unrepresentable value, so this error is
+    // never raised; it is the write's, should it be.
+    let text = toml::to_string(&record).map_err(|err| PrimitiveError::Io {
+        path: path.clone(),
+        source: std::io::Error::other(err),
+    })?;
+    // Create-only: `clear_rounds` has just emptied `dir`, so a start already
+    // there is a concurrent run's, whose own start stands (`BE-RACE-003`).
+    super::write_new_atomic(&path, &text).map(|_| ())
+}
+
+/// What the round directory says about the run's loop so far (spec 078,
+/// AC17), counted from the directory and never from the host.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct LoopFigures {
+    /// Round directories holding a `round.toml`: the rounds briefed so far.
+    pub(crate) rounds: usize,
+    /// Rounds whose `result.json` is a complete re-read holding a MUST or
+    /// SHOULD on a path of the round.
+    pub(crate) re_reads_with_findings: usize,
+    /// Whole seconds from the recorded start to `now`, or why there is none:
+    /// no readable `start.toml`, or a clock reading earlier than the start.
+    /// Never zero for an absent start.
+    pub(crate) elapsed: std::result::Result<u64, String>,
+}
+
+/// Count the loop's figures from the feature's round directory `dir`, at `now`.
+///
+/// A round counts as a re-read with findings as `read-re-read` reads it: the
+/// result is complete, and a MUST or SHOULD outside the round's `round.toml`
+/// paths is a NOTE. A result that is absent, incomplete, unparseable, or
+/// whose `round.toml` cannot be read counts as none, never as a finding.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the directory or a round's file exists but
+/// cannot be read.
+pub(crate) fn loop_figures(dir: &Path, now: SystemTime) -> Result<LoopFigures> {
+    let mut rounds = 0;
+    let mut re_reads_with_findings = 0;
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => Some(entries),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
+        Err(source) => {
+            return Err(PrimitiveError::Io {
+                path: dir.into(),
+                source,
+            });
+        }
+    };
+    for entry in entries.into_iter().flatten() {
+        let entry = entry.map_err(|source| PrimitiveError::Io {
+            path: dir.into(),
+            source,
+        })?;
+        let is_dir = entry
+            .file_type()
+            .map_err(|source| PrimitiveError::Io {
+                path: entry.path(),
+                source,
+            })?
+            .is_dir();
+        if !is_dir || !entry.path().join(ROUND_FILE).is_file() {
+            continue;
+        }
+        rounds += 1;
+        let round = entry.path();
+        let ResultFile::Complete(mut findings) = read_result(&round.join(RESULT_FILE))? else {
+            continue;
+        };
+        let Ok(record) = read_round_record(&round)? else {
+            continue;
+        };
+        demote_out_of_round(&mut findings, &record.paths);
+        if findings.iter().any(|f| f.severity != ReReadSeverity::Note) {
+            re_reads_with_findings += 1;
+        }
+    }
+    Ok(LoopFigures {
+        rounds,
+        re_reads_with_findings,
+        elapsed: elapsed_since_start(dir, now)?,
+    })
+}
+
+/// Whole seconds from `dir`'s recorded start to `now`, or the reason there are
+/// none.
+fn elapsed_since_start(dir: &Path, now: SystemTime) -> Result<std::result::Result<u64, String>> {
+    let path = dir.join(START_FILE);
+    let text = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Err(format!(
+                "{} does not exist: the rounds were started before start-fix-rounds recorded a start",
+                path.display()
+            )));
+        }
+        Err(source) => return Err(PrimitiveError::Io { path, source }),
+    };
+    let Ok(record) = toml::from_str::<StartRecord>(&text) else {
+        return Ok(Err(format!("{} does not parse", path.display())));
+    };
+    let Some(started) = crate::session::parse_iso8601_utc(&record.started_at) else {
+        return Ok(Err(format!(
+            "{}'s started-at is not a UTC timestamp",
+            path.display()
+        )));
+    };
+    Ok(now
+        .duration_since(started)
+        .map(|elapsed| elapsed.as_secs())
+        .map_err(|_| {
+            format!(
+                "the clock reads earlier than the start {} records",
+                path.display()
+            )
+        }))
 }
 
 /// The identity a snapshot commit is made under, so a snapshot needs no
@@ -673,6 +818,27 @@ mod tests {
             PrimitiveError::InvalidReReadsOff { problem, .. } => problem.clone(),
             other => panic!("not InvalidReReadsOff: {other:?}"),
         }
+    }
+
+    /// The elapsed time is the clock less the recorded start, whole seconds;
+    /// a missing or unreadable start, or a clock before it, is absent with a
+    /// reason, never zero (AC17, `QUAL-CLAIM-001`).
+    #[test]
+    fn elapsed_is_the_clock_less_the_recorded_start() {
+        let tmp = tempfile::tempdir().unwrap();
+        let start = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_800_000_000);
+        let elapsed = |now| loop_figures(tmp.path(), now).unwrap().elapsed;
+        let later = start + std::time::Duration::from_secs(5_400);
+
+        assert!(elapsed(later).unwrap_err().contains("does not exist"));
+        record_start(tmp.path(), start).unwrap();
+        assert_eq!(elapsed(later), Ok(5_400));
+        let before = start - std::time::Duration::from_secs(1);
+        assert!(elapsed(before).unwrap_err().contains("earlier"));
+        write(&tmp.path().join(START_FILE), "started-at = \"yesterday\"\n");
+        assert!(elapsed(later).unwrap_err().contains("not a UTC timestamp"));
+        write(&tmp.path().join(START_FILE), "not toml =\n");
+        assert!(elapsed(later).unwrap_err().contains("does not parse"));
     }
 
     /// A finding on a round path spelled another way (`./`, a doubled

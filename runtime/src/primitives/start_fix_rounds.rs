@@ -2,8 +2,9 @@
 //! round (spec 078).
 //!
 //! Called once per run, when the passes end and before any fix: it clears the
-//! feature's earlier rounds and snapshots the working tree, so the first
-//! round's changed paths are exactly the fixes made after the passes.
+//! feature's earlier rounds, records when the loop starts (AC17) and snapshots
+//! the working tree, so the first round's changed paths are exactly the fixes
+//! made after the passes.
 //!
 //! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
@@ -41,6 +42,7 @@ pub fn run(args: &StartFixRoundsArgs, repo: &Path) -> Result<StartFixRoundsResul
     let project = ProjectRepository::discover(repo)?;
     let dir = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
     fix_rounds::clear_rounds(&dir)?;
+    fix_rounds::record_start(&dir, std::time::SystemTime::now())?;
     let (base, files) = fix_rounds::snapshot(&project)?;
     Ok(StartFixRoundsResult {
         base,
@@ -206,11 +208,41 @@ mod tests {
         run(&args("001-x"), tmp.path()).unwrap();
 
         assert!(rounds.join("001-x").is_dir());
-        assert_eq!(fs::read_dir(rounds.join("001-x")).unwrap().count(), 0);
+        // Only the loop's start remains.
+        let left: Vec<_> = fs::read_dir(rounds.join("001-x"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, [fix_rounds::START_FILE]);
         assert!(rounds.join("002-y/def/brief.md").is_file());
         assert_eq!(
             fs::read_to_string(rounds.join(".gitignore")).unwrap(),
             "*\n"
+        );
+    }
+
+    /// The loop's start is recorded in the feature's round directory, as the
+    /// runtime's clock read it, for `brief-re-read`'s elapsed time (AC17).
+    #[test]
+    fn the_loops_start_is_recorded_in_the_round_directory() {
+        let (tmp, _repository) = fixture();
+        let before = std::time::SystemTime::now();
+        run(&args("001-x"), tmp.path()).unwrap();
+        let text = fs::read_to_string(
+            tmp.path()
+                .join(fix_rounds::ROUNDS_DIR)
+                .join("001-x")
+                .join(fix_rounds::START_FILE),
+        )
+        .unwrap();
+        let record: fix_rounds::StartRecord = toml::from_str(&text).unwrap();
+        let started = crate::session::parse_iso8601_utc(&record.started_at).unwrap();
+        let after = std::time::SystemTime::now();
+        // The record is to the second, so it may precede `before` by under one.
+        assert!(
+            started + std::time::Duration::from_secs(1) > before && started <= after,
+            "{}",
+            record.started_at
         );
     }
 

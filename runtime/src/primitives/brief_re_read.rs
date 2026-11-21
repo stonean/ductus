@@ -8,6 +8,7 @@
 
 use std::fmt::Write as _;
 use std::path::Path;
+use std::time::SystemTime;
 
 use crate::primitives::analyze_subjects::{is_analyze_subject, is_review_contract};
 use crate::primitives::fix_rounds::{self, BRIEF_FILE, RESULT_FILE, ROUND_FILE, RoundRecord};
@@ -17,9 +18,11 @@ use crate::schema::primitives::{BriefReReadArgs, BriefReReadResult, ListsForm, R
 
 /// The severity bar every brief states: spec 078's *The loop* section.
 const SEVERITY_BAR: &str = "\
+Raise a finding of any severity only on a case whose trigger is shown possible in this project, from its code, configuration, history or deployment shape. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: leave it out of the result file.
+
 - **MUST**: the round's code does what the spec or data model forbids, fails a behavior they require, or breaks one that held.
 - **SHOULD**: a sentence the round made untrue or left contradicting another it edited, or a test it added that would pass with its behavior removed.
-- **NOTE**: a contrived input, a style point, or anything outside the round. A finding on a path the round did not change is a NOTE.";
+- **NOTE**: a style point, or anything outside the round. A finding on a path the round did not change is a NOTE.";
 
 /// The result file's contract every brief states: the data model's **Result
 /// file** section, which `read-re-read` and `check-prescriptions` read.
@@ -83,7 +86,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         ..BriefReReadResult::default()
     };
     if kind == RoundKind::Empty || result.re_reads_off.is_some() {
-        return bounded(repo, &args.feature, result);
+        return bounded(repo, &rounds, &args.feature, result);
     }
     if kind == RoundKind::ReRead {
         let round_rel = fix_rounds::round_rel(&args.feature, &base);
@@ -119,15 +122,28 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         result.result = Some(result_rel);
     }
     result.snapshot = Some(snapshot);
-    bounded(repo, &args.feature, result)
+    bounded(repo, &rounds, &args.feature, result)
 }
 
 /// Bound `result` to one read (spec 078, scenario
 /// `fix-round-results-have-a-bounded-size`): inline while it fits `[artifacts]
 /// read-size-bytes`, and past it with its lists in the file `lists-file` names,
 /// as `compute-review-scope` bounds its lists. `round.toml` and the brief
-/// already hold every path of the round, whatever the form.
-fn bounded(repo: &Path, feature: &str, mut result: BriefReReadResult) -> Result<BriefReReadResult> {
+/// already hold every path of the round, whatever the form. Also sets the
+/// loop's figures, counted from `rounds`, the feature's round directory (AC17).
+fn bounded(
+    repo: &Path,
+    rounds: &Path,
+    feature: &str,
+    mut result: BriefReReadResult,
+) -> Result<BriefReReadResult> {
+    let figures = fix_rounds::loop_figures(rounds, SystemTime::now())?;
+    result.rounds = figures.rounds;
+    result.re_reads_with_findings = figures.re_reads_with_findings;
+    (result.elapsed_seconds, result.elapsed_absent_reason) = match figures.elapsed {
+        Ok(seconds) => (Some(seconds), None),
+        Err(reason) => (None, Some(reason)),
+    };
     let paths = result.paths.as_deref().unwrap_or_default();
     let exempt = result.exempt.as_deref().unwrap_or_default();
     let excluded = result.excluded.as_deref().unwrap_or_default();
@@ -799,6 +815,94 @@ mod tests {
         assert_eq!(second.paths.as_deref().unwrap(), ["src/b.rs"]);
     }
 
+    /// Write the complete `result.json` of the round briefed as `round`, with
+    /// one finding per `(severity, path)`.
+    fn finish(tmp: &tempfile::TempDir, round: &BriefReReadResult, findings: &[(&str, &str)]) {
+        let findings: Vec<_> = findings
+            .iter()
+            .map(|(severity, path)| {
+                serde_json::json!({ "severity": severity, "path": path, "text": "a finding" })
+            })
+            .collect();
+        write(
+            &tmp.path().join(round.result.as_ref().unwrap()),
+            &serde_json::json!({ "complete": true, "findings": findings }).to_string(),
+        );
+    }
+
+    /// Three rounds briefed: the figures come from the round directory, so
+    /// each round's call counts the rounds before it and their re-reads, and
+    /// a finding outside its round, which counts as a NOTE, finds nothing
+    /// (spec 078, AC17).
+    #[test]
+    fn three_rounds_are_counted_from_the_round_directory() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        write(&tmp.path().join("src/a.rs"), "fn a() { 1 }\n");
+        let first = brief(&tmp, &base).unwrap();
+        assert_eq!((first.rounds, first.re_reads_with_findings), (1, 0));
+        finish(&tmp, &first, &[("MUST", "src/a.rs")]);
+
+        write(&tmp.path().join("src/b.rs"), "fn b() {}\n");
+        let second = brief(&tmp, first.snapshot.as_ref().unwrap()).unwrap();
+        assert_eq!((second.rounds, second.re_reads_with_findings), (2, 1));
+        // A SHOULD on a path the round did not change is a NOTE, so only the
+        // in-round NOTE and that one are here: no finding.
+        finish(
+            &tmp,
+            &second,
+            &[("SHOULD", "src/a.rs"), ("NOTE", "src/b.rs")],
+        );
+
+        write(&tmp.path().join("src/c.rs"), "fn c() {}\n");
+        let third = brief(&tmp, second.snapshot.as_ref().unwrap()).unwrap();
+        assert_eq!((third.rounds, third.re_reads_with_findings), (3, 1));
+        let seconds = third.elapsed_seconds.expect("the loop's start is recorded");
+        assert!(seconds < 60, "{seconds}");
+        assert_eq!(third.elapsed_absent_reason, None);
+    }
+
+    /// A re-read not finished, or a result a round's record cannot scope,
+    /// finds nothing; a round finished with a SHOULD counts.
+    #[test]
+    fn a_re_read_not_finished_counts_as_none() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        write(&tmp.path().join("src/a.rs"), "fn a() { 1 }\n");
+        let first = brief(&tmp, &base).unwrap();
+        write(
+            &tmp.path().join(first.result.as_ref().unwrap()),
+            "{\"complete\": false, \"findings\": [{\"severity\": \"MUST\", \"path\": \"src/a.rs\", \"text\": \"x\"}]}",
+        );
+        write(&tmp.path().join("src/b.rs"), "fn b() {}\n");
+        let second = brief(&tmp, first.snapshot.as_ref().unwrap()).unwrap();
+        assert_eq!((second.rounds, second.re_reads_with_findings), (2, 0));
+        finish(&tmp, &second, &[("SHOULD", "src/b.rs")]);
+        write(&tmp.path().join("src/c.rs"), "fn c() {}\n");
+        let third = brief(&tmp, second.snapshot.as_ref().unwrap()).unwrap();
+        assert_eq!((third.rounds, third.re_reads_with_findings), (3, 1));
+    }
+
+    /// Rounds started before the start was recorded have no elapsed time, and
+    /// say why: zero would read as a loop just begun.
+    #[test]
+    fn a_round_directory_with_no_start_reports_no_elapsed_time() {
+        let tmp = fixture();
+        let base = start(&tmp);
+        fs::remove_file(
+            tmp.path()
+                .join(fix_rounds::ROUNDS_DIR)
+                .join(FEATURE)
+                .join(fix_rounds::START_FILE),
+        )
+        .unwrap();
+        write(&tmp.path().join("src/a.rs"), "fn a() { 1 }\n");
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!((result.rounds, result.elapsed_seconds), (1, None));
+        let reason = result.elapsed_absent_reason.expect("a stated reason");
+        assert!(reason.contains("start-fix-rounds"), "{reason}");
+    }
+
     /// A file name holding a newline and shell syntax reaches the brief only
     /// as an escaped JSON string. Unix only: Windows refuses a newline in a
     /// file name.
@@ -853,7 +957,13 @@ mod tests {
             (None, None, None)
         );
         let rounds = tmp.path().join(fix_rounds::ROUNDS_DIR).join(FEATURE);
-        assert_eq!(fs::read_dir(rounds).unwrap().count(), 0);
+        // No round directory: only the loop's start is there.
+        let left: Vec<_> = fs::read_dir(rounds)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, [fix_rounds::START_FILE]);
+        assert_eq!(result.rounds, 0);
     }
 
     /// The switch's reason is reported whatever the round's kind, so a run

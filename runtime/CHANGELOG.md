@@ -4,8 +4,30 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ## [Unreleased]
 
+### Added
+
+- **`brief-re-read` returns the loop's figures, counted from the round directory (spec 078, AC17).**
+  Every result gains `rounds` (round directories holding a `round.toml`, this
+  call's included), `re-reads-with-findings` (complete results holding a
+  MUST or SHOULD on a path of their round) and `elapsed-seconds`, whole
+  seconds since `start-fix-rounds` recorded `start.toml`, with
+  `elapsed-absent-reason` when it is null: rounds started before the start
+  was recorded, or a clock earlier than it, never read as zero seconds. The
+  command and reference quote them at the budget stop instead of the host's
+  count. An existing consumer that reads fields by name is unaffected, and
+  one that rejects unknown fields gains four to accept. An adopter's review
+  on 0.60.0 had run four re-reads over about four hours, each extra one put
+  to the operator as "one more" with no count or time.
+
 ### Changed
 
+- **The re-read brief's severity bar requires a trigger shown possible in the project (spec 078, AC16).**
+  A finding of any severity, MUST, SHOULD or NOTE, is raised only on a case
+  whose trigger the project's code, configuration, history or deployment shape
+  shows possible; a case shown only by building it is no finding, as spec 020's
+  AC18 has it for the passes, and "a contrived input" is no longer a NOTE. The
+  same adopter's re-reads each opened on a contrived case in the previous
+  round's fix.
 - **BREAKING: a stored rule verdict stands while the sections it concerns are unchanged (spec 082, AC7).**
   `write-analysis` records `section-digest`, a 16-hex digest of each heading's
   own text in the design subjects (`<path>#<Heading>`, and `<path>` for the

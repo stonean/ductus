@@ -81,6 +81,12 @@ const EXEMPT: &[(&str, &str)] = &[
          generated state the runtime renders whole, never a file a person edited (spec 078)",
     ),
     (
+        "fix_rounds.rs",
+        "creates a fix-round loop's start.toml, create-only, in a round directory start-fix-rounds \
+         has just cleared — generated state the runtime renders whole, never a file a person \
+         edited (spec 078, AC17)",
+    ),
+    (
         "bounded_lists.rs",
         "writes a list file under .ductus/results/ named by the sha256 of its own bytes — \
          generated state the runtime renders whole, never a file a person edited (066 scenario \
