@@ -14,7 +14,7 @@ Origin: inbox item surfaced 2026-05-19 during runtime-improvement investigation,
 
 ## Behavior
 
-**Resolved 2026-08-30: no shape ships.** `writeCode` continues to carry `constitution-excerpts` as an inlined `Vec<String>`, leading the cache-anchored prefix exactly as `spec.md` §LLM extension points describes, while the request fits `[artifacts] read-size-bytes`. Past it the array moves to the request's lists file with `constitution-excerpts-count` and `request-lists-file` left inline (022's data model §Request bodies past the read size, task 37): the bound holds the whole request to the read size, so it is not a reference shape, and the runtime still selects and reads each anchor, with only the carrier changed. This scenario is the record of the shape decision, not a change to be implemented.
+**Resolved 2026-08-30: no shape ships.** `writeCode` continues to carry `constitution-excerpts` as an inlined `Vec<String>`, leading the cache-anchored prefix exactly as `spec.md` §LLM extension points describes, while the request fits `[artifacts] read-size-bytes`. Past it the array moves to the request's lists file with `constitution-excerpts-count` and `request-lists-file` left inline (022's `specs/022-deterministic-runtime/data-model.md` §Request bodies past the read size, task 37): the bound holds the whole request to the read size, so it is not a reference shape, and the runtime still selects and reads each anchor, with only the carrier changed. This scenario is the record of the shape decision, not a change to be implemented.
 
 Two shapes were considered and both rejected:
 
