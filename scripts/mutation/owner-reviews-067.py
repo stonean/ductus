@@ -656,8 +656,8 @@ MUTATIONS = [
     (
         'M86 a code span holding a path and a reference is not read',
         'src/primitives/resolve_anchor.rs',
-        '            let Some((token, offset)) = span_citation(&line[span.clone()]) else {',
-        '            let Some((token, offset)) = span_citation(&line[span.clone()]).filter(|_| false) else {',
+        '        let Some((token, offset)) = span_citation(&line[span.clone()]) else {',
+        '        let Some((token, offset)) = span_citation(&line[span.clone()]).filter(|_| false) else {',
         'a_span_holding_a_path_and_one_reference_is_judged',
     ),
     (

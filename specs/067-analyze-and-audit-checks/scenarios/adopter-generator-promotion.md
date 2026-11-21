@@ -6,7 +6,7 @@ section: "Derived frontmatter indexes"
 
 ## Context
 
-022's `spec.md` §Bash script relationships stated the rule this scenario overturns:
+022's `specs/022-deterministic-runtime/spec.md` §Bash script relationships stated the rule this scenario overturns:
 
 > **`gen-*.sh`** (called by the pre-commit hook) — stay bash. The runtime never replaces them: pre-commit has no LLM in the loop, so they fail the eligibility rule from §runtime-boundary principle 3.
 

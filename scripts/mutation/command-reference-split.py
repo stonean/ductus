@@ -33,8 +33,8 @@ MUTATIONS = [
     (
         'M3 the line rule is tried before a pair, so a pair takes its fallbacks',
         'src/primitives/resolve_anchor.rs',
-        '            let cross = pairs.get(&whole).copied().or_else(|| {',
-        '            let cross = judged_against.as_ref().map(|h| names_local_heading(h, rest) || names_local_heading(&own_headings, rest) || markers.contains(&anchor)).or_else(|| pairs.get(&whole).copied()).or_else(|| {',
+        '            let cross = pair.or_else(|| {',
+        '            let cross = single_shipped.map(|h| names_local_heading(h, rest) || names_local_heading(&own_headings, rest) || markers.contains(anchor)).or(pair).or_else(|| {',
         'resolve_anchor',
     ),
     (
