@@ -48,7 +48,7 @@ dispositions:
 waivers:
   - rule: BE-CACHE-002
     file: runtime/src/primitives/rule_verdicts.rs
-    reason: "The owner's choice at this review (2026-11-12, option a): the loaded rule-file set joined the currency key, and specs/system.md stays out of it, since every edit there would re-judge every rule of every spec to protect about three rules. 082's Resolved Questions record the decision."
+    reason: "The owner's choice at this review (2026-11-12, option a): the loaded rule-file set joined the currency key, and specs/system.md stays out of it, since every edit there would judge every rule of every spec again, against its changed sections since AC7, to protect the verdicts of the 27 rules whose Verifications name it (counted 2026-11-21; the owner kept the choice with that count the same day). 082's Resolved Questions record the decision."
     waived-at: 2026-11-12T20:51:35Z
     waived-by: andy@stone.dev
 decisions:
@@ -172,9 +172,9 @@ Five-pass review of 082's reopening for AC7 (diff-base 50754fad, base-source reo
 
 - **File**: `runtime/src/primitives/rule_verdicts.rs`
 - **Rule**: Cache keys SHOULD incorporate every input that affects the cached value, including the authorization scope (user, tenant, role) when the value is principal-specific, entered as an identifier such as a user or tenant ID and never as a session token, API key, or other secret.
-- **Finding**: A stored rule verdict is reused while its sections, its rule file and the loaded rule-file set are unchanged; about three rules' Verifications judge against specs/system.md, which is not an input, so an edit there leaves their verdicts current.
+- **Finding**: A stored rule verdict is reused while its sections, its rule file and the loaded rule-file set are unchanged; 27 rules' Verifications name specs/system.md, which is not an input, so an edit there leaves their verdicts current.
 - **Auto-fixable**: no
-- **Waived**: The owner's choice at this review (2026-11-12, option a): the loaded rule-file set joined the currency key, and specs/system.md stays out of it, since every edit there would re-judge every rule of every spec to protect about three rules. 082's Resolved Questions record the decision.
+- **Waived**: The owner's choice at this review (2026-11-12, option a): the loaded rule-file set joined the currency key, and specs/system.md stays out of it, since every edit there would judge every rule of every spec again, against its changed sections since AC7, to protect the verdicts of the 27 rules whose Verifications name it (counted 2026-11-21; the owner kept the choice with that count the same day). 082's Resolved Questions record the decision.
 
 ## Deferred findings
 
