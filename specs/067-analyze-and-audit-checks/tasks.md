@@ -1,5 +1,5 @@
 ---
-next-task: 44
+next-task: 46
 ---
 
 # 067 — Analyze and Audit Checks Tasks
@@ -107,3 +107,21 @@ The shipped `framework/bootstrap/hooks/ductus-pre-commit` needs no change: it ru
 - [x] `check-corpus-links` is not taught reference-style definition lines, which would newly block adopter commits
 
 - **Done when**: the spec's Resolved Questions state each decision with its reason
+
+## 44. AC6 and AC7: an analysis judges its own design fix in the run, and the plan against the spec
+
+- [ ] Update `plan.md`'s design record for AC6 and AC7 first. The decisions are this spec's Resolved Questions of 2026-11-21.
+- [ ] AC6: `write-analysis` (066's surface) refuses a hard-fail or blocking finding at a design subject of the spec in hand recorded as deferred whole to its own `tasks.md`, and refuses one recorded undispositioned at a design subject a fix of the run edited; steps 19 and 20 of `framework/commands/analyze.md` and `framework/reference/analyze.md` §Finding dispositions say the design edit is made in the run once confirmed. Fixture: each refusal and each accepted record, failing with the refusal removed.
+- [ ] AC7: step 15 and `framework/reference/analyze.md` §Plan consistency (blocking if plan exists) gain the plan-against-the-spec's-Behavior-and-criteria judgment; update the `plan-consistency` line of this spec's `data-model.md`, which enumerates the host's judgments.
+- [ ] Correct in the same change the statements this makes false: 058's `spec.md` routing list ("The spec in hand: a task on its `tasks.md`, a scenario, or a body edit"), 078's Resolved Question premise ("Analyze's fixes are mechanical chores its step-20 re-check re-detects") and the first paragraph of `framework/reference/review.md` §Fix-round loop; add 058, 066 and 078 to `cross-spec-impact:`.
+
+- **Done when**: Both refusals are proven by a fixture both ways, the command and reference state the in-run design fix and the plan-against-spec judgment, and 058, 078 and the review reference no longer say otherwise.
+
+## 45. AC8 and AC9: /analyze judges every scenario's § references
+
+- [ ] Update `plan.md`'s design record for AC8 and AC9 first. The decisions (a scenario's bare `spec.md` names its parent; a registered service's checkout is not read, and `--help` says so) are this spec's Resolved Questions of 2026-11-21.
+- [ ] AC8: step 4 of `framework/commands/analyze.md` runs `resolve-anchor` on each scenario under the spec, reports each reference with the scenario's path, and counts the scenario files as examined.
+- [ ] AC9 in `resolve-anchor`: in a scenario, a bare `spec.md` resolves to the parent's; a quoted heading after `§` (`§"Cache invalidation"`) is reported as a form the check does not read; an unresolved reference whose next line completes it is reported as wrapped; `--help` states that a path leaving the project is unjudged even inside a registered `[services]` checkout.
+- [ ] Fixture, from the adopter report: one scenario beside a `spec.md` with `## Surface` and `## Cache invalidation`. Before the fix `(spec §Surface)` is unresolved, ``(`spec.md` §Surface)`` is resolved but unjudged, `§"Cache invalidation"` is absent from `references`, and ``(`../spec.md` §Surface)`` resolves; assert each form in both directions.
+
+- **Done when**: The fixture proves each form both ways, analyze's step 4 covers every scenario with scenarios counted as examined, and `resolve-anchor --help` states the service-checkout answer.
