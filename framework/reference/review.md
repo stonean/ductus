@@ -73,6 +73,11 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
    not fatal. None is auto-pruned. A malformed entry halts the run before any
    rule file is selected, and is not skipped: the operator fixes it.
 
+   The **header test** then leaves out each selected file whose header, its
+   text before the first `##` heading, names `/{project}:analyze` and not
+   `/{project}:review`, with a notice naming it as judged by analysis alone
+   (**Load rules**).
+
    A key either section does not recognize is reported and the run continues
    (spec 019, `CFG-ENV-012`); an entry carrying an unknown field still applies.
    The closing `loading rule files:` line names what was selected, so adopters
@@ -98,6 +103,8 @@ Load these inputs inline as the authoritative review criteria:
 These are the **only** sources of normative rules for the review. Do not
 introduce review criteria from outside the project.
 
+**A rule file its header gives to analysis is not loaded.** `discover-rule-files` leaves out of a review's selection each file whose header, its text before the first `##` heading, names `/{project}:analyze` and not `/{project}:review` as an enforcer of its rules, and names it in a notice as judged by analysis alone, so the two audits never judge one of its rules differently (spec 020, AC17). A header naming neither, as a project's own rule file may, keeps its file.
+
 **Every loaded rule file has a pass that applies it to the code in scope.** The
 runtime carries the mapping, which this list states
 (`review_pass_for_rule_file`, a test holds the two together), and the request
@@ -107,7 +114,7 @@ the passes this run performs:
 - `security-*.md` — the security pass.
 - `performance-*.md` — the efficiency pass.
 - `quality-cross.md` — the quality pass.
-- every other loaded file, a design-time file or a project-authored file with an unrecognized suffix among them — the quality pass.
+- every other loaded file, a design-time file whose header names review or a project-authored file with an unrecognized suffix among them — the quality pass.
 
 A Statement whose Verification is a design-time commitment is applied by its pass only where the code in scope shows what it governs; a Statement the code does not reach records nothing. The reuse and simplicity passes apply no rule file. On a dimension-restricted run (`--security`), a loaded file whose pass did not run is named in the Summary as unapplied, never folded into a clean result.
 

@@ -182,6 +182,9 @@ pub(crate) fn compute(
         // Under `all` no entry was validated, so `disabled` is empty and the
         // filter removes nothing.
         apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
+        if !args.all {
+            leave_to_analysis(&dir, &mut selected, &mut notices);
+        }
         // A `*.md` entry that is no regular file, a symlink among them, is
         // not loaded: named, so a file that was never examined does not read
         // as one that does not exist (`QUAL-CLAIM-001`).
@@ -690,6 +693,54 @@ fn apply_disabled_filter(
     }
 }
 
+/// Drop from a review's selection each file whose header leaves its rules to
+/// `/{project}:analyze` (spec 020, AC17), naming each in a notice, so a review
+/// and an analysis never judge one of its rules differently. A file that
+/// cannot be read stays selected: [`list_rules`] names it unreadable, and
+/// dropping it here would turn a read failure into a silent omission
+/// (`QUAL-CLAIM-001`).
+fn leave_to_analysis(dir: &Path, selected: &mut Vec<String>, notices: &mut Vec<String>) {
+    selected.retain(|name| {
+        let left = read_text(&dir.join(name)).is_ok_and(|text| header_leaves_to_analysis(&text));
+        if left {
+            notices.push(format!(
+                "rule file {} is judged by analysis alone: its header names the analyze command and not review, so review does not load it",
+                flatten_line(name)
+            ));
+        }
+        !left
+    });
+}
+
+/// Whether a rule file's header, its text before the first `##` heading,
+/// names `/{project}:analyze` as an enforcer of its rules and
+/// `/{project}:review` nowhere (spec 020, AC17). A header naming neither, as
+/// a project's own rule file may, is not left to analysis: review keeps
+/// loading it for the quality pass (owner, 2026-11-21). Either command
+/// matches as shipped, `{project}` literal, or as an adopter's install
+/// substituted it, `/<name>:`.
+#[allow(clippy::expect_used)]
+pub(crate) fn header_leaves_to_analysis(text: &str) -> bool {
+    static R: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let command = R.get_or_init(|| {
+        regex::Regex::new(r"/(?:\{project\}|[A-Za-z0-9][A-Za-z0-9._-]*):(review|analyze)\b")
+            .expect("hard-coded regex compiles")
+    });
+    let header: String = text
+        .split_inclusive('\n')
+        .take_while(|line| !line.starts_with("##"))
+        .collect();
+    let (mut review, mut analyze) = (false, false);
+    for caps in command.captures_iter(&header) {
+        match caps.get(1).map(|m| m.as_str()) {
+            Some("review") => review = true,
+            Some(_) => analyze = true,
+            None => {}
+        }
+    }
+    analyze && !review
+}
+
 /// Parse the resolved config file, returning defaults when it is absent, plus
 /// the unknown keys in the two sections this primitive reads, the
 /// repo-relative name that resolution picked, and its path. Returning the name
@@ -782,6 +833,110 @@ mod tests {
         "accessibility-frontend.md",
         "quality-cross.md",
     ];
+
+    /// A repo whose `framework/rules/` holds each `(name, body)` as written.
+    fn setup_with(files: &[(&str, &str)]) -> TempDir {
+        let tmp = TempDir::new().unwrap();
+        let rules = tmp.path().join("framework/rules");
+        std::fs::create_dir_all(&rules).unwrap();
+        for (name, body) in files {
+            std::fs::write(rules.join(name), body).unwrap();
+        }
+        tmp
+    }
+
+    /// One rule file of each header kind AC17 distinguishes (spec 020).
+    const HEADERS: &[(&str, &str)] = &[
+        (
+            "concurrency-backend.md",
+            "# Concurrency\n\nDesign-time commitments; `/{project}:analyze` enforces them against feature artifacts.\n\n## Locks\n\n### BE-LOCK-001\n",
+        ),
+        (
+            "security-backend.md",
+            "# Security\n\n`/{project}:analyze` enforces them, and `/{project}:review`'s security pass also checks the code in scope.\n\n## Auth\n",
+        ),
+        (
+            "quality-cross.md",
+            "# Quality\n\n`/{project}:review`'s quality pass enforces them against source in scope.\n",
+        ),
+        (
+            "team-rules.md",
+            "# Team rules\n\nOur own rules, named by no command.\n",
+        ),
+        (
+            "api-backend.md",
+            "# API\n\nAs an adopter's install wrote it: `/acme:analyze` enforces them.\n",
+        ),
+        (
+            "observability-backend.md",
+            "# Observability\n\n`/{project}:analyze` enforces them.\n\n## Notes\n\nA rule body may mention `/{project}:review`; the header is what counts.\n",
+        ),
+    ];
+
+    #[test]
+    fn a_review_leaves_out_each_rule_file_whose_header_names_analyze_alone() {
+        let tmp = setup_with(HEADERS);
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert_eq!(
+            selected_of(&result),
+            vec!["quality-cross.md", "security-backend.md", "team-rules.md"],
+            "review keeps a file whose header names review, and one naming neither"
+        );
+        let notices = result.notices.unwrap();
+        for left in [
+            "api-backend.md",
+            "concurrency-backend.md",
+            "observability-backend.md",
+        ] {
+            assert!(
+                notices.iter().any(|n| n
+                    == &format!("rule file {left} is judged by analysis alone: its header names the analyze command and not review, so review does not load it")),
+                "{left} is named as judged by analysis: {notices:?}"
+            );
+        }
+        assert_eq!(
+            notices
+                .iter()
+                .filter(|n| n.contains("judged by analysis"))
+                .count(),
+            3,
+            "no file review keeps is named as left to analysis: {notices:?}"
+        );
+    }
+
+    #[test]
+    fn an_analysis_loads_every_rule_file_whatever_its_header_names() {
+        let tmp = setup_with(HEADERS);
+        let result = run(
+            &DiscoverRuleFilesArgs {
+                all: true,
+                ..DiscoverRuleFilesArgs::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(selected_of(&result).len(), HEADERS.len());
+        assert!(
+            !result
+                .notices
+                .unwrap()
+                .iter()
+                .any(|n| n.contains("judged by analysis"))
+        );
+    }
+
+    #[test]
+    fn a_header_counts_a_command_only_by_its_whole_name() {
+        // `/{project}:reviewer` names no review command, so the analyze claim
+        // stands alone; a header naming neither command is not left to analysis.
+        assert!(header_leaves_to_analysis(
+            "# X\n\n`/{project}:analyze` and `/{project}:reviewer`.\n"
+        ));
+        assert!(!header_leaves_to_analysis("# X\n\nNo command named.\n"));
+        assert!(!header_leaves_to_analysis(
+            "# X\n\n`/{project}:review`'s quality pass.\n"
+        ));
+    }
 
     #[test]
     fn rejects_unrecognized_detected_surface_member() {

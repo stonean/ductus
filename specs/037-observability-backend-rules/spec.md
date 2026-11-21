@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [008-security-rules, 016-cross-cutting-rules, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules]
+status: in-progress
+dependencies: [008-security-rules, 016-cross-cutting-rules, 020-code-review, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules]
 next-criterion: 8
 ---
 
@@ -43,7 +43,7 @@ Observability rules default to **SHOULD** (the right metrics, spans, and probes 
 - [x] AC4: The rule set covers, at minimum, metrics, distributed tracing, and health endpoints — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.
 - [x] AC5: Each MUST rule is one whose absence prevents detection or diagnosis of an outage regardless of scale; contextual observability trade-offs are SHOULD. The split is evident from the Statements.
 - [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-LOG-006` for tracing/correlation, `BE-LOG-008` for sensitive values in metric labels and span attributes, `CFG-*` for tunable config, and `CFG-ENV-006` for a sensitive configuration value in those carriers and in a readiness response).
-- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
+- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md). **Narrowed by [020](../020-code-review/spec.md)'s AC17 (owner, 2026-11-21):** the file's header names `/{project}:analyze` alone, so a review leaves it out of its selection with a notice and `/{project}:analyze` alone judges its rules.
 
 ## Open Questions
 

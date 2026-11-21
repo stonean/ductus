@@ -58,7 +58,7 @@ Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observabilit
 - **Three categories vs. five.** Chose `METRIC`/`TRACE`/`HEALTH`; deferred `SLO`/`ALERT` (clarify resolution, reaffirmed by owner decision 2026-10-19 — see the spec's Resolved Questions) — they are operational policy, not per-feature design commitments `/ductus:analyze` can check against a spec/plan. The `BE-{CATEGORY}` grammar admits them later.
 - **Analyze-time vs. review-time verification.** Chose analyze-time design-time commitments (like 034), not code-pattern review (like 036's `QUAL-STUB-001`). Observability is something a spec/plan *commits to* up front; the absence of a metric or probe is a planning gap, caught best against artifacts.
 - **Two MUSTs only.** Readiness-distinct-from-liveness and trace-context propagation are the two absences that blind operators regardless of scale; everything else is contextual coverage (SHOULD). Keeping the MUST set tight avoids forcing instrumentation that may not fit every feature.
-- **Known limitation.** `/ductus:analyze` checks that a spec/plan *commits* to these; it cannot verify the commitment is actually implemented in code — that residual gap is what `/ductus:review` and tests cover, the same limitation every design-time rule carries.
+- **Known limitation.** `/ductus:analyze` checks that a spec/plan *commits* to these; it cannot verify the commitment is actually implemented in code — that residual gap is what tests cover, the same limitation every design-time rule carries, since `/ductus:review` does not load this file (020's AC17).
 
 ## Cross-spec impact
 

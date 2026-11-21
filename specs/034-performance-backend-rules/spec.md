@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [008-security-rules, 016-cross-cutting-rules, 033-rule-surface-setting]
+status: in-progress
+dependencies: [008-security-rules, 016-cross-cutting-rules, 020-code-review, 033-rule-surface-setting]
 next-criterion: 10
 ---
 
@@ -12,7 +12,7 @@ Introduce `framework/rules/performance-backend.md`, the backend counterpart to `
 
 The constitution names **performance** a governance-recognized cross-cutting category (§rules), and when this spec was written the frontend surface already shipped `performance-frontend.md` (Core Web Vitals, bundle size, image/font discipline) while the backend surface had no performance rule set at all — only `security-backend.md` and `api-backend.md`. Backend performance failures that recur across features — N+1 queries, missing indexes, unbounded caches, exhausted connection pools, oversized responses, slow work on the request path — had nowhere to be promoted to the rules tier; each was re-litigated per feature or caught only in production.
 
-This spec closes the asymmetry: a backend performance rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans and `/ductus:review` checks against code.
+This spec closes the asymmetry: a backend performance rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans. `/ductus:review` checked it against code until 020's AC17, since which the file's header leaves its rules to `/ductus:analyze` alone.
 
 ## Rule set scope
 
@@ -49,7 +49,7 @@ Performance rules default to **SHOULD** (advisory; thresholds are context-depend
 - [x] AC4: The rule set covers, at minimum, query efficiency (N+1 + indexes + bounded results), caching (TTL/invalidation, scope-complete keys, stampede), connection pooling (pooled + sized + bounded acquisition + release), and payload budgets (size cap + field selection + compression) — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.
 - [x] AC5: Each MUST rule is one whose absence is a DoS/exhaustion risk regardless of scale; tunable efficiency trade-offs are SHOULD. The split is evident from the Statements.
 - [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it. The citations are `BE-PAGE` (pagination, from `BE-QUERY-003` and `BE-PAYLOAD-001`), `BE-STATUS-001` and `BE-LRO-001` (async acknowledgment and its status monitor, from `BE-ASYNC-001`), `CFG-CONST-003` (named tunable values, from the rules that require a cap, chunk, buffer, pool size, or timeout), `BE-AUTHZ-002` / `BE-AUTHZ-005` / `BE-AUTHZ-003` (from `BE-CACHE-002`), `BE-API-001` (`no-store` responses, from `BE-CACHE-004`), `FE-LOAD-007` (build-emitted frontend assets and the HTML documents that reference them, from `BE-CACHE-004`), `BE-INPUT-006` (request-size limits, from `BE-PAYLOAD-004`), `BE-TIMEOUT-001` / `BE-BREAKER-001` (bounding a synchronous third-party call, from `BE-ASYNC-001`; `BE-TIMEOUT-001` also from `BE-POOL-005`, for the call's own missing timeout), and `BE-COORD-003` (the transactional outbox, from `BE-POOL-005`). `BE-INPUT-006` was not needed as first delivered — no rule reached request-size limits — and became needed when the 2026-10-19 rule-file review added `BE-PAYLOAD-004`. The `BE-IDEMP` citation this criterion originally anticipated is still **not** needed and not present: no rule in the set reaches retry semantics, so there is nothing to cite and nothing was restated.
-- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
+- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md). **Narrowed by [020](../020-code-review/spec.md)'s AC17 (owner, 2026-11-21):** the file's header names `/{project}:analyze` alone, so a review leaves it out of its selection with a notice and `/{project}:analyze` alone judges its rules.
 - [x] AC8: The rule set also covers bulk-write batching in bounded chunks (`BE-QUERY-004`), an explicit HTTP caching policy with validators for responses `BE-API-001` leaves cacheable (`BE-CACHE-004`), pool sizing against the backend's connection limit across every running instance (`BE-POOL-004`), and streaming large request and response bodies (`BE-PAYLOAD-004`) — each a SHOULD with a design-time-commitment Verification clause, added by the 2026-10-19 rule-file review.
 - [x] AC9: The rule set also keeps a database transaction or a checked-out pooled connection from being held open across a call to another service or any other wait this service does not control (`BE-POOL-005`): a SHOULD whose Verification clause is a design-time commitment that the call is made outside any open transaction and without a checked-out connection, or that names the `BE-COORD-003` outbox deferring it — added by the second 2026-10-19 rule-file review.
 

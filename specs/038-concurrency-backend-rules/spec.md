@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [008-security-rules, 016-cross-cutting-rules, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules]
+status: in-progress
+dependencies: [008-security-rules, 016-cross-cutting-rules, 020-code-review, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules]
 next-criterion: 9
 ---
 
@@ -48,7 +48,7 @@ Concurrency rules default to **SHOULD** where the right approach is contextual. 
 - [x] AC4: The rule set covers, at minimum, shared-state races, locking/deadlock avoidance, and transaction isolation — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.
 - [x] AC5: Each MUST rule is one whose absence is a correctness/corruption hazard regardless of scale; contextual trade-offs are SHOULD. The split is evident from the Statements.
 - [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it. As delivered the citations are `api-backend.md` `BE-IDEMP` (retry safety) and `BE-COND-001` (a read-modify-write across two HTTP requests), `reliability-backend.md` `BE-RETRY-001` (retry mechanics) and `BE-RETRY-005` (exhausted redelivery), `configuration-cross.md` `CFG-CONST-003` (tunable lock timeouts and hold bounds), and, since the second 2026-10-19 rule-file review, `performance-backend.md` `BE-CACHE-003` (cache stampede, from `BE-RACE-003`). The `BE-POOL-*` citation this criterion anticipated is **not** present and was not needed: no rule in the set reaches connection pooling — the file does not mention pools or connections at all — so there is nothing to cite and nothing was restated.
-- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
+- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md). **Narrowed by [020](../020-code-review/spec.md)'s AC17 (owner, 2026-11-21):** the file's header names `/{project}:analyze` alone, so a review leaves it out of its selection with a notice and `/{project}:analyze` alone judges its rules.
 - [x] AC8: Every concern the §Rule set scope category table names is delivered by at least one rule in `framework/rules/concurrency-backend.md`, and the table cites each delivering rule by ID, so no concern is promised without a rule behind it.
 
 ## Open Questions

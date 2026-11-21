@@ -22,6 +22,19 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   when a design subject cannot be read. An adopter's third analysis had judged
   a sentence its plan held unchanged through two earlier analyses a MUST,
   because every task between them edited the plan elsewhere.
+- **BREAKING: a review no longer loads a rule file its header gives to analysis (spec 020, AC17).**
+  `discover-rule-files`' review selection leaves out each file whose header,
+  its text before the first `##` heading, names `/{project}:analyze` and not
+  `/{project}:review` (as shipped, or with the project's name substituted),
+  and names it in a `rule file … is judged by analysis alone` notice. Of the
+  shipped files, seven name analysis alone and so are judged by analysis
+  only: `accessibility-frontend.md`, `api-backend.md`,
+  `concurrency-backend.md`, `observability-backend.md`,
+  `performance-backend.md`, `performance-frontend.md` and
+  `reliability-backend.md`. A header naming neither command keeps its file,
+  and `all`, the analysis selection, is unchanged. An adopter's review on
+  0.60.0 had judged concurrency rules out of reach of its code while the
+  analysis of the design that code implements judged them violated.
 
 ## [0.60.0] — 2026-11-20
 

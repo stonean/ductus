@@ -62,7 +62,7 @@ A rule file's **filename suffix** decides which projects load it, and there are 
 | `-frontend.md` | projects with a frontend surface | `security-frontend.md` |
 | `-cross.md` | every project, unconditionally | `quality-cross.md` |
 
-Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip. Suffix and `surfaces` decide what `ductus` installs and what `/review` enforces; `/analyze` loads every rule file present, and a rule fires there only when a spec or plan meets its Verification trigger.
+Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip. Suffix and `surfaces` decide what `ductus` installs and what `/review` enforces, except that `/review` leaves out a file whose header names `/analyze` alone, which `/analyze` alone enforces; `/analyze` loads every rule file present, and a rule fires there only when a spec or plan meets its Verification trigger.
 
 To stand a rule file down from `/review` without deleting it — a `-cross.md` file included — list it under `[[review.disabled-rule-files]]` with a mandatory `reason`. The reason is the audit trail, and it is why the opt-out is a config entry rather than a deletion.
 

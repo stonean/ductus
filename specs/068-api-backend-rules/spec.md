@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [008-security-rules, 016-cross-cutting-rules, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules]
+status: in-progress
+dependencies: [008-security-rules, 016-cross-cutting-rules, 020-code-review, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules]
 next-criterion: 17
 ---
 
@@ -55,7 +55,7 @@ One severity constraint binds this file as it binds every rule file: a MUST neve
 ## Enforcement
 
 - The rules verify **design-time commitments** — what a spec, plan, or the project's `system.md` or `errors.md` must state — not code patterns, as the file's header declares. `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces` (`framework/reference/analyze.md`, the rules step: `discover-rule-files` with `all` lists every `*.md` file in the rule-file directory), and each rule fires only on its Verification trigger, so a project with no programmatic API draws no findings from it.
-- `/{project}:review` selects the file under the **backend** surface by its suffix (`discover-rule-files`), and its content is then authoritative review criteria: MUST blocking, SHOULD advisory. How a project narrows that follows constitution §rules, which the file's header points at, and the selection composes with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
+- `/{project}:review` does not load the file: its header names `/{project}:analyze` alone, so `discover-rule-files` leaves it out of a review's selection and analysis alone judges its rules (020's AC17). Its suffix still classifies it under the **backend** surface for installation. How a project narrows that follows constitution §rules, which the file's header points at, and the selection composes with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
 - `ductus` installs and updates the file as a shared file, through its entry in the Shared Files manifest of `framework/bootstrap/ductus.md`.
 
 ## Rule ID format
@@ -75,7 +75,7 @@ This spec therefore carries no data-model, by design. One here would become the 
 - [x] AC7: Every rule ID the file cites from another rule file resolves to an existing rule whose text supports what is said of it, and every rule ID another rule file cites from this one exists here.
 - [x] AC8: No rule restates a requirement that a sibling rule file owns under the Boundaries above; where the concerns meet, the rule cites the sibling rule.
 - [x] AC9: The 2026-10-19 owner decisions under Resolved Questions hold in the file: `BE-SCHEMA-002` accepts design-first and code-first on one source of truth; `BE-IDEMP-001` covers a non-idempotent `PATCH` and answers a reused key with a different body with `422` and an in-flight duplicate with `409`, except that a side-effecting RPC call carried over HTTP, which counts as a `POST`, may carry its key in a request field and signal both rejections through its protocol's error channel; `BE-STATUS-001` requires `WWW-Authenticate` on `401`; `BE-COND-001`, `BE-PAGE-004`, and `BE-REPR-001` are MUST rules; the file's header says a rule phrased in HTTP methods, status codes, or headers reaches an RPC protocol carried over HTTP only as far as its own text says; `BE-COND-001` covers RPC update methods and GraphQL mutations, its version-field branch naming the `etag` field of AIP-154 and gRPC `ABORTED`; `BE-REPR-001` accepts `google.protobuf.Timestamp`; and `BE-APIVER-002` lets a deprecated GraphQL root field on an endpoint that is not itself deprecated carry the schema mark alone.
-- [x] AC10: The file is listed in the Shared Files manifest of `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`.
+- [x] AC10: The file is listed in the Shared Files manifest of `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`. **Narrowed by [020](../020-code-review/spec.md)'s AC17 (owner, 2026-11-21):** the file's header names `/{project}:analyze` alone, so a review leaves it out of its selection with a notice and `/{project}:analyze` alone judges its rules.
 - [x] AC11: The constitution's §rules Lifecycle no longer lists `api-backend.md` under its recorded backfill exception.
 - [x] AC12: The file's header states its severity posture — a rule is MUST only when its absence lets a client relying on the contract fail silently or corrupts data, and SHOULD where an alternative serves the same purpose or a departure is inconsistent rather than incorrect — and each rule's tier follows it: `BE-PAGE-003` and `BE-REPR-003` are MUST-tier, and `BE-APIVER-002` requires a `Sunset` date no earlier than the `Deprecation` date without requiring a future one.
 - [x] AC13: `BE-APIVER-001` accepts a declared versionless strategy, whose declaration in `specs/system.md` commits to making no change `BE-COMPAT-001` lists as breaking, and `BE-COMPAT-001` says such an API makes none of them, so a deprecated field or operation stays served until the API adopts a versioning strategy.

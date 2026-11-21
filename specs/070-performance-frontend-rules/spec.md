@@ -1,6 +1,6 @@
 ---
-status: done
-dependencies: [008-security-rules, 011-brownfield-process, 024-rule-loader, 025-rule-opt-out, 033-rule-surface-setting, 034-performance-backend-rules, 037-observability-backend-rules]
+status: in-progress
+dependencies: [008-security-rules, 011-brownfield-process, 020-code-review, 024-rule-loader, 025-rule-opt-out, 033-rule-surface-setting, 034-performance-backend-rules, 037-observability-backend-rules]
 next-criterion: 13
 ---
 
@@ -46,7 +46,7 @@ One severity constraint is already settled. Under [008's data-model §Severity c
 
 The rules verify **design-time commitments**, meaning what a spec or plan must state, not code patterns. The file's header says so. `/ductus:analyze` enforces them against feature artifacts. That includes code snippets a plan quotes for its affected files, such as an `<img src="*.jpg">` with no modern-format source, an `@font-face` rule with no `font-display`, or an external classic `<script src>` with no `defer` or `async`. MUST-tier findings are blocking and SHOULD-tier findings are advisory, per 008's severity classification. `/ductus:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`. A rule fires only on a spec or plan that meets its Verification trigger.
 
-`/ductus` installs the file from its Shared Files manifest (`framework/bootstrap/ductus.md`) to `specs/rules/performance-frontend.md` in an adopting project. `/ductus:review` selects it under the **frontend** surface. The `-frontend.md` suffix classifies it (024), and a `[rules] surfaces` list without `frontend` stops both installation updates and review selection ([033-rule-surface-setting](../033-rule-surface-setting/spec.md)). A `[[review.disabled-rule-files]]` entry excludes it from review alone (025). Listing it under `[pinned] files` only stops updates from overwriting a customized copy.
+`/ductus` installs the file from its Shared Files manifest (`framework/bootstrap/ductus.md`) to `specs/rules/performance-frontend.md` in an adopting project. `/ductus:review` does not load it: its header names `/ductus:analyze` alone, so a review leaves it out of its selection (020's AC17). The `-frontend.md` suffix classifies it (024), and a `[rules] surfaces` list without `frontend` stops installation updates ([033-rule-surface-setting](../033-rule-surface-setting/spec.md)). Listing it under `[pinned] files` only stops updates from overwriting a customized copy.
 
 ## ID format
 
@@ -64,7 +64,7 @@ The category abbreviations are governed by the file's own header, per the consti
 - [x] AC6: `FE-BUNDLE-001` sets no default budget figure: its Statement states none, and its Verification leaves a budget's figure to the project.
 - [x] AC7: Rules whose concern meets a sibling rule file cite it and do not restate it. `FE-LOAD-007` cites `BE-CACHE-004`, `BE-PAYLOAD-003`, `FE-PII-003`, and `BE-API-001`. `FE-LOAD-009` cites `FE-PII-003` and `BE-API-001`. `FE-LOAD-004` cites `FE-CSP-002`. `FE-MAIN-002` cites `BE-PAGE`. `BE-CACHE-004` in `framework/rules/performance-backend.md` defers build-emitted frontend assets to this file where this file is also loaded.
 - [x] AC8: Every cross-file citation in the file resolves. `check-rule-ids`, run on `framework/rules/performance-frontend.md` against every rule file in `framework/rules/`, reports no missing or deprecated ID, and the `BE-PAGE` category it cites is a section of `framework/rules/api-backend.md`.
-- [x] AC9: The file is listed in the Shared Files manifest of `framework/bootstrap/ductus.md`, and `/ductus:review` selects it under the `frontend` surface, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
+- [x] AC9: The file is listed in the Shared Files manifest of `framework/bootstrap/ductus.md`, and `/ductus:review` selects it under the `frontend` surface, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md). **Narrowed by [020](../020-code-review/spec.md)'s AC17 (owner, 2026-11-21):** the file's header names `/{project}:analyze` alone, so a review leaves it out of its selection with a notice and `/{project}:analyze` alone judges its rules.
 - [x] AC10: The recorded backfill exception in `framework/constitution.md` §rules → Lifecycle no longer lists `performance-frontend.md`.
 - [x] AC11: The file's header states its severity posture — a rule is MUST only when its absence blocks a user regardless of scale, or leaves the page without the budgets and real-user measurement the other rules answer to — and `FE-BUNDLE-002`, `FE-IMAGE-001`, `FE-IMAGE-002`, `FE-LOAD-001` and `FE-FONT-002` are SHOULD-tier, under their IDs.
 - [x] AC12: `FE-VITALS-001` requires its budgets published in `specs/system.md`, as `FE-BUNDLE-001` requires its own.
