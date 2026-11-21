@@ -48,6 +48,9 @@ Coverage:
   T. check.py fails a design subject added after the split
   U. an integrity item step 15 did not check is recorded as
      integrity-not-checked, which sets restricted
+  AP. check.py fails a step-15 hand-back that does not say whether the plan
+     was judged against the spec's Behavior and criteria, and a contract item
+     step 15 did not check is recorded as integrity-not-checked (spec 067, AC7)
   V. record.py refuses a malformed heading a judge reported that its plan
      does not name
   W. record.py refuses detection older than the feature
@@ -281,7 +284,7 @@ class Project:
                 for p in s["subjects"]}
         with open(s["out"], "w") as f:
             json.dump({"grounding": [], "integrity": [], "decision-reasons": [], "bytes-read": acct,
-                       "integrity-checked": {i: i not in unchecked for i in ("code-block", "rationale", "system")}},
+                       "integrity-checked": {i: i not in unchecked for i in ("code-block", "rationale", "system", "contract")}},
                       f)
 
     def all_hand_backs(self, verdicts_by_cell=None, unchecked=()):
@@ -585,6 +588,23 @@ def u(p, name):
            rc.stdout + r.stdout + r.stderr)
 
 
+def ap(p, name):
+    record_setup(p, unchecked=("contract",))
+    rc = p.run("check.py", F)
+    r = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    out_path = p.manifest()["step15"]["out"]
+    out = json.load(open(out_path))
+    del out["integrity-checked"]["contract"]
+    time.sleep(1.1)
+    json.dump(out, open(out_path, "w"))
+    rm = p.run("check.py", F)
+    check_(name, rc.returncode == 0 and "integrity item contract was not checked" in rc.stdout
+           and r.returncode == 0 and "integrity-not-checked=1" in wa
+           and rm.returncode == 1 and "integrity-checked does not give each of" in rm.stdout + rm.stderr,
+           rc.stdout + r.stdout + r.stderr + rm.stdout + rm.stderr)
+
+
 def v(p, name):
     record_setup(p)
     m = p.manifest()
@@ -832,7 +852,7 @@ def z(name):
                       open(c["out"], "w"))
         s15 = m["step15"]
         json.dump({"grounding": [], "integrity": [], "decision-reasons": [],
-                   "integrity-checked": {"code-block": True, "rationale": True, "system": True},
+                   "integrity-checked": {"code-block": True, "rationale": True, "system": True, "contract": True},
                    "bytes-read": {f"specs/{F}/{p}": [os.path.getsize(os.path.join(root, "specs", F, p))] * 2
                                   for p in s15["subjects"]}}, open(s15["out"], "w"))
         steps.append(run("check.py", F))
@@ -906,6 +926,7 @@ def main():
     case("AI. split.py refuses detection older than an untracked file", ai)
     case("AJ. split.py names the flag, value and bound of a bad budget", aj)
     case("AO. detect.py runs resolve-anchor on each scenario and counts them examined", ao)
+    case("AP. step 15 states the plan-against-spec judgment, or it is unchecked", ap)
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)

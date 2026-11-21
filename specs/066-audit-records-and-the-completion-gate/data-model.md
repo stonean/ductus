@@ -167,7 +167,7 @@ Result:
   "dispositions": { "fixed": 0, "deferred": 0, "waived": 1, "undispositioned": 7 } }
 ```
 
-Writes `specs/{feature}/analysis.md`; its writes, refusals and the derivation of `dispositions:` are as `ductus write-analysis --help` states. Each finding arrives with its tier, which is why `tier` is required: a waiver on a hard-fail or blocking finding is refused. Each deferred or waived finding is stored under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to.
+Writes `specs/{feature}/analysis.md`; its writes, refusals and the derivation of `dispositions:` are as `ductus write-analysis --help` states. Each finding arrives with its tier, which is why `tier` is required: a waiver on a hard-fail or blocking finding is refused. Two more refusals read `tier` and `path` (067's AC6, which owns them): a live hard-fail or blocking finding whose `path` is a design subject of the spec (`spec.md`, `plan.md`, `data-model.md` or a scenario, repo-relative or relative to the feature directory) is refused when its deferral `target` is that spec's own `tasks.md`, and refused when recorded undispositioned at a design subject that a finding recorded `live: false` also cites, which is how the arguments show that a fix of the run edited it; a record with no such finding is accepted, and `ductus exec`, which itemizes no fixed finding, is never refused. Each deferred or waived finding is stored under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to.
 
 **Derived, never accepted:**
 

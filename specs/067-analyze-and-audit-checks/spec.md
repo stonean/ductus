@@ -2,7 +2,7 @@
 status: in-progress
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 next-criterion: 10
-cross-spec-impact: [022-deterministic-runtime, 046-scenario-open-question-visibility, 066-audit-records-and-the-completion-gate]
+cross-spec-impact: [022-deterministic-runtime, 046-scenario-open-question-visibility, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 078-review-fix-rounds-are-re-read-within-a-bound]
 ---
 
 # 067 — Analyze and Audit Checks

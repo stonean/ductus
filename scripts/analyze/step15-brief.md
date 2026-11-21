@@ -28,15 +28,15 @@ Write this JSON to `{{OUT}}`:
 ```json
 {
   "grounding": [{"path": "spec.md", "message": "one claim, naming its section"}],
-  "integrity": [{"check": "code-block|rationale|system", "path": "plan.md", "message": "one line"}],
-  "integrity-checked": {"code-block": true, "rationale": true, "system": true},
+  "integrity": [{"check": "code-block|rationale|system|contract", "path": "plan.md", "message": "one line"}],
+  "integrity-checked": {"code-block": true, "rationale": true, "system": true, "contract": true},
   "decision-reasons": [{"path": "plan.md", "message": "one line"}],
   "bytes-read": {"specs/{{FEATURE}}/spec.md": [0, 0]}
 }
 ```
 
 - Report each grounding claim on its own, never two in one entry.
-- `integrity-checked` says which of the three integrity items you judged. Set an item to `false` when its subject could not be read.
+- `integrity-checked` says which of the integrity items you judged. Set an item to `false` when its subject could not be read. `code-block` is the spec holding no implementation code block, `rationale` each Technical Decision carrying its rationale, `system` the plan not contradicting `specs/system.md`, and `contract` the plan not contradicting the spec's Behavior or acceptance criteria: a decision that reverses a requirement the spec states, or leaves a criterion unmet by design, each a finding with `check` set to `contract`.
 - `bytes-read` holds every subject, keyed by repo-relative path. Each entry is `[bytes read, wc -c size]`.
 
 End your final message with:

@@ -386,7 +386,7 @@ When `--fix` is set, after writing the report:
 
 ## Fix-round loop
 
-Step 12 re-reads the fixes this run made before the record is final (spec 078): step 10's chore fixes, `--fix`'s, and those a re-read prompts. It covers no other command's fixes: `/ductus:analyze`'s re-check reads its own, and `/ductus:implement`'s land before the review whose passes read them.
+Step 12 re-reads the fixes this run made before the record is final (spec 078): step 10's chore fixes, `--fix`'s, and those a re-read prompts. It covers no other command's fixes: `/ductus:analyze`'s re-check reads its own, chores and the design edits it makes in the run (spec 067, AC6), and `/ductus:implement`'s land before the review whose passes read them.
 
 - **A round is derived, never stated.** The run's first base is the snapshot `start-fix-rounds` takes before step 10 writes anything, and `brief-re-read` works out what changed since a base. A deferral's write is a round's path like any other write. Each exempt or briefed round's `snapshot`, and a matched check's, is the next round's base, so no round re-lists an earlier one. Another session's uncommitted edits cannot be told apart and stay in the round; `git worktree` isolates sessions (§concurrent-features).
 - **The loop ends when a round is `empty`**: after a clean re-read, or a matched check with `open` at zero, nothing has changed since the last base. A NOTE fixed afterwards is a change, so it is a round.

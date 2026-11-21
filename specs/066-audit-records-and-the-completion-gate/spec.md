@@ -30,6 +30,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md) added reasons to the analysis record's closed set of unexamined reasons, each listed with its class in [data-model.md](data-model.md): its path families now run at `in-progress` and say when they do not run, its reference, integrity and decision-reason checks name what they could not judge, and a path that leaves the project is its own reason.
 >
 > **Signpost:** [050 — Constitution](../050-constitution/spec.md)'s AC24 forbids a line-number citation in a spec artifact; AC6 here makes removing a citation's line suffix a mechanical edit, so the strips of 050's sweep reopened no spec on their own.
+>
+> **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md)'s AC6 added two refusals to `write-analysis`: a gating finding at a design subject of the spec recorded deferred to its own `tasks.md`, and one recorded undispositioned at a subject a fixed finding of the run cites. [data-model.md](data-model.md) states them.
 
 ## Motivation
 

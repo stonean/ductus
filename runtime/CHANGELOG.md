@@ -6,6 +6,21 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **BREAKING: `write-analysis` refuses a gating finding at a design subject deferred to its own `tasks.md`, and one left undispositioned at a subject a fix of the run edited (spec 067, AC6).**
+  A live hard-fail or blocking finding whose `path` is a design subject of the
+  spec being recorded (`spec.md`, `plan.md`, `data-model.md` or a scenario,
+  repo-relative or relative to the feature directory) is refused when its
+  deferral `target` is that spec's own `tasks.md`, and refused when recorded
+  undispositioned while a finding recorded `live: false` cites the same
+  subject, which is how the arguments show that a fix of the run edited it.
+  Each refusal names the finding and writes no record. A caller that deferred
+  such a finding to its own tasks, or recorded a new one undispositioned after
+  fixing its subject, is refused where it was accepted; a deferral to another
+  spec's work, a finding at `tasks.md` or any other file, an advisory finding,
+  and every run that itemizes no fixed finding, `ductus exec` included, are
+  recorded as before. `/ductus:analyze` steps 19 and 20 say the design edit is
+  made in the run once the operator confirms it, and step 15 judges the plan
+  against the spec's Behavior and acceptance criteria.
 - **BREAKING: `resolve-anchor` reads a scenario's bare `spec.md` as the parent's and reports the forms it does not read (spec 067, AC8, AC9).**
   In a file under a `scenarios` directory a bare `spec.md` names the `spec.md`
   of the spec that directory sits in, so a reference beside it is judged

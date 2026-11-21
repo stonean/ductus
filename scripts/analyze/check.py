@@ -46,7 +46,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import analyze_lib as lib  # noqa: E402
 
 KINDS = ("addressed", "finding", "waived")
-INTEGRITY = ("code-block", "rationale", "system")
+INTEGRITY = ("code-block", "rationale", "system", "contract")
 
 
 def read_out(path, created_epoch):

@@ -251,6 +251,7 @@ fn run_between(
     let gating = gating_counts(args, repo, &root);
     let blocking = gating.hard_fail > 0 || gating.blocking_findings > 0;
     let dispositions = count_dispositions(args)?;
+    refuse_design_edit_deferrals(args, &root)?;
     decisions::one_outcome_per_key(
         args.findings
             .iter()
@@ -526,6 +527,78 @@ fn count_dispositions(args: &WriteAnalysisArgs) -> Result<Dispositions> {
     counts.undispositioned =
         live_total.saturating_sub(counts.deferred.saturating_add(counts.waived));
     Ok(counts)
+}
+
+/// The path of `path` within the spec's own directory when it names an artifact of this
+/// feature: repo-relative under `{root}/{feature}/`, or already relative to the feature
+/// directory, as a host or a test writes it. A path under another feature, or outside the
+/// spec root, names none.
+fn within_feature<'a>(path: &'a str, root: &str, feature: &str) -> Option<&'a str> {
+    let path = path.trim();
+    let path = path.strip_prefix("./").unwrap_or(path);
+    let own = format!("{root}/{feature}/");
+    if let Some(inside) = path.strip_prefix(own.as_str()) {
+        return Some(inside);
+    }
+    (!path.starts_with(&format!("{root}/")) && !path.starts_with('/')).then_some(path)
+}
+
+/// The design subject of this feature a finding cites, when its `path` names one.
+fn design_subject<'a>(finding: &'a AnalysisFinding, root: &str, feature: &str) -> Option<&'a str> {
+    within_feature(&finding.path, root, feature)
+        .filter(|inside| crate::primitives::analyze_subjects::is_design_subject(inside))
+}
+
+/// Refuse the two records AC6 of spec 067 forbids, before any write: a live hard-fail or
+/// blocking finding at a design subject of the spec recorded as deferred to the spec's own
+/// `tasks.md`, which leaves the fixed text unjudged until a later cycle; and one recorded
+/// undispositioned at a subject a fix of the run edited. A fix is seen as a finding recorded
+/// `live: false` (gone from the re-check, so fixed) citing that subject.
+fn refuse_design_edit_deferrals(args: &WriteAnalysisArgs, root: &str) -> Result<()> {
+    let own_tasks = format!("{root}/{}/tasks.md", args.feature);
+    let edited: BTreeSet<&str> = args
+        .findings
+        .iter()
+        .filter(|finding| !finding.live)
+        .filter_map(|finding| design_subject(finding, root, &args.feature))
+        .collect();
+    for (idx, finding) in args.findings.iter().enumerate().filter(|(_, f)| f.live) {
+        if !matches!(
+            finding.tier,
+            AnalysisTier::HardFail | AnalysisTier::Blocking
+        ) {
+            continue;
+        }
+        let Some(subject) = design_subject(finding, root, &args.feature) else {
+            continue;
+        };
+        let disposition = &finding.disposition;
+        match disposition.outcome {
+            DispositionOutcome::Deferred => {
+                let target = decisions::nonblank(disposition.target.as_deref()).map(str::trim);
+                if target
+                    .is_some_and(|target| target.strip_prefix("./").unwrap_or(target) == own_tasks)
+                {
+                    return Err(invalid(
+                        format!("findings[{idx}].disposition.target"),
+                        &format!(
+                            "a hard-fail or blocking finding at `{subject}` is fixed in the run by an edit the operator confirms, so the re-check judges the fix; only the code it owes is a task, never the finding deferred whole to this spec's own tasks.md"
+                        ),
+                    ));
+                }
+            }
+            DispositionOutcome::Undispositioned if edited.contains(subject) => {
+                return Err(invalid(
+                    format!("findings[{idx}].disposition.outcome"),
+                    &format!(
+                        "a fix of this run edited `{subject}`, so a gating finding the re-check produces there is fixed or deferred to another spec's work in the run, never left undispositioned; revert the fix when it cannot be"
+                    ),
+                ));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// The arguments as this run records them: a finding the rule waived again
@@ -1467,6 +1540,7 @@ mod tests {
             Some("specs/042-demo/tasks.md"),
         );
         own.disposition.task = Some("2".into());
+        own.path = "tasks.md".into();
         a.findings = vec![own];
         run(&a, tmp.path()).unwrap();
 
@@ -1929,13 +2003,19 @@ mod tests {
                 DispositionOutcome::Fixed,
                 None,
             ),
-            finding(
-                AnalysisTier::Blocking,
-                "task-consistency",
-                "task 4 has no Done when",
-                DispositionOutcome::Deferred,
-                Some("specs/042-demo/tasks.md"),
-            ),
+            {
+                // A finding at `tasks.md` is no design subject, so AC6 leaves its deferral to
+                // the spec's own tasks alone.
+                let mut owed = finding(
+                    AnalysisTier::Blocking,
+                    "task-consistency",
+                    "task 4 has no Done when",
+                    DispositionOutcome::Deferred,
+                    Some("specs/042-demo/tasks.md"),
+                );
+                owed.path = "tasks.md".into();
+                owed
+            },
             finding(
                 AnalysisTier::Advisory,
                 "applicable-rules",
@@ -1962,7 +2042,7 @@ mod tests {
             }
         );
         let report = analysis_md(&tmp);
-        assert!(report.contains("- task-consistency — task 4 has no Done when — `spec.md` — **deferred** to `specs/042-demo/tasks.md`"), "{report}");
+        assert!(report.contains("- task-consistency — task 4 has no Done when — `tasks.md` — **deferred** to `specs/042-demo/tasks.md`"), "{report}");
         assert!(report.contains("- applicable-rules — BE-AUTHN-001 does not fire — `spec.md` — **waived**: cited for a future endpoint"), "{report}");
         assert!(
             report.contains(
@@ -1995,6 +2075,205 @@ mod tests {
                 "{error}"
             );
             assert!(!analysis_exists(&tmp), "nothing is written on a refusal");
+        }
+    }
+
+    /// A finding of `tier` citing `path`, with `outcome` and its companion.
+    fn design_finding(
+        path: &str,
+        tier: AnalysisTier,
+        outcome: DispositionOutcome,
+        companion: Option<&str>,
+    ) -> AnalysisFinding {
+        let mut found = finding(
+            tier,
+            "plan-consistency",
+            &format!("at {path} ({outcome:?}, {tier:?})"),
+            outcome,
+            companion,
+        );
+        found.path = path.into();
+        found
+    }
+
+    /// A record for spec 042 carrying `findings`, written under `specs/043-other`'s tasks existing
+    /// so a deferral to it names work that is there. `Ok` is the record written.
+    fn record_design(findings: Vec<AnalysisFinding>) -> (TempDir, Result<WriteAnalysisResult>) {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let other = tmp.path().join("specs/043-other");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(
+            other.join("tasks.md"),
+            "# T\n\n## 1. A\n\n- [ ] a\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("specs/042-demo/tasks.md"),
+            "# T\n\n## 1. A\n\n- [x] a\n\n- **Done when**: a.\n",
+        )
+        .unwrap();
+        let mut a = args();
+        a.decided_by = Some("dev@example.com".into());
+        let live = |tier| {
+            u32::try_from(findings.iter().filter(|f| f.live && f.tier == tier).count()).unwrap()
+        };
+        a.hard_fail = live(AnalysisTier::HardFail);
+        a.blocking_findings = live(AnalysisTier::Blocking);
+        a.advisory = live(AnalysisTier::Advisory);
+        a.findings = findings;
+        let result = run(&a, tmp.path());
+        (tmp, result)
+    }
+
+    /// AC6 of spec 067: a gating finding at a design subject of the spec is fixed in the run, so
+    /// recording it deferred whole to the spec's own `tasks.md` is refused, whichever subject,
+    /// tier and path form, with nothing written.
+    #[test]
+    fn a_gating_design_finding_deferred_to_its_own_tasks_is_refused() {
+        let own = "specs/042-demo/tasks.md";
+        for path in [
+            "specs/042-demo/plan.md",
+            "specs/042-demo/spec.md",
+            "specs/042-demo/data-model.md",
+            "specs/042-demo/scenarios/a.md",
+            "plan.md",
+        ] {
+            for tier in [AnalysisTier::HardFail, AnalysisTier::Blocking] {
+                let (tmp, result) = record_design(vec![design_finding(
+                    path,
+                    tier,
+                    DispositionOutcome::Deferred,
+                    Some(own),
+                )]);
+                let error = result.unwrap_err().to_string();
+                assert!(
+                    error.contains("findings[0].disposition.target"),
+                    "{path}: {error}"
+                );
+                assert!(error.contains("own tasks.md"), "{error}");
+                assert!(!analysis_exists(&tmp), "nothing is written on a refusal");
+            }
+        }
+    }
+
+    /// The deferrals AC6 leaves alone are recorded: to another spec's work, a finding that is
+    /// advisory, one at a path that is no design subject, and one under another feature.
+    #[test]
+    fn a_design_finding_deferred_elsewhere_is_recorded() {
+        let own = "specs/042-demo/tasks.md";
+        let other = "specs/043-other/tasks.md";
+        let cases = vec![
+            design_finding(
+                "specs/042-demo/plan.md",
+                AnalysisTier::Blocking,
+                DispositionOutcome::Deferred,
+                Some(other),
+            ),
+            design_finding(
+                "specs/042-demo/plan.md",
+                AnalysisTier::Advisory,
+                DispositionOutcome::Deferred,
+                Some(own),
+            ),
+            design_finding(
+                "specs/042-demo/tasks.md",
+                AnalysisTier::Blocking,
+                DispositionOutcome::Deferred,
+                Some(own),
+            ),
+            design_finding(
+                "specs/043-other/plan.md",
+                AnalysisTier::Blocking,
+                DispositionOutcome::Deferred,
+                Some(own),
+            ),
+        ];
+        for case in cases {
+            let (tmp, result) = record_design(vec![case.clone()]);
+            result.unwrap_or_else(|error| panic!("{} was refused: {error}", case.path));
+            assert!(analysis_exists(&tmp));
+        }
+    }
+
+    /// AC6 of spec 067: a fix of the run edited a design subject when a finding gone from the
+    /// re-check cites it, so a gating finding recorded undispositioned there is refused.
+    #[test]
+    fn a_gating_finding_left_undispositioned_at_an_edited_subject_is_refused() {
+        for tier in [AnalysisTier::HardFail, AnalysisTier::Blocking] {
+            let (tmp, result) = record_design(vec![
+                design_finding(
+                    "specs/042-demo/plan.md",
+                    AnalysisTier::Advisory,
+                    DispositionOutcome::Fixed,
+                    None,
+                ),
+                design_finding("plan.md", tier, DispositionOutcome::Undispositioned, None),
+            ]);
+            let error = result.unwrap_err().to_string();
+            assert!(error.contains("findings[1].disposition.outcome"), "{error}");
+            assert!(error.contains("edited `plan.md`"), "{error}");
+            assert!(!analysis_exists(&tmp), "nothing is written on a refusal");
+        }
+    }
+
+    /// The records AC6 accepts beside that refusal: no fix edited the subject, a fix edited a
+    /// different one or a file that is no design subject, the finding is advisory, or it is
+    /// deferred to another spec's work.
+    #[test]
+    fn a_gating_finding_is_recorded_where_no_fix_edited_its_subject() {
+        let fixed = |path| {
+            design_finding(
+                path,
+                AnalysisTier::Advisory,
+                DispositionOutcome::Fixed,
+                None,
+            )
+        };
+        let owed = |path| {
+            design_finding(
+                path,
+                AnalysisTier::Blocking,
+                DispositionOutcome::Undispositioned,
+                None,
+            )
+        };
+        let cases = vec![
+            vec![owed("specs/042-demo/plan.md")],
+            vec![
+                fixed("specs/042-demo/spec.md"),
+                owed("specs/042-demo/plan.md"),
+            ],
+            vec![
+                fixed("specs/042-demo/tasks.md"),
+                owed("specs/042-demo/plan.md"),
+            ],
+            vec![
+                fixed("specs/043-other/plan.md"),
+                owed("specs/042-demo/plan.md"),
+            ],
+            vec![
+                fixed("specs/042-demo/plan.md"),
+                design_finding(
+                    "specs/042-demo/plan.md",
+                    AnalysisTier::Advisory,
+                    DispositionOutcome::Undispositioned,
+                    None,
+                ),
+            ],
+            vec![
+                fixed("specs/042-demo/plan.md"),
+                design_finding(
+                    "specs/042-demo/plan.md",
+                    AnalysisTier::Blocking,
+                    DispositionOutcome::Deferred,
+                    Some("specs/043-other/tasks.md"),
+                ),
+            ],
+        ];
+        for findings in cases {
+            let (tmp, result) = record_design(findings.clone());
+            result.unwrap_or_else(|error| panic!("{findings:?} was refused: {error}"));
+            assert!(analysis_exists(&tmp));
         }
     }
 

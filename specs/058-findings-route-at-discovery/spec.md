@@ -15,6 +15,8 @@ next-criterion: 36
 # 058 — Findings route at discovery
 
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed who decides in a review or analysis run. A finding is fixed when mechanical and otherwise waived with its reason, by a rule that asks nobody, and only a gating finding's waiver or deferral reaches the operator. Where this spec says a run proposes or confirms a disposition, read that of `/{project}:implement`'s disposition task and of a gating finding.
+>
+> **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md)'s AC6 narrowed *the spec in hand* in the deferred disposition's routing list below: an analysis fixes a gating finding at a design subject of the spec in hand in the run, and `write-analysis` refuses it deferred whole to the spec's own `tasks.md`.
 
 Every finding `/{project}:review`, `/{project}:analyze`, or
 `/{project}:implement` produces takes at most one disposition: fixed,
@@ -93,7 +95,10 @@ The three dispositions:
    artifact the pre-`done` gate reads, chosen by the groom decision tree, an
    external work-item ID, or both (076). `groom.md` stays its single canonical
    statement, and each command references it rather than restating it:
-   - **The spec in hand:** a task on its `tasks.md`, a scenario, or a body edit.
+   - **The spec in hand:** a task on its `tasks.md`, a scenario, or a body edit,
+     except that an analysis's hard-fail or blocking finding at one of its design
+     subjects is fixed by an edit the operator confirms in the run, never deferred
+     whole to its own `tasks.md`; only the code that edit owes is a task (067's AC6).
      If it is `done` — a review or analyze run can examine a finished spec — it
      is reopened `done → in-progress` as below, so the deferred work does not sit
      unchecked on a spec no gate reads.
