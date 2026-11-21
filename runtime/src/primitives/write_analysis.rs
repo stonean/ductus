@@ -655,6 +655,8 @@ struct RuleFields {
     verdicts: BTreeMap<String, RuleVerdict>,
     unjudged: Vec<String>,
     digest: BTreeMap<String, String>,
+    /// The design subjects' sections at write time (AC7).
+    sections: BTreeMap<String, String>,
     /// Reported in the result and the body, recorded in no field.
     contradictions: Vec<RuleContradiction>,
     /// Each `waived` verdict in `verdicts` with its rule's tier, MUST-tier
@@ -768,8 +770,13 @@ fn check_new_verdicts(
 /// it), or left unjudged. A rule the prior record held that no loaded file
 /// defines is in none of them, so its verdict is dropped.
 ///
-/// A new `finding` over a rule whose prior verdict was current and quiet or
-/// addressed is a contradiction, reported and held against nothing.
+/// A new `finding` at a section unchanged since its rule's quiet or
+/// addressed verdict is a contradiction alone, stored nowhere and counted in
+/// no tier (AC7); one against a current such verdict at a location naming no
+/// section is a contradiction beside the finding, which counts (AC3). A rule
+/// owed a judgment against the changed sections keeps its carried verdict
+/// when the run stores none for it, and is unjudged when the run did not
+/// judge it.
 ///
 /// # Errors
 ///
@@ -813,6 +820,7 @@ fn derive_rule_fields(
             .iter()
             .map(|file| (file.name.clone(), file.digest.clone()))
             .collect(),
+        sections: crate::primitives::analyze_subjects::section_digest(feature_dir),
         ..RuleFields::default()
     };
     for (rule, current) in standing.rules() {
@@ -828,7 +836,8 @@ fn derive_rule_fields(
                     fields.verdicts.insert(rule.id.clone(), verdict.clone());
                 }
                 Currency::NotFired => {}
-                Currency::Stale => fields.unjudged.push(rule.id.clone()),
+                // The changed sections are what nobody judged.
+                Currency::Rejudge { .. } | Currency::Stale => fields.unjudged.push(rule.id.clone()),
             }
             continue;
         }
@@ -840,13 +849,29 @@ fn derive_rule_fields(
                 fields.unjudged.push(rule.id.clone());
             }
             Some(verdict) => {
-                if let Some(earlier) = rule_verdicts::contradiction(current, verdict) {
+                let demoted = standing.demoted(id, verdict);
+                if let Some(earlier) =
+                    demoted.or_else(|| rule_verdicts::contradiction(current, verdict))
+                    && let RuleVerdict::Finding { at, message, .. } = verdict
+                {
                     fields.contradictions.push(RuleContradiction {
                         rule: rule.id.clone(),
                         earlier: earlier.to_string(),
+                        at: at.clone(),
+                        message: message.clone(),
+                        counted: demoted.is_none(),
                     });
                 }
-                fields.verdicts.insert(rule.id.clone(), verdict.clone());
+                if demoted.is_none() {
+                    fields.verdicts.insert(rule.id.clone(), verdict.clone());
+                } else {
+                    carry(&mut fields, rule, current, &entries);
+                }
+            }
+            // Judged and stored nothing: a rule judged against the changed
+            // sections keeps what it carries there.
+            None if matches!(current, Currency::Rejudge { .. }) => {
+                carry(&mut fields, rule, current, &entries);
             }
             None => {}
         }
@@ -883,6 +908,27 @@ fn derive_rule_fields(
         fields,
         unreadable_files: universe.unreadable,
     })
+}
+
+/// Keep the verdict `current` carries for `rule` (AC7): its stored `addressed`
+/// or `waived` one, the latter only while the spec's departure entry stands,
+/// which a carried waiver is refilled from; a waiver whose entry is gone
+/// stood for sections this run did not judge, so the rule is unjudged.
+fn carry(
+    fields: &mut RuleFields,
+    rule: &rule_verdicts::AssessableRule,
+    current: &Currency,
+    entries: &BTreeMap<String, Entry>,
+) {
+    match current.carried() {
+        Some(RuleVerdict::Waived { .. }) if !entries.contains_key(&rule.id) => {
+            fields.unjudged.push(rule.id.clone());
+        }
+        Some(verdict) => {
+            fields.verdicts.insert(rule.id.clone(), verdict.clone());
+        }
+        None => {}
+    }
 }
 
 /// The `waived` verdicts of `verdicts` with their rules' tiers, the MUST-tier
@@ -1155,8 +1201,10 @@ fn code_span(text: &str) -> String {
 }
 
 /// Each rule whose verdict turned from quiet or addressed to a finding over
-/// unchanged subjects, or `*None.*`. A note, never a finding: the finding is
-/// recorded in its own tier (spec 082, AC3).
+/// text judged before, or `*None.*`. A note, never a finding: one at a
+/// section unchanged since the earlier verdict holds nothing and its message
+/// is kept here alone (AC7); one at a location naming no section is recorded
+/// in its own tier as well (spec 082, AC3).
 fn render_contradictions(contradictions: &[RuleContradiction]) -> String {
     if contradictions.is_empty() {
         return "*None.*".to_string();
@@ -1164,11 +1212,21 @@ fn render_contradictions(contradictions: &[RuleContradiction]) -> String {
     contradictions
         .iter()
         .map(|c| {
-            format!(
-                "- {} — judged a finding over unchanged subjects, against an earlier verdict of {}",
-                plain(&c.rule),
-                plain(&c.earlier)
-            )
+            if c.counted {
+                format!(
+                    "- {} — judged a finding over unchanged subjects, against an earlier verdict of {}; the finding counts in its tier",
+                    plain(&c.rule),
+                    plain(&c.earlier)
+                )
+            } else {
+                format!(
+                    "- {} — judged a finding at {}, a section unchanged since its earlier verdict of {}, so it counts in no tier: {}",
+                    plain(&c.rule),
+                    code_span(&c.at),
+                    plain(&c.earlier),
+                    single_line(&c.message)
+                )
+            }
         })
         .collect::<Vec<_>>()
         .join("\n")
@@ -1182,6 +1240,14 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
         out.push_str("rule-digest:\n");
         for (file, digest) in &rules.digest {
             let _ = writeln!(out, "  {}: {digest}", yaml_string(&single_line(file)));
+        }
+    }
+    // A key is a path and a heading, which may hold any character a heading
+    // can, so it is always double-quoted.
+    if !rules.sections.is_empty() {
+        out.push_str("section-digest:\n");
+        for (section, digest) in &rules.sections {
+            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(&single_line(section)));
         }
     }
     if !rules.verdicts.is_empty() {
@@ -3033,7 +3099,7 @@ mod tests {
         )
     }
 
-    /// Spec 082, AC4: the three fields a record carries read back through the
+    /// Spec 082, AC4: the four fields a record carries read back through the
     /// record's own loader, text values holding the characters a flow mapping
     /// ends on included, and an empty field is omitted.
     #[test]
@@ -3068,6 +3134,14 @@ mod tests {
             ]),
             unjudged: vec!["BE-AUTHN-004".into(), "BE-AUTHN-005".into()],
             digest: BTreeMap::from([("quality-cross.md".to_string(), "ab".repeat(32))]),
+            // A heading may hold what a block mapping's key ends on.
+            sections: BTreeMap::from([
+                ("plan.md".to_string(), "12".repeat(8)),
+                (
+                    "plan.md#Rollout: one, two # \"three\"".to_string(),
+                    "34".repeat(8),
+                ),
+            ]),
             contradictions: Vec::new(),
             waived: Vec::new(),
         };
@@ -3079,6 +3153,7 @@ mod tests {
             panic!("the record did not load");
         };
         assert_eq!(record.rule_digest, rules.digest);
+        assert_eq!(record.section_digest, rules.sections);
         assert_eq!(record.unjudged_rules, rules.unjudged);
         assert_eq!(record.rule_verdicts.len(), 3);
         assert_eq!(
@@ -3106,7 +3181,12 @@ mod tests {
         )
         .unwrap();
         let report = analysis_md(&tmp);
-        for key in ["rule-verdicts", "unjudged-rules", "rule-digest"] {
+        for key in [
+            "rule-verdicts",
+            "unjudged-rules",
+            "rule-digest",
+            "section-digest",
+        ] {
             assert!(
                 !report.contains(key),
                 "{key} is omitted when empty: {report}"
@@ -3187,6 +3267,14 @@ mod tests {
         RuleVerdict::Finding {
             tier,
             at: "spec.md#Behavior".into(),
+            message: message.into(),
+        }
+    }
+
+    fn finding_at(at: &str, message: &str) -> RuleVerdict {
+        RuleVerdict::Finding {
+            tier: FindingTier::Must,
+            at: at.into(),
             message: message.into(),
         }
     }
@@ -3297,10 +3385,11 @@ mod tests {
         assert_eq!(written_record(&tmp).unjudged_rules, rule_ids(2, 0));
     }
 
-    /// Spec 082, AC3: a finding over unchanged subjects, against a rule that
-    /// did not fire or was addressed, is recorded as a finding in its tier and
-    /// reported as a contradiction naming the earlier verdict; a finding
-    /// against a finding is none; the contradiction holds nothing.
+    /// Spec 082, AC3 as AC7 leaves it: a finding over unchanged subjects at a
+    /// location naming no section, against a rule that did not fire or was
+    /// addressed, is recorded as a finding in its tier and reported as a
+    /// contradiction naming the earlier verdict; a finding against a finding
+    /// is none; the contradiction holds nothing.
     #[test]
     fn a_finding_after_a_quiet_or_addressed_verdict_is_a_recorded_contradiction() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
@@ -3318,22 +3407,29 @@ mod tests {
         second.blocking_findings = 3;
         second.judged_rules = rule_ids(3, 0);
         second.rule_verdicts = BTreeMap::from([
-            ("TS-RULE-001".to_string(), finding_verdict("was quiet")),
-            ("TS-RULE-002".to_string(), finding_verdict("was addressed")),
+            (
+                "TS-RULE-001".to_string(),
+                finding_at("spec.md", "was quiet"),
+            ),
+            (
+                "TS-RULE-002".to_string(),
+                finding_at("spec.md", "was addressed"),
+            ),
             ("TS-RULE-003".to_string(), finding_verdict("still bad")),
         ]);
         let result = run(&second, tmp.path()).unwrap();
+        let counted = |rule: &str, earlier: &str, message: &str| RuleContradiction {
+            rule: rule.into(),
+            earlier: earlier.into(),
+            at: "spec.md".into(),
+            message: message.into(),
+            counted: true,
+        };
         assert_eq!(
             result.contradictions,
             [
-                RuleContradiction {
-                    rule: "TS-RULE-001".into(),
-                    earlier: "not-fired".into()
-                },
-                RuleContradiction {
-                    rule: "TS-RULE-002".into(),
-                    earlier: "addressed".into()
-                },
+                counted("TS-RULE-001", "not-fired", "was quiet"),
+                counted("TS-RULE-002", "addressed", "was addressed"),
             ]
         );
         // The finding is recorded in its tier; the contradiction is no count.
@@ -3343,7 +3439,7 @@ mod tests {
         assert!(record.blocking);
         let report = analysis_md(&tmp);
         assert!(
-            report.contains("- TS-RULE-002 — judged a finding over unchanged subjects, against an earlier verdict of addressed"),
+            report.contains("- TS-RULE-002 — judged a finding over unchanged subjects, against an earlier verdict of addressed; the finding counts in its tier"),
             "{report}"
         );
 
@@ -3355,6 +3451,254 @@ mod tests {
         third.blocking_findings = 3;
         let result = run(&third, tmp.path()).unwrap();
         assert_eq!(result.contradictions.len(), 0);
+    }
+
+    /// Spec 082, AC7: with nothing changed, a finding at a section, against a
+    /// rule that did not fire or was addressed, is the contradiction alone,
+    /// stored nowhere and counted in no tier, the addressed rule keeping its
+    /// verdict; a finding against a finding still stands.
+    #[test]
+    fn a_finding_at_an_unchanged_section_after_a_quiet_or_addressed_verdict_holds_nothing() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 0);
+        let mut first = args();
+        first.judged_rules = rule_ids(3, 0);
+        first.blocking_findings = 1;
+        first.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-002".to_string(), addressed("spec.md#Behavior")),
+            ("TS-RULE-003".to_string(), finding_verdict("old")),
+        ]);
+        run(&first, tmp.path()).unwrap();
+
+        let mut second = args();
+        second.blocking_findings = 1;
+        second.judged_rules = rule_ids(3, 0);
+        second.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), finding_verdict("was quiet")),
+            ("TS-RULE-002".to_string(), finding_verdict("was addressed")),
+            ("TS-RULE-003".to_string(), finding_verdict("still bad")),
+        ]);
+        let result = run(&second, tmp.path()).unwrap();
+        let demoted = |rule: &str, earlier: &str, message: &str| RuleContradiction {
+            rule: rule.into(),
+            earlier: earlier.into(),
+            at: "spec.md#Behavior".into(),
+            message: message.into(),
+            counted: false,
+        };
+        assert_eq!(
+            result.contradictions,
+            [
+                demoted("TS-RULE-001", "not-fired", "was quiet"),
+                demoted("TS-RULE-002", "addressed", "was addressed"),
+            ]
+        );
+        let record = written_record(&tmp);
+        assert_eq!(
+            record.rule_verdicts.keys().collect::<Vec<_>>(),
+            ["TS-RULE-002", "TS-RULE-003"]
+        );
+        assert_eq!(
+            record.rule_verdicts["TS-RULE-002"],
+            addressed("spec.md#Behavior")
+        );
+        assert_eq!(
+            record.rule_verdicts["TS-RULE-003"],
+            finding_verdict("still bad")
+        );
+        let report = analysis_md(&tmp);
+        assert!(
+            report.contains("- TS-RULE-001 — judged a finding at `spec.md#Behavior`, a section unchanged since its earlier verdict of not-fired, so it counts in no tier: was quiet"),
+            "{report}"
+        );
+    }
+
+    const PLAN: &str = "# Plan\n\n## Overview\n\nA.\n\n## Rollout\n\nB.\n";
+
+    /// `plan.md` with its Rollout section's text edited and nothing else.
+    fn edit_rollout(tmp: &TempDir) {
+        fs::write(
+            tmp.path().join("specs/042-demo/plan.md"),
+            PLAN.replace("B.", "C."),
+        )
+        .unwrap();
+    }
+
+    /// The record as one written before AC7: its `section-digest` removed.
+    fn strip_section_digest(tmp: &TempDir) {
+        let path = tmp.path().join("specs/042-demo/analysis.md");
+        let text = fs::read_to_string(&path).unwrap();
+        let mut kept = Vec::new();
+        let mut in_block = false;
+        for line in text.split_inclusive('\n') {
+            if line.starts_with("section-digest:") {
+                in_block = true;
+                continue;
+            }
+            if in_block && line.starts_with("  ") {
+                continue;
+            }
+            in_block = false;
+            kept.push(line);
+        }
+        assert!(kept.len() < text.split_inclusive('\n').count(), "{text}");
+        fs::write(&path, kept.concat()).unwrap();
+    }
+
+    fn standing_of(tmp: &TempDir) -> rule_verdicts::Standing {
+        let universe = rule_verdicts::load_universe(tmp.path()).unwrap();
+        rule_verdicts::standing(&tmp.path().join("specs/042-demo"), &universe.files)
+    }
+
+    /// Spec 082, AC7's fixture: an edit to one section of `plan.md` between
+    /// two runs leaves a not-fired verdict current for every other section.
+    /// The rule is owed a judgment of the changed section alone, a finding
+    /// there counts, and one at an unchanged section is a contradiction that
+    /// holds nothing. With the section digests removed from the first
+    /// record, the same edit stales the verdict, so the same finding is
+    /// stored and a count of zero is refused.
+    #[test]
+    fn a_plan_section_edit_leaves_a_not_fired_verdict_current() {
+        for digests in [true, false] {
+            let tmp = spec_repo("status: in-progress\ndependencies: []");
+            with_rules(&tmp, 1, 0);
+            fs::write(tmp.path().join("specs/042-demo/plan.md"), PLAN).unwrap();
+            let mut first = args();
+            first.judged_rules = rule_ids(1, 0);
+            run(&first, tmp.path()).unwrap();
+            if !digests {
+                strip_section_digest(&tmp);
+            }
+            edit_rollout(&tmp);
+            let standing = standing_of(&tmp);
+            let mut second = args();
+            second.judged_rules = rule_ids(1, 0);
+            let judged_at = |at: &str| {
+                BTreeMap::from([("TS-RULE-001".to_string(), finding_at(at, "judged anew"))])
+            };
+            second.rule_verdicts = judged_at("plan.md#Overview");
+            if !digests {
+                assert_eq!(
+                    standing.no_reuse,
+                    Some(rule_verdicts::NoReuse::SubjectsChanged)
+                );
+                assert_eq!(standing.currency("TS-RULE-001"), Some(&Currency::Stale));
+                let error = run(&second, tmp.path()).unwrap_err();
+                assert!(
+                    matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "blocking-findings"),
+                    "without section digests the finding is stored: {error}"
+                );
+                continue;
+            }
+            assert_eq!(standing.no_reuse, None);
+            assert_eq!(
+                standing.currency("TS-RULE-001"),
+                Some(&Currency::Rejudge {
+                    earlier: None,
+                    carries: false
+                })
+            );
+            assert_eq!(
+                standing.changed_sections().collect::<Vec<_>>(),
+                ["plan.md#Rollout"]
+            );
+            // At the changed section the finding is stored, so a count of
+            // zero is refused and nothing is written.
+            let mut at_changed = second.clone();
+            at_changed.rule_verdicts = judged_at("plan.md#Rollout");
+            assert!(run(&at_changed, tmp.path()).is_err());
+            let result = run(&second, tmp.path()).unwrap();
+            assert_eq!(result.contradictions.len(), 1);
+            assert!(!result.contradictions[0].counted);
+            let record = written_record(&tmp);
+            assert_eq!(record.rule_verdicts, BTreeMap::new());
+            assert_eq!(record.unjudged_rules, [] as [String; 0]);
+            assert!(!record.blocking);
+            assert!(record.section_digest.contains_key("plan.md#Rollout"));
+        }
+    }
+
+    /// Spec 082, AC7: a rule owed a judgment of the changed sections keeps
+    /// its `addressed` verdict when judged and its cite's section is
+    /// unchanged, loses it when that section changed, and is unjudged when
+    /// the run did not judge it.
+    #[test]
+    fn an_addressed_verdict_carries_only_while_its_section_is_unchanged() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 0);
+        fs::write(tmp.path().join("specs/042-demo/plan.md"), PLAN).unwrap();
+        let mut first = args();
+        first.judged_rules = rule_ids(3, 0);
+        first.rule_verdicts = BTreeMap::from([
+            ("TS-RULE-001".to_string(), addressed("plan.md#Overview")),
+            ("TS-RULE-002".to_string(), addressed("plan.md#Rollout")),
+        ]);
+        run(&first, tmp.path()).unwrap();
+        edit_rollout(&tmp);
+        let reusable: Vec<String> = standing_of(&tmp)
+            .reusable()
+            .map(|(rule, _)| rule.id.clone())
+            .collect();
+        assert_eq!(reusable, ["TS-RULE-001"]);
+        let mut second = args();
+        second.judged_rules = rule_ids(2, 0);
+        run(&second, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(
+            record.rule_verdicts,
+            BTreeMap::from([("TS-RULE-001".to_string(), addressed("plan.md#Overview"))])
+        );
+        assert_eq!(record.unjudged_rules, ["TS-RULE-003"]);
+    }
+
+    /// Spec 082, AC7 and the Resolved Questions: a finding stands, unjudged
+    /// and carried, while its section is unchanged, and its rule is judged in
+    /// full once that section changes, unjudged until it is.
+    #[test]
+    fn a_finding_stands_while_its_section_is_unchanged_and_is_judged_in_full_once_it_changes() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        fs::write(tmp.path().join("specs/042-demo/plan.md"), PLAN).unwrap();
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 0);
+        first.blocking_findings = 2;
+        first.rule_verdicts = BTreeMap::from([
+            (
+                "TS-RULE-001".to_string(),
+                finding_at("plan.md#Overview", "one"),
+            ),
+            (
+                "TS-RULE-002".to_string(),
+                finding_at("plan.md#Rollout", "two"),
+            ),
+        ]);
+        run(&first, tmp.path()).unwrap();
+        edit_rollout(&tmp);
+        let standing = standing_of(&tmp);
+        assert_eq!(
+            standing.currency("TS-RULE-001"),
+            Some(&Currency::Fired(finding_at("plan.md#Overview", "one")))
+        );
+        assert_eq!(
+            standing
+                .judge()
+                .map(|rule| rule.id.as_str())
+                .collect::<Vec<_>>(),
+            ["TS-RULE-002"]
+        );
+        assert_eq!(standing.rejudge().count(), 0);
+        let mut second = args();
+        second.blocking_findings = 1;
+        run(&second, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(
+            record.rule_verdicts,
+            BTreeMap::from([(
+                "TS-RULE-001".to_string(),
+                finding_at("plan.md#Overview", "one")
+            )])
+        );
+        assert_eq!(record.unjudged_rules, ["TS-RULE-002"]);
     }
 
     /// Two contradictions: rule 1 was quiet, rule 2 was addressed, and both

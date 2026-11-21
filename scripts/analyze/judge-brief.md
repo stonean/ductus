@@ -27,6 +27,7 @@ Read each file whole with the Read tool. When a read is cut short (a line cap, t
 
 - **Loaded rule files**, for a yield "where `{file}` is also loaded": {{LOADED}}.
 - **Departures:** {{DEPARTURES}}
+- **Changed sections:** {{REJUDGE}}
 - Judge from what the subjects say. Do not read source code to decide a rule.
 
 ## 5. Return

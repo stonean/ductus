@@ -8,7 +8,8 @@ the exec walker asks only about a rule whose verdict is not current
 Each mutation removes the behavior one unit test names, and its filter selects
 that test. By behavior: what makes a verdict current is held by M1 to M3 and
 M27 (AC1 by M1 to M3, M7 and M9; the rule-file set a record was judged under
-by M27; AC5 by M2); the derived unjudged list by M5 and M10 (AC2); the
+by M27; AC5 by M2; AC7 by M28 and M31 to M37); the derived unjudged list
+by M5 and M10 (AC2); the
 contradiction note by M6 (AC3); the addressed citation by M4 (AC6, on the
 interactive and the exec path); carrying a verdict forward by M7; the tier
 count floor by M8; the walker's reuse by M9 and M13; the interactive list by
@@ -16,7 +17,8 @@ M11 and M12; the tally's addressed-by and judged set by M14 and M15; the
 stored tier by M16 to M18; the refusal of a tier a single-tier rule cannot
 fail in by M19 and M20; the gate's hold on unjudged rules by M21 and M22; the
 bounded `contradictions` result by M23 and M24; a caller's bare `unexamined`
-total by M25; and a single-tier rule's finding counted in its own tier by M26.
+total by M25; a single-tier rule's finding counted in its own tier by M26;
+and a finding at an unchanged section holding nothing (AC7) by M29 and M30.
 AC4 is held by `write_analysis::tests::the_rule_fields_read_back_through_the_loader`
 (no mutant: it holds the record's shape, not a behavior one line removes).
 
@@ -36,9 +38,9 @@ MUTATIONS = [
     (
         'M1 the design-subject comparison is dropped',
         'src/primitives/rule_verdicts.rs',
-        '    recorded == current\n',
-        '    recorded == current || true\n',
-        'rule_verdicts::tests::a_design_subject_edit_judges_every_rule_and_a_tasks_or_review_edit_none rule_verdicts::tests::a_design_subject_added_or_removed_judges_every_rule discover_rule_files::tests::a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge',
+        '    Some(recorded == current)\n',
+        '    Some(recorded == current || true)\n',
+        'rule_verdicts::tests::a_design_subject_edit_judges_every_rule_and_a_tasks_or_review_edit_none rule_verdicts::tests::a_design_subject_added_or_removed_judges_every_rule_against_its_sections discover_rule_files::tests::a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge',
     ),
     (
         'M2 the rule-digest comparison is dropped',
@@ -64,15 +66,15 @@ MUTATIONS = [
     (
         'M5 the derived unjudged list is emptied',
         'src/primitives/write_analysis.rs',
-        '                Currency::Stale => fields.unjudged.push(rule.id.clone()),',
-        '                Currency::Stale => {}',
+        '                Currency::Rejudge { .. } | Currency::Stale => fields.unjudged.push(rule.id.clone()),',
+        '                Currency::Rejudge { .. } | Currency::Stale => {}',
         'write_analysis::tests::a_run_judging_fewer_rules_than_were_loaded_names_each_one_unjudged write_analysis::tests::an_edited_rule_file_is_judged_again_over_an_unchanged_spec interpreter::tests::an_exec_walk_that_asks_about_fewer_rules_than_were_loaded_names_each_unjudged',
     ),
     (
         'M6 the contradiction comparison is removed',
         'src/primitives/write_analysis.rs',
-        'if let Some(earlier) = rule_verdicts::contradiction(current, verdict) {',
-        'if let Some(earlier) = None::<&str> {',
+        'demoted.or_else(|| rule_verdicts::contradiction(current, verdict))',
+        'demoted.or(None::<&str>)',
         'write_analysis::tests::a_finding_after_a_quiet_or_addressed_verdict_is_a_recorded_contradiction write_analysis::tests::a_contradiction_over_a_should_rule_holds_nothing',
     ),
     (
@@ -98,7 +100,7 @@ MUTATIONS = [
         'src/interpreter/mod.rs',
         '''                standing
                     .currency(&rule.id)
-                    .is_none_or(|currency| *currency == Currency::Stale)''',
+                    .is_none_or(Currency::owes_judgment)''',
         '''                standing.currency(&rule.id).is_none_or(|_| true)''',
         'interpreter::tests::a_second_exec_walk_over_an_unchanged_spec_asks_about_no_rule interpreter::tests::an_exec_step_reuses_the_current_verdicts_and_asks_about_the_rest interpreter::tests::an_exec_walk_asks_again_about_a_rule_that_was_edited',
     ),
@@ -157,8 +159,8 @@ MUTATIONS = [
     (
         'M17 a finding verdict stores the rule tier, not the tier it counted in',
         'src/interpreter/analyze_tally.rs',
-        '                tier: counted,',
-        '                tier: if asked == RuleSeverity::Should { FindingTier::Should } else { FindingTier::Must },',
+        '            tier: counted,',
+        '            tier: if asked == RuleSeverity::Should { FindingTier::Should } else { FindingTier::Must },',
         'interpreter::tests::a_mixed_rule_counts_floors_and_is_reused_in_the_tier_it_failed_in analyze_tally::tests::each_assessment_leaves_its_verdict_and_judges_its_rule',
     ),
     (
@@ -231,5 +233,76 @@ MUTATIONS = [
         '    if loaded_now != judged_under {',
         '    if false && loaded_now != judged_under {',
         'rule_verdicts::tests::a_changed_rule_file_set_makes_no_verdict_reusable rule_verdicts::tests::an_unjudged_or_newly_loaded_rule_is_judged rule_verdicts::tests::a_removed_rule_s_verdict_is_dropped',
+    ),
+    # -- AC7: a verdict stands while the sections it concerns are unchanged --
+    (
+        'M28 the section digests are not compared',
+        'src/primitives/rule_verdicts.rs',
+        '    let sections = (!prior.section_digest.is_empty())',
+        '    let sections = (false && !prior.section_digest.is_empty())',
+        'write_analysis::tests::a_plan_section_edit_leaves_a_not_fired_verdict_current rule_verdicts::tests::a_section_edit_judges_each_rule_as_its_verdict_says discover_rule_files::tests::a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge interpreter::tests::an_exec_walk_after_a_section_edit_counts_only_a_finding_at_a_changed_section',
+    ),
+    (
+        'M29 a finding at an unchanged section is stored as a finding',
+        'src/primitives/write_analysis.rs',
+        '                let demoted = standing.demoted(id, verdict);',
+        '                let demoted = None::<&str>;',
+        'write_analysis::tests::a_plan_section_edit_leaves_a_not_fired_verdict_current write_analysis::tests::a_finding_at_an_unchanged_section_after_a_quiet_or_addressed_verdict_holds_nothing',
+    ),
+    (
+        'M30 the exec tally counts a finding at an unchanged section',
+        'src/interpreter/analyze_tally.rs',
+        '        if demoted {\n            return;\n        }',
+        '        if demoted && false {\n            return;\n        }',
+        'interpreter::tests::an_exec_walk_after_a_section_edit_counts_only_a_finding_at_a_changed_section',
+    ),
+    (
+        'M31 a finding stands whatever its section',
+        'src/primitives/rule_verdicts.rs',
+        '            if delta.unchanged_at(at) {',
+        '            if true || delta.unchanged_at(at) {',
+        'write_analysis::tests::a_finding_stands_while_its_section_is_unchanged_and_is_judged_in_full_once_it_changes rule_verdicts::tests::a_section_edit_judges_each_rule_as_its_verdict_says',
+    ),
+    (
+        'M32 an addressed verdict carries whatever its section',
+        'src/primitives/rule_verdicts.rs',
+        '            carries: delta.unchanged_at(cite),',
+        '            carries: true,',
+        'write_analysis::tests::an_addressed_verdict_carries_only_while_its_section_is_unchanged rule_verdicts::tests::a_section_edit_judges_each_rule_as_its_verdict_says',
+    ),
+    (
+        'M33 a rule owed a judgment of the changed sections and not judged is not unjudged',
+        'src/primitives/write_analysis.rs',
+        '                Currency::Rejudge { .. } | Currency::Stale => fields.unjudged.push(rule.id.clone()),',
+        '                Currency::Rejudge { .. } => {}\n                Currency::Stale => fields.unjudged.push(rule.id.clone()),',
+        'write_analysis::tests::an_addressed_verdict_carries_only_while_its_section_is_unchanged',
+    ),
+    (
+        'M34 the text before a subject s first heading has no section',
+        'src/primitives/analyze_subjects.rs',
+        '    texts.insert(rel.to_string(), lines[..first].concat());',
+        '    let _ = first;',
+        'analyze_subjects::tests::a_subject_s_sections_are_each_heading_s_own_text rule_verdicts::tests::a_design_subject_added_or_removed_judges_every_rule_against_its_sections',
+    ),
+    (
+        'M35 a criterion tick moves a spec.md section',
+        'src/primitives/analyze_subjects.rs',
+        '    let text = if rel == "spec.md" {',
+        '    let text = if false && rel == "spec.md" {',
+        'analyze_subjects::tests::a_subject_s_sections_are_each_heading_s_own_text',
+    ),
+    (
+        'M36 the walker skips a rule owed a judgment of the changed sections',
+        'src/interpreter/mod.rs',
+        '                    .is_none_or(Currency::owes_judgment)',
+        '                    .is_none_or(|currency| *currency == Currency::Stale)',
+        'interpreter::tests::an_exec_walk_after_a_section_edit_counts_only_a_finding_at_a_changed_section',
+    ),
+    (
+        'M37 discover-rule-files lists no rule to judge against the changed sections',
+        'src/primitives/discover_rule_files.rs',
+        '    let rejudge: Vec<String> = standing.rejudge().map(|rule| rule.id.clone()).collect();',
+        '    let rejudge: Vec<String> = Vec::new();',
+        'discover_rule_files::tests::a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge',
     ),
 ]

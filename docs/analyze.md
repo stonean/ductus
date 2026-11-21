@@ -82,6 +82,11 @@ unexamined-by-reason:
 rule-digest:
   quality-cross.md: 5e1c…
   security-backend.md: a07d…
+section-digest:
+  "plan.md": 4b0e…
+  "plan.md#Observability": 91c2…
+  "spec.md": d3a7…
+  "spec.md#Acceptance Criteria": 0f58…
 rule-verdicts:
   BE-LOG-002: {verdict: addressed, cite: "plan.md#Observability"}
   QUAL-CLAIM-001: {verdict: addressed, cite: "spec.md#Acceptance Criteria"}
@@ -123,7 +128,8 @@ decisions:
 | `unexamined-by-reason` | Map of `reason: count` | The `unexamined` total broken out over a closed reason set. Omitted entirely when empty |
 | `analyzed-digest` | Map of `path: sha256` | Per-path digest of every `.md` under the feature **as this run read it**, keyed within the feature directory, `review.md` included and this file excluded whole. The staleness basis. Omitted when empty, which only a pre-digest record can be |
 | `analyzed-unreadable` | List of paths | Subjects that exist but could not be read when the digest was taken, recorded rather than digested as empty. Omitted when empty |
-| `rule-digest` | Map of `rule file: sha256` | A digest of each loaded rule file's rules (ID, Statement and Verification). A later run reuses a stored verdict only while its rule's file, the set of loaded files and the design subjects are unchanged (spec 082). Omitted when no rule file was loaded |
+| `rule-digest` | Map of `rule file: sha256` | A digest of each loaded rule file's rules (ID, Statement and Verification). A later run reuses a stored verdict only while its rule's file, the set of loaded files and the sections it concerns are unchanged (spec 082). Omitted when no rule file was loaded |
+| `section-digest` | Map of `path#heading: digest` | A 16-character digest of each section of the design subjects: each heading's own text, keyed `path#heading`, and the text before a file's first heading, keyed `path`. A later run judges a quiet or addressed rule against the changed sections alone. Omitted when the feature has no design subject |
 | `rule-verdicts` | Map of rule ID to verdict | Each loaded rule that fired: `addressed`, with the `cite` of the design-subject heading that addresses it, `finding`, with the `tier` it counted in, `at` and `message`, or `waived`, for a rule whose trigger fires and the spec holds a departure entry for (spec 073): the entry's `reason`, `decided-by` and `decided-at` from git history (`unattributed` and no time when history cannot say) and its `cited` reference, filled on every write and neither a finding nor a pass. A loaded rule in neither this map nor `unjudged-rules` did not fire. Omitted when empty |
 | `unjudged-rules` | List of rule IDs | Each assessable rule the run neither judged nor reused a current verdict for, counted into `rule-assessments-not-checked`; the completion gate holds `done` while it names any. Omitted when empty |
 | `dispositions` | Map of four integers | What the run did with its findings, in every tier: `fixed`, `deferred`, `waived`, `undispositioned`. **Derived**; always written. Absent means the record predates dispositions. A record written before spec 076 carries `routed` and `discarded`, read as `deferred` and `waived` |
@@ -170,9 +176,9 @@ Two classes live in the set, and they call for opposite responses. **Excluded by
 
 `artifact-unreadable` carries one exception to the whole "an unknown is never escalated into a defect" rule: on a spec at `status: done` it is a **blocking finding** rather than a skipped target, so it appears in `blocking-findings` and not here. The rule it breaks is about *other* files — another spec's frontmatter, an upstream service's state — where the defect belongs to someone else. This one names the spec's own artifact in its own directory that its own analysis could not read. The concrete case is Scenario open questions: an unreadable scenario contributes no questions and, as a skip, no finding, so a scenario carrying unresolved questions that will not parse would sail through the gate built to catch exactly that. Below `done` it stays a skipped target — the questions check is advisory there, and an unreadable artifact mid-work is a state to report rather than a gate to fail.
 
-### `rule-verdicts`, `unjudged-rules` and `rule-digest`
+### `rule-verdicts`, `unjudged-rules`, `rule-digest` and `section-digest`
 
-A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, and a digest of each loaded rule file. A later run judges a rule again only when the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`) or the rule's file changed, or a rule file was added or removed, so a spec nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A `waived` verdict is listed apart from the passed rules, in the body's `## Waived rules` section and in the report. A verdict that turns from not firing, or from addressed, to a finding over unchanged subjects is reported as a contradiction beside its finding, which counts in its own tier.
+A run records the verdict of each loaded rule that fired, the assessable rules it neither judged nor reused, a digest of each loaded rule file, and a digest of each section of the spec's design subjects (the spec, plan, data model and scenarios, not `tasks.md`). A later run judges every rule again when the rule's file changed or a rule file was added or removed. When only sections changed, it judges a rule that did not fire, or that the spec addressed, against the changed sections alone, and a stored finding's rule in full only once the finding's own section changed, so text nobody edited is judged once. A rule in neither field did not fire. An `addressed` verdict names the heading that addresses its rule, and one whose heading does not exist is recorded as unjudged instead. A `waived` verdict is listed apart from the passed rules, in the body's `## Waived rules` section and in the report. A finding at a section unchanged since its rule's not-fired or addressed verdict is reported as a contradiction alone and counts in no tier; one at a location naming no section is a contradiction beside its finding, which counts in its own tier.
 
 ### `blocking`
 

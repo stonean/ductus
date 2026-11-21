@@ -69,6 +69,20 @@ def departures(m):
     return "\n".join(lines)
 
 
+def rejudged(m, share):
+    """The share's rules to judge against the changed sections alone (spec 082, AC7)."""
+    ids = [i for i in share["ids"] if i in set(m.get("rejudge") or [])]
+    if not ids:
+        return "every rule of your share is judged in full."
+    sections = ", ".join(f"`{s}`" for s in m.get("changed-sections") or []) or "none"
+    return ("these rules of your share keep their stored verdict for every section but the changed "
+            "ones, so judge each against the changed sections alone, reading the rest for context: "
+            "it fires only when a change makes it fire or removes what addressed it, and a finding is "
+            "placed at the changed section that causes it. The others are judged in full.\n"
+            f"  - Judged against the changed sections: {', '.join(f'`{i}`' for i in ids)}.\n"
+            f"  - Changed sections (`<path>` alone is the text before the file's first heading): {sections}.")
+
+
 def run(argv):
     if len(argv) != 1:
         raise lib.Unreadable("usage: briefs.py FEATURE")
@@ -89,7 +103,8 @@ def run(argv):
                             "SHARE_FILE": share["file"], "SHARE_BYTES": f"{share['bytes']:,}",
                             "SHARE_LONG": share_long,
                             "LOADED": ", ".join(f"`{n}`" for n in m["loaded"]) or "none",
-                            "DEPARTURES": departures(m)})
+                            "DEPARTURES": departures(m),
+                            "REJUDGE": rejudged(m, share)})
         with open(c["brief"], "w", encoding="utf-8") as f:
             f.write(text)
         prompts.append((c["cell"], c["brief"], c["out"]))

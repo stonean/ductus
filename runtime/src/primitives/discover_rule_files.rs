@@ -232,6 +232,8 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
     if let Some(block) = &result.verdicts {
         lists["reusable"] = serde_json::json!(&block.reusable);
         lists["judge"] = serde_json::json!(&block.judge);
+        lists["rejudge"] = serde_json::json!(&block.rejudge);
+        lists["changed-sections"] = serde_json::json!(&block.changed_sections);
     }
     if let Some(file) = super::bounded_lists::place(
         repo,
@@ -248,6 +250,8 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
         if let Some(block) = &mut result.verdicts {
             block.reusable = None;
             block.judge = None;
+            block.rejudge = None;
+            block.changed_sections = None;
         }
         result.lists_file = Some(file);
     }
@@ -342,7 +346,8 @@ fn list_rules(
 }
 
 /// The stored rule verdicts for `feature` over `loaded`: which rules to
-/// judge and which fired verdicts to report again (spec 082). A record that
+/// judge in full, which against the changed sections alone, those sections,
+/// and which fired verdicts stand (spec 082, AC7). A record that
 /// does not parse is named in a notice, so judging every rule is never
 /// mistaken for holding no verdicts.
 fn verdicts_block(
@@ -375,12 +380,18 @@ fn verdicts_block(
         })
         .collect();
     let judge: Vec<String> = standing.judge().map(|rule| rule.id.clone()).collect();
+    let rejudge: Vec<String> = standing.rejudge().map(|rule| rule.id.clone()).collect();
+    let changed_sections: Vec<String> = standing.changed_sections().cloned().collect();
     Ok(RuleVerdictsBlock {
         reason: standing.no_reuse.as_ref().map(|why| why.code().to_string()),
         reusable_count: reusable.len(),
         judge_count: judge.len(),
+        rejudge_count: rejudge.len(),
+        changed_sections_count: changed_sections.len(),
         reusable: Some(reusable),
         judge: Some(judge),
+        rejudge: Some(rejudge),
+        changed_sections: Some(changed_sections),
     })
 }
 
@@ -1728,8 +1739,8 @@ mod tests {
     /// Spec 082, AC1 on the interactive path: with no record every assessable
     /// rule is to be judged, and with a record over unchanged subjects none
     /// is, the current finding coming back to report again, in its tier; an
-    /// edited design subject judges every rule again, an edited `tasks.md`
-    /// none.
+    /// edited `tasks.md` judges none, and a first `plan.md` judges the quiet
+    /// rules against its sections alone, the finding standing (AC7).
     #[test]
     fn a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge() {
         let tmp = verdict_project();
@@ -1762,11 +1773,19 @@ mod tests {
         let ticked = run(&with_feature(args(&[])), tmp.path()).unwrap();
         assert_eq!(ticked.verdicts.unwrap().judge_count, 0);
 
+        // A first `plan.md` adds its sections: the finding at `spec.md#Goal`
+        // stands, and every other rule is judged against the new sections
+        // alone (AC7).
         std::fs::write(tmp.path().join("specs/001-x/plan.md"), "# Plan\n").unwrap();
         let edited = run(&with_feature(args(&[])), tmp.path()).unwrap();
         let block = edited.verdicts.unwrap();
-        assert_eq!(block.reason.as_deref(), Some("subjects-changed"));
-        assert_eq!(block.judge.unwrap(), ALL_JUDGED);
+        assert_eq!(block.reason, None);
+        assert_eq!(block.judge.unwrap(), [] as [String; 0]);
+        assert_eq!(block.rejudge.unwrap(), ["TS-RULE-002", "TS-SHLD-001"]);
+        assert_eq!(block.rejudge_count, 2);
+        assert_eq!(block.changed_sections.unwrap(), ["plan.md", "plan.md#Plan"]);
+        assert_eq!(block.changed_sections_count, 2);
+        assert_eq!(block.reusable_count, 1);
     }
 
     /// A rule the prior run left unjudged is the only one listed to judge.

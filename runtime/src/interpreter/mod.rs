@@ -538,7 +538,10 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 None => (true, Vec::new(), Vec::new()),
             };
         // A rule whose stored verdict is current is not asked about again
-        // (spec 082): a spec that has not changed is judged once.
+        // (spec 082): a spec that has not changed is judged once. One owed a
+        // judgment against the changed sections is asked about whole, since
+        // the request carries `spec.md` and no section list; the tally keeps
+        // only a finding at a changed section (AC7).
         let (asked, reused) = self.split_reused(in_tier, tier);
         if loaded_none || !matches!(tier, RuleSeverity::Must | RuleSeverity::Should) {
             if let Some(tally) = &mut self.analyze_tally {
@@ -591,8 +594,12 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 Ok(response) => response,
                 Err(outcome) => return Ok(Some(outcome)),
             };
+            let standing = self
+                .rules
+                .as_ref()
+                .and_then(|rules| rules.standing.as_ref());
             if let Some(tally) = &mut self.analyze_tally {
-                tally.record_assessment(&rule.id, asked_tier, mixed, departed, &response);
+                tally.record_assessment(&rule.id, asked_tier, mixed, departed, &response, standing);
             }
             self.accept_response(number, ASSESS_SPEC_QUALITY, response)?;
         }
@@ -621,7 +628,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             .filter(|rule| {
                 standing
                     .currency(&rule.id)
-                    .is_none_or(|currency| *currency == Currency::Stale)
+                    .is_none_or(Currency::owes_judgment)
             })
             .collect();
         // Each reused finding is counted at the step of its rule's tier, in
@@ -2701,6 +2708,68 @@ mod tests {
         assert_eq!(rule_lines(&before), rule_lines(&after));
         assert!(after.contains("\nblocking-findings: 1\n"), "{after}");
         assert!(!after.contains("rule-assessments-not-checked"), "{after}");
+    }
+
+    /// Spec 082, AC7 under `ductus exec`: after an edit to one section of
+    /// `spec.md`, a walk asks again about every quiet rule, the request
+    /// unchanged, and counts a finding at the changed section while one at an
+    /// unchanged section counts in no tier and leaves no verdict.
+    #[test]
+    fn an_exec_walk_after_a_section_edit_counts_only_a_finding_at_a_changed_section() {
+        let repo = analyze_repo(Some(THREE_RULES));
+        let spec = repo.path().join("specs/001-x/spec.md");
+        let body = |scope: &str| {
+            format!(
+                "---\nstatus: clarified\ndependencies: []\n---\n\n# x\n\n## Goal\n\nOne.\n\n## Scope\n\n{scope}\n"
+            )
+        };
+        std::fs::write(&spec, body("Two.")).unwrap();
+        let pass = |n| llm_response(n, "{\"passed\":true}");
+        let failed_at = |n, section: &str| {
+            llm_response(
+                n,
+                &failed_with("must", "TS-MUST-001")
+                    .replace("\"section\":\"x\"", &format!("\"section\":\"{section}\"")),
+            )
+        };
+        let (_, _) = walk_analyze(
+            &both_steps(),
+            repo.path(),
+            Some(&[QUALITY]),
+            &[pass(1), pass(2), pass(3)].concat(),
+        );
+
+        std::fs::write(&spec, body("Three.")).unwrap();
+        let (outcome, envelopes) = walk_analyze(
+            &both_steps(),
+            repo.path(),
+            Some(&[QUALITY]),
+            &[failed_at(1, "Goal"), pass(2), pass(3)].concat(),
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+        assert_eq!(requests(&envelopes).len(), 3, "{envelopes:?}");
+        let analysis = analysis_text(repo.path());
+        assert!(analysis.contains("\nblocking-findings: 0\n"), "{analysis}");
+        assert!(!analysis.contains("TS-MUST-001: {verdict"), "{analysis}");
+        assert!(
+            analysis.contains("- TS-MUST-001 — judged a finding at `spec.md#Goal`, a section unchanged since its earlier verdict of not-fired"),
+            "{analysis}"
+        );
+
+        std::fs::write(&spec, body("Four.")).unwrap();
+        let (outcome, _) = walk_analyze(
+            &both_steps(),
+            repo.path(),
+            Some(&[QUALITY]),
+            &[failed_at(1, "Scope"), pass(2), pass(3)].concat(),
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let analysis = analysis_text(repo.path());
+        assert!(analysis.contains("\nblocking-findings: 1\n"), "{analysis}");
+        assert!(
+            analysis.contains("TS-MUST-001: {verdict: finding, tier: must, at: \"spec.md#Scope\""),
+            "{analysis}"
+        );
     }
 
     /// Spec 082, AC2 under `ductus exec`: a walk whose steps ask about fewer

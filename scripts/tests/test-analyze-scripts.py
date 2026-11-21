@@ -17,8 +17,8 @@ never an exit 0 (QUAL-CLAIM-001).
 Coverage:
   A. detect.py exits 2 when a primitive returns no result, and writes no
      detection record
-  B. split.py keeps each rule file whole in one share, judges only
-     verdicts.judge, and keeps verdicts.reusable for the record
+  B. split.py keeps each rule file whole in one share, judges no reusable
+     rule, and keeps verdicts.reusable for the record
   C. split.py groups the scenarios when the subjects overflow a cell, and
      keeps them in one group when they fit
   D. split.py refuses a judged rule no loaded file holds
@@ -58,6 +58,12 @@ Coverage:
      finding
   AB. record.py refuses two live findings that share a key
   AC. combine.py refuses while step 15's hand-back fails its check
+  AK. split.py shares out verdicts.judge and verdicts.rejudge and keeps
+     verdicts.changed-sections, and briefs.py names each share's rules to
+     judge against the changed sections (spec 082, AC7)
+  AL. record.py counts a rejudged rule's finding at a changed section and
+     passes one at an unchanged section as its verdict alone, and covers
+     verdicts.judge and verdicts.rejudge (spec 082, AC7)
   AD. check.py exits 2 when read-section returns no not-found list
   AE. a defect in a script exits 2, never 1, the refused status
   AF. detect.py runs resolve-references only for a spec with references,
@@ -340,6 +346,54 @@ def d(p, name):
     p.write("rules.json", json.dumps(rules))
     r = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
     check_(name, r.returncode == 1 and "RZ-404" in r.stderr, r.stderr)
+
+
+def rejudging(p):
+    """Write a rules.json whose verdicts judge RA-001 and RB-001 in full and
+    RA-002 and RC-001 against plan.md#Design alone."""
+    rules = json.loads(json.dumps(RULES))
+    rules["verdicts"] = {**rules["verdicts"], "reason": None, "judge": ["RA-001", "RB-001"],
+                         "rejudge": ["RA-002", "RC-001"], "changed-sections": ["plan.md#Design"]}
+    p.write("rules.json", json.dumps(rules))
+
+
+def ak(p, name):
+    rejudging(p)
+    p.split("--share-bytes", "1500")
+    r = p.run("briefs.py", F)
+    m = p.manifest()
+    ids = sorted(i for s in m["shares"].values() for i in s["ids"])
+    with_ra = next(x for x in m["cells"] if "RA-002" in m["shares"][x["share"]]["ids"])
+    without = [x for x in m["cells"] if not set(m["shares"][x["share"]]["ids"]) & {"RA-002", "RC-001"}]
+    brief = open(with_ra["brief"]).read()
+    check_(name, r.returncode == 0 and ids == ["RA-001", "RA-002", "RB-001", "RC-001"]
+           and m["judge"] == ["RA-001", "RB-001"] and m["rejudge"] == ["RA-002", "RC-001"]
+           and m["changed-sections"] == ["plan.md#Design"]
+           and "Judged against the changed sections: `RA-002`" in brief and "`plan.md#Design`" in brief
+           and all("every rule of your share is judged in full" in open(x["brief"]).read() for x in without),
+           r.stdout + r.stderr + json.dumps([m.get("rejudge"), ids]))
+
+
+def al(p, name):
+    rejudging(p)
+    p.split()
+    unchanged = {"verdict": "finding", "at": "plan.md#Other", "message": "over judged text"}
+    p.all_hand_backs({cell_a(p): {"RA-002": FND, "RC-001": unchanged}})
+    p.write("plan.json", json.dumps({"findings": []}))
+    r = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    try:
+        rv = json.load(open(os.path.join(p.stub, "captured-rule-verdicts-json")))
+        fs = json.load(open(os.path.join(p.stub, "captured-findings-json")))
+    except OSError:
+        rv, fs = {}, []
+    keys = sorted(x["message"] for x in fs if x["family"] == "rule-assessment")
+    judged = sorted(wa[i + 1] for i, x in enumerate(wa) if x == "--judged-rule")
+    check_(name, r.returncode == 0 and keys == ["RA-002: not covered", "RC-002: a reused finding"]
+           and rv.get("RC-001", {}).get("at") == "plan.md#Other"
+           and judged == ["RA-001", "RA-002", "RB-001", "RC-001"]
+           and wa[wa.index("--advisory") + 1] == "2" and "contradiction: RC-001" in r.stdout,
+           r.stdout + r.stderr + json.dumps([rv, keys, wa]))
 
 
 def e(p, name):
@@ -733,7 +787,7 @@ def z(name):
 def main():
     print("analyze scripts:", flush=True)
     case("A. detect.py exits 2 on a primitive with no result", a)
-    case("B. split.py keeps rule files whole and judges only verdicts.judge", b)
+    case("B. split.py keeps rule files whole and judges no reusable rule", b)
     case("C. split.py groups overflowing scenarios, and only then", c)
     case("D. split.py refuses a judged rule no file holds", d)
     case("E. briefs.py fills every placeholder and carries heading bodies", e)
@@ -771,6 +825,8 @@ def main():
     case("AA. record.py writes a broken reference as an Advisory finding", aa)
     case("AB. record.py refuses two findings sharing a key", ab)
     case("AC. combine.py refuses while step 15 fails its check", ac)
+    case("AK. split.py and briefs.py carry the rules to judge against changed sections", ak)
+    case("AL. record.py counts no finding at an unchanged section", al)
     case("AD. check.py exits 2 on a read-section with no not-found list", ad)
     case("AE. a defect in a script exits 2", ae)
     case("AF. detect.py runs resolve-references only for a spec with references", af)

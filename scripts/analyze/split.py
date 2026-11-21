@@ -6,9 +6,11 @@ scripts read (spec 060, scenario rule-judging-runs-from-repo-scripts).
 usage: python3 -I scripts/analyze/split.py FEATURE
            [--share-bytes N] [--cell-bytes N] [--rules-json FILE]
 
-The rules are those discover-rule-files' verdicts.judge lists (spec 082),
-from `discover-rule-files --all --rules --verification --feature FEATURE`,
-or from FILE, a result saved from that call. Each verdicts.reusable entry is
+The rules are those discover-rule-files' verdicts.judge and verdicts.rejudge
+list (spec 082), from `discover-rule-files --all --rules --verification
+--feature FEATURE`, or from FILE, a result saved from that call; a rule in
+rejudge is judged against verdicts.changed-sections alone (AC7), which the
+manifest keeps for briefs.py and record.py. Each verdicts.reusable entry is
 kept in the manifest for record.py to report again, unjudged.
 
 Shares keep each rule file whole and are balanced by the bytes of their
@@ -125,8 +127,10 @@ def run(argv):
                             "--feature", feature)
     verdicts = found.get("verdicts")
     if isinstance(verdicts, dict) and "judge" not in verdicts and "judge" in found:
-        # Past the read size the lists file holds verdicts' two lists at its top level.
-        verdicts = {**verdicts, "judge": found["judge"], "reusable": found.get("reusable") or []}
+        # Past the read size the lists file holds verdicts' lists at its top level.
+        verdicts = {**verdicts, "judge": found["judge"], "reusable": found.get("reusable") or [],
+                    "rejudge": found.get("rejudge") or [],
+                    "changed-sections": found.get("changed-sections") or []}
     if not isinstance(verdicts, dict) or "judge" not in verdicts:
         raise lib.Unreadable("discover-rule-files returned no verdicts.judge; pass --feature with --all and --rules")
     if found.get("unreadable"):
@@ -135,18 +139,20 @@ def run(argv):
     for note in found.get("notices") or []:
         print(f"notice: {note}")
     judge = set(verdicts["judge"])
+    rejudge = set(verdicts.get("rejudge") or [])
+    asked = judge | rejudge
     rules_dir = found.get("rules-dir") or ""
     files, placed = [], set()
     for rf in found.get("rule-files") or []:
-        rules = [r for r in rf.get("rules") or [] if r.get("id") in judge]
+        rules = [r for r in rf.get("rules") or [] if r.get("id") in asked]
         placed |= {r["id"] for r in rules}
         if rules:
             text = render_file(rf["file"], rules, rf.get("other-headings") or [])
             files.append({"file": rf["file"], "rules": rules, "text": text,
                           "bytes": len(text.encode("utf-8"))})
-    missing = sorted(judge - placed)
+    missing = sorted(asked - placed)
     if missing:
-        raise lib.Refused(f"verdicts.judge names rules no loaded file holds: {missing}")
+        raise lib.Refused(f"verdicts.judge or rejudge names rules no loaded file holds: {missing}")
 
     notes = []
     total = sum(f["bytes"] for f in files)
@@ -206,7 +212,9 @@ def run(argv):
         "feature": feature, "status": status, "head": head, "run": run_id,
         "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "work": w,
         "rules-dir": rules_dir, "loaded": [os.path.basename(s) for s in found.get("selected") or []],
-        "judge": sorted(judge), "reusable": verdicts.get("reusable") or [],
+        "judge": sorted(judge), "rejudge": sorted(rejudge),
+        "changed-sections": verdicts.get("changed-sections") or [],
+        "reusable": verdicts.get("reusable") or [],
         "verdicts-reason": verdicts.get("reason"),
         "departures": departures, "shares": shares, "groups": groups, "cells": cells,
         "subjects": {p: {"bytes": b, "sha256": lib.sha256(os.path.join(d, p)),
@@ -217,7 +225,8 @@ def run(argv):
         "notes": notes,
     }
     lib.write_json(lib.manifest_path(feature), manifest)
-    print(f"== {feature}: {len(judge)} rules to judge, {len(manifest['reusable'])} reusable verdicts "
+    print(f"== {feature}: {len(judge)} rules to judge in full, {len(rejudge)} against "
+          f"{len(manifest['changed-sections'])} changed sections, {len(manifest['reusable'])} reusable verdicts "
           f"({verdicts.get('reason') or 'current'}); {len(shares)} shares x {len(groups)} scenario groups "
           f"= {len(cells)} cells, plus a step-15 reader")
     for letter, s in shares.items():

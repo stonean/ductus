@@ -24,10 +24,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{Map, Value};
 
-use crate::primitives::check_rule_ids;
 use crate::primitives::write_analysis::{
     REASON_RULE_ASSESSMENTS_NOT_CHECKED, REASON_RULE_FILE_UNREADABLE,
 };
+use crate::primitives::{check_rule_ids, rule_verdicts};
 use crate::schema::primitives::{FindingTier, RuleVerdict};
 use crate::schema::severity::{AnalyzeSeverity, RuleSeverity};
 use crate::schema::status::{COMPATIBLE_STATUSES, UNBLOCKING_STATUSES};
@@ -259,6 +259,12 @@ impl AnalyzeTally {
     /// `addressed-by`, records the bare `waived` verdict and counts into no
     /// tier, and a plain pass records nothing, as for any rule.
     /// `write-analysis` fills the verdict from the entry.
+    ///
+    /// `standing` is where the feature's stored verdicts leave each rule: a
+    /// finding it [demotes](rule_verdicts::Standing::demoted), at a section
+    /// unchanged since the rule's not-fired or `addressed` verdict, is kept
+    /// for `write-analysis` to record as a contradiction and counted in no
+    /// tier (spec 082, AC7).
     pub(crate) fn record_assessment(
         &mut self,
         rule: &str,
@@ -266,6 +272,7 @@ impl AnalyzeTally {
         mixed: bool,
         departed: bool,
         response: &Value,
+        standing: Option<&rule_verdicts::Standing>,
     ) {
         self.judged.insert(rule.to_string());
         let passed = response.get("passed") == Some(&Value::Bool(true));
@@ -316,16 +323,18 @@ impl AnalyzeTally {
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|message| !message.is_empty());
-        self.verdicts.insert(
-            rule.to_string(),
-            RuleVerdict::Finding {
-                tier: counted,
-                at: section.map_or_else(|| "spec.md".to_string(), |s| format!("spec.md#{s}")),
-                message: message
-                    .unwrap_or("the host reported the rule failed and gave no finding")
-                    .to_string(),
-            },
-        );
+        let verdict = RuleVerdict::Finding {
+            tier: counted,
+            at: section.map_or_else(|| "spec.md".to_string(), |s| format!("spec.md#{s}")),
+            message: message
+                .unwrap_or("the host reported the rule failed and gave no finding")
+                .to_string(),
+        };
+        let demoted = standing.is_some_and(|standing| standing.demoted(rule, &verdict).is_some());
+        self.verdicts.insert(rule.to_string(), verdict);
+        if demoted {
+            return;
+        }
         match tier {
             RuleSeverity::Must => self.blocking += 1,
             RuleSeverity::Should => self.advisory += 1,
@@ -546,6 +555,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "must" } }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-001",
@@ -553,6 +563,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "should" } }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-001",
@@ -560,6 +571,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true }),
+            None,
         );
 
         let bindings = bound(&tally);
@@ -831,6 +843,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "MUST" } }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-001",
@@ -838,11 +851,33 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "Should" } }),
+            None,
         );
         let failed = json!({ "passed": false });
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, true, false, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Should, true, false, &failed);
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Info, true, false, &failed);
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Must,
+            true,
+            false,
+            &failed,
+            None,
+        );
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Should,
+            true,
+            false,
+            &failed,
+            None,
+        );
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Info,
+            true,
+            false,
+            &failed,
+            None,
+        );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 2);
         assert_eq!(bindings["advisory"], 2);
@@ -855,8 +890,22 @@ mod tests {
         let mut tally = AnalyzeTally::new();
         let should = json!({ "passed": false, "finding": { "severity": "should" } });
         let must = json!({ "passed": false, "finding": { "severity": "must" } });
-        tally.record_assessment("TS-MUST-001", RuleSeverity::Must, false, false, &should);
-        tally.record_assessment("TS-SHOULD-001", RuleSeverity::Should, false, false, &must);
+        tally.record_assessment(
+            "TS-MUST-001",
+            RuleSeverity::Must,
+            false,
+            false,
+            &should,
+            None,
+        );
+        tally.record_assessment(
+            "TS-SHOULD-001",
+            RuleSeverity::Should,
+            false,
+            false,
+            &must,
+            None,
+        );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 1);
         assert_eq!(bindings["advisory"], 1);
@@ -868,7 +917,14 @@ mod tests {
                 message: "the host reported the rule failed and gave no finding".into(),
             }
         );
-        tally.record_assessment("TS-BOTH-001", RuleSeverity::Must, true, false, &should);
+        tally.record_assessment(
+            "TS-BOTH-001",
+            RuleSeverity::Must,
+            true,
+            false,
+            &should,
+            None,
+        );
         assert_eq!(bound(&tally)["advisory"], 2);
     }
 
@@ -885,6 +941,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "info" } }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-001",
@@ -892,6 +949,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false, "finding": { "severity": "" } }),
+            None,
         );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 1);
@@ -910,6 +968,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-001",
@@ -917,6 +976,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true }),
+            None,
         );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 0);
@@ -981,6 +1041,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true }),
+            None,
         );
         tally.record_assessment(
             "TS-A-002",
@@ -988,6 +1049,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true, "addressed-by": " plan.md#Observability " }),
+            None,
         );
         tally.record_assessment(
             "TS-A-003",
@@ -995,6 +1057,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": true, "addressed-by": "  " }),
+            None,
         );
         tally.record_assessment(
             "TS-A-004",
@@ -1004,6 +1067,7 @@ mod tests {
             &json!({ "passed": false, "finding": {
                 "severity": "must", "rule-id": "TS-A-004",
                 "location": { "section": "Goal", "line": 3 }, "message": "no owner" } }),
+            None,
         );
         tally.record_assessment(
             "TS-A-005",
@@ -1011,6 +1075,7 @@ mod tests {
             true,
             false,
             &json!({ "passed": false }),
+            None,
         );
         let bindings = bound(&tally);
         assert_eq!(
@@ -1060,13 +1125,21 @@ mod tests {
     fn a_departed_rule_that_fires_is_waived_and_counts_into_no_tier() {
         let mut tally = AnalyzeTally::new();
         let failed = json!({ "passed": false, "finding": { "severity": "must" } });
-        tally.record_assessment("TS-RULE-001", RuleSeverity::Must, false, true, &failed);
+        tally.record_assessment(
+            "TS-RULE-001",
+            RuleSeverity::Must,
+            false,
+            true,
+            &failed,
+            None,
+        );
         tally.record_assessment(
             "TS-RULE-002",
             RuleSeverity::Must,
             false,
             true,
             &json!({ "passed": true, "addressed-by": "spec.md#Behavior" }),
+            None,
         );
         tally.record_assessment(
             "TS-RULE-003",
@@ -1074,8 +1147,16 @@ mod tests {
             false,
             true,
             &json!({ "passed": true }),
+            None,
         );
-        tally.record_assessment("TS-RULE-004", RuleSeverity::Should, false, true, &failed);
+        tally.record_assessment(
+            "TS-RULE-004",
+            RuleSeverity::Should,
+            false,
+            true,
+            &failed,
+            None,
+        );
         let bindings = bound(&tally);
         assert_eq!(bindings["blocking-findings"], 0);
         assert_eq!(bindings["advisory"], 0);
@@ -1089,7 +1170,14 @@ mod tests {
         );
         assert_eq!(bindings["judged-rules"].as_array().unwrap().len(), 4);
 
-        tally.record_assessment("TS-RULE-005", RuleSeverity::Must, false, false, &failed);
+        tally.record_assessment(
+            "TS-RULE-005",
+            RuleSeverity::Must,
+            false,
+            false,
+            &failed,
+            None,
+        );
         assert_eq!(bound(&tally)["blocking-findings"], 1);
     }
 }

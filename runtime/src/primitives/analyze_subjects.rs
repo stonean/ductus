@@ -32,6 +32,7 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
+use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::{hex, read_text};
 use crate::schema::primitives::{AnalyzeBlock, RecordFreshness};
 
@@ -84,7 +85,8 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
 ///
 /// Narrower than [`is_analyze_subject`], and deliberately so. `tasks.md`
 /// changes with every tick and `review.md` with every review, and neither is
-/// a design: counting either would judge every rule again after each of them,
+/// a design: counting either would judge every rule again, against its changed
+/// sections, after each of them,
 /// the cost the analysis digest's wider set pays for the gate's sake. Wider
 /// than [`is_review_contract`], which leaves `spec.md` out for the reasons its
 /// comment gives; a verdict about the spec's own text needs it. A scenario is
@@ -171,7 +173,41 @@ pub(crate) struct SubjectDigest {
 /// subdirectory shrink the subject set silently, so a digest taken after it
 /// became unreadable would compare clean against one taken before.
 pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -> SubjectDigest {
-    let mut out = SubjectDigest::default();
+    let mut digests = BTreeMap::new();
+    let mut unreadable = walk_subjects(feature_dir, is_subject, |rel, text| {
+        // Every subject is digested whole. A record's own artifact is
+        // excluded by the membership predicate rather than partially
+        // excised here: excising only the frontmatter left the body —
+        // which the same call rewrites — inside the digest, so a run
+        // whose report changed staled itself (spec 057, and see
+        // `is_analyze_subject`). `spec.md` is digested in full too,
+        // with the block gone there is nothing in it to excise; only
+        // its criteria's ticks are normalized, which no analysis
+        // judges (`without_criterion_ticks`).
+        let mut hasher = Sha256::new();
+        if rel == "spec.md" {
+            hasher.update(without_criterion_ticks(text).as_bytes());
+        } else {
+            hasher.update(text.as_bytes());
+        }
+        digests.insert(rel, hex(&hasher.finalize()));
+    });
+    unreadable.sort();
+    SubjectDigest {
+        digests,
+        unreadable,
+    }
+}
+
+/// Walk `feature_dir` for the subjects `is_subject` selects, handing each
+/// readable one's path within the feature and its text to `each`, and return
+/// the subjects the walk could not reach or read, unsorted.
+fn walk_subjects(
+    feature_dir: &Path,
+    is_subject: fn(&str) -> bool,
+    mut each: impl FnMut(String, &str),
+) -> Vec<String> {
+    let mut unreadable = Vec::new();
     for entry in walkdir::WalkDir::new(feature_dir).follow_links(false) {
         let entry = match entry {
             Ok(entry) => entry,
@@ -190,7 +226,7 @@ pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -
                     .map(|path| path.to_string_lossy().replace('\\', "/"))
                     .filter(|path| !path.is_empty())
                     .unwrap_or_else(|| ".".to_string());
-                out.unreadable.push(path);
+                unreadable.push(path);
                 continue;
             }
         };
@@ -205,29 +241,66 @@ pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -
             continue;
         }
         match read_text(entry.path()) {
-            Ok(text) => {
-                // Every subject is digested whole. A record's own artifact is
-                // excluded by the membership predicate rather than partially
-                // excised here: excising only the frontmatter left the body —
-                // which the same call rewrites — inside the digest, so a run
-                // whose report changed staled itself (spec 057, and see
-                // `is_analyze_subject`). `spec.md` is digested in full too,
-                // with the block gone there is nothing in it to excise; only
-                // its criteria's ticks are normalized, which no analysis
-                // judges (`without_criterion_ticks`).
-                let mut hasher = Sha256::new();
-                if rel == "spec.md" {
-                    hasher.update(without_criterion_ticks(&text).as_bytes());
-                } else {
-                    hasher.update(text.as_bytes());
-                }
-                out.digests.insert(rel, hex(&hasher.finalize()));
-            }
-            Err(_) => out.unreadable.push(rel),
+            Ok(text) => each(rel, &text),
+            Err(_) => unreadable.push(rel),
         }
     }
-    out.unreadable.sort();
-    out
+    unreadable
+}
+
+/// The `section-digest` of `feature_dir` (spec 082, AC7): each section of
+/// each design subject ([`is_design_subject`]), keyed as [`file_sections`]
+/// keys it. A subject that cannot be read contributes no key; the record's
+/// `analyzed-unreadable` names it, and no verdict is reused over it.
+pub(crate) fn section_digest(feature_dir: &Path) -> BTreeMap<String, String> {
+    let mut sections = BTreeMap::new();
+    walk_subjects(feature_dir, is_design_subject, |rel, text| {
+        sections.extend(file_sections(&rel, text));
+    });
+    sections
+}
+
+/// The sections of one design subject, `rel` within the feature, with their
+/// digests: each heading's own text, from its heading line to the next
+/// heading of any level, keyed `<rel>#<Heading>`, and the text before the
+/// first heading, frontmatter included, keyed `<rel>` alone, so every
+/// subject holds a key and its addition or removal shows. Headings are read
+/// by [`heading_lines`], so one inside a fence or a comment is content, and
+/// headings reading alike share one key, digested together in order, as a
+/// citation resolves by that equality. A section's own text and not its
+/// subsections, since an edit to a subsection would otherwise change every
+/// heading above it, and one edit would mark the whole file changed.
+/// `spec.md` is read with its criteria's ticks normalized, as its
+/// whole-file digest is. A digest is the first 16 hex characters of
+/// SHA-256: it detects change, and nothing trusts it for integrity.
+pub(crate) fn file_sections(rel: &str, text: &str) -> BTreeMap<String, String> {
+    let text = if rel == "spec.md" {
+        without_criterion_ticks(text)
+    } else {
+        text.to_string()
+    };
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let headings = heading_lines(&text);
+    let mut texts: BTreeMap<String, String> = BTreeMap::new();
+    let first = headings.first().map_or(lines.len(), |heading| heading.line);
+    texts.insert(rel.to_string(), lines[..first].concat());
+    for (index, heading) in headings.iter().enumerate() {
+        let end = headings
+            .get(index + 1)
+            .map_or(lines.len(), |next| next.line);
+        texts
+            .entry(format!("{rel}#{}", heading.text))
+            .or_default()
+            .push_str(&lines[heading.line..end].concat());
+    }
+    texts
+        .into_iter()
+        .map(|(key, section)| {
+            let mut digest = hex(&Sha256::digest(section.as_bytes()));
+            digest.truncate(16);
+            (key, digest)
+        })
+        .collect()
 }
 
 /// `spec.md`'s text with every acceptance criterion's checkbox marker set to
@@ -1476,6 +1549,49 @@ mod tests {
         assert!(
             paths.iter().any(|p| p.ends_with("scenarios/a.md")),
             "{paths:?}"
+        );
+    }
+
+    /// Spec 082, AC7: a design subject's sections are each heading's own
+    /// text, the text before the first heading under the bare path; a heading
+    /// in a fence is content; headings reading alike share a key; an edit to
+    /// a subsection changes no heading above it; and a criterion's tick in
+    /// `spec.md` changes no section.
+    #[test]
+    fn a_subject_s_sections_are_each_heading_s_own_text() {
+        let plan = "pre\n# Plan\n\nIntro.\n\n## A\n\n```md\n## Fenced\n```\n\n### A1\n\nx\n\n## B\n\ny\n\n## A\n\nz\n";
+        let sections = file_sections("plan.md", plan);
+        assert_eq!(
+            sections.keys().map(String::as_str).collect::<Vec<_>>(),
+            [
+                "plan.md",
+                "plan.md#A",
+                "plan.md#A1",
+                "plan.md#B",
+                "plan.md#Plan"
+            ]
+        );
+        assert!(sections.values().all(|digest| digest.len() == 16));
+        let edited = file_sections("plan.md", &plan.replace("\nx\n", "\nchanged\n"));
+        let changed: Vec<&String> = sections
+            .keys()
+            .filter(|key| sections.get(*key) != edited.get(*key))
+            .collect();
+        assert_eq!(changed, ["plan.md#A1"], "a subsection edit moves only it");
+        let second_a = file_sections("plan.md", &plan.replace("\nz\n", "\nw\n"));
+        assert_ne!(sections["plan.md#A"], second_a["plan.md#A"]);
+        let fenced = file_sections("plan.md", &plan.replace("## Fenced", "## Moved"));
+        assert_ne!(sections["plan.md#A"], fenced["plan.md#A"]);
+        assert_eq!(sections["plan.md#B"], fenced["plan.md#B"]);
+
+        let spec = "---\nstatus: draft\n---\n\n# S\n\n## Acceptance Criteria\n\n- [ ] AC1: one\n";
+        assert_eq!(
+            file_sections("spec.md", spec),
+            file_sections("spec.md", &spec.replace("- [ ]", "- [x]"))
+        );
+        assert_ne!(
+            file_sections("spec.md", spec)["spec.md"],
+            file_sections("spec.md", &spec.replace("draft", "done"))["spec.md"]
         );
     }
 }

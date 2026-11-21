@@ -563,6 +563,14 @@ pub struct AnalyzeBlock {
     /// verdict.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rule_digest: BTreeMap<String, String>,
+    /// Each section of the design subjects and the first 16 hex characters
+    /// of a SHA-256 over its text (spec 082, AC7), keyed `<path>#<Heading>`,
+    /// or `<path>` for the text before the file's first heading. A stored
+    /// verdict is current while the sections it concerns digest alike. Empty
+    /// means no design subject existed or the record predates the field,
+    /// which falls back to the whole files.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub section_digest: BTreeMap<String, String>,
     /// Subjects that exist but could not be read when the digest was taken.
     ///
     /// Recorded rather than digested as empty, so a record cannot claim to
@@ -843,23 +851,42 @@ pub struct DiscoverRuleFilesResult {
 #[serde(rename_all = "kebab-case")]
 pub struct RuleVerdictsBlock {
     /// Why nothing is reusable, when nothing is: `no-prior-verdicts`,
-    /// `subjects-changed`, `rule-files-changed` (the rule files loaded are not
-    /// the set the record's `rule-digest` names) or `record-unreadable`. Then
-    /// `judge` holds every assessable rule.
+    /// `subjects-changed` (a design subject changed and the record carries
+    /// no `section-digest`, or one could not be read), `rule-files-changed`
+    /// (the rule files loaded are not the set the record's `rule-digest`
+    /// names) or `record-unreadable`. Then `judge` holds every assessable
+    /// rule.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     /// Entries in `reusable`, in either form.
     pub reusable_count: usize,
     /// Entries in `judge`, in either form.
     pub judge_count: usize,
-    /// Each current verdict that fired, to report again without judging the
-    /// rule. Absent in the file form.
+    /// Entries in `rejudge`, in either form.
+    pub rejudge_count: usize,
+    /// Entries in `changed-sections`, in either form.
+    pub changed_sections_count: usize,
+    /// Each stored fired verdict that stands unless this run's judgment
+    /// replaces it: a current one, to report again without judging its rule,
+    /// and the carried `addressed` or `waived` verdict of a rule in
+    /// `rejudge`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reusable: Option<Vec<ReusableVerdict>>,
-    /// The IDs of the rules to judge: those with no current verdict, in
-    /// file then heading order. Absent in the file form.
+    /// The IDs of the rules to judge in full: those with no current verdict,
+    /// in file then heading order. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub judge: Option<Vec<String>>,
+    /// The IDs of the rules to judge against `changed-sections` only, in file
+    /// then heading order: a not-fired, `addressed` or `waived` verdict that
+    /// stands for every other section (AC7). Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejudge: Option<Vec<String>>,
+    /// Each section of the design subjects changed since the prior record,
+    /// added and removed ones among them, as `<path>#<Heading>`, or `<path>`
+    /// for the text before its first heading, in key order. Every section it
+    /// does not name is unchanged. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changed_sections: Option<Vec<String>>,
 }
 
 /// One current fired verdict in [`RuleVerdictsBlock::reusable`].
@@ -2296,6 +2323,14 @@ pub struct RuleContradiction {
     pub rule: String,
     /// The earlier verdict, `not-fired` or `addressed`.
     pub earlier: String,
+    /// Where the new finding was placed, as the host passed it.
+    pub at: String,
+    /// The new finding's message, as the host passed it.
+    pub message: String,
+    /// Whether the finding also counts in its tier: `false` for one at a
+    /// section unchanged since the earlier verdict, which is recorded nowhere
+    /// else (AC7), `true` for one at a location naming no section (AC3).
+    pub counted: bool,
 }
 
 /// Parsed spec frontmatter.

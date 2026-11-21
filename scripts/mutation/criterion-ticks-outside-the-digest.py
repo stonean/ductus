@@ -19,8 +19,8 @@ MUTATIONS = [
     (
         'M1 a criterion tick stales the analysis again',
         'src/primitives/analyze_subjects.rs',
-        '                    hasher.update(without_criterion_ticks(&text).as_bytes());',
-        '                    hasher.update(text.as_bytes());',
+        '            hasher.update(without_criterion_ticks(text).as_bytes());',
+        '            hasher.update(text.as_bytes());',
         'analyze_subjects::tests::a_criterion_tick_does_not_move_the_spec_digest check_review_gate::tests::a_criterion_tick_leaves_the_analysis_current_and_another_spec_edit_stales_it',
     ),
     (

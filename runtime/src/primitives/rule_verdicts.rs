@@ -16,7 +16,9 @@
 //! *A stored verdict is current while four things match*):
 //!
 //! 1. the design subjects, `spec.md`, `plan.md`, `data-model.md` and each
-//!    scenario, digest as the record's `analyzed-digest` entries for them say;
+//!    scenario, digest as the record's `analyzed-digest` entries for them say,
+//!    or, where they do not, the sections the verdict concerns digest as the
+//!    record's `section-digest` says (AC7, [`SectionDelta`]);
 //! 2. the set of rule files loaded now is the set the record's `rule-digest`
 //!    names, so a file added or removed makes no verdict reusable
 //!    (`BE-CACHE-002`);
@@ -25,15 +27,15 @@
 //! 4. the rule was judged: the record's `unjudged-rules` does not list it.
 //!
 //! A rule that did not fire has no verdict to be current, so a current rule is
-//! one of three things, [`Currency`]: not fired, fired (with its verdict), or
-//! stale. Treating "no entry" as stale would judge every quiet rule on every
-//! run, and treating it as unjudged would name them all in
-//! `rule-assessments-not-checked`.
+//! one of four things, [`Currency`]: not fired, fired (with its verdict),
+//! owed a judgment against the changed sections only, or stale. Treating "no
+//! entry" as stale would judge every quiet rule on every run, and treating it
+//! as unjudged would name them all in `rule-assessments-not-checked`.
 
 use std::collections::BTreeMap;
 use std::path::{Component, Path};
 
-use crate::primitives::analyze_subjects::{is_design_subject, subject_digest};
+use crate::primitives::analyze_subjects::{is_design_subject, section_digest, subject_digest};
 use crate::primitives::departures::{self, Attribution};
 use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::rule_sections::{parse_rule_sections, rules_digest};
@@ -129,8 +131,9 @@ pub(crate) enum NoReuse {
     /// No `analysis.md`, or one that carries no `rule-digest`, which a record
     /// written before spec 082 does not.
     NoPriorVerdicts,
-    /// A design subject changed, was added or was removed, or one could not
-    /// be read.
+    /// A design subject changed, was added or was removed and the record
+    /// carries no `section-digest` to say which sections, written before
+    /// AC7; or a design subject could not be read.
     SubjectsChanged,
     /// The rule files loaded now are not the set the record's `rule-digest`
     /// names: a file added or removed. A verdict is current only for the set
@@ -159,10 +162,102 @@ impl NoReuse {
 pub(crate) enum Currency {
     /// Judged against the current subjects and rule text, and did not fire.
     NotFired,
-    /// Judged against them, and fired, with the verdict stored.
+    /// Judged against them, and fired, with the verdict stored; or a
+    /// `finding` whose section is unchanged, which stands unjudged (AC7).
     Fired(RuleVerdict),
-    /// Not judged against them: judge it.
+    /// Judged against the current rule text and every section but the
+    /// changed ones, against which it is to be judged (AC7). `earlier` is its
+    /// verdict there, `None` when it did not fire, and `carries` whether that
+    /// verdict stands when the judgment of the changed sections does not
+    /// replace it: an `addressed` one only while its `cite` is at an
+    /// unchanged section, a `waived` one always.
+    Rejudge {
+        /// The stored verdict, `None` when the rule did not fire.
+        earlier: Option<RuleVerdict>,
+        /// Whether `earlier` stands when the judgment replaces nothing.
+        carries: bool,
+    },
+    /// Not judged against them: judge it in full.
     Stale,
+}
+
+impl Currency {
+    /// Whether a run owes the rule a judgment: in full, or against the
+    /// changed sections.
+    pub(crate) fn owes_judgment(&self) -> bool {
+        matches!(self, Self::Stale | Self::Rejudge { .. })
+    }
+
+    /// The stored verdict that stands when this run's judgment stores none:
+    /// a current fired one, or a carried one of a rule judged against the
+    /// changed sections.
+    pub(crate) fn carried(&self) -> Option<&RuleVerdict> {
+        match self {
+            Self::Fired(verdict)
+            | Self::Rejudge {
+                earlier: Some(verdict),
+                carries: true,
+            } => Some(verdict),
+            Self::NotFired | Self::Rejudge { .. } | Self::Stale => None,
+        }
+    }
+
+    /// The earlier verdict a finding at an unchanged section would
+    /// contradict: `not-fired` or `addressed`, current or owed a judgment
+    /// against the changed sections. A finding, a waiver and a stale rule
+    /// cleared no section.
+    fn cleared(&self) -> Option<&'static str> {
+        match self {
+            Self::NotFired | Self::Rejudge { earlier: None, .. } => Some("not-fired"),
+            Self::Fired(RuleVerdict::Addressed { .. })
+            | Self::Rejudge {
+                earlier: Some(RuleVerdict::Addressed { .. }),
+                ..
+            } => Some("addressed"),
+            Self::Fired(RuleVerdict::Finding { .. } | RuleVerdict::Waived { .. })
+            | Self::Rejudge { .. }
+            | Self::Stale => None,
+        }
+    }
+}
+
+/// The sections of the design subjects against the prior record's
+/// `section-digest` (AC7): those digesting alike on both sides, and the
+/// rest, the added and removed among them.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub(crate) struct SectionDelta {
+    unchanged: std::collections::BTreeSet<String>,
+    changed: std::collections::BTreeSet<String>,
+}
+
+impl SectionDelta {
+    /// Compare the prior record's `section-digest` with the sections now.
+    pub(crate) fn between(
+        prior: &BTreeMap<String, String>,
+        now: &BTreeMap<String, String>,
+    ) -> Self {
+        let mut delta = Self::default();
+        for key in prior.keys().chain(now.keys()) {
+            if prior.get(key) == now.get(key) {
+                delta.unchanged.insert(key.clone());
+            } else {
+                delta.changed.insert(key.clone());
+            }
+        }
+        delta
+    }
+
+    /// Whether `location`, `<path>#<Heading>`, names a section both digests
+    /// hold alike. A location naming no heading, or a section either lacks,
+    /// is never unchanged: holding a finding to nothing needs proof that its
+    /// text was judged before.
+    pub(crate) fn unchanged_at(&self, location: &str) -> bool {
+        let Some((path, heading)) = location.split_once('#') else {
+            return false;
+        };
+        let (path, heading) = (path.trim(), heading.trim());
+        !heading.is_empty() && self.unchanged.contains(&format!("{path}#{heading}"))
+    }
 }
 
 /// The standing of every assessable rule of the loaded files.
@@ -172,6 +267,9 @@ pub(crate) struct Standing {
     pub(crate) no_reuse: Option<NoReuse>,
     /// Each distinct assessable rule in file then heading order.
     rules: Vec<(AssessableRule, Currency)>,
+    /// The sections against the prior record's, when both sides can say
+    /// (AC7); `None` for a record without `section-digest`, or none reusable.
+    sections: Option<SectionDelta>,
 }
 
 impl Standing {
@@ -188,7 +286,7 @@ impl Standing {
             .map(|(_, currency)| currency)
     }
 
-    /// The rules to judge: every stale one.
+    /// The rules to judge in full: every stale one.
     pub(crate) fn judge(&self) -> impl Iterator<Item = &AssessableRule> {
         self.rules
             .iter()
@@ -196,14 +294,44 @@ impl Standing {
             .map(|(rule, _)| rule)
     }
 
-    /// The current fired verdicts, each with its rule.
+    /// The rules to judge against [`Self::changed_sections`] only (AC7).
+    pub(crate) fn rejudge(&self) -> impl Iterator<Item = &AssessableRule> {
+        self.rules
+            .iter()
+            .filter(|(_, currency)| matches!(currency, Currency::Rejudge { .. }))
+            .map(|(rule, _)| rule)
+    }
+
+    /// The keys of the sections changed since the prior record, the added and
+    /// removed among them, in key order; empty when none did, or when the
+    /// record cannot say.
+    pub(crate) fn changed_sections(&self) -> impl Iterator<Item = &String> {
+        self.sections.iter().flat_map(|delta| delta.changed.iter())
+    }
+
+    /// The fired verdicts that stand unless this run's judgment replaces
+    /// them, each with its rule: every current one, and every carried one of
+    /// a rule judged against the changed sections.
     pub(crate) fn reusable(&self) -> impl Iterator<Item = (&AssessableRule, &RuleVerdict)> {
         self.rules
             .iter()
-            .filter_map(|(rule, currency)| match currency {
-                Currency::Fired(verdict) => Some((rule, verdict)),
-                Currency::NotFired | Currency::Stale => None,
-            })
+            .filter_map(|(rule, currency)| currency.carried().map(|verdict| (rule, verdict)))
+    }
+
+    /// The earlier verdict `verdict`, passed for `id`, is held to nothing
+    /// against (AC7): a `finding` at a section unchanged since that rule's
+    /// not-fired or `addressed` verdict. Such a finding is a contradiction
+    /// alone, stored nowhere and counted in no tier, by `write-analysis` and
+    /// the exec tally alike.
+    pub(crate) fn demoted(&self, id: &str, verdict: &RuleVerdict) -> Option<&'static str> {
+        let RuleVerdict::Finding { at, .. } = verdict else {
+            return None;
+        };
+        let earlier = self.currency(id)?.cleared()?;
+        self.sections
+            .as_ref()
+            .is_some_and(|delta| delta.unchanged_at(at))
+            .then_some(earlier)
     }
 }
 
@@ -230,9 +358,19 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
     if prior.rule_digest.is_empty() {
         return unreusable(rules, NoReuse::NoPriorVerdicts);
     }
-    if !design_subjects_match(feature_dir, &prior) {
+    let Some(whole_files_match) = design_subjects_match(feature_dir, &prior) else {
         return unreusable(rules, NoReuse::SubjectsChanged);
-    }
+    };
+    let sections = (!prior.section_digest.is_empty())
+        .then(|| SectionDelta::between(&prior.section_digest, &section_digest(feature_dir)));
+    // With every design subject unchanged nothing is to be judged against;
+    // otherwise the sections say what is, or, for a record that cannot say,
+    // every rule is stale.
+    let changed = match &sections {
+        _ if whole_files_match => false,
+        Some(_) => true,
+        None => return unreusable(rules, NoReuse::SubjectsChanged),
+    };
     let loaded_now: std::collections::BTreeSet<&str> =
         files.iter().map(|file| file.name.as_str()).collect();
     let judged_under: std::collections::BTreeSet<&str> =
@@ -247,9 +385,10 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
         let file_current = prior.rule_digest.get(&file.name) == Some(&file.digest);
         for rule in &file.rules {
             let here = if file_current && !prior.unjudged_rules.contains(&rule.id) {
-                match prior.rule_verdicts.get(&rule.id) {
-                    Some(verdict) => Currency::Fired(verdict.clone()),
-                    None => Currency::NotFired,
+                let verdict = prior.rule_verdicts.get(&rule.id);
+                match &sections {
+                    Some(delta) if changed => section_currency(delta, verdict),
+                    _ => verdict.map_or(Currency::NotFired, |v| Currency::Fired(v.clone())),
                 }
             } else {
                 Currency::Stale
@@ -268,6 +407,37 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
     Standing {
         no_reuse: None,
         rules,
+        sections,
+    }
+}
+
+/// Where a judged rule stands once some section changed (AC7): a quiet,
+/// `addressed` or `waived` one is judged against the changed sections, an
+/// `addressed` one carried only while its `cite` is at an unchanged section;
+/// a `finding` stands while its `at` is, and is judged in full otherwise,
+/// since a finding cleared no other section (the spec's Resolved Questions,
+/// 2026-11-21).
+fn section_currency(delta: &SectionDelta, verdict: Option<&RuleVerdict>) -> Currency {
+    match verdict {
+        None => Currency::Rejudge {
+            earlier: None,
+            carries: false,
+        },
+        Some(found @ RuleVerdict::Finding { at, .. }) => {
+            if delta.unchanged_at(at) {
+                Currency::Fired(found.clone())
+            } else {
+                Currency::Stale
+            }
+        }
+        Some(addressed @ RuleVerdict::Addressed { cite }) => Currency::Rejudge {
+            earlier: Some(addressed.clone()),
+            carries: delta.unchanged_at(cite),
+        },
+        Some(waived @ RuleVerdict::Waived { .. }) => Currency::Rejudge {
+            earlier: Some(waived.clone()),
+            carries: true,
+        },
     }
 }
 
@@ -275,17 +445,19 @@ fn unreusable(rules: Vec<(AssessableRule, Currency)>, why: NoReuse) -> Standing 
     Standing {
         no_reuse: Some(why),
         rules,
+        sections: None,
     }
 }
 
 /// Whether the design subjects now are the ones the prior record was taken
-/// over: the same set, each with the same digest, none unreadable.
+/// over, the same set, each with the same digest; `None` when one of them, on
+/// either side, could not be read, which no section can settle.
 ///
 /// An unreadable entry that is no markdown file is a directory the walk could
 /// not reach, and everything beneath it is unreachable, so it blocks too; one
 /// that is a markdown file blocks only when it is a design subject, since a
 /// `tasks.md` the record could not read decides nothing here.
-fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> bool {
+fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> Option<bool> {
     let is_markdown = |path: &str| {
         Path::new(path)
             .extension()
@@ -294,7 +466,7 @@ fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> bool {
     let blocks = |path: &String| is_design_subject(path) || !is_markdown(path);
     let now = subject_digest(feature_dir, is_design_subject);
     if now.unreadable.iter().any(blocks) || prior.analyzed_unreadable.iter().any(blocks) {
-        return false;
+        return None;
     }
     let recorded: BTreeMap<&String, &String> = prior
         .analyzed_digest
@@ -302,7 +474,7 @@ fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> bool {
         .filter(|(path, _)| is_design_subject(path))
         .collect();
     let current: BTreeMap<&String, &String> = now.digests.iter().collect();
-    recorded == current
+    Some(recorded == current)
 }
 
 /// Whether `cite`, `<path>#<Heading>`, names a design subject of the feature
@@ -339,10 +511,12 @@ pub(crate) fn cite_resolves(feature_dir: &Path, cite: &str) -> bool {
     })
 }
 
-/// The earlier verdict a new `finding` contradicts, when it does: a rule
-/// that did not fire, or one the spec addressed, and now fires against the
-/// same subjects (AC3). Findings against findings, and any verdict against a
-/// stale or unjudged rule, contradict nothing.
+/// The earlier verdict a new `finding` contradicts while it still counts:
+/// a rule that did not fire, or one the spec addressed, and now fires against
+/// the same subjects, at a location naming no section (AC3), since one at a
+/// section is [`Standing::demoted`]. Findings against findings, and any
+/// verdict against a stale rule or one owed a judgment of changed sections,
+/// contradict nothing.
 pub(crate) fn contradiction(earlier: &Currency, now: &RuleVerdict) -> Option<&'static str> {
     if !matches!(now, RuleVerdict::Finding { .. }) {
         return None;
@@ -351,6 +525,7 @@ pub(crate) fn contradiction(earlier: &Currency, now: &RuleVerdict) -> Option<&'s
         Currency::NotFired => Some("not-fired"),
         Currency::Fired(RuleVerdict::Addressed { .. }) => Some("addressed"),
         Currency::Fired(RuleVerdict::Finding { .. } | RuleVerdict::Waived { .. })
+        | Currency::Rejudge { .. }
         | Currency::Stale => None,
     }
 }
@@ -448,9 +623,20 @@ mod tests {
     }
 
     /// A prior `analysis.md` as `write-analysis` writes it: the analyze
-    /// subjects' digest, the rule files' digests, and `extra` (verdicts and
-    /// the unjudged list, as frontmatter text).
+    /// subjects' digest, the rule files' digests, the design subjects'
+    /// sections, and `extra` (verdicts and the unjudged list, as frontmatter
+    /// text).
     fn record(dir: &Path, files: &[LoadedRuleFile], extra: &str) {
+        let mut sections = String::from("section-digest:\n");
+        for (key, digest) in section_digest(dir) {
+            let _ = writeln!(sections, "  {key:?}: {digest}");
+        }
+        record_before_sections(dir, files, &format!("{sections}{extra}"));
+    }
+
+    /// A prior `analysis.md` as `write-analysis` wrote it before AC7, with no
+    /// `section-digest`.
+    fn record_before_sections(dir: &Path, files: &[LoadedRuleFile], extra: &str) {
         let subjects = subject_digest(dir, is_analyze_subject);
         let mut text = String::from("---\nspec: 001-x\nlast-run: 2026-11-12T00:00:00Z\n");
         if !subjects.digests.is_empty() {
@@ -514,15 +700,15 @@ mod tests {
         assert_eq!(reusable, ["TS-MUST-001"]);
     }
 
-    /// A design subject's edit judges every rule again, whichever subject it
-    /// is, and a `tasks.md` or `review.md` edit judges none (AC1, the
-    /// Resolved Questions).
+    /// Against a record written before AC7, a design subject's edit judges
+    /// every rule again, whichever subject it is, and a `tasks.md` or
+    /// `review.md` edit judges none (AC1, the Resolved Questions).
     #[test]
     fn a_design_subject_edit_judges_every_rule_and_a_tasks_or_review_edit_none() {
         let loaded = files(MUST_RULES, SHOULD_RULES);
         for edited in ["spec.md", "plan.md", "scenarios/s.md"] {
             let tmp = feature();
-            record(tmp.path(), &loaded, ONE_FIRED);
+            record_before_sections(tmp.path(), &loaded, ONE_FIRED);
             fs::write(tmp.path().join(edited), "# Edited\n").unwrap();
             let standing = standing(tmp.path(), &loaded);
             assert_eq!(
@@ -542,21 +728,152 @@ mod tests {
     }
 
     /// A design subject added (a first `data-model.md`) or removed (a
-    /// deleted scenario) changes the set, so every rule is judged again.
+    /// deleted scenario) adds or removes its sections, so every quiet rule is
+    /// judged against them (AC7); against a record written before AC7 the
+    /// changed set judges every rule in full.
     #[test]
-    fn a_design_subject_added_or_removed_judges_every_rule() {
+    fn a_design_subject_added_or_removed_judges_every_rule_against_its_sections() {
         let loaded = files(MUST_RULES, SHOULD_RULES);
         let tmp = feature();
         record(tmp.path(), &loaded, "");
         fs::write(tmp.path().join("data-model.md"), "# Data\n").unwrap();
-        assert!(all_stale(&standing(tmp.path(), &loaded)));
+        let added = standing(tmp.path(), &loaded);
+        assert_eq!(added.no_reuse, None);
+        assert_eq!(added.rejudge().count(), 3);
+        assert_eq!(
+            added.changed_sections().collect::<Vec<_>>(),
+            ["data-model.md", "data-model.md#Data"]
+        );
 
         let tmp = feature();
         record(tmp.path(), &loaded, "");
         fs::remove_file(tmp.path().join("scenarios/s.md")).unwrap();
+        let removed = standing(tmp.path(), &loaded);
+        assert_eq!(removed.rejudge().count(), 3);
+        assert_eq!(
+            removed.changed_sections().collect::<Vec<_>>(),
+            [
+                "scenarios/s.md",
+                "scenarios/s.md#Context",
+                "scenarios/s.md#S"
+            ]
+        );
+
+        let tmp = feature();
+        record_before_sections(tmp.path(), &loaded, "");
+        fs::remove_file(tmp.path().join("scenarios/s.md")).unwrap();
         let standing = standing(tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, Some(NoReuse::SubjectsChanged));
         assert!(all_stale(&standing));
+    }
+
+    /// AC7: an edit to one section leaves each verdict standing for the
+    /// others. A quiet rule and an `addressed` one are judged against the
+    /// changed section alone, the latter carried only while its cite's
+    /// section is unchanged; a `waived` one is carried; a finding at an
+    /// unchanged section stands unjudged, and one at the changed section is
+    /// judged in full.
+    #[test]
+    fn a_section_edit_judges_each_rule_as_its_verdict_says() {
+        let tmp = tempdir().unwrap();
+        fs::write(tmp.path().join("spec.md"), "# Spec\n\n## Goal\n\nOne.\n").unwrap();
+        fs::write(
+            tmp.path().join("plan.md"),
+            "# Plan\n\n## Observability\n\nA.\n\n## Rollout\n\nB.\n",
+        )
+        .unwrap();
+        let five = "### TS-MUST-001\n\n> A MUST b.\n\n**Verification:** v.\n\n\
+                    ### TS-MUST-002\n\n> A MUST c.\n\n**Verification:** v.\n\n\
+                    ### TS-MUST-003\n\n> A MUST d.\n\n**Verification:** v.\n\n\
+                    ### TS-MUST-004\n\n> A MUST e.\n\n**Verification:** v.\n\n\
+                    ### TS-MUST-005\n\n> A MUST f.\n\n**Verification:** v.\n\n\
+                    ### TS-MUST-006\n\n> A MUST g.\n\n**Verification:** v.\n";
+        let loaded = vec![LoadedRuleFile::read("a-cross.md", five)];
+        record(
+            tmp.path(),
+            &loaded,
+            "rule-verdicts:\n  \
+             TS-MUST-002: {verdict: addressed, cite: \"plan.md#Observability\"}\n  \
+             TS-MUST-003: {verdict: addressed, cite: \"plan.md#Rollout\"}\n  \
+             TS-MUST-004: {verdict: waived, reason: \"r\", decided-by: \"x\"}\n  \
+             TS-MUST-005: {verdict: finding, tier: must, at: \"spec.md#Goal\", message: \"m\"}\n  \
+             TS-MUST-006: {verdict: finding, tier: must, at: \"plan.md#Rollout\", message: \"m\"}\n",
+        );
+        fs::write(
+            tmp.path().join("plan.md"),
+            "# Plan\n\n## Observability\n\nA.\n\n## Rollout\n\nC.\n",
+        )
+        .unwrap();
+        let standing = standing(tmp.path(), &loaded);
+        assert_eq!(standing.no_reuse, None);
+        assert_eq!(
+            standing.changed_sections().collect::<Vec<_>>(),
+            ["plan.md#Rollout"]
+        );
+        let rejudged = |carried: bool| move |c: &Currency| matches!(c, Currency::Rejudge { carries, .. } if *carries == carried);
+        let of = |id: &str| standing.currency(id).unwrap();
+        assert_eq!(
+            of("TS-MUST-001"),
+            &Currency::Rejudge {
+                earlier: None,
+                carries: false
+            }
+        );
+        assert!(rejudged(true)(of("TS-MUST-002")));
+        assert!(rejudged(false)(of("TS-MUST-003")));
+        assert!(rejudged(true)(of("TS-MUST-004")));
+        assert!(matches!(
+            of("TS-MUST-005"),
+            Currency::Fired(RuleVerdict::Finding { .. })
+        ));
+        assert_eq!(of("TS-MUST-006"), &Currency::Stale);
+        let ids = |rules: Vec<&AssessableRule>| -> Vec<String> {
+            rules.into_iter().map(|rule| rule.id.clone()).collect()
+        };
+        assert_eq!(ids(standing.judge().collect()), ["TS-MUST-006"]);
+        assert_eq!(
+            ids(standing.rejudge().collect()),
+            ["TS-MUST-001", "TS-MUST-002", "TS-MUST-003", "TS-MUST-004"]
+        );
+        let reusable: Vec<&str> = standing
+            .reusable()
+            .map(|(rule, _)| rule.id.as_str())
+            .collect();
+        assert_eq!(reusable, ["TS-MUST-002", "TS-MUST-004", "TS-MUST-005"]);
+
+        // A finding at an unchanged section after a quiet or addressed
+        // verdict is demoted; at the changed section, or naming no section,
+        // or after a finding, it is not.
+        let finding = |at: &str| RuleVerdict::Finding {
+            tier: FindingTier::Must,
+            at: at.into(),
+            message: "m".into(),
+        };
+        assert_eq!(
+            standing.demoted("TS-MUST-001", &finding("spec.md#Goal")),
+            Some("not-fired")
+        );
+        assert_eq!(
+            standing.demoted("TS-MUST-003", &finding("plan.md#Observability")),
+            Some("addressed")
+        );
+        assert_eq!(
+            standing.demoted("TS-MUST-001", &finding("plan.md#Rollout")),
+            None
+        );
+        assert_eq!(standing.demoted("TS-MUST-001", &finding("plan.md")), None);
+        assert_eq!(
+            standing.demoted("TS-MUST-001", &finding("plan.md#Missing")),
+            None
+        );
+        assert_eq!(
+            standing.demoted("TS-MUST-005", &finding("spec.md#Goal")),
+            None
+        );
+        assert_eq!(
+            standing.demoted("TS-MUST-004", &finding("spec.md#Goal")),
+            None
+        );
     }
 
     /// A rule file whose rules changed judges that file's rules again and

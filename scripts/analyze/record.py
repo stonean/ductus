@@ -29,7 +29,10 @@ The hand-backs are checked and merged again here, as check.py and
 combine.py do, so what is recorded is what the judges wrote. Each fired
 rule's finding, and each verdicts.reusable finding, is written as
 `rule-assessment — RULE: message`, in the Blocking tier for a MUST-tier
-rule and the Advisory tier otherwise. Each broken cross-service reference
+rule and the Advisory tier otherwise; a finding of a rule judged against
+the changed sections alone, placed at a section verdicts.changed-sections
+does not name, is passed only as its verdict, which write-analysis records
+as a contradiction counted in no tier (spec 082, AC7). Each broken cross-service reference
 and each repository the registry holds twice is an Advisory finding. The
 unexamined targets are those detect.py's results name, an integrity item
 step 15 did not check, and the plan's; any the run could not read sets
@@ -126,6 +129,21 @@ def reference_findings(feature, det):
     return out
 
 
+def demoted(m, rid, v):
+    """Whether a finding is a contradiction alone (spec 082, AC7): its rule
+    was judged against the changed sections only, its earlier verdict was not
+    a waiver, and it is placed at `<path>#<Heading>` that
+    verdicts.changed-sections does not name, every such heading resolving
+    here, so unchanged since the last record."""
+    if rid not in set(m.get("rejudge") or []):
+        return False
+    if any(r.get("id") == rid and r.get("verdict") == "waived" for r in m.get("reusable") or []):
+        return False
+    path, _, heading = (v.get("at") or "").partition("#")
+    key = f"{path.strip()}#{heading.strip()}"
+    return bool(heading.strip()) and key not in set(m.get("changed-sections") or [])
+
+
 def run(argv):
     write = "--write" in argv
     argv = [a for a in argv if a != "--write"]
@@ -171,12 +189,15 @@ def run(argv):
     bad = lib.unresolved_cites(feature, refs)
     if bad:
         raise lib.Refused(f"verdicts cite headings that do not resolve: {bad}")
-    if set(merged["judged"]) | set(merged["unjudged"]) != set(m["judge"]):
-        raise lib.Refused("judged and unjudged rules do not cover verdicts.judge")
+    if set(merged["judged"]) | set(merged["unjudged"]) != set(m["judge"]) | set(m.get("rejudge") or []):
+        raise lib.Refused("judged and unjudged rules do not cover verdicts.judge and verdicts.rejudge")
 
     findings = [dict(f) for f in plan.get("findings") or []]
     for rid, v in sorted(verdicts.items()):
-        if v["verdict"] == "finding":
+        if v["verdict"] == "finding" and demoted(m, rid, v):
+            print(f"contradiction: {rid} judged a finding at {v.get('at')}, a section unchanged since its "
+                  "verdict, so it counts in no tier")
+        elif v["verdict"] == "finding":
             findings.append(rule_finding(feature, rid, v, v.get("tier")))
     for r in m.get("reusable") or []:
         if r.get("verdict") == "finding":

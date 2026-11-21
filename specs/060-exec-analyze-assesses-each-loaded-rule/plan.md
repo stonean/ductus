@@ -127,7 +127,7 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 The scenario `rule-judging-runs-from-repo-scripts` puts the host's orchestration around AC10's subagents in `scripts/analyze/`. Rebuilt in a temp directory, it was lost with the session and refined by nobody (owner, 2026-11-18). There is one script for each step. A cells manifest, `manifest.json`, is written by the split and read by every later step, so no share, group, feature or address is fixed in code:
 
 - `detect.py` runs the deterministic steps.
-- `split.py` cuts `verdicts.judge` into shares and the scenarios into groups.
+- `split.py` cuts `verdicts.judge` and `verdicts.rejudge` into shares, keeping `verdicts.changed-sections` for the briefs and the record (spec 082, AC7), and the scenarios into groups.
 - `briefs.py` renders `judge-brief.md` and `step15-brief.md`.
 - `check.py` checks each hand-back.
 - `combine.py` merges the cells.

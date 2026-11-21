@@ -2,6 +2,27 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING: a stored rule verdict stands while the sections it concerns are unchanged (spec 082, AC7).**
+  `write-analysis` records `section-digest`, a 16-hex digest of each heading's
+  own text in the design subjects (`<path>#<Heading>`, and `<path>` for the
+  text before a file's first heading). After an edit, a rule that did not
+  fire, was addressed or was waived is judged again against the changed
+  sections alone, and `discover-rule-files`' `verdicts` gains `rejudge`,
+  `changed-sections` and their counts. A stored finding stands while its own
+  section is unchanged, and its rule is judged in full once that section
+  changes. A finding at a section unchanged since its rule's not-fired or
+  addressed verdict is no longer stored or, under `ductus exec`, counted: it
+  is a contradiction alone, and `contradictions` entries gain `at`, `message`
+  and `counted`. A record written before this falls back to the whole files,
+  so `subjects-changed` now arises only for one without `section-digest`, or
+  when a design subject cannot be read. An adopter's third analysis had judged
+  a sentence its plan held unchanged through two earlier analyses a MUST,
+  because every task between them edited the plan elsewhere.
+
 ## [0.60.0] — 2026-11-20
 
 A minor release with breaking changes: 109 of the 287 entries below are
