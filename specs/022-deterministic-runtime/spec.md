@@ -32,6 +32,8 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added a third rule verdict, `waived`, for a rule the spec departs from: the exec walker records it for any fired answer on such a rule, and the `assessSpecQuality` section of the data model states the answer.
 >
 > **Signpost:** [020](../020-code-review/spec.md) changed a surface this spec owns. `discover-rule-files` leaves out of a review's selection each rule file whose header names `/{project}:analyze` and not `/{project}:review`, with a notice naming it as judged by analysis alone (020's AC17); scenario `review-runtime-acceleration` states the step.
+>
+> **Signpost:** [067](../067-analyze-and-audit-checks/spec.md) changed the walker this spec's runtime core owns. An exec `/{project}:analyze` step 4 dispatches `resolve-anchor` on the spec's `spec.md` and each scenario under it in one call, merged before the result is bounded, so the walk judges a scenario's `§` references as the interactive run does (067's AC8).
 
 ## Motivation
 

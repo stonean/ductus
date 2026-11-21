@@ -190,8 +190,10 @@ pub fn bound(scan: Anchors, path: &str, repo: &Path) -> Result<ResolveAnchorResu
 /// its `path`, its unresolved anchors are listed as `<path>: <anchor>`, its
 /// counts add to the spec's, and `scenarios-examined` is the number of
 /// scenario files scanned (0 for a spec with none). A scenario that cannot be
-/// read is counted in `anchor-target-unreadable` and not examined. Any other
-/// path is scanned alone, with `scenarios-examined` absent.
+/// read is counted in `anchor-target-unreadable` and not examined, and so is a
+/// `scenarios/` that exists and cannot be listed or leaves the project, once,
+/// so that state never reads as a spec with no scenarios. Any other path is
+/// scanned alone, with `scenarios-examined` absent.
 ///
 /// # Errors
 ///
@@ -205,7 +207,12 @@ pub fn run_with_scenarios(args: &ResolveAnchorArgs, repo: &Path) -> Result<Resol
             .unwrap_or_else(|| Path::new(""))
             .join(SCENARIOS_DIR);
         let mut examined = 0u32;
-        for scenario in scenario_files(repo, &dir) {
+        let Some(scenarios) = scenario_files(repo, &dir) else {
+            scan.anchor_target_unreadable = scan.anchor_target_unreadable.saturating_add(1);
+            scan.scenarios_examined = Some(0);
+            return bound(scan, &args.path, repo);
+        };
+        for scenario in scenarios {
             let scenario_args = ResolveAnchorArgs {
                 path: scenario.clone(),
                 markers_path: args.markers_path.clone(),
@@ -222,25 +229,28 @@ pub fn run_with_scenarios(args: &ResolveAnchorArgs, repo: &Path) -> Result<Resol
     bound(scan, &args.path, repo)
 }
 
-/// The `.md` files directly under `dir`, repo-relative and sorted; none when
-/// the directory is absent or cannot be read.
-fn scenario_files(repo: &Path, dir: &Path) -> Vec<String> {
+/// The `.md` files directly under `dir`, repo-relative and sorted: none when
+/// the directory is absent, and `None` when it exists and cannot be listed,
+/// an entry included, or leaves the project.
+fn scenario_files(repo: &Path, dir: &Path) -> Option<Vec<String>> {
     let dir = dir.to_string_lossy().replace('\\', "/");
-    let Ok(listed) = contained_path(repo, &dir).and_then(|abs| {
-        std::fs::read_dir(abs).map_err(|source| crate::primitives::PrimitiveError::Io {
-            path: dir.clone().into(),
-            source,
-        })
-    }) else {
-        return Vec::new();
-    };
-    let mut names: Vec<String> = listed
-        .filter_map(std::result::Result::ok)
+    if std::fs::symlink_metadata(repo.join(&dir))
+        .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound)
+    {
+        return Some(Vec::new());
+    }
+    let abs = contained_path(repo, &dir).ok()?;
+    let entries = std::fs::read_dir(abs)
+        .ok()?
+        .collect::<std::io::Result<Vec<_>>>()
+        .ok()?;
+    let mut names: Vec<String> = entries
+        .iter()
         .filter(|entry| is_markdown(&entry.file_name().to_string_lossy()))
         .map(|entry| format!("{dir}/{}", entry.file_name().to_string_lossy()))
         .collect();
     names.sort();
-    names
+    Some(names)
 }
 
 impl Anchors {

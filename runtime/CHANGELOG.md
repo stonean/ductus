@@ -21,6 +21,15 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   each scenario and count the files examined. An adopter counted 64 citations
   of a bare `spec.md` in scenarios across two repositories, each read as
   unjudged.
+- **`ductus exec` judges each scenario's `§` references at `/ductus:analyze` step 4 (spec 067, AC8).**
+  The walker scans the spec's `spec.md` and each `.md` under its `scenarios/`
+  in one dispatch, merged before the result is bounded: a scenario's
+  references carry `path`, its unresolved anchors read `<path>: <anchor>` and
+  count as advisory, and the result carries `scenarios-examined`, 0 for a spec
+  with none. A scenario that cannot be read, and a `scenarios/` that exists
+  and cannot be listed or leaves the project, count in
+  `anchor-target-unreadable`, so neither reads as a spec with no scenarios.
+  Before this an exec analysis judged `spec.md` alone.
 - **`brief-re-read` returns the loop's figures, counted from the round directory (spec 078, AC17).**
   Every result gains `rounds` (round directories holding a `round.toml`, this
   call's included), `re-reads-with-findings` (complete results holding a

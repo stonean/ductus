@@ -1239,7 +1239,15 @@ fn dispatch_primitive(
         "write-analysis" => call!(WriteAnalysisArgs, write_analysis),
         "check-stuck" => call!(CheckStuckArgs, check_stuck),
         "validate-frontmatter" => call!(ValidateFrontmatterArgs, validate_frontmatter),
-        "resolve-anchor" => call!(ResolveAnchorArgs, resolve_anchor),
+        // `/analyze` step 4 judges each scenario under the spec as it judges
+        // `spec.md`, in this one dispatch, the scans merged before the result
+        // is bounded (067 AC8).
+        "resolve-anchor" => {
+            let args: ResolveAnchorArgs =
+                serde_json::from_value(value).map_err(DispatchError::BadArgs)?;
+            let result = primitives::resolve_anchor::run_with_scenarios(&args, repo)?;
+            Ok(serde_json::to_value(result).unwrap_or(Value::Null))
+        }
         "resolve-feature" => call!(ResolveFeatureArgs, resolve_feature),
         "resolve-references" => call!(ResolveReferencesArgs, resolve_references),
         // The measured entry, not `run`: `write-review` and `write-analysis`
@@ -2256,6 +2264,138 @@ mod tests {
             .expect("the file form wrote its list file")
             .count();
         assert_eq!(held, 1);
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nadvisory: 1\n"), "{record}");
+    }
+
+    /// The context an exec `/analyze` step 4 dispatches `resolve-anchor`
+    /// against: `path` alone, the spec directory as a session records it.
+    fn step_4_context(path: &str) -> Map<String, Value> {
+        let mut context = Map::new();
+        context.insert("path".into(), Value::String(path.into()));
+        context
+    }
+
+    /// An exec `/analyze` step 4 judges each scenario under the spec as it
+    /// judges `spec.md` (spec 067, AC8): `scenarios-examined` counts the
+    /// scenario files scanned, 0 for a spec with none, which reads apart from
+    /// scenarios left unread; each scenario reference carries its `path` and
+    /// a scenario's unresolved anchor is listed with it; a file that is not
+    /// markdown is not scanned. A scenario dispatched alone is scanned alone,
+    /// with neither field.
+    #[test]
+    fn an_exec_step_4_scans_each_scenario_under_the_spec() {
+        let repo = analyze_repo(None);
+        let none = dispatch_primitive(
+            "resolve-anchor",
+            &step_4_context("specs/001-x"),
+            repo.path(),
+        )
+        .unwrap();
+        assert_eq!(none["scenarios-examined"], 0, "{none}");
+        assert_eq!(none["anchor-target-unreadable"], 0, "{none}");
+        let scenarios = repo.path().join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(scenarios.join("a.md"), "# a\n\nSee §nowhere.\n").unwrap();
+        std::fs::write(
+            scenarios.join("b.md"),
+            "# b\n\n## Context\n\nPer §Context.\n",
+        )
+        .unwrap();
+        std::fs::write(scenarios.join("notes.txt"), "See §ignored.\n").unwrap();
+        let result = dispatch_primitive(
+            "resolve-anchor",
+            &step_4_context("specs/001-x"),
+            repo.path(),
+        )
+        .unwrap();
+        assert_eq!(result["scenarios-examined"], 2, "{result}");
+        assert_eq!(
+            result["unresolved"],
+            serde_json::json!(["specs/001-x/scenarios/a.md: nowhere"]),
+            "{result}"
+        );
+        let paths: Vec<&str> = result["references"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|reference| reference["path"].as_str())
+            .collect();
+        assert_eq!(
+            paths,
+            ["specs/001-x/scenarios/a.md", "specs/001-x/scenarios/b.md"],
+            "{result}"
+        );
+        assert_eq!(result["intra-document"], 1, "{result}");
+        let alone = dispatch_primitive(
+            "resolve-anchor",
+            &step_4_context("specs/001-x/scenarios/a.md"),
+            repo.path(),
+        )
+        .unwrap();
+        assert!(alone.get("scenarios-examined").is_none(), "{alone}");
+        assert!(alone["references"][0].get("path").is_none(), "{alone}");
+        assert_eq!(
+            alone["unresolved"],
+            serde_json::json!(["nowhere"]),
+            "{alone}"
+        );
+    }
+
+    /// A scenario an exec step 4 cannot read, and a `scenarios/` that leaves
+    /// the project, are each counted in `anchor-target-unreadable` and examine
+    /// nothing, so neither reads as a spec with no scenarios (spec 067, AC8).
+    #[cfg(unix)]
+    #[test]
+    fn an_exec_step_4_records_an_unreadable_scenario_and_directory() {
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("x.md"), "# x\n\nSee §nowhere.\n").unwrap();
+        let repo = analyze_repo(None);
+        let scenarios = repo.path().join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("x.md"), scenarios.join("x.md")).unwrap();
+        let file = dispatch_primitive(
+            "resolve-anchor",
+            &step_4_context("specs/001-x"),
+            repo.path(),
+        )
+        .unwrap();
+        assert_eq!(file["scenarios-examined"], 0, "{file}");
+        assert_eq!(file["anchor-target-unreadable"], 1, "{file}");
+        assert_eq!(file["unresolved-count"], 0, "{file}");
+        let repo = analyze_repo(None);
+        std::os::unix::fs::symlink(outside.path(), repo.path().join("specs/001-x/scenarios"))
+            .unwrap();
+        let dir = dispatch_primitive(
+            "resolve-anchor",
+            &step_4_context("specs/001-x"),
+            repo.path(),
+        )
+        .unwrap();
+        assert_eq!(dir["scenarios-examined"], 0, "{dir}");
+        assert_eq!(dir["anchor-target-unreadable"], 1, "{dir}");
+        assert_eq!(dir["unresolved-count"], 0, "{dir}");
+    }
+
+    /// The walk's tally counts a scenario's unresolved anchor as advisory, so
+    /// the record of a spec whose scenario cites a missing section is not
+    /// clean (spec 067, AC8). An unreadable scenario is proven at the dispatch
+    /// above: a walk over one stops at `write-analysis`, which refuses a
+    /// feature directory holding a link out of the project.
+    #[test]
+    fn an_exec_step_4_walk_counts_each_scenario_in_the_record() {
+        let repo = analyze_repo(None);
+        let scenarios = repo.path().join("specs/001-x/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(scenarios.join("a.md"), "# a\n\nSee §nowhere.\n").unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![4]),
+            name: "resolve-anchor".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
         let record = analysis_text(repo.path());
         assert!(record.contains("\nadvisory: 1\n"), "{record}");
     }

@@ -84,7 +84,7 @@ The owner's answer (c) to the reopen-avoidance audit (2026-11-12): a rule alone 
 
 ### `resolve-anchor` judges a scenario's references, and names the forms it does not read (AC8, AC9)
 
-`/{project}:analyze` step 4 runs `resolve-anchor` on the spec and then on each file under `scenarios/`, each with `markers-path` set to the constitution, and reports a reference with the path of the file that holds it. A scenario file it scans counts as examined; a spec with no scenarios examines none, so that reads apart from scenarios left unscanned. `scripts/analyze/detect.py` runs the same calls.
+`/{project}:analyze` step 4 runs `resolve-anchor` on the spec and then on each file under `scenarios/`, each with `markers-path` set to the constitution, and reports a reference with the path of the file that holds it. A scenario file it scans counts as examined; a spec with no scenarios examines none, so that reads apart from scenarios left unscanned. `scripts/analyze/detect.py` runs the same calls. Under `ductus exec` the walker's step 4 makes the same scan in one dispatch (`run_with_scenarios`), merging the scans before the result is bounded so it meets the read size once: a scenario's references carry `path`, its unresolved anchors read `<path>: <anchor>`, the result carries `scenarios-examined`, and a scenario it cannot read, or a `scenarios/` that exists and cannot be listed or leaves the project, is counted in `anchor-target-unreadable`, which the walk's tally records unexamined.
 
 - **A bare `spec.md` in a scenario names the parent's.** A file whose directory is named `scenarios` takes `spec.md` to mean the `spec.md` beside that directory, since none can sit beside a scenario (`Documents::load`'s `parent_spec`). Any other file reads `spec.md` as before, and `../spec.md` resolves as a path as before. Rejected: requiring `../spec.md`, which reopens the scenario template's owner and has adopters rewrite each citation (owner, 2026-11-21).
 - **A quoted heading after `§` is reported, never left out.** `§"Cache invalidation"` is a reference of kind `quoted-heading`: `resolved` true, `unjudged` `anchor-target-unjudgeable` (a form the check does not read, excluded by construction), counted in `quoted-heading` and in `anchor-target-unjudgeable`. No new `unjudged` reason is added, since the reasons are a closed set `write-analysis` and the tally read.
@@ -151,6 +151,7 @@ The rule counts a new value in a response set the schema documents as closed as 
 | `runtime/src/primitives/check_promotion_coverage.rs` | Specify | `check-promotion-coverage` (a header row keeps the previous table's keys, task 42) |
 | `runtime/src/primitives/read_spec.rs` | Modify | The one open-question parser skips a none list item (task 38) |
 | `runtime/src/primitives/mod.rs` | Modify | `section_line_indices_by`, the case-insensitive heading scan `plan-consistency` uses (task 39) |
+| `runtime/src/interpreter/mod.rs` | Modify | The exec walker dispatches step 4's `resolve-anchor` through `run_with_scenarios`, 022's core changed for this spec (task 45) |
 | `scripts/mutation/owner-reviews-067.py` | Modify | M96 to M105, the mutants of tasks 38 to 42 |
 | `scripts/analyze/detect.py` | Modify | Runs `resolve-anchor` on each scenario beside the spec (task 45) |
 | `scripts/tests/test-analyze-scripts.py` | Modify | Proves the scenario calls (task 45) |
