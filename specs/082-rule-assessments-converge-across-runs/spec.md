@@ -39,7 +39,7 @@ Read at `6158d7df`, the framework had these gaps:
 - **A design subject added or removed** (a first `plan.md`, a deleted scenario): its sections are added or removed, so every rule is judged again against them, as against any changed section.
 - **A citation into a subject later deleted or renamed**: its section is changed, so the verdict resting on it is not carried forward, and the rule is unjudged until judged again.
 - **A verdict map or unjudged list that does not parse**: the record is undeterminable, as any unparseable audit record is (§text-first-artifacts), never read as holding no verdicts.
-- **Two runs writing the record**: `write-analysis` writes it whole and atomically, so the later run's verdicts stand and are what the next run reads.
+- **Two runs writing the record**: `write-analysis` writes it whole and atomically, and only while `analysis.md` still holds the bytes it read, so a run whose record another run replaced after it read is refused with `changed-since-read`, writes nothing and is run again; the record that stands is what the next run reads (066's data model, *The write is guarded*).
 
 ## Applicable Rules
 
