@@ -1243,11 +1243,13 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
         }
     }
     // A key is a path and a heading, which may hold any character a heading
-    // can, so it is always double-quoted.
+    // can, so it is always double-quoted, and never flattened: the next run
+    // compares it with the key it computes, and a flattened one would never
+    // match, so its section would read as changed on every run.
     if !rules.sections.is_empty() {
         out.push_str("section-digest:\n");
         for (section, digest) in &rules.sections {
-            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(&single_line(section)));
+            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));
         }
     }
     if !rules.verdicts.is_empty() {
@@ -3138,7 +3140,7 @@ mod tests {
             sections: BTreeMap::from([
                 ("plan.md".to_string(), "12".repeat(8)),
                 (
-                    "plan.md#Rollout: one, two # \"three\"".to_string(),
+                    "plan.md#Rollout: one, two # \"three\"\u{2028}four".to_string(),
                     "34".repeat(8),
                 ),
             ]),

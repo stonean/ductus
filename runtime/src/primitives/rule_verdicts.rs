@@ -368,7 +368,8 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
     // every rule is stale.
     let changed = match &sections {
         _ if whole_files_match => false,
-        Some(_) => true,
+        // A reordering changes a file and no section: nothing to judge.
+        Some(delta) => !delta.changed.is_empty(),
         None => return unreusable(rules, NoReuse::SubjectsChanged),
     };
     let loaded_now: std::collections::BTreeSet<&str> =
@@ -481,7 +482,8 @@ fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> Option<boo
 /// and a heading it holds.
 ///
 /// The path is a design subject by [`is_design_subject`], a regular file
-/// inside the feature directory (a link is not one, and `..` is refused); the
+/// inside the feature directory reached through no link, at the file or at
+/// any directory on the way (`BE-INPUT-004`), and `..` is refused; the
 /// heading is compared by equality with a heading
 /// [`heading_lines`](crate::primitives::resolve_anchor) reads, the reader
 /// `resolve-anchor` and `read-section` share, so a heading in a fence or a
@@ -500,7 +502,13 @@ pub(crate) fn cite_resolves(feature_dir: &Path, cite: &str) -> bool {
     {
         return false;
     }
-    let file = feature_dir.join(path);
+    let mut file = feature_dir.to_path_buf();
+    for part in Path::new(path).components() {
+        file.push(part);
+        if !std::fs::symlink_metadata(&file).is_ok_and(|meta| !meta.file_type().is_symlink()) {
+            return false;
+        }
+    }
     if !std::fs::symlink_metadata(&file).is_ok_and(|meta| meta.file_type().is_file()) {
         return false;
     }
@@ -1125,7 +1133,8 @@ mod tests {
         }
     }
 
-    /// A citation into a link is not into a file of the feature.
+    /// A citation into a link is not into a file of the feature, whether the
+    /// link is the file or a directory on the way to it (`BE-INPUT-004`).
     #[cfg(unix)]
     #[test]
     fn a_citation_into_a_link_does_not_resolve() {
@@ -1138,6 +1147,34 @@ mod tests {
         )
         .unwrap();
         assert!(!cite_resolves(tmp.path(), "data-model.md#Heading"));
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("scenarios/ln")).unwrap();
+        assert!(!cite_resolves(tmp.path(), "scenarios/ln/o.md#Heading"));
+        assert!(cite_resolves(tmp.path(), "scenarios/s.md#Context"));
+    }
+
+    /// AC7: sections that only move change a file's digest and no section's,
+    /// so every verdict stays current and nothing is owed a judgment.
+    #[test]
+    fn a_reordering_of_sections_leaves_every_verdict_current() {
+        let loaded = files(MUST_RULES, SHOULD_RULES);
+        let tmp = feature();
+        fs::write(
+            tmp.path().join("plan.md"),
+            "# Plan\n\n## A\n\nx\n\n## B\n\ny\n\n",
+        )
+        .unwrap();
+        record(tmp.path(), &loaded, ONE_FIRED);
+        fs::write(
+            tmp.path().join("plan.md"),
+            "# Plan\n\n## B\n\ny\n\n## A\n\nx\n\n",
+        )
+        .unwrap();
+        let standing = standing(tmp.path(), &loaded);
+        assert_eq!(standing.no_reuse, None);
+        assert_eq!(standing.changed_sections().count(), 0);
+        assert_eq!(standing.judge().count(), 0);
+        assert_eq!(standing.rejudge().count(), 0);
+        assert_eq!(standing.reusable().count(), 1);
     }
 
     /// A new finding contradicts a rule that did not fire and one the spec

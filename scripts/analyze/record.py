@@ -133,8 +133,12 @@ def demoted(m, rid, v):
     """Whether a finding is a contradiction alone (spec 082, AC7): its rule
     was judged against the changed sections only, its earlier verdict was not
     a waiver, and it is placed at `<path>#<Heading>` that
-    verdicts.changed-sections does not name, every such heading resolving
-    here, so unchanged since the last record."""
+    verdicts.changed-sections does not name. That a heading the list does not
+    name is unchanged, present in both digests alike as the runtime's
+    `SectionDelta::unchanged_at` requires, holds only because run() has
+    already refused every `at` that does not resolve (lib.unresolved_cites):
+    a heading that exists now and is not named changed was in the last record
+    too."""
     if rid not in set(m.get("rejudge") or []):
         return False
     if any(r.get("id") == rid and r.get("verdict") == "waived" for r in m.get("reusable") or []):

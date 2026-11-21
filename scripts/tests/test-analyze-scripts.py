@@ -64,6 +64,10 @@ Coverage:
   AL. record.py counts a rejudged rule's finding at a changed section and
      passes one at an unchanged section as its verdict alone, and covers
      verdicts.judge and verdicts.rejudge (spec 082, AC7)
+  AM. split.py reads verdicts.rejudge and verdicts.changed-sections from the
+     top level of a file-form result, as it reads verdicts.judge (AC7)
+  AN. record.py counts a rejudged rule's finding at an unchanged section
+     when its earlier verdict was a waiver (AC7)
   AD. check.py exits 2 when read-section returns no not-found list
   AE. a defect in a script exits 2, never 1, the refused status
   AF. detect.py runs resolve-references only for a spec with references,
@@ -394,6 +398,42 @@ def al(p, name):
            and judged == ["RA-001", "RA-002", "RB-001", "RC-001"]
            and wa[wa.index("--advisory") + 1] == "2" and "contradiction: RC-001" in r.stdout,
            r.stdout + r.stderr + json.dumps([rv, keys, wa]))
+
+
+def am(p, name):
+    rules = json.loads(json.dumps(RULES))
+    reusable = rules["verdicts"]["reusable"]
+    rules.update({"judge": ["RA-001", "RB-001"], "rejudge": ["RA-002", "RC-001"],
+                  "changed-sections": ["plan.md#Design"], "reusable": reusable})
+    rules["verdicts"] = {"reason": None, "judge-count": 2, "rejudge-count": 2,
+                         "changed-sections-count": 1, "reusable-count": 1}
+    p.write("rules.json", json.dumps(rules))
+    p.split()
+    m = p.manifest()
+    ids = sorted(i for s in m["shares"].values() for i in s["ids"])
+    check_(name, ids == ["RA-001", "RA-002", "RB-001", "RC-001"] and m["rejudge"] == ["RA-002", "RC-001"]
+           and m["changed-sections"] == ["plan.md#Design"] and [x["id"] for x in m["reusable"]] == ["RC-002"],
+           json.dumps([m.get("rejudge"), m.get("changed-sections"), ids]))
+
+
+def an(p, name):
+    rejudging(p)
+    rules = json.loads(open(os.path.join(p.base, "rules.json")).read())
+    rules["verdicts"]["reusable"].append({"id": "RC-001", "verdict": "waived", "reason": "r",
+                                          "decided-by": "x"})
+    p.write("rules.json", json.dumps(rules))
+    p.split()
+    p.all_hand_backs({cell_a(p): {"RC-001": {"verdict": "finding", "at": "plan.md#Other",
+                                             "message": "after a waiver"}}})
+    p.write("plan.json", json.dumps({"findings": []}))
+    r = p.run("record.py", F, p.plan, "--write")
+    try:
+        fs = json.load(open(os.path.join(p.stub, "captured-findings-json")))
+    except OSError:
+        fs = []
+    keys = sorted(x["message"] for x in fs if x["family"] == "rule-assessment")
+    check_(name, r.returncode == 0 and "RC-001: after a waiver" in keys and "contradiction: RC-001" not in r.stdout,
+           r.stdout + r.stderr + json.dumps(keys))
 
 
 def e(p, name):
@@ -827,6 +867,8 @@ def main():
     case("AC. combine.py refuses while step 15 fails its check", ac)
     case("AK. split.py and briefs.py carry the rules to judge against changed sections", ak)
     case("AL. record.py counts no finding at an unchanged section", al)
+    case("AM. split.py reads rejudge from a file-form result", am)
+    case("AN. record.py counts a finding after a waiver", an)
     case("AD. check.py exits 2 on a read-section with no not-found list", ad)
     case("AE. a defect in a script exits 2", ae)
     case("AF. detect.py runs resolve-references only for a spec with references", af)

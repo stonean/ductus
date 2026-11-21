@@ -1,28 +1,49 @@
 ---
 spec: 082-rule-assessments-converge-across-runs
-last-run: 2026-11-12T20:51:35Z
-reviewed-against: 8974812c9c5ec73cba45e570515bfdd8deda69c3
-diff-base: cca8ffb09614fb66144fad76b0c3fa3b3fa4d45c
+last-run: 2026-11-21T21:06:03Z
+reviewed-against: 91dd60ea89034d29c11ba9ae1dbfa0b2a3db2ef2
+diff-base: 50754fad25305a8747eece8c8f5f4e1ef81fe203
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 27
-scope: 31
-excluded: 76
+examined: 24
+scope: 27
+unread:
+  - .claude/commands/ductus/analyze.md
+  - .ductus/reference/analyze.md
+  - .pi/prompts/ductus-analyze.md
+excluded: 17
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 3
-re-reads: 2
-diff-checked: 1
+fix-rounds: 1
+re-reads: 1
+diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: f2342da1234ffcbc2c2f76156b21515970299eff57dc0ba3a2e29dccf32c29e8
+  data-model.md: 4d2166e42b8f55b378577c4ef2603e04a3a61917d2ab868fdeee11e9aa7b9686
+criteria-judged: 7
+criteria-met: 7
+criteria-verdicts:
+  - label: AC1
+    digest: 4a0857872309ed58872f075b8025ea392a67d1514aa9073d61358a31b9e879a4
+  - label: AC2
+    digest: 3cbfe7efe3091bf01d26a64f70eddbf26314a9372889cb0edd902548edc5ee57
+  - label: AC3
+    digest: 1befb19e8f5346e68ce01c19b43553569afe5562252156bb6544c24ae43f70f0
+  - label: AC4
+    digest: dd1ed9f021190ade822854187d0d3978039add99e0a0be057dcf54284cf84321
+  - label: AC5
+    digest: e5ee59d1cbe20e217298ae3af9280a4239ee38b7846777be598fd9dc11cf5523
+  - label: AC6
+    digest: 495b1c761328f69346efe24636618b4500b4bbb6e4e65cab9b5a65fef1522894
+  - label: AC7
+    digest: 06feb3f60fef3083ba599a719d6c82e30763134abb86ce53f52d4de175c0becb
 blocking: false
 dispositions:
-  fixed: 12
+  fixed: 8
   deferred: 0
-  waived: 14
+  waived: 13
   undispositioned: 0
 waivers:
   - rule: BE-CACHE-002
@@ -101,15 +122,37 @@ decisions:
     reason: A contradiction needs a prior record and rule files; the two bounded-form unit tests in write_analysis.rs cover both forms.
     decided-at: 2026-11-12T20:51:35Z
     decided-by: rule
+  - key: other — under ductus exec a rule owed a judgment against the changed sections is asked about whole, since the request carries spec.md and no section list, so AC7 holds there by the tally counting no finding at an unchanged section — `runtime/src/interpreter/mod.rs`
+    outcome: waived
+    reason: "082's plan records it under Trade-offs: a changed-sections field on the request would change 022's request shape at the same request count, and the finding the host returns at an unchanged section is demoted either way."
+    decided-at: 2026-11-21T21:05:16Z
+    decided-by: rule
+  - key: perf — briefs.py's rejudged() and record.py's demoted() rebuild their sets for each rule — `scripts/analyze/briefs.py`
+    outcome: waived
+    reason: A share holds at most the 201 to 310 loaded rules, so the rebuilt sets cost nothing measurable, and no loaded performance rule governs a local script.
+    decided-at: 2026-11-21T21:05:16Z
+    decided-by: rule
+  - key: other — AC7 names the not-fired and addressed verdicts judged against the changed sections and not the waived one, which the code, plan and reference also judge so — `specs/082-rule-assessments-converge-across-runs/spec.md`
+    outcome: waived
+    reason: AC7 states what its fixture proves and claims no closed set; a waived verdict is decided by its departure entry (spec 073), and the plan and the analyze reference state its treatment.
+    decided-at: 2026-11-21T21:05:16Z
+    decided-by: rule
+  - key: other — tasks.md records a section-digest measurement (77 specs, median 34, max 586, 1.4 KB) with no method, which the plan's re-measure of the same day replaces — `specs/082-rule-assessments-converge-across-runs/tasks.md`
+    outcome: waived
+    reason: tasks.md is spent work-tracking and no durable index (constitution, Tasks Phase); plan.md holds the figure with its method and units.
+    decided-at: 2026-11-21T21:05:16Z
+    decided-by: rule
 ---
 
 # Review — 082-rule-assessments-converge-across-runs
 
 ## Summary
 
-Five-pass review of 082 over its reopening window (`cca8ffb0`, base-source reopen); the passes read the tree at `8a599af9`, and this run's fixes are committed in `f54c1016` (prose, data models, generated copies) and `8974812c` (runtime). Method: 082's own change, its 20 commits from `31aeed91` to `57820d27` (+3,445 / −226 lines over 36 files), read with `git log -p` per file, other specs' commits in the same files left out. Four reviewers each followed one behavior across its files and ran all five passes over it (verdict currency; write-analysis' fields and refusals; the exec walker and the completion gate; the pipeline prose and 082's data model checked whole against the code), probing edge cases on fixtures in clones; a fifth applied each of the 203 loaded rules (nine files, backend plus cross) one at a time, Statement, Verification and Not-flagged clause. Every finding was re-checked against the tree before it was recorded. Coverage, from each reviewer's pass-by-pass account: the security pass applied the security rule files through the fifth reviewer, the other four reasoned from the code; extensions.rs and the prose files took no security or reuse pass, holding no logic; main.rs and descriptions.rs were read in 082's diffs only. Examined 27 of the 31 scope entries, most in 082's parts rather than whole. Not counted: the three generated copies (.claude/commands/ductus/analyze.md, .ductus/reference/analyze.md, .pi/prompts/ductus-analyze.md), confirmed by `scripts/gen-claude-commands.sh --check` and regenerated in sync after the fixes; and runtime/src/primitives/resolve_constitutions.rs, changed only by this run's fix, which the first fix round's re-read read. This run's edits to 022's and 066's data models and to 060's spec and plan, committed under a subject naming 082, are those specs' own (spec 081) and are listed under Excluded from scope; round 1's re-read read them. Fixed in this run: BE-PAYLOAD-001 (MUST; write-analysis' contradictions now bounded through bounded_lists::place), QUAL-CLAIM-001 (SHOULD; a bare unexamined total is recorded under the new reason unclassified instead of being replaced by the derived breakdown), CFG-CONST-001 (MUST; the shared unexamined reason keys are constants in write_analysis.rs), BE-COMPAT-001 (MUST; 082's plan now classifies each interface change), and BE-CACHE-002's loaded-rule-file part (the set joined the currency key, reason rule-files-changed); its specs/system.md part is waived by the owner. One broken contract was fixed: the exec walk's abort on a mislabelled single-tier finding. 060's AC5 was corrected by the owner's choice. Each fix has a test proved red; five new mutants (M23 to M27) are killed and `run.py --check` passes on 27; the whole cargo test passed, 36 suites, 3131 tests.
+Five-pass review of 082's reopening for AC7 (diff-base 50754fad, base-source reopen), passes over the tree at 91dd60ea, whose code change is 70c4f3da. Two reviewers in parallel: part A followed the runtime behaviors (section digests and verdict currency, write-analysis' carry and demotion, discover-rule-files' verdicts, the exec walker and tally) across the eight runtime files by their 50754fad..70c4f3da hunks and the code each behavior needed, drove edge cases on fixtures with the release binary (duplicate headings, a fenced heading, a heading holding : # and ", CRLF, an unparseable section-digest), applied all nine loaded rule files whole (285,584 bytes, each read against wc -c) and judged AC1 to AC7; part B ran the passes over the scripts and checked 082's plan and data model whole and the prose's claims against runtime/src, with part A's rule files applied to the scripts' security and efficiency passes. Examined 24 of the 27 scope entries; not counted: the three generated copies (.claude/commands/ductus/analyze.md, .ductus/reference/analyze.md, .pi/prompts/ductus-analyze.md), confirmed in sync by scripts/gen-claude-commands.sh --check. Fixed in this run: BE-INPUT-004 (MUST, low confidence: cite_resolves now refuses a link at any component of a citation's path, M40), two QUAL-TEST-001 (SHOULD: cases AM and AN in scripts/tests/test-analyze-scripts.py, each proved failing with its behavior removed), and two broken AC7 contracts (a section key is written unflattened, M38; a reordering of sections leaves every verdict current, M39). BE-CACHE-002 fires as before and the owner's stored waiver applies. The deleted path, specs/083-review-and-analysis-check-each-other/spec.md, is the retired 083's, removed by c5da762d, and no pass read it.
 
-3 fix round(s): 2 re-read, 1 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+7 of 7 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -125,11 +168,11 @@ Five-pass review of 082 over its reopening window (`cca8ffb0`, base-source reope
 
 ## Waived findings
 
-### WAIVED: BE-CACHE-002 — a stored verdict's currency key leaves out specs/system.md
+### WAIVED: BE-CACHE-002 — the stored-verdict currency key leaves out specs/system.md
 
 - **File**: `runtime/src/primitives/rule_verdicts.rs`
-- **Rule**: Cache keys SHOULD incorporate every input that affects the cached value
-- **Finding**: A stored rule verdict is reused while the design subjects, its rule file and (since this review's fix) the loaded rule-file set are unchanged. About three rules' Verifications (BE-APIVER-001, BE-REPR-001, BE-REPR-002) judge against specs/system.md, which is not an input, so an edit there leaves their verdicts current.
+- **Rule**: Cache keys SHOULD incorporate every input that affects the cached value, including the authorization scope (user, tenant, role) when the value is principal-specific, entered as an identifier such as a user or tenant ID and never as a session token, API key, or other secret.
+- **Finding**: A stored rule verdict is reused while its sections, its rule file and the loaded rule-file set are unchanged; about three rules' Verifications judge against specs/system.md, which is not an input, so an edit there leaves their verdicts current.
 - **Auto-fixable**: no
 - **Waived**: The owner's choice at this review (2026-11-12, option a): the loaded rule-file set joined the currency key, and specs/system.md stays out of it, since every edit there would re-judge every rule of every spec to protect about three rules. 082's Resolved Questions record the decision.
 
@@ -137,34 +180,39 @@ Five-pass review of 082 over its reopening window (`cca8ffb0`, base-source reope
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: rule_verdicts::standing reuses verdicts over unchanged subjects; tests a_second_run_over_an_unchanged_spec (write_analysis.rs), a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge (discover_rule_files.rs) and the exec AC1 walk in interpreter/mod.rs
+- AC2 — met: write_analysis::derive_rule_fields pushes unjudged rules into rule-assessments-not-checked on both paths; tests 'Spec 082, AC2' in write_analysis.rs and interpreter/mod.rs
+- AC3 — met: write_analysis contradiction handling with Standing::demoted and rule_verdicts::contradiction; superseded in part by AC7 as the criterion says; tests a_finding_after_a_quiet_or_addressed_verdict_is_a_recorded_contradiction and a_finding_at_an_unchanged_section_..._holds_nothing
+- AC4 — met: section-digest is in framework/constitution.md's analysis-record row, 066's data-model.md and 082's data-model.md; AnalyzeBlock.section_digest round-trips in the AC4 test in write_analysis.rs; an unparseable section-digest driven on the release binary gave record-unreadable
+- AC5 — met: rule-digest per file in standing(); tests 'Spec 082, AC5' in write_analysis.rs and interpreter/mod.rs (not changed in this window, read only)
+- AC6 — met: write_analysis::derive_rule_fields sends an addressed verdict whose cite fails rule_verdicts::cite_resolves to unjudged; tests 'Spec 082, AC6' in write_analysis.rs and interpreter/mod.rs
+- AC7 — met: analyze_subjects::file_sections/section_digest, rule_verdicts::section_currency/Standing::demoted, write_analysis carry/demotion, tally record_assessment; fixture a_plan_section_edit_leaves_a_not_fired_verdict_current runs with and without the digests, plus exec and discover tests; discover-rule-files driven on a fixture with duplicate headings, a fenced heading, a YAML-significant heading and CRLF reported only the changed sections
+
 ## Observations
 
-- bug — a host labelling a single-tier rule's finding in the other tier aborted the whole ductus exec analyze at write-analysis' tier refusal, writing no record; the tally now counts it in the rule's tier, honoring the label only for a rule carrying both MUST and SHOULD — `runtime/src/interpreter/analyze_tally.rs` (breaks the spec's contract) — **fixed** (decided by the rule)
-- convention — stale doc comments: RuleVerdict::Finding said the tier is not stored, WriteAnalysisArgs::rule_verdicts omitted the required tier, and derive_rule_fields and the floor comment said the floor reads the rule text's tier — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
-- convention — write-analysis' refusal comment and WRITE_ANALYSIS overstated what is refused: a prior record whose rule fields alone do not parse is overwritten with every rule judged, and an unlistable rule directory is an error — `runtime/src/primitives/write_analysis.rs` — **fixed** (decided by the rule)
-- convention — DISCOVER_RULE_FILES said every reusable entry carries a tier and that a rule in neither list is current; a rule of an unreadable file is in neither and is named under unreadable — `runtime/src/schema/descriptions.rs` — **fixed** (decided by the rule)
-- convention — 082's Resolved Question on contradictions placed them under ductus exec or a forced re-judge, which neither path produces — `specs/082-rule-assessments-converge-across-runs/spec.md` — **fixed** (decided by the rule)
-- convention — 082's data model gave the verdicts block with rules and feature, where all is required too, and showed reason as null where it is absent — `specs/082-rule-assessments-converge-across-runs/data-model.md` — **fixed** (decided by the rule)
-- convention — 022's data model said verdicts.reason is absent when some verdict is reusable; it is absent whenever the prior verdicts can be reused — `specs/022-deterministic-runtime/data-model.md` — **fixed** (decided by the rule)
-- convention — 066's data model omitted write-analysis' refusal of a finding in a tier its rule cannot fail in — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **fixed** (decided by the rule)
-- convention — docs/analyze.md's record field table and example lacked rule-digest, rule-verdicts and unjudged-rules — `docs/analyze.md` — **fixed** (decided by the rule)
-- convention — the mutation list's header mapped criteria to mutants but omitted M8, M11 to M15, M19 and M20 — `scripts/mutation/rule-verdicts-converge.py` — **fixed** (decided by the rule)
-- convention — the gate's unjudged-rules block shows three names and its guidance did not say analysis.md's unjudged-rules holds them all; analyze_gate_block's doc comment gave stale check numbers — `runtime/src/primitives/check_review_gate.rs` — **fixed** (decided by the rule)
-- other — 060's ticked AC5 said an exec analyze asks about every loaded rule, false since 082 reuses current verdicts; its summary line and plan said the same — `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — **fixed**
 - bug — cite_resolves matches a heading's text exactly, so a closing # sequence, a setext heading or an indented heading cannot be cited by its plain text — `runtime/src/primitives/rule_verdicts.rs` — **waived**: It uses the shared heading_lines reader resolve-anchor uses, as 082's Resolved Questions specify; an unresolved citation is recorded unjudged, never lost. (decided by the rule)
 - perf — cite_resolves re-reads the cited file for each addressed verdict, and currency scans the rules linearly — `runtime/src/primitives/rule_verdicts.rs` — **waived**: Negligible at 310 rules; each read is one small design subject of one spec. (decided by the rule)
 - other — scenarios/./s.md and scenarios//s.md resolve as citations — `runtime/src/primitives/rule_verdicts.rs` — **waived**: Both name the same file the plain path does. (decided by the rule)
 - other — a judged-rules entry naming no loaded rule is ignored, while an unknown rule-verdicts key is refused — `runtime/src/primitives/write_analysis.rs` — **waived**: The typo leaves the real rule named unjudged, which the gate holds at done, so nothing is lost or passed. (decided by the rule)
 - simplicity — check_new_verdicts repeats the rule lookup standing.currency already does — `runtime/src/primitives/write_analysis.rs` — **waived**: One map lookup per verdict; merging them would couple the refusal to the currency walk. (decided by the rule)
-- other — the gate holds done on an analysis naming an unjudged rule whose file was later removed, until the next analysis — `runtime/src/primitives/check_review_gate.rs` — **waived**: The next analysis drops a removed rule; the gate reads the record it is given, as every gate check does. (decided by the rule)
-- other — the gate does not compare an analysis record's rule-digest with the rule files at done — `runtime/src/primitives/check_review_gate.rs` — **waived**: Analysis freshness is over the spec's subjects by 066's design; a changed rule is judged again at the next analysis, as AC5 requires. (decided by the rule)
 - other — an exec finding stores at as spec.md#<section> whichever subject the host found it in — `runtime/src/interpreter/analyze_tally.rs` — **waived**: The assessSpecQuality response carries only a spec section; at is where the report points, and a reused finding is reported by its stored message. (decided by the rule)
 - other — an exec step asking about nothing records one rule-assessments-not-checked beside the unjudged rules write-analysis names — `runtime/src/interpreter/analyze_tally.rs` — **waived**: 082's plan Trade-offs record the overlap: it overstates the gap, never hides one. (decided by the rule)
 - other — a passed: true response with a blank addressed-by reads as not fired, not as an unresolved citation — `runtime/src/interpreter/analyze_tally.rs` — **waived**: 082's data model: without addressed-by a pass is not fired, and a blank citation is none. (decided by the rule)
-- convention — feature-directory resolution (validate_feature_argument then is_dir) appears in write-analysis, discover-rule-files and the exec payload — `runtime/src/interpreter/payload.rs` — **waived**: Each goes through the shared validate_feature_argument; what repeats is one is_dir check. (decided by the rule)
 - other — split_reused runs before the loaded-none and tier checks, so a procedure repeating a tier step would count reused findings twice — `runtime/src/interpreter/mod.rs` — **waived**: Unproven, and analyze.md has one assessSpecQuality step per tier. (decided by the rule)
-- other — a record written before 082 carries no rule-digest and passes the gate with nothing saying its rules were judged — `runtime/src/primitives/check_review_gate.rs` — **waived**: 082's plan: such a record reuses nothing, and the spec's next analysis writes the fields. (decided by the rule)
-- other — runtime/tests/result_sizes.rs measures write-analysis with no contradictions, since its harness calls each primitive with default arguments — `runtime/tests/result_sizes.rs` — **waived**: A contradiction needs a prior record and rule files; the two bounded-form unit tests in write_analysis.rs cover both forms. (decided by the rule)
+- other — under ductus exec a rule owed a judgment against the changed sections is asked about whole, since the request carries spec.md and no section list, so AC7 holds there by the tally counting no finding at an unchanged section — `runtime/src/interpreter/mod.rs` — **waived**: 082's plan records it under Trade-offs: a changed-sections field on the request would change 022's request shape at the same request count, and the finding the host returns at an unchanged section is demoted either way. (decided by the rule)
+- bug — write-analysis flattened each section-digest key through single_line, so a heading holding a line-hazard character such as U+2028 read as changed on every run — `runtime/src/primitives/write_analysis.rs` (breaks the spec's contract) — **fixed** (decided by the rule)
+- bug — a pure reordering of sections changed the whole-file digest and no section digest, so every quiet rule was owed a judgment of no changed section and was recorded unjudged — `runtime/src/primitives/rule_verdicts.rs` (breaks the spec's contract) — **fixed** (decided by the rule)
+- perf — briefs.py's rejudged() and record.py's demoted() rebuild their sets for each rule — `scripts/analyze/briefs.py` — **waived**: A share holds at most the 201 to 310 loaded rules, so the rebuilt sets cost nothing measurable, and no loaded performance rule governs a local script. (decided by the rule)
+- other — record.py's demoted() treats a heading changed-sections does not name as unchanged, relying unstated on unresolved_cites having refused an at that does not resolve — `scripts/analyze/record.py` — **fixed** (decided by the rule)
+- other — 082's data model said a rule absent from reusable and judge is current, false for a quiet rule in rejudge — `specs/082-rule-assessments-converge-across-runs/data-model.md` — **fixed** (decided by the rule)
+- other — the analyze reference said a verdict is never passed for a rule verdicts.reusable lists, though a rule in rejudge may be in both and its new finding at a changed section is passed — `framework/reference/analyze.md` — **fixed** (decided by the rule)
+- other — docs/analyze.md said a changed rule file judges every rule again, where only its own rules are, and every rule only when a file is added or removed — `docs/analyze.md` — **fixed** (decided by the rule)
+- other — 082's plan still counted three record fields in its Data Model section and the docs/analyze.md row, and five Resolved Questions where the spec holds ten — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
+- other — 082's plan said only a finding at a changed section of spec.md counts under ductus exec, though a finding naming no section, recorded at bare spec.md, always counts — `specs/082-rule-assessments-converge-across-runs/plan.md` — **fixed** (decided by the rule)
+- other — AC7 names the not-fired and addressed verdicts judged against the changed sections and not the waived one, which the code, plan and reference also judge so — `specs/082-rule-assessments-converge-across-runs/spec.md` — **waived**: AC7 states what its fixture proves and claims no closed set; a waived verdict is decided by its departure entry (spec 073), and the plan and the analyze reference state its treatment. (decided by the rule)
+- other — tasks.md records a section-digest measurement (77 specs, median 34, max 586, 1.4 KB) with no method, which the plan's re-measure of the same day replaces — `specs/082-rule-assessments-converge-across-runs/tasks.md` — **waived**: tasks.md is spent work-tracking and no durable index (constitution, Tasks Phase); plan.md holds the figure with its method and units. (decided by the rule)
 
 ## Skipped passes
 
@@ -172,82 +220,23 @@ Five-pass review of 082 over its reopening window (`cca8ffb0`, base-source reope
 
 ## Excluded from scope
 
-- `.ductus/reference/clarify.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `.ductus/reference/specify.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `AGENTS.md` — 050-constitution
-- `framework/migrations/criterion-label-backfill.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `framework/reference/clarify.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `framework/reference/specify.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `runtime/src/primitives/check_artifacts.rs` — 022-deterministic-runtime, 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `runtime/src/primitives/label_criteria.rs` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `runtime/src/primitives/measure_reopenings.rs` — 079-review-and-analysis-work-converges
-- `runtime/src/primitives/read_spec.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/src/primitives/read_tasks.rs` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `runtime/tests/mcp.rs` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning, 079-review-and-analysis-work-converges
-- `scripts/mutation/outward-link-reads-067.py` — 067-analyze-and-audit-checks
-- `specs/013-text-first-artifacts/scenarios/criterion-identifiers.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `specs/019-config-decisions/data-model.md` — 019-config-decisions, 079-review-and-analysis-work-converges
-- `specs/019-config-decisions/spec.md` — 019-config-decisions, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/data-model.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/022-deterministic-runtime/scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/a-path-argument-resolves-inside-its-base.md` — 022-deterministic-runtime, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/022-deterministic-runtime/scenarios/append-task-honours-slug-with-explicit-body.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/check-stuck-tasks-md-advancement.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/coverage-expansion-primitives.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/criterion-label-assignment.md` — 013-text-first-artifacts, 022-deterministic-runtime, 041-task-pruning
-- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/derive-boundary-uncommitted-spec-dir.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/framework-list-dedup.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/scenarios/scaffolding-primitives.md` — 022-deterministic-runtime, 079-review-and-analysis-work-converges
-- `specs/022-deterministic-runtime/spec.md` — 022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/023-govern-refinement/scenarios/configure-retires-formerly-canonical-entries.md` — 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 063-oversized-artifacts-warn-with-a-fix, 079-review-and-analysis-work-converges
-- `specs/026-framework-self-audit/scenarios/family-39-shipped-anchor-resolution.md` — 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 063-oversized-artifacts-warn-with-a-fix, 079-review-and-analysis-work-converges
-- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md` — 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 063-oversized-artifacts-warn-with-a-fix, 079-review-and-analysis-work-converges
-- `specs/030-cross-service-references/data-model.md` — 030-cross-service-references, 079-review-and-analysis-work-converges
-- `specs/030-cross-service-references/spec.md` — 030-cross-service-references, 079-review-and-analysis-work-converges
-- `specs/041-task-pruning/data-model.md` — 013-text-first-artifacts, 022-deterministic-runtime, 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 063-oversized-artifacts-warn-with-a-fix, 079-review-and-analysis-work-converges
-- `specs/045-decision-state-drift-detection/data-model.md` — 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/045-decision-state-drift-detection/spec.md` — 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/048-govern-acquired-runtime/tasks.md` — 048-govern-acquired-runtime, 079-review-and-analysis-work-converges
-- `specs/050-constitution/plan.md` — 050-constitution
-- `specs/050-constitution/spec.md` — 022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/050-constitution/tasks.md` — 050-constitution
-- `specs/051-branch-scoped-spec-numbering/data-model.md` — 051-branch-scoped-spec-numbering, 079-review-and-analysis-work-converges
-- `specs/051-branch-scoped-spec-numbering/scenarios/a-fold-target-is-held-to-the-name-grammar.md` — 051-branch-scoped-spec-numbering, 079-review-and-analysis-work-converges
-- `specs/051-branch-scoped-spec-numbering/spec.md` — 051-branch-scoped-spec-numbering, 079-review-and-analysis-work-converges
-- `specs/055-shared-constitution/data-model.md` — 055-shared-constitution, 079-review-and-analysis-work-converges
-- `specs/055-shared-constitution/spec.md` — 055-shared-constitution, 079-review-and-analysis-work-converges
-- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md` — 022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/062-concurrent-session-targets/data-model.md` — 062-concurrent-session-targets, 079-review-and-analysis-work-converges
-- `specs/062-concurrent-session-targets/spec.md` — 062-concurrent-session-targets, 079-review-and-analysis-work-converges
-- `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md` — 023-govern-refinement, 026-framework-self-audit, 041-task-pruning, 063-oversized-artifacts-warn-with-a-fix, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/data-model.md` — 022-deterministic-runtime, 045-decision-state-drift-detection, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/only-gating-findings-hold-done.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/process-decisions-results-have-a-bounded-size.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-includes-uncommitted-work.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/scenarios/write-analysis-and-the-second-gate.md` — 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges
-- `specs/066-audit-records-and-the-completion-gate/spec.md` — 022-deterministic-runtime, 050-constitution, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `specs/067-analyze-and-audit-checks/data-model.md` — 022-deterministic-runtime, 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/plan.md` — 022-deterministic-runtime, 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/adopter-corpus-link-integrity.md` — 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/scenarios/analyze-artifact-checks.md` — 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md` — 045-decision-state-drift-detection, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/scenarios/sibling-symlink-trust-boundary.md` — 022-deterministic-runtime, 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/spec-integrity-and-plan-consistency-are-run.md` — 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/067-analyze-and-audit-checks/tasks.md` — 067-analyze-and-audit-checks
-- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md` — 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges
-- `specs/078-review-fix-rounds-are-re-read-within-a-bound/scenarios/fix-round-results-have-a-bounded-size.md` — 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges
-- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/data-model.md` — 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/plan.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/spec.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/tasks.md` — 048-govern-acquired-runtime, 079-review-and-analysis-work-converges
-- `specs/080-deterministic-runtime-efficiency/data-model.md` — 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/spec.md` — 079-review-and-analysis-work-converges, 080-deterministic-runtime-efficiency
+- `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
+- `specs/022-deterministic-runtime/data-model.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/050-constitution/spec.md`
+- `specs/055-shared-constitution/spec.md`
+- `specs/055-shared-constitution/tasks.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md`
+- `specs/079-review-and-analysis-work-converges/research.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
 
 ## Unexamined governance
 

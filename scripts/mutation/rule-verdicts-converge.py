@@ -8,9 +8,9 @@ the exec walker asks only about a rule whose verdict is not current
 Each mutation removes the behavior one unit test names, and its filter selects
 that test. By behavior: what makes a verdict current is held by M1 to M3 and
 M27 (AC1 by M1 to M3, M7 and M9; the rule-file set a record was judged under
-by M27; AC5 by M2; AC7 by M28 and M31 to M37); the derived unjudged list
+by M27; AC5 by M2; AC7 by M28 and M31 to M39); the derived unjudged list
 by M5 and M10 (AC2); the
-contradiction note by M6 (AC3); the addressed citation by M4 (AC6, on the
+contradiction note by M6 (AC3); the addressed citation by M4 and M40 (AC6, on the
 interactive and the exec path); carrying a verdict forward by M7; the tier
 count floor by M8; the walker's reuse by M9 and M13; the interactive list by
 M11 and M12; the tally's addressed-by and judged set by M14 and M15; the
@@ -304,5 +304,26 @@ MUTATIONS = [
         '    let rejudge: Vec<String> = standing.rejudge().map(|rule| rule.id.clone()).collect();',
         '    let rejudge: Vec<String> = Vec::new();',
         'discover_rule_files::tests::a_second_call_over_an_unchanged_spec_lists_no_rule_to_judge',
+    ),
+    (
+        'M38 a section key is flattened when written',
+        'src/primitives/write_analysis.rs',
+        '            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));',
+        '            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(&single_line(section)));',
+        'write_analysis::tests::the_rule_fields_read_back_through_the_loader',
+    ),
+    (
+        'M39 a reordering of sections owes every quiet rule a judgment',
+        'src/primitives/rule_verdicts.rs',
+        '        Some(delta) => !delta.changed.is_empty(),',
+        '        Some(delta) => !delta.changed.is_empty() || true,',
+        'rule_verdicts::tests::a_reordering_of_sections_leaves_every_verdict_current',
+    ),
+    (
+        'M40 a citation through a linked directory resolves',
+        'src/primitives/rule_verdicts.rs',
+        '        if !std::fs::symlink_metadata(&file).is_ok_and(|meta| !meta.file_type().is_symlink()) {',
+        '        if false && !std::fs::symlink_metadata(&file).is_ok_and(|meta| !meta.file_type().is_symlink()) {',
+        'rule_verdicts::tests::a_citation_into_a_link_does_not_resolve',
     ),
 ]
