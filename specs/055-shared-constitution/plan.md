@@ -74,7 +74,11 @@ gives `pi` a native rules file of `AGENTS.md`, and
 `framework/templates/project/agents.md` links the constitution in prose rather than
 importing it. So AC9's managed block is **layout-derived**: an `@{document-path}`
 line under `claude-style`, which Claude Code expands at session start, and a
-`See [alias](path)` link under the `AGENTS.md` layouts, which loads nothing. Step 4
+`See [alias](path)` link under the `AGENTS.md` layouts, which loads nothing. The
+`ductus:constitutions` region in `AGENTS.md` is maintained for **every** layout (AC13):
+`claude-style` gets the links there too, beside its `CLAUDE.md` imports, because the
+template ships that region to every project with a comment saying `/ductus` maintains
+it, and under `pi` the `AGENTS.md` block is the native one, written once. Step 4
 skips a document an import already loaded, so none is read twice, and reads one
 whose import loaded nothing — an external import not yet approved, or a host that
 does not resolve `@path`. Claude Code's memory documentation, *Import additional

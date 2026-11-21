@@ -130,7 +130,7 @@ The rule tier has a structurally similar gap (a rule file a project authors regi
 
 ## How it loads
 
-`/ductus` lists each resolved shared document in a managed block in your `CLAUDE.md` or `AGENTS.md`:
+`/ductus` lists each resolved shared document in a managed block in your `AGENTS.md`, and under Claude Code in your `CLAUDE.md` too:
 
 ```markdown
 <!-- BEGIN ductus:constitutions -->
@@ -138,7 +138,7 @@ The rule tier has a structurally similar gap (a rule file a project authors regi
 <!-- END ductus:constitutions -->
 ```
 
-The block's content is layout-derived, because the file is. Claude Code reads `CLAUDE.md` and gets `@path` imports, which **load the documents at session start**, so a session that runs no command still has the rules. Pi reads `AGENTS.md` and resolves **no import directive at all**, so it gets plain links, which load nothing. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and the import never touches `.ductus/constitution.md`.
+The block's content depends on the file. Claude Code reads `CLAUDE.md` and gets `@path` imports, which **load the documents at session start**, so a session that runs no command still has the rules. `AGENTS.md`, which Pi reads, takes **no import directive at all**, so its block is plain `- See [alias](path)` links, which load nothing; Claude Code's `AGENTS.md` carries the same links beside the `CLAUDE.md` imports. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and the import never touches `.ductus/constitution.md`.
 
 `/ductus:target` loads the shipped constitution and every resolved shared document that is not already in context, **once per session**, so every subsequent command inherits them with no per-command step. A document a `CLAUDE.md` import loaded is not read again. For Pi, which reads `AGENTS.md`, `/ductus:target` is the loading mechanism.
 
