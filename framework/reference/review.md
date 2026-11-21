@@ -123,17 +123,17 @@ A Statement whose Verification is a design-time commitment is applied by its pas
 Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines, as the criteria step judges every criterion: a stale claim the window left alone otherwise waits for a review that reads its file. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
-produced. A pass's finding, or a reviewer's claim, is checked against the tree before it is recorded; break things only in a clone while reviewers read.
+produced. A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, and its mechanism is checked against the tree; break things only in a clone while reviewers read. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: recorded nowhere and fixed in no round (spec 020, AC18).
 
 ### Passes in a subagent
 
 The passes read every loaded rule file and every in-scope file, which in the host's own context every later call of the session would read again. So a host that can start a subagent (Claude Code's Agent tool) runs steps 3 to 7.2 in one fresh subagent, and one that cannot (Pi) runs them itself. Brief it with the feature, the run's scope (`compute-review-scope`'s `scope`, or the file its `lists-file` names), the rule files step 2 loaded, any dimension-restricting flag, this section, **§Criteria step**, §Load rules (which maps each loaded rule file to its pass), the five pass sections below, the **Observations** rules under §Write `review.md` (what an observation is and how it is dispositioned), and the shapes `write-review` takes for `findings` and `observations`. The subagent reads each rule file and each in-scope file whole, the remainder of any read a tool cut short included, and returns as its last message:
 
-- the findings and the observations as JSON in `write-review`'s shapes, and the criterion verdicts in its `criteria` shape, with each criterion it could not judge and why;
+- the findings and the observations as JSON in `write-review`'s shapes, each with the evidence that its trigger can occur in the project (the code path, configuration, history or deployment shape that reaches it), and the criterion verdicts in its `criteria` shape, with each criterion it could not judge and why;
 - each in-scope file it read, and each it did not, with why;
 - for each rule file, the bytes it read against the file's size, and each pass that did not run.
 
-The host checks the hand-back before using it, as it checks any reviewer's claim. A file read short, a rule file read below its size, or a pass that did not run is named in the Summary and kept out of `examined`, or the subagent is asked to finish; it never reads as a clean result (§design-principles). The host then continues at step 7.3 with what it was handed, opening a file itself only to check or fix a finding. Under `ductus exec` the walker asks for each pass in turn.
+The host checks the hand-back before using it, as it checks any reviewer's claim. A file read short, a rule file read below its size, or a pass that did not run is named in the Summary and kept out of `examined`, or the subagent is asked to finish; it never reads as a clean result (§design-principles). A finding or observation whose hand-back shows no trigger the project can reach is dropped, recorded nowhere. The host then continues at step 7.3 with what it was handed, opening a file itself only to check or fix a finding. Under `ductus exec` the walker asks for each pass in turn.
 
 ### Security pass
 
