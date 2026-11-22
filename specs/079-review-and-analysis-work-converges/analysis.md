@@ -1,18 +1,18 @@
 ---
 spec: 079-review-and-analysis-work-converges
-last-run: 2026-11-21T22:14:42Z
-analyzed-against: f02d7ee847d9f5d9d902ff02af99a139b8a340dc
+last-run: 2026-11-22T02:12:46Z
+analyzed-against: d809811bf6277d854f82abf61786eb1fd5893850
 hard-fail: 0
 blocking-findings: 0
-advisory: 3
+advisory: 5
 unexamined: 3
 analyzed-digest:
   data-model.md: 06298383706eaad589c60381deb6ec991aa75d1ee934006eeb8ff1d792290580
-  plan.md: ed634b59e0d57daf552254f0f012769d267041f47ccd989576075ece42c357d2
+  plan.md: e892b6c71e7ad6886fe8d3d4cc8d5c7dc4b741f59d05af48c30d8bec44c0625f
   research.md: 0b2684cba2edfbdf8778e2367ed7811a5aa7be89839395f897f42f28d6dfb993
-  review.md: aa2cf09c438fb23f2a01f34366455790213a3bd9159dc21fa54d9cce28917158
+  review.md: 7a881756ce3304b62711ee01ba602190e1354edfe3681c42566ca84a191d50d7
   scenarios/the-excluded-section-lists-paths-only.md: 1763a8c3a9dd478a6f39d2813a73d4804c21dc8e9581c401af3fdaf35e6ea8b1
-  spec.md: 26cbc83935f083ae9f0b74ea44a6deb067353edf08478a33d95b45b8ad72b8b7
+  spec.md: 82052c8a03dd75f93c4d9fec366e85e5e6d91f866817fa14b09755593c0895fe
   tasks.md: d7640c1757c590bf6492db53d28d7e89fbe553dbf5883bf920af96ea6cd31fae
 unexamined-by-reason:
   anchor-target-unjudgeable: 1
@@ -48,7 +48,7 @@ section-digest:
   "plan.md#Affected Files": 8aa851eecef098fa
   "plan.md#Cross-spec impact": e42e9f392be561f0
   "plan.md#Data Model": 40ce1846aee13dcc
-  "plan.md#Dispositions": e72448959ff5ae0b
+  "plan.md#Dispositions": c6a2975ce785e126
   "plan.md#Fix rounds": c11e610c9207075c
   "plan.md#One commit-attribution helper": 2f5dd511c27018dc
   "plan.md#One description per primitive": 53540b37939dfdb2
@@ -57,7 +57,7 @@ section-digest:
   "plan.md#Prose cuts come last": 0a3ba0aeb3df320f
   "plan.md#Technical Decisions": ad85a1d406c0b799
   "plan.md#The change is breaking": bc0d8b2b3ff1587c
-  "plan.md#The constitution": e4c6943316077744
+  "plan.md#The constitution": 69aae4b6425c2723
   "plan.md#The gate reads what a review owes": a1ef714684072d43
   "plan.md#The measurement": 5f11de2d3b504396
   "plan.md#The open mark": 749fcf6569d30083
@@ -77,14 +77,14 @@ section-digest:
   "scenarios/the-excluded-section-lists-paths-only.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/the-excluded-section-lists-paths-only.md#The-excluded-section-lists-paths-only": e9dfd6102a162346
   "spec.md": 72bdd76ae2334055
-  "spec.md#079 — Review and analysis work converges": 982ad1d8e4fa5fdd
-  "spec.md#Acceptance Criteria": 3e361fa6051a79ea
+  "spec.md#079 — Review and analysis work converges": 968644a8e412d2a5
+  "spec.md#Acceptance Criteria": dfbb4f02fee4b4c2
   "spec.md#Applicable Rules": edc80fdad54b842a
   "spec.md#Behavior": 55145a9018734d1c
   "spec.md#Edge Cases": 7367063714e27280
   "spec.md#Motivation": 81069fbaa0db88c6
   "spec.md#Open Questions": 20edda8881516e4e
-  "spec.md#Resolved Questions": 01c2e52ac93801a3
+  "spec.md#Resolved Questions": d2fc293a80dfda6a
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The change is breaking"}
   BE-INPUT-001: {verdict: addressed, cite: "spec.md#Applicable Rules"}
@@ -105,23 +105,33 @@ blocking: false
 dispositions:
   fixed: 0
   deferred: 0
-  waived: 3
+  waived: 5
   undispositioned: 0
 decisions:
-  - key: decision-reasons — spec.md Resolved Questions (Does a record's commit leave code committed after the run unread?) rejects adding what lies between to the next window because a review preceding its commit would owe a second review for code it read, a review run as the stated reason
+  - key: "grounding — Resolved Questions, 'Which surface is canonical for a primitive's behavior': states as fact that the data model 'does not ship' to adopters, with no citation to the manifest or layout that says so."
     outcome: waived
-    reason: "Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this"
-    decided-at: 2026-11-16T17:59:10Z
+    reason: "advisory and no chore: true of the tree, since the **Shared Files** manifest in `framework/bootstrap/ductus.md` ships no spec of this repository, so no adopter receives a data model; a Resolved Question's premise, recorded with its decision"
+    decided-at: 2026-11-22T02:12:46Z
     decided-by: rule
-  - key: "grounding — Trade-offs, the entry on a person's lasting keep of a plan section: '3 of 70 analysis records held any plan-record decision' gives a count with no query or method cited (Grounding, advisory)."
+  - key: "grounding — Resolved Questions, 'How are a run's findings dispositioned': states as fact that 'AGENTS.md does not ship', with no citation to the manifest or layout that says so."
     outcome: waived
-    reason: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides.
-    decided-at: 2026-11-20T00:39:18Z
+    reason: "advisory and no chore: true of the tree, since an adopter's AGENTS.md is made from `framework/templates/project/agents.md`, never this repository's (the **Shared Files** manifest in `framework/bootstrap/ductus.md`); a Resolved Question's premise"
+    decided-at: 2026-11-22T02:12:46Z
     decided-by: rule
-  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 97290 bytes, 2 read pages at the 50000-byte read size
+  - key: "grounding — Resolved Questions, 'What may one review run cost?': states as fact that 'a status transition can never be self-approved' with no cite to the rule or primitive that enforces it."
+    outcome: waived
+    reason: "advisory and no chore: a premise restating the constitution's §pipeline-boundaries (never transition a spec's status without explicit user approval), the canonical rule a citation would copy"
+    decided-at: 2026-11-22T02:12:46Z
+    decided-by: rule
+  - key: "decision-reasons — Resolved Questions, 'Where does each change land?': the leading reason for rejecting a scenario and task on each owner is the reopen of 076 and up to 16 owner runs; the other reasons (review only as each owner closes, 066 paused) are weaker. Low confidence; state the result the rejected option would deliver and what the chosen one gives up."
+    outcome: waived
+    reason: "advisory and no chore: the entry states the results the rejected option delivers besides its cost (the changes reviewed only as each owner next closes, beside 74 other unchecked tasks, and 066 and this spec waiting on each other) and what the choice gives up (the owners being the only home for these behaviors)"
+    decided-at: 2026-11-22T02:12:46Z
+    decided-by: rule
+  - key: artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 99108 bytes, 2 read pages at the 50000-byte read size
     outcome: waived
     reason: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing.
-    decided-at: 2026-11-21T22:14:42Z
+    decided-at: 2026-11-22T02:12:46Z
     decided-by: rule
 ---
 
@@ -129,7 +139,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 3 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 3 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 5 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 5 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -141,9 +151,11 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Trade-offs, the entry on a person's lasting keep of a plan section, states that 3 of 70 analysis records held any `plan-record` decision with no commit, date or method, so the figure cannot be re-derived. — `specs/079-review-and-analysis-work-converges/plan.md` — **waived**: The count is the owner's 2026-11-05 measurement over the 70 analysis records then, which today's corpus no longer reproduces, and the decision it supports rests on analyze.md step 19 having no waiver path, cited beside it; re-deriving it changes nothing the plan decides. (decided by the rule)
-- decision-reasons — Resolved Questions, 'Does a record's commit leave code committed after the run unread?': the first rejected option (adding what lies between to the next window) is rejected because a review preceding its commit would owe a second review, 1 of 143 and over the bound, which is a review run and not a result the option gives up or delivers. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Advisory and no chore: the entry gives 'a review ... owe a second review' as the reason for rejecting the option, with its line estimate beside it; the result the option would deliver (reading the in-between code) and the one the choice gives up are stated only as the gap's no-occurrence figures, so the entry would restate both to clear this (decided by the rule)
-- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 97290 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
+- grounding — Resolved Questions, 'Which surface is canonical for a primitive's behavior': states as fact that the data model 'does not ship' to adopters, with no citation to the manifest or layout that says so. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: advisory and no chore: true of the tree, since the **Shared Files** manifest in `framework/bootstrap/ductus.md` ships no spec of this repository, so no adopter receives a data model; a Resolved Question's premise, recorded with its decision (decided by the rule)
+- grounding — Resolved Questions, 'How are a run's findings dispositioned': states as fact that 'AGENTS.md does not ship', with no citation to the manifest or layout that says so. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: advisory and no chore: true of the tree, since an adopter's AGENTS.md is made from `framework/templates/project/agents.md`, never this repository's (the **Shared Files** manifest in `framework/bootstrap/ductus.md`); a Resolved Question's premise (decided by the rule)
+- grounding — Resolved Questions, 'What may one review run cost?': states as fact that 'a status transition can never be self-approved' with no cite to the rule or primitive that enforces it. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: advisory and no chore: a premise restating the constitution's §pipeline-boundaries (never transition a spec's status without explicit user approval), the canonical rule a citation would copy (decided by the rule)
+- decision-reasons — Resolved Questions, 'Where does each change land?': the leading reason for rejecting a scenario and task on each owner is the reopen of 076 and up to 16 owner runs; the other reasons (review only as each owner closes, 066 paused) are weaker. Low confidence; state the result the rejected option would deliver and what the chosen one gives up. — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: advisory and no chore: the entry states the results the rejected option delivers besides its cost (the changes reviewed only as each owner next closes, beside 74 other unchecked tasks, and 066 and this spec waiting on each other) and what the choice gives up (the owners being the only home for these behaviors) (decided by the rule)
+- artifact-size — `specs/079-review-and-analysis-work-converges/spec.md` is 99108 bytes, 2 read pages at the 50000-byte read size — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: A trim of this size is no chore, and splitting this spec would part the criteria AC1 and AC20 measure together; the size blocks nothing. (decided by the rule)
 
 ## Deferred to other specs
 
