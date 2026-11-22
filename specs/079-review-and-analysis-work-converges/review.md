@@ -1,24 +1,19 @@
 ---
 spec: 079-review-and-analysis-work-converges
-last-run: 2026-11-20T00:32:55Z
-reviewed-against: b65dcc75d05c4fe18d1eb3ee8c5aa40d2934ef3b
-diff-base: ac98cc81ccb20ffc3e928f161c9131ae24c51289
+last-run: 2026-11-22T01:30:28Z
+reviewed-against: fc5bbfea0aa6237613ebc82256e8a12101953068
+diff-base: db227015b55be230e5e6a55f3c9baeeac7fb89e0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 11
-scope: 16
-unread:
-  - runtime/CHANGELOG.md
-  - runtime/src/schema/descriptions.rs
-  - runtime/src/schema/primitives.rs
-  - specs/079-review-and-analysis-work-converges/plan.md
-  - specs/079-review-and-analysis-work-converges/spec.md
-excluded: 86
+examined: 1
+scope: 2
+unread: []
+excluded: 22
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
-re-reads: 2
+fix-rounds: 1
+re-reads: 0
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
@@ -61,7 +56,7 @@ criteria-verdicts:
   - label: AC16
     digest: 06e5b44632a25e7b07398df3a78c4b9ba1be9abbbe4ddd6f8f4f38e36423dccd
   - label: AC17
-    digest: 69a092756cf6297061bbb8cb35aa39439c8a907098bbcfd3d867547e2cbfb545
+    digest: 0d7d3f92e8ee5175b16945fa9a872131a3c67e199a6034230c4049fd0801b35e
   - label: AC18
     digest: c13f38b439a3024c5dce7928d6589e227cf5b647c16e7833019be0ffd08a491b
   - label: AC19
@@ -88,9 +83,9 @@ criteria-verdicts:
     digest: 3c3b93058c3baf2dac1a8265512f32cc4ffb6211caea3a4018cccc995e69cd5a
 blocking: false
 dispositions:
-  fixed: 8
+  fixed: 2
   deferred: 0
-  waived: 1
+  waived: 2
   undispositioned: 0
 decisions:
   - key: "bug: a first review that stopped early still drops unchanged plan entries from the next scope, so what its skipped pass never read stays unread, against the module doc's 'stopping early leaves nothing permanently unread'. — `runtime/src/primitives/compute_review_scope.rs:201`"
@@ -294,9 +289,9 @@ decisions:
 
 ## Summary
 
-Window `ac98cc81`..HEAD, base-source reopen, as `compute-review-scope` resolved it (14 entries before this run's fixes, 16 with the two the fixes touched). Four readers each read their part: A the three `security-*.md` files whole (194,749 bytes) and `slice-code.diff` and `slice-docs.diff` whole; B the nine other rule files whole (213,777 bytes), `AGENTS.md` lines 123 to 215 and `specs/system.md`, all four diff slices whole (`slice-code.diff`, `slice-docs.diff`, the `descriptions.rs` word diff, the `runtime/CHANGELOG.md` diff) and a verdict on each of the 38 stored decisions; C1 and C2 the criteria step over all 29 criteria. No MUST or SHOULD violation; 9 observations, 8 fixed in the run and 1 waived by the rule. The fix round re-read twice, both clean. Unread, named in `unread`: `runtime/CHANGELOG.md` (the window diff read whole, other specs' hunks not checked beyond it), `runtime/src/schema/descriptions.rs` (word diff whole and the two constants this spec owns), `runtime/src/schema/primitives.rs` (the changed doc read as a diff), and `plan.md` and `spec.md` of this spec (`spec.md` read whole to the end of its acceptance criteria and in the changed lines; its Resolved Questions beyond the cited ones were not read). `compute_review_scope.rs` and `write_review.rs` were read as the whole window diff plus the changed functions, not whole files, and are counted examined on that basis. Stored decisions: 7 hold and carry (the ones naming `compute_review_scope.rs`, `write_review.rs`, `descriptions.rs` and this spec's `spec.md`), 31 name a path outside the scope and are retained. AC6 was edited this run and judged met with its current text; criteria judged are all 29 of 29.
+Five-pass review of 079's reopening (diff-base db227015, base-source reopen) at HEAD fc5bbfea. Its window is fc5bbfea, which reopened 079 as the owner chose on 2026-11-21: AC17 reworded to admit an analysis's operator-confirmed design edit (067's AC6), with a signpost back to 067, a Resolved Question and a Why-split-from-067 entry. Passes (part P5) read that hunk and `specs/079-review-and-analysis-work-converges/spec.md` whole against the rule files the change touches, `quality-cross.md` and `configuration-cross.md` (38,992 bytes, each whole against `wc -c`); the three `security-*.md` files were not read, since the one-file scope holds no code for the security pass, which is named here as not run. No finding; one observation, and the criteria part's note on the plan, both fixed in this run: the Resolved Question "What may one review run cost?" and `plan.md`'s Dispositions and Finding-dispositions bullet now admit the design edit. P5 re-ran over the fix. Two stored waivers still apply. The criteria step (part C10) judged every criterion individually: 29 of 29 met, AC17 against its reworded text, many driven with the release binary on a scratch clone. Examined 1 of 1; nothing unread.
 
-2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 0 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 1.
 
 29 of 29 acceptance criteria judged met.
 
@@ -322,47 +317,42 @@ Window `ac98cc81`..HEAD, base-source reopen, as `compute-review-scope` resolved 
 
 ## Acceptance criteria
 
-- AC1 — met: `measure_reopenings.rs` `over_bound`/`review_fields`/`analysis_fields` implement the bound (second run over unless the previous left a gating count, open fix-round mark, budget stop or skipped pass) and `descriptions.rs` MEASURE_REOPENINGS states not-counted (no-recorded-run, record-unparseable, no-in-progress-commit) and waiting-count; tests a_second_clean_run_of_either_kind_is_over_the_bound, a_reopening_with_no_run_is_not_counted; the 10-reopening sample and per-miss tasks were not re-measured here.
-- AC4 — met: `compute_review_scope.rs` `owes_a_review`/`paths_owing_a_review` (code only via `is_project_artifact`; no run, `holds_done_until_reviewed`, left-open paths and `criteria_owing` owe one) match the criterion and all three Superseded sentences; tests a_reopening_that_changed_only_text_owes_no_review, a_stale_digest_puts_its_contract_in_scope_and_owes_no_review, a_record_the_gate_holds_owes_a_review_whatever_the_window_holds, a_review_is_owed_with_no_record_whatever_the_window_holds.
-- AC2 — met: `framework/commands/review.md` step 10 and `framework/reference/review.md` Observations: rule decides, chore fixed, else waived with reason, only a `contract-break` observation is deferred (gate-confirm), person's deferral overrules; matches the Superseded-in-part sentence.
-- AC3 — met: `compute_review_scope.rs` `split_changes` excludes a path only when `window.others` holds it and neither `window.own` nor uncommitted does, `fix_rounds.rs` `round_paths`/`changed_only_by_other_specs` does the same per round, and `write_review.rs` `render_excluded` lists every excluded path and round-excluded path (tests another_specs_commit_leaves_the_scope_and_is_listed_in_excluded, the_record_names_each_excluded_path, an_excluded_path_is_listed_without_the_specs_that_claimed_it, fix-round `left out of fix round 2` test); the paths-only refactor still names every path.
-- AC5 — met: `compute_review_scope.rs` `resolve_base`/`last_review_commit` start at the later of the reopen parent and the last finished review commit, `recorded_run.stopped_early` (budget stop, skipped pass, `holds_done_until_reviewed`) keeps the start, `--since` is used verbatim; tests a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start, a_record_the_gate_holds_does_not_move_the_start, since_is_used_verbatim_with_no_parent_walk.
-- AC6 — met: `compute_review_scope.rs` `attribute_window` (alone/no-spec take all, several-claimant rule, 081 named-spec rule), `compute` (uncommitted, `open-findings`, digest contracts, `folded_in`, plan files only with no run at HEAD), `commit_attribution.rs` merge handling, and the 081 sentence via `take_unclaimed`/`ReadRecord::read`/`read_records` (window holds commit, `unread` lacks path, no skipped pass/budget stop/open loop) all hold post-refactor; test a_path_a_complete_record_read_is_credited_and_owes_no_review asserts not in scope, in `excluded`, `!review_owed`; the COMPUTE_REVIEW_SCOPE description agrees.
-- AC7 — met: `diff_cross_spec.rs` `window_base` uses the parent of the in-progress commit via `transition_parent` and `compute` keeps only paths of commits where `claims.is_claimed_by(form)` (or uncommitted); tests the_window_starts_at_the_transition_parent, a_reopen_leaves_an_earlier_windows_sibling_changes_out, another_specs_commit_is_absent.
-- AC8 — met: The behavior lives in runtime primitives (`measure-reopenings` in `framework/runtime-tools.txt`, spec root read via `Paths::load` so it measures an adopter's project), `framework/commands/review.md` and `framework/reference/review.md`; `runtime/CHANGELOG.md` carries 079's entries (44 mentions); the `AGENTS.md`-only rules (AC10, AC11, AC16) are the criterion's own exceptions.
-- AC9 — met: `runtime/src/main.rs` builds `about`/`long_about` and `runtime/src/mcp/server.rs` the MCP `description` from the same `descriptions::` constant (MEASURE_REOPENINGS checked), `framework/commands/review.md` step 1 cites `compute-review-scope`'s description, and `framework/constitution.md` Drift Prevention table names `runtime/src/schema/descriptions.rs`.
-- AC10 — met: `AGENTS.md` bullet 'Weigh what an option starts against what it delivers' says each option states its result and the reopens and review runs it starts and that rejecting one says which result is given up.
-- AC11 — met: `AGENTS.md` 'Local checks follow what a change touches' scales checks by blast radius with 'Before a tag: every push workflow's steps', and 'After pushing...Never wait on it' reads CI without waiting; `scripts/run-workflow-steps.py` exists.
-- AC12 — met: 079 has `plan.md`, `tasks.md` (tasks 1-40) and a 12-entry `cross-spec-impact:`; the paths-only change's cross-spec claim was corrected in 081's AC13 (now 'listed in `excluded`', 081 `done`), and a grep of 066, 058 and 079 artifacts finds no remaining claim that `excluded` names claimants.
-- AC13 — met: `brief_re_read.rs` `split_exempt` removes exempt paths before `classify` and the brief renders and records only `paths`; test an_exempt_path_leaves_a_mixed_rounds_brief_and_record.
-- AC14 — met: `write_review.rs` writes `fix-rounds-open: true` only when `args.loop_open` (command steps 11 and 12 pass it on the first write and omit it on the last), `check_review_gate.rs` `holds_done_until_reviewed` and `fix_round_block` block on `fix_rounds_open == Some(true)`; tests the_open_mark_follows_the_loop_open_argument, a_record_with_no_mark_is_unaffected.
-- AC15 — met: `classify_spec_edit.rs` reads spec.md/plan.md edits that add or change no criterion, question or unchecked task as a correction (tests spec_body_prose_is_a_correction, a_plan_edit_is_a_correction, a_task_edit_adding_no_unchecked_task_is_a_correction) and `framework/constitution.md` Spec lifecycle says a correction takes no back-edge.
-- AC16 — met: AGENTS.md Workflow bullet 'A change to a shared runtime surface lands in the spec that requires it, and `cross-spec-impact:` holds that spec's `done` until the surface's owner links back' (022/066/067 owners) is present verbatim in substance.
-- AC17 — met: Only a gating deferral reaches the operator via gate-confirm (framework/commands/review.md step 10, analyze.md step 19, constitution 'Finding dispositions'); measure_reopenings.rs `drop_carried` takes same-key-and-outcome decisions held by another spec's record at the first write's parents, proven by `a_decision_carried_from_another_specs_record_counts_where_it_began` (asserts [(FEATURE,1),(013-b,1)]) and the changed-outcome and keyless tests.
-- AC18 — met: wc -c at HEAD: commands+reference (30 files, git ls-tree and cat agree) 465,917 < 567,705 (93f63a1c: 276,548+291,157=567,705 exactly); AGENTS.md 49,793 and constitution 49,021 < 50,000 (scripts/lint-governing-size.sh silent); review.md 46,394 and analyze.md 49,777 at 9064b7be (re-measured with git show|wc -c, 2026-11-11 close) under read-size 50,000; now 55,547 and 63,924, which RQ 'Does AC18 hold each reference...' allows.
-- AC19 — met: pipeline_view.rs renders 'Reopenings since ... closed, N over the bound, N not counted · N in-progress spec(s) with no unchecked task' and the shallow/none-closed/not-measured states (tests ~1722-1745), render_status.rs `the_reopenings_row_renders_on_every_run_just_before_the_inbox_row`; `waiting_features` in measure_reopenings.rs counts in-progress specs with no unchecked line.
-- AC20 — met: Tasks: tasks.md holds no unchecked box at HEAD (tasks 37-40 all [x]); baseline: RQ 'What outcome...' records 126 closings/261 runs at d62e72f3 and later re-measures at fc20a939 and d6594496 (126 closings); sample: spec went done at 9064b7be (2026-11-11) after per-closing records (git log 'tasks(079): ...closings in the closing order's record', misses as tasks 29/31/33/34) and RQ 'What does this spec's own done require?' scopes AC1 to that sample with the owner's 2026-11-16 decision on nine later misses; I did not re-run measure-reopenings (no cargo/MCP) so the count of 10 rests on those records.
-- AC22 — met: check_review_gate.rs `run_with_lint` calls `review_half_block` (disposition, fix-round, open-findings, `review-owed`) before `analyze_half_block`; tests `a_missing_review_is_reported_before_a_missing_analysis`, `a_contract_change_since_the_review_holds_done_only_on_the_analysis` (AnalyzeStale then ReviewOwed naming src/code.rs) and compute_review_scope `a_path_in_another_specs_directory_owes_no_review`/`another_specs_deletion_owes_this_spec_no_review`.
-- AC23 — met: write_review.rs `open_findings` lists each counted violation's file plus unfixed/unwaived/unreleased contract breaks (path_without_lines); compute_review_scope.rs reads `at_head.open_findings` into `hold_in_scope` wherever the window starts (tests `a_path_left_open_comes_back_from_excluded`, `..._comes_from_head_and_is_named_as_owing_a_review`); check_review_gate `review_half_block` blocks ReviewOwed naming it (`a_finding_left_open_blocks_and_names_its_file`); `refuse_an_empty_scope_over_a_finding` refuses over counted findings or open-findings.
-- AC24 — met: process_decisions.rs and process_waivers.rs retain a silent decision/waiver on a file still on disk the scope does not hold and expire it when the scope holds it or it is gone (tests `a_silent_decision_on_a_file_the_run_did_not_read_is_retained`, `..._the_run_read_expires`, `..._gone_from_disk_expires`, `a_scope_that_cannot_be_read_retains_and_says_so`, process_waivers `a_waiver_on_a_file_the_run_did_not_read_is_retained`).
-- AC25 — met: classify_spec_edit.rs `contract_reasons`/`only_references_differ` return Mechanical for a scenario or data-model edit that is a `SweepIndex` (mechanical_sweep) sweep or only a cross-service reference edit; tests `a_token_swept_across_files_is_mechanical` (scenario+data-model), `a_token_changed_in_one_file_reopens`, `a_rewritten_reference_is_mechanical`, `a_reference_added_or_removed_as_a_list_item_is_mechanical`; kind Mechanical is the non-reopening class in constitution 'Spec lifecycle'.
-- AC26 — met: check_artifacts.rs `check_unticked_criteria` emits blocking review-state-drift for a done spec (test `a_done_spec_with_an_unticked_criterion_has_drifted`, names 'AC2, three'); classify_spec_edit tests `an_untick_reopens`, `an_untick_is_read_across_a_label` (Reopens/Criterion) and `a_tick_is_a_correction`.
-- AC21 — met: framework/constitution.md Runtime Boundary 'Host integration' states 'The binary is the source of a primitive's rules', requires the server ('without it, stop and say to restart or re-run `/ductus`'), keeps in the reference only what a step does with the result, host judgment and policy; Drift Prevention canonical-source table names the compiled description / `ductus <name> --help`.
-- AC27 — met: One test `unchecked_lines`/`adds_unchecked_box`/`describe_unchecked` (read_tasks.rs, any heading, outside fences/comments) feeds check_review_gate `unchecked_task_block`, check_artifacts blocking drift (`a_done_spec_holding_an_unchecked_box_is_review_state_drift`, three heading shapes), classify_spec_edit (`a_box_moved_or_under_a_renamed_task_is_a_correction`, `a_box_no_numbered_task_holds_reopens`), prune_plan (reopen tests ~1204-1285) and measure_reopenings `waiting_features`.
-- AC28 — met: framework/commands/review.md step 1 and analyze.md step 1 stop naming boxes (done spec goes on to step 22 drift/--fix, step 21 records nothing); `refuse_while_tasks_are_open` called by write_review.rs and write_analysis.rs with the run's `deferred_here` exemption (tests write_review ~5144-5173, write_analysis ~1372-1407 incl. the 'Other' task still refusing); templates/spec/tasks.md line 19 'Schedule no review, analysis or completion gate as a task'; `git log 29ec6cc2` is 'feat(079): a review or an analysis runs once implementation is complete'.
-- AC29 — met: framework/reference/review.md 'Two things a pass notices are no observation' (a no-claim edit such as a stray comma or hedge is not reported; an unre-checkable claim for want of a fetched source is named in the Summary's account of what went unexamined, not under Observations); review.md command criteria step 7.2 consistent.
+- AC1 — met: `runtime/src/primitives/measure_reopenings.rs` (`REOPENING_RUN_BOUND`, `over_bound`; gating = `blocking/MUST/SHOULD/contract-breaks/open` `mark/budget` `stop/skipped` pass); release binary `measure-reopenings --at d62e72f3 --since 2026-10-01` reproduces 126 closed, 261 runs, 28 over, 0 not counted, waiting 11; lists not-counted and waiting; tests in `measure_reopenings.rs` (`a_second_clean_run_`..._is_over_the_bound, `a_second_run_after_a_gating_finding_`..., `a_reopening_with_no_run_is_not_counted`). The 10-reopening sample's per-reopening tasks were not re-counted here; the Resolved Questions scope it (owner, 2026-11-09 and 2026-11-16).
+- AC4 — met: `compute_review_scope.rs` `owes_a_review` and `check_review_gate.rs` `holds_done_until_reviewed` (gating count, no dispositions map, open mark, unwaived round, open-findings); tests `a_reopening_that_changed_only_text_owes_no_review`, `a_record_the_gate_holds_owes_a_review_whatever_the_window_holds`, `a_review_is_owed_with_no_record_whatever_the_window_holds`, `an_artifact_only_window_owes_a_review_while_a_criterion_is_unjudged`; binary compute-review-scope on 079 reports review-owed true with criteria-owing [AC17].
+- AC2 — met: `framework/commands/review.md` step 10 and `analyze.md` step 19 (chore fixed, else waived by rule, only a gating deferral or design edit reaches gate-confirm; contract-break observations treated as gating); `decisions.rs` `RULE_DECIDER` 'by-rule'; `runtime/tests/review_command.rs` `a_fix_and_route_step_asks_a_person_only_about_a_gating_deferral`.
+- AC3 — met: `compute_review_scope.rs` excluded is a list of path strings (binary output on 079: 26 plain strings); `fix_rounds.rs` `round_paths` drops another spec's commits, `tests/fix_rounds.rs` `another_specs_commit_between_rounds_leaves_the_round` and `brief_re_read.rs` `another_specs_commit_leaves_a_round_that_also_holds_a_fix`; `write_review.rs` renders the Excluded from scope section.
+- AC5 — met: `compute_review_scope.rs` window start; binary base-source 'reopen' on 079; tests `a_review_in_the_reopening_moves_the_start_to_its_commit`, `a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start`, `a_record_the_gate_holds_does_not_move_the_start`, `since_override_replaces_the_derived_base`.
+- AC6 — met: `commit_attribution.rs` (CommitClaims, merge commit claims nothing) with `compute_review_scope.rs`; tests `a_named_commits_code_goes_to_every_spec_it_names`, `a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it`, `an_unplanned_path_`..._goes_to_every_claimant, `what_the_record_leaves_open_joins_the_scope_wherever_the_window_starts`, `a_contract_changed_before_the_window_joins_the_scope`, `a_fold_below_done_brings_its_code_into_a_window_`..., `an_unchanged_plan_entry_stays_only_on_the_first_review`, `uncommitted_work_joins_whole_even_on_another_specs_path`; the 081 supersessions are in the same file's tests.
+- AC7 — met: `diff_cross_spec.rs`; binary on 079 reports window-base db227015 (the reopen's parent) and 6 sibling paths, all 067 files that fc5bbfea touched with 079's directory; tests `the_window_starts_at_the_transition_parent`, `a_reopen_leaves_an_earlier_windows_sibling_changes_out`.
+- AC8 — met: `framework/runtime-tools.txt` lists measure-reopenings and classify-spec-edit as MCP tools; commands, references and constitution carry the behavior; `measure_reopenings.rs` test `a_project_in_a_subdirectory_reads_its_own_paths` and `--help` show it reads a project's own history.
+- AC9 — met: `ductus mcp` `tools/list` against `ductus <tool> --help` for all 73 tools: 73 descriptions equal their --help text, 0 mismatches; `runtime/src/schema/descriptions.rs`; constitution canonical-source table row 'A primitive's behavior'.
+- AC10 — met: `AGENTS.md` Workflow bullet 'Weigh what an option starts against what it delivers' states each option's result, the reopens and review runs, and what is given up.
+- AC11 — met: `AGENTS.md` Workflow bullet 'Local checks follow what a change touches' (artifacts-only, docs, `framework/scripts/CI`, runtime tiers; every push workflow's steps before a tag) and 'After pushing, read every workflow's run' with 'Never wait on it'.
+- AC12 — met: spec cross-spec-impact lists the 12 specs; each of 020, 022, 026, 041, 050, 051, 058, 063, 066, 067, 076, 078 links back to 079 (grep of `spec/plan/scenarios`), 067 and 079 have reciprocal signposts; `plan.md` and `tasks.md` exist with all boxes ticked. Not a verdict change: `plan.md`'s Dispositions section (line on step `10/19`) still says only a gating waiver or deferral reaches the operator, and its constitution list does not name the 2026-11-21 design-edit amendment, so it lags AC17's reword.
+- AC13 — met: `brief_re_read.rs` classify keeps the per-path exemption; test `an_exempt_path_leaves_a_mixed_rounds_brief_and_record` and `the_brief_carries_exactly_the_derived_paths`.
+- AC14 — met: `write_review.rs` `loop_open` writes fix-rounds-open: true (test `the_open_mark_follows_the_loop_open_argument`); `review.md` step 11 passes loop-open and step 12 omits it; `check_review_gate.rs` gate check 9 blocks on the mark (tests `what_the_gate_holds_until_a_review_runs_is_what_review_owed_reads`, `a_done_spec_holding_the_open_mark_is_review_state_drift`).
+- AC15 — met: classify-spec-edit on a done fixture in a scratch clone: spec prose edit and plan edit read correction, a criterion edit reads reopens; constitution §spec-lifecycle states it; tests `spec_body_prose_is_a_correction`, `a_plan_edit_is_a_correction`.
+- AC16 — met: `AGENTS.md` Workflow bullet 'A change to a shared runtime surface lands in the spec that requires it, and cross-spec-impact: holds that spec's done until the surface's owner links back'.
+- AC17 — met: Re-judged against the reworded text: it matches 067 AC6 (an analysis fixes a gating design-subject finding once the operator confirms) and every surface that carries it: constitution §brownfield-inbox Finding dispositions ('fixed ... or an analysis's edit to a design subject ... once the operator confirms it'; 'Only a gating finding's waiver, deferral or design edit reaches the operator, one at a time'), `framework/commands/analyze.md` description, Purpose and step 19, `review.md` step 10 (only a contract-break deferral reaches gate-confirm); measure-reopenings reports decisions-by-person per run with carried decisions counted in the first record (`measure_reopenings.rs` `drop_carried`; test `a_decision_carried_from_another_specs_record_counts_where_it_began`); gate-confirm is one decision per call. The criterion is ticked but compute-review-scope names it in criteria-owing until this review's record is written.
+- AC18 — met: wc -c at HEAD: `framework/commands` plus `framework/reference` 474,248 under 567,705; `AGENTS.md` 49,793 and constitution 49,199 under 50,000; `review.md` 57,533 and `analyze.md` 66,965 exceed the 2026-11-11 read size, which the criterion and its Resolved Question allow for later specs.
+- AC19 — met: binary render-status prints 'Reopenings since 2026-10-23: 186 closed, 42 over the review and analysis bound, 0 not counted · 15 in-progress spec(s) with no unchecked task'; dashboard carries the reopenings object; `dashboard.rs` and `render_status.rs`.
+- AC20 — met: `tasks.md` holds 0 unchecked boxes; measurement reproduces the recorded baseline at d62e72f3 (126 closings, 261 runs, 28 over, run by the release binary in a scratch clone). The next-10-closings sample is owner-scoped by the Resolved Questions of 2026-11-04, 2026-11-09 and 2026-11-16; its per-reopening tasks were not re-counted.
+- AC22 — met: binary check-review-gate on 079 returns blocked-by review-owed naming AC17 ahead of every analyze check; tests `a_reopening_that_changed_code_takes_one_review_then_one_analysis`, `a_review_owed_for_paths_and_criteria_names_both`, `a_path_in_another_specs_directory_owes_no_review`.
+- AC23 — met: `write_review.rs` `open_findings` and `render_open_findings`; `compute_review_scope.rs` holds each listed path (tests `what_the_record_leaves_open_joins_the_scope_wherever_the_window_starts`, `a_path_left_open_that_is_gone_or_leaves_the_project_is_not_read`); gate holds on `open_findings` via `holds_done_until_reviewed`; `write_review.rs` tests `a_contract_break_the_run_did_not_fix_counts`, `a_stored_break_left_open_with_no_file_refuses`.
+- AC24 — met: `process_waivers.rs` and `process_decisions.rs` tests `a_waiver_on_a_file_the_run_did_not_read_is_retained`, `a_silent_decision_on_a_file_the_run_read_expires`, `a_silent_decision_on_a_file_gone_from_disk_expires`, `a_scope_that_cannot_be_read_retains_and_says_so`, `an_analysis_expires_a_silent_decision_wherever_its_file_lies`.
+- AC25 — met: `classify_spec_edit.rs` SweepIndex and ReferenceScrub; tests `a_token_swept_across_files_is_mechanical`, `a_sweep_through_another_file_is_mechanical`, `a_rewritten_reference_is_mechanical`, `a_token_changed_in_one_file_reopens` (the kinds the criterion names).
+- AC26 — met: binary on a done fixture: check-artifacts reports blocking review-state-drift 'done spec has unticked acceptance criteria'; classify-spec-edit reads an untick as reopens (reason criterion) and a tick as correction.
+- AC21 — met: `framework/constitution.md` §runtime-boundary Host integration ('The binary is the source of a primitive's rules'; without the server, stop and say to restart or re-run /ductus; marker §runtime-host-integration resolves); the commands' pointer lines (log, target and review checked) say the same.
+- AC27 — met: `read_tasks.rs` `describe_unchecked/unchecked_lines/adds_unchecked_box` used by `check_review_gate.rs`, `check_artifacts.rs`, `classify_spec_edit.rs`, `prune_plan.rs` and `measure_reopenings.rs`; binary: gate blocked-by unchecked-task for a box under an unnumbered heading, check-artifacts review-state-drift on a done spec with a box, comment and fence boxes ignored; tests `a_box_moved_or_under_a_renamed_task_is_a_correction`, `a_box_no_numbered_task_holds_reopens`, `moving_or_reindenting_an_unchecked_box_does_not_reopen`, `waiting_is_the_in_progress_specs_with_no_unchecked_task`.
+- AC28 — met: binary on a fixture: write-review and write-analysis both refuse with '`tasks.md` holds 1 unchecked box(es)' for a box under a numbered and under an unnumbered heading, and write-analysis accepts a list whose only boxes are ticked, in a comment or in a fence; `review.md` and `analyze.md` step 1 stop on it; the deferral-named exception is in `refuse_while_tasks_are_open` (`read_tasks.rs`), not driven here.
+- AC29 — met: `framework/reference/review.md` Observations: 'Two things a pass notices are no observation' (a no-claim edit is not reported; an unchecked claim with no fetched source goes in the Summary's unexamined account).
 
 ## Observations
 
-- convention: the doc comment of `ComputeReviewScopeResult.excluded` still said `write-review`'s record names the spec that claimed each, which the paths-only change made false — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
-- other: the scenario's 88.8% claimant share did not reproduce at `b7b07500` (88.6% by removed bytes), and the Resolved Question said 88.6% — `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md` — **fixed** (decided by the rule)
-- other: `runtime/CHANGELOG.md`'s 079 entry repeated the 88.8% figure, a claimant-text count that was not stated, a corpus total 16 bytes off and description sizes that matched no commit of `runtime/src/schema/descriptions.rs` (7,961 to 7,932 and 4,359 to 4,323 are the constants' bytes), and an `[Unreleased]` entry still said the section names the claiming spec — `runtime/CHANGELOG.md` — **fixed** (decided by the rule)
-- other: the Resolved Question's section sizes left the heading line out without saying so (9,467,774 against 9,469,246 with it), and its baseline sizes of the two references read as a target the owner later relaxed — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- bug: mutation M14 still replaced its anchor with a `window.others.entry(path)` line that no longer compiled against the set, so it errored instead of being killed; re-anchored to `window.others.extend(claims.paths);` and run both ways — `scripts/mutation/reviews-follow-what-changed.py` — **fixed** (decided by the rule)
-- convention: the `split_changes` doc comment said a path the walk never met 'has no claimant to name', wording from when `excluded` named claimants — `runtime/src/primitives/compute_review_scope.rs` — **fixed** (decided by the rule)
-- convention: the `resolve_scope` doc paragraph wrapped oddly and `yaml_string`'s doc named only waiver and decision lists and said paths stay unquoted, though it quotes every path the record holds — `runtime/src/primitives/write_review.rs` — **fixed** (decided by the rule)
-- other: AC6 and its Resolved Question carried no note of 081's read credit, under which a path a committed review read leaves the scope — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
-- convention: the list header says the next mutation takes the next free number while `M319` follows `M273` in `scripts/mutation/scope-attribution.py` — `scripts/mutation/scope-attribution.py` — **waived**: Mutation ids are allocated across every list under `scripts/mutation/`, where `M318` is the highest of another list, so `M319` was the next free id; renumbering it to `M274` would reuse a number range other lists hold and gain nothing. (decided by the rule)
+- convention: the Resolved Question "What may one review run cost?" still said only a gating finding's waiver or deferral reaches the owner, after AC17's reword admitted an analysis's design edit — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- convention: `plan.md`'s Dispositions said only a gating waiver or deferral reaches the operator, and its Finding-dispositions bullet did not record 067's AC6 amendment — `specs/079-review-and-analysis-work-converges/plan.md` — **fixed** (decided by the rule)
+- `cross-spec-impact:` names neither 000 nor 035, though the round edited their scenarios and reopened 035 — `specs/079-review-and-analysis-work-converges/spec.md` — **waived**: Each is a correction of a claim, which owes no back-link and names this spec in its commit, as `plan.md`'s Cross-spec impact says; AC12's list is of specs whose surface this changes. (decided by the rule)
+- other — the Behavior bullet 'A behavior is stated once' now requires existing restatements in a data model or scenario to be swept to pointers (8596f472), but no acceptance criterion tests it: AC9 covers the description, commands and references only, AC12 corrects false claims. A criterion would be one nothing can check, since the spec's own Resolved Question records that nothing detects a new copy. — `specs/079-review-and-analysis-work-converges/spec.md:64` — **waived**: The Resolved Question on the canonical surface states that nothing detects a new copy (§drift-prevention) and that this part relies on review, so no testable criterion exists to add; the sweep was task 36's, and a criterion is a requirement of its own. (decided by the rule)
 
 ## Skipped passes
 
@@ -371,91 +361,27 @@ Window `ac98cc81`..HEAD, base-source reopen, as `compute-review-scope` resolved 
 ## Excluded from scope
 
 - `.claude/commands/ductus/analyze.md`
-- `.claude/commands/ductus/review.md`
+- `.claude/commands/ductus/help.md`
 - `.ductus/reference/analyze.md`
-- `.ductus/reference/audit.md`
-- `.ductus/reference/clarify.md`
-- `.ductus/reference/plan.md`
 - `.pi/prompts/ductus-analyze.md`
-- `.pi/prompts/ductus-review.md`
+- `.pi/prompts/ductus-help.md`
 - `framework/commands/analyze.md`
-- `framework/commands/review.md`
+- `framework/commands/help.md`
+- `framework/constitution.md`
 - `framework/reference/analyze.md`
-- `framework/reference/audit.md`
-- `framework/reference/clarify.md`
-- `framework/reference/plan.md`
-- `runtime/src/interpreter/payload.rs`
-- `runtime/src/main.rs`
-- `runtime/src/parser/mod.rs`
-- `runtime/src/primitives/analyze_subjects.rs`
-- `runtime/src/primitives/check_artifacts.rs`
-- `runtime/src/primitives/check_command_flags.rs`
-- `runtime/src/primitives/check_corpus_links.rs`
-- `runtime/src/primitives/check_orphaned_references.rs`
-- `runtime/src/primitives/check_review_gate.rs`
-- `runtime/src/primitives/check_step_references.rs`
-- `runtime/src/primitives/derive_routing_candidates.rs`
-- `runtime/src/primitives/relocate_audit_records.rs`
-- `runtime/src/primitives/spec_links.rs`
-- `runtime/src/primitives/tool_loading.rs`
-- `runtime/tests/bounded_list_gates.rs`
-- `runtime/tests/check_step_references_cli.rs`
-- `runtime/tests/derive_dependencies_golden.rs`
-- `runtime/tests/derive_references_golden.rs`
-- `runtime/tests/golden/review-basic.jsonl`
-- `runtime/tests/mcp.rs`
-- `scripts/audit/README.md`
-- `scripts/audit/step-reference-integrity.sh`
-- `scripts/mutation/relocate-merge-children-057.py`
-- `scripts/mutation/reopen-measure.py`
-- `scripts/mutation/step-references-bounded.py`
-- `scripts/mutation/step-references-reach.py`
-- `scripts/tests/test-step-reference-integrity.sh`
-- `specs/020-code-review/analysis.md`
-- `specs/020-code-review/data-model.md`
-- `specs/020-code-review/review.md`
-- `specs/022-deterministic-runtime/data-model.md`
-- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`
-- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
-- `specs/022-deterministic-runtime/tasks.md`
-- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
-- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
-- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
-- `specs/026-framework-self-audit/spec.md`
-- `specs/026-framework-self-audit/tasks.md`
-- `specs/041-task-pruning/data-model.md`
-- `specs/041-task-pruning/tasks.md`
-- `specs/051-branch-scoped-spec-numbering/spec.md`
-- `specs/051-branch-scoped-spec-numbering/tasks.md`
-- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
-- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
-- `specs/057-analyze-artifact-and-record-relocation/review.md`
-- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
-- `specs/057-analyze-artifact-and-record-relocation/spec.md`
-- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
-- `specs/066-audit-records-and-the-completion-gate/analysis.md`
-- `specs/066-audit-records-and-the-completion-gate/data-model.md`
-- `specs/066-audit-records-and-the-completion-gate/plan.md`
-- `specs/066-audit-records-and-the-completion-gate/review.md`
-- `specs/066-audit-records-and-the-completion-gate/spec.md`
-- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `runtime/CHANGELOG.md`
+- `runtime/src/primitives/resolve_anchor.rs`
+- `runtime/src/schema/descriptions.rs`
+- `scripts/analyze/detect.py`
+- `scripts/analyze/record.py`
+- `scripts/mutation/quoted-heading-forms-067.py`
+- `scripts/tests/test-analyze-scripts.py`
 - `specs/067-analyze-and-audit-checks/data-model.md`
-- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
-- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md`
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md`
-- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/review.md`
+- `specs/067-analyze-and-audit-checks/scenarios/anchor-reference-kinds.md`
 - `specs/067-analyze-and-audit-checks/spec.md`
 - `specs/067-analyze-and-audit-checks/tasks.md`
-- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
-- `specs/071-command-reference-split/spec.md`
-- `specs/071-command-reference-split/tasks.md`
-- `specs/080-deterministic-runtime-efficiency/plan.md`
-- `specs/080-deterministic-runtime-efficiency/spec.md`
-- `specs/080-deterministic-runtime-efficiency/tasks.md`
-- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
-- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
-- `specs/081-reviews-and-checks-follow-what-changed/review.md`
-- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
 
 ## Unexamined governance
 

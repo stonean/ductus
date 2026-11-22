@@ -46,7 +46,7 @@ The lookup finds a spec's files by number when its name is absent from a commit 
 
 ### Dispositions
 
-Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze.md` change: a non-gating finding follows the rule, with no `gate-confirm`, and only a gating finding's waiver or deferral reaches the operator. A stored decision by a person still wins (`process-decisions`). Under `ductus exec` nothing changes, since with no operator nothing is written (steps 10 and 12 of `framework/commands/review.md` say the walker no-ops them).
+Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze.md` change: a non-gating finding follows the rule, with no `gate-confirm`, and only a gating finding's waiver or deferral, or an analysis's in-run design edit for one (067's AC6), reaches the operator. A stored decision by a person still wins (`process-decisions`). Under `ductus exec` nothing changes, since with no operator nothing is written (steps 10 and 12 of `framework/commands/review.md` say the walker no-ops them).
 
 "Counts as gating" means a contract-breaking observation takes a gating finding's dispositions: it is fixed in the run or deferred to the spec's own task, its deferral reaches the operator, and the record counts it in `contract-breaks`. A stored decision on one is marked `contract-break: true`, so a later run matching it holds the same without a host marking it again. `check-review-gate` gains no tier, so the MUST, SHOULD, hard-fail and blocking definitions in the constitution, 058, 076 and 066 stay true: a break the run did not fix, a person did not waive and no deferral releases is listed in `open-findings`, and the gate blocks on the list as `review-owed` (owner, 2026-11-06). That holds `holds_done_until_reviewed` (`runtime/src/primitives/check_review_gate.rs`) true too, so its record does not move the window's start. `contract-breaks` still counts a waived break, which the measurement reads as a gating finding left by that run.
 
@@ -82,7 +82,7 @@ Four edits, net-negative together, since it held 49,936 of 50,000 bytes by `wc -
 
 - §runtime-boundary's host integration and eligibility criterion 3: the binary is the source of a primitive's rules, and the server is required, so a command stops without it (AC21; owner, 2026-11-06).
 - §spec-lifecycle's third back-edge and its shared test: a correction reopens nothing (AC15).
-- §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17).
+- §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17); 067's AC6 later added an analysis's operator-confirmed design edit to what reaches the operator (2026-11-21).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
 
 The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description. §cross-spec-impact also follows AC15: a signpost on a `done` spec is a correction, and `check-review-gate`'s guidance says so.
