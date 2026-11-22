@@ -2,7 +2,22 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.61.0] — 2026-11-21
+
+A minor release with breaking changes: 4 of the 11 entries below are marked
+BREAKING, under Added and Changed. An analysis fixes a gating finding at its
+own design in the run once the operator confirms the edit, judges the plan
+against the spec, and judges each scenario's `§` references; a stored rule
+verdict stands while the sections it concerns are unchanged; a review leaves
+the seven rule files whose headers give them to analysis out of its
+selection; and a review pass or a fix round's re-read raises a finding only
+on a case its trigger shows possible in the project. `/ductus` now writes
+the shared-constitution links into `AGENTS.md` for every agent, so each
+adopter's self-update replaces the installed bootstrap, one restart, on the
+first `/ductus` after this release. Six lockfile patch updates, no manifest
+change, and the MSRV stays 1.89. The entries for spec 020's AC18, spec 055's
+AC13 and the lockfile were added with this release; the others were written
+as their changes landed.
 
 ### Added
 
@@ -87,7 +102,12 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   is a contradiction alone, and `contradictions` entries gain `at`, `message`
   and `counted`. A record written before this falls back to the whole files,
   so `subjects-changed` now arises only for one without `section-digest`, or
-  when a design subject cannot be read. An adopter's third analysis had judged
+  when a design subject cannot be read. A pure reordering of sections leaves
+  every verdict current; a heading holding a control character, a Unicode
+  line break or a noncharacter no longer reads as changed on every run; and a
+  verdict's citation that reaches a file outside the feature through a
+  linked directory is refused at any component of its path, not only at the
+  cited file (`BE-INPUT-004`). An adopter's third analysis had judged
   a sentence its plan held unchanged through two earlier analyses a MUST,
   because every task between them edited the plan elsewhere.
 - **BREAKING: a review no longer loads a rule file its header gives to analysis (spec 020, AC17).**
@@ -103,6 +123,32 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   and `all`, the analysis selection, is unchanged. An adopter's review on
   0.60.0 had judged concurrency rules out of reach of its code while the
   analysis of the design that code implements judged them violated.
+- **A review records a finding only when its trigger can occur in the project (spec 020, AC18).**
+  A pass's finding, an observation or a reviewer's claim is recorded only
+  when its trigger is shown possible in the project's code, configuration,
+  history or deployment shape, as well as its mechanism checked against the
+  tree; a case shown only by building it is a false positive, recorded
+  nowhere and fixed in no round. A review subagent returns that evidence with
+  each finding and observation, and the host drops one with none
+  (`framework/reference/review.md` §Run review passes and §Passes in a
+  subagent). A fix round's re-read is held to the same bar (spec 078, AC16).
+- **`/ductus` writes the shared-constitution links into `AGENTS.md` for every agent layout (spec 055, AC13).**
+  With a `[constitutions.*]` entry registered, a Claude Code project now gets
+  `- See [{alias}](<{document-path}>)` links in `AGENTS.md` beside its
+  `CLAUDE.md` `@` imports, so an agent reading `AGENTS.md` alone is pointed
+  at the shared constitutions too; Pi, whose native rules file is
+  `AGENTS.md`, is unchanged. The block is appended with its markers where
+  `AGENTS.md` has none, and the append is reported. The path sits in angle
+  brackets, so a space in a registered path keeps the link whole.
+- **Lockfile, net from 0.60.0 to the release head: 6 dependencies change version, none is added or removed, and no advisory is open.**
+  Counted as the `[[package]]` name and version pairs of `runtime/Cargo.lock`
+  at `ductus-v0.60.0` against the release commit (`git diff ductus-v0.60.0
+  HEAD -- runtime/Cargo.lock`), the crate's own version aside; the lockfile's
+  268 package entries stay 268. `form_urlencoded` 1.2.2 to 1.2.3, `hashbrown`
+  0.17.1 to 0.17.2, `toml` 1.2.1 to 1.2.2, `toml_parser` 1.1.5 to 1.1.6, `url`
+  2.5.8 to 2.5.9 and `walkdir` 2.5.0 to 2.5.1, each the highest compatible
+  with Rust 1.89. `scripts/check-runtime-currency.sh` scanned 268 crates and
+  found no advisory, and the manifest's dependencies are unchanged.
 
 ## [0.60.0] — 2026-11-20
 
