@@ -49,8 +49,8 @@ MUTATIONS = [
     (
         'M5 a path two commits changed counts twice',
         'src/primitives/write_review/moved_scope.rs',
-        '            if let Some(&at) = position.get(&path) {\n',
-        '            if let Some(&at) = None::<&usize> {\n',
+        '            let at = *position.entry(path.clone()).or_insert_with(|| {\n',
+        '            let at = *position.entry(format!("{path}{}", moved.len())).or_insert_with(|| {\n',
         'primitives::write_review::moved_scope::tests::a_path_two_later_commits_changed_counts_once_naming_both',
     ),
     (
@@ -84,8 +84,8 @@ MUTATIONS = [
     (
         "M10 every one of a moved path's commits is named",
         'src/primitives/write_review/moved_scope.rs',
-        '                .take(NAMED_COMMITS)\n',
-        '',
+        '            if commits.len() < NAMED_COMMITS {\n',
+        '            if true {\n',
         'primitives::write_review::moved_scope::tests::a_moved_path_names_three_of_its_commits_and_counts_the_rest',
     ),
     (
@@ -96,9 +96,9 @@ MUTATIONS = [
         'primitives::write_review::moved_scope::tests::a_long_commit_subject_is_cut',
     ),
     (
-        'M12 the refusal omits the command that lists every changed path',
+        'M12 the refusal omits the command that lists every moved path',
         'src/primitives/write_review/moved_scope.rs',
-        '`git diff --name-only {} HEAD` lists',
+        '`git log --relative --name-only --format= {}..HEAD` lists',
         '{} lists',
         'primitives::write_review::moved_scope::tests::a_refusal_names_three_moved_paths_and_counts_the_rest',
     ),
@@ -108,5 +108,26 @@ MUTATIONS = [
         '        format!(", and {} more", moved.len() - NAMED_PATHS)\n',
         '        String::new()\n',
         'primitives::write_review::moved_scope::tests::a_refusal_names_three_moved_paths_and_counts_the_rest',
+    ),
+    (
+        'M14 three moved paths are counted as more',
+        'src/primitives/write_review/moved_scope.rs',
+        '    let more = if moved.len() > NAMED_PATHS {\n',
+        '    let more = if moved.len() >= NAMED_PATHS {\n',
+        'primitives::write_review::moved_scope::tests::at_each_bound_nothing_is_counted_as_more',
+    ),
+    (
+        "M15 a path's third commit is counted as more",
+        'src/primitives/write_review/moved_scope.rs',
+        '            if *total > NAMED_COMMITS {\n',
+        '            if *total >= NAMED_COMMITS {\n',
+        'primitives::write_review::moved_scope::tests::at_each_bound_nothing_is_counted_as_more',
+    ),
+    (
+        'M16 a 72-character subject is cut',
+        'src/primitives/write_review/moved_scope.rs',
+        '    if subject.chars().count() <= SUBJECT_CHARS {\n',
+        '    if subject.chars().count() < SUBJECT_CHARS {\n',
+        'primitives::write_review::moved_scope::tests::at_each_bound_nothing_is_counted_as_more',
     ),
 ]

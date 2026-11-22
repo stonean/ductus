@@ -26,12 +26,11 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   a path its scope holds, since another spec's window took such a path as read.
   The refusal's size is bounded whatever moved: it counts the moved paths,
   names the first three, each with up to three of its commits, and gives the
-  `git diff --name-only` command that lists every one. It says to read each
-  moved path and each path a re-run of `compute-review-scope` adds before
-  writing with the new `head`. A
-  `reviewed-against` naming no commit, or one `HEAD` does not descend from, is
-  refused too. None of the three is checked with an empty `diff-base`, whose
-  scope is empty.
+  `git log --relative --name-only` command that lists every one. It says to
+  read each moved path and each path a re-run of `compute-review-scope` adds
+  before writing with the new `head`. A `reviewed-against` naming no commit,
+  or one `HEAD` does not descend from, is refused too. None of the three is
+  checked with an empty `diff-base`, whose scope is empty.
 
 ### Fixed
 

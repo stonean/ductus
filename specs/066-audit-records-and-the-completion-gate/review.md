@@ -1,35 +1,31 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-22T05:44:34Z
-reviewed-against: c6aa33df9480b2c3e6484a43aa29427e6667784c
-diff-base: 2947cfc8419118f91f4bb35e530faf308838715b
+last-run: 2026-11-22T06:48:24Z
+reviewed-against: 1ce4caeb71365eb446cea762482af1c4932fb360
+diff-base: 6f679f6429d2fe416f73bddc197be4dbc9bd1e8e
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 14
-scope: 24
+examined: 8
+scope: 14
 unread:
-  - runtime/CHANGELOG.md
-  - runtime/src/primitives/compute_review_scope.rs
-  - runtime/src/primitives/write_analysis.rs
-  - runtime/src/primitives/write_review.rs
-  - runtime/src/schema/descriptions.rs
-  - runtime/src/schema/primitives.rs
   - .claude/commands/ductus/review.md
   - .ductus/reference/review.md
   - .pi/prompts/ductus-review.md
-  - scripts/mutation/moved-scope-066.py
-excluded: 5
+  - runtime/CHANGELOG.md
+  - runtime/src/schema/descriptions.rs
+  - runtime/tests/golden/review-basic.jsonl
+excluded: 2
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
+fix-rounds: 3
 re-reads: 1
-diff-checked: 0
+diff-checked: 1
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 12fd964a626f816744ba55cf35312f35b90be01a887c937d1b99bfd7f44677df
-  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: 0ed8f94bead14e1e8b68f6fd356da7e928543b5b69b7e338e56f852c3614cb7c
+  data-model.md: 957555d58f8d2d3547221128b9a6fa08245f318235108e36f8ae3ef5c7d6df05
+  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: fc060f7f8dd91322a08ccf6d8e9a630c483c84c1725225088cf3e1937baba7ad
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -75,9 +71,9 @@ criteria-verdicts:
     digest: 010fec4de3c948b457a9c6ce91153ca3e200783fe86ab5f7b66b154a9cc07016
 blocking: false
 dispositions:
-  fixed: 8
+  fixed: 3
   deferred: 0
-  waived: 14
+  waived: 11
   undispositioned: 0
 decisions:
   - key: "other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md`"
@@ -305,15 +301,20 @@ decisions:
     reason: the scenario adds the fields so a host can reconcile a record without reading it back and states no obligation to compare them; a step requiring the comparison is a new requirement about the pipeline's own machinery, not a mechanical fix
     decided-at: 2026-11-22T05:44:34Z
     decided-by: rule
+  - key: "reuse: `cut` in moved_scope.rs duplicates `truncate(text, budget)` in resolve_constitutions.rs (count characters, append an ellipsis when cut); the two differ only in `truncate` trimming trailing whitespace before the ellipsis, a property QUAL-DELEG-001 asks be enumerated before one replaces the other — `runtime/src/primitives/write_review/moved_scope.rs`"
+    outcome: waived
+    reason: truncate in resolve_constitutions.rs also trims trailing whitespace before its ellipsis, so one shared helper would change one caller's output (QUAL-DELEG-001), and each is a few lines private to its module
+    decided-at: 2026-11-22T06:48:24Z
+    decided-by: rule
 ---
 
 # Review — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-The window runs from 2947cfc8, the parent of 066's done → in-progress reopen 5906abae (base-source reopen), to c6aa33df. It holds that amend and c6aa33df's tasks 29 and 30. AGENTS.md and the four 050 records are excluded as 050's. Three subagent reviewers read it. Two ran the five passes against the four rule files review loads, configuration-cross.md, quality-cross.md, security-backend.md and security-cross.md (182,653 bytes); each finished reading every one whole, one after being asked to. The third judged the six criteria and checked each concrete claim in the data model against the code. The passes read 14 of the 24 scope entries whole: framework/commands/review.md, framework/reference/review.md, 066's spec.md, plan.md, tasks.md, data-model.md, both new scenarios, write_review/moved_scope.rs, write_review/departure_waivers.rs, tests/fix_rounds.rs, tests/parity.rs, tests/walker.rs and tests/golden/review-basic.jsonl. Ten are listed unread. Five are 139 KB to 508 KB each, so for write_review.rs, write_analysis.rs, compute_review_scope.rs, schema/primitives.rs and schema/descriptions.rs the passes read the window's hunks and every function, test and description those hunks touch. Of runtime/CHANGELOG.md they read lines 1 to 47, the whole [Unreleased] section. The three generated mirrors (.claude/commands/ductus/review.md, .ductus/reference/review.md, .pi/prompts/ductus-review.md) were not opened: their changed lines hash equal to their sources' after the {project} substitution, the generator was re-run in sync, and the generators workflow passed on c6aa33df. scripts/mutation/moved-scope-066.py was written by this run. Two QUAL-TEST-001 SHOULDs were fixed with tests: compute-review-scope's new head had no test that fails when it is wrong, and write-analysis's result counts were asserted only at zero. The eight mutants in scripts/mutation/moved-scope-066.py prove those tests and c6aa33df's guard, all eight killed. AC3 was first judged not met, because its "read only for the mechanical-sweep rename exemption" missed compute-review-scope's read of reviewed-against as a record's credited window (spec 081). Its annotation was corrected and the criterion judged met again. Of ten new observations, eight were fixed in the run, four of them broken contracts. First, the moved-scope remedy read only the paths a re-run adds, though the refusal names paths the scope already held. Second, the scenario stated the reviewed-against check without exception, while the plan and code skip it with an empty diff-base; the contract was narrowed to the plan's exemption, the agent's recommendation, adopted by the operator, 2026-11-22. Third and fourth, two data-model claims: the file-form size, re-measured on built fixtures with the release binary, and reviewed-against's readers. Two observations were waived by the rule. Twelve stored decisions on in-scope files were checked against those files, still stand, and dispose of their observations.
+A later review of 066. Its window runs from 6f679f64, the last review's commit (base-source last-review), to 1ce4caeb. It holds 945d1edc, the analysis's design edit bounding the moved-scope refusal under BE-PAYLOAD-001, which the owner confirmed, and 1ce4caeb, task 31's code. ec41a6c2's edits to 023's and 048's review records are excluded as theirs. One subagent reviewer ran the five passes against the four rule files review loads (configuration-cross.md, quality-cross.md, security-backend.md, security-cross.md; 182,653 bytes), reading each whole. It read 8 of the 14 scope entries whole: write_review/moved_scope.rs, scripts/mutation/moved-scope-066.py, the scenario a-commit-after-the-scope-was-resolved-refuses-the-write, tasks.md, framework/commands/review.md, framework/reference/review.md, plan.md and data-model.md. It checked every claim in the scenario, and the data model's refusal paragraph, against the code. Six entries are listed unread. Of runtime/schema/descriptions.rs and runtime/CHANGELOG.md the reviewer read the window hunks with the whole WRITE_REVIEW description and the whole [Unreleased] entry. Of runtime/tests/golden/review-basic.jsonl it read the window diff, and the host confirmed the file differs only in the fixture's commit sha. The three generated mirrors were not opened: their changed lines follow their sources through the generator, re-run in sync. The criteria step was the host's. No code a criterion names changed in this window except write_review/moved_scope.rs, so each of the six was judged again on the last review's evidence, and the 16 tests their verdicts cite were run again; all pass. No rule violation was found. Of five observations, three were fixed in the run. First, the refusal's listing command named by the operator's chosen bound, git diff --name-only, printed repository-root paths in a project below the work tree's root and left out a path a later commit reverted. It is now git log --relative --name-only --format=, verified on a built repository, the agent's recommendation, adopted by the operator, 2026-11-22. Second, each moved path now keeps at most three commits, each formatted once per commit. Third, a test now covers each bound's edge, with three more mutants. The 16 mutants in scripts/mutation/moved-scope-066.py are all killed. The cut helper's resemblance to resolve_constitutions.rs's truncate is waived by the rule, and the plan's Affected Files matches its stored decision. Ten stored decisions on in-scope files were checked against those files and still stand. The fix round's re-read found two SHOULDs: the data model and the moved_scope.rs doc comment called the command's output the set the refusal counts, where it is a superset of it. Its two prescribed edits were applied and matched by check-prescriptions, and the plan's copy of the phrase was corrected in an exempt round.
 
-1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+3 fix round(s): 1 re-read, 1 diff-checked, 1 exempt, 0 not re-read. Exempt: round 3.
 
 6 of 6 acceptance criteria judged met.
 
@@ -348,28 +349,20 @@ The window runs from 2947cfc8, the parent of 066's done → in-progress reopen 5
 
 ## Observations
 
-- bug: write-review's moved-scope guard runs only when diff-base is non-empty (resolve_scope returns early), so with an empty diff-base (a spec with no recorded in-progress transition) reviewed-against naming no commit is accepted, contradicting scenario a-commit-after-the-scope-was-resolved-refuses-the-write ('a reviewed-against naming no commit ... is an argument error') and the write-review description, which state it unconditionally; plan.md exempts it; runtime/tests/walker.rs passes reviewed-against 'headsha0' (a sha naming no commit) with an empty diff-base in process_waivers_binds_fired_from_accumulated_pass_findings, applied_waiver_threads_from_process_waivers_into_write_review and file_form_process_waivers_reaches_write_review_whole, and write-review succeeds, so the exemption is pinned by tests as it stands — `runtime/src/primitives/write_review.rs` (breaks the spec's contract) — **fixed**
-- convention: departure_waivers.rs inserted `fn head` between `seed`'s doc comment and `seed`, so `seed` lost its doc and `head` carries a two-sentence doc starting 'The sha of the repository's first commit, the diff-base every run takes' — `runtime/src/primitives/write_review/departure_waivers.rs` — **fixed** (decided by the rule)
-- convention: WriteReviewArgs.reviewed_against doc (rendered as --help) still reads 'HEAD sha the review ran against' and ReviewBlock.reviewed_against 'HEAD sha at the time of the run', though it is now the head compute-review-scope returned and a value naming no commit or a non-ancestor is refused — `runtime/src/schema/primitives.rs` — **fixed** (decided by the rule)
-- bug: the moved-scope remedy tells the host to "read each path it adds" (compute-review-scope's re-run), but the refusal fires for a path already in the scope (src/a.rs changed again after the head, or a path read uncommitted and then committed), which a re-run does not add, so following the step as worded writes with the new head over content no pass read, the false credit the guard exists to close; the refusal names each moved path, so the remedy should say to read each named path as well as each added one — `framework/commands/review.md` (breaks the spec's contract) — **fixed** (decided by the rule)
-- convention: plan.md's Affected Files table omits files tasks 29 and 30 changed (runtime/CHANGELOG.md, runtime/src/primitives/write_review/departure_waivers.rs, runtime/tests/fix_rounds.rs, runtime/tests/parity.rs, runtime/tests/walker.rs) and gives framework/reference/review.md, descriptions.rs and primitives.rs purposes naming other tasks only — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through c6aa33df, whose subject names 066 (decided by the rule)
-- other: plan.md (task 30) and the scenario a-write-result-states-what-it-wrote say all three write-analysis counts are read from the record's values and never echoed from the arguments, but the result's advisory is args.advisory (the value the record renders), so advisory is an echo and no test can tell it from one — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- other: no step of framework/commands/analyze.md or framework/commands/review.md tells the host to compare write-analysis's hard-fail, blocking-findings and advisory or write-review's excluded, unread-count and decisions with what it passed, so the discrepancy those fields were added to expose (a dropped decision, a net count) surfaces only when a host happens to look — `framework/commands/review.md` — **waived**: the scenario adds the fields so a host can reconcile a record without reading it back and states no obligation to compare them; a step requiring the comparison is a new requirement about the pipeline's own machinery, not a mechanical fix (decided by the rule)
-- convention: data-model.md's compute-review-scope Size paragraph states the file form's own size as 354 bytes plus the directory name and extra count digits (measured 367 and 342), but task 29 added the 50-byte `head` field to that result, so the file form is now 50 bytes larger (measured 431 bytes for a 41-character feature directory with reopen, where the old figures predict 381); re-measure and rewrite the figures — `specs/066-audit-records-and-the-completion-gate/data-model.md` (breaks the spec's contract) — **fixed** (decided by the rule)
-- convention: data-model.md's Record freshness paragraph says reviewed-against is provenance 'read only for the mechanical-sweep exemption', but compute-review-scope's read_records reads it as the end of a record's credited window (spec 081) and the same data model makes it the `head` of the resolved scope that write-review guards (task 29); the sentence contradicts the model's own write-review section — `specs/066-audit-records-and-the-completion-gate/data-model.md` (breaks the spec's contract) — **fixed** (decided by the rule)
-- bug: moved_scope.rs refuse_a_moved_scope counts path-and-commit pairs and labels the count 'N paths', so one scope path changed by two later commits reads as '2 paths' (probe over a 5906abae..c6aa33df window said 24 paths for a scope of 23 entries) — `runtime/src/primitives/write_review/moved_scope.rs` — **fixed** (decided by the rule)
+- reuse: `cut` in moved_scope.rs duplicates `truncate(text, budget)` in resolve_constitutions.rs (count characters, append an ellipsis when cut); the two differ only in `truncate` trimming trailing whitespace before the ellipsis, a property QUAL-DELEG-001 asks be enumerated before one replaces the other — `runtime/src/primitives/write_review/moved_scope.rs` — **waived**: truncate in resolve_constitutions.rs also trims trailing whitespace before its ellipsis, so one shared helper would change one caller's output (QUAL-DELEG-001), and each is a few lines private to its module (decided by the rule)
+- efficiency: `refuse_a_moved_scope` formats the same `named` commit string once per (commit, scope path) instead of once per commit, and keeps every one in `moved` although a refusal shows at most three per path and counts the rest; a sweep of N scope paths in one commit builds N identical strings — `runtime/src/primitives/write_review/moved_scope.rs` — **fixed** (decided by the rule)
+- other: no test holds exactly NAMED_PATHS moved paths, NAMED_COMMITS commits on one path or a SUBJECT_CHARS-long subject, so `moved.len() > NAMED_PATHS` to `>=` (prints ", and 0 more"), `commits.len() > NAMED_COMMITS` to `>=` (prints "; 0 more") and `<= SUBJECT_CHARS` to `<` (a needless ellipsis) all survive, and moved-scope-066.py lists none of them — `scripts/mutation/moved-scope-066.py` — **fixed** (decided by the rule)
+- other: the command the refusal gives, `git diff --name-only <sha> HEAD`, does not list every moved path as the scenario and data model say: it prints the net change, so a scope path a later commit changed and a later one reverted is counted in `moved` and absent from the output, and in a project below the work tree's root it prints root-relative paths, outside-project ones included, where scope entries are project-relative; AGENTS.md's Gotchas and the shipped pre-commit hook use `--relative --name-only` for this reason — `runtime/src/primitives/write_review/moved_scope.rs` (breaks the spec's contract) — **fixed**
+- convention: plan.md's Affected Files table omits `scripts/mutation/moved-scope-066.py` and `runtime/CHANGELOG.md`, both changed by tasks 29 to 31, though it lists each sibling mutation list (compare-and-set-066.py, criteria-in-review-066.py, line-citation-strip-066.py) — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through c6aa33df, whose subject names 066 (decided by the rule)
 - other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **waived**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
 - edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **waived**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
 - other — `framework/commands/review.md` step 1 (94e5b151) says a zero scope with `deleted-count` above zero is empty 'because every path it would hold was deleted', but `deleted` holds every window deletion whoever's commit made it and `excluded` can also empty the scope, so the sentence and the Summary naming each `deleted` path can mislabel another spec's deletions — `framework/commands/review.md:119` — **waived**: the scenario's edge case scopes the claim to the spec's own code deletions with review-owed true; the report over-names rather than hides a path, and no gate reads it. The wording fix reopens review.md's generated mirrors and 066 for a low-confidence imprecision (decided by the rule)
 - other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137` — **waived**: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both. (decided by the rule)
 - other — plan.md Affected Files omits files f65ef759 changed for task 25: docs/analyze.md, framework/reference/implement.md, runtime/src/primitives/mod.rs, scripts/mutation/reopen-measure.py and 079's spec.md — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims and is the owner's plan decision, not a mechanical edit; every one of these files is already in the window through the commit that changed it (decided by the rule)
 - other — the data model's compute-review-scope Size paragraph says performReview's request names every in-scope file whole, but the exec walker's load_scope_files (runtime/src/interpreter/payload.rs) silently skips a scope file that is missing, unreadable or not UTF-8, naming only a path leaving the project in unexaminable — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **waived**: the code is 022 and 080's exec walker, outside 066's primitives; the sentence cites 022's data model for the claim, a correction lands in 022's directory, and nothing in 066's code depends on it (decided by the rule)
-- other: nothing ties the reasons check-artifacts, resolve-anchor, check-rule-ids and the exec walker's tally emit to UNEXAMINED_REASONS; the test holds the list equal to the data model's table only, so a skip reason added to a check and not to the list and table makes every write-analysis that records it fail with a refusal naming the reason (loud, never a silent record). Every reason those sources emit at HEAD is in the list (checked by reading each emitter) — `runtime/src/primitives/write_analysis.rs` — **waived**: the refusal is loud and names the reason, so the gap cannot pass as a clean record; docs/developing-ductus.md's closed-set procedure greps a sibling reason such as root-absent across runtime/src and so reaches UNEXAMINED_REASONS; a test enumerating every emitter would copy the checks' reason sets, which this review found equal to the list at HEAD (decided by the rule)
-- other — a run judging only some criteria records criteria-judged and criteria-met over those alone, and its generated Summary reads 'N of N', with no count of the criteria it left unjudged — `runtime/src/primitives/write_review.rs` — **waived**: the data model defines criteria-judged as the criteria the run judged and promises no unjudged count; compute-review-scope names each unjudged criterion in criteria-owing and reads review-owed true, so the gate holds done, and the command names a criterion it could not judge in the Summary (decided by the rule)
 - other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
 - other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md` — **waived**: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim. (decided by the rule)
-- the `yaml_string` doc comment says it is used for every string value in the waiver and decision lists and does not name the record paths it now quotes — `runtime/src/primitives/write_review.rs` — **waived**: the stale clause is incomplete, not false: ordinary paths stay unquoted as it says, and fixing a doc comment in `runtime/src/primitives/write_review.rs`, also in 079's window, costs a landing and a re-read round for no behavior (decided by the rule)
-- `render_rule_fields` in `runtime/src/primitives/write_analysis.rs` flattens a rule file name through `single_line` before `yaml_string` for `rule-digest` keys, a map the scenario does not name — `runtime/src/primitives/write_analysis.rs` — **waived**: rule-digest keys are rule file names, a map the scenario does not name, and flattening them predates this change and loses nothing a path needs (decided by the rule)
+- other: no step of framework/commands/analyze.md or framework/commands/review.md tells the host to compare write-analysis's hard-fail, blocking-findings and advisory or write-review's excluded, unread-count and decisions with what it passed, so the discrepancy those fields were added to expose (a dropped decision, a net count) surfaces only when a host happens to look — `framework/commands/review.md` — **waived**: the scenario adds the fields so a host can reconcile a record without reading it back and states no obligation to compare them; a step requiring the comparison is a new requirement about the pipeline's own machinery, not a mechanical fix (decided by the rule)
 
 ## Skipped passes
 
@@ -377,11 +370,8 @@ The window runs from 2947cfc8, the parent of 066's done → in-progress reopen 5
 
 ## Excluded from scope
 
-- `AGENTS.md`
-- `specs/050-constitution/analysis.md`
-- `specs/050-constitution/plan.md`
-- `specs/050-constitution/review.md`
-- `specs/050-constitution/spec.md`
+- `specs/023-govern-refinement/review.md`
+- `specs/048-govern-acquired-runtime/review.md`
 
 ## Unexamined governance
 

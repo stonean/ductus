@@ -29,7 +29,8 @@ use crate::schema::paths;
 /// the moved paths, each once however many commits changed it, names the first
 /// [`NAMED_PATHS`], each with up to [`NAMED_COMMITS`] of its commits and their
 /// subjects cut at [`SUBJECT_CHARS`] characters, says how many more, and gives
-/// the `git diff --name-only` command that lists every changed path. The remedy
+/// the `git log --relative --name-only` command that lists each path every
+/// later commit changed, project-relative, a superset of the moved paths it counts. The remedy
 /// is the run's: re-run `compute-review-scope`, read each moved path and each
 /// path it adds, or list it in `unread`, and write again with its `head`. A
 /// moved path is usually one the scope already held, which the re-run does not
@@ -79,27 +80,34 @@ pub(super) fn refuse_a_moved_scope(
     walk.hide(against.id())?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
     // Each moved path once, in the order a commit first moved it, with the
-    // commits that moved it.
-    let mut moved: Vec<(String, Vec<String>)> = Vec::new();
+    // first commits that moved it, as many as a refusal names, and how many
+    // moved it in all.
+    let mut moved: Vec<(String, Vec<String>, usize)> = Vec::new();
     let mut position: BTreeMap<String, usize> = BTreeMap::new();
     for oid in walk {
         let commit = repository.find_commit(oid?)?;
-        let subject = cut(&flatten_line(
-            commit.summary().ok().flatten().unwrap_or_default(),
-        ));
+        let named = format!(
+            "{} {}",
+            short(commit.id()),
+            cut(&flatten_line(
+                commit.summary().ok().flatten().unwrap_or_default()
+            ))
+        );
         for path in attributor
             .claims(&commit)?
             .paths
             .into_iter()
             .filter(|path| entries.contains(path))
         {
-            let named = format!("{} {subject}", short(commit.id()));
-            if let Some(&at) = position.get(&path) {
-                moved[at].1.push(named);
-            } else {
-                position.insert(path.clone(), moved.len());
-                moved.push((path, vec![named]));
+            let at = *position.entry(path.clone()).or_insert_with(|| {
+                moved.push((path, Vec::new(), 0));
+                moved.len() - 1
+            });
+            let (_, commits, total) = &mut moved[at];
+            if commits.len() < NAMED_COMMITS {
+                commits.push(named.clone());
             }
+            *total += 1;
         }
     }
     if moved.is_empty() {
@@ -108,15 +116,10 @@ pub(super) fn refuse_a_moved_scope(
     let named = moved
         .iter()
         .take(NAMED_PATHS)
-        .map(|(path, commits)| {
-            let mut shown = commits
-                .iter()
-                .take(NAMED_COMMITS)
-                .cloned()
-                .collect::<Vec<_>>()
-                .join("; ");
-            if commits.len() > NAMED_COMMITS {
-                let _ = write!(shown, "; {} more", commits.len() - NAMED_COMMITS);
+        .map(|(path, commits, total)| {
+            let mut shown = commits.join("; ");
+            if *total > NAMED_COMMITS {
+                let _ = write!(shown, "; {} more", total - NAMED_COMMITS);
             }
             format!("{} ({shown})", flatten_line(path))
         })
@@ -129,8 +132,9 @@ pub(super) fn refuse_a_moved_scope(
     };
     Err(refuse(format!(
         "{} in this run's scope changed in commits after {}, which the passes did not \
-         read: {named}{more}; `git diff --name-only {} HEAD` lists every changed path, \
-         read against the scope; re-run compute-review-scope, read each moved path and \
+         read: {named}{more}; `git log --relative --name-only --format= {}..HEAD` lists \
+         each path every later commit changed, read against the scope; re-run \
+         compute-review-scope, read each moved path and \
          each path it adds, or list it in unread, and write again with its head as \
          reviewed-against",
         if moved.len() == 1 {
@@ -247,7 +251,9 @@ mod tests {
         assert_eq!(named, 3, "{reason}");
         assert!(reason.contains(", and 1 more;"), "{reason}");
         assert!(
-            reason.contains(&format!("`git diff --name-only {head} HEAD`")),
+            reason.contains(&format!(
+                "`git log --relative --name-only --format= {head}..HEAD`"
+            )),
             "{reason}"
         );
     }
@@ -288,6 +294,31 @@ mod tests {
         let reason = reason(&err);
         assert!(reason.contains(&format!("{kept}…")), "{reason}");
         assert!(!reason.contains(&format!("{kept}x")), "{reason}");
+    }
+
+    /// At each bound nothing is counted as more: three moved paths are all
+    /// named, a path three commits changed is named with all three, and a
+    /// 72-character subject is kept whole.
+    #[test]
+    fn at_each_bound_nothing_is_counted_as_more() {
+        let (tmp, repository, head) = repo();
+        let paths = ["src/a.rs", "src/b.rs", "src/c.rs"];
+        let subject = "s".repeat(72);
+        for n in 1..=3 {
+            for path in paths {
+                write(&tmp.path().join(path), &format!("fn x() {{ {n}; }}\n"));
+            }
+            commit_all(&repository, &subject);
+        }
+        let err = refuse_a_moved_scope(&head, tmp.path(), &scope(&paths)).unwrap_err();
+        let reason = reason(&err);
+        assert!(
+            reason.starts_with("3 paths in this run's scope"),
+            "{reason}"
+        );
+        assert!(!reason.contains("more"), "{reason}");
+        assert!(!reason.contains('…'), "{reason}");
+        assert!(reason.contains(&subject), "{reason}");
     }
 
     /// One scope path two later commits changed is one path, named with both
