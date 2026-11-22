@@ -10,7 +10,8 @@
 //! against, and this guard refuses the write while a commit after that sha
 //! changed a path the write-time scope holds.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 use std::path::Path;
 
 use git2::{Oid, Sort};
@@ -24,12 +25,15 @@ use crate::schema::paths;
 /// path `entries` holds. A commit after it that changed no scope path refuses
 /// nothing: nothing the passes should have read moved.
 ///
-/// Each moved path is named with each commit that changed it, and counted once
-/// however many did, since the remedy is the run's: re-run
-/// `compute-review-scope`, read each path named here and each path it adds, or
-/// list it in `unread`, and write again with its `head`. A named path is
-/// usually one the scope already held, which the re-run does not add, so
-/// reading only the added paths would credit content no pass read.
+/// The refusal's size is bounded whatever moved (`BE-PAYLOAD-001`): it counts
+/// the moved paths, each once however many commits changed it, names the first
+/// [`NAMED_PATHS`], each with up to [`NAMED_COMMITS`] of its commits and their
+/// subjects cut at [`SUBJECT_CHARS`] characters, says how many more, and gives
+/// the `git diff --name-only` command that lists every changed path. The remedy
+/// is the run's: re-run `compute-review-scope`, read each moved path and each
+/// path it adds, or list it in `unread`, and write again with its `head`. A
+/// moved path is usually one the scope already held, which the re-run does not
+/// add, so reading only the added paths would credit content no pass read.
 ///
 /// # Errors
 ///
@@ -74,40 +78,88 @@ pub(super) fn refuse_a_moved_scope(
     walk.push(head.id())?;
     walk.hide(against.id())?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
-    let mut moved = Vec::new();
-    let mut paths_moved = BTreeSet::new();
+    // Each moved path once, in the order a commit first moved it, with the
+    // commits that moved it.
+    let mut moved: Vec<(String, Vec<String>)> = Vec::new();
+    let mut position: BTreeMap<String, usize> = BTreeMap::new();
     for oid in walk {
         let commit = repository.find_commit(oid?)?;
-        let subject = flatten_line(commit.summary().ok().flatten().unwrap_or_default());
+        let subject = cut(&flatten_line(
+            commit.summary().ok().flatten().unwrap_or_default(),
+        ));
         for path in attributor
             .claims(&commit)?
             .paths
             .into_iter()
             .filter(|path| entries.contains(path))
         {
-            moved.push(format!(
-                "{} ({} {subject})",
-                flatten_line(&path),
-                short(commit.id())
-            ));
-            paths_moved.insert(path);
+            let named = format!("{} {subject}", short(commit.id()));
+            if let Some(&at) = position.get(&path) {
+                moved[at].1.push(named);
+            } else {
+                position.insert(path.clone(), moved.len());
+                moved.push((path, vec![named]));
+            }
         }
     }
     if moved.is_empty() {
         return Ok(());
     }
+    let named = moved
+        .iter()
+        .take(NAMED_PATHS)
+        .map(|(path, commits)| {
+            let mut shown = commits
+                .iter()
+                .take(NAMED_COMMITS)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("; ");
+            if commits.len() > NAMED_COMMITS {
+                let _ = write!(shown, "; {} more", commits.len() - NAMED_COMMITS);
+            }
+            format!("{} ({shown})", flatten_line(path))
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let more = if moved.len() > NAMED_PATHS {
+        format!(", and {} more", moved.len() - NAMED_PATHS)
+    } else {
+        String::new()
+    };
     Err(refuse(format!(
         "{} in this run's scope changed in commits after {}, which the passes did not \
-         read: {}; re-run compute-review-scope, read each path named here and each path \
-         it adds, or list it in unread, and write again with its head as reviewed-against",
-        if paths_moved.len() == 1 {
+         read: {named}{more}; `git diff --name-only {} HEAD` lists every changed path, \
+         read against the scope; re-run compute-review-scope, read each moved path and \
+         each path it adds, or list it in unread, and write again with its head as \
+         reviewed-against",
+        if moved.len() == 1 {
             "1 path".to_string()
         } else {
-            format!("{} paths", paths_moved.len())
+            format!("{} paths", moved.len())
         },
         short(against.id()),
-        moved.join(", ")
+        against.id()
     )))
+}
+
+/// How many moved paths a refusal names; it counts the rest (`BE-PAYLOAD-001`).
+const NAMED_PATHS: usize = 3;
+
+/// How many of a moved path's commits a refusal names; it counts the rest.
+const NAMED_COMMITS: usize = 3;
+
+/// The characters of a commit subject a refusal keeps.
+const SUBJECT_CHARS: usize = 72;
+
+/// `subject` cut to [`SUBJECT_CHARS`] characters, with an ellipsis when cut.
+fn cut(subject: &str) -> String {
+    if subject.chars().count() <= SUBJECT_CHARS {
+        return subject.to_string();
+    }
+    let mut kept: String = subject.chars().take(SUBJECT_CHARS).collect();
+    kept.push('…');
+    kept
 }
 
 /// The first eight hex digits of `oid`, as a commit is named in a message.
@@ -171,7 +223,71 @@ mod tests {
         assert!(reason.contains(&landed[..8]), "{reason}");
         assert!(reason.contains("chore: tidy a"), "{reason}");
         assert!(reason.contains("re-run compute-review-scope"), "{reason}");
-        assert!(reason.contains("read each path named here"), "{reason}");
+        assert!(reason.contains("read each moved path"), "{reason}");
+    }
+
+    /// Four moved paths are counted, three named and the rest counted, with
+    /// the command that lists them all, so the refusal's size does not grow
+    /// with what moved (`BE-PAYLOAD-001`).
+    #[test]
+    fn a_refusal_names_three_moved_paths_and_counts_the_rest() {
+        let (tmp, repository, head) = repo();
+        let paths = ["src/a.rs", "src/b.rs", "src/c.rs", "src/d.rs"];
+        for path in paths {
+            write(&tmp.path().join(path), "fn x() { 3; }\n");
+        }
+        commit_all(&repository, "chore: a sweep");
+        let err = refuse_a_moved_scope(&head, tmp.path(), &scope(&paths)).unwrap_err();
+        let reason = reason(&err);
+        assert!(
+            reason.starts_with("4 paths in this run's scope"),
+            "{reason}"
+        );
+        let named = paths.iter().filter(|path| reason.contains(*path)).count();
+        assert_eq!(named, 3, "{reason}");
+        assert!(reason.contains(", and 1 more;"), "{reason}");
+        assert!(
+            reason.contains(&format!("`git diff --name-only {head} HEAD`")),
+            "{reason}"
+        );
+    }
+
+    /// A path four later commits changed is named with three of them and a
+    /// count of the fourth.
+    #[test]
+    fn a_moved_path_names_three_of_its_commits_and_counts_the_rest() {
+        let (tmp, repository, head) = repo();
+        let commits: Vec<String> = (1..=4)
+            .map(|n| {
+                write(
+                    &tmp.path().join("src/a.rs"),
+                    &format!("fn a() {{ {n}; }}\n"),
+                );
+                commit_all(&repository, &format!("chore: tidy a {n}")).to_string()
+            })
+            .collect();
+        let err = refuse_a_moved_scope(&head, tmp.path(), &scope(&["src/a.rs"])).unwrap_err();
+        let reason = reason(&err);
+        assert!(reason.starts_with("1 path in this run's scope"), "{reason}");
+        for named in &commits[..3] {
+            assert!(reason.contains(&named[..8]), "{reason}");
+        }
+        assert!(!reason.contains(&commits[3][..8]), "{reason}");
+        assert!(reason.contains("; 1 more)"), "{reason}");
+    }
+
+    /// A commit subject past 72 characters is cut, so one long subject does
+    /// not lengthen the refusal without bound.
+    #[test]
+    fn a_long_commit_subject_is_cut() {
+        let (tmp, repository, head) = repo();
+        write(&tmp.path().join("src/a.rs"), "fn a() { 5; }\n");
+        let kept = "k".repeat(72);
+        commit_all(&repository, &format!("{kept}{}", "x".repeat(40)));
+        let err = refuse_a_moved_scope(&head, tmp.path(), &scope(&["src/a.rs"])).unwrap_err();
+        let reason = reason(&err);
+        assert!(reason.contains(&format!("{kept}…")), "{reason}");
+        assert!(!reason.contains(&format!("{kept}x")), "{reason}");
     }
 
     /// One scope path two later commits changed is one path, named with both

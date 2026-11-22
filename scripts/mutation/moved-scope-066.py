@@ -1,10 +1,10 @@
-"""Mutation list for spec 066 tasks 29 and 30 (scenarios
+"""Mutation list for spec 066 tasks 29, 30 and 31 (scenarios
 `a-commit-after-the-scope-was-resolved-refuses-the-write` and
 `a-write-result-states-what-it-wrote`): `compute-review-scope` returns the
 head its scope was resolved against, `write-review` refuses a write whose
-scope a later commit moved, naming each path once with each commit, and each
-write result states the counts its record holds. Each mutation drops one part
-of those rules; a test kills each.
+scope a later commit moved, in a refusal whose size is bounded whatever moved
+(task 31, BE-PAYLOAD-001), and each write result states the counts its record
+holds. Each mutation drops one part of those rules; a test kills each.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/moved-scope-066.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -49,15 +49,15 @@ MUTATIONS = [
     (
         'M5 a path two commits changed counts twice',
         'src/primitives/write_review/moved_scope.rs',
-        '        if paths_moved.len() == 1 {\n            "1 path".to_string()\n        } else {\n            format!("{} paths", paths_moved.len())\n',
-        '        if moved.len() == 1 {\n            "1 path".to_string()\n        } else {\n            format!("{} paths", moved.len())\n',
+        '            if let Some(&at) = position.get(&path) {\n',
+        '            if let Some(&at) = None::<&usize> {\n',
         'primitives::write_review::moved_scope::tests::a_path_two_later_commits_changed_counts_once_naming_both',
     ),
     (
-        'M6 the remedy omits the paths the refusal names',
+        'M6 the remedy omits the moved paths the scope already held',
         'src/primitives/write_review/moved_scope.rs',
-        'read each path named here and each path \\\n         it adds, or list it in unread',
-        'read each path it adds \\\n         or list it in unread',
+        'read each moved path and \\\n         each path it adds',
+        'read each path \\\n         it adds',
         'primitives::write_review::moved_scope::tests::a_commit_after_the_head_that_changed_a_scope_path_refuses_naming_it',
     ),
     (
@@ -73,5 +73,40 @@ MUTATIONS = [
         '            hard_fail,\n            blocking_findings,\n            advisory: args.advisory,\n',
         '            hard_fail,\n            blocking_findings,\n            advisory: 0,\n',
         'primitives::write_analysis::tests::the_result_states_each_count_the_record_holds',
+    ),
+    (
+        'M9 every moved path is named',
+        'src/primitives/write_review/moved_scope.rs',
+        '        .take(NAMED_PATHS)\n',
+        '',
+        'primitives::write_review::moved_scope::tests::a_refusal_names_three_moved_paths_and_counts_the_rest',
+    ),
+    (
+        "M10 every one of a moved path's commits is named",
+        'src/primitives/write_review/moved_scope.rs',
+        '                .take(NAMED_COMMITS)\n',
+        '',
+        'primitives::write_review::moved_scope::tests::a_moved_path_names_three_of_its_commits_and_counts_the_rest',
+    ),
+    (
+        'M11 a long commit subject is kept whole',
+        'src/primitives/write_review/moved_scope.rs',
+        '    if subject.chars().count() <= SUBJECT_CHARS {\n',
+        '    if true {\n',
+        'primitives::write_review::moved_scope::tests::a_long_commit_subject_is_cut',
+    ),
+    (
+        'M12 the refusal omits the command that lists every changed path',
+        'src/primitives/write_review/moved_scope.rs',
+        '`git diff --name-only {} HEAD` lists',
+        '{} lists',
+        'primitives::write_review::moved_scope::tests::a_refusal_names_three_moved_paths_and_counts_the_rest',
+    ),
+    (
+        'M13 the paths past the named ones are not counted',
+        'src/primitives/write_review/moved_scope.rs',
+        '        format!(", and {} more", moved.len() - NAMED_PATHS)\n',
+        '        String::new()\n',
+        'primitives::write_review::moved_scope::tests::a_refusal_names_three_moved_paths_and_counts_the_rest',
     ),
 ]
