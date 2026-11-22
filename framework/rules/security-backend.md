@@ -68,16 +68,6 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 **Source:** OWASP Authentication Cheat Sheet
 
-### BE-AUTHN-009
-
-**DEPRECATED in 0.60.0:** moved to `security-cross.md` `SEC-AUTHN-001`, which installs in every project shape; removed in 0.62.0.
-
-> Comparison of secrets, tokens, MACs, signatures, and password hashes MUST use a constant-time comparison primitive.
-
-**Verification:** This rule is deprecated. **Not flagged:** every case it governs, which `security-cross.md` `SEC-AUTHN-001` owns.
-
-**Source:** OWASP Authentication Cheat Sheet, OWASP Webhook Security Cheat Sheet, OWASP Cross-Site Request Forgery Prevention Cheat Sheet
-
 ### BE-AUTHN-010
 
 > Multi-factor authentication MUST be enforced for privileged accounts (administrators, role-managers, billing operators, security operators). Acceptable second factors are WebAuthn/passkeys (preferred), TOTP authenticator apps, or hardware security keys. SMS-delivered codes MUST NOT be the only available second factor for privileged accounts.
@@ -101,16 +91,6 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 **Verification:** Any spec or plan that introduces JWT issuance or verification, an OIDC client's verification of an ID token's signature included, MUST commit to all five requirements, (e) where it issues tokens. `/{project}:analyze` flags JWT specs that accept tokens without naming an algorithm allowlist, that omit `kid`-to-alg binding, that skip `iss`/`aud`/`exp`/`nbf` validation, or that propose long-lived access tokens without refresh-token rotation. **Not flagged:** in a spec or plan that introduces an OAuth client or authorization server, or introduces or changes the refresh tokens an authorization server issues to public clients, the protection of a refresh token issued to a public client, sender-constraining or rotation, which `security-cross.md` `SEC-AUTHN-003` owns; and, in a spec or plan that introduces an OIDC client or changes how it validates its ID tokens, the ID token's claims, which `security-cross.md` `SEC-AUTHN-002` (c) owns. In any other spec, (e) stays this rule's for a public client too, and a confidential client's rotation is this rule's in every spec; (d) asks none of an ID token's claims.
 
 **Source:** OWASP JSON Web Token Cheat Sheet, RFC 8725 §2.1, §3.1, §3.8, §3.9 (JSON Web Token Best Current Practices), OpenID Connect Core 1.0 §2 (the ID Token is a JWT)
-
-### BE-AUTHN-013
-
-**DEPRECATED in 0.60.0:** moved to `security-cross.md` `SEC-AUTHN-002`, which installs in every project shape; removed in 0.62.0.
-
-> OAuth 2.0 and OIDC client flows MUST (a) include and verify a unique `state` parameter on every authorization request; (b) use PKCE (`code_challenge` / `code_verifier`) for every authorization-code flow, including confidential clients; (c) validate the `nonce` claim on OIDC ID tokens; and (d) validate redirect URIs against an exact-match allowlist registered with the authorization server, the port of a native app's loopback redirection URI (`127.0.0.1`, `[::1]` or `localhost`) aside. A client that authenticates to the authorization server MAY instead send a `redirect_uri` it has not registered, and does not take from the request, in a pushed authorization request (RFC 9126) or a signed request object (RFC 9101).
-
-**Verification:** This rule is deprecated. **Not flagged:** every case it governs, which `security-cross.md` `SEC-AUTHN-002` owns.
-
-**Source:** RFC 9700 §2.1, §2.1.1, §4.1.3 (OAuth 2.0 Security Best Current Practice), RFC 9126 §2.4, §7.2 (Pushed Authorization Requests), RFC 8252 §7.3, RFC 7636 (PKCE), OpenID Connect Core 1.0
 
 ### BE-AUTHN-014
 

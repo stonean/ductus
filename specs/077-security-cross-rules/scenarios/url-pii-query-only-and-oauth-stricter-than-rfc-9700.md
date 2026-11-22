@@ -14,7 +14,7 @@ section: "Rule set scope"
 - The opaque identifier an RFC 8058 one-click `List-Unsubscribe` URI carries MAY appear in that URI, which encodes the recipient and the list with no other carrier, worded as `FE-STORAGE-003` words it. The Verification excepts it.
 - Its yields to `BE-API-013`, `BE-API-015` and `FE-STORAGE-003` name "any case" each reaches, so they hold as those rules narrow the same way.
 - `SEC-AUTHN-002` keeps (a), `state` on every authorization request, and (b), PKCE for every authorization-code flow, confidential clients included. Its Source says they go beyond RFC 9700 on purpose: §2.1.1 makes PKCE RECOMMENDED for a confidential client and §2.1 lets PKCE or the OIDC `nonce` stand in for `state`.
-- `BE-DEPS-006` and `BE-AUTHN-020`, never tagged, are removed from `security-backend.md` in 0.60.0, so `SEC-DEPS-001` and `SEC-AUTHN-003` have no deprecated predecessor to yield to. Only `BE-AUTHN-009` and `BE-AUTHN-013` stay deprecated, for removal in 0.62.0.
+- `BE-DEPS-006` and `BE-AUTHN-020`, never tagged, are removed from `security-backend.md` in 0.60.0, so `SEC-DEPS-001` and `SEC-AUTHN-003` have no deprecated predecessor to yield to. `BE-AUTHN-009` and `BE-AUTHN-013` stayed deprecated until 0.62.0, which removes them (task 14).
 
 ## Edge Cases
 

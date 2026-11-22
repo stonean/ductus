@@ -3,6 +3,7 @@ status: done
 dependencies: [022-deterministic-runtime, 066-audit-records-and-the-completion-gate]
 next-criterion: 10
 cross-spec-impact: [022-deterministic-runtime, 046-scenario-open-question-visibility, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges]
+retired-rules: [BE-AUTHN-009, BE-AUTHN-013]
 ---
 
 # 067 — Analyze and Audit Checks

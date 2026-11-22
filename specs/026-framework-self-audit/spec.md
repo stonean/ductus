@@ -2,6 +2,7 @@
 status: done
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 next-criterion: 28
+retired-rules: [BE-AUTHN-009, BE-AUTHN-013]
 ---
 
 # 026 — Framework self-audit (`/audit`)

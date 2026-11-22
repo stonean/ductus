@@ -3,7 +3,7 @@ status: in-progress
 dependencies: [008-security-rules, 024-rule-loader, 033-rule-surface-setting]
 next-criterion: 12
 cross-spec-impact: [008-security-rules, 017-derive-dont-ask]
-retired-rules: [BE-AUTHN-020, BE-DEPS-006]
+retired-rules: [BE-AUTHN-009, BE-AUTHN-013, BE-AUTHN-020, BE-DEPS-006]
 ---
 
 # 077 — Security cross rules
@@ -84,7 +84,7 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 - [x] AC2: `specs/077-security-cross-rules/data-model.md` registers the file's ID prefix and categories, and `/ductus:analyze` loads the file: `check-rule-ids` accepts each of its IDs, and every citation of a successor resolves.
 - [x] AC3: A sensitive value that is not configuration, in a log line, an error-reporting payload or telemetry, is reported by the new log rule in a frontend-only and a cross-only project. In a backend-only and a full-stack project `/{project}:analyze` reports it once, under `BE-LOG-002` or `BE-LOG-008`, which the new rule names as owner where `security-backend.md` is loaded.
 - [x] AC4: The four moved rules carry their predecessors' Statements and Verifications as decided in 008's tasks 40 and 42, and as its tasks 43 and 44 later changed them, `SEC-DEPS-001`'s reusable-workflow sentence and flag as §Rule set scope item 2 states them and its yield as §Deprecation and re-pointing states it, and each successor's yield to a backend owner carries "where `security-backend.md` is also loaded".
-- [x] AC5: `BE-AUTHN-009` and `BE-AUTHN-013` each carry a `**DEPRECATED in {version}:**` label naming the release that ships this spec and a removal target two minor releases later, and each names its successor with no load condition.
+- [x] AC5: `BE-AUTHN-009` and `BE-AUTHN-013` each carry a `**DEPRECATED in {version}:**` label naming the release that ships this spec and a removal target two minor releases later, and each names its successor with no load condition. **Superseded in part:** both were removed from `framework/rules/security-backend.md` at that target, in 0.62.0, and are listed under `retired-rules:` (task 14).
 - [x] AC6: Every yield and Statement in `framework/rules/security-backend.md`, `framework/rules/security-frontend.md` and `framework/rules/configuration-cross.md` that names `BE-AUTHN-009` or `BE-AUTHN-013`, or `BE-LOG-002` or `BE-LOG-008` as owner of a non-configuration sensitive value, names the successor as §Deprecation and re-pointing states.
 - [x] AC7: No live artifact outside a decision record, a changelog entry or an audit record cites one of the four old IDs, `BE-DEPS-006` and `BE-AUTHN-020` removed included, as a current requirement.
 - [x] AC8: `framework/bootstrap/ductus.md` ships the file in every shape, and `docs/rules.md` lists it. A frontend-only, a backend-only and a cross-only `[rules] surfaces` setting each install it.

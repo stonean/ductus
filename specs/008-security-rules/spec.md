@@ -4,7 +4,7 @@ status: done
 dependencies: [007-govern-workflow]
 tags: [security, format]
 next-criterion: 29
-retired-rules: [BE-AUTHN-020, BE-DEPS-006]
+retired-rules: [BE-AUTHN-009, BE-AUTHN-013, BE-AUTHN-020, BE-DEPS-006]
 cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-review, 034-performance-backend-rules, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 048-govern-acquired-runtime, 060-exec-analyze-assesses-each-loaded-rule, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 077-security-cross-rules]
 ---
 
@@ -14,7 +14,7 @@ cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 020-code-revie
 
 Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the ductus command as two files — `security-backend.md` and `security-frontend.md` — beside `security-cross.md`, which spec 077 introduced for the security rules that hold on every surface. These are rules, not guidelines: `/{project}:analyze` checks implementation against them.
 
-> **Signpost ([077 — Security cross rules](../077-security-cross-rules/spec.md)):** `security-cross.md` holds `SEC-LOG-001`, new, and `SEC-DEPS-001` and `SEC-AUTHN-001` to `-003`, which take over `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020`, and `SEC-AUTHN-004` and `SEC-DATA-001`, which task 43 added, the first taking `BE-API-009`'s authorization-server sentences. `BE-AUTHN-020` and `BE-DEPS-006` were never in a tagged release and are removed (task 45); the two that remain, `BE-AUTHN-009` and `BE-AUTHN-013`, are deprecated in 0.60.0, removed in 0.62.0, and each yields every case to its successor. The yields and Statements in `security-backend.md`, `security-frontend.md` and `configuration-cross.md` that named them name the successors, those that named `BE-LOG-002` or `BE-LOG-008` for a sensitive value outside a backend name `security-cross.md`'s rules where `security-backend.md` is not loaded, and 077's `data-model.md` registers the `SEC` prefix beside `BE` and `FE`. This spec's tasks 32, 40 and 42 close there. 077 records the obligation in its `cross-spec-impact:` frontmatter; this signpost is its discharge.
+> **Signpost ([077 — Security cross rules](../077-security-cross-rules/spec.md)):** `security-cross.md` holds `SEC-LOG-001`, new, and `SEC-DEPS-001` and `SEC-AUTHN-001` to `-003`, which take over `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020`, and `SEC-AUTHN-004` and `SEC-DATA-001`, which task 43 added, the first taking `BE-API-009`'s authorization-server sentences. `BE-AUTHN-020` and `BE-DEPS-006` were never in a tagged release and are removed (task 45); the other two, `BE-AUTHN-009` and `BE-AUTHN-013`, were deprecated in 0.60.0, each yielding every case to its successor, and are removed in 0.62.0 (077's task 14). The yields and Statements in `security-backend.md`, `security-frontend.md` and `configuration-cross.md` that named them name the successors, those that named `BE-LOG-002` or `BE-LOG-008` for a sensitive value outside a backend name `security-cross.md`'s rules where `security-backend.md` is not loaded, and 077's `data-model.md` registers the `SEC` prefix beside `BE` and `FE`. This spec's tasks 32, 40 and 42 close there. 077 records the obligation in its `cross-spec-impact:` frontmatter; this signpost is its discharge.
 
 ## Motivation
 

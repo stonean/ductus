@@ -32,6 +32,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   or one `HEAD` does not descend from, is refused too. None of the three is
   checked with an empty `diff-base`, whose scope is empty.
 
+### Removed
+
+- **BREAKING: `BE-AUTHN-009` and `BE-AUTHN-013` leave `security-backend.md`
+  at their 0.62.0 target (spec 077).** Both were deprecated in 0.60.0, and
+  `security-cross.md`'s `SEC-AUTHN-001` and `SEC-AUTHN-002` hold every case
+  they governed. A spec citing either now draws the Blocking unknown-rule
+  finding where it drew an Advisory one, so re-point it to the successor, or
+  list the ID under the spec's `retired-rules:` when the spec records the
+  retirement. A project that pinned `security-backend.md` keeps both in its
+  copy until it re-syncs the file.
+
 ### Fixed
 
 - **Three references and a description state what the runtime already did
