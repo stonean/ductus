@@ -17,14 +17,14 @@ Implements [024 — Stack-aware rule-file loader for `/ductus:review`](spec.md).
 
 ### Discovery algorithm (shared between `/ductus:review` and `/ductus:analyze`)
 
-Both commands describe the same prose procedure in their own Behavior sections — no shared command file or library. Rationale: per §text-first-artifacts, commands are markdown procedures; prose duplication of a five-line algorithm is cheaper than introducing a third shared command file and changing the parser's understanding of command composition. The two commands are already independently parseable today; this preserves that.
+Both commands select rule files through the runtime's `discover-rule-files` primitive, which carries the procedure below; neither command restates it. Rationale: the selection is deterministic bookkeeping both commands share, so it is a primitive rather than prose each command repeats and an agent re-executes (022's `review-runtime-acceleration` scenario, §runtime-boundary).
 
 The procedure:
 
 1. List `framework/rules/*.md` (ductus's own repo) or `specs/rules/*.md` (adopter projects).
 2. For each file, take the basename and inspect its suffix.
 3. Classify into one of `{backend, frontend, cross, unrecognized}`.
-4. `/ductus:review`: keep files whose surface matches the detected stack (the alignment-check output from step 4), keep all `cross`, keep all `unrecognized` (with the warning).
+4. `/ductus:review`: keep files whose surface matches the detected stack (the alignment-check output from step 4), keep all `cross`, keep all `unrecognized` (with the warning), except a file whose header names `/ductus:analyze` and not `/ductus:review` among its rules' enforcers, which it leaves out with a notice (020's AC17).
 5. `/ductus:analyze`: keep every file. Citation verification spans surfaces, so a backend-only project legitimately cites `FE-XSS-001` in a scenario that covers HTML output, and that citation needs to be verifiable.
 
 ### Stdout notices
@@ -53,7 +53,7 @@ The procedure:
 - Bootstrap map (`framework/bootstrap/ductus.md`) updates both the source path (`framework/rules/configuration-cross.md`) and the destination path. Without renaming the destination, adopter-side `/ductus:review` would emit the unrecognized-suffix warning against its own bundled file on every run. (The destination path was subsequently moved to `specs/rules/configuration-cross.md` by the rule-file relocation sweep; see the current bootstrap manifest.)
 - A one-pass migration sits in `framework/bootstrap/ductus.md` alongside the existing `spec-and-plan.md` cleanup (precedent: spec 023). On each `/ductus` invocation: if `specs/configuration.md` exists in the adopting project, offer to rename it and emit a one-line notice. Adopters who skip running `/ductus` after upgrade hit the runtime warning at `/ductus:review` time until they rename manually — the warning is the discoverability surface for that case. (The migration has since been folded into the broader rule-file relocation migration that moves all closed-suffix rule files to `specs/rules/`.)
 - Live references in `framework/` are swept (see Affected Files). Done-spec bodies under `specs/NNN-*/` were left unswept, because §drift-prevention carved them out as *frozen archaeology* when this plan was written. 023's `living-specs` scenario removed that carve-out — done spec bodies are live artifacts and are swept with everything else, in the same uniform substitution, which does not reopen them.
-- Cross-reference recorded in the "Past Renames" section of `specs/README.md` so historical references in done-spec bodies remain discoverable without rewriting them.
+- `specs/README.md` names the rename among those recorded in git history (AC4).
 
 ### CI lint (`scripts/lint-rule-filenames.sh`)
 
@@ -63,7 +63,7 @@ Wiring: a new step in `.github/workflows/framework-checks.yml`, alongside the ex
 
 ### Constitution edit
 
-`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, names the runtime warning as the adopter-side safety net. Its two inline references to `framework/rules/configuration.md` (under `#### Constants and configuration` and `#### Environment variables`) are renamed to `framework/rules/configuration-cross.md`. No anchor changes, no cascading reference updates.
+`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, names the runtime warning as the adopter-side safety net. Rationale: AC1 documents the convention in the constitution because it binds every rule file both commands load, an adopter's own included, and the constitution is the document every adopter receives. Its two inline references to `configuration.md` (under `#### Constants and configuration` and `#### Environment variables`) follow the rename, since §drift-prevention allows no dead reference in a live artifact, and name `specs/rules/configuration-cross.md`, the path adopters load it from. No anchor changes, no cascading reference updates.
 
 ### `AGENTS.md` fallback narrowed (not removed)
 
@@ -85,7 +85,7 @@ This drops the "depend on author diligence" failure mode for files inside `frame
 | `framework/commands/implement.md` | Edit | Update §Scope Boundaries' `framework/rules/configuration.md` reference |
 | `framework/commands/groom.md` | Edit | Update `specs/configuration.md` reference in the "If a loaded rule file already covers the domain" bullet |
 | `framework/bootstrap/ductus.md` | Edit | Update bootstrap map source/destination; add one-pass migration for `specs/configuration.md` → `specs/rules/configuration-cross.md` |
-| `specs/README.md` | Edit | Record rename under the "Past Renames" section |
+| `specs/README.md` | Edit | Name the rename among those recorded in git history (AC4) |
 | `scripts/lint-rule-filenames.sh` | Create | Closed-suffix lint, exits non-zero on any `framework/rules/*.md` without a valid suffix |
 | `.github/workflows/framework-checks.yml` | Edit | Wire `scripts/lint-rule-filenames.sh` into the lint phase as a new step |
 | `.claude/commands/ductus/review.md`, `.claude/commands/ductus/analyze.md`, `.claude/commands/ductus/implement.md`, `.claude/commands/ductus/groom.md` | Derived | Regenerated by `scripts/gen-claude-commands.sh` |
@@ -99,7 +99,7 @@ This drops the "depend on author diligence" failure mode for files inside `frame
 - **`/ductus:analyze` applies the same stack filter as `/ductus:review`.** Rejected — per Resolved Questions, citation verification spans surfaces. A backend project legitimately cites `FE-XSS-001` in a scenario; that citation needs to be verifiable regardless of detected stack.
 - **Leave the bootstrap destination at `specs/configuration.md`.** Rejected — the adopter-side discovery algorithm needs the same closed-suffix signal as ductus's. Without renaming the destination, adopter-side `/ductus:review` would emit the unrecognized-suffix warning against ductus's own bundled file on every run.
 - **Skip the one-pass adopter migration in `framework/bootstrap/ductus.md`.** Rejected — without it, adopters who upgrade get both `specs/configuration.md` (now orphaned) and `specs/rules/configuration-cross.md` (newly bootstrapped) and the older file silently sticks around. The migration mirrors spec 023's `spec-and-plan.md` precedent.
-- **A shared discovery library file referenced from both commands.** Rejected — adds a third file to the parser's understanding for a five-line algorithm. Prose duplication is cheaper and keeps each command independently parseable.
+- **A shared discovery library file referenced from both commands.** Rejected — a third markdown file for the parser to compose, where the `discover-rule-files` primitive gives both commands one tested selection.
 
 ### Known limitations
 

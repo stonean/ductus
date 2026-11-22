@@ -52,7 +52,7 @@ The fix: derive rule-file selection from observable signals. Each rule file decl
 | `framework/rules/accessibility-frontend.md` | none — file is correctly suffixed | n/a |
 | `framework/rules/performance-frontend.md` | none — file is correctly suffixed | n/a |
 | `scripts/lint-rule-filenames.sh` | required — fails CI if any `framework/rules/*.md` file does not end in `-backend.md`, `-frontend.md`, or `-cross.md` | new |
-| `specs/README.md` | edit — record the `configuration.md` → `configuration-cross.md` rename under the "Past Renames" section | update |
+| `specs/README.md` | edit — name the `configuration.md` → `configuration-cross.md` rename among those recorded in git history (AC4) | update |
 | `.github/workflows/*.yml` | edit — wire `scripts/lint-rule-filenames.sh` into the existing lint job | update |
 
 ## Open Questions
