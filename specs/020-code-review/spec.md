@@ -1,9 +1,9 @@
 ---
 spec: 020-code-review
-status: done
+status: in-progress
 dependencies: []
-cross-spec-impact: [022-deterministic-runtime, 024-rule-loader, 034-performance-backend-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 066-audit-records-and-the-completion-gate, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
-next-criterion: 19
+cross-spec-impact: [022-deterministic-runtime, 024-rule-loader, 034-performance-backend-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 076-waived-and-deferred-findings-are-distinct-dispositions]
+next-criterion: 20
 ---
 
 # 020 — `/ductus:review` code review command with blocking gate
@@ -96,6 +96,7 @@ should remove.
 - [x] AC16: A host that can start a subagent runs review's five passes and the criteria step's judging, steps 3 to 7.2 of `framework/commands/review.md`, in one fresh subagent briefed as `framework/reference/review.md` §Passes in a subagent states, and continues at step 7.3 with only the findings, observations, criterion verdicts and coverage it returns, so the rule files and in-scope files never enter its own context; a read the subagent reports short is named in the Summary and kept out of `examined`. A host that cannot start one runs them itself, and `ductus exec` asks for each pass in turn, then for the criteria. **Widened by 066's task 27** (scenario `criteria-are-verified-in-review`), which added the criteria step.
 - [x] AC17: `/{project}:review` does not load a rule file whose header names `/{project}:analyze` and not `/{project}:review` among the enforcers of its rules: `discover-rule-files` leaves each such file out of a review's selection, with a notice naming it as judged by analysis, and keeps one whose header names neither, and a fixture rule file of each kind proves both.
 - [x] AC18: A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, as well as its mechanism being checked against the tree. A case shown only by building it is a false positive, recorded nowhere and fixed in no round, and `framework/reference/review.md` §Run review passes says so.
+- [ ] AC19: A stored waiver or violation deferral covers only the findings at its `(rule, file, site)` anchor, up to the number it covers: a finding of its rule at another site in the same file, more findings at its site than it covers, and any finding under an anchor recorded without a site each count and are reported for a new decision with the notice the scenario `waiver-expiry` gives; `--waive` and `--defer` refuse a finding that names no site; and a fixture of each case fails with its guard removed.
 
 ## Non-goals
 
