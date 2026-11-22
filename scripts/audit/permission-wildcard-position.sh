@@ -27,8 +27,19 @@
 # entries into holes, which is why the extraction is allow-scoped rather than
 # filtered after the fact.
 #
-# METHOD. One host: configure/claude.md, the only configure file that
-# carries a permission set.
+# The same holds for `/ductus`'s Claude seed, the other allow set ductus
+# ships, which every adopter's settings file receives before /configure
+# runs. This family once read configure/claude.md alone, and the seed's
+# `Bash(certutil -hashfile * SHA256)` shipped from 022's task 18 on, until
+# Claude Code's startup check warned on it in an adopter ("allows any
+# option at its *"; spec 023's scenario configure-permission-pattern-safety).
+#
+# METHOD. One host, Claude, in two allow sets:
+#
+#   ductus.md — the `permissions.allow` entries of the claude row's
+#     settings_template in the Agent Registry section, read as JSON.
+#     install.sh's copy is held to this row by Family 14 and govern.md's
+#     byte copy by Family 21, so the row is the one seed subject.
 #
 #   configure/claude.md — bullet entries of the form `- `Bash(...)`` inside
 #     the `permissions.allow` section, whose bounds are derived from the
@@ -116,6 +127,56 @@ EOF
   fi
 fi
 
-echo "permission-wildcard-position: checked $claude_count claude allow entries" >&2
+# The Claude seed: Bash() allow entries of the Agent Registry claude row,
+# printed as line<TAB>content. A function rather than a heredoc inside
+# "$(...)": bash 3.2 misparses one whose body holds backticks.
+DUCTUS="framework/bootstrap/ductus.md"
+seed_count=0
+seed_entries() {
+  python3 - "$DUCTUS" <<'PY'
+import json, re, sys
+
+lines = open(sys.argv[1]).read().split("\n")
+start = next(i for i, l in enumerate(lines) if l == "## Agent Registry")
+end = next(i for i, l in enumerate(lines) if i > start and l == "### Derived values")
+row = re.compile(r"^\| `claude` \| [^|]* \| `[^`]*` \| `[^`]*` \| `(\{[^`]*)` \|")
+for i in range(start, end):
+    m = row.match(lines[i])
+    if m:
+        for entry in json.loads(m.group(1)).get("permissions", {}).get("allow", []):
+            b = re.fullmatch(r"Bash\((.*)\)", entry)
+            if b:
+                print(f"{i + 1}\t{b.group(1)}")
+        break
+PY
+}
+
+if [ ! -f "$DUCTUS" ]; then
+  emit "$DUCTUS" "not found — this family cannot examine the seed, which is not the same as clean" \
+    "restore the file or update this family's paths"
+else
+  seed_out="$(seed_entries)"
+  seed_rc=$?
+  if [ "$seed_rc" -ne 0 ]; then
+    emit "$DUCTUS" "the seed parse exited $seed_rc — it could not examine its subject, which is not the same as clean" \
+      "check the ## Agent Registry and ### Derived values headings and the claude row's settings_template cell"
+  fi
+  while IFS="$(printf '\t')" read -r lineno entry; do
+    [ -n "${entry:-}" ] || continue
+    seed_count=$((seed_count + 1))
+    if mid_wildcard "$entry"; then
+      emit "$DUCTUS:$lineno" "seed allow entry \`Bash($entry)\` places a wildcard before a further word — Claude Code lets it span inserted options, approves them with no prompt, and warns on it in every adopter" \
+        "pin the value that wildcard stands for, or move the wildcard to the end; if neither is possible, drop the entry and let the step fall through to the host's Ask prompt; then append the old entry to the retired seed list"
+    fi
+  done <<EOF
+$seed_out
+EOF
+  if [ "$seed_count" -eq 0 ]; then
+    emit "$DUCTUS" "no Bash() allow entries extracted from the claude row's settings_template — the parse is broken, not the seed" \
+      "check the row's fifth cell is its settings_template JSON in one code span"
+  fi
+fi
+
+echo "permission-wildcard-position: checked $claude_count claude canonical allow entries and $seed_count claude seed allow entries" >&2
 
 exit "$drift"

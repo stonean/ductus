@@ -1,5 +1,5 @@
 ---
-next-task: 35
+next-task: 36
 ---
 
 # 048 — Ductus-Acquired Runtime Tasks
@@ -40,3 +40,9 @@ Decided by the owner on 2026-11-13, each deferred here by 048's review. First, A
 - [x] A scratch-adopter bootstrap shows a normal run unchanged
 
 - **Done when**: AC25 holds, every live artifact states the platforms published, and 048's review and analysis judge it
+
+### 35. State that the Windows configured binary's digest prompts on Claude
+
+- [x] Implement the compare bullet of `scenarios/pointer-follows-the-store.md` as edited: `framework/bootstrap/ductus.md` (and its `govern.md` copy) Pointer materialization step 2 and Permission Setup say the seed grants `certutil` for the pointer alone, as `certutil -hashfile .ductus/bin/ductus.exe SHA256`, so the configured binary's digest prompts on Windows, once a run and twice on a run that re-makes the pointer
+
+- **Done when**: No live artifact says the Windows digest comparison prompts for nothing, and the pointer's `certutil` command is spelled exactly as the seed grants it

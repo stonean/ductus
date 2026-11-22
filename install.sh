@@ -229,7 +229,7 @@ case "$agent" in
       "Bash(mkdir -p .ductus/bin)",
       "Bash(shasum *)",
       "Bash(sha256sum *)",
-      "Bash(certutil -hashfile * SHA256)",
+      "Bash(certutil -hashfile .ductus/bin/ductus.exe SHA256)",
       "Bash(~/.ductus/bin/ductus --version)",
       "Bash(~/.ductus/bin/ductus.exe --version)",
       "Bash(.ductus/bin/ductus fetch-archive *)",

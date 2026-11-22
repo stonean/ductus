@@ -2,6 +2,21 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Fixed
+
+- **`/ductus`'s Claude seed grants `certutil` for the pointer alone (specs 023 and 048).**
+  The seed's `Bash(certutil -hashfile * SHA256)` let its `*` span inserted
+  options, and Claude Code warns on it in every adopter ("allows any option at
+  its * · use an exact value"). It is now
+  `Bash(certutil -hashfile .ductus/bin/ductus.exe SHA256)`, and the old entry is
+  on Claude's retired seed list, so the next `/ductus` run removes it from an
+  existing settings file. On Windows the configured binary's digest, whose path
+  differs per project, now prompts on Claude, once a run and twice on a run that
+  re-makes the pointer. `/ductus:audit` Family 29 reads the seed as well as
+  `/configure`'s canonical set.
+
 ## [0.61.0] — 2026-11-21
 
 A minor release with breaking changes: 4 of the 11 entries below are marked
