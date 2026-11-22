@@ -105,7 +105,9 @@ to fetch, and `/ductus:audit` Family 20 requires it to equal
 `runtime/Cargo.toml` and the newest `runtime/CHANGELOG.md` heading
 (`scripts/audit/version-agreement.sh`). Bumping it alone fails that family;
 bumping all three declares a runtime release that must be tagged `ductus-v*` or
-every adopter fetches assets that do not exist. The constitution reaches
+every adopter fetches assets that do not exist (`framework/bootstrap/ductus.md`
+**Branch 2 — acquire the pinned release** fetches the pinned release's archive,
+and its **Failure** aborts on an unpublished asset). The constitution reaches
 adopters by the **Shared Files** manifest row copying
 `framework/constitution.md` to `.ductus/constitution.md`
 (`framework/bootstrap/ductus.md`), which tracks `main` — so no bump, and no
@@ -177,7 +179,7 @@ The review record's `scope` field (task 36) is `compute-review-scope`'s scope, c
 
 ### Memory routing lives in `AGENTS.md`
 
-Where a learning goes is stated once, in the constitution's §drift-prevention, and carried to the file every agent reads by a framework-managed block in `AGENTS.md`, `ductus:memory-routing`, which `/{project}` writes with `merge-managed-block` on every run (`framework/bootstrap/ductus.md` §Shared files with conflict handling). The block is one line: both questions in order and a link to §drift-prevention. A block rather than a template edit because both project templates are `skip` strategy, so only a block reaches an existing adopter, and it stays current. Neither `CLAUDE.md` carries routing: the template keeps its imports and the `ductus:constitutions` block, and this repository's keeps its imports. The migration `memory-routing-leaves-claude-md` removes the template's old section from an existing `CLAUDE.md` only when it matches one of the four shipped versions, embedded in the migration because an adopter's run has the archive and not this repository's history, and leaves an edited one with a report. The section ends at the next heading or at a framework block's first line, because a run that found no markers appended the `ductus:constitutions` block after it. A fixture walk of its procedure (17 cases, 2026-10-27) found four readings that gave a wrong result; its steps now define a line, a blank line and a heading, and stop after the pinned and edited reports.
+Where a learning goes is stated once, in the constitution's §drift-prevention, and carried to the file every agent reads by a framework-managed block in `AGENTS.md`, `ductus:memory-routing`, which `/{project}` writes with `merge-managed-block` on every run (`framework/bootstrap/ductus.md` §Shared files with conflict handling). The block is one line: both questions in order and a link to §drift-prevention. A block rather than a template edit because both project templates are `skip` strategy (the same section of `framework/bootstrap/ductus.md`), so only a block reaches an existing adopter, and it stays current. Neither `CLAUDE.md` carries routing: the template keeps its imports and the `ductus:constitutions` block, and this repository's keeps its imports. The migration `memory-routing-leaves-claude-md` removes the template's old section from an existing `CLAUDE.md` only when it matches one of the four shipped versions, embedded in the migration because an adopter's run has the archive and not this repository's history, and leaves an edited one with a report. The section ends at the next heading or at a framework block's first line, because a run that found no markers appended the `ductus:constitutions` block after it. A fixture walk of its procedure (17 cases, 2026-10-27) found four readings that gave a wrong result; its steps now define a line, a blank line and a heading, and stop after the pinned and edited reports.
 
 ### An answer is applied as chosen
 
@@ -284,7 +286,7 @@ Four rows have since left this table: *`unexamined` cannot be measured while the
 | Verify what a commit actually contains before reporting it landed — `git show --stat`, not the absence of an error | Git discipline behind every completion claim; `git show --stat` plus `git status --short` answer different questions |
 | Read the clock and read the sha — never write either from recollection | Both values are adopter-written fields on the review and analyze records |
 | `remove-inbox-item` takes the bullet text, so never drive it from line numbers — each removal shifts the lines under you | **R** — match by text and assert uniqueness; never edit by position over a list that shrinks as you walk it |
-| A scenario's link to a sibling spec needs `../../` | Adopters have scenarios and sibling specs, and the corpus link check ships in the pre-commit hook |
+| A scenario's link to a sibling spec needs `../../` | Adopters have scenarios and sibling specs, and the corpus link check ships in the pre-commit hook (`check-corpus-links` in `framework/bootstrap/hooks/ductus-pre-commit`) |
 | "Record" spans several destinations in this framework — name the artifact and section, never the verb alone | **R** — the destinations are all adopter-facing commands with different gate semantics |
 | Piping a gate command's output replaces its exit status — `cmd \| tail` reports `tail`'s success, not `cmd`'s | **R** — never pipe a command whose exit code you intend to read; the shown output is genuine and the status is manufactured |
 | A `§` reference resolves by *line*, against a heading its text begins with — a line wrap alone breaks it | Adopters cite constitution anchors and run the anchor resolver |
@@ -432,11 +434,11 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | No dead references in live artifacts (survey W11) | **R** — the artifact list is restated generically (specs, commands, rules, docs, README) rather than naming this repo's directories |
 | A behavior change needs a prose-claim sweep, not just an identifier sweep (survey W12) | Identifier greps miss stale claims in any project; the failure mode is the wording, not the paths |
 | Never hand-write an `AC{n}:` label — add the criterion unlabelled and run `label-criteria` (survey W16) | The counter is adopter frontmatter and the collision risk is identical |
-| Use the `Write` tool, not Bash redirects, for `.ductus/session.toml` (survey W18) | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants |
+| Use the `Write` tool, not Bash redirects, for `.ductus/session.toml` (survey W18) | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants (`Edit(.ductus/session.toml)` in `framework/bootstrap/configure/claude.md`) |
 | Re-open a `done` spec via `set-status` when the only intent is to reflect on-disk edits, not via `/{project}:amend` (survey W21) | The back-edge and the refinement loop are both adopter-facing |
 | Add a rule to its surface's home spec via the back-edge — do not spawn a new spec for it (survey W22) | Adopters own rule files and hit the same spec-proliferation pressure |
 | A canonical table living on a `done` spec syncs with no back-edge only from its `spec.md` outside the criteria, `plan.md` or `tasks.md` — one in its data model or a scenario reopens it (survey W24) | Follows from the canonical-sources map, which adopters receive |
-| A CI check that reads git history needs `fetch-depth: 0` (survey W27) | **R** — the shipped adopter CI template runs exactly such a check, so this is adopter-facing already |
+| A CI check that reads git history needs `fetch-depth: 0` (survey W27) | **R** — any adopter CI that reads history meets a shallow checkout; the shipped template (`framework/templates/ci/adopter-generators.yml`) reads none, so the rule is stated for the project's own checks |
 | A new test that reads git history or shells out to a repo script is a change to the workflow that runs it, not just to the suite (survey W28) | **R** — same family as W27; stated as history/inputs rather than this repo's workflow filenames |
 | When an item routes to a chore, fix it — do not park it (survey W29) | The groom command and its five routes ship unchanged |
 | `git checkout -- specs/{feature}/` silently reverts uncommitted pipeline state (survey W30) | Status flips and ticked criteria are tracked-file writes in every adopter repo |
