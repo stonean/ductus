@@ -1,6 +1,6 @@
 ---
 spec: 020-code-review
-status: in-progress
+status: done
 dependencies: []
 cross-spec-impact: [022-deterministic-runtime, 024-rule-loader, 034-performance-backend-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules, 076-waived-and-deferred-findings-are-distinct-dispositions]
 next-criterion: 20
