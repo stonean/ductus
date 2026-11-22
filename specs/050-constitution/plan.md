@@ -195,6 +195,10 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 §recommendations' first paragraph states it before its closing reopen sentence, so it binds every project and is not part of the one-at-a-time default a project may replace; `framework/reference/clarify.md` step 1.4 points at it. Its home was clarify alone from 2026-11-12, which left review and analysis decisions, plan rationale and commit messages without it (an adopter's report against 0.61.0; scenario `a-decision-is-attributed-to-whoever-made-it`). The sentence is 253 bytes: the constitution went from 49,199 to 49,452 (`wc -c`), so no cut was needed.
 
+### A primitive is probed in a local clone
+
+§grounding's Rules carry it as the bullet after *Run the project's own command*, which it extends to an artifact not yet written: the project's own binary, run where the probe's edit cannot reach the pipeline. It names plain git and "the project's runtime binary", no host or path, so it holds for every project, where the 2026-11-12 classification of a practice worded with `/tmp` and the main tree's binary was project-only (scenario `a-primitive-is-probed-in-a-local-clone`). The bullet is 334 bytes: the constitution went from 49,452 to 49,786 (`wc -c`), leaving 214.
+
 ## Classification
 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
@@ -410,7 +414,7 @@ Seven practices an adopter reported as true of every project, classified one at 
 - **Record a decision as the operator's only when the operator made it**: §recommendations, for every record a command writes, with `framework/reference/clarify.md` step 1.4 pointing at it (§A decision is attributed to whoever made it)
 - **Name a function, test or file, never a line number**: §grounding's *Cite what you consulted*, merged; `framework/reference/plan.md`, `framework/reference/clarify.md`, `framework/commands/plan.md` and `framework/commands/analyze.md` advised `path:line` and are corrected; `AGENTS.md`'s gotcha points at it
 - **A document follows a move by content, not file name**: §drift-prevention's *A retired filename is not a retired name*, merged: a split maps one name to several paths
-- **Learn a primitive in a throwaway clone**: project-only: host and repository machinery
+- **Learn a primitive in a throwaway clone**: §grounding's Rules (§A primitive is probed in a local clone)
 - **Measure a reviewer's claim against the tree before recording it**: `framework/reference/review.md` §Run review passes
 - **Recommend a waiver only where a recorded requirement backs it**: §design-principles' waive disposition, merged, so analysis waivers are covered too
 - **Design rationale routes to a comment at the code**: `framework/reference/review.md`'s Observations: a chore fixed in the run

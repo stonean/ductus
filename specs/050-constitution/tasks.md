@@ -41,6 +41,6 @@ A read-only sweep on 2026-11-18, at `6f1286dc`, by meaning and by every principl
 
 ## 52. A primitive is probed in a local clone (scenario a-primitive-is-probed-in-a-local-clone)
 
-- [ ] Implement the behavior described in `scenarios/a-primitive-is-probed-in-a-local-clone.md`
+- [x] Implement the behavior described in `scenarios/a-primitive-is-probed-in-a-local-clone.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
