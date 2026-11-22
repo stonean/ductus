@@ -111,6 +111,8 @@ A finding with a releasing deferral renders under a **Deferred findings** sectio
 
 New notices: ``deferral lapsed: {key} — `{target}`[ task {n}] is complete and the finding still fires``, and ``deferral target unreadable: {key} — `{target}` ``.
 
+A stored deferral's target is contained before it is read, as a new one's is: one whose feature directory, or the `spec.md` or `tasks.md` read in it, resolves outside the project is never read through, and reads as unreadable, with that notice (`decisions::work_state`).
+
 `DecisionRef` gains optional `task` and `work-item`.
 
 ## `/{project}:review` flags
