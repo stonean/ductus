@@ -2,7 +2,20 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.62.0] — 2026-11-22
+
+A minor release with breaking changes: 2 of the 6 entries below are marked
+BREAKING, under Changed and Removed. `write-review` refuses a write whose
+scope a later commit moved, in a refusal whose size is bounded, so a review's
+record credits only what its passes read, and the two audit-record writers'
+results state the counts their records hold. `BE-AUTHN-009` and
+`BE-AUTHN-013` leave `security-backend.md` at the 0.62.0 target their 0.60.0
+deprecation set. Two constitution rules attribute a decision to whoever made
+it and keep a primitive's probe out of the project's tree, and `/ductus`'s
+Claude seed grants `certutil` for the pointer alone, so each adopter's
+self-update replaces the installed bootstrap, one restart, on the first
+`/ductus` after this release. No lockfile or manifest change, and the MSRV
+stays 1.89.
 
 ### Added
 
