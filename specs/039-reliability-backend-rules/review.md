@@ -1,22 +1,17 @@
 ---
 spec: 039-reliability-backend-rules
-last-run: 2026-11-20T04:27:30Z
-reviewed-against: 07fa02c3bd31a2b5cedd4aabfece9738d693b6bb
-diff-base: fa4ae5c75b7d68e907f18cee94eb8f8157f83f52
+last-run: 2026-11-22T00:14:30Z
+reviewed-against: d4f3b6e78246d9c7d56b4c1d4644d4e57c09432d
+diff-base: 2983d2a34c07c501545bb76512b6c7c9555f11a5
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 6
-scope: 6
+examined: 2
+scope: 2
 unread: []
-excluded: 33
+excluded: 66
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 0
-re-reads: 0
-diff-checked: 0
-not-re-read: 0
-budget-stop: false
 reviewed-digest:
   scenarios/expendable-messages-may-be-dropped-when-recorded.md: 03e0030d79ae0938b4375c3ec2fc2950e08a41c96817f0a4b54d93536d66d22e
 criteria-judged: 10
@@ -35,7 +30,7 @@ criteria-verdicts:
   - label: AC6
     digest: c0a7264750e08af9db7da4e7542b72482790c324a11aa908b504366902a01412
   - label: AC7
-    digest: e0a1e0aafb04cb8a160f0d103b807c954aed5b5173c72629a26d5ed87f732526
+    digest: 95424e2bfc8e2ea79d78345b7d26703a0e3659e41e567d68c9f301e059c4b237
   - label: AC8
     digest: 3af306b6aba2a6a79ee051a56c1bcf3ccbf5b15c602a33caface40dfd4fb9cf6
   - label: AC9
@@ -44,7 +39,7 @@ criteria-verdicts:
     digest: b07de331a98dcace58bd3875b485345f81d5488a80a0ecdb840efba17172a649
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -175,9 +170,7 @@ decisions:
 
 ## Summary
 
-Reopened by task 8 (BE-RETRY-005 may drop a declared-expendable message once recorded). Base fa4ae5c7 (reopen), window of 6 entries, all read by three readers: a security reader over the three security rule files (whole), a reader for the other four passes over the nine other loaded rule files, AGENTS.md Gotchas to the end and specs/system.md (whole), and a criteria reader. runtime/CHANGELOG.md was read as its window diff (11,021 bytes) and its 039 entry, not as the whole 610 KB file. No finding; one observation (the plan Overview narrated history and cited pruned tasks 5 and 7) fixed by commit specs(039) plan Overview, before the fix-round base, and read whole by the criteria reader. Two stored decisions on tasks.md expired because the pruned tasks no longer exist. Criteria AC1 to AC10 judged met. The stated sizes of reliability-backend.md (19,029 bytes) and the spec files are unchanged by this review.
-
-0 fix round(s): 0 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+Five-pass review of 039's reopening by 925c6905 (020's task 18, AC17), diff-base 2983d2a3, base-source reopen, at HEAD ba69ef5d. The scope is `specs/039-reliability-backend-rules/spec.md` and `plan.md`, which 925c6905 edited to say a review leaves out a rule file whose header gives it to `/ductus:analyze`. Passes (part P1, one reviewer for 020 and the eight specs 925c6905 reopened) read those hunks and each scope file whole against the five rule files `discover-rule-files` selected (232,805 bytes, each read whole against `wc -c`): no finding and no observation. The seven other rule files are judged by analysis alone (020's AC17), so the efficiency pass ran on its own definition. The criteria step (part C6) judged every criterion individually: 10 of 10 met, with the rule file read whole, exactly the ten rules AC6 lists citing `CFG-CONST-003`, and 034's spec naming `reliability-backend.md` (AC8). Examined 2 of 2; nothing unread.
 
 10 of 10 acceptance criteria judged met.
 
@@ -203,20 +196,20 @@ Reopened by task 8 (BE-RETRY-005 may drop a declared-expendable message once rec
 
 ## Acceptance criteria
 
-- AC1 — met: `framework/rules/reliability-backend.md` exists; 13 `### BE-` headings, 13 Verification, 13 Source, 0 Rationale; every Statement is a block quote with RFC 2119 keywords.
-- AC2 — met: All IDs are `BE-{TIMEOUT|RETRY|BREAKER|DRAIN|BULK}-NNN`, none of these categories in the other backend files; `bash scripts/lint-rule-ids.sh` exits 0 (12 files, 308 IDs).
-- AC3 — met: The header paragraph of `framework/rules/reliability-backend.md` declares `Categories:` TIMEOUT, RETRY, BREAKER, DRAIN, BULK with their concerns.
-- AC4 — met: `BE-TIMEOUT-001`, `BE-RETRY-001`, `BE-BREAKER-001`, `BE-DRAIN-001` each carry a design-time-commitment Verification flagged by `/{project}:analyze`, no code-pattern grep.
-- AC5 — met: Four MUSTs (`BE-TIMEOUT-001`, `BE-RETRY-001`, `BE-RETRY-005`, `BE-DRAIN-001`), each an availability or cascading-failure risk; the other nine are SHOULD; `BE-RETRY-005`'s added sentence is a MAY.
-- AC6 — met: `CFG-CONST-003` appears in exactly the ten rules the criterion lists; `BE-POOL-002`, `BE-IDEMP`, `BE-ASYNC-001` and `BE-POOL-005` are cited from `BE-TIMEOUT-001`, `BE-RETRY-001`, `BE-BULK-001` and `BE-TIMEOUT-003` and exist in their files.
-- AC7 — met: `framework/bootstrap/ductus.md` carries the manifest row between `quality-cross.md` and `security-backend.md`; the `-backend.md` suffix selects it under the backend surface; `discover-rule-files` selects it in this run.
-- AC8 — met: `specs/034-performance-backend-rules/spec.md` forward-references `reliability-backend.md` as landed by spec 039, and the file holds the TIMEOUT, RETRY and BREAKER rules.
-- AC9 — met: `BE-RETRY-003`, `-004` and `BE-BULK-002` are SHOULD, and `BE-RETRY-005` is MUST with dead-letter or recorded halt, no alerting requirement, and a MAY for a recorded drop of a spec-declared-expendable message; each has Statement, Verification and Source.
-- AC10 — met: `BE-TIMEOUT-003` is SHOULD, its Verification states PostgreSQL `statement_timeout`, MySQL `max_execution_time` for read-only `SELECT`, MongoDB `maxTimeMS` and SQL Server's driver-side timeout, and cites `BE-POOL-002`, `BE-POOL-005` and `CFG-CONST-003`.
+- AC1 — met: `framework/rules/reliability-backend.md` exists, `-backend.md` suffix, ### ID headings with `Statement/Verification/Source`, no Rationale (grep count 0)
+- AC2 — met: `scripts/lint-rule-ids.sh` run: exit 0, 12 files, 308 IDs; categories BE-TIMEOUT, BE-RETRY, BE-BREAKER, BE-DRAIN, BE-BULK are disjoint from every other `-backend.md` file's (listed from their ### headings)
+- AC3 — met: header paragraph lists Categories: TIMEOUT, RETRY, BREAKER, DRAIN, BULK abbreviations
+- AC4 — met: TIMEOUT-001..003, RETRY-001 (bound, backoff+jitter, idempotent only), BREAKER-001, `DRAIN-001/002` with design-time Verification
+- AC5 — met: MUSTs: TIMEOUT-001, RETRY-001, RETRY-005, DRAIN-001 (availability risks); the rest SHOULD
+- AC6 — met: BE-POOL-002 (`TIMEOUT-001/003`, BULK-001), BE-IDEMP (RETRY-001), BE-ASYNC-001 (BULK-001) cited; CFG-CONST-003 appears in exactly ten rules (`TIMEOUT-001/002/003`, `RETRY-001/002/005`, BREAKER-001, `DRAIN-001/002`, BULK-001), matching the criterion's list and its 'ten rules in all'
+- AC7 — met: `framework/bootstrap/ductus.md` Shared Files row lists the file; ductus discover-rule-files (release binary) leaves it out with a 'judged by analysis alone' notice and selects the other five files; its header names analyze, not review
+- AC8 — met: `specs/034-performance-backend-rules/spec.md` names `reliability-backend.md` (spec 039) for the deferred deadlines, timeouts, retries and breakers; the file carries `TIMEOUT/RETRY/BREAKER` rules
+- AC9 — met: BE-RETRY-003 SHOULD, BE-RETRY-004 SHOULD, BE-RETRY-005 MUST with a MAY for expendable messages and a Not-flagged clause on monitoring, BE-BULK-002 SHOULD; each has `Statement/Verification/Source`
+- AC10 — met: BE-TIMEOUT-003 SHOULD; Verification states PostgreSQL `statement_timeout`, MySQL `max_execution_time` (SELECT only), MongoDB maxTimeMS and SQL Server's driver-side timeout; cites BE-POOL-002, BE-POOL-005 (exists in `performance-backend.md`), CFG-CONST-003
 
 ## Observations
 
-- convention: `plan.md`'s Overview cited tasks 5 and 7, which `tasks.md` no longer holds, and narrated how the rule set got here, which the plan's design record does not carry; the Overview now states the rule set as it stands (commit `specs(039): the plan's Overview states the rule set as it stands, without the history and the pruned task numbers`). — `specs/039-reliability-backend-rules/plan.md` — **fixed** (decided by the rule)
+*None.*
 
 ## Skipped passes
 
@@ -224,39 +217,72 @@ Reopened by task 8 (BE-RETRY-005 may drop a declared-expendable message once rec
 
 ## Excluded from scope
 
-- `framework/rules/accessibility-frontend.md`
-- `framework/rules/api-backend.md`
-- `framework/rules/concurrency-backend.md`
-- `framework/rules/configuration-cross.md`
-- `framework/rules/security-backend.md`
-- `framework/rules/security-cross.md`
-- `framework/rules/security-frontend.md`
-- `runtime/src/primitives/shipped_rule_ids.txt`
-- `scripts/audit/README.md`
-- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
-- `specs/008-security-rules/spec.md`
-- `specs/008-security-rules/tasks.md`
-- `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md`
-- `specs/017-derive-dont-ask/spec.md`
-- `specs/017-derive-dont-ask/tasks.md`
-- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md`
-- `specs/026-framework-self-audit/spec.md`
-- `specs/038-concurrency-backend-rules/scenarios/a-declared-loss-tolerant-message-owes-no-outbox.md`
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/review.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/review.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-review.md`
+- `docs/developing-ductus.md`
+- `docs/rules.md`
+- `framework/commands/analyze.md`
+- `framework/commands/review.md`
+- `framework/reference/analyze.md`
+- `framework/reference/review.md`
+- `runtime/CHANGELOG.md`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/primitives/brief_re_read.rs`
+- `runtime/src/primitives/discover_rule_files.rs`
+- `runtime/src/primitives/fix_rounds.rs`
+- `runtime/src/primitives/resolve_anchor.rs`
+- `runtime/src/primitives/start_fix_rounds.rs`
+- `runtime/src/primitives/write_analysis.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/tests/golden/review-basic.jsonl`
+- `runtime/tests/line_ending_discipline.rs`
+- `scripts/analyze/check.py`
+- `scripts/analyze/detect.py`
+- `scripts/analyze/step15-brief.md`
+- `scripts/mutation/analysis-design-fix-067.py`
+- `scripts/mutation/command-reference-split.py`
+- `scripts/mutation/exec-scenario-anchors-067.py`
+- `scripts/mutation/owner-reviews-067.py`
+- `scripts/tests/test-analyze-scripts.py`
+- `specs/020-code-review/plan.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
+- `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md`
+- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/024-rule-loader/review.md`
+- `specs/024-rule-loader/spec.md`
+- `specs/034-performance-backend-rules/review.md`
+- `specs/034-performance-backend-rules/spec.md`
+- `specs/037-observability-backend-rules/plan.md`
+- `specs/037-observability-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/plan.md`
+- `specs/038-concurrency-backend-rules/review.md`
 - `specs/038-concurrency-backend-rules/spec.md`
-- `specs/038-concurrency-backend-rules/tasks.md`
+- `specs/058-findings-route-at-discovery/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
 - `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
+- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md`
 - `specs/067-analyze-and-audit-checks/spec.md`
-- `specs/068-api-backend-rules/scenarios/repr-003-bounded-numbers-and-patch-001-format-home.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
 - `specs/068-api-backend-rules/spec.md`
-- `specs/068-api-backend-rules/tasks.md`
-- `specs/069-accessibility-frontend-rules/scenarios/verifications-flag-only-what-the-statement-covers.md`
 - `specs/069-accessibility-frontend-rules/spec.md`
-- `specs/069-accessibility-frontend-rules/tasks.md`
-- `specs/077-security-cross-rules/data-model.md`
-- `specs/077-security-cross-rules/plan.md`
-- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
-- `specs/077-security-cross-rules/spec.md`
-- `specs/077-security-cross-rules/tasks.md`
+- `specs/070-performance-frontend-rules/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/inbox.md`
 
 ## Unexamined governance
 
