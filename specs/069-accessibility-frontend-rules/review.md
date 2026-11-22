@@ -1,22 +1,17 @@
 ---
 spec: 069-accessibility-frontend-rules
-last-run: 2026-11-20T13:14:39Z
-reviewed-against: 3b4c2e6e586464cadcd63c419ef9bf27df41bc71
-diff-base: 07bd04639ba5874d97d964ad1432e2ec8fb8a263
+last-run: 2026-11-22T00:14:36Z
+reviewed-against: 60113bfd4f5843c8469d85f0ec650ff92270ceef
+diff-base: 2983d2a34c07c501545bb76512b6c7c9555f11a5
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 4
-scope: 4
+examined: 1
+scope: 1
 unread: []
-excluded: 26
+excluded: 68
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 3
-re-reads: 2
-diff-checked: 0
-not-re-read: 0
-budget-stop: false
 reviewed-digest:
   scenarios/verifications-flag-only-what-the-statement-covers.md: 4a7f7d2da98dd304b9da859c1eacb3b59fc65695a4a8b1ca3825ec806b7b26df
 criteria-judged: 14
@@ -43,7 +38,7 @@ criteria-verdicts:
   - label: AC10
     digest: 499ab37e4375aaac14c3536b87704c7170e48f5257e4766dcf145a23ac475c6a
   - label: AC11
-    digest: f6da642fe44729fd0ffea6ad57ce071d386b7313107b74529b599e5266e7e1b0
+    digest: 24996e721115aef754c03c3e46e9567c0d4eb1c4905e193c12497fb270a9b54a
   - label: AC12
     digest: c6d3dcf87dbb11909d77a22a659277cf97b567ce6c30c3c6f9b6e988abc525aa
   - label: AC13
@@ -52,9 +47,9 @@ criteria-verdicts:
     digest: 5808dab9b973d1121e48ef9dd8173f4c67c787c863b5449d0828de96269478cd
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 0
   deferred: 0
-  waived: 5
+  waived: 1
   undispositioned: 0
 decisions:
   - key: "`FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md`"
@@ -88,9 +83,7 @@ decisions:
 
 ## Summary
 
-Review of 069's second pass over `07bd0463` to the head of this run (base-source `last-review`), scope 4, examined 4: the window holds the owner's correction of 2026-11-20 (`framework/rules/accessibility-frontend.md` tightened from 52,000 to 51,182 bytes to meet the 51,200-byte bar of 2026-11-08, with no claim dropped), the plan's and spec's source citations, and the previous analysis record. Two readers read their files whole against measured sizes: the security pass over `framework/rules/security-backend.md`, `framework/rules/security-cross.md` and `framework/rules/security-frontend.md`, and the other passes over the other nine rule files (the seven it first read in part were then read whole), `AGENTS.md`, `specs/system.md` and the four in-scope files, checking each of the 20 reworded Verification lines of the rule file against its pre-image. `runtime/CHANGELOG.md` and the scenario were read at the 069 entry and whole. No criterion owed a verdict by `compute-review-scope`; the 14 verdicts of the first pass are carried (spec text unchanged for the criteria, and the reader confirmed the tightening falsifies none of AC1 to AC14). 0 MUST, 0 SHOULD, no stored decisions. Nine observations: four fixed (the `FE-A11YFORM-006` and `FE-MOTION-002` clause wording, `FE-SEMHTML-004` regaining help's order relative to other page content, the plan's `FE-LAYOUT-002` size boundary), five waived by the rule. Measurement (`wc -c`; each rule section from the line after its `### FE-` heading to the next heading of any level, at `fa4ae5c7` then now): `FE-KBD-004` 1,079 to 1,162; `FE-A11YFORM-003` 971 to 1,053; `FE-A11YFORM-006` 1,192 to 1,472; `FE-LAYOUT-002` 1,019 to 1,218; `FE-MOTION-002` 796 to 854; the file 50,939 to 51,182. Fix rounds: three, the first two re-read clean by independent agents (the clause wording, then `FE-SEMHTML-004`) and the third, a plan edit, exempt, then empty; budget-stop false.
-
-3 fix round(s): 2 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 3.
+Five-pass review of 069's reopening by 925c6905 (020's task 18, AC17), diff-base 2983d2a3, base-source reopen, at HEAD ba69ef5d. The scope is `specs/069-accessibility-frontend-rules/spec.md`, which 925c6905 edited to say a review leaves out a rule file whose header gives it to `/ductus:analyze`. Passes (part P1, one reviewer for 020 and the eight specs 925c6905 reopened) read those hunks and each scope file whole against the five rule files `discover-rule-files` selected (232,805 bytes, each read whole against `wc -c`): no finding and no observation. The seven other rule files are judged by analysis alone (020's AC17), so the efficiency pass ran on its own definition. The criteria step (parts C8 and C9) judged every criterion individually: 14 of 14 met. AC4 was judged from 62 fetched documents, read as full text, every claim of the 40 rules and the header matching (the EUR-Lex page for Directive 2019/882 returned an empty body, so its text was read from the Publications Office's XHTML of the same Directive); AC5 from the fetched WCAG 2.2 Recommendation, every cited number, title and stated level matching. The stored waiver of the five task-6 clauses still applies. Examined 1 of 1; nothing unread.
 
 14 of 14 acceptance criteria judged met.
 
@@ -116,31 +109,23 @@ Review of 069's second pass over `07bd0463` to the head of this run (base-source
 
 ## Acceptance criteria
 
-- AC1 — met: framework/rules/accessibility-frontend.md header lists the 11 categories and the 40 rule IDs use only them
-- AC2 — met: the 11 categories are disjoint from those of performance-frontend.md and security-frontend.md
-- AC3 — met: 40 rules each with one-tier Statement, Verification and Source; scripts/lint-rule-ids.sh exits 0; the five Not-flagged clauses sit in Verifications and change no Statement
-- AC4 — met: every rule has a Source; claims were re-fetched 2026-11-08 (12b26fab) and task 6's one new WCAG quote 2026-11-19 (spec.md Resolved Questions); this run fetched nothing
-- AC5 — met: 58 distinct section numbers cited in Sources, titles and levels match WCAG 2.2, 2.3.3 and 2.4.13 labelled AAA
-- AC6 — met: SHOULDs are FE-KBD-005, FE-MOTION-003, FE-A11YTEST-002 and FE-A11YTEST-003; the only MUST with no section citation is FE-A11YTEST-001, the named exception
-- AC7 — met: no Statement requires continuous integration; FE-A11YTEST-001 requires a check before each release
-- AC8 — met: FE-KBD-002 holds 2.4.7 and 3:1 for an author-styled indicator; 2.4.13 appears only in FE-KBD-005 (SHOULD)
-- AC9 — met: all 43 cited FE and BE IDs resolve to one heading each under framework/rules
-- AC10 — met: framework/constitution.md has no backfill mention and does not name accessibility-frontend.md
-- AC11 — met: framework/bootstrap/ductus.md manifest row ships the file and discover_rule_files.rs keeps the -frontend.md surface
-- AC12 — met: no data-model.md in specs/069-accessibility-frontend-rules; header keeps FE-{CATEGORY}-{NNN}
-- AC13 — met: all 55 Level A and AA criteria are cited in Sources; the header disclaims a conformance claim
-- AC14 — met: FE-ARIA-001 cites WCAG 2.2 4.1.2 and no Statement restricts restating an implicit role
+- AC1 — met: Header Categories list names exactly the 11; 11 `## FE-` headings match; all 40 `### FE-` IDs fall in them (python parse of `framework/rules/accessibility-frontend.md`).
+- AC2 — met: The 6 FE- categories of `security-frontend.md` (`XSS/CSRF/STORAGE/AUTHN/CSP/DEPS/PII`) and `performance-frontend.md` (`VITALS/BUNDLE/IMAGE/LOAD/FONT/MAIN`) share none with the 11; headings read.
+- AC3 — met: `scripts/lint-rule-ids.sh` exit 0 (12 files, 308 headings); all 40 sections have a heading holding only the ID, a Statement of one tier (0 mixed), Verification and Source, no Rationale; test `no_shipped_statement_mixes_tiers` in `runtime/src/primitives/rule_sections.rs` exists.
+- AC4 — met: Every Source's document was fetched 2026-11-21 (the file cites titles, not URLs; the URLs are the canonical locations) and every claim checked matches; EUR-Lex HTML refused automated fetch (HTTP 202, empty) so the Directive was read from the Publications Office copy of the same OJ text.
+- AC5 — met: Fetched https://`www.w3.org/TR/WCAG22`/ (chars 0-200000 of 269706, covering 1.1.1 to 4.1.3 and 5.2.2): all 59 criterion numbers the file cites exist, each title beside them matches the fetched title exactly (scripted comparison), the only levels the file states for a criterion are AAA for 2.4.13 and 2.3.3 and both are AAA, 4.1.1 is marked obsolete, and 5.2.2 'Full pages' text matches.
+- AC6 — met: Python parse: 36 MUST, 4 SHOULD (KBD-005, MOTION-003, A11YTEST-002, A11YTEST-003); KBD-005 and MOTION-003 label Level AAA in text; the two A11YTEST SHOULDs are testing practices; every MUST but FE-A11YTEST-001 has a § criterion in its Source (all `A/AA`).
+- AC7 — met: No Statement contains 'CI' or 'continuous integration' (parse); A11YTEST-001's Verification says the engine runs wherever the project chooses; A11YTEST-003 is the SHOULD for every-change.
+- AC8 — met: FE-KBD-002 MUST cites §2.4.7 and §1.4.11 (3:1) only; Level AAA §2.4.13 appears only in FE-KBD-005 (SHOULD), grep of 'Level AAA' lines `77/81` and 311.
+- AC9 — met: `ductus check-rule-ids --path framework/rules/accessibility-frontend.md` with all 12 rule files: 43 citations, 0 missing, 0 deprecated; FE-PII-002 and FE-AUTHN-002 in `security-frontend.md`, BE-AUTHN-005 in `security-backend.md`.
+- AC10 — met: `framework/constitution.md` has no 'backfill' or 'Recorded exception' text and no mention of `accessibility-frontend.md` (grep).
+- AC11 — met: Row in `framework/bootstrap/ductus.md` Shared Files table with the Rule-file surface filter (suffix `-frontend.md`); `ductus discover-rule-files` on a copy under scratch: review selection excludes `accessibility-frontend.md` with a 'judged by analysis alone' notice, `--all` selects it (12 files), surfaces=[backend] selects no frontend file.
+- AC12 — met: `specs/069-accessibility-frontend-rules` has no `data-model.md`; the header carries the categories and ID format.
+- AC13 — met: Of the 55 WCAG 2.2 `A/AA` SCs (4.1.1 excluded), every one is cited as a § in the file, including 1.3.3, 1.4.5, 2.4.5, 2.5.4, 3.2.3, 3.2.4, 3.2.6; header says 'Meeting these rules is not a WCAG conformance claim'. SC list from my knowledge of WCAG 2.2.
+- AC14 — met: FE-ARIA-001 Source cites §4.1.2 and is MUST; Severity posture names no exception for it; no rule has a MUST (NOT) on restating an implicit role (grep 'implicit' only hits ARIA-004's `output` note; role="list" absent).
 
 ## Observations
 
-- `FE-A11YFORM-006`'s tightened Not-flagged clause said 'loading nothing' where the case is a handler that loads no different page, which changed the carve-out's wording; the clause is restored to the case as stated in the scenario — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
-- `FE-MOTION-002`'s tightened Not-flagged clause said 'those thresholds' with no antecedent; it names the general flash and red flash thresholds again — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
-- `plan.md` gave the `FE-LAYOUT-002` section size without a boundary, so it could not be re-derived (the figure counted the next category heading); the plan states the boundary and the sizes measured by it — `specs/069-accessibility-frontend-rules/plan.md` — **fixed** (decided by the rule)
-- `FE-SEMHTML-004`'s tightened Verification said help repeats 'in the same relative order', dropping 'relative to other page content', which task 4 corrected from the WCAG 2.2 §3.2.6 copy; the Verification keeps help's order relative to other page content again — `framework/rules/accessibility-frontend.md` — **fixed** (decided by the rule)
-- `FE-A11YFORM-003`'s Not-flagged clause dropped its reason clause 'which the Statement does not cover'; the case and its example are intact and the scenario keeps the reason — `framework/rules/accessibility-frontend.md` — **waived**: no case or requirement changed, only a reason clause, and the owner's 51,200-byte bar asks for the cut (decided by the rule)
-- `plan.md` 'The file stays one read' records how the size was reached, which a design record would leave to commits; the owner asked for the measured result to be stated in the plan — `specs/069-accessibility-frontend-rules/plan.md` — **waived**: the owner's instruction of 2026-11-20 is to record the measured result and that the file was tightened to meet the 2026-11-08 cap (decided by the rule)
-- `specs/069-accessibility-frontend-rules/analysis.md` is stale against HEAD because this window changed its design subjects; the analysis that follows this review regenerates it — `specs/069-accessibility-frontend-rules/analysis.md` — **waived**: the analysis run after this review regenerates the record, which no hand edit may touch (decided by the rule)
-- `FE-A11YFORM-002`'s Not-flagged clause ends in a garbled phrase and `FE-KBD-001`'s lists a flagged case, both untouched by this window — `framework/rules/accessibility-frontend.md` — **waived**: outside the window and outside the owner's no-claim-changed instruction (decided by the rule)
 - the five task-6 clauses appear in the rule file, the scenario, the spec's Resolved Question and the changelog; they record the flagged side, the not-flagged side and the release note, and no claim contradicts another — `specs/069-accessibility-frontend-rules/spec.md` — **waived**: each copy records a different side of the decision and the changelog is release notes (decided by the rule)
 
 ## Skipped passes
@@ -149,32 +134,74 @@ Review of 069's second pass over `07bd0463` to the head of this run (base-source
 
 ## Excluded from scope
 
-- `framework/rules/configuration-cross.md`
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/review.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/review.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-review.md`
+- `docs/developing-ductus.md`
+- `docs/rules.md`
+- `framework/commands/analyze.md`
+- `framework/commands/review.md`
+- `framework/reference/analyze.md`
+- `framework/reference/review.md`
 - `runtime/CHANGELOG.md`
-- `specs/008-security-rules/analysis.md`
-- `specs/008-security-rules/plan.md`
-- `specs/008-security-rules/review.md`
-- `specs/008-security-rules/spec.md`
-- `specs/017-derive-dont-ask/analysis.md`
-- `specs/017-derive-dont-ask/data-model.md`
-- `specs/017-derive-dont-ask/plan.md`
-- `specs/017-derive-dont-ask/review.md`
-- `specs/017-derive-dont-ask/spec.md`
-- `specs/039-reliability-backend-rules/analysis.md`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/primitives/brief_re_read.rs`
+- `runtime/src/primitives/discover_rule_files.rs`
+- `runtime/src/primitives/fix_rounds.rs`
+- `runtime/src/primitives/resolve_anchor.rs`
+- `runtime/src/primitives/start_fix_rounds.rs`
+- `runtime/src/primitives/write_analysis.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/tests/golden/review-basic.jsonl`
+- `runtime/tests/line_ending_discipline.rs`
+- `scripts/analyze/check.py`
+- `scripts/analyze/detect.py`
+- `scripts/analyze/step15-brief.md`
+- `scripts/mutation/analysis-design-fix-067.py`
+- `scripts/mutation/command-reference-split.py`
+- `scripts/mutation/exec-scenario-anchors-067.py`
+- `scripts/mutation/owner-reviews-067.py`
+- `scripts/tests/test-analyze-scripts.py`
+- `specs/020-code-review/plan.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
+- `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md`
+- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/024-rule-loader/review.md`
+- `specs/024-rule-loader/spec.md`
+- `specs/034-performance-backend-rules/review.md`
+- `specs/034-performance-backend-rules/spec.md`
+- `specs/037-observability-backend-rules/plan.md`
+- `specs/037-observability-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/plan.md`
+- `specs/038-concurrency-backend-rules/review.md`
+- `specs/038-concurrency-backend-rules/spec.md`
 - `specs/039-reliability-backend-rules/plan.md`
 - `specs/039-reliability-backend-rules/review.md`
 - `specs/039-reliability-backend-rules/spec.md`
-- `specs/068-api-backend-rules/analysis.md`
-- `specs/068-api-backend-rules/plan.md`
-- `specs/068-api-backend-rules/review.md`
+- `specs/058-findings-route-at-discovery/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
+- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
 - `specs/068-api-backend-rules/spec.md`
-- `specs/077-security-cross-rules/analysis.md`
-- `specs/077-security-cross-rules/data-model.md`
-- `specs/077-security-cross-rules/plan.md`
-- `specs/077-security-cross-rules/review.md`
-- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
-- `specs/077-security-cross-rules/spec.md`
-- `specs/077-security-cross-rules/tasks.md`
+- `specs/070-performance-frontend-rules/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/inbox.md`
 
 ## Unexamined governance
 
