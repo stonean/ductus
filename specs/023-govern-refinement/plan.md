@@ -53,16 +53,16 @@ Rationale: the spec drops the track entirely (its section 1), so no reference to
 
 Separate from the lightweight-track sweep, the constitution carries eight references to deleted verbs (`/capture`, `/elaborate`) outside the lightweight-track section. Each is rewritten to the post-consolidation verb in the same edit pass:
 
-| Line | Section | Current text | Rewrite |
-| --- | --- | --- | --- |
-| 99 | §spec-lifecycle | `/elaborate` adds a scenario | `/amend` adds a scenario |
-| 108 | §spec-lifecycle (The three cycles — Brownfield) | `/capture` (sketch spec) → … → `/elaborate` to add a scenario | `/specify` (sketch spec) → … → `/amend` to add a scenario |
-| 109 | §spec-lifecycle (The three cycles — Reopen) | `/elaborate` adds a scenario | `/amend` adds a scenario |
-| 260 | §scenario-promotion | `/specify` (for new behavior) or `/capture` (for another existing feature) | `/specify` (covers both) |
-| 335 | §brownfield-process intro | The `/capture` command initializes a skeleton spec | The `/specify` command initializes a skeleton spec; sparse acceptance criteria are valid for brownfield use |
-| 339 | §brownfield-process Capture phase | `/capture` drafts a skeleton spec | `/specify` drafts a skeleton spec |
-| 350 | §brownfield-process Inbox integration | directs the user to run `/capture` … `/capture` creates specs | directs the user to run `/specify` … `/specify` creates specs |
-| 409 | §runtime-boundary (principle 2 example list) | `/capture` sketching | `/specify` sketching |
+| Section | Current text | Rewrite |
+| --- | --- | --- |
+| §spec-lifecycle | `/elaborate` adds a scenario | `/amend` adds a scenario |
+| §spec-lifecycle (The three cycles — Brownfield) | `/capture` (sketch spec) → … → `/elaborate` to add a scenario | `/specify` (sketch spec) → … → `/amend` to add a scenario |
+| §spec-lifecycle (The three cycles — Reopen) | `/elaborate` adds a scenario | `/amend` adds a scenario |
+| §scenario-promotion | `/specify` (for new behavior) or `/capture` (for another existing feature) | `/specify` (covers both) |
+| §brownfield-process intro | The `/capture` command initializes a skeleton spec | The `/specify` command initializes a skeleton spec; sparse acceptance criteria are valid for brownfield use |
+| §brownfield-process Capture phase | `/capture` drafts a skeleton spec | `/specify` drafts a skeleton spec |
+| §brownfield-process Inbox integration | directs the user to run `/capture` … `/capture` creates specs | directs the user to run `/specify` … `/specify` creates specs |
+| §runtime-boundary (principle 2 example list) | `/capture` sketching | `/specify` sketching |
 
 Rationale: the spec's sections 2 and 3 delete `capture.md` and `elaborate.md` rather than alias them, so each surviving mention of either verb would be a dead reference (§drift-prevention).
 
@@ -114,6 +114,8 @@ The rename ships alongside a description tightening on both commands so `/help` 
 - Drop the `/capture` row from the brownfield table.
 - Rename the surrounding heading in `help.md` from "Elaborate (add precision)" to "Refine".
 
+Rationale: §2 and §3 delete `capture.md` and `elaborate.md` rather than alias them, and the generator reads each row's description from its command file (`read_description`), so a row left for either would fail the pre-commit generator, as the rename above notes for `validate.md`; the table that held `/elaborate` is renamed for `/amend`, the verb that remains.
+
 The script's existing splice logic handles marker renames without code changes — the markers are data, not hardcoded structure. The five table-build invocations in the script update inline.
 
 ### Migration check in `/ductus` bootstrap
@@ -158,7 +160,7 @@ The changelog entry accompanying the paired runtime and framework release docume
 | `.githooks/pre-commit` | Modify | Wire `gen-configure-mcp.sh` into the hook. |
 | `README.md` | Modify | Remove `/capture`, `/elaborate`, and lightweight-track references; update Slash Commands tables; drop `spec-and-plan.md` from templates table. |
 | `AGENTS.md` | Modify | Drop `spec-and-plan` from the framework templates list. |
-| `specs/README.md` | Modify | Remove the "Lightweight track detection" bullet from §Design Decisions (active-design statement being undone); add a "Past Renames" note recording `/validate → /analyze`. |
+| `specs/README.md` | Modify | Remove the "Lightweight track detection" bullet from §Design Decisions (active-design statement being undone); add a "Past Renames" note recording `/validate → /analyze`, which the `living-specs` scenario later deleted (AC23). |
 | `framework/templates/project/agents.md` | Modify | Drop `spec-and-plan` from the templates list and remove the `spec-and-plan.md` row from the templates description. |
 | `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list. |
 | `framework/bootstrap/ductus.md` | Modify | Add migration check for `spec-and-plan.md` files (see Phase B task 14); sweep all `spec-and-plan` and deleted-verb references (lines ~296, 311, 384, 442, 479, 481) including manifest entries for `capture.md`, `elaborate.md`, and `spec-and-plan.md`. |
