@@ -28,7 +28,7 @@ A finding takes one of three dispositions: fixed, deferred or waived. The consti
 
 ### A deferral's companion is a target, a work item, or both
 
-`require_companion` (`runtime/src/primitives/decisions.rs`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it flattens today, so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
+`require_companion` (`runtime/src/primitives/decisions.rs`) generalizes to the refusals in the data model's *Disposition* table (AC3, AC10, AC11). `decision_for` stores `task` and `work-item`. It keeps `work-item` byte-identical, unlike the companion text it passes through `flatten_line` (`decision_for`'s doc comment), so a multi-line ID is refused rather than flattened (AC4). Existence of a `target`, and of a `task` within it, is checked against the tree at write time; the task check uses `read-tasks`' parser.
 
 ### A review violation's deferral is a stored decision, not a new list
 
@@ -129,7 +129,7 @@ The read aliases make every existing record parse, and each record is rewritten 
 ## Trade-offs
 
 - **A `deferrals:` list in `review.md`, mirroring `waivers:`.** Rejected: it would be a second implementation of matched, expired and retained, and a third list per record. `decisions:` already carries that lifecycle.
-- **The gate computing release from `decisions:`.** Rejected: a stored decision does not know its finding's tier, and the writer does. So the writer derives the counts and the `gating` flag.
+- **The gate computing release from `decisions:`.** Rejected: a stored decision does not know its finding's tier (`RawDecision` in `runtime/src/primitives/decisions.rs` carries no tier field), and the writer does. So the writer derives the counts and the `gating` flag.
 - **Analysis keeping gross counts beside a released count the gate subtracts.** Rejected: outstanding would be computed in two places, and review's counts are already net of waivers. Net counts give both records one meaning: what still holds `done`.
 - **Aliases on host input.** Rejected: there is no caller older than the runtime it ships with.
 - **A migration rewriting adopters' records.** Rejected: every record parses through the aliases, and its next run rewrites it.
