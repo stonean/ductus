@@ -1,6 +1,6 @@
 ---
 status: draft
-next-task: 21
+next-task: 23
 ---
 
 # 020 — `/ductus:review` Tasks
@@ -30,3 +30,17 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Discharge `cross-spec-impact:`: 022's scenario `review-runtime-acceleration` (its code-movement claim), 058's data model (the violation key form), 066's data model (`process-waivers`) and scenario `process-waivers-file-lists`, and 076's data model (the `key` and `decision-key` rows) each carry a blockquote signpost back-linking this spec with the contract change, and `check-review-gate` reports the impact discharged.
 
 - **Done when**: A review judges AC19 met; each case of the scenario `waiver-expiry` has a fixture that fails with its guard removed; the reference, the command and `docs/rules.md` state the triple anchor; and 022, 058, 066 and 076 carry the signposts.
+
+## 21. AC19: findings at different sites are counted apart
+
+- [ ] Update `plan.md`'s AC19 decision first: an anchor's count collapses overlapping findings of one rule, file and site, never across sites. `collapse_overlapping` (`runtime/src/primitives/process_waivers.rs`) collapses a rule's overlapping findings in a file whatever their sites, and a whole-file finding (an empty `line-range`) overlaps every range, so when one is listed in `fired` before a finding at a named site, the waiver anchored at that site counts none and expires with the `no longer fires` notice while its finding stands. `write-review`'s cross-site dedup (AC13) stays as it is, and `lower_covers` already never lowers `covers` to zero, so a site anchor whose finding the dedup kept elsewhere is applied and unchanged. Found reviewing task 20's runtime work, 2026-11-22.
+- [ ] Implement with a test, proven to fail with the site condition removed from the collapse, in which a whole-file finding listed before a site finding of the same rule leaves the waiver anchored at that site applied.
+
+- **Done when**: A waiver anchored at a site applies while a finding of its rule fires there, whatever overlapping finding of that rule at another site `fired` lists first, the test fails with the site condition removed, and the plan states the per-site count.
+
+## 22. AC19: only a violation's key reads as recorded before sites
+
+- [ ] Update `plan.md`'s AC19 decision first: a stored key reads as a violation's recorded before sites only when the token after its leading word `rule` is a rule ID. `decisions::is_pre_site_violation_key` (`runtime/src/primitives/decisions.rs`) reads any key that starts with the word `rule`, holds the word `at` and no backtick that way, so an observation's key with no path, such as `rule engine at startup leaks`, expires its stored decision on every review with the `recorded before sites` notice and the person is asked again. Test the token with `check_rule_ids::is_a_rule_id` (`runtime/src/primitives/check_rule_ids.rs`), never a copy of its pattern (`QUAL-DELEG-001`). Found reviewing task 20's runtime work, 2026-11-22.
+- [ ] Implement with a test, proven to fail with the rule-ID test removed, in which a waived observation keyed `rule engine at startup leaks` matches while it fires and a deferral keyed `rule BE-X-001 at src/a.rs` still expires as recorded before sites.
+
+- **Done when**: Only a key whose token after its leading word `rule` is a rule ID reads as recorded before sites, the test fails with that check removed, and the plan says so.
