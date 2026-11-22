@@ -39,7 +39,7 @@ Operator-tunable values these rules name (the probe intervals and timeouts in `B
 
 ### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observability-backend.md\` |` to the `### ductus-owned shared files` table, slotted between `configuration-cross.md` and `performance-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's surface filter includes it when `backend` is configured — no change needed in either. The §Shared Files note is count-free, so no count edit.
+Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observability-backend.md\` |` to the `### ductus-owned shared files` table, slotted between `configuration-cross.md` and `performance-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's surface filter includes it when `backend` is configured — no change needed in either. Its header names `/{project}:analyze` and not `/{project}:review`, so a review then leaves it out and analysis alone judges it (020's AC17). The §Shared Files note is count-free, so no count edit.
 
 ### What this feature does NOT touch
 
