@@ -16,7 +16,7 @@ Per spec, sources are `framework/rules/security-backend.md` and `framework/rules
 
 ### Project destination is the spec root's `rules/` directory
 
-ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` in adopted projects, alongside the other rule files. They sit under the same spec root as `system.md`, `errors.md`, and `events.md` — the cross-cutting global specs — which keeps the project root clean and groups all "applies project-wide" docs together. This plan was written against the original flat layout (`specs/security-{backend,frontend}.md`); the `rules/` subdirectory arrived in ductus 0.6.0 (`CHANGELOG.md` §rule-files-relocate, introduced 0.6.0) and adopters are converged by the `rule-files-relocate` migration.
+ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` in adopted projects, alongside the other rule files. They sit under the same spec root as `system.md`, `errors.md`, and `events.md` — the cross-cutting global specs — which keeps the project root clean and groups all "applies project-wide" docs together. This plan was written against the original flat layout (`specs/security-{backend,frontend}.md`); the `rules/` subdirectory arrived in ductus 0.6.0 (the `rule-files-relocate` entry of `CHANGELOG.md`, introduced 0.6.0) and adopters are converged by the `rule-files-relocate` migration.
 
 ### Rule entry format is heading-anchored markdown
 
@@ -104,8 +104,8 @@ Each edge case maps directly to a checkbox in that section's check list, so viol
 > The audit reports each gap under its spec and writes nothing, where it first
 > wrote each to `specs/inbox.md`. The trigger and the per-rule logic are
 > unchanged, and the contract is `spec.md` §Brownfield Adoption. Since 056 split
-> the bootstrap, the section lives in `framework/bootstrap/ductus-procedure.md`
-> §Security Audit (brownfield).
+> the bootstrap, the section lives in
+> `framework/bootstrap/ductus-procedure.md` §Security Audit (brownfield).
 
 When `/ductus` lands rule files in a project with existing feature spec directories, in either numbering form constitution §numbering defines, it runs a one-time audit and reports each gap under the spec it belongs to, writing nothing, so `/{project}:analyze` finds and dispositions each gap when that spec is next worked on. This follows 011's brownfield process, each spec gaining precision as it is worked on, rather than introducing baseline files or suppression mechanisms.
 
