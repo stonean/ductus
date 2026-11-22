@@ -8,9 +8,9 @@ An alias-keyed `[constitutions.<alias>]` registry in `.ductus/config.toml`, read
 same way `[services]` already is; one new runtime primitive, `resolve-constitutions`,
 that resolves each entry to a document on disk and reports what it could not resolve;
 `/ductus:target`'s existing once-per-session constitution load extended to every
-resolved document not already in context; and a layout-derived managed block in the
-adopter's native rules file, which imports the document at session start under
-`claude-style` and links it under the `AGENTS.md` layouts.
+resolved document not already in context; and a managed `ductus:constitutions` block
+that links each document from `AGENTS.md` under every layout, plus, under
+`claude-style`, one in `CLAUDE.md` that imports it at session start (AC13).
 
 Nothing is fetched, nothing is copied, and `.ductus/constitution.md` is never
 rewritten. The feature is a read of local disk plus a report.
@@ -74,7 +74,7 @@ gives `pi` a native rules file of `AGENTS.md`, and
 `framework/templates/project/agents.md` links the constitution in prose rather than
 importing it. So AC9's managed block is **layout-derived**: an `@{document-path}`
 line under `claude-style`, which Claude Code expands at session start, and a
-`See [alias](path)` link under the `AGENTS.md` layouts, which loads nothing. The
+`See [alias](<path>)` link under the `AGENTS.md` layouts, which loads nothing. The
 `ductus:constitutions` region in `AGENTS.md` is maintained for **every** layout (AC13):
 `claude-style` gets the links there too, beside its `CLAUDE.md` imports, because the
 template ships that region to every project with a comment saying `/ductus` maintains
@@ -164,7 +164,9 @@ enforces it.
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of the above (Family 21) |
 | `framework/constitution.md` | Modify | Precedence statement + schema pointer (AC10) |
 | `framework/templates/project/claude-md.md` | Modify | Managed-block marker for `claude-style` |
-| `framework/templates/project/agents.md` | Modify | Managed-block marker for `AGENTS.md` layouts |
+| `framework/templates/project/agents.md` | Modify | Managed-block markers for the constitutions region `/ductus` maintains under every layout (AC13) |
+| `docs/shared-constitution.md` | Modify | Where `/ductus` writes each block, and how a registered constitution loads (task 19) |
+| `framework/migrations/remove-legacy-constitutions-region.md` | Modify | Its Background says Shared Files also writes the block into `AGENTS.md` for every layout, appending it with its markers to a file that lacks it (task 19) |
 | `.claude/commands/ductus/*.md` | Regenerate | `scripts/gen-claude-commands.sh` output |
 | `specs/055-shared-constitution/data-model.md` | Create | `[constitutions.*]` schema (canonical) |
 
