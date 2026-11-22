@@ -796,6 +796,14 @@ mod tests {
         assert_eq!(listed, expected);
         assert!(text.contains(&format!("git diff --relative {base} {snapshot}")));
         assert!(text.contains(SEVERITY_BAR) && text.contains(RESULT_CONTRACT));
+        // The bar's text itself, not the constant it is built from, so a bar
+        // that loses the reachable-trigger clause fails here (spec 078, AC16).
+        assert!(
+            text.contains(
+                "Raise a finding of any severity only on a case whose trigger is shown possible in this project"
+            ),
+            "the brief states the reachable-trigger bar"
+        );
         assert_eq!(
             result_rel,
             format!("{}/result.json", fix_rounds::round_rel(FEATURE, &base))

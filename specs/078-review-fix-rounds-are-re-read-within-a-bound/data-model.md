@@ -25,7 +25,7 @@ Result: `{ "base": "<sha>", "files": 812, "budget": 2 }`
 
 - `base`, `files` and `budget` are as `ductus start-fix-rounds --help` states. The snapshot's author and committer are a fixed `ductus` identity, so no `user.name` is needed, and its parent is none on an unborn `HEAD`; the runtime holds the budget once (`runtime/src/primitives/fix_rounds.rs`, `RE_READ_BUDGET`), and `write-review`'s `budget-stop` derivation reads the same constant.
 - It also writes `start.toml` into the feature's round directory (AC17), which `brief-re-read` reads for `elapsed-seconds`; the result is unchanged.
-- Errors: a `feature` outside the allowlist, one that would leave the spec root, a feature directory that does not exist, a malformed `[review] re-reads-off` or config file, read here before the run writes any fix, a round directory that cannot be cleared, a project no work tree contains, or a libgit2 failure. An error is never a base: the host records the run's first round as not re-read (AC15).
+- Errors: a `feature` outside the allowlist, one that would leave the spec root, a feature directory that does not exist, a malformed `[review] re-reads-off` or config file, read here before the run writes any fix, a round directory that cannot be cleared, a `start.toml` that cannot be written, a project no work tree contains, or a libgit2 failure. An error is never a base: the host records the run's first round as not re-read (AC15).
 
 ## `brief-re-read`
 

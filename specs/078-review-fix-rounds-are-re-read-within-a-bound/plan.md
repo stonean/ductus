@@ -62,7 +62,8 @@ The loop step says what to do when the host can start an independent agent and w
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/fix_rounds.rs` | Create | Round directory, self-ignore, the `re-reads-off` reader, `result.json` parsing |
+| `runtime/src/primitives/fix_rounds.rs` | Create | Round directory, self-ignore, the `re-reads-off` reader, `result.json` parsing, the loop's `start.toml` and the figures `brief-re-read` returns (task 20) |
+| `runtime/src/schema/descriptions.rs` | Modify | The loop primitives' descriptions, their figures and the reachable-trigger bar among them (task 20) |
 | `runtime/src/primitives/start_fix_rounds.rs` | Create | `start-fix-rounds` |
 | `runtime/src/primitives/brief_re_read.rs` | Create | `brief-re-read` and the brief's text |
 | `runtime/src/primitives/read_re_read.rs` | Create | `read-re-read` |
@@ -85,7 +86,7 @@ The loop step says what to do when the host can start an independent agent and w
 | `scripts/mutation/own-record-is-no-round.py` | Create | Mutation list: the review's own record is no round's path |
 | `scripts/mutation/re-read-budget.py` | Create | Mutation list: the re-read budget's one home |
 | `scripts/mutation/fix-round-record.py` | Create | Through 066's scenario task: the record fields' and the gate's fix-round check's mutation list |
-| `runtime/tests/line_ending_discipline.rs` | Modify | `brief_re_read.rs` exempt: it writes generated state |
+| `runtime/tests/line_ending_discipline.rs` | Modify | `brief_re_read.rs` and `fix_rounds.rs` exempt: they write generated state |
 | `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the changed command |
 | `runtime/CHANGELOG.md` | Modify | Unreleased entry |
 | `framework/runtime-tools.txt` | Modify | Four tool lines |
