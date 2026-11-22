@@ -19,18 +19,25 @@ Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative
 
 ## Waiver record
 
-One entry per waiver judgment: one rule, waived at one or more files for one reason. Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
+One entry per waiver judgment: one rule, waived at one or more anchors for one reason, each anchor a file, a site in it and the number of findings it covers ([waiver-expiry](scenarios/waiver-expiry.md)). Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
 
 ```yaml
 - rule: BE-AUTHN-007
-  file: src/api/internal.ts
+  anchors:
+    - file: src/api/internal.ts
+      site: internalRouter
+      covers: 1
   reason: "Endpoint is internal-only behind mTLS; rule applies to public APIs"
   waived-at: 2026-05-10T14:40:00Z
   waived-by: dev@example.com
 - rule: BE-AUTHN-008
-  file:
-    - src/api/admin.ts
-    - src/api/metrics.ts
+  anchors:
+    - file: src/api/admin.ts
+      site: adminRoutes
+      covers: 1
+    - file: src/api/metrics.ts
+      site: metricsRoutes
+      covers: 2
   reason: "Both routes are bound to the loopback interface"
   waived-at: 2026-05-11T09:15:00Z
   waived-by: dev@example.com
@@ -39,7 +46,8 @@ One entry per waiver judgment: one rule, waived at one or more files for one rea
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `rule` | string (rule ID) | yes | E.g. `BE-AUTHN-007`. Must reference a known rule at write time. |
-| `file` | string (relative path), or a list of them | yes | The paths the waiver is anchored to, each its own `(rule, file)` anchor and matched literally — never expanded as a pattern. Written as a single path when the entry holds one and as a list when it holds more. An empty list, or a list holding a blank path, is missing. Added by [waiver-file-lists](scenarios/waiver-file-lists.md); a one-path entry is unchanged. |
+| `anchors` | list of anchor records | yes, but on a departure waiver | Each a `(rule, file, site)` anchor ([waiver-expiry](scenarios/waiver-expiry.md)): `file`, a repo-relative path matched literally, never expanded as a pattern; `site`, the narrowest named unit enclosing the findings, or `(top level)`; `covers`, a positive integer, the findings it covers, lowered by a run that applies it to fewer and never raised. An empty list, or an anchor with a blank `file` or `site` or a `covers` that is not a positive integer, is missing. An entry holding `anchors` is read from them alone. Added by AC19. |
+| `file` | string (relative path), or a list of them | on a departure waiver | A departure waiver's paths, each covering every finding of its rule at that file, at any site. Written as a single path when the entry holds one and as a list when it holds more ([waiver-file-lists](scenarios/waiver-file-lists.md)). Any other entry holding `file` and no `anchors` was recorded before sites: each path covers nothing and expires on the next review. |
 | `reason` | string | yes | Free-text justification. Empty string is invalid. |
 | `waived-at` | ISO 8601 timestamp | yes | Set by `/ductus:review --waive`. |
 | `waived-by` | string (email) | yes | Sourced from `git config user.email`. |
@@ -47,10 +55,12 @@ One entry per waiver judgment: one rule, waived at one or more files for one rea
 
 ### Expiry rule
 
-A waiver anchor expires (its path is dropped from `review.md`'s frontmatter on the next `/ductus:review` run — from the spec's, before 057 — and the entry with its last path) when **either** of the following holds:
+A waiver anchor expires (it is dropped from `review.md`'s frontmatter on the next `/ductus:review` run — from the spec's, before 057 — and the entry with its last anchor) when **any** of the following holds:
 
 - The anchored path no longer exists in the repository (renamed or deleted).
-- The named `rule` no longer fires at that path (rule removed, or the violating code was fixed), in a run whose scope holds it; a run that did not read the path retains the anchor.
+- The named `rule` no longer fires at that site (rule removed, or the violating code was fixed or moved out of it), in a run whose scope holds the file; a run that did not read the file retains the anchor.
+- More findings fire at the anchor than it covers.
+- It names no site and is not a departure waiver's: it was recorded before sites.
 
 When the underlying finding still exists elsewhere in scope after expiry, it re-counts toward its severity's count: a MUST toward `must-violations`, flipping the record's `blocking` flag back to `true`; a SHOULD toward `should-violations`, which holds `done` at the pre-done gate. The detailed edge-case behavior is in [`scenarios/waiver-expiry.md`](scenarios/waiver-expiry.md).
 
@@ -124,7 +134,7 @@ decisions:                           # omitted entirely when empty
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop`, `round-waivers` | integers, a boolean, a list | no | The fix-round loop's outcome, derived by `write-review` and absent when the run stated nothing about its fixes. Defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md). |
 | `criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts` | integer, integer, list, list | no | The criteria step's verdicts, defined in [066's data model](../066-audit-records-and-the-completion-gate/data-model.md) and absent when the run judged no criterion. |
 | `excluded`, `contract-breaks`, `open-findings`, `fix-rounds-open` | integer, integer, list, boolean | no | Defined in [079's data model](../079-review-and-analysis-work-converges/data-model.md). `excluded` and `contract-breaks` are written on every run; `open-findings` and `fix-rounds-open` only when set. |
-| `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `rule {rule-id} at {file}`; each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
+| `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `` rule {rule-id} at {file} in `{site}` `` with `covers`, the number of findings at that anchor, lowered and never raised (AC19; a key with no backticked site was recorded before sites and expires on the next review); each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing. Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
 **Validation severity** (per [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
 **Audit records**, which has declared both records since 057):
@@ -161,6 +171,7 @@ Each finding under MUST/SHOULD/Low-confidence sections:
 ### MUST: <rule-id> — <one-line summary>
 
 - **File**: `path/to/file.ts:<start-line>-<end-line>`
+- **Site**: <the narrowest named unit enclosing it, or (top level)>
 - **Rule**: <verbatim rule text from framework/rules/...>
 - **Finding**: <one to three sentences>
 - **Auto-fixable**: yes | no
