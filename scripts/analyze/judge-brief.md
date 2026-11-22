@@ -51,7 +51,7 @@ Answer every ID in your share. Each goes in `judged`, fired or not, or in `unjud
 
 - `verdicts` holds only the fired rules.
 - A `cite` or `at` is `<path>#<Heading>`. The path is relative to the feature directory, and the heading is a heading's exact, whole text without its `#` marks.
-- `bytes-read` holds every design subject and the share file, keyed by repo-relative path. Each entry is `[bytes read, wc -c size]`.
+- `bytes-read` holds every design subject, keyed by repo-relative path, and the share file, keyed by exactly the path §3 gives it with nothing around it, since `check.py` matches that path whole. Each entry is `[bytes read, wc -c size]`.
 
 End your final message with:
 
