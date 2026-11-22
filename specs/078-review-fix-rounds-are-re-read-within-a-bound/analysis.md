@@ -1,35 +1,93 @@
 ---
 spec: 078-review-fix-rounds-are-re-read-within-a-bound
-last-run: 2026-11-14T13:44:48Z
-analyzed-against: 87b2240447b238b2c86a7ebfd964e9d0c44bb9ec
+last-run: 2026-11-22T02:12:39Z
+analyzed-against: 27dc36020c142b4b1631fe1de7b5bf96c4f43e02
 hard-fail: 0
 blocking-findings: 0
-advisory: 5
-unexamined: 2
+advisory: 4
+unexamined: 0
 analyzed-digest:
-  data-model.md: 1fc4eae1fc031a011a4aa2346152a20aed0ed867454993c3a31dd1ba8846149d
-  plan.md: 84f5c48d9862a8c81749a229413e638cd59a1cda32d8cad312ff7d50165fe500
-  review.md: 3330a8dae59991d2ea8e19895300447af70f73ecff42d631c7c83944fe77946b
+  data-model.md: 168e5910602ec2917f2b05ea82a7359ebf3961dabb571dfccdb2179c5f5be526
+  plan.md: 0a10bccad75fcbde514215c5b62acc75cb4230c95faebca5d7657870d90a98bd
+  review.md: 2235ac196037533057865be4eec80545cd0cce01dc0c8099a1a08d706d1e7193
   scenarios/a-reviews-own-record-is-no-fix-round.md: 8a0190ef5a926425199a4381d558f52db626cdd81803b4e23c9aa1055b130440
   scenarios/fix-round-results-have-a-bounded-size.md: 3cf9dc7ebb4213d371eadee7db64826448d2da4ed0bf3ffa96b4fecb897f78d9
-  spec.md: 4a08b1d2f1911af781ff23182c4e3eae72a37d48a201e796502c809d12eb249f
-  tasks.md: 046ea8e5f19a0ed15e64dc250cc4cd707dfff4e011214ec271ad99e16c36553f
-unexamined-by-reason:
-  never-existed: 1
-  not-a-live-claim: 1
+  spec.md: c7657fe51162a5b9cab63415c998e5276ea0651d5eaa619a1700e766227bcf89
+  tasks.md: 5a3b984be9a91aa30f899e70470a4a2fec22068021a0ae9e32518d00e9f257f0
 rule-digest:
-  accessibility-frontend.md: 5c1e7a9b5f625f14e6a1879c145ee30e25c5f5aff04ae4c853ee589e21b1efbb
-  api-backend.md: 0caddd70fd1a546d80a5e77d254a38c36d158fcad464ee2493491a23cde06ea5
-  concurrency-backend.md: 15209bb99ee1c7a63cfcde08a73f6de5df857834776cea43fadb7f0f1040370c
-  configuration-cross.md: 2a807ba8facdfd1c3738383e6d44a1f6f2c6f91b387eac0ca5ed90d75dc9e178
+  accessibility-frontend.md: 4d7f5ac09d457c99774f5fc341222a464d2b461cb0467cd58a13dc31c928359b
+  api-backend.md: 8e496f92a50b68b1ae8b1954e30a85dd142dc65d3b3882089f9c48560096d800
+  concurrency-backend.md: 2650d82125bd67945fd327f7fb9f76c57ca10d165925733139afa3cd50562dd4
+  configuration-cross.md: 050a5b8dd375fe4790f5d92753db27ae53ac730db1557cbee84b923b72499ca9
   observability-backend.md: c36af8f004e95bafdb260d1a639ece53d64099855dfe6bd2e1754795d83be6b2
   performance-backend.md: f14131dc59688f068afb1c239aa5a6031b163bfac1ec702f2d28df808e26b814
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
-  reliability-backend.md: 0522a169c04113521bad128dfef283cd7e910264bf49c4a5320f27ba625fcdee
-  security-backend.md: d89d6dad3ab51586ae4e68944b0c8e9ad4d5da721560f10590de3cdecc904d3f
-  security-cross.md: dc98261801405fccaf5de9eb8f8ed9b020ebc78fcb5bfb124778a5fcc287950b
-  security-frontend.md: e648707661636c2461485b362dfacc38cdfb9c770731e81599aee6929271a90e
+  reliability-backend.md: 26c045df79b6a99319bd7dfa09490b4a2d5ac742eee70a6b3ad0235d49093d2a
+  security-backend.md: 511a68b25ceb148f8292cda2a829aaff03a38bc3453732e33a70bd5d6acf5df5
+  security-cross.md: 26e287f06cdca2744d0972cbf7cf6a48f27d869526dd86c7c375ac4bdc0dadce
+  security-frontend.md: 5fddb21530faa805cb00f23c929e9402548ed0d6a0ed3e8e9a910561b74a45a3
+section-digest:
+  "data-model.md": e3b0c44298fc1c14
+  "data-model.md#078 — Review fix rounds are re-read within a bound: Data Model": 40879fe4a29eba24
+  "data-model.md#Result file": 0e19e16fb21a3913
+  "data-model.md#Round directory": e492c1ae98c4b5cc
+  "data-model.md#`[review] re-reads-off`": 2a05c9a8d3e2849b
+  "data-model.md#`brief-re-read`": dfdefa13b5873dd7
+  "data-model.md#`check-prescriptions`": 03ed796b190b3535
+  "data-model.md#`check-review-gate` — the fix-round check": b8713ded490c86dd
+  "data-model.md#`read-re-read`": 387d60471b04d3f2
+  "data-model.md#`start-fix-rounds`": 3c32d2f1992531df
+  "data-model.md#`write-review` — the loop's argument and record fields": 7ec1da947fed384a
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#078 — Review fix rounds are re-read within a bound Plan": 402f9bd506161815
+  "plan.md#A round's paths are a tree-to-tree diff": ee6c925be5c7b7d4
+  "plan.md#Affected Files": 7231037ce483d6e9
+  "plan.md#Cross-spec impact": 61e2bcd9ccb4ba66
+  "plan.md#Data Model": 612c8030662cf56d
+  "plan.md#Every agent gets the same procedure": 855805f377eb9169
+  "plan.md#Exemption is a path predicate the runtime evaluates": 41f77aa34e9aca42
+  "plan.md#Four primitives, owned by this feature": f0e5f9223bf25e1e
+  "plan.md#Overview": 7277cf2a54e1ee5d
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The exec path makes no round": cd0f15518f8a60e9
+  "plan.md#The loop's end and its budget": f32686b195dec18a
+  "plan.md#The re-read reports through a file the runtime reads": 7471b4594c20c31f
+  "plan.md#The record and the gate are 066's": 1c15f82f548cd402
+  "plan.md#The round directory ignores itself": ea3f14850d27063f
+  "plan.md#The runtime writes the brief": 73c4e25f2892af48
+  "plan.md#The snapshot is an unreferenced commit object": e65135f7a471a7b8
+  "plan.md#The switch is read by the runtime": a4db01d04ccc371b
+  "plan.md#Trade-offs": 97562be797245232
+  "scenarios/a-reviews-own-record-is-no-fix-round.md": 9bad63fce44c0b72
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#A-reviews-own-record-is-no-fix-round": a4e5ff5be5a9945c
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#Behavior": 822878e85d168158
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#Context": e2683faa0c1632cd
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#Edge Cases": b529a0d2c904987d
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/a-reviews-own-record-is-no-fix-round.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/fix-round-results-have-a-bounded-size.md": 950580b43a29d1d1
+  "scenarios/fix-round-results-have-a-bounded-size.md#Behavior": 944315d93029c1ff
+  "scenarios/fix-round-results-have-a-bounded-size.md#Context": 843dda83f3bdec5c
+  "scenarios/fix-round-results-have-a-bounded-size.md#Edge Cases": ea550395c6b36cf6
+  "scenarios/fix-round-results-have-a-bounded-size.md#Fix-round-results-have-a-bounded-size": de186b4ebc296908
+  "scenarios/fix-round-results-have-a-bounded-size.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/fix-round-results-have-a-bounded-size.md#Resolved Questions": b5f7b98fb3491576
+  "spec.md": cd848d376d1b048d
+  "spec.md#078 — Review fix rounds are re-read within a bound": 8f6723f817eacc73
+  "spec.md#A prescribed edit is checked by diff": cc1bbef59da9609a
+  "spec.md#Acceptance Criteria": e7be4b164643ba26
+  "spec.md#Applicable Rules": bd26e5c22e91f4c8
+  "spec.md#Behavior": 29ab98cdbf8ff7c1
+  "spec.md#Edge Cases": 7483f80ae33ad838
+  "spec.md#Hosts": d11c66ea78fd2a44
+  "spec.md#Motivation": 6a01d3c44afa77f2
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Resolved Questions": 79a4122dc6bd5211
+  "spec.md#The budget": c0ad31930edf4097
+  "spec.md#The loop": 1b2c1536965f39af
+  "spec.md#The record": e1f9cf073a10065c
+  "spec.md#The scope is derived": 1abb065a3c44cd1b
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#The record and the gate are 066's"}
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Result file"}
@@ -38,47 +96,45 @@ rule-verdicts:
   BE-INPUT-004: {verdict: addressed, cite: "data-model.md#Round directory"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#Result file"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "scenarios/fix-round-results-have-a-bounded-size.md#Behavior"}
+  BE-RACE-001: {verdict: addressed, cite: "plan.md#Trade-offs"}
+  BE-RACE-002: {verdict: addressed, cite: "plan.md#Trade-offs"}
   BE-RACE-003: {verdict: addressed, cite: "data-model.md#Round directory"}
-  BE-REPR-002: {verdict: finding, tier: should, at: "data-model.md#Result file", message: "result.json's and read-re-read's severities are upper-case MUST, SHOULD and NOTE while 078's other enum values are lower-case kebab"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#The loop's end and its budget"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#The runtime writes the brief"}
   CFG-CONST-003: {verdict: addressed, cite: "plan.md#The loop's end and its budget"}
   CFG-CONST-004: {verdict: addressed, cite: "plan.md#The switch is read by the runtime"}
   CFG-ENV-001: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
-  CFG-ENV-002: {verdict: addressed, cite: "plan.md#Affected Files"}
+  CFG-ENV-002: {verdict: addressed, cite: "plan.md#The switch is read by the runtime"}
   CFG-ENV-005: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
   CFG-ENV-008: {verdict: addressed, cite: "data-model.md#`[review] re-reads-off`"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "plan.md#The loop's end and its budget"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#A round's paths are a tree-to-tree diff"}
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   deferred: 0
-  waived: 5
+  waived: 4
   undispositioned: 0
 decisions:
-  - key: "rule-assessment — BE-REPR-002: result.json's and read-re-read's severities are upper-case MUST, SHOULD and NOTE while 078's other enum values are lower-case kebab"
-    outcome: waived
-    reason: The severities are the RFC 2119 keywords the rule files and every brief's severity bar spell in capitals, and a re-read writes them as it reads them; this project declares no casing convention (it has no specs/system.md).
-    decided-at: 2026-11-04T14:34:33Z
-    decided-by: andy@stone.dev
   - key: grounding — the Motivation's account of 076's avoidable rounds cites no commit or record
     outcome: waived
     reason: History that motivates the spec and governs no behavior; 076's review commits keep it.
     decided-at: 2026-11-04T14:34:33Z
     decided-by: andy@stone.dev
-  - key: grounding — the rejected alternative's cost, that diff_since without the index hashes every file on every review, cites nothing
+  - key: "grounding — Technical Decisions, 'The runtime writes the brief': asserts an adopter's report of a review on 0.60.0 found the earlier bar admitted contrived NOTEs, with no citation to the report or any artifact holding it (Grounding, form check)."
     outcome: waived
-    reason: "A decision record: it states the cost as the owner weighed it on 2026-11-03."
-    decided-at: 2026-11-04T14:34:33Z
-    decided-by: andy@stone.dev
-  - key: grounding — the overlap Family 7 sees is listed without the run or commit that produced it
+    reason: "advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it"
+    decided-at: 2026-11-22T02:12:39Z
+    decided-by: rule
+  - key: "grounding — Technical Decisions, 'The loop's end and its budget': asserts an adopter's review on 0.60.0 ran six fix rounds and four re-reads over about four hours, with no citation or stated measurement method (Grounding, form check)."
     outcome: waived
-    reason: The split rationale's example; every audit run re-derives the overlap.
-    decided-at: 2026-11-04T14:34:33Z
-    decided-by: andy@stone.dev
-  - key: grounding — the rejected alternative's reason, that compute-review-scope writes nothing outside .ductus/results/, cites nothing
+    reason: "advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it"
+    decided-at: 2026-11-22T02:12:39Z
+    decided-by: rule
+  - key: "decision-reasons — Resolved Questions, 'Does check-review-gate hold done...': rejects 'blocking on every such round' because declining then has no path to done but a whole /review re-run, a review-run cost stated as the reason rather than the result the option gives up."
     outcome: waived
-    reason: A rejected alternative's reason in a decision record (owner, 2026-11-03), the shape of the stored cost waiver beside it; its source is the primitive's compiled description, which no 078 artifact names and this command does not read.
-    decided-at: 2026-11-09T19:34:21Z
+    reason: "advisory and no chore: the entry states the result the rejected option delivers, not only its cost: under it a declined re-read has no path to done, removing the decline the first resolution gives the operator, and the passing gate's guidance is named as the caveat §design-principles rules out"
+    decided-at: 2026-11-22T02:12:39Z
     decided-by: rule
 ---
 
@@ -86,7 +142,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 2 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 4 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -98,11 +154,10 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-REPR-002: result.json's and read-re-read's severities are upper-case MUST, SHOULD and NOTE while 078's other enum values are lower-case kebab — `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md` — **waived**: The severities are the RFC 2119 keywords the rule files and every brief's severity bar spell in capitals, and a re-read writes them as it reads them; this project declares no casing convention (it has no specs/system.md).
-- grounding — the Motivation's account of 076's avoidable rounds cites no commit or record — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: History that motivates the spec and governs no behavior; 076's review commits keep it.
-- grounding — the rejected alternative's cost, that diff_since without the index hashes every file on every review, cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: A decision record: it states the cost as the owner weighed it on 2026-11-03.
-- grounding — the overlap Family 7 sees is listed without the run or commit that produced it — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: The split rationale's example; every audit run re-derives the overlap.
-- grounding — the rejected alternative's reason, that compute-review-scope writes nothing outside .ductus/results/, cites nothing — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: A rejected alternative's reason in a decision record (owner, 2026-11-03), the shape of the stored cost waiver beside it; its source is the primitive's compiled description, which no 078 artifact names and this command does not read.
+- grounding — Technical Decisions, 'The runtime writes the brief': asserts an adopter's report of a review on 0.60.0 found the earlier bar admitted contrived NOTEs, with no citation to the report or any artifact holding it (Grounding, form check). — `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
+- grounding — Technical Decisions, 'The loop's end and its budget': asserts an adopter's review on 0.60.0 ran six fix rounds and four re-reads over about four hours, with no citation or stated measurement method (Grounding, form check). — `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
+- grounding — Motivation: asserts spec 076's review ran five fix rounds and four re-reads in one session and that the second re-read found a MUST earlier rounds had recorded fixed, citing only the spec number, no review record or commit (Grounding, form check). — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: History that motivates the spec and governs no behavior; 076's review commits keep it.
+- decision-reasons — Resolved Questions, 'Does check-review-gate hold done...': rejects 'blocking on every such round' because declining then has no path to done but a whole /review re-run, a review-run cost stated as the reason rather than the result the option gives up. — `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md` — **waived**: advisory and no chore: the entry states the result the rejected option delivers, not only its cost: under it a declined re-read has no path to done, removing the decline the first resolution gives the operator, and the passing gate's guidance is named as the caveat §design-principles rules out (decided by the rule)
 
 ## Deferred to other specs
 
@@ -114,9 +169,8 @@ decisions:
 
 ## Unexamined targets
 
-- never-existed: 1
-- not-a-live-claim: 1
+*None — every target was examined.*
 
 ## Fixed in this run
 
-- task-consistency — tasks.md task 15 still carries handoff prose 079's completed and pruned task 28 made stale: its last sentence says 'before `done` 079's task 28 is corrected to the counts a simulated closing then reads' — `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md` — **fixed** (decided by the rule)
+*None.*
