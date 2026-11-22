@@ -4,8 +4,36 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ## [Unreleased]
 
+### Added
+
+- **The audit-record writers' results state what they wrote (spec 066).**
+  `write-analysis` returns `hard-fail`, `blocking-findings` and `advisory` as
+  the record holds them, the first two net of the live findings a deferral
+  releases, and `write-review` returns `excluded`, `unread-count` and
+  `decisions`, the counts its record holds, so a caller sees a decision the
+  write dropped without reading `review.md` back.
+- **Two constitution rules (spec 050).** §recommendations attributes a
+  decision to whoever made it in every record a command writes, the clarify
+  reference pointing at it, and §grounding probes a primitive on an artifact
+  not yet written in a `git clone --local` copy, never in the project's tree.
+
+### Changed
+
+- **BREAKING: `write-review` refuses a write whose scope moved under the review
+  (spec 066).** `compute-review-scope` returns `head`, the commit its scope was
+  resolved against, and `/ductus:review` passes it as `reviewed-against`.
+  `write-review` refuses, writing nothing, while a commit after that sha changed
+  a path its scope holds, naming each path and commit, since another spec's
+  window took such a path as read. A `reviewed-against` naming no commit, or one
+  `HEAD` does not descend from, is refused too.
+
 ### Fixed
 
+- **Three references and a description state what the runtime already did
+  (spec 066).** The analyze reference says a criterion's tick leaves the
+  analysis current, `compute-review-scope`'s description says every backticked
+  path in an Affected Files cell is a plan entry, and the review reference says
+  a pass is never told to leave out an issue a stored decision settles.
 - **`/ductus`'s Claude seed grants `certutil` for the pointer alone (specs 023 and 048).**
   The seed's `Bash(certutil -hashfile * SHA256)` let its `*` span inserted
   options, and Claude Code warns on it in every adopter ("allows any option at

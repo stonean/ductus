@@ -1207,6 +1207,13 @@ pub struct ComputeReviewScopeResult {
     pub diff_base: String,
     /// Where the window starts.
     pub base_source: BaseSource,
+    /// The commit the scope's committed part was resolved against, `HEAD` when
+    /// the call ran: the `reviewed-against` a review whose passes read this
+    /// scope records, so `write-review` can refuse a commit landing after it
+    /// that changed a scope path (066 scenario
+    /// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
+    #[serde(default)]
+    pub head: String,
     /// False when a review record names a run and holds nothing only a review
     /// clears, a finding it leaves open among that, and the scope and the deletions it
     /// attributes to the spec hold no
@@ -1992,6 +1999,18 @@ pub struct WriteReviewResult {
     /// can still overstate the numerator, but it cannot hide how large the
     /// subject was.
     pub scope: u32,
+    /// The count the record's `excluded` field holds: the paths the scope left
+    /// out (066 scenario `a-write-result-states-what-it-wrote`).
+    #[serde(default)]
+    pub excluded: u32,
+    /// The entries of the record's `unread`; absent when the run stated none,
+    /// as the record's field is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unread_count: Option<u32>,
+    /// The entries of the record's `decisions:` after this write, so a stored
+    /// decision the write dropped shows without reading `review.md` back.
+    #[serde(default)]
+    pub decisions: u32,
     /// The spec's analyze-record freshness, computed against the **working
     /// tree** at the moment this review was written (spec 047 AC12).
     ///
@@ -2265,6 +2284,17 @@ pub struct WriteAnalysisResult {
     /// `true` when `hard-fail` or `blocking-findings` exceeds zero — the
     /// value `check-review-gate` reads.
     pub blocking: bool,
+    /// The `hard-fail` the record holds: the outstanding count, net of the live
+    /// findings a deferral releases, so it can differ from the count passed (066
+    /// scenario `a-write-result-states-what-it-wrote`).
+    #[serde(default)]
+    pub hard_fail: u32,
+    /// The `blocking-findings` the record holds, net as `hard-fail` is.
+    #[serde(default)]
+    pub blocking_findings: u32,
+    /// The `advisory` the record holds.
+    #[serde(default)]
+    pub advisory: u32,
     /// The `unexamined` total actually written — derived from the breakdown
     /// when one was supplied, so a caller can confirm the two agree.
     #[serde(default)]

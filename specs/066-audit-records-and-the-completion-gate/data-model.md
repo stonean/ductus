@@ -16,6 +16,7 @@ Result, inline and past the read size:
 {
   "diff-base": "<sha>",
   "base-source": "reopen",
+  "head": "<sha>",
   "review-owed": true,
   "form": "inline",
   "scope-count": 2,
@@ -35,6 +36,7 @@ Result, inline and past the read size:
 {
   "diff-base": "<sha>",
   "base-source": "reopen",
+  "head": "<sha>",
   "review-owed": true,
   "form": "file",
   "scope-count": 1056,
@@ -47,6 +49,8 @@ Result, inline and past the read size:
 ```
 
 `diff-base` and `base-source` are as `ductus compute-review-scope --help` states (where the window starts, and the later review commit that can move it); a supplied `since` is the full sha its reference peels to (`resolve_base`), with no parent walk, and changes only where the window starts. `modified-since` is every file changed between `diff-base` and the working tree inside the project directory — committed, staged, unstaged and untracked but not ignored — named from the project root and sorted. `plan-affected` is every path the first cell of a plan `## Affected Files` table row names: its first backticked span, and each later one holding no whitespace and starting with none of `-`, `/` and `§`. `deleted` is the `modified-since` paths absent from the working tree (the tree reports not found, or a parent that is now a file; a path present but unreadable, as under a directory with no search permission, is not deleted and stays in `scope`), `excluded` those the scope rule leaves out, and `scope` what `compute-review-scope`'s rule keeps of `modified-since`, with `plan-affected` on a first review, each path the record at `HEAD` leaves open or whose contract its digest says changed, and what a spec folded into this one below `done` brought, less `deleted`, so the denominator holds only what a review can read (scenarios `review-base-includes-the-transition-commit`, `review-scope-includes-uncommitted-work`, `review-scope-union`, `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
+
+`head` is the commit the scope's committed part was resolved against, `HEAD` when the call ran. It is the `reviewed-against` a review whose passes read this scope passes to `write-review`, so a commit landing after it cannot join the record's window unread (scenario `a-commit-after-the-scope-was-resolved-refuses-the-write`).
 
 `criteria-owing` (scenario `criteria-are-verified-in-review`) names each acceptance criterion that keeps a review owed whatever the scope holds: one `spec.md` holds unticked, or one ticked whose digest (`criterion_verdicts::digest`) the record's `criteria-verdicts` does not hold, by label, `#{index}` for one with none, in body order. The record is the working tree's, as for the rest of `review-owed`, and one without `criteria-verdicts` holds no verdict. A non-empty list makes `review-owed` true, and `check-review-gate`'s `review-owed` block names it beside the paths. `criteria-owing` and `criteria-owing-count` are absent when no criterion owes a review, so such a spec's result is the one it got before. A `spec.md` that cannot be read fails the call.
 
@@ -120,8 +124,11 @@ Args (the added half only):
 Result (the added half only):
 
 ```json
-{ "observations": 1, "dispositions": { "fixed": 0, "deferred": 1, "waived": 0, "undispositioned": 0 }, "examined": 38, "scope": 46 }
+{ "observations": 1, "dispositions": { "fixed": 0, "deferred": 1, "waived": 0, "undispositioned": 0 }, "examined": 38, "scope": 46,
+  "excluded": 4, "unread-count": 0, "decisions": 2 }
 ```
+
+`excluded`, `unread-count` and `decisions` are the written record's (scenario `a-write-result-states-what-it-wrote`): the count its `excluded` field holds, the entries of its `unread`, absent when the run stated none, and the entries of its `decisions:` after the write, so a caller sees a decision the write dropped without reading `review.md` back.
 
 An **observation** is something the reviewer judged real that maps to no loaded rule, so it cannot be a finding. `path` is optional. `text` must be non-empty, and `text`, `path` and `decision-key` must each be one line, since an observation renders as one list item and a decided one's line becomes its decision key; a newline or control character in any of them is refused before anything is written. Observations never enter `must-violations` / `should-violations` / `low-confidence`, never affect `blocking`, and never change the exit code; they render in their own `## Observations` report section, after `## Waived findings` and before `## Skipped passes`, which emits `*None.*` when empty. The report frontmatter carries no `observations:` key.
 
@@ -130,6 +137,8 @@ An observation's disposition and its recording are as `ductus write-review --hel
 **`scope` is derived and `examined` is claimed.** `scope` is resolved by the primitive through `compute-review-scope` against the run's own `diff-base`, so no caller can shrink the subject to match what it read; `examined` is the caller's count of in-scope files the passes actually read, which only the host knows. Both are written to `review.md`'s frontmatter; an unstated `examined` is recorded as absent, never as zero. Nothing reads the pair; a person reads it at the completion gate (scenario `a-review-states-what-it-read`).
 
 **`unread` names what the passes did not read** (spec 081). It lists the scope entries the passes did not read, as `compute-review-scope` returns them: `[]` when they read every entry, and absent when the run states nothing, which is not *read everything*. `write-review` refuses an entry the run's scope does not hold. `compute-review-scope` reads it: a path of a commit naming no spec and touching no spec directory is credited in every other window once a record committed there, whose window holds the commit and which recorded no skipped pass, budget stop or open fix-round loop, leaves the path out of `unread`.
+
+**A commit after the scope's head refuses the write** (scenario `a-commit-after-the-scope-was-resolved-refuses-the-write`). `reviewed-against` is `compute-review-scope`'s `head` for the scope the passes read. When `HEAD` has moved past it, `write-review` walks the commits after it and refuses, writing nothing, while one of them changed a path its derived scope holds, naming each path and commit. A commit that changed no scope path refuses nothing. A `reviewed-against` naming no commit, or one `HEAD` does not descend from, is refused as an argument error. A spec never `in-progress` has an empty `diff-base`, derives no scope and is not checked.
 
 **Size** (scenario `freshness-results-have-a-bounded-size`). `analyze-freshness.paths` holds the artifacts whose digest differs from the analysis's, sorted, and each recorded digest key no longer on disk, and its maximum is `[artifacts] read-size-bytes` (50,000 bytes by default) for the result: past it, `form` is `"file"`, a `stale` `analyze-freshness` carries no `paths` key, and `lists-file` names a file under `.ductus/results/write-review/{feature}/` whose `analyze-stale-paths` key holds every path. `analyze-stale-paths-count` is inline in both forms, zero unless the state is `stale`, so a stale state with no `paths` and a count above zero is a moved list, never a short one.
 
@@ -162,12 +171,13 @@ Result:
 
 ```json
 { "spec-path": "specs/042-widget/spec.md", "blocking": false, "unexamined": 105, "replaced": true,
+  "hard-fail": 0, "blocking-findings": 0, "advisory": 8,
   "contradictions": [{ "rule": "BE-LOG-002", "earlier": "not-fired", "at": "plan.md#Observability", "message": "...", "counted": false }], "contradictions-count": 1, "form": "inline",
   "waived": [{ "rule": "BE-COMPAT-001", "tier": "must", "reason": "...", "decided-by": "dev@example.com", "decided-at": "2026-11-12T18:04:11Z", "cited": "..." }], "waived-count": 1,
   "dispositions": { "fixed": 0, "deferred": 0, "waived": 1, "undispositioned": 7 } }
 ```
 
-Writes `specs/{feature}/analysis.md`; its writes, refusals and the derivation of `dispositions:` are as `ductus write-analysis --help` states. Each finding arrives with its tier, which is why `tier` is required: a waiver on a hard-fail or blocking finding is refused. Two more refusals read `tier` and `path` (067's AC6, which owns them): a live hard-fail or blocking finding whose `path` is a design subject of the spec (`spec.md`, `plan.md`, `data-model.md` or a scenario, repo-relative or relative to the feature directory) is refused when its deferral `target` is that spec's own `tasks.md`, and refused when recorded undispositioned at a design subject that a finding recorded `live: false` also cites, which is how the arguments show that a fix of the run edited it; a record with no such finding is accepted, and `ductus exec`, which itemizes no fixed finding, is never refused. Each deferred or waived finding is stored under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to.
+Writes `specs/{feature}/analysis.md`; its writes, refusals and the derivation of `dispositions:` are as `ductus write-analysis --help` states. The result's `hard-fail`, `blocking-findings` and `advisory` are the tier counts the record holds, the first two net of the live findings a deferral releases, so they can differ from the counts passed (scenario `a-write-result-states-what-it-wrote`). Each finding arrives with its tier, which is why `tier` is required: a waiver on a hard-fail or blocking finding is refused. Two more refusals read `tier` and `path` (067's AC6, which owns them): a live hard-fail or blocking finding whose `path` is a design subject of the spec (`spec.md`, `plan.md`, `data-model.md` or a scenario, repo-relative or relative to the feature directory) is refused when its deferral `target` is that spec's own `tasks.md`, and refused when recorded undispositioned at a design subject that a finding recorded `live: false` also cites, which is how the arguments show that a fix of the run edited it; a record with no such finding is accepted, and `ductus exec`, which itemizes no fixed finding, is never refused. Each deferred or waived finding is stored under `decisions:`, keyed `{family} — {message}` or by the `decision-key` the host matched it to.
 
 **Derived, never accepted:**
 

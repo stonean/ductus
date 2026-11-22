@@ -787,9 +787,20 @@ fn run_parity_case(command: &str, fixture: &str) {
     let bin = runtime_binary();
     let staged = stage_fixture(command, fixture);
 
-    let mut child = ductus_command(&bin)
-        .arg("exec")
-        .arg(command)
+    let mut exec = ductus_command(&bin);
+    exec.arg("exec").arg(command);
+    // A review records the head its scope was resolved against as
+    // `reviewed-against` (066 scenario
+    // `a-commit-after-the-scope-was-resolved-refuses-the-write`): the staged
+    // repository's HEAD, which every fixture commit's fixed time makes the same
+    // on every run.
+    if command == "review" {
+        let head = git2::Repository::open(staged.path())
+            .and_then(|repository| Ok(repository.head()?.peel_to_commit()?.id()))
+            .expect("the staged fixture has a HEAD");
+        exec.arg(format!("reviewed-against={head}"));
+    }
+    let mut child = exec
         .current_dir(staged.path())
         // The ductus-basic bootstrap fetches from the loopback mock-HTTP
         // server, which fetch-archive's SSRF screen denies by default;

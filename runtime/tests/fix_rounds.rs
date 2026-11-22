@@ -368,7 +368,7 @@ fn a_cut_off_review_leaves_the_mark_its_last_write_clears() {
             &WriteReviewArgs {
                 feature: FEATURE.to_string(),
                 reviewed_at: "2026-11-05T00:00:00Z".to_string(),
-                reviewed_against: "abc".to_string(),
+                reviewed_against: "HEAD".to_string(),
                 diff_base: "HEAD".to_string(),
                 loop_open,
                 ..WriteReviewArgs::default()

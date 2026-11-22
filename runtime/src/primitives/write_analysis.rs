@@ -250,14 +250,12 @@ fn run_between(
     let args = settled.as_ref();
     let gating = gating_counts(args, repo, &root);
     let blocking = gating.hard_fail > 0 || gating.blocking_findings > 0;
+    // The tier counts the record renders, which the result states (066 scenario
+    // `a-write-result-states-what-it-wrote`).
+    let (hard_fail, blocking_findings) = (gating.hard_fail, gating.blocking_findings);
     let dispositions = count_dispositions(args)?;
     refuse_design_edit_deferrals(args, &root)?;
-    decisions::one_outcome_per_key(
-        args.findings
-            .iter()
-            .map(|finding| (finding_key(finding), finding.disposition.outcome)),
-    )
-    .map_err(|refusal| refusal.into_error("write-analysis", "findings", "a finding"))?;
+    one_outcome_per_finding(args)?;
     // The prior record is read only for the decisions it stores. A file that
     // opens no frontmatter block carries none, so it is overwritten, and
     // re-running the command repairs a record damaged that way. One whose
@@ -352,6 +350,9 @@ fn run_between(
         WriteAnalysisResult {
             spec_path: rel_path(&spec_path, repo),
             blocking,
+            hard_fail,
+            blocking_findings,
+            advisory: args.advisory,
             unexamined,
             replaced,
             contradictions: rules.fields.contradictions,
@@ -1066,6 +1067,16 @@ struct Gating {
     holding: Vec<String>,
 }
 
+/// Refuse two findings that share a key but carry different outcomes.
+fn one_outcome_per_finding(args: &WriteAnalysisArgs) -> Result<()> {
+    decisions::one_outcome_per_key(
+        args.findings
+            .iter()
+            .map(|finding| (finding_key(finding), finding.disposition.outcome)),
+    )
+    .map_err(|refusal| refusal.into_error("write-analysis", "findings", "a finding"))
+}
+
 fn gating_counts(args: &WriteAnalysisArgs, repo: &Path, root: &str) -> Gating {
     let gates = |finding: &AnalysisFinding| {
         finding.live
@@ -1775,12 +1786,21 @@ mod tests {
             ),
             held,
         ];
-        assert!(
-            run(&a, tmp.path()).unwrap().blocking,
-            "the work-item deferral still blocks"
-        );
+        let written = run(&a, tmp.path()).unwrap();
+        assert!(written.blocking, "the work-item deferral still blocks");
         let report = analysis_md(&tmp);
         assert!(report.contains("blocking-findings: 1\n"), "{report}");
+        // The result states the record's net count, not the 2 passed (066 scenario
+        // `a-write-result-states-what-it-wrote`).
+        assert_eq!(
+            (
+                written.hard_fail,
+                written.blocking_findings,
+                written.advisory
+            ),
+            (a.hard_fail, 1, a.advisory),
+            "{written:?}"
+        );
         let deferred_section = report.split("## Deferred to other specs").nth(1).unwrap();
         assert!(
             deferred_section

@@ -88,6 +88,15 @@ fn fixture(dir: &Path, entries: &str) -> Repository {
 }
 
 /// The sha of the repository's first commit, the `diff-base` every run takes.
+/// The fixture's `HEAD`, the sha a review's scope is resolved against and its
+/// record's `reviewed-against` (066 scenario
+/// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
+fn head(dir: &Path) -> String {
+    let repository = Repository::open(dir).unwrap();
+    let head = repository.head().unwrap().peel_to_commit().unwrap().id();
+    head.to_string()
+}
+
 fn seed(dir: &Path) -> String {
     let repository = Repository::open(dir).unwrap();
     let mut walk = repository.revwalk().unwrap();
@@ -128,7 +137,7 @@ fn run_review(
     let mut args = json!({
         "feature": FEATURE,
         "reviewed-at": reviewed_at,
-        "reviewed-against": "abc1234",
+        "reviewed-against": head(dir),
         "diff-base": seed(dir),
         "empty-scope": false,
         "findings": findings,
@@ -503,7 +512,7 @@ fn a_new_deferral_of_a_violation_an_entry_decides_is_refused_naming_the_entry() 
     fixture(tmp.path(), MUST_ENTRY);
     let findings = [deferred(MUST_RULE, "src/a.rs", None)];
     let args: WriteReviewArgs = serde_json::from_value(json!({
-        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": "abc1234",
+        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": head(tmp.path()),
         "diff-base": seed(tmp.path()), "empty-scope": false, "findings": findings,
         "decided-by": "person@example.com",
     }))
@@ -738,7 +747,7 @@ fn a_run_writing_its_record_twice_counts_the_stored_departure_waived_both_times(
     fixture(tmp.path(), MUST_ENTRY);
     let findings = [finding(MUST_RULE, "must", "src/a.rs")];
     let args: WriteReviewArgs = serde_json::from_value(json!({
-        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": "abc1234",
+        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": head(tmp.path()),
         "diff-base": seed(tmp.path()), "empty-scope": false, "findings": findings,
     }))
     .unwrap();

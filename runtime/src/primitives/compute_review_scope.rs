@@ -59,6 +59,7 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
     let mut result = ComputeReviewScopeResult {
         diff_base: scope.diff_base.clone(),
         base_source: scope.base_source,
+        head: scope.head.clone(),
         review_owed: scope.review_owed,
         form: ListsForm::Inline,
         scope_count: scope.scope.len(),
@@ -107,6 +108,8 @@ pub(crate) struct ReviewScope {
     pub(crate) diff_base: String,
     /// See [`ComputeReviewScopeResult::base_source`].
     pub(crate) base_source: BaseSource,
+    /// See [`ComputeReviewScopeResult::head`].
+    pub(crate) head: String,
     /// See [`ComputeReviewScopeResult::review_owed`].
     pub(crate) review_owed: bool,
     /// The changed paths, and those the last review left open, that make a review
@@ -177,19 +180,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // tree says is not there is deleted: one present but unreadable (permission
     // denied) stays in the scope, since a review owes it a read the same as any
     // other; a path under a parent that became a file cannot exist, so it is gone.
-    let deleted: BTreeSet<String> = modified_since
-        .iter()
-        .filter(|path| {
-            matches!(
-                std::fs::symlink_metadata(repo.join(path)),
-                Err(error) if matches!(
-                    error.kind(),
-                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
-                )
-            )
-        })
-        .cloned()
-        .collect();
+    let deleted = deleted_paths(repo, &modified_since);
 
     // Uncommitted work cannot be attributed, so it joins whole, even on a path
     // another spec's commit also changed. An untracked or staged file is part
@@ -225,7 +216,8 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // at `HEAD` decides, so a run's own uncommitted record does not change the
     // answer between its two writes, and one naming no run (`last-run: null`)
     // records no review.
-    let head_tree = repository.head()?.peel_to_commit()?.tree()?;
+    let head_commit = repository.head()?.peel_to_commit()?;
+    let head_tree = head_commit.tree()?;
     if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {
         scope.extend(
             plan_affected
@@ -265,6 +257,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     Ok(ReviewScope {
         diff_base,
         base_source,
+        head: head_commit.id().to_string(),
         review_owed,
         owed_by,
         criteria_owing,
@@ -274,6 +267,24 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         deleted: deleted.into_iter().collect(),
         excluded,
     })
+}
+
+/// The paths of `modified_since` the working tree reports not found, or under a
+/// parent that is now a file (see the comment in [`compute`]).
+fn deleted_paths(repo: &Path, modified_since: &[String]) -> BTreeSet<String> {
+    modified_since
+        .iter()
+        .filter(|path| {
+            matches!(
+                std::fs::symlink_metadata(repo.join(path)),
+                Err(error) if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                )
+            )
+        })
+        .cloned()
+        .collect()
 }
 
 /// Whether a review is owed: no run recorded, or one holding what only a review

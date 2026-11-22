@@ -78,6 +78,26 @@ Scenario `criteria-are-verified-in-review` moves the pipeline's only check of co
 
 **`BE-COMPAT-001`:** breaking: `check-review-gate`'s `blocked-by` gains `unticked-criterion`; `ductus exec implement` no longer sends `verifyCriteria`, and `ductus exec review` does; `review-owed` reads true where it read false. Additive: `write-review`'s `criteria` argument and the record's four fields, and `compute-review-scope`'s `criteria-owing`. It ships with the pending minor bump.
 
+### A commit after the scope was resolved refuses the write (task 29)
+
+Scenario `a-commit-after-the-scope-was-resolved-refuses-the-write` closes a false credit an adopter's report against 0.61.0 found: `write-review` re-derives the scope at write time, so a commit landing mid-review joined a scope no pass read, and a record whose `reviewed-against` was the write-time `HEAD` let another spec's window take that commit's paths as read (spec 081).
+
+- **`reviewed-against` is the scope's head.** `compute-review-scope` returns `head`, the commit its committed part was resolved against, and `/{project}:review` passes it as `reviewed-against`, so the record's window, `diff-base` to `reviewed-against`, ends where what the passes saw ends. No new argument: the field already meant the commit the review ran against.
+- **The guard sits in `resolve_scope`.** `write_review::moved_scope::refuse_a_moved_scope` runs where the write-time scope is derived, so it reads exactly the entries the record counts. It walks the commits after `reviewed-against` up to `HEAD` and takes each one's own paths through `commit_attribution::Attributor::claims`, the reading `compute-review-scope` uses, so a merge contributes only what it changed itself. It refuses while one of them changed a scope entry, naming each path and commit. A commit changing no entry refuses nothing, since nothing the passes should have read moved.
+- **An unresolvable `reviewed-against` is an argument error.** A sha naming no commit, or one `HEAD` does not descend from, is refused rather than read as an unmoved scope. A spec with an empty `diff-base` derives no scope and is not checked.
+
+**`BE-COMPAT-001`:** breaking: `write-review` refuses a `reviewed-against` naming no commit and a write whose scope a later commit moved, where it wrote before. Additive: `compute-review-scope`'s `head`. The test fixtures that passed a placeholder sha now pass the fixture's `HEAD`.
+
+### A write result states what it wrote (task 30)
+
+Scenario `a-write-result-states-what-it-wrote`, from the same report: each record writer's result carries the counts its record holds, so a caller reconciles the record without reading it back.
+
+- **`write-analysis` returns its tier counts as written.** `hard-fail` and `blocking-findings` are the outstanding counts the writer derives, net of the live findings a deferral releases; `advisory` is the count it records. All three are read from the values the record renders, never echoed from the arguments.
+- **`write-review` returns `excluded`, `unread-count` and `decisions`.** `excluded` is the count its `excluded` field holds, `unread-count` the entries of its `unread`, absent when the run stated none, and `decisions` the entries of the `decisions:` list it wrote, so a stored decision this write dropped shows as a count below the one the caller expects.
+- **Counts only.** No list joins either result, so neither result's bound under `[artifacts] read-size-bytes` changes.
+
+**`BE-COMPAT-001`:** additive: five result fields.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -119,6 +139,11 @@ Scenario `criteria-are-verified-in-review` moves the pipeline's only check of co
 | `runtime/src/interpreter/payload.rs` | Modify | The `verifyCriteria` request built for `/{project}:review` (task 27) |
 | `runtime/tests/golden/*.jsonl` | Modify | The implement and review walks re-blessed (task 27) |
 | `scripts/mutation/criteria-in-review-066.py` | Create | The mutation list proving each criteria behavior (task 27) |
+| `runtime/src/primitives/write_review/moved_scope.rs` | Create | The guard against a scope a later commit moved (task 29) |
+| `runtime/src/primitives/write_review.rs` | Modify | `resolve_scope` calls the guard (task 29) |
+| `runtime/src/primitives/compute_review_scope.rs` | Modify | The scope carries the `head` it was resolved against (task 29) |
+| `framework/commands/review.md` | Modify | Step 11 passes the scope's `head` as `reviewed-against` and says what the moved-scope refusal asks (task 29) |
+| `runtime/src/primitives/write_analysis.rs` | Modify | The result carries the tier counts the record holds (task 30) |
 
 ## Data Model
 

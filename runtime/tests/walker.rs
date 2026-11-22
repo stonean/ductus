@@ -246,6 +246,16 @@ fn assert_observations_threaded(repo_root: &std::path::Path, review: &str) {
     );
 }
 
+/// The repository's `HEAD`: the head a review's scope is resolved against, which
+/// it records as `reviewed-against` (066 scenario
+/// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
+fn head_of(dir: &std::path::Path) -> String {
+    git2::Repository::open(dir)
+        .and_then(|repository| Ok(repository.head()?.peel_to_commit()?.id()))
+        .unwrap()
+        .to_string()
+}
+
 #[test]
 fn review_primitive_results_thread_into_perform_review_and_write_review() {
     let tmp = tempfile::tempdir().unwrap();
@@ -309,7 +319,10 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
         "reviewed-at".into(),
         Value::String("2026-07-06T00:00:00Z".into()),
     );
-    context.insert("reviewed-against".into(), Value::String("headsha0".into()));
+    context.insert(
+        "reviewed-against".into(),
+        Value::String(head_of(tmp.path())),
+    );
 
     // One security pass returns a single MUST finding against the scoped file,
     // plus one observation — something real that matched no loaded rule.

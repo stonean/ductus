@@ -588,15 +588,7 @@ fn run_between(
     surviving.extend(waivers.entries);
     let dispositions = count_dispositions(&args.observations);
     one_outcome_per_key(&args.observations, &deduped)?;
-    let mut decisions = merged_decisions(&feature_dir, args, repo, &deduped)?;
-    decisions::mark_gating(&mut decisions, &sorted.holding());
-    let breaks: Vec<String> = args
-        .observations
-        .iter()
-        .filter(|observation| observation.contract_break)
-        .map(observation_key)
-        .collect();
-    decisions::mark_breaks(&mut decisions, &breaks);
+    let decisions = recorded_decisions(&feature_dir, args, repo, &deduped, &sorted.holding())?;
     let loop_record = loop_record_of(args, repo)?;
     let open_findings = open_findings(
         must.iter().chain(should.iter()).map(|f| f.file.as_str()),
@@ -665,6 +657,12 @@ fn run_between(
         analyze_freshness,
         examined: args.examined,
         scope,
+        excluded: u32::try_from(excluded.len()).unwrap_or(u32::MAX),
+        unread_count: args
+            .unread
+            .as_ref()
+            .map(|unread| u32::try_from(unread.len()).unwrap_or(u32::MAX)),
+        decisions: u32::try_from(decisions.len()).unwrap_or(u32::MAX),
         malformed_departures: waivers.malformed,
         superseded_deferrals: waivers.superseded.into_iter().map(|s| s.notice).collect(),
         criteria_judged: criteria.as_ref().map(|c| c.judged),
@@ -881,6 +879,7 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<S
         .filter(|path| *path != own_record)
         .collect();
     refuse_unread_outside_the_scope(args, &entries)?;
+    moved_scope::refuse_a_moved_scope(&args.reviewed_against, repo, &entries)?;
     Ok((
         u32::try_from(entries.len()).unwrap_or(u32::MAX),
         result.excluded,
@@ -1032,6 +1031,28 @@ fn stored_decisions(
         }
     }
     Ok(stored)
+}
+
+/// The `decisions:` list this run records ([`merged_decisions`]), each deferral
+/// that releases nothing marked gating and each decision on a broken contract
+/// marked so (spec 079).
+fn recorded_decisions(
+    feature_dir: &Path,
+    args: &WriteReviewArgs,
+    repo: &Path,
+    deduped: &[ReviewFinding],
+    holding: &[String],
+) -> Result<Vec<RawDecision>> {
+    let mut decisions = merged_decisions(feature_dir, args, repo, deduped)?;
+    decisions::mark_gating(&mut decisions, holding);
+    let breaks: Vec<String> = args
+        .observations
+        .iter()
+        .filter(|observation| observation.contract_break)
+        .map(observation_key)
+        .collect();
+    decisions::mark_breaks(&mut decisions, &breaks);
+    Ok(decisions)
 }
 
 /// The `decisions:` list this run records: what is stored, less what it expired, and
@@ -3081,6 +3102,9 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("\nscope: 2\n"), "{report}");
         assert!(report.contains("\nexcluded: 1\n"), "{report}");
+        // The result states the record's count (066 scenario
+        // `a-write-result-states-what-it-wrote`).
+        assert_eq!(out.excluded, 1, "{out:?}");
         assert!(
             report.contains("## Excluded from scope\n\n- `src/other.rs`\n"),
             "{report}"
@@ -3116,8 +3140,14 @@ mod tests {
             let mut args = base_args("001-x");
             args.diff_base = parent;
             args.unread = unread.clone();
-            run(&args, tmp.path()).unwrap();
+            let out = run(&args, tmp.path()).unwrap();
             assert_eq!(unread_of(&tmp), unread);
+            // The result counts what the record holds, absent when it holds none.
+            assert_eq!(
+                out.unread_count,
+                unread.as_ref().map(|u| u32::try_from(u.len()).unwrap()),
+                "{out:?}"
+            );
         }
     }
 
@@ -3491,6 +3521,29 @@ mod tests {
                 if argument == "findings[0].disposition.outcome"),
             "{err:?}"
         );
+    }
+
+    /// `write-review` as a review run calls it, against the `HEAD` its scope was
+    /// resolved at: the fixtures' placeholder `abc1234` stands for that sha, which
+    /// the guard against a moved scope reads (066 scenario
+    /// `a-commit-after-the-scope-was-resolved-refuses-the-write`). A fixture with
+    /// no repository or no commit keeps the placeholder.
+    fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
+        super::run(&at_head(args, repo), repo)
+    }
+
+    /// `args` with the placeholder `reviewed-against` replaced by `repo`'s `HEAD`.
+    fn at_head(args: &WriteReviewArgs, repo: &Path) -> WriteReviewArgs {
+        let mut args = args.clone();
+        if args.reviewed_against == "abc1234"
+            && let Some(head) = git2::Repository::open(repo).ok().and_then(|repository| {
+                let id = repository.head().ok()?.peel_to_commit().ok()?.id();
+                Some(id.to_string())
+            })
+        {
+            args.reviewed_against = head;
+        }
+        args
     }
 
     fn base_args(feature: &str) -> WriteReviewArgs {
@@ -5993,10 +6046,13 @@ mod tests {
             by_rule: false,
         }];
         // No `decided-by`: a matched decision is not a new one.
-        run(&args, tmp.path()).unwrap();
+        let out = run(&args, tmp.path()).unwrap();
         let stored =
             decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
         assert_eq!(stored.len(), 1);
+        // The result counts the decisions the record now holds, the pruned one
+        // gone (066 scenario `a-write-result-states-what-it-wrote`).
+        assert_eq!(out.decisions, 1, "{out:?}");
         assert_eq!(stored[0].key.as_deref(), Some("other: settled earlier"));
         assert_eq!(stored[0].decided_by.as_deref(), Some("first@example.com"));
         assert!(
@@ -6895,6 +6951,8 @@ mod tests {
         }
     }
 }
+
+mod moved_scope;
 
 #[cfg(test)]
 mod departure_waivers;
