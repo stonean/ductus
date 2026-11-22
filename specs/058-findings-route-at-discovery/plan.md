@@ -574,7 +574,7 @@ See [data-model.md](data-model.md).
   triggering on a key rather than a message. `--fix` has since stopped
   reverting on it.
 - **`process-decisions` as its own primitive rather than a mode of
-  `process-waivers`.** Waivers are keyed on `(rule, file)` and applied to
+  `process-waivers`.** Waivers are keyed on `(rule, file)`, by site since 020's AC19, and applied to
   MUST violations; decisions are keyed on a finding key and carry an outcome.
   Folding them together would give one primitive two anchor rules.
 - **Host-matched review keys.** Observation decisions depend on the host

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime]
 next-criterion: 7
 cross-spec-impact: [000-slash-commands, 020-code-review, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
@@ -9,6 +9,8 @@ cross-spec-impact: [000-slash-commands, 020-code-review, 079-review-and-analysis
 
 The runtime primitives that record a spec's two audits — `/{project}:review` in `review.md` and `/{project}:analyze` in `analysis.md` — and the pre-`done` gate that reads them. The parser, the interpreter, the protocol and the shared surfaces these primitives build on are [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md)'s; the record schema itself is the constitution's (§text-first-artifacts, Audit records). The argument and result shapes are in [data-model.md](data-model.md).
 
+> **Signpost:** [020](../020-code-review/spec.md)'s AC19 anchors a review waiver at a rule, file and site: `process-waivers` classifies each `anchors` item, with its `covers` count, and a departure waiver's `file` paths at any site, and expires an anchor recorded before sites. [data-model.md](data-model.md)'s `process-waivers` section and scenario `process-waivers-file-lists` state it.
+>
 > **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
 > `write-review` and `write-analysis` record a deferral's work (`target`,
 > `task`, `work-item`) and its derived `gating`, refuse a deferral that names

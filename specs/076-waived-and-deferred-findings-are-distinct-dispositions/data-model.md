@@ -48,7 +48,8 @@ decisions:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `key` | string | yes | As in 058, plus a third form: a review MUST or SHOULD violation is keyed `rule {rule-id} at {file}`, one entry per file the rule fires at. |
+| `key` | string | yes | As in 058, plus a third form: a review MUST or SHOULD violation is keyed `` rule {rule-id} at {file} in `{site}` ``, one entry per site the rule fires at (020's AC19). A violation key with no backticked site, `rule {rule-id} at {file}` as written before AC19, was recorded before sites: it covers no finding and expires on the next review. |
+| `covers` | integer ≥ 1 | on a violation's deferral | The findings the deferral covers at its key, lowered by a run that matches fewer and never raised; more findings there expire it (020's AC19). |
 | `outcome` | `deferred` \| `waived` | yes | `routed` is read as `deferred` and `discarded` as `waived`; writers emit only the new names. |
 | `target` | string (repo-relative path) | when `deferred` without `work-item` | The pipeline work: a scenario, a `tasks.md`, a `spec.md`, a feature directory created through `/{project}:specify`, or a rule file the project owns. Must exist when the deferral is recorded. |
 | `task` | string (task number) | no | Only with a `target` that is a `tasks.md`; the number must name a task in it when recorded. |
@@ -92,7 +93,7 @@ A new deferral's `target` that the containment screen refuses — a traversal, a
 | Field | Type | Notes |
 | --- | --- | --- |
 | `disposition` | `Disposition`, optional | New. Only `deferred` is accepted; a waiver stays `waivers:` and `--waive`. |
-| `decision-key` | string, optional | New. The stored decision the host matched; absent, `rule {rule-id} at {file}`. |
+| `decision-key` | string, optional | New. The stored decision the host matched; absent, `` rule {rule-id} at {file} in `{site}` `` (020's AC19). |
 
 A finding with a releasing deferral renders under a **Deferred findings** section and is excluded from `must-violations` and `should-violations`, as a waived one is. A finding with a non-releasing deferral stays in its MUST or SHOULD bucket, rendered with its deferral. A finding both deferred and matched by an applied waiver is refused, and so is one matched by an applied waiver while a stored deferral for its key stands outside `expired-decisions` (argument `expired-decisions`).
 

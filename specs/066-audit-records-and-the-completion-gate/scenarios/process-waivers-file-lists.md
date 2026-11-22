@@ -10,6 +10,7 @@ section: "The review record"
 
 ## Behavior
 
+- Since [020's AC19](../../020-code-review/scenarios/waiver-expiry.md) an entry's anchors are its `anchors` list, each `{file, site, covers}`, and `file` is a departure waiver's, covering every site, or an entry's recorded before sites, whose every path expires on the next review. What follows holds for each kind: an anchor is one `anchors` item or one `file` path, and `missing 'file'` below reads `missing 'anchors'`.
 - The waiver readers accept `file` as a string or a list of strings. `process-waivers` walks each entry's paths in order as separate anchors, so `applied`, `expired` and `retained` still carry one `WaiverRef` per anchor and the result shape does not change. Its notices are per anchor.
 - A `file` that is absent, blank, an empty list, or a list holding a blank path is reported `missing 'file'`. A list item that is not a string fails the parse, as any non-string known field does.
 - Duplicate detection runs over anchors across all entries, first claim wins. A later claim is reported with the existing notice text, and the same entry's other paths are still classified.

@@ -60,7 +60,7 @@ decisions:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `key` | string | yes | Analyze: `{family} — {message}`. Review: the observation's rendered line, as `observation_line` builds it — its text, then an em dash and its path in backticks, or the text alone. A deferred MUST or SHOULD violation: `rule {rule-id} at {file}` (076's data model). |
+| `key` | string | yes | Analyze: `{family} — {message}`. Review: the observation's rendered line, as `observation_line` builds it — its text, then an em dash and its path in backticks, or the text alone. A deferred MUST or SHOULD violation: `` rule {rule-id} at {file} in `{site}` ``, by site since 020's AC19 (076's data model). |
 | `outcome` | `deferred` \| `waived` | yes | `fixed` is never stored: a fixed finding stops firing. `undispositioned` is never stored: it is the absence of a decision. |
 | `target` | string (repo-relative path) | when `deferred` without a `work-item` | The scenario, `tasks.md`, spec, or rule file the finding was deferred to. |
 | `reason` | string | when `waived` | Free text; an empty string is invalid. |

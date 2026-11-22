@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 cross-spec-impact: [012-multi-agent-govern, 015-tarball-fetch, 021-runtime-boundary, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 055-shared-constitution, 061-updates-track-the-latest-release-tag]
 next-criterion: 33
@@ -34,6 +34,8 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > **Signpost:** [020](../020-code-review/spec.md) changed a surface this spec owns. `discover-rule-files` leaves out of a review's selection each rule file whose header names `/{project}:analyze` and not `/{project}:review`, with a notice naming it as judged by analysis alone (020's AC17); scenario `review-runtime-acceleration` states the step.
 >
 > **Signpost:** [067](../067-analyze-and-audit-checks/spec.md) changed the walker this spec's runtime core owns. An exec `/{project}:analyze` step 4 dispatches `resolve-anchor` on the spec's `spec.md` and each scenario under it in one call, merged before the result is bounded, so the walk judges a scenario's `§` references as the interactive run does (067's AC8).
+>
+> **Signpost:** [020](../020-code-review/spec.md) changed a surface this spec owns. A finding carries a `site`, and `process-waivers` and `write-review` anchor a waiver, and a violation's deferral, at a rule, file and site with `covers`, the findings it covers: a finding at another site, more findings than it covers, or an anchor recorded before sites each count (020's AC19); scenario `review-runtime-acceleration` states the step.
 
 ## Motivation
 

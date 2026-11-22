@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 020-code-review, 022-deterministic-runtime, 047-analyze-findings-durability, 050-constitution, 057-analyze-artifact-and-record-relocation]
 cross-spec-impact:
   - 008-security-rules
@@ -24,6 +24,8 @@ deferred to the work that will address it, or waived with its reason
 recorded. A gating one must have one before its spec can reach `done`. `specs/inbox.md` stops being a place findings are
 sent. It holds only the todos a person captures with `/{project}:log`.
 
+> **Signpost:** [020](../020-code-review/spec.md)'s AC19 keys a deferred review violation by its site, `` rule {rule-id} at {file} in `{site}` ``, with `covers`, the findings it covers, so a stored decision of one covers no finding at another site; [data-model.md](data-model.md)'s `key` row states the form.
+>
 > **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
 > *Routed* is now *deferred* and *discarded* is now *waived*, in this body, in
 > both records' `dispositions:` maps and in stored outcomes; a record written

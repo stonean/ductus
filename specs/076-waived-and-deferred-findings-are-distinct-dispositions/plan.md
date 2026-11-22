@@ -32,7 +32,7 @@ A finding takes one of three dispositions: fixed, deferred or waived. The consti
 
 ### A review violation's deferral is a stored decision, not a new list
 
-A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisions:`, keyed `rule {rule-id} at {file}`, the form waiver notices already use (`framework/reference/review.md`, §Per-run waiver processing). This reuses one lifecycle (`process-decisions`, `decisions::merge`, `one_outcome_per_key`) for observations, analyze findings and violations. Waivers stay in `waivers:` under `process-waivers`, unchanged.
+A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisions:`, keyed `rule {rule-id} at {file}`, the form waiver notices already use (`framework/reference/review.md`, §Per-run waiver processing), and by site since 020's AC19 (`` rule {rule-id} at {file} in `{site}` ``, with `covers`). This reuses one lifecycle (`process-decisions`, `decisions::merge`, `one_outcome_per_key`) for observations, analyze findings and violations. Waivers stay in `waivers:` under `process-waivers`, unchanged.
 
 `ReviewFinding` gains `disposition` and `decision-key`. `/{project}:review` gains `--defer` with `--target`/`--task` and/or `--work-item` (AC12, AC15). The flag shapes are in the data model.
 
