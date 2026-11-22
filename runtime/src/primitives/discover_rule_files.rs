@@ -938,6 +938,64 @@ mod tests {
         ));
     }
 
+    /// The disabled-rule-files filter runs before the header test (spec 020,
+    /// AC17): a disabled file whose header gives it to analysis is named as
+    /// disabled, with its reason, and neither as judged by analysis alone nor
+    /// as a disabled entry stack detection never selected.
+    #[test]
+    fn a_disabled_file_left_to_analysis_is_named_disabled() {
+        let tmp = setup_with(HEADERS);
+        let config = tmp.path().join(".ductus");
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::write(
+            config.join("config.toml"),
+            "[[review.disabled-rule-files]]\nfile = \"concurrency-backend.md\"\nreason = \"No shared state in this project.\"\n",
+        )
+        .unwrap();
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert!(!selected_of(&result).contains(&"concurrency-backend.md".to_string()));
+        let notices = result.notices.unwrap();
+        let named: Vec<&String> = notices
+            .iter()
+            .filter(|n| n.contains("concurrency-backend.md"))
+            .collect();
+        assert_eq!(
+            named,
+            vec![
+                "disabled-rule-file: concurrency-backend.md — No shared state in this project. (.ductus/config.toml)"
+            ],
+            "{notices:?}"
+        );
+    }
+
+    /// A rule file whose text cannot be read stays in a review's selection
+    /// (spec 020, AC17): the header test never drops a file it could not read,
+    /// so a read failure is named where the file's rules are listed rather
+    /// than turned into a silent omission.
+    #[test]
+    fn an_unreadable_rule_file_stays_selected() {
+        let tmp = setup_with(HEADERS);
+        let mut bytes = b"# Concurrency\n\n`/{project}:analyze` enforces them.\n".to_vec();
+        bytes.extend_from_slice(&[0xff, 0xfe, b'\n']);
+        std::fs::write(
+            tmp.path().join("framework/rules/concurrency-backend.md"),
+            bytes,
+        )
+        .unwrap();
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert!(
+            selected_of(&result).contains(&"concurrency-backend.md".to_string()),
+            "an unreadable file is not left to analysis"
+        );
+        assert!(
+            !result
+                .notices
+                .unwrap()
+                .iter()
+                .any(|n| n.contains("concurrency-backend.md") && n.contains("judged by analysis")),
+        );
+    }
+
     #[test]
     fn rejects_unrecognized_detected_surface_member() {
         // The MCP-boundary `detected-surfaces` arg is validated like a config

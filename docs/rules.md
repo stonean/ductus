@@ -1,10 +1,10 @@
 # Rules
 
-The deep reference for the rules `/review` holds code to. The README's [Rules](../README.md#rules) section covers what they are and what ships; this page covers how a rule is enforced, which rule files load for your project, how waivers work, and how to write your own.
+The deep reference for the rules `/review` holds code to and `/analyze` holds specs and plans to. The README's [Rules](../README.md#rules) section covers what they are and what ships; this page covers how a rule is enforced, which rule files load for your project, how waivers work, and how to write your own.
 
 ## How a rule is enforced
 
-A spec says what a feature should do; the rules say what any code is held to regardless of feature — and `/review` audits the implementation against them before a spec can reach `done`. Without them the review has taste and nothing else.
+A spec says what a feature should do; the rules say what any code is held to regardless of feature — and before a spec can reach `done`, `/analyze` checks its spec and plan against every rule file and `/review` audits the implementation against each file whose header names it. Without them the review has taste and nothing else.
 
 They are plain markdown in your project's rule-file directory — the `rules/` directory under your spec root once scaffolded, or [`framework/rules/`](../framework/rules/) here in `ductus`'s own repo — and they are the **only** normative source a review may cite: `/review` is instructed not to invent criteria beyond these files and your `AGENTS.md`. That is what keeps two reviews of the same code from disagreeing, and what makes a finding arguable — every one quotes the rule it came from.
 
@@ -28,6 +28,8 @@ They are plain markdown in your project's rule-file directory — the `rules/` d
 | `observability-backend.md` | Metrics, distributed tracing, health signaling — so a failure in production is diagnosable rather than merely visible |
 | `accessibility-frontend.md` | WCAG 2.2 AA: semantic HTML, keyboard navigation and focus, ARIA usage, color and contrast, accessible forms, text alternatives and media, pointer input and target size, reflow and zoom, text spacing and orientation, motion and flashing, time limits, accessibility testing |
 | `configuration-cross.md` | Named constants, environment variables, and feature flags: no magic numbers, no undocumented env vars, fail-fast on missing or malformed configuration, no secrets baked into client builds or kept in source, version control, container builds or build artifacts, a declared default for every flag |
+
+A file's header names the command that judges it. `/review` holds code to the three security files, `quality-cross.md` and `configuration-cross.md`; the other seven are judged by `/analyze` alone, against specs and plans, and a review does not load them ([Which rules load](#which-rules-load)).
 
 The security files are mostly **MUST** rules, because the failures they describe are exploitable rather than merely untidy. The backend reliability, observability, performance, and concurrency files default to **SHOULD** where the right approach depends on context, and each states in its header what earns a rule **MUST**. Accessibility is AA because that is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion; a rule that adopts a Level AAA criterion says so and is a **SHOULD**. `quality-cross.md`'s five failure modes are stated in full in the README's [Rules](../README.md#rules) section.
 

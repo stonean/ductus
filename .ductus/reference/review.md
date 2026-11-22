@@ -761,6 +761,9 @@ gate), not on an exit status.
   a file at `specs/rules/<domain>-{backend,frontend,cross}.md` is the only
   step needed; the suffix selects which stacks load it. Any other suffix loads
   for every stack and warns, never skips silently, until the file is renamed.
+  The file's header decides which command judges its rules: one naming
+  `/ductus:analyze` and not `/ductus:review` is judged by analysis
+  alone, so a review does not load it (spec 020, AC17).
 - The `AGENTS.md` rule-file reference survives strictly for adopter-local
   rule files placed **outside** `specs/rules/` — e.g.,
   `docs/rules/internal-api.md` — since the framework cannot directory-walk
@@ -769,8 +772,9 @@ gate), not on an exit status.
   `[[review.disabled-rule-files]]` (see **Inputs** in the command file). The
   override is project-wide and its mandatory `reason` is the audit trail. Use it
   when the stack-derived selection is correct but the team is not yet ready to
-  enforce that file's rules (e.g., an internal admin UI that has not adopted
-  full WCAG AA). Waivers remain the right tool for individual `(rule, file)`
-  exceptions.
+  enforce that file's rules (e.g., `security-frontend.md` on a project whose
+  frontend is being retired). A file whose header gives it to analysis alone
+  needs no entry, since a review does not load it. Waivers remain the right
+  tool for individual `(rule, file)` exceptions.
 - The five-dimension model is fixed. Domain-specific concerns (accessibility,
   i18n, licensing) belong in additional rule files, not new passes.

@@ -91,6 +91,8 @@ The runtime half's `process-waivers` result is bounded (BE-PAYLOAD-001): its `ap
 | `framework/reference/review.md` | Edit | The command's reference: the passes, the rule-file-to-pass mapping, the Not-flagged routing, waivers, deferrals and the fix-round loop |
 | `runtime/src/interpreter/payload.rs`, `runtime/src/interpreter/mod.rs`, `runtime/src/schema/extensions.rs` | Edit | `performReview` names its pass and carries that pass's rule files, `loaded-rule-files` and `passes-run` |
 | `runtime/src/primitives/discover_rule_files.rs`, `runtime/src/schema/descriptions.rs` | Edit | A review's selection leaves out a file whose header names analyze alone (AC17), and `DISCOVER_RULE_FILES` says so |
+| `runtime/tests/golden/review-basic.jsonl`, `runtime/CHANGELOG.md` | Edit | The review golden's diff-base tokens, and the Unreleased entry for AC17 |
+| `docs/rules.md` | Edit | Which command judges each shipped rule file (AC17) |
 | `framework/rules/security-frontend.md` | Edit | Its header says review reports a defect under the owner a **Not flagged:** clause names |
 | `framework/bootstrap/ductus.md` | Edit | §Project Configuration lists `[review] tech-stack-verified` with its purpose and its default, the inventory `CFG-ENV-002` requires |
 | `framework/bootstrap/govern.md` | Edit | Byte-identical mirror of `ductus.md` (audit Family 21) |
