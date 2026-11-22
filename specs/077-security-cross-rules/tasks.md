@@ -1,5 +1,5 @@
 ---
-next-task: 14
+next-task: 15
 ---
 
 # 077 — Security cross rules Tasks
@@ -16,3 +16,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - Bytes measured from git, per `###` section of `framework/rules/security-cross.md` (heading to the next `##` or `###` heading), `fa4ae5c7` to `51fe0d34`: file 23,779 to 24,283 (+504); `SEC-DATA-001` 3,993 to 4,326 (+333); `SEC-AUTHN-002` 5,109 to 5,280 (+171)
 
 - **Done when**: each item is stated in the rule file as decided, the spec records the requirement (scenario `url-pii-query-only-and-oauth-stricter-than-rfc-9700`, and a Resolved Questions entry per decision with its reason) and corrects any criterion the change makes false, any external claim the new text makes is fetched and not recalled, bytes before and after are measured per rule and per file, `runtime/CHANGELOG.md` `[Unreleased]` gains an entry per changed rule, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+## 14. Remove BE-AUTHN-009 and BE-AUTHN-013 at their 0.62.0 target (Resolved Question "Which version removes the deprecated IDs?")
+
+- [ ] Remove the `BE-AUTHN-009` and `BE-AUTHN-013` sections from `framework/rules/security-backend.md`, whose labels name removal in 0.62.0, the release that now follows. The owner chose 0.62.0 with this removal on 2026-11-22, the agent's recommendation, adopted by the operator. Regenerate `runtime/src/primitives/shipped_rule_ids.txt` (`BLESS_RULE_INDEX=1 cargo test --lib shipped_rule_index`)
+- [ ] List both IDs under `retired-rules:` in the `spec.md` of each spec whose directory records them, 008, 026, 067 and this one, per 067's scenario `a-record-cites-a-removed-rule`; annotate AC5 as superseded in part by the removal
+- [ ] `runtime/CHANGELOG.md`'s `[Unreleased]` names the removal as BREAKING: an adopter spec citing either ID now gets the Blocking unknown-rule finding, as this spec's Resolved Question states
+
+- **Done when**: Neither rule is in a framework rule file, the release audit's Family 40 passes with `version` at 0.62.0, the whole `cargo test` passes, and 077's next review reads the change.
