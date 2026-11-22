@@ -47,7 +47,7 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 
 ### Deprecation and re-pointing
 
-- `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020` were labelled `**DEPRECATED in {version}:**`, naming the release that ships this spec, per constitution §rules. The removal target is the second minor release after it: deprecated in `0.X.0`, removed in `0.(X+2).0`. `BE-DEPS-006` and `BE-AUTHN-020` were never in a tagged release, and 008 removed them in 0.60.0 (owner, 2026-11-19); `BE-AUTHN-009` and `BE-AUTHN-013` stay deprecated for removal in 0.62.0. Each names its successor as the owner of every case it governed, with no load condition, since a `-cross.md` owner installs in every shape. A deprecated rule binds until it is removed.
+- `BE-DEPS-006`, `BE-AUTHN-009`, `BE-AUTHN-013` and `BE-AUTHN-020` were labelled `**DEPRECATED in {version}:**`, naming the release that ships this spec, per constitution §rules. The removal target is the second minor release after it: deprecated in `0.X.0`, removed in `0.(X+2).0`. `BE-DEPS-006` and `BE-AUTHN-020` were never in a tagged release, and 008 removed them in 0.60.0 (owner, 2026-11-19); `BE-AUTHN-009` and `BE-AUTHN-013` stayed deprecated until 0.62.0, which removes them (task 14). Each named its successor as the owner of every case it governed, with no load condition, since a `-cross.md` owner installs in every shape. A deprecated rule binds until it is removed.
 - Every yield and Statement that names one of the four as current re-points to the successor:
   - `BE-API-009`, `BE-API-010` (d), `BE-API-011` (including its "Token comparison MUST be constant-time per `BE-AUTHN-009`") and `BE-API-013` in `security-backend.md`;
   - `FE-AUTHN-001` and `FE-STORAGE-003` in `security-frontend.md`.
@@ -88,8 +88,8 @@ Each moved rule carries its predecessor's Statement and Verification as they sta
 - [x] AC6: Every yield and Statement in `framework/rules/security-backend.md`, `framework/rules/security-frontend.md` and `framework/rules/configuration-cross.md` that names `BE-AUTHN-009` or `BE-AUTHN-013`, or `BE-LOG-002` or `BE-LOG-008` as owner of a non-configuration sensitive value, names the successor as §Deprecation and re-pointing states.
 - [x] AC7: No live artifact outside a decision record, a changelog entry or an audit record cites one of the four old IDs, `BE-DEPS-006` and `BE-AUTHN-020` removed included, as a current requirement.
 - [x] AC8: `framework/bootstrap/ductus.md` ships the file in every shape, and `docs/rules.md` lists it. A frontend-only, a backend-only and a cross-only `[rules] surfaces` setting each install it.
-- [x] AC9: `runtime/CHANGELOG.md`'s `## [Unreleased]` section names the four ID changes and the waivers they expire.
-- [x] AC11: `runtime/CHANGELOG.md`'s `## [Unreleased]` section also names each successor, the removal version, and the double report a project pinning `security-backend.md` sees until it re-syncs the file.
+- [x] AC9: `runtime/CHANGELOG.md`'s `## [0.60.0]` section, the release that shipped this spec, names the four ID changes and the waivers they expire.
+- [x] AC11: `runtime/CHANGELOG.md`'s `## [0.60.0]` section also names each successor, the removal version, and the double report a project pinning `security-backend.md` sees until it re-syncs the file.
 - [x] AC10: A fresh agent's re-read of the new file and of every rule this spec changes, across all four project shapes, finds no MUST or SHOULD.
 
 ## Open Questions

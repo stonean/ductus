@@ -7,7 +7,7 @@ Implements [077 — Security cross rules](spec.md).
 Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC-LOG-001`), four moved from `security-backend.md`, and `SEC-AUTHN-004`, which 008's task 43 moved from `BE-API-009`'s authorization-server sentences, and `SEC-DATA-001`, which it added. The work then has four parts:
 
 - **Register the prefix** in this spec's `data-model.md`, the rule-ID lint and the analyze reference.
-- **Deprecate the four old rules**, each reduced to a yield to its successor so `/{project}:analyze` reports a case once. `BE-DEPS-006` and `BE-AUTHN-020`, never tagged, are then removed in 0.60.0 by 008 (owner, 2026-11-19); `BE-AUTHN-009` and `BE-AUTHN-013` stay deprecated.
+- **Deprecate the four old rules**, each reduced to a yield to its successor so `/{project}:analyze` reports a case once. `BE-DEPS-006` and `BE-AUTHN-020`, never tagged, are then removed in 0.60.0 by 008 (owner, 2026-11-19); `BE-AUTHN-009` and `BE-AUTHN-013` stay deprecated until 0.62.0, which removes them (task 14).
 - **Re-point every yield and Statement** that names them, and sweep every live citation.
 - **Ship the file**: the manifest row, `docs/rules.md`, the README, and `runtime/CHANGELOG.md`'s `## [Unreleased]` section.
 

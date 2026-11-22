@@ -27,6 +27,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 15. Disposition out-of-spec finding: 008's scenario says BE-AUTHN-009 and BE-AUTHN-013 remain deprecated
 
-- [x] `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md` — its Behavior bullet on `BE-AUTHN-020` and `BE-DEPS-006`'s removal says "Two 0.60.0 deprecations remain, `BE-AUTHN-009` and `BE-AUTHN-013`, which shipped in 0.59.11 and keep their labels and their 0.62.0 removal", and task 14 removes both — waived: the sentence schedules the very removal task 14 makes ("keep their labels and their 0.62.0 removal") and sits under the bullet recording 0.60.0's removal of the other two, so it reads as 0.60.0's decision, which 0.62.0 carries out, rather than as a present claim; rewording it would reopen 008, a `done` spec, for a review and an analysis that change no requirement
+- [x] `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md` — its Behavior bullet on `BE-AUTHN-020` and `BE-DEPS-006`'s removal says "Two 0.60.0 deprecations remain, `BE-AUTHN-009` and `BE-AUTHN-013`, which shipped in 0.59.11 and keep their labels and their 0.62.0 removal", and task 14 removes both — fixed: reworded in the past tense, which reopens 008 for a review and an analysis (the agent's recommendation, adopted by the operator, 2026-11-22, after 077's review found the earlier waiver's reason rested on the reopen's cost)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
