@@ -1,5 +1,5 @@
 ---
-next-task: 51
+next-task: 53
 ---
 
 # 050 — Constitution Tasks
@@ -32,3 +32,15 @@ Tasks derived from the [plan](plan.md). Complete in order.
 A read-only sweep on 2026-11-18, at `6f1286dc`, by meaning and by every principle name, found what the third box owes; re-derive it if the corpus has moved. To correct: 050's own scenario deletion, `the-constitution-fits-one-read` ("the principles" names the design principles) and the `plan.md` sentence calling the two lists byte-identical; 008's `spec.md` Motivation and Constitution Reference, its `plan.md` Overview, "currently reads:" quote and Affected Files row, and AC28's annotation; 010's `spec.md` "(§principles → Business)" and its `plan.md` "following the `### Business` principles list"; 037's `spec.md` "the principles list calls the system to be Supportable and Observable"; 039's `spec.md` Motivation and BULK Resolved Question and its `plan.md` "reliability principle"; and 077's `plan.md`, twice ("the Secure principle names", the Affected Files row). Each edit outside 008 and 050 is to a `spec.md` body or `plan.md`, so no `done` spec reopens; confirm with `classify-spec-edit` before committing. 010's AC11 needs no edit, since its "or a new dedicated subsection" branch, `### Cost levers`, stays. 016's naming Resolved Question, which this sweep missed, was corrected too. Kept as records: 072's past-tense motivation, 008's rejected alternative, 010's Resolved Question 6 and plan history, 050's §principles size row and cut account, and each `review.md` and `analysis.md` naming the deleted scenario.
 
 - **Done when**: `framework/constitution.md` has no `### Technology` or `### Business` heading, `scripts/lint-governing-size.sh` and `scripts/audit/run-all.sh` pass, no live artifact describes a removed principle as current, and each reopened spec is `in-progress` with its analysis owed.
+
+## 51. A decision is attributed to whoever made it (scenario a-decision-is-attributed-to-whoever-made-it)
+
+- [ ] Implement the behavior described in `scenarios/a-decision-is-attributed-to-whoever-made-it.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 52. A primitive is probed in a local clone (scenario a-primitive-is-probed-in-a-local-clone)
+
+- [ ] Implement the behavior described in `scenarios/a-primitive-is-probed-in-a-local-clone.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
