@@ -44,8 +44,8 @@
 //! deny-side counterpart rather than by a documented convention: an
 //! over-broad deny entry refuses more rather than approving more, so
 //! sweeping both arrays under one argument would invite narrowing the
-//! deny set into holes. See spec 027's `retired-permission-entry-cleanup`
-//! scenario.
+//! deny set into holes. See spec 023's
+//! `configure-retires-formerly-canonical-entries` scenario.
 //!
 //! # Ceiling
 //!

@@ -39,7 +39,7 @@ The bare `Edit` and `Write` tool-level entries at the top of §5 are unaffected:
 
 ## Edge Cases
 
-- An adopter who ran `/ductus:configure` before this change keeps both entries until the 027 migration runs; the host's startup warning is what surfaces them meanwhile.
+- ~~An adopter who ran `/ductus:configure` before this change keeps both entries until the 027 migration runs; the host's startup warning is what surfaces them meanwhile.~~ **Superseded** by [`configure-retires-formerly-canonical-entries`](configure-retires-formerly-canonical-entries.md) (AC36–AC38): the adopter's next `/ductus:configure` run removes both.
 - Removing the bare `Write` tool entry would revoke a real tool grant, not a path grant — the two forms must not be swept together.
 - A host whose permission grammar has no path-scoped file form cannot express the defect, and is skipped by whatever audit check enforces the invariant — the same per-host applicability rule the wildcard-position check already applies.
 - An adopter who pinned `configure/claude.md` in `.ductus/config.toml` keeps their pinned copy, inert entries included; the pin contract already accepts that trade.
