@@ -73,7 +73,9 @@ decisions:
 
 - **Matched.** The key fired this run. The entry is re-rendered unchanged, and
   the finding counts under its outcome without being asked about.
-- **Expired.** The key did not fire, and the run evaluated its source. The
+- **Expired.** The key did not fire, and the run evaluated its source, or, on
+  any run, more findings fire at a violation's key than its `covers`, or the key
+  was recorded before sites (020's AC19; 076's data model). The
   entry is dropped on this write. For a deferred finding, this is the moment the
   deferred work landed.
 - **Retained.** The key did not fire, but the run did not evaluate its source:
@@ -153,7 +155,7 @@ at least one is new and no rule decided it. The shared disposition shape is `Dis
 | --- | --- | --- |
 | `observations` | list of `ReviewObservation` | Each now carries its disposition (below). |
 | `expired-decisions` | list of decision refs | From `process-decisions`' `expired`; dropped on this write. |
-| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived other than `by-rule`, or any violation newly deferred (076), or any `new-waivers` item is passed (079). |
+| `decided-by` | string, optional | Author of this run's new decisions. Required when any observation is newly deferred or waived other than `by-rule`, or any violation newly deferred (076), or any `new-waivers` item is passed (079), or a fix round is waived (078). |
 
 ### `ReviewObservation` — the `write-review` `observations` entry
 
@@ -212,7 +214,7 @@ findings sharing a summary apart. A spent section never matches.
 | `feature` | string | Feature directory under the spec root. |
 | `record` | `review` \| `analysis` | Which record's `decisions:` to read. |
 | `fired` | list of strings | This run's finding keys; on the CLI, `--fired-json FILE` from a staging directory, as `process-waivers`' `fired` is (022 task 24). |
-| `fired-violations` | list of `{rule, file, site, line-range, decision-key}` | The review record's MUST and SHOULD violations, one entry per finding: each keyed `` rule {rule-id} at {file} in `{site}` ``, a `decision-key` that is not that key refused, and the findings at a key counted per site as `process-waivers` counts its `fired` (020's AC19, task 23). Refused on the analysis record; on the CLI, `--fired-violations-json FILE`. |
+| `fired-violations` | list of `{rule, file, site, line-range, decision-key}` | The review record's MUST and SHOULD violations, one entry per finding: each keyed `` rule {rule-id} at {file} in `{site}` `` (`rule {rule-id} at {file}` for a finding naming no site, which no stored decision matches), a `decision-key` that is not that key refused, and the findings at a key counted per site as `process-waivers` counts its `fired` (020's AC19, task 23). Refused on the analysis record; on the CLI, `--fired-violations-json FILE`. |
 | `restricted` | bool | The run did not evaluate every source: a review pass did not run, or an analysis could not read a target it meant to examine or could not resolve a registered shared constitution. |
 | `since` | string, optional | A review's `--since`. On the review record a decision whose key names a file still on disk that this window's scope does not hold is retained (079). |
 

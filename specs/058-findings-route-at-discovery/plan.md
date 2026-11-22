@@ -39,8 +39,8 @@ the count; it reads the gating counts the records already carry.
 fixed field set:
 
 - `render_report` writes the frontmatter at
-  `runtime/src/primitives/write_review.rs` and writes the file with
-  `write_atomic`.
+  `runtime/src/primitives/write_review.rs` and writes the file through
+  `ReadSnapshot::write_if_unchanged`.
 - `render_analysis` does the same at
   `runtime/src/primitives/write_analysis.rs`.
 
@@ -226,12 +226,12 @@ With capture gone, the writer has to be given the findings.
 ### The inbox windows and the standing row leave the review and implement primitives
 
 - **`compute-review-scope`:** drop `captured_issues` from
-  `ComputeReviewScopeResult` (`primitives.rs`), along with `diff_since`,
-  `inbox_in_worktree`, and `inbox_at`
+  `ComputeReviewScopeResult` (`primitives.rs`), along with `inbox_in_worktree`, `inbox_at`
+  and `diff_since`'s inbox parameter
   (`runtime/src/primitives/compute_review_scope.rs`).
 - **`diff-cross-spec`:** drop `inbox_additions` and `inbox_standing`
   (`runtime/src/primitives/diff_cross_spec.rs`; `primitives.rs`). **Keep** the
-  exclusion of `inbox.md` from `cross_spec_paths` (`diff_cross_spec.rs`'s `s != inbox_rel` filter):
+  exclusion of `inbox.md` from `cross_spec_paths` (`diff_cross_spec.rs`'s `path != inbox_rel` filter):
   editing a manual todo is not a cross-spec impact.
 - **`inbox_standing::standing`** (`runtime/src/primitives/inbox_standing.rs`)
   survives, with `dashboard` as its only caller.
@@ -362,11 +362,11 @@ are rewritten, to describe the chore being fixed and the item being
 removed.
 
 - **`analyze.md`:**
-  - Step 16 (capture) becomes three steps:
+  - The capture step becomes three steps, now steps 18 to 20:
     - process decisions;
     - fix and route, gated per write;
     - re-run the detection steps when anything was written.
-  - The `write-analysis` step, now step 19, passes `findings`,
+  - The `write-analysis` step, now step 21, passes `findings`,
     `expired-decisions`, and `decided-by` instead of `captured-issues`.
   - The Purpose, Scope Boundaries, frontmatter description, and
     the Finding capture (durability) section are rewritten to match.
@@ -516,9 +516,8 @@ version goes in the repo-root `version` file, `runtime/Cargo.toml`'s `version`, 
 `--locked`. Family 20 checks that they agree. The changelog section covers
 every runtime change this release carries, not only 058's (tasks 1–48): 022's
 task 123, exec analyze deriving its list seeds, and 051's task 26, a fold
-owed to another tree no longer holding `done`. The tag `ductus-v0.53.0` is
-cut after 058, 022, and 051 are all `done`, following the `AGENTS.md` release
-entry. The new
+owed to another tree no longer holding `done`. It shipped as
+`ductus-v0.53.0`. The new
 primitive joins `framework/runtime-tools.txt`, whose parity with the registry
 is asserted by `runtime/tests/mcp.rs`'s `lists_every_manifest_tool_and_canonical_set`. The configure permission list
 gains it too (`framework/bootstrap/configure/claude.md`'s allow list, beside its `mcp__ductus__append-inbox` and `mcp__ductus__remove-inbox-item` entries at `5a1d410b`).
