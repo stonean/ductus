@@ -1,5 +1,5 @@
 ---
-next-task: 29
+next-task: 31
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -61,3 +61,15 @@ Owed after this task (2026-11-19): nothing. 066 itself is `done` (`0c4d20fc`), a
 - [x] Implement the behavior described in `scenarios/record-paths-are-quoted-only-when-they-need-it.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 29. A commit after the scope was resolved refuses the write (scenario a-commit-after-the-scope-was-resolved-refuses-the-write)
+
+- [ ] Implement the behavior described in `scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 30. A write result states what it wrote (scenario a-write-result-states-what-it-wrote)
+
+- [ ] Implement the behavior described in `scenarios/a-write-result-states-what-it-wrote.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
