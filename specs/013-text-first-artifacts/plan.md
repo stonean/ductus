@@ -80,9 +80,9 @@ This repo has no `/ductus`. The work is a manual implementation task: convert ea
 
 At the `draft → clarified` transition, after all open questions are resolved and before the validation gate, check whether `tags` is empty. If so, surface as one of the validation findings with severity advisory: *"Tags are empty. Adding tags helps cross-cutting graph views. Add some, or proceed without."* The advisory does not block the transition.
 
-### Validate strict/advisory split
+### Analyze strict/advisory split
 
-Per Q4. The validate command's instructions document the severity per check:
+Per Q4. The analyze command's instructions document the severity per check:
 
 - Hard fail: missing/invalid `status`, missing/invalid `dependencies`, malformed YAML, no frontmatter block on a spec or scenario file.
 - Advisory: empty `tags`, unknown fields (informational), checkbox mismatches (existing), cross-spec reference issues (existing).

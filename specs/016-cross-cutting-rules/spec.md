@@ -8,7 +8,7 @@ next-criterion: 9
 
 # 016 — Cross-Cutting Rules
 
-Promote rules to a first-class artifact tier alongside specs and scenarios. The rule infrastructure already exists but is framed as security-specific; this spec generalizes the framing, the bug decision tree, the validate plumbing, and the spec template so cross-cutting concerns of any kind (security, performance, concurrency, observability, accessibility, etc.) land in a single, consistent home.
+Promote rules to a first-class artifact tier alongside specs and scenarios. The rule infrastructure already exists but is framed as security-specific; this spec generalizes the framing, the bug decision tree, the analyze plumbing, and the spec template so cross-cutting concerns of any kind (security, performance, concurrency, observability, accessibility, etc.) land in a single, consistent home.
 
 ## Motivation
 
@@ -32,7 +32,7 @@ Bugs route to the tier that matches the *scope* of the missing or violated requi
 
 ## Scope
 
-The artifact tier and validate plumbing already exist. This spec generalizes the framing and adds the missing decision-tree route.
+The artifact tier and analyze plumbing already exist. This spec generalizes the framing and adds the missing decision-tree route.
 
 ### In scope
 
