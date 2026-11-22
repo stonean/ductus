@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [022-deterministic-runtime]
 next-criterion: 7
 cross-spec-impact: [000-slash-commands, 020-code-review, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
