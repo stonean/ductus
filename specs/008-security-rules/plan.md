@@ -16,7 +16,7 @@ Per spec, sources are `framework/rules/security-backend.md` and `framework/rules
 
 ### Project destination is the spec root's `rules/` directory
 
-ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` in adopted projects, alongside the other rule files. They sit under the same spec root as `system.md`, `errors.md`, and `events.md` — the cross-cutting global specs — which keeps the project root clean and groups all "applies project-wide" docs together. This plan was written against the original flat layout (`specs/security-{backend,frontend}.md`); the `rules/` subdirectory arrived in ductus 0.6.0 and adopters are converged by the `rule-files-relocate` migration.
+ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` in adopted projects, alongside the other rule files. They sit under the same spec root as `system.md`, `errors.md`, and `events.md` — the cross-cutting global specs — which keeps the project root clean and groups all "applies project-wide" docs together. This plan was written against the original flat layout (`specs/security-{backend,frontend}.md`); the `rules/` subdirectory arrived in ductus 0.6.0 (`CHANGELOG.md` §rule-files-relocate, introduced 0.6.0) and adopters are converged by the `rule-files-relocate` migration.
 
 ### Rule entry format is heading-anchored markdown
 
@@ -101,25 +101,25 @@ Each edge case maps directly to a checkbox in that section's check list, so viol
 ### Brownfield audit lives in ductus, not `/{project}:analyze`
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> The audit's sink below is gone: it reports each gap under its spec and writes
-> nothing, so steps 4 and 5 and the inbox rationale describe the design as first
-> built. The trigger and the per-rule logic are unchanged. The current contract
-> is `spec.md` §Brownfield Adoption. Since 056 split the bootstrap, the section
-> lives in `framework/bootstrap/ductus-procedure.md` §Security Audit (brownfield).
+> The audit reports each gap under its spec and writes nothing, where it first
+> wrote each to `specs/inbox.md`. The trigger and the per-rule logic are
+> unchanged, and the contract is `spec.md` §Brownfield Adoption. Since 056 split
+> the bootstrap, the section lives in `framework/bootstrap/ductus-procedure.md`
+> §Security Audit (brownfield).
 
-When `/ductus` lands rule files in a project with existing feature spec directories, in either numbering form constitution §numbering defines, it runs a one-time audit and writes findings to `specs/inbox.md`. The adopter then walks the inbox via `/{project}:groom`. This reuses 011's brownfield infrastructure rather than introducing baseline files or suppression mechanisms.
+When `/ductus` lands rule files in a project with existing feature spec directories, in either numbering form constitution §numbering defines, it runs a one-time audit and reports each gap under the spec it belongs to, writing nothing, so `/{project}:analyze` finds and dispositions each gap when that spec is next worked on. This follows 011's brownfield process, each spec gaining precision as it is worked on, rather than introducing baseline files or suppression mechanisms.
 
 `framework/bootstrap/ductus.md` gains a new top-level section, **Security audit (brownfield)**, slotted after **Shared Files** (where the manifest deposits the rule files) and before **Per-Agent Scaffolding**. The section's logic:
 
 1. Detect the trigger: at least one of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or, since spec 077, `specs/rules/security-cross.md` was newly created (not updated) by the manifest pass, AND at least one feature spec directory exists, in either numbering form constitution §numbering defines.
 2. Load the newly created security rule file(s) using the same integrity checks `/{project}:analyze` uses. If a file fails to load, report and skip the audit for that file.
 3. Iterate the rules, applying each to each existing feature spec — its `spec.md`, `plan.md`, `data-model.md` and scenarios read together, with a cross-spec file the spec or the Verification refers to — as `/{project}:analyze` applies it: produce one finding when its Verification trigger fires against the spec and the spec does not include the commitment or holds a case the rule flags, unless the rule sets that gap aside or names it as another rule's, in its **Not flagged:** clause or elsewhere, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in a non-security rule file the manifest pass newly created is reported under that rule's ID, its file loaded with the same integrity checks and the rule applied to that case alone, as `/{project}:analyze` applies it (since spec 077).
-4. Append findings to `specs/inbox.md`, deduplicating against existing lines that begin with the same `{Rule ID}: {artifact path}` prefix.
-5. Report the audit summary line (`{N} security audit items added to specs/inbox.md.`) in the post-scaffolding output, omitted when N is zero.
+4. Report each finding under the spec it belongs to, as `{Rule ID}: {affected artifact path} does not address — {one-line summary}` (`spec.md` §Finding format). The audit writes no file.
+5. The post-scaffolding output reports how many gaps were found and in how many specs and lists each finding under its spec, and is omitted when there are none (AC27, as 058 superseded it).
 
-Audit logic mirrors the command's per-rule check logic. Both call into the same Verification-evaluation pattern; the difference is the *output sink* (inbox vs. the analyze findings report). For implementation, the analyze prompt and the ductus audit section can share a written description of the per-rule check (referenced rather than duplicated) — the rule-evaluation procedure lives in one place, both consumers reference it.
+Audit logic mirrors the command's per-rule check logic. Both call into the same Verification-evaluation pattern; the difference is the output: the audit reports at adoption and writes nothing, where `/{project}:analyze` records its findings in the spec's `analysis.md`. For implementation, the analyze prompt and the ductus audit section can share a written description of the per-rule check (referenced rather than duplicated) — the rule-evaluation procedure lives in one place, both consumers reference it.
 
-Trade-off: ductus gains complexity from this audit step, but the alternative (adopters running `/{project}:analyze` post-adoption and manually piping output to log) is high-friction and fragile. Auto-audit on first install matches the brownfield ergonomic that 011 already established.
+Trade-off: ductus gains complexity from this audit step, but the alternative, adopters running `/{project}:analyze` on every legacy spec after adoption, would hold the next gate on each spec at once (`spec.md` §Brownfield Adoption). Auto-audit on first install matches the brownfield ergonomic that 011 already established.
 
 ### Constitution gets a one-line append
 
