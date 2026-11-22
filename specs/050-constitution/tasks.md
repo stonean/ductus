@@ -35,7 +35,7 @@ A read-only sweep on 2026-11-18, at `6f1286dc`, by meaning and by every principl
 
 ## 51. A decision is attributed to whoever made it (scenario a-decision-is-attributed-to-whoever-made-it)
 
-- [ ] Implement the behavior described in `scenarios/a-decision-is-attributed-to-whoever-made-it.md`
+- [x] Implement the behavior described in `scenarios/a-decision-is-attributed-to-whoever-made-it.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 

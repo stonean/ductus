@@ -191,6 +191,10 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 §text-first-artifacts **Principles** carries the rule as the owner approved it on 2026-10-28, after the bullet on exceptions to markdown as the source of truth. It defines required content by pointing at §grounding, §design-principles and §drift-prevention rather than restating them, and no command or template restates it. The constitution had 3 bytes of headroom and the bullet is 599, so restatements were cut in the same change: the opening tagline; the Guiding Principles' second sentence, which restates their first; §grounding's lead slogan; the clause saying the default spec-root name applies when the key is unset; §bug-handling's pointer to the decision tree that follows it; the Readiness Check's closing instruction, which its pass/fail gate states; §brownfield-process's lead, which its three steps state; §runtime-boundary's acquisition clause, which principle 3 states; and the eligibility paragraph restating that all three criteria must hold. Passages other artifacts quote stay verbatim: §cost-levers' `/cost` example (`010-agent-autonomy` AC11), the §runtime-boundary sentences 021, 048 and this spec quote, the brownfield-backlog sentence, and the sentence naming the checks the completion gate composes with, on which `046-scenario-open-question-visibility` rests a decision.
 
+### A decision is attributed to whoever made it
+
+§recommendations' first paragraph states it before its closing reopen sentence, so it binds every project and is not part of the one-at-a-time default a project may replace; `framework/reference/clarify.md` step 1.4 points at it. Its home was clarify alone from 2026-11-12, which left review and analysis decisions, plan rationale and commit messages without it (an adopter's report against 0.61.0; scenario `a-decision-is-attributed-to-whoever-made-it`). The sentence is 253 bytes: the constitution went from 49,199 to 49,452 (`wc -c`), so no cut was needed.
+
 ## Classification
 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
@@ -403,7 +407,7 @@ clause rather than as a principle in its own right.
 
 Seven practices an adopter reported as true of every project, classified one at a time by the owner (scenario `adopter-practices-classified-for-promotion`). A practice has one normative statement; the three constitution merges net out against cuts in the same commit, which records the measured size.
 
-- **Record a decision as the operator's only when the operator made it**: `framework/reference/clarify.md` step 1.4, where Resolved Questions are written: the constitution's §recommendations would cost every record a constitution sentence
+- **Record a decision as the operator's only when the operator made it**: §recommendations, for every record a command writes, with `framework/reference/clarify.md` step 1.4 pointing at it (§A decision is attributed to whoever made it)
 - **Name a function, test or file, never a line number**: §grounding's *Cite what you consulted*, merged; `framework/reference/plan.md`, `framework/reference/clarify.md`, `framework/commands/plan.md` and `framework/commands/analyze.md` advised `path:line` and are corrected; `AGENTS.md`'s gotcha points at it
 - **A document follows a move by content, not file name**: §drift-prevention's *A retired filename is not a retired name*, merged: a split maps one name to several paths
 - **Learn a primitive in a throwaway clone**: project-only: host and repository machinery
@@ -525,7 +529,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
 | `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
 | `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
-| `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Point at §grounding's *Cite what you consulted* in place of restating it (task 48); clarify records a decision as the operator's only when the operator made it |
+| `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Point at §grounding's *Cite what you consulted* in place of restating it (task 48); clarify points at §recommendations' attribution rule (task 51) |
 | `framework/reference/review.md` | Modify | §Run review passes checks a claim against the tree before recording it; Observations fixes design rationale as a comment |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |
