@@ -374,7 +374,7 @@ Every finding still live when detection ends — hard fail, blocking, and adviso
 The analyze record's fields and types are declared in the constitution's §text-first-artifacts; what each means:
 
 - `analyzed-against` — HEAD sha at the time of the run, provenance only: the working tree and a commit are the same subject only on a clean tree, so it is never the staleness basis.
-- `analyzed-digest` — per-path digest of the analyze subjects as the run read them from disk, excluding `analysis.md`'s own record, since a record written after its subjects are read can never digest itself. Absent is undeterminable.
+- `analyzed-digest` — per-path digest of the analyze subjects as the run read them from disk, excluding `analysis.md`'s own record, since a record written after its subjects are read can never digest itself. `spec.md` is digested with each acceptance criterion's checkbox unticked, so a review's ticks leave the analysis current, while the `review.md` that review writes does not. Absent is undeterminable.
 - `analyzed-unreadable` — subjects that exist but could not be read, recorded rather than digested as empty.
 - `hard-fail`, `blocking-findings`, `advisory` — the tier counts, the first two outstanding ones: the re-check's count less the live findings their deferral releases, listed under Deferred to other specs. `blocking-findings` is named for the tier to keep it distinct from the derived `blocking` flag, and `advisory` is never gated on.
 - `unexamined`, `unexamined-by-reason` — targets the run could not examine, the field that makes a clean run honest (**Unexamined targets** above).
