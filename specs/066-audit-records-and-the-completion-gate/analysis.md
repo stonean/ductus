@@ -1,21 +1,23 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-22T02:12:03Z
-analyzed-against: cc7201df347f15347ae40ea12d24073077cac266
+last-run: 2026-11-22T06:56:50Z
+analyzed-against: a61dac2ccb87c222ac7feddf88309ead5eae0abb
 hard-fail: 0
 blocking-findings: 0
-advisory: 1
+advisory: 0
 unexamined: 9
 analyzed-digest:
-  data-model.md: f34ab890622815a0e60aa3bc1533c8d41959c2c5b9afd2d157023390639ad04c
-  plan.md: a95511d4561cbb23cb1c45e6312a147f703c04efe038f0efea4b85f14803eb81
-  review.md: 1782658978960ffd452e4d92ecf004672a12a54a9c53cf85b9cf412c45a759ed
+  data-model.md: 957555d58f8d2d3547221128b9a6fa08245f318235108e36f8ae3ef5c7d6df05
+  plan.md: ed15bb0b5caf8708bd9a9349e041bc90ad1d14e9c44848d35a85b1fbaa90058b
+  review.md: dcb19b0ec3483055cff7d0c1f32a4fa2562254e5c9f3a068d5b778a9b6b267f5
+  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: fc060f7f8dd91322a08ccf6d8e9a630c483c84c1725225088cf3e1937baba7ad
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
   scenarios/a-renamed-file-contributes-its-rewrites.md: b578c5093853df3201d5d4b451b21c55943afb4840a47cb6d45f263a96e2a9fe
   scenarios/a-review-states-what-it-read.md: a75902f6c548b664d670a03ef4642b8cb4ff20fbdccfa39468666fa5d9787490
   scenarios/a-supplied-summary-carries-the-loops-account.md: 80f366f0462d15212f4c5ceb7c097095fd5c5cd87ee68f769056c3dc1c803882
+  scenarios/a-write-result-states-what-it-wrote.md: 71d4b19f014d1bc19335c9ec29af30fa4e782d57538db9167962cd7064f649de
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 39b59f38bb7b419b250d16d6ff6f3fec473959a3f9293706a6fcab931f6f232d
   scenarios/checkbox-state-is-outside-the-analysis-digest.md: ca9c4875ae8dec48c0c79edc74f3af3d4ee405601c6a8b1dee3c9a68f748834d
   scenarios/criteria-are-verified-in-review.md: 46195c281734fabf5056a32817a48667b7d6465b7a2f3f8119f16c238637c8c7
@@ -37,8 +39,8 @@ analyzed-digest:
   scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: b1f735f519d1dac37555d62dfb8e273ea8631c81b89e90e9fe7305fb748cc739
-  tasks.md: f534c65bba3e67010d10dd047939c4ac34f856da9c294fdf6437ce80246c70d1
+  spec.md: c9752fae6c42546ec23656114a9cc826f830388591084b6ebc86d43e06600791
+  tasks.md: 4d39b4175a270661f58c3679ce8b748c5981bf1b173fd1f43fa54fe6a210139b
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
@@ -59,18 +61,20 @@ section-digest:
   "data-model.md": e3b0c44298fc1c14
   "data-model.md#066 — Audit Records and the Completion Gate Data Model": fd40e009bea15199
   "data-model.md#Cross-spec impact": aea1a17eb4c418d1
-  "data-model.md#Record freshness": 3e57f2da1e801a59
+  "data-model.md#Record freshness": 2ad3d71c143fe625
   "data-model.md#`check-review-gate` — evaluate implement's pre-done review gate": 5cfdfb49da251c80
-  "data-model.md#`compute-review-scope` — the review's diff base and scope": fb0d2606203d2a66
+  "data-model.md#`compute-review-scope` — the review's diff base and scope": e391733b4183a6c0
   "data-model.md#`diff-cross-spec` — implement's cross-spec impact surface": c67c750644cce1b4
   "data-model.md#`process-decisions` — classify stored decisions before dispositions": 90968f759f8cd8ed
   "data-model.md#`process-waivers` — classify recorded waivers before the write": 55a8876ebe3a0991
-  "data-model.md#`write-analysis` — record that analyze ran": 4e44b221a6ea0ea7
-  "data-model.md#`write-review` — observations and the review's denominator": dbe410395b8a9bca
+  "data-model.md#`write-analysis` — record that analyze ran": 866d9c05f12e498b
+  "data-model.md#`write-review` — observations and the review's denominator": 2375884522a6b5ec
   "plan.md": e3b0c44298fc1c14
   "plan.md#066 — Audit Records and the Completion Gate Plan": adf58d11fa4f1d72
+  "plan.md#A commit after the scope was resolved refuses the write (task 29)": d331380f18419441
   "plan.md#A stripped line-number citation is a mechanical edit (AC6)": 4194457a4546a914
-  "plan.md#Affected Files": 88835412bc599266
+  "plan.md#A write result states what it wrote (task 30)": a75ee36ad04b3573
+  "plan.md#Affected Files": 925824b17eb802de
   "plan.md#Criteria are judged in review, and the gate judges nothing (task 27)": 5cae7ad8947d3826
   "plan.md#Data Model": c84d1eb9b86e1a97
   "plan.md#Freshness paths go to a file past the read size": 77e34f507fa5a8c2
@@ -84,6 +88,13 @@ section-digest:
   "plan.md#The two record writes are guarded (`BE-TXN-002`)": 54af0788e2438ad4
   "plan.md#The unexamined reasons are a closed set (AC2, task 26)": abcf128cfcdf250c
   "plan.md#Trade-offs": 9d16896488e298fb
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md": d616699402c1569d
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#A-commit-after-the-scope-was-resolved-refuses-the-write": 9a4c09f5601dceb6
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Behavior": 8cc9cffcf18a8ca3
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Context": 6df0f1936b290310
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Edge Cases": 80faa3dcf9e7b29a
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/a-done-spec-has-no-transition-to-gate.md": 8c91577236508071
   "scenarios/a-done-spec-has-no-transition-to-gate.md#A-done-spec-has-no-transition-to-gate": e5e98d5725cf6885
   "scenarios/a-done-spec-has-no-transition-to-gate.md#Behavior": 27577a6f54ae3f89
@@ -126,6 +137,13 @@ section-digest:
   "scenarios/a-supplied-summary-carries-the-loops-account.md#Edge Cases": 0502078e29c59fe5
   "scenarios/a-supplied-summary-carries-the-loops-account.md#Open Questions": 9fc5979d590cdb97
   "scenarios/a-supplied-summary-carries-the-loops-account.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/a-write-result-states-what-it-wrote.md": 14124ed3ac8ef445
+  "scenarios/a-write-result-states-what-it-wrote.md#A-write-result-states-what-it-wrote": ecc1e9560d9cf26c
+  "scenarios/a-write-result-states-what-it-wrote.md#Behavior": 48e82fee639088b4
+  "scenarios/a-write-result-states-what-it-wrote.md#Context": 07a9b85208dc5f3a
+  "scenarios/a-write-result-states-what-it-wrote.md#Edge Cases": c4e06ad1a441e81c
+  "scenarios/a-write-result-states-what-it-wrote.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/a-write-result-states-what-it-wrote.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md": d616699402c1569d
   "scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md#An-empty-scope-flag-does-not-decide-the-denominator": 4ccf50070adb1307
   "scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md#Behavior": bf68d0990cf95b59
@@ -275,7 +293,7 @@ section-digest:
   "scenarios/write-review-known-field-quoting.md#Write-review-known-field-quoting": 0cff1e9d4376b359
   "spec.md": de1e5ccc3a99919d
   "spec.md#066 — Audit Records and the Completion Gate": eb2e493fbdef03b9
-  "spec.md#Acceptance Criteria": 7cca6c89fd148db2
+  "spec.md#Acceptance Criteria": bb723f2b12911c5a
   "spec.md#Motivation": 693fe38e6ed04cc4
   "spec.md#Open Questions": 35737a7fd1b7cc55
   "spec.md#Record freshness": bc5b162aa9c3b739
@@ -284,47 +302,39 @@ section-digest:
   "spec.md#The completion gate": 741785d1c657b3c2
   "spec.md#The review record": 1a514d41efd4ea70
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
   BE-COND-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`write-analysis` — record that analyze ran"}
+  BE-INPUT-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
   BE-RACE-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-RACE-003: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-RACE-003: {verdict: addressed, cite: "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Edge Cases"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-TXN-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-TXN-002: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
+  BE-TXN-004: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   CFG-CONST-002: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
-  CFG-CONST-003: {verdict: addressed, cite: "data-model.md#`compute-review-scope` — the review's diff base and scope"}
-  QUAL-CLAIM-001: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
   QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
   QUAL-GROUND-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
-  QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Affected Files"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 2
   deferred: 0
-  waived: 1
+  waived: 0
   undispositioned: 0
-decisions:
-  - key: "grounding — Resolved Questions, 'Why a spec of its own': states that /{project}:specify's routing gate offered 022 as a fact about existing behavior with no citation to a command, primitive or artifact (operator approval is dated but the routing claim is unsourced)."
-    outcome: waived
-    reason: "advisory and no chore: the history of how the spec was split out, recorded with the owner's dated approval; it governs no behavior, and /specify's routing is `derive-routing-candidates`' (`framework/commands/specify.md`)"
-    decided-at: 2026-11-22T02:12:03Z
-    decided-by: rule
 ---
 
 # Analysis — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 9 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -336,7 +346,7 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Resolved Questions, 'Why a spec of its own': states that /{project}:specify's routing gate offered 022 as a fact about existing behavior with no citation to a command, primitive or artifact (operator approval is dated but the routing claim is unsourced). — `specs/066-audit-records-and-the-completion-gate/spec.md` — **waived**: advisory and no chore: the history of how the spec was split out, recorded with the owner's dated approval; it governs no behavior, and /specify's routing is `derive-routing-candidates`' (`framework/commands/specify.md`) (decided by the rule)
+*None.*
 
 ## Deferred to other specs
 
@@ -353,4 +363,5 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- rule-assessment — BE-PAYLOAD-001: The moved-scope refusal names every moved scope path with each commit that changed it, a variable-size body, and neither the plan nor the scenario states a maximum size or a lists-file for it, as the sibling results (scope-results-have-a-bounded-size) do. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed**
+- grounding — Technical Decisions, 'A commit after the scope was resolved refuses the write', guard bullet: the claim that `git diff --name-only` prints repository-root paths in a project below the work tree's root and leaves out a path a later commit reverted is stated as fact about git with no citation or command. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
