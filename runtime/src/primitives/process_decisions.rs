@@ -16,9 +16,11 @@
 //!   spec's status, cannot be read — or whose feature directory, or the
 //!   `spec.md` or `tasks.md` read in it, resolves outside the project — is
 //!   matched, with a notice, so a check that could not run looks like neither.
-//! - **expired** — the key did not fire on an unrestricted run. The writer
-//!   drops the entry. For a deferred decision this is the moment the deferred
-//!   work landed.
+//! - **expired** — the key did not fire on an unrestricted run, or, on any run,
+//!   more findings fire at a violation's key than its `covers`, or the key is a
+//!   violation's recorded before sites (spec 020's AC19). The writer drops the
+//!   entry. For a deferred decision that did not fire, this is the moment the
+//!   deferred work landed.
 //! - **retained** — the key did not fire, but the run did not evaluate every
 //!   source, or its scope does not hold the file a review key names, so absence
 //!   proves nothing and the entry is kept (spec 079).
@@ -226,7 +228,8 @@ impl Retained {
 /// [`PrimitiveError::Yaml`] when its frontmatter or `decisions:` list does
 /// not parse — never an empty result, which would re-ask every settled
 /// question — [`PrimitiveError::InvalidArgument`] when `fired-violations` is given for
-/// the analysis record, or [`PrimitiveError::Io`] on read failure. An absent record, or
+/// the analysis record or an entry's `decision-key` is not its own key, or
+/// [`PrimitiveError::Io`] on read failure. An absent record, or
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classified> {
@@ -240,6 +243,7 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
         });
     }
     let file = record_file(args)?;
+    refuse_a_foreign_violation_key(args)?;
     let stored = read_decisions(&feature_dir, file)?;
     let fired = fired_keys(args);
 
@@ -351,6 +355,31 @@ fn record_file(args: &ProcessDecisionsArgs) -> Result<&'static str> {
     }
 }
 
+/// Refuse a `fired-violations` entry whose `decision-key` is not its own key, naming it: a
+/// stored deferral covers only the findings at its own anchor, so no host match keys a
+/// finding to another (spec 020's AC19).
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] naming `fired-violations[i].decision-key`.
+fn refuse_a_foreign_violation_key(args: &ProcessDecisionsArgs) -> Result<()> {
+    for (index, violation) in args.fired_violations.iter().enumerate() {
+        if let Some(reason) = decisions::foreign_violation_key(
+            &violation.rule,
+            &violation.file,
+            violation.site.as_deref(),
+            violation.decision_key.as_deref(),
+        ) {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "process-decisions".into(),
+                argument: format!("fired-violations[{index}].decision-key"),
+                reason,
+            });
+        }
+    }
+    Ok(())
+}
+
 /// This run's fired keys, each flattened as the writers store keys, so a finding whose
 /// message carried a stray line break still matches the decision stored for it: `fired`
 /// once per entry, then a review's `fired-violations`, keyed and counted as `write-review`
@@ -360,12 +389,7 @@ fn fired_keys(args: &ProcessDecisionsArgs) -> Vec<String> {
     let violations = collapse_at_sites(&args.fired_violations)
         .into_iter()
         .map(|violation| {
-            decisions::violation_key(
-                &violation.rule,
-                &violation.file,
-                violation.site.as_deref(),
-                violation.decision_key.as_deref(),
-            )
+            decisions::violation_key(&violation.rule, &violation.file, violation.site.as_deref())
         });
     args.fired
         .iter()
@@ -600,8 +624,8 @@ mod tests {
     /// Only a key whose word after `rule` is a rule ID reads as a violation's recorded before
     /// sites: an observation keyed `rule engine at startup leaks` matches while it fires, and
     /// a deferral keyed by a rule ID with no site still expires as recorded before sites
-    /// (spec 020 task 22). `BE-X-001` is no rule ID by that grammar, whose category takes two
-    /// characters.
+    /// (spec 020 task 22). `BE-X-001` is no rule ID by that grammar, whose category takes at
+    /// least two characters.
     #[test]
     fn only_a_rule_ids_key_reads_as_recorded_before_sites() {
         let observation = "rule engine at startup leaks";
@@ -628,6 +652,35 @@ mod tests {
                 "decision expired: {key} — recorded before sites (deferred to work item `PROJ-1`)"
             )]
         );
+    }
+
+    /// A `fired-violations` entry whose `decision-key` is not its own key is refused, naming
+    /// it, so no host match keys a finding to another site's deferral; its own key keys it as
+    /// its rule, file and site do (spec 020's AC19).
+    #[test]
+    fn a_fired_violations_decision_key_that_is_not_its_own_is_refused() {
+        let tmp = repo_with("review.md", &covering(SITE_KEY, Some(1)));
+        let at = |site: &str, key: Option<&str>| crate::schema::primitives::FiredViolation {
+            rule: "BE-X-001".into(),
+            file: "src/a.rs".into(),
+            site: Some(site.into()),
+            decision_key: key.map(Into::into),
+            ..Default::default()
+        };
+        let mut review = args(DecisionRecord::Review, &[], false);
+        review.fired_violations = vec![at("walk2", Some(SITE_KEY))];
+        let error = compute(&review, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "fired-violations[0].decision-key"
+                    && reason.contains(SITE_KEY)
+                    && reason.contains("rule BE-X-001 at src/a.rs in `walk2`")),
+            "{error}"
+        );
+
+        review.fired_violations = vec![at("walk", Some(SITE_KEY))];
+        let result = compute(&review, tmp.path()).unwrap();
+        assert_eq!(result.matched.len(), 1, "{result:?}");
     }
 
     /// `fired-violations` keys a review's violations by site, so the analysis record refuses

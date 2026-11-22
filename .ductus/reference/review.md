@@ -123,7 +123,7 @@ A Statement whose Verification is a design-time commitment is applied by its pas
 Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines, as the criteria step judges every criterion: a stale claim the window left alone otherwise waits for a review that reads its file. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
-produced. A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, and its mechanism is checked against the tree; break things only in a clone while reviewers read. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: recorded nowhere and fixed in no round (spec 020, AC18). Each finding names its **site**: the narrowest named unit enclosing it that a later run can name again — a function or method, a type, a configuration key path, a markdown heading — spelled as the file spells it, or `(top level)` outside any; a line number is never a site. A stored waiver or deferral covers only the findings at its site ([Waivers](#waivers)), so a finding naming no site counts and cannot be waived or deferred.
+produced. A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, and its mechanism is checked against the tree; break things only in a clone while reviewers read. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: recorded nowhere and fixed in no round (spec 020, AC18). Each finding names its **site**: the narrowest named unit enclosing it that a later run can name again — a function or method, a type, a configuration key path, a markdown heading — spelled as the file spells it, or `(top level)` outside any; a line number is never a site. A stored waiver or deferral covers only the findings at its site ([Waivers](#waivers)), so a finding naming no site counts, no `--waive` or `--defer` takes it, and only a departure entry's waiver ([Waivers](#waivers)), which covers every site in its files, covers it.
 
 ### Passes in a subagent
 
@@ -579,8 +579,8 @@ to `write-review`.
    rule), more findings fire at its site than it covers, or it names no site and
    is not a departure waiver's — the last two on a restricted run too. The anchor
    drops from the entry on the next frontmatter write, the entry with its last
-   anchor, and a `waiver expired:` notice prints, saying which of these it was:
-   expiry MUST NOT be silent. When the same rule still fires anywhere in scope after a drop, the
+   anchor, and a `waiver expired:` notice prints, naming the count or the missing
+   site when either is the cause: expiry MUST NOT be silent. When the same rule still fires anywhere in scope after a drop, the
    finding re-counts toward its severity's count: a MUST flips `review.blocking`
    to `true`, and a SHOULD holds `done` at the pre-done gate.
 3. **Retain** a waiver whose rule did not fire on a file still on disk that the

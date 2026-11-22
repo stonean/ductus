@@ -259,6 +259,42 @@ fn a_departure_waiver_covers_every_site_in_its_file() {
     );
 }
 
+/// A departure waiver is read by its `file`, whatever else a hand edit gave it, as
+/// `write-review` refreshes it: an `anchors` list on it does not move it, so
+/// `process-waivers` applies it at its file and the entry still covers a file it does not
+/// list yet (spec 020's plan, A waiver's anchors).
+#[test]
+fn a_departure_waiver_is_read_by_its_file_whatever_else_it_holds() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    write(
+        tmp.path(),
+        &format!("specs/{FEATURE}/review.md"),
+        &format!(
+            "---\nspec: {FEATURE}\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: {MUST_RULE}\n    file: src/a.rs\n    anchors:\n      - file: src/b.rs\n        site: other\n        covers: 1\n    reason: the credential field is removed rather than versioned\n    waived-at: 2023-11-14T22:13:20Z\n    waived-by: decider@example.com\n    departure: true\n---\n\n# Review\n"
+        ),
+    );
+    let at = |file: &str, site: &str| {
+        let mut found = finding(MUST_RULE, "must", file);
+        found["site"] = json!(site);
+        found
+    };
+    let findings = [
+        at("src/a.rs", "alpha"),
+        at("src/a.rs", "beta"),
+        at("src/b.rs", "other"),
+    ];
+    let (classified, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(classified.applied.len(), 1, "{classified:?}");
+    assert_eq!(classified.applied[0].file, "src/a.rs", "{classified:?}");
+    assert!(classified.applied[0].site.is_none(), "{classified:?}");
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (3, 0),
+        "{written:?}"
+    );
+}
+
 #[test]
 fn a_file_added_later_is_covered_with_no_second_decision() {
     let tmp = tempfile::tempdir().unwrap();

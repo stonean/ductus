@@ -93,7 +93,7 @@ A new deferral's `target` that the containment screen refuses — a traversal, a
 | Field | Type | Notes |
 | --- | --- | --- |
 | `disposition` | `Disposition`, optional | New. Only `deferred` is accepted; a waiver stays `waivers:` and `--waive`. |
-| `decision-key` | string, optional | New. The stored decision the host matched; absent, `` rule {rule-id} at {file} in `{site}` `` (020's AC19). |
+| `decision-key` | string, optional | New. The stored decision the host matched, which since 020's AC19 is the finding's own key, `` rule {rule-id} at {file} in `{site}` ``, or refused. |
 
 A finding with a releasing deferral renders under a **Deferred findings** section and is excluded from `must-violations` and `should-violations`, as a waived one is. A finding with a non-releasing deferral stays in its MUST or SHOULD bucket, rendered with its deferral. A finding both deferred and matched by an applied waiver is refused, and so is one matched by an applied waiver while a stored deferral for its key stands outside `expired-decisions` (argument `expired-decisions`).
 

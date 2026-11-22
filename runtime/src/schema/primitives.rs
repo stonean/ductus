@@ -935,8 +935,8 @@ pub struct FiredFinding {
 }
 
 /// One violation a review's passes produced, in `process-decisions`' `fired-violations`:
-/// keyed `` rule {rule-id} at {file} in `{site}` ``, or by its `decision-key` when it has
-/// one, as `write-review` keys a deferral, and counted as `process-waivers` counts its
+/// keyed `` rule {rule-id} at {file} in `{site}` ``, a `decision-key` that is not that key
+/// being refused, as `write-review` keys a deferral, and counted as `process-waivers` counts its
 /// `fired` (spec 020 AC19).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -953,8 +953,8 @@ pub struct FiredViolation {
     /// overlap are counted once. Empty means the whole file.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub line_range: String,
-    /// The stored decision's key the host matched the finding to, which keys it in
-    /// place of its rule, file and site.
+    /// The finding's own key, `` rule {rule-id} at {file} in `{site}` ``, or the entry is
+    /// refused: no host match keys a finding to another site's deferral.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision_key: Option<String>,
 }
@@ -1147,7 +1147,7 @@ pub struct ProcessDecisionsArgs {
     pub fired: Vec<String>,
     /// The review record's MUST and SHOULD violations, one entry per finding with
     /// its `site` and `line-range`, as `process-waivers`' `fired`: each is keyed
-    /// `` rule {rule-id} at {file} in `{site}` ``, or by its `decision-key`, and
+    /// `` rule {rule-id} at {file} in `{site}` ``, a `decision-key` that is not that key being refused, and
     /// the findings at a key are counted after collapsing those of one rule, file
     /// and site whose line ranges overlap, so a stored decision with `covers`
     /// matches while no more findings than it covers fire there. Refused on the
@@ -1211,10 +1211,11 @@ pub struct ProcessDecisionsResult {
     /// the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matched: Option<Vec<DecisionRef>>,
-    /// Stored decisions whose key did not fire on an unrestricted run. Passed
-    /// to the writer as `expired-decisions`, which drops them. For a deferred
-    /// decision this is the moment the deferred work landed. Absent in the
-    /// file form.
+    /// Stored decisions whose key did not fire on an unrestricted run, or, on any
+    /// run, a violation's whose key more findings fire at than it covers or that was
+    /// recorded before sites (spec 020's AC19). Passed to the writer as
+    /// `expired-decisions`, which drops them. For a deferred decision that did not
+    /// fire, this is the moment the deferred work landed. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expired: Option<Vec<DecisionRef>>,
     /// Stored decisions whose key did not fire on a restricted run, or on a
@@ -1776,8 +1777,8 @@ pub struct ReviewFinding {
     /// takes it out of this spec's counts.
     #[serde(default)]
     pub disposition: Disposition,
-    /// The stored decision the host matched this violation to; absent, its
-    /// key is `` rule {rule-id} at {file} in `{site}` ``.
+    /// The violation's own key, `` rule {rule-id} at {file} in `{site}` ``, or the call is
+    /// refused; absent, that key is used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision_key: Option<String>,
 }

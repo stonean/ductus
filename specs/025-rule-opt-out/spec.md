@@ -17,7 +17,7 @@ But derivation can't see intent. A team building an internal admin UI may not be
 Without an override, those teams have three bad options:
 
 1. **Pin the file in `.ductus/config.toml [pinned] files` and delete its content locally.** Defeats the purpose of shipping rules — the next `ductus` update can't push improvements to a file the adopter is now maintaining.
-2. **Add a waiver for every finding.** Waivers are per-`(rule, file)` and intended for narrow, justified exceptions — using them to suppress an entire rule file means dozens of waiver entries that obscure the small number of waivers that actually mean something.
+2. **Add a waiver for every finding.** Waivers are per-`(rule, file, site)` and intended for narrow, justified exceptions — using them to suppress an entire rule file means dozens of waiver entries that obscure the small number of waivers that actually mean something.
 3. **Ignore `/ductus:review`'s `blocking: true` output.** Detaches the team from the gate the framework provides and removes the protection from rules they DO care about.
 
 The fix: a deliberate, recorded, file-level opt-out. `.ductus/config.toml` already houses adopter-side state, one top-level section per concern, each documented by the spec that owns it (019's data model records the convention, and `AGENTS.md`'s entry on when a `.ductus/config.toml` change is cross-spec impact applies it). A new `[[review.disabled-rule-files]]` array-of-tables key lets adopters say "we know this file applies; we're not enforcing it yet; here's why." The reason is mandatory — without one, the entry is silently typo-able to a meaningless on/off switch.

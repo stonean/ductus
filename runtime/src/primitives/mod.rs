@@ -969,12 +969,9 @@ impl StoredAnchor {
     /// The anchor's `(file, site, covers)`, when it is usable: a non-blank `file` and
     /// `site` and a positive integer `covers`.
     pub(crate) fn usable(&self) -> Option<(&str, &str, u32)> {
-        fn nonblank(value: Option<&str>) -> Option<&str> {
-            value.filter(|text| !text.trim().is_empty())
-        }
         Some((
-            nonblank(self.file.as_deref())?,
-            nonblank(self.site.as_deref())?,
+            decisions::nonblank(self.file.as_deref())?,
+            decisions::nonblank(self.site.as_deref())?,
             self.covers_count()?,
         ))
     }

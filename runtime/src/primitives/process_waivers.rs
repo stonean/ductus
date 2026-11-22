@@ -417,13 +417,14 @@ struct Located<'a> {
     kind: Kind<'a>,
 }
 
-/// The entry's anchors, or `None` when it names no usable one. An entry holding `anchors`
-/// is read from them alone, and one holding a blank or unusable anchor, or none, is
-/// malformed; otherwise a usable `file` is one anchor per path, a departure waiver's
-/// covering every site and any other entry's recorded before sites.
+/// The entry's anchors, or `None` when it names no usable one. A departure waiver is read
+/// by its `file`, one anchor per path covering every site, whatever else it holds, as
+/// `write-review` refreshes it. Any other entry holding `anchors` is read from them alone,
+/// and one holding a blank or unusable anchor, or none, is malformed; otherwise a usable
+/// `file` is one anchor per path, recorded before sites.
 fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
     let departure = waiver.departure == Some(true);
-    if let Some(anchors) = &waiver.anchors {
+    if !departure && let Some(anchors) = &waiver.anchors {
         if anchors_unusable(anchors) {
             return None;
         }
@@ -433,11 +434,7 @@ fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
                 .filter_map(StoredAnchor::usable)
                 .map(|(file, site, covers)| Located {
                     file,
-                    kind: if departure {
-                        Kind::Departure
-                    } else {
-                        Kind::Site { site, covers }
-                    },
+                    kind: Kind::Site { site, covers },
                 })
                 .collect(),
         );

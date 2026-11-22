@@ -29,9 +29,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   key with no backticked site, covers nothing and expires on its spec's next
   review with a `recorded before sites` notice; a departure waiver keeps `file`
   and covers every site in it. `write-review` refuses a `--waive` or `--defer`
-  of a finding that names no site, and renders `- **Site**:` under each
-  finding's file. An adopter's existing waivers and violation deferrals expire
-  once and are decided again.
+  of a finding that names no site, whatever `decision-key` it carries, and
+  renders `- **Site**:` under each finding's file. A violation's `decision-key`,
+  on `write-review`'s `findings` or `process-decisions`' `fired-violations`, is
+  its own key or the call is refused naming it, so no host match moves a finding
+  to another site's deferral. The cross-pass dedup matches on the site too, so a
+  finding a waiver or deferral covers at one site no longer drops an overlapping
+  finding of its rule at another from the report and the counts. A departure
+  waiver is read by its `file` whatever else its entry holds, and a violation's
+  key whose site is a heading holding an em dash and a backtick still names its
+  file, so its deferral on a file the run did not read is retained. An adopter's
+  existing waivers and violation deferrals expire once and are decided again.
 
 ## [0.62.0] — 2026-11-22
 

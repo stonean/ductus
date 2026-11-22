@@ -279,7 +279,9 @@ fn round_list(rounds: &[usize]) -> String {
 
 /// Refuse a violation's disposition that is fixed or waived, or a deferral
 /// missing its companions (spec 076). A violation is waived with `--waive`
-/// and fixed by removing it, so neither reaches this writer as an outcome.
+/// and fixed by removing it, so neither reaches this writer as an outcome. A
+/// violation's `decision-key` that is not its own key is refused too, since a
+/// stored deferral covers only the findings at its own anchor (spec 020's AC19).
 fn validate_finding_dispositions(args: &WriteReviewArgs) -> Result<()> {
     for (idx, finding) in args.findings.iter().enumerate() {
         let at = format!("findings[{idx}].disposition");
@@ -306,6 +308,18 @@ fn validate_finding_dispositions(args: &WriteReviewArgs) -> Result<()> {
                 &format!("findings[{idx}].decision-key"),
                 key,
             )?;
+        }
+        if let Some(reason) = decisions::foreign_violation_key(
+            &finding.rule,
+            &finding.file,
+            finding.site.as_deref(),
+            finding.decision_key.as_deref(),
+        ) {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("findings[{idx}].decision-key"),
+                reason,
+            });
         }
     }
     Ok(())
@@ -1225,17 +1239,18 @@ fn observation_line(observation: &ReviewObservation) -> String {
 
 // -- dedup -------------------------------------------------------------------
 
-/// Cross-pass dedup: collapse findings that share a `(rule, file)` anchor and
+/// Cross-pass dedup: collapse findings that share a `(rule, file, site)` anchor and
 /// have overlapping line ranges into one, keeping the highest-severity member
 /// (tie broken by higher confidence). First-seen order is preserved for a
-/// stable render.
+/// stable render. Findings at different sites are never one finding, as
+/// [`collapse_at_sites`] counts them, so a finding a waiver or deferral covers at
+/// one site absorbs none at another (spec 020's AC19, AC13).
 fn dedup_findings(findings: &[ReviewFinding]) -> Vec<ReviewFinding> {
     let mut kept: Vec<ReviewFinding> = Vec::new();
     for finding in findings {
         let range = parse_range(&finding.line_range);
         let overlap = kept.iter().position(|existing| {
-            existing.rule == finding.rule
-                && existing.file == finding.file
+            existing.place() == finding.place()
                 && ranges_overlap(range, parse_range(&existing.line_range))
         });
         if let Some(idx) = overlap {
@@ -1259,7 +1274,7 @@ fn finding_rank(finding: &ReviewFinding) -> u8 {
 
 /// Parse a line-range string into an inclusive `(start, end)`. An empty or
 /// unparseable range covers the whole file, so it overlaps any range sharing
-/// the same `(rule, file)`.
+/// the same `(rule, file, site)`.
 pub(crate) fn parse_range(text: &str) -> (u32, u32) {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -1327,8 +1342,8 @@ impl Placed for crate::schema::primitives::FiredFinding {
 /// The findings with each one overlapping an earlier one of its rule, file and site dropped:
 /// the findings at an anchor, as `process-waivers` and `process-decisions` count them and
 /// `write-review` stores and lowers a waiver's or a deferral's `covers`. Two reports of one finding count once, and findings at
-/// different sites are counted apart, which the cross-pass dedup deciding the report does
-/// not do (spec 020 AC19).
+/// different sites are counted apart, as the cross-pass dedup deciding the report also
+/// keeps them (spec 020 AC19).
 pub(crate) fn collapse_at_sites<T: Placed>(findings: &[T]) -> Vec<&T> {
     let mut kept: Vec<&T> = Vec::new();
     for finding in findings {
@@ -1488,18 +1503,13 @@ fn findings_at_key(findings: &[&ReviewFinding], key: &str) -> u32 {
     u32::try_from(count).unwrap_or(u32::MAX)
 }
 
-/// The stored-decision key for a violation: the stored decision the host
-/// matched it to, when it supplied one, else `` rule {rule-id} at {file} in `{site}` `` —
+/// The stored-decision key for a violation, `` rule {rule-id} at {file} in `{site}` `` —
 /// one entry per site the rule fires at, the anchor a waiver keeps (spec 076, spec 020's
-/// `waiver-expiry`). A finding whose pass named no site has the key without one, which
-/// matches no stored decision and which `write-review` refuses to defer.
+/// `waiver-expiry`). A `decision-key` the host passed is this key or refused. A finding
+/// whose pass named no site has the key without one, which matches no stored decision and
+/// which `write-review` refuses to defer.
 fn violation_key(finding: &ReviewFinding) -> String {
-    decisions::violation_key(
-        &finding.rule,
-        &finding.file,
-        finding.site.as_deref(),
-        finding.decision_key.as_deref(),
-    )
+    decisions::violation_key(&finding.rule, &finding.file, finding.site.as_deref())
 }
 
 /// The record's lists and derived counts, rendered into the frontmatter.
@@ -2719,8 +2729,8 @@ fn superseded_deferrals(
 
 /// Refuse a deferral of a violation whose pass named no site, naming the finding: its key
 /// is `` rule {rule-id} at {file} in `{site}` ``, so a deferral without a site would anchor
-/// to nothing and match no later run. A finding matched to a stored decision by
-/// `decision-key` is the stored deferral's, so it is not refused.
+/// to nothing and match no later run. A `decision-key` changes nothing: it is the
+/// finding's own key, which names no site either.
 ///
 /// # Errors
 ///
@@ -2729,7 +2739,6 @@ fn refuse_deferring_a_finding_with_no_site(args: &WriteReviewArgs) -> Result<()>
     for (idx, finding) in args.findings.iter().enumerate() {
         if finding.disposition.outcome == DispositionOutcome::Deferred
             && finding_site(finding).is_none()
-            && decisions::nonblank(finding.decision_key.as_deref()).is_none()
         {
             return Err(PrimitiveError::InvalidArgument {
                 primitive: "write-review".into(),
@@ -5606,8 +5615,9 @@ mod tests {
         assert!(next.expired.is_empty(), "{:?}", next.notices);
     }
 
-    /// A deferral of a finding whose pass named no site is refused naming the finding; one
-    /// matched to a stored decision by its key is the stored deferral's and is not.
+    /// A deferral of a finding whose pass named no site is refused naming the finding, and a
+    /// `decision-key` does not let it through: another site's key is not its own, and its own
+    /// names no site either.
     #[test]
     fn a_deferral_of_a_finding_that_names_no_site_is_refused() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -5625,8 +5635,114 @@ mod tests {
         );
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
 
-        args.findings[0].decision_key = Some("rule SEC-1 at src/a.rs in `walk`".into());
+        for (key, refused) in [
+            (SITE_KEY, "findings[0].decision-key"),
+            ("rule SEC-1 at src/a.rs", "findings[0].disposition"),
+        ] {
+            args.findings[0].decision_key = Some(key.into());
+            let error = run(&args, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == refused),
+                "{key}: {error}"
+            );
+            assert!(!tmp.path().join("specs/001-x/review.md").exists());
+        }
+    }
+
+    /// A violation's `decision-key` is its own key or refused, naming the finding, so no host
+    /// match keys a finding to another site's deferral (spec 020's AC19).
+    #[test]
+    fn a_violations_decision_key_that_is_not_its_own_is_refused() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        let mut elsewhere = deferred_at(must("SEC-1", "src/a.rs", Some("walk2"), "1-2"));
+        elsewhere.decision_key = Some(SITE_KEY.into());
+        args.findings = vec![elsewhere];
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "findings[0].decision-key"
+                    && reason.contains(SITE_KEY)
+                    && reason.contains("rule SEC-1 at src/a.rs in `walk2`")),
+            "{error}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+
+        args.findings[0].decision_key = Some("rule SEC-1 at src/a.rs in `walk2`".into());
         run(&args, tmp.path()).unwrap();
+        assert!(review_md(&tmp, "001-x").contains("key: rule SEC-1 at src/a.rs in `walk2`"));
+    }
+
+    /// The cross-pass dedup keeps findings at different sites apart, in either order: a
+    /// finding a waiver covers at one site absorbs none of its rule at another whose range
+    /// overlaps it, a whole-file one included, and deferrals at two such sites are both
+    /// stored (spec 020's AC19).
+    #[test]
+    fn the_dedup_keeps_findings_at_different_sites_apart() {
+        let alpha = must("SEC-1", "src/a.rs", Some("alpha"), "10-20");
+        let beta = must("SEC-1", "src/a.rs", Some("beta"), "15-18");
+        let whole = must("SEC-1", "src/a.rs", Some("alpha"), "");
+        for findings in [
+            vec![alpha.clone(), beta.clone()],
+            vec![beta.clone(), alpha],
+            vec![whole, beta],
+        ] {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            let mut args = base_args("001-x");
+            args.findings = findings.clone();
+            args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
+            let result = run(&args, tmp.path()).unwrap();
+            assert_eq!(
+                (result.waived, result.must_violations),
+                (1, 1),
+                "{findings:?}: {result:?}"
+            );
+            assert!(result.blocking);
+        }
+
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "1-30")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("talk"), "10-12")),
+        ];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 2, "{result:?}");
+        let mut keys: Vec<String> = stored_decisions_of(&tmp)
+            .into_iter()
+            .filter_map(|decision| decision.key)
+            .collect();
+        keys.sort();
+        assert_eq!(keys, ["rule SEC-1 at src/a.rs in `talk`", SITE_KEY]);
+    }
+
+    /// A `--waive` anchors at each site its rule fires at that no stored waiver holds: a
+    /// waiver stored at `alpha` holds `alpha` alone, so the new one anchors at `beta`.
+    #[test]
+    fn a_new_waiver_anchors_where_a_stored_waiver_at_another_site_does_not_hold() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        seed_waivers(
+            &tmp,
+            "001-x",
+            "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/a.rs\n        site: alpha\n        covers: 1\n    reason: decided\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com",
+        );
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "1-2"),
+            must("SEC-1", "src/a.rs", Some("beta"), "10-12"),
+        ];
+        args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
+        args.new_waivers = vec![waive("SEC-1", "beta too")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0, "{result:?}");
+        let stored = recorded(&tmp, "001-x");
+        assert_eq!(stored.len(), 2, "{}", review_md(&tmp, "001-x"));
+        let anchors = stored[1].anchors.as_ref().unwrap();
+        assert_eq!(anchors.len(), 1, "{anchors:?}");
+        assert!(anchors[0].is_at("src/a.rs", "beta"), "{anchors:?}");
     }
 
     /// Each refused `--waive` writes nothing: a waiver with nothing to waive, or nobody

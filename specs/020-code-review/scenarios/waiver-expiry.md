@@ -34,7 +34,7 @@ When step 2, 4, 6 or 7 applies and the same rule still fires *anywhere in scope*
 
 Every drop emits a one-line notice on stdout so the operator notices the lost coverage: `waiver expired: rule {rule-id} at {file} in {site} ({reason})`; under step 6, `waiver expired: rule {rule-id} at {file} in {site} — {n} findings fire where it covers {m} ({reason})`; under step 7, `waiver expired: rule {rule-id} at {file} — recorded before sites ({reason})`, so the operator re-decides from the reason given. Silent expiry would let waivers quietly evaporate — the notice is the point.
 
-A finding whose pass names no site still counts, and no stored waiver or deferral covers it. `--waive` and `--defer` refuse it, naming the finding, because an anchor without a site would cover nothing (step 7).
+A finding whose pass names no site still counts, and no stored waiver or deferral covers it but a departure waiver, which covers every finding of its rule in its files (rule 5's exception). `--waive` and `--defer` refuse it, naming the finding, because an anchor without a site would cover nothing (step 7).
 
 ## Edge Cases
 

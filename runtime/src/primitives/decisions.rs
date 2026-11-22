@@ -528,15 +528,27 @@ pub(crate) fn stored_as_a_break(stored: &[RawDecision], key: &str) -> bool {
 /// observation's text, an em dash and its path in backticks, or a violation's
 /// `` rule {id} at {file} in `{site}` ``, without any `:line`. The file of a violation's key
 /// ends at its first `` in ` ``, and a key recorded before sites, `rule {id} at {file}`, names
-/// the same file. `None` for a key naming no file, as a hand-chosen one may.
+/// the same file. A violation's key whose `{id}` is a rule ID is read as one first, since its
+/// site may be a heading holding an em dash and a backtick, as `` Review record — `review.md` ``
+/// does. `None` for a key naming no file, as a hand-chosen one may.
 pub(crate) fn key_anchor(key: &str) -> Option<&str> {
-    let named = key
-        .strip_suffix('`')
-        .and_then(|rest| rest.rsplit_once(" — `"))
-        .map(|(_, path)| path)
+    let named = sited_violation_key_file(key)
+        .or_else(|| {
+            key.strip_suffix('`')
+                .and_then(|rest| rest.rsplit_once(" — `"))
+                .map(|(_, path)| path)
+        })
         .or_else(|| violation_key_file(key))?;
     let file = super::path_without_lines(named);
     (!file.is_empty()).then_some(file)
+}
+
+/// The file of `` rule {id} at {file} in `{site}` `` when `{id}` is a rule ID, by the grammar
+/// `check-rule-ids` reads, and the key ends at its site's closing backtick.
+fn sited_violation_key_file(key: &str) -> Option<&str> {
+    let (id, rest) = key.strip_prefix("rule ")?.split_once(" at ")?;
+    let (file, site) = rest.split_once(" in `")?;
+    (super::check_rule_ids::is_a_rule_id(id) && site.ends_with('`')).then_some(file)
 }
 
 /// The file of a violation's key, `` rule {id} at {file} in `{site}` `` or, before sites,
@@ -546,23 +558,37 @@ fn violation_key_file(key: &str) -> Option<&str> {
     Some(rest.split_once(" in `").map_or(rest, |(file, _)| file))
 }
 
-/// A violation's key: `decision_key` when it is not blank, else `` rule {rule} at {file} in
-/// `{site}` ``, or `rule {rule} at {file}` when it names no site, which matches no stored
-/// decision. `write-review` stores a deferral under it and `process-decisions` counts a
-/// review's `fired-violations` by it.
-pub(crate) fn violation_key(
+/// A violation's key: `` rule {rule} at {file} in `{site}` ``, or `rule {rule} at {file}` when
+/// it names no site, which matches no stored decision. `write-review` stores a deferral under
+/// it and `process-decisions` counts a review's `fired-violations` by it.
+pub(crate) fn violation_key(rule: &str, file: &str, site: Option<&str>) -> String {
+    match nonblank(site).map(str::trim) {
+        Some(site) => format!("rule {} at {} in `{site}`", rule.trim(), file.trim()),
+        None => format!("rule {} at {}", rule.trim(), file.trim()),
+    }
+}
+
+/// Why a violation's `decision_key` is refused: it is not blank and is not the finding's own
+/// [`violation_key`]. A stored deferral covers only the findings at its own anchor, matched
+/// exactly by the runtime, so no host match keys a finding to another site's deferral, or a
+/// finding naming no site to any (spec 020's AC19, the scenario `waiver-expiry`'s Resolved
+/// Questions). `None` when the key is absent, blank or the finding's own.
+pub(crate) fn foreign_violation_key(
     rule: &str,
     file: &str,
     site: Option<&str>,
     decision_key: Option<&str>,
-) -> String {
-    nonblank(decision_key).map_or_else(
-        || match nonblank(site).map(str::trim) {
-            Some(site) => format!("rule {} at {} in `{site}`", rule.trim(), file.trim()),
-            None => format!("rule {} at {}", rule.trim(), file.trim()),
-        },
-        str::to_string,
-    )
+) -> Option<String> {
+    let key = nonblank(decision_key)?;
+    let own = violation_key(rule, file, site);
+    (!same_key(key, &own)).then(|| {
+        format!(
+            "`{}` is not the finding's own key `{}`: a violation's decision-key names its own \
+             rule, file and site",
+            flatten_line(key),
+            flatten_line(&own)
+        )
+    })
 }
 
 /// Whether `key` is a violation's key recorded before sites, `rule {id} at {file}`: its
@@ -989,6 +1015,25 @@ mod tests {
         assert!(!is_pre_site_violation_key(
             "grounding — plan.md cites a path"
         ));
+    }
+
+    /// A violation's key is read as one before an observation's, so a site that is a heading
+    /// holding an em dash and a backtick, as `` Review record — `review.md` `` does, still names
+    /// the key's file; an observation's key is read as its path as before.
+    #[test]
+    fn a_violation_key_whose_site_holds_an_em_dash_names_its_file() {
+        assert_eq!(
+            key_anchor(
+                "rule QUAL-CLAIM-001 at framework/constitution.md in `Review record — `review.md``"
+            ),
+            Some("framework/constitution.md")
+        );
+        assert_eq!(
+            key_anchor("rule engine at startup in `main` leaks — `src/a.rs`"),
+            Some("src/a.rs"),
+            "a word after `rule` that is no rule ID keeps the observation's reading"
+        );
+        assert_eq!(key_anchor("bug: x — `src/a.rs:4`"), Some("src/a.rs"));
     }
 
     /// `covers` is read, written back as a bare integer, and a fresh decision carries the
