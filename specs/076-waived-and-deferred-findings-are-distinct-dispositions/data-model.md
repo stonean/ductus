@@ -74,6 +74,7 @@ Release and completion are the behavior of `write-review`, `write-analysis`, `pr
 | `task` | string, optional | As the decision field. |
 | `work-item` | string, optional | As the decision field. |
 | `reason` | string, optional | Required when `waived`. |
+| `by-rule` | bool, optional | The disposition rule decided it, so a waiver stores `decided-by: rule` (079's data model). |
 
 **Refusals**, each `PrimitiveError::InvalidArgument` naming the argument path:
 
@@ -85,6 +86,7 @@ Release and completion are the behavior of `write-review`, `write-analysis`, `pr
 | `task` without a `tasks.md` target, with a `tasks.md` that is not a feature's, or naming no task in it | `{at}.task` | a task is numbered in a tasks.md target; `` `{target}` is not a feature's tasks.md ``; `` `{target}` has no task {n} `` |
 | `waived` carrying `target`, `task` or `work-item` | `{at}.target`, `{at}.task` or `{at}.work-item` | a waiver names no future work |
 | `waived` without `reason` | `{at}.reason` | unchanged from 058's discard refusal |
+| `by-rule` on an outcome other than `fixed` or `waived` | `{at}.by-rule` | the rule fixes or waives; a deferral reaches the operator |
 
 A new deferral's `target` that the containment screen refuses — a traversal, an absolute path, or a link out of the project — is refused with `PrimitiveError::InvalidPath`.
 

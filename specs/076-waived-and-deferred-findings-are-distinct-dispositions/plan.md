@@ -40,7 +40,7 @@ A deferred MUST or SHOULD violation is stored in `review.md`'s existing `decisio
 
 A deferral releases a gating finding as `framework/reference/review.md` §Deferrals states (data model, *Release and lapse*).
 
-- `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs`'s `waiver_reason` test, in the bucketing loop of `run` (now `sort_findings`; at `a76c99e8`)), and renders it under Deferred findings.
+- `write-review` excludes a released violation from `must-violations`/`should-violations`, as it excludes a waived one (`runtime/src/primitives/write_review.rs`'s `waiver_reason` test, in `sort_findings`), and renders it under Deferred findings.
 - `write-analysis` records `hard-fail`/`blocking-findings` net of released findings and derives `blocking` from them (`runtime/src/primitives/write_analysis.rs`). The host-supplied gross counts still bound the itemized findings (`write_analysis.rs`'s `itemized[slot] > tier_count` check).
 - A non-releasing deferral of a gating finding stays counted, and its decision carries the derived `gating: true`.
 - `check-review-gate`'s outstanding-findings block (`runtime/src/primitives/check_review_gate.rs`'s `disposition_block`) names each such decision with its work reference (AC16). Its guidance (`disposition_block`'s "Fix each outstanding finding") names deferral as the fix-later exit.
