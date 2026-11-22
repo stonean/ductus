@@ -72,6 +72,8 @@ Wiring: a new step in `.github/workflows/framework-checks.yml`, alongside the ex
 - Files inside `framework/rules/` are auto-discovered by directory walk — no `AGENTS.md` reference required.
 - The `AGENTS.md` fallback survives strictly for adopter-local rule files placed outside `framework/rules/` (e.g., `docs/rules/internal-api.md`). The framework cannot directory-walk arbitrary adopter paths; an explicit reference is the discovery signal.
 
+Each such path reaches `discover-rule-files` as an `extra-files` entry, which `validate_contained` screens lexically and contains canonically within the project before the file is read, refusing one that leaves it (022's plan §Path arguments: a lexical screen, then canonical containment; `BE-INPUT-004`).
+
 This drops the "depend on author diligence" failure mode for files inside `framework/rules/` while preserving the legitimate use case for files outside it.
 
 ## Affected Files
