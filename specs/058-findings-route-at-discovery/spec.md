@@ -449,7 +449,8 @@ spec's links to it. Each also gets the contract change itself:
   chore.** The run reverts the attempt, and the finding takes another
   disposition. A chore is never counted as fixed while its fix is not on disk.
 - **A confirmed deferral whose write fails is undispositioned.** For example,
-  `create-scenario` refuses a slug that already exists. The failure is reported
+  `create-scenario` refuses a slug that already exists (its compiled description,
+  `ductus create-scenario --help`). The failure is reported
   with the finding, and the record never counts a deferral that did not land.
 - **Two findings with the same key in one run get one disposition.** A
   finding's key is the stored `decision-key` the host matched it to, or else
