@@ -18,22 +18,22 @@ MUTATIONS = [
     (
         'M1 the duplicate notice prints the stored rule and file raw',
         'src/primitives/process_waivers.rs',
-        '"duplicate waiver: rule {shown_rule} at {shown_file} — entry [{index}] ignored"',
+        '"duplicate waiver: rule {shown_rule} at {at} — entry [{index}] ignored"',
         '"duplicate waiver: rule {rule} at {file} — entry [{index}] ignored"',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
     (
         'M2 the retained notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
-        '"waiver retained: rule {shown_rule} at {shown_file} — dimension not evaluated this run ({shown_reason})"',
-        '"waiver retained: rule {rule} at {file} — dimension not evaluated this run ({reason})"',
+        '"waiver retained: rule {rule} at {at} — dimension not evaluated this run ({reason})"',
+        '"waiver retained: rule {} at {} — dimension not evaluated this run ({})", anchor.rule, anchor.file, anchor.reason',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
     (
         'M3 the final expired notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
-        '                notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));\n                expired.push(anchor);',
-        '                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));\n                expired.push(anchor);',
+        '            out.notices\n                .push(format!("waiver expired: rule {rule} at {at} ({reason})"));\n            out.expired.push(anchor);',
+        '            out.notices.push(format!(\n                "waiver expired: rule {} at {} ({})",\n                anchor.rule, anchor.file, anchor.reason\n            ));\n            out.expired.push(anchor);',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
     (
@@ -46,15 +46,15 @@ MUTATIONS = [
     (
         'M5 the departure-expiry notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
-        '            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {\n                notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));',
-        '            if departure_gone(waiver, &rule, &spec_path, &mut entry_rules)? {\n                notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
+        '                && departure_gone(waiver, &rule, &spec_path, &mut entry_rules)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"\n                ));',
+        '                && departure_gone(waiver, &rule, &spec_path, &mut entry_rules)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
         'process_waivers::tests::the_departure_expiry_notice_flattens_stored_text',
     ),
     (
         'M6 the retained-unread notice prints the raw why text',
         'src/primitives/process_waivers.rs',
-        '— {shown_why} ({shown_reason})"',
-        '— {why} ({shown_reason})"',
+        '— {shown_why} ({reason})"',
+        '— {why} ({reason})"',
         'process_waivers::tests::notices_flatten_stored_text_and_classification_reads_it_as_written',
     ),
 ]

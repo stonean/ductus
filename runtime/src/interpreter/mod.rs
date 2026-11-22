@@ -1142,7 +1142,8 @@ fn dispatch_primitive(
     // and the primitive classifies waivers against exactly that set via
     // its `fired` argument. Bind `findings` → `fired` unless the caller
     // seeded `fired` explicitly — `FiredFinding` deserialization keeps the
-    // `(rule, file)` anchor and ignores the extra severity/range keys.
+    // `(rule, file, site)` anchor and each finding's `line-range`, which the
+    // count of findings at an anchor collapses over, and ignores the other keys.
     if name == "process-waivers"
         && !bindings.contains_key("fired")
         && let Some(findings @ Value::Array(_)) = bindings.get("findings").cloned()

@@ -123,7 +123,7 @@ A Statement whose Verification is a design-time commitment is applied by its pas
 Run the five passes below. Dividing a wide scope among agents, follow each behavior across its files and drive it on fixtures, rather than giving each agent one kind of file: the worst defects lie between files that read fine alone. A scenario or data model in scope is checked whole, every concrete claim in it against the code, not only its changed lines, as the criteria step judges every criterion: a stale claim the window left alone otherwise waits for a review that reads its file. When a flag restricts dimensions (`--security`,
 `--simplicity`, `--quality`), skip the unselected passes and record them as
 `skipped` in the report. `write-review` collapses a finding more than one pass
-produced. A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, and its mechanism is checked against the tree; break things only in a clone while reviewers read. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: recorded nowhere and fixed in no round (spec 020, AC18).
+produced. A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, and its mechanism is checked against the tree; break things only in a clone while reviewers read. A case shown only by building it, an input or a layout the project cannot produce, is a false positive: recorded nowhere and fixed in no round (spec 020, AC18). Each finding names its **site**: the narrowest named unit enclosing it that a later run can name again — a function or method, a type, a configuration key path, a markdown heading — spelled as the file spells it, or `(top level)` outside any; a line number is never a site. A stored waiver or deferral covers only the findings at its site ([Waivers](#waivers)), so a finding naming no site counts and cannot be waived or deferred.
 
 ### Passes in a subagent
 
@@ -138,8 +138,8 @@ The host checks the hand-back before using it, as it checks any reviewer's claim
 ### Security pass
 
 Walk every file in scope against the loaded security rules (the files **§Load rules** maps to this pass). For each finding,
-record: rule ID, severity (MUST or SHOULD), file path, line range, the rule
-text, and a one-sentence explanation of how the code violates it. **Do not
+record: rule ID, severity (MUST or SHOULD), file path, line range, site, the
+rule text, and a one-sentence explanation of how the code violates it. **Do not
 flag patterns that are not in the loaded rules** — the project's rule set is
 authoritative.
 
@@ -365,6 +365,7 @@ Each finding follows this shape:
 ### MUST: <rule-id> — <one-line summary>
 
 - **File**: `path/to/file.ts:42-55`
+- **Site**: <the narrowest named unit enclosing it, or (top level)>
 - **Rule**: <verbatim rule text from the rule file (framework/rules/... or specs/rules/...)>
 - **Finding**: <one to three sentences>
 - **Auto-fixable**: yes | no
@@ -491,43 +492,57 @@ A MUST or SHOULD violation can be waived only with explicit, recorded justificat
 ```
 
 This appends one entry to `review.md`'s frontmatter, through `write-review`'s
-`new-waivers`. Its `file` lists every in-scope file the rule fires at in this run
-that no waiver already holds — a single path when there is one:
+`new-waivers`. Its `anchors` list every in-scope site the rule fires at in this
+run that no waiver already holds, each with its file and `covers`, the number of
+findings there:
 
 ```yaml
 waivers:
   - rule: BE-AUTHN-007
-    file: src/api/internal.ts
+    anchors:
+      - file: src/api/internal.ts
+        site: internalRouter
+        covers: 1
     reason: "Endpoint is internal-only behind mTLS; rule applies to public APIs"
     waived-at: 2026-05-10T14:40:00Z
     waived-by: <git config user.email>
   - rule: BE-AUTHN-008
-    file:
-      - src/api/admin.ts
-      - src/api/metrics.ts
+    anchors:
+      - file: src/api/admin.ts
+        site: adminRoutes
+        covers: 1
+      - file: src/api/metrics.ts
+        site: metricsRoutes
+        covers: 2
     reason: "Both routes are bound to the loopback interface"
     waived-at: 2026-05-11T09:15:00Z
     waived-by: <git config user.email>
 ```
 
 A list is one judgment — one `reason`, `waived-at` and `waived-by` — over
-each path it names, so a later `--waive` for the same rule records a new entry
+each anchor it names, so a later `--waive` for the same rule records a new entry
 rather than appending to an existing one. The framework never merges entries; an
 operator may merge those sharing a rule, reason and author by hand.
 
 Waived findings drop out of the `must-violations` and `should-violations` counts
-and appear in `review.md` under the **Waived findings** section. They survive
-across `/ductus:review` runs as long as the rule ID and file location still
-match; if either changes, the waiver expires and the finding re-blocks. The
-anchor is `(rule, file)`, not line numbers, so code moving within the file does
-not expire the waiver. Each path of a list applies, expires and is retained on
-its own, and is matched literally: a pattern such as `src/**/*.ts` names a path
-that does not exist and expires as one.
+and appear in `review.md` under the **Waived findings** section. A waiver covers
+only the findings at its `(rule, file, site)` anchor, up to its `covers`, which a
+run that applies it to fewer lowers and nothing raises (spec 020's scenario
+`waiver-expiry`). Line numbers are not part of the anchor, so code moving within
+its site, or the site moving within the file, does not expire the waiver; a file
+or site renamed or gone, a fix, or more findings at the site than it covers does,
+and the findings there re-block. A waiver of the rule elsewhere in the file
+covers nothing here. Each anchor applies, expires and is retained on its own, and
+its path is matched literally: a pattern such as `src/**/*.ts` names a path that
+does not exist and expires as one. An entry holding `file` and no `anchors`, not a
+departure waiver's, was recorded before sites: it covers nothing and expires on
+the next review, with its reason in the notice, for the operator to decide again.
 
 **A departure the spec states needs no `--waive`.** A well-formed departure
 entry under the spec's `## Applicable Rules`, of any tier, a SHOULD's included,
 is a decision the spec already holds: `write-review` stores one waiver for its
-rule from it, over the files in this review's scope only, and `process-waivers`
+rule from it, a `file` list over the files in this review's scope only, covering
+every site in each with no count, and `process-waivers`
 expires it once the spec no longer holds the entry. The review step reads the
 result's `malformed-departures`, which names each entry that derives nothing. The
 entry decides over a deferral of its violations: `write-review` refuses a new
@@ -542,8 +557,10 @@ check-departures --help`).
 
 On every `/ductus:review` run, after the review passes have produced their
 findings (see **Run review passes**) and before counting them or writing the
-record, step 8 classifies each anchor — each path an entry lists, under its rule —
-against those findings. A waiver can only be judged against findings that exist,
+record, step 8 classifies each anchor — each one an entry's `anchors` lists, or
+each path a departure waiver's `file` lists, under its rule — against those
+findings, which the host passes as `fired`, one entry per finding with its
+`site` and `line-range`, so findings a dedup would collapse count once. A waiver can only be judged against findings that exist,
 so an empty scope leaves the waivers untouched, and a dimension-restricted run
 retains those anchored to skipped dimensions rather than expiring them. The
 result's `applied`, `expired`, `retained` and `notices` lists, which grow with the
@@ -553,37 +570,43 @@ inline in both forms, and the host reads `applied` and `expired` from there to p
 to `write-review`.
 
 1. **Apply** when the file exists at the anchored path AND the rule still
-   fires there. The finding appears under **Waived findings** with the waiver's
-   `reason`, excluded from its severity's count.
-2. **Expire** when the file no longer exists at the anchored path or the rule no
-   longer fires there in a file the run read (IDs are permanent per
+   fires at its site, at most as many times as the anchor covers — a departure
+   waiver's anywhere in the file. The finding appears under **Waived findings**
+   with the waiver's `reason`, excluded from its severity's count.
+2. **Expire** when the file no longer exists at the anchored path, the rule no
+   longer fires at its site in a file the run read (IDs are permanent per
    `specs/008-security-rules/data-model.md`, so a renamed rule is a different
-   rule). The path drops from the entry on the next frontmatter write, the entry
-   with its last path, and a `waiver expired:` notice prints: expiry MUST NOT be
-   silent. When the same rule still fires anywhere in scope after a drop, the
+   rule), more findings fire at its site than it covers, or it names no site and
+   is not a departure waiver's — the last two on a restricted run too. The anchor
+   drops from the entry on the next frontmatter write, the entry with its last
+   anchor, and a `waiver expired:` notice prints, saying which of these it was:
+   expiry MUST NOT be silent. When the same rule still fires anywhere in scope after a drop, the
    finding re-counts toward its severity's count: a MUST flips `review.blocking`
    to `true`, and a SHOULD holds `done` at the pre-done gate.
 3. **Retain** a waiver whose rule did not fire on a file still on disk that the
    run's scope does not hold: nothing read that file, so its finding may still
    stand, and a person's reason must not go on a narrow window's say-so. The same
    holds for a stored decision naming such a file (`process-decisions`).
-4. **Do not extend** a waiver to a file it does not list. If the same rule
-   fires at a path other than the waiver's anchors, that is a separate
-   finding; the operator records a fresh `--waive` if it is also intentional.
+4. **Do not extend** a waiver to a file or site it does not list. If the same
+   rule fires at a path or site other than the waiver's anchors, that is a
+   separate finding; the operator records a fresh `--waive` if it is also
+   intentional. A departure waiver alone covers every site in its files.
 
 ## Malformed and duplicate waivers
 
-- A waiver entry missing any of `rule`, `file`, `reason`, `waived-at`, or
-  `waived-by`, or whose `file` is an empty list or holds a blank path, is
+- A waiver entry missing any of `rule`, `anchors` (`file` on a departure
+  waiver), `reason`, `waived-at`, or `waived-by`, or whose `anchors` is empty or
+  holds an anchor with a blank `file` or `site` or a `covers` that is not a
+  positive integer, or whose `file` is an empty list or holds a blank path, is
   **skipped** with a one-line warning and kept on the write: malformed entries
   are operator-authored state, not garbage for the framework to collect, so the
   operator cleans it up. Two exceptions: a re-render drops an entry with no
-  fields at all, and a malformed entry listing an expired waiver's rule and file
-  loses that path.
-- Two or more claims on the same `(rule, file)` pair: **only the first
-  applies**. Each later claim emits a one-line warning, and only that pair of its
-  entry is ignored. Duplicates are kept until the pair expires, when every claim
-  on it is pruned together.
+  fields at all, and a malformed entry listing an expired waiver's anchor loses
+  that anchor.
+- Two or more claims on the same `(rule, file, site)` anchor: **only the first
+  applies**. Each later claim emits a one-line warning, and only that anchor of
+  its entry is ignored. Duplicates are kept until the anchor expires, when every
+  claim on it is pruned together.
 
 The `waivers` list follows the §text-first-artifacts open-schema
 rule. Adopters MAY add fields (e.g., `co-waived-by`, `approved-by-team`) to
@@ -602,10 +625,15 @@ waived: a waiver records that a finding will not be addressed
 /ductus:review --defer <rule-id> --work-item <id> [--reason "<text>"]
 ```
 
-Each file the rule fires at in this run gets one decision in `review.md`'s
-`decisions:`, keyed `rule {rule-id} at {file}`, carrying its `target`, `task`
-and `work-item` as given. A new deferral's target, and its task in that
-`tasks.md`, must exist.
+Each site the rule fires at in this run gets one decision in `review.md`'s
+`decisions:`, keyed `` rule {rule-id} at {file} in `{site}` ``, carrying its
+`target`, `task` and `work-item` as given and `covers`, the number of findings
+there. A new deferral's target, and its task in that `tasks.md`, must exist, and
+a finding that names no site cannot be deferred. A deferral covers only the
+findings at its key, up to its `covers`, lowered as a waiver's is: more findings
+there, or a key with no backticked site, recorded before sites, expires it with
+a notice, and those findings need a new disposition (spec 020's scenario
+`waiver-expiry`).
 
 **When a deferral releases a gating finding.** A gating finding — a review MUST
 or SHOULD violation, or an analyze hard-fail or blocking finding — is
@@ -776,6 +804,6 @@ gate), not on an exit status.
   enforce that file's rules (e.g., `security-frontend.md` on a project whose
   frontend is being retired). A file whose header gives it to analysis alone
   needs no entry, since a review does not load it. Waivers remain the right
-  tool for individual `(rule, file)` exceptions.
+  tool for individual `(rule, file, site)` exceptions.
 - The five-dimension model is fixed. Domain-specific concerns (accessibility,
   i18n, licensing) belong in additional rule files, not new passes.

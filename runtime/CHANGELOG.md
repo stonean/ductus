@@ -2,6 +2,32 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## Unreleased
+
+### Changed
+
+- **BREAKING: a stored waiver or violation deferral covers only the findings at
+  its `(rule, file, site)` anchor, up to the number it covers (spec 020).**
+  Through 0.62.0 both matched on rule and file alone, so one waiver covered
+  every finding of its rule in the file, unrelated code and code added later
+  included. A finding now carries an optional `site`, the narrowest named unit
+  enclosing it, and `fired` for `process-waivers` one entry per finding with its
+  `site` and `line-range`. `write-review` records a `--waive` as one entry whose
+  `anchors:` lists a `{file, site, covers}` per site its rule fires at,
+  `covers` the findings there after the cross-pass dedup, lowered by a run that
+  applies the anchor to fewer and never raised; a violation's deferral is keyed
+  `` rule {rule-id} at {file} in `{site}` `` and carries `covers`. More findings at
+  a site than an anchor covers expire it, on a restricted run too, with
+  `waiver expired: … — {n} findings fire where it covers {m}` or
+  `decision expired: … — {n} findings fire where it covers {m}`. An entry
+  recorded before sites, a hand waiver's `file` with no `anchors` or a violation
+  key with no backticked site, covers nothing and expires on its spec's next
+  review with a `recorded before sites` notice; a departure waiver keeps `file`
+  and covers every site in it. `write-review` refuses a `--waive` or `--defer`
+  of a finding that names no site, and renders `- **Site**:` under each
+  finding's file. An adopter's existing waivers and violation deferrals expire
+  once and are decided again.
+
 ## [0.62.0] — 2026-11-22
 
 A minor release with breaking changes: 2 of the 6 entries below are marked

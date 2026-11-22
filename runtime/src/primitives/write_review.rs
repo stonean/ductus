@@ -24,8 +24,8 @@ use crate::primitives::criterion_verdicts;
 use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::departures::Attribution;
 use crate::primitives::{
-    PrimitiveError, Result, WaiverPaths, analyze_subjects, fix_rounds, read_text, rel_path,
-    split_frontmatter,
+    PrimitiveError, Result, StoredAnchor, WaiverPaths, analyze_subjects, fix_rounds, read_text,
+    rel_path, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -541,6 +541,7 @@ fn run_between(
     let waivers = run_waivers(args, repo, &root, &feature_dir, &spec_content)?;
     let settled = settled(args, &waivers, &feature_dir)?;
     let args = settled.as_ref();
+    refuse_deferring_a_finding_with_no_site(args)?;
     an_open_break_names_its_file(args)?;
 
     // Dedup, then bucket the survivors.
@@ -1063,7 +1064,7 @@ fn merged_decisions(
     repo: &Path,
     deduped: &[ReviewFinding],
 ) -> Result<Vec<RawDecision>> {
-    decisions::merge(
+    let mut merged = decisions::merge(
         stored_decisions(feature_dir, args, repo)?,
         &args.expired_decisions,
         &[
@@ -1080,12 +1081,22 @@ fn merged_decisions(
             "observations",
             "an observation or violation",
         )
-    })
+    })?;
+    // A deferral a run matches to fewer findings covers that many, never more.
+    for entry in &mut merged {
+        if let (Some(covers), Some(key)) = (entry.covers, entry.key.as_deref()) {
+            let count = findings_at_key(deduped, key);
+            if count > 0 && count < covers {
+                entry.covers = Some(count);
+            }
+        }
+    }
+    Ok(merged)
 }
 
 /// Refuse two observations, or two violations, that share a key but carry
 /// different outcomes, naming the list the conflicting key came from: a
-/// violation's key is `rule {rule-id} at {file}`, an observation's its
+/// violation's key is `` rule {rule-id} at {file} in `{site}` ``, an observation's its
 /// rendered line.
 fn one_outcome_per_key(
     observations: &[ReviewObservation],
@@ -1246,7 +1257,7 @@ fn finding_rank(finding: &ReviewFinding) -> u8 {
 /// Parse a line-range string into an inclusive `(start, end)`. An empty or
 /// unparseable range covers the whole file, so it overlaps any range sharing
 /// the same `(rule, file)`.
-fn parse_range(text: &str) -> (u32, u32) {
+pub(crate) fn parse_range(text: &str) -> (u32, u32) {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return (0, u32::MAX);
@@ -1263,19 +1274,33 @@ fn parse_range(text: &str) -> (u32, u32) {
 }
 
 /// Inclusive interval overlap.
-fn ranges_overlap(a: (u32, u32), b: (u32, u32)) -> bool {
+pub(crate) fn ranges_overlap(a: (u32, u32), b: (u32, u32)) -> bool {
     a.0 <= b.1 && b.0 <= a.1
 }
 
-/// The reason of the first applied waiver anchored to this finding's
-/// `(rule, file)`, or `None` when unwaived.
+/// The finding's site, trimmed, when its pass named one.
+fn finding_site(finding: &ReviewFinding) -> Option<&str> {
+    decisions::nonblank(finding.site.as_deref()).map(str::trim)
+}
+
+/// The reason of the first applied waiver anchored to this finding: its `(rule, file)`
+/// and, when the anchor names a site, that site. A departure waiver's anchor names none and
+/// covers every site in its file; a site anchor never covers a finding whose pass named no
+/// site. `None` when unwaived.
 fn waiver_reason<'a>(
     finding: &ReviewFinding,
     applied: &'a [crate::schema::primitives::WaiverRef],
 ) -> Option<&'a str> {
     applied
         .iter()
-        .find(|waiver| waiver.rule == finding.rule && waiver.file == finding.file)
+        .find(|waiver| {
+            waiver.rule == finding.rule
+                && waiver.file == finding.file
+                && waiver
+                    .site
+                    .as_deref()
+                    .is_none_or(|site| finding_site(finding) == Some(site.trim()))
+        })
         .map(|waiver| waiver.reason.as_str())
 }
 
@@ -1374,22 +1399,44 @@ fn sort_findings<'a>(
     Ok(sorted)
 }
 
-/// The decisions the deferred violations store, keyed by [`violation_key`].
+/// The decisions the deferred violations store, keyed by [`violation_key`], each covering
+/// the number of findings that share its key.
 fn decided_violations(findings: &[ReviewFinding]) -> Vec<DecisionRef> {
     findings
         .iter()
         .filter_map(|finding| {
-            decisions::decision_for(&finding.disposition, &violation_key(finding))
+            let key = violation_key(finding);
+            let mut decision = decisions::decision_for(&finding.disposition, &key)?;
+            decision.covers = Some(findings_at_key(findings, &key));
+            Some(decision)
         })
         .collect()
 }
 
+/// How many of `findings` share `key` as their violation key.
+fn findings_at_key(findings: &[ReviewFinding], key: &str) -> u32 {
+    let count = findings
+        .iter()
+        .filter(|finding| decisions::same_key(&violation_key(finding), key))
+        .count();
+    u32::try_from(count).unwrap_or(u32::MAX)
+}
+
 /// The stored-decision key for a violation: the stored decision the host
-/// matched it to, when it supplied one, else `rule {rule-id} at {file}` — one
-/// entry per file the rule fires at, the anchor a waiver keeps (spec 076).
+/// matched it to, when it supplied one, else `` rule {rule-id} at {file} in `{site}` `` —
+/// one entry per site the rule fires at, the anchor a waiver keeps (spec 076, spec 020's
+/// `waiver-expiry`). A finding whose pass named no site has the key without one, which
+/// matches no stored decision and which `write-review` refuses to defer.
 fn violation_key(finding: &ReviewFinding) -> String {
     decisions::nonblank(finding.decision_key.as_deref()).map_or_else(
-        || format!("rule {} at {}", finding.rule.trim(), finding.file.trim()),
+        || match finding_site(finding) {
+            Some(site) => format!(
+                "rule {} at {} in `{site}`",
+                finding.rule.trim(),
+                finding.file.trim()
+            ),
+            None => format!("rule {} at {}", finding.rule.trim(), finding.file.trim()),
+        },
         str::to_string,
     )
 }
@@ -1915,6 +1962,9 @@ fn finding_block(finding: &ReviewFinding, label: &str, waived_reason: Option<&st
     } else {
         let _ = writeln!(out, "- **File**: `{}:{range}`", finding.file);
     }
+    if let Some(site) = finding_site(finding) {
+        let _ = writeln!(out, "- **Site**: {}", crate::primitives::flatten_line(site));
+    }
     if !finding.rule_text.trim().is_empty() {
         let _ = writeln!(out, "- **Rule**: {}", finding.rule_text.trim());
     }
@@ -2136,16 +2186,20 @@ struct Superseded {
     notice: String,
 }
 
-/// What this run's `new-waivers` add: the `waivers:` entries to store, each listing the
-/// files its rule fires at in this run that no waiver holds, and every anchor to apply. A
-/// run writes its record twice with one set of arguments, so an anchor its earlier write
+/// What this run's `new-waivers` add: one `waivers:` entry per item, anchored at every
+/// `(file, site)` its rule fires at in this run that no waiver holds, each covering the
+/// number of findings there, and every anchor to apply. The findings are counted after
+/// the cross-pass collapse, so the count is the one `process-waivers` reads on the next run.
+/// A run writes its record twice with one set of arguments, so an anchor its earlier write
 /// stored applies and is not stored again, and a rule its fix has since cleared asks
 /// nothing of this write (spec 079). The departure entries add theirs after.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidArgument`] when a rule fires at no such file and no earlier
-/// write of this run stored it, or when a new deferral is of a violation an entry decides.
+/// [`PrimitiveError::InvalidArgument`] when a rule fires at no such anchor and no earlier
+/// write of this run stored it, when it fires at a finding whose pass named no site (an
+/// anchor without a site would cover nothing), or when a new deferral is of a violation an
+/// entry decides.
 fn new_waiver_entries(
     args: &WriteReviewArgs,
     surviving: &[RawWaiverFull],
@@ -2157,25 +2211,28 @@ fn new_waiver_entries(
 )> {
     let mut entries = Vec::new();
     let mut anchors = Vec::new();
+    let deduped = dedup_findings(&args.findings);
     for (idx, waiver) in args.new_waivers.iter().enumerate() {
-        let held = |file: &str| {
-            surviving.iter().any(|entry| {
-                entry.rule.as_deref() == Some(waiver.rule.as_str())
-                    && entry
-                        .file
-                        .as_ref()
-                        .is_some_and(|paths| paths.as_slice().iter().any(|path| path == file))
-            })
-        };
-        let firing: std::collections::BTreeSet<&str> = args
-            .findings
+        let firing: Vec<&ReviewFinding> = deduped
             .iter()
             .filter(|finding| {
                 finding.rule == waiver.rule
                     && waiver_reason(finding, &args.applied_waivers).is_none()
             })
-            .map(|finding| finding.file.as_str())
             .collect();
+        if let Some(finding) = firing
+            .iter()
+            .find(|finding| finding_site(finding).is_none())
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("new-waivers[{idx}]"),
+                reason: format!(
+                    "`{}` fires at `{}` in a finding that names no site, and a waiver anchors to a site, so it would cover nothing; the pass names the finding's site first",
+                    waiver.rule, finding.file
+                ),
+            });
+        }
         let stored_by_this_run = surviving.iter().any(|entry| {
             entry.rule.as_deref() == Some(waiver.rule.as_str())
                 && entry.waived_at.as_deref() == Some(args.reviewed_at.as_str())
@@ -2185,29 +2242,38 @@ fn new_waiver_entries(
                 primitive: "write-review".into(),
                 argument: format!("new-waivers[{idx}]"),
                 reason: format!(
-                    "`{}` fires at no file in this run that a waiver does not already hold",
+                    "`{}` fires at no site in this run that a waiver does not already hold",
                     waiver.rule
                 ),
             });
         }
+        let mut sites: std::collections::BTreeMap<(&str, &str), u32> =
+            std::collections::BTreeMap::new();
+        for finding in &firing {
+            if let Some(site) = finding_site(finding) {
+                *sites.entry((finding.file.as_str(), site)).or_insert(0) += 1;
+            }
+        }
         anchors.extend(
-            firing
-                .iter()
-                .map(|file| crate::schema::primitives::WaiverRef {
+            sites
+                .keys()
+                .map(|(file, site)| crate::schema::primitives::WaiverRef {
                     rule: waiver.rule.clone(),
                     file: (*file).to_string(),
+                    site: Some((*site).to_string()),
                     reason: waiver.reason.clone(),
                 }),
         );
-        let fresh: Vec<String> = firing
+        let fresh: Vec<StoredAnchor> = sites
             .iter()
-            .filter(|file| !held(file))
-            .map(|file| (*file).to_string())
+            .filter(|((file, site), _)| !holds_anchor(surviving, &waiver.rule, file, site))
+            .map(|((file, site), covers)| StoredAnchor::of(file, site, *covers))
             .collect();
         if !fresh.is_empty() {
             entries.push(RawWaiverFull {
                 rule: Some(waiver.rule.clone()),
-                file: Some(WaiverPaths::of(fresh)),
+                file: None,
+                anchors: Some(fresh),
                 reason: Some(waiver.reason.clone()),
                 waived_at: Some(args.reviewed_at.clone()),
                 waived_by: args.decided_by.clone(),
@@ -2235,6 +2301,11 @@ fn run_waivers(
 ) -> Result<RunWaivers> {
     let departures = read_departures(repo, root, &args.feature, spec_content);
     let mut surviving = surviving_waivers(feature_dir, args)?;
+    lower_covers(
+        &mut surviving,
+        &args.applied_waivers,
+        &dedup_findings(&args.findings),
+    );
     let reasons = refresh_departure_waivers(&mut surviving, &departures, &args.reviewed_at);
     let (entries, anchors, superseded) = new_waiver_entries(args, &surviving, &departures)?;
     Ok(RunWaivers {
@@ -2260,18 +2331,86 @@ struct Departures {
     project: std::path::PathBuf,
 }
 
-/// Whether a waiver in `waivers` already holds `rule` at `file`.
+/// Whether a waiver in `waivers` already holds `rule` at `file`, by a path an entry lists.
 fn holds(waivers: &[RawWaiverFull], rule: &str, file: &str) -> bool {
     waivers.iter().any(|waiver| holds_at(waiver, rule, file))
 }
 
-/// Whether `waiver` holds `rule` at `file`.
+/// Whether `waiver` holds `rule` at `file`, by a path it lists.
 fn holds_at(waiver: &RawWaiverFull, rule: &str, file: &str) -> bool {
     waiver.rule.as_deref() == Some(rule)
         && waiver
             .file
             .as_ref()
             .is_some_and(|paths| paths.as_slice().iter().any(|path| path == file))
+}
+
+/// Whether a waiver in `waivers` holds `rule` at the anchor `(file, site)`.
+fn holds_anchor(waivers: &[RawWaiverFull], rule: &str, file: &str, site: &str) -> bool {
+    waivers.iter().any(|waiver| {
+        waiver.rule.as_deref() == Some(rule)
+            && waiver
+                .anchors
+                .iter()
+                .flatten()
+                .any(|anchor| anchor.is_at(file, site))
+    })
+}
+
+/// Lower each recorded anchor that `applied` names to the number of `findings` at it, when
+/// that is fewer than it covers: an anchor covers what a run applied it to, never more.
+fn lower_covers(
+    waivers: &mut [RawWaiverFull],
+    applied: &[crate::schema::primitives::WaiverRef],
+    findings: &[ReviewFinding],
+) {
+    for waiver in waivers.iter_mut().filter(|waiver| !is_departure(waiver)) {
+        let Some(rule) = waiver.rule.as_deref() else {
+            continue;
+        };
+        for anchor in waiver.anchors.iter_mut().flatten() {
+            let (Some(file), Some(site), Some(covers)) = (
+                anchor.file.as_deref(),
+                anchor.site.as_deref(),
+                anchor.covers_count(),
+            ) else {
+                continue;
+            };
+            if !applied.iter().any(|held| {
+                held.rule == rule && held.file == file && held.site.as_deref() == Some(site)
+            }) {
+                continue;
+            }
+            let count = findings
+                .iter()
+                .filter(|finding| {
+                    finding.rule == rule
+                        && finding.file == file
+                        && finding_site(finding) == Some(site.trim())
+                })
+                .count();
+            if let Ok(count) = u32::try_from(count)
+                && count > 0
+                && count < covers
+            {
+                anchor.covers = Some(serde_norway::Value::Number(count.into()));
+            }
+        }
+    }
+}
+
+/// Whether `waiver` holds `rule` at `finding`: by an anchor at its `(file, site)`, or a path
+/// it lists at its file.
+fn holds_finding(waiver: &RawWaiverFull, rule: &str, finding: &ReviewFinding) -> bool {
+    holds_at(waiver, rule, &finding.file)
+        || finding_site(finding).is_some_and(|site| {
+            waiver.rule.as_deref() == Some(rule)
+                && waiver
+                    .anchors
+                    .iter()
+                    .flatten()
+                    .any(|anchor| anchor.is_at(&finding.file, site))
+        })
 }
 
 /// Read the departure entries of `content`, the text of `spec.md`. A spec holding none,
@@ -2357,6 +2496,7 @@ fn refresh_departure_waivers(
                 .map(|file| crate::schema::primitives::WaiverRef {
                     rule: entry.rule.clone(),
                     file: file.clone(),
+                    site: None,
                     reason: entry.reason.clone(),
                 }),
         );
@@ -2410,37 +2550,14 @@ fn departure_waiver_entries(
             .enumerate()
             .filter(|(_, finding)| finding.rule == entry.rule && in_scope(&finding.file))
             .collect();
-        for (idx, finding) in &decided {
-            if finding.disposition.outcome != DispositionOutcome::Deferred
-                || claimed_by_hand(args, surviving, finding)
-            {
-                continue;
-            }
-            let Some(key) = decisions::nonblank(finding.decision_key.as_deref()) else {
-                return Err(PrimitiveError::InvalidArgument {
-                    primitive: "write-review".into(),
-                    argument: format!("findings[{idx}].disposition"),
-                    reason: format!(
-                        "`{}` at `{}` cannot be deferred: spec.md line {} departs from `{}`, so \
-                         the entry decided it; remove the entry first to defer the finding",
-                        finding.rule, finding.file, entry.line, entry.rule
-                    ),
-                });
-            };
-            superseded.push(Superseded {
-                index: *idx,
-                key: key.to_string(),
-                notice: format!(
-                    "the stored deferral of `{}` at `{}` is superseded: spec.md line {} departs \
-                     from `{}`, so the entry decided it",
-                    finding.rule, finding.file, entry.line, entry.rule
-                ),
-            });
-        }
+        superseded.extend(superseded_deferrals(args, surviving, entry, &decided)?);
         let firing: std::collections::BTreeSet<&str> = decided
             .iter()
             .map(|(_, finding)| *finding)
-            .filter(|finding| waiver_reason(finding, &args.applied_waivers).is_none())
+            .filter(|finding| {
+                waiver_reason(finding, &args.applied_waivers).is_none()
+                    && waiver_reason(finding, anchors).is_none()
+            })
             .map(|finding| finding.file.as_str())
             .collect();
         anchors.extend(
@@ -2449,6 +2566,7 @@ fn departure_waiver_entries(
                 .map(|file| crate::schema::primitives::WaiverRef {
                     rule: entry.rule.clone(),
                     file: (*file).to_string(),
+                    site: None,
                     reason: entry.reason.clone(),
                 }),
         );
@@ -2478,6 +2596,7 @@ fn departure_waiver_entries(
         entries.push(RawWaiverFull {
             rule: Some(entry.rule.clone()),
             file: Some(WaiverPaths::of(fresh)),
+            anchors: None,
             reason: Some(entry.reason.clone()),
             waived_at: Some(at.unwrap_or_else(|| args.reviewed_at.clone())),
             waived_by: Some(by),
@@ -2488,6 +2607,79 @@ fn departure_waiver_entries(
         });
     }
     Ok(superseded)
+}
+
+/// The stored deferrals `entry` supersedes among `decided`, the findings of its rule the
+/// run's scope holds: each deferred violation no hand waiver claims, which must carry its
+/// stored decision's key.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] naming `findings[idx].disposition` when a new
+/// deferral is of a violation the entry decides.
+fn superseded_deferrals(
+    args: &WriteReviewArgs,
+    surviving: &[RawWaiverFull],
+    entry: &crate::primitives::departures::Entry,
+    decided: &[(usize, &ReviewFinding)],
+) -> Result<Vec<Superseded>> {
+    let mut superseded = Vec::new();
+    for (idx, finding) in decided {
+        if finding.disposition.outcome != DispositionOutcome::Deferred
+            || claimed_by_hand(args, surviving, finding)
+        {
+            continue;
+        }
+        let Some(key) = decisions::nonblank(finding.decision_key.as_deref()) else {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("findings[{idx}].disposition"),
+                reason: format!(
+                    "`{}` at `{}` cannot be deferred: spec.md line {} departs from `{}`, so \
+                     the entry decided it; remove the entry first to defer the finding",
+                    finding.rule, finding.file, entry.line, entry.rule
+                ),
+            });
+        };
+        superseded.push(Superseded {
+            index: *idx,
+            key: key.to_string(),
+            notice: format!(
+                "the stored deferral of `{}` at `{}` is superseded: spec.md line {} departs \
+                 from `{}`, so the entry decided it",
+                finding.rule, finding.file, entry.line, entry.rule
+            ),
+        });
+    }
+    Ok(superseded)
+}
+
+/// Refuse a deferral of a violation whose pass named no site, naming the finding: its key
+/// is `` rule {rule-id} at {file} in `{site}` ``, so a deferral without a site would anchor
+/// to nothing and match no later run. A finding matched to a stored decision by
+/// `decision-key` is the stored deferral's, so it is not refused.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidArgument`] naming `findings[idx].disposition`.
+fn refuse_deferring_a_finding_with_no_site(args: &WriteReviewArgs) -> Result<()> {
+    for (idx, finding) in args.findings.iter().enumerate() {
+        if finding.disposition.outcome == DispositionOutcome::Deferred
+            && finding_site(finding).is_none()
+            && decisions::nonblank(finding.decision_key.as_deref()).is_none()
+        {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("findings[{idx}].disposition"),
+                reason: format!(
+                    "`{}` at `{}` names no site, and a deferral anchors to a site, so it would \
+                     match no later run; the pass names the finding's site first",
+                    finding.rule, finding.file
+                ),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Whether a hand waiver, stored or asked for in this run, claims `finding`: it keeps
@@ -2502,7 +2694,7 @@ fn claimed_by_hand(
         .any(|waiver| waiver.rule == finding.rule)
         || surviving
             .iter()
-            .any(|waiver| !is_departure(waiver) && holds_at(waiver, &finding.rule, &finding.file))
+            .any(|waiver| !is_departure(waiver) && holds_finding(waiver, &finding.rule, finding))
 }
 
 /// The arguments as this run records them: each new waiver's anchors applied, so its
@@ -2550,11 +2742,9 @@ fn settled<'a>(
     let mut args = args.clone();
     // An entry's current reason replaces the one `process-waivers` read from the record.
     for applied in &mut args.applied_waivers {
-        if let Some(fresh) = waivers
-            .reasons
-            .iter()
-            .find(|fresh| fresh.rule == applied.rule && fresh.file == applied.file)
-        {
+        if let Some(fresh) = waivers.reasons.iter().find(|fresh| {
+            fresh.rule == applied.rule && fresh.file == applied.file && fresh.site == applied.site
+        }) {
             applied.reason.clone_from(&fresh.reason);
         }
     }
@@ -2570,6 +2760,7 @@ fn settled<'a>(
             work_item: None,
             reason: None,
             by_rule: false,
+            covers: None,
         });
         let finding = &mut args.findings[superseded.index];
         finding.disposition = crate::schema::primitives::Disposition::default();
@@ -2643,29 +2834,46 @@ fn surviving_waivers(feature_dir: &Path, args: &WriteReviewArgs) -> Result<Vec<R
         .collect())
 }
 
-/// The waiver with every path whose `(rule, file)` anchor expired removed, or
-/// `None` when that removes its last path.
+/// The waiver with every anchor that expired removed, or `None` when that removes its
+/// last one.
 ///
-/// Each listed path is its own anchor (spec 020's `waiver-file-lists`), so an
-/// entry loses only the paths that expired and keeps the rest, with its other
-/// fields and extras. Only anchors are compared. A waiver missing another
-/// field, which `process-waivers` reports as malformed and never lists as
-/// expired, still loses a path an expired anchor names. A waiver missing its
-/// rule or file names no anchor, and one listing no path has none to lose, so
-/// neither is ever pruned.
+/// An entry holding `anchors` loses each whose `(file, site)` an expired anchor of its
+/// rule names, and is read from them alone, so a `file` beside them is neither pruned
+/// nor kept alive. Any other entry, a departure waiver's or one recorded before sites,
+/// loses each listed path an expired anchor with no site names (spec 020's
+/// `waiver-file-lists`). Only anchors are compared. A waiver missing another field,
+/// which `process-waivers` reports as malformed and never lists as expired, still loses an
+/// anchor an expired one names. A waiver missing its rule names no anchor, and one listing
+/// none has none to lose, so neither is ever pruned.
 fn prune_expired(
     mut waiver: RawWaiverFull,
     expired: &[crate::schema::primitives::WaiverRef],
 ) -> Option<RawWaiverFull> {
-    let (Some(rule), Some(paths)) = (waiver.rule.as_deref(), waiver.file.as_mut()) else {
+    let Some(rule) = waiver.rule.clone() else {
+        return Some(waiver); // no anchor to match
+    };
+    let named_by = |file: &str, site: Option<&str>| {
+        expired
+            .iter()
+            .any(|entry| entry.rule == rule && entry.file == file && entry.site.as_deref() == site)
+    };
+    if let Some(anchors) = waiver.anchors.as_mut() {
+        let listed = anchors.len();
+        anchors.retain(|anchor| {
+            !anchor
+                .file
+                .as_deref()
+                .zip(anchor.site.as_deref())
+                .is_some_and(|(file, site)| named_by(file, Some(site)))
+        });
+        let emptied = listed > 0 && anchors.is_empty();
+        return (!emptied).then_some(waiver);
+    }
+    let Some(paths) = waiver.file.as_mut() else {
         return Some(waiver); // no anchor to match
     };
     let listed = paths.as_slice().len();
-    paths.retain(|path| {
-        !expired
-            .iter()
-            .any(|entry| entry.rule == rule && &entry.file == path)
-    });
+    paths.retain(|path| !named_by(path, None));
     let emptied = listed > 0 && paths.as_slice().is_empty();
     (!emptied).then_some(waiver)
 }
@@ -2696,6 +2904,13 @@ pub(crate) fn render_waivers_at(block: &mut String, waivers: &[RawWaiverFull], b
             &[
                 ("rule", waiver.rule.as_deref().into()),
                 ("file", waiver_file(waiver.file.as_ref())),
+                (
+                    "anchors",
+                    waiver
+                        .anchors
+                        .as_deref()
+                        .map_or(EntryValue::Absent, EntryValue::Anchors),
+                ),
                 ("reason", waiver.reason.as_deref().into()),
                 ("waived-at", waiver.waived_at.as_deref().into()),
                 ("waived-by", waiver.waived_by.as_deref().into()),
@@ -2730,6 +2945,11 @@ pub(crate) enum EntryValue<'a> {
     Scalar(&'a str),
     /// Rendered as a block sequence under the key; `[]` when empty.
     List(&'a [String]),
+    /// Rendered inline as a bare integer.
+    Number(u32),
+    /// A waiver's anchors, rendered as a block sequence of `file`, `site` and `covers`
+    /// mappings under the key; `[]` when empty.
+    Anchors(&'a [StoredAnchor]),
 }
 
 impl<'a> From<Option<&'a str>> for EntryValue<'a> {
@@ -2768,7 +2988,7 @@ pub(crate) fn render_list_entry(
             EntryValue::Scalar(value) => {
                 let _ = writeln!(block, "{}{key}: {}", indent(), yaml_string(value));
             }
-            EntryValue::List([]) => {
+            EntryValue::List([]) | EntryValue::Anchors([]) => {
                 let _ = writeln!(block, "{}{key}: []", indent());
             }
             EntryValue::List(items) => {
@@ -2779,10 +2999,43 @@ pub(crate) fn render_list_entry(
                     let _ = writeln!(block, "{base}      - {}", yaml_string(item));
                 }
             }
+            EntryValue::Number(number) => {
+                let _ = writeln!(block, "{}{key}: {number}", indent());
+            }
+            EntryValue::Anchors(anchors) => {
+                let _ = writeln!(block, "{}{key}:", indent());
+                for anchor in *anchors {
+                    render_anchor(block, base, anchor);
+                }
+            }
         }
     }
     for (key, value) in extra {
         render_extra_field(block, &indent(), key, value);
+    }
+}
+
+/// One anchor of a waiver, as an item of the entry's `anchors:` list. A `covers` that is
+/// not a positive integer, which a hand edit can leave, is kept as written so the entry
+/// stays malformed rather than being repaired.
+fn render_anchor(block: &mut String, base: &str, anchor: &StoredAnchor) {
+    let covers = anchor.covers.as_ref().map(|covers| match covers {
+        serde_norway::Value::Number(number) => number.to_string(),
+        other => serde_norway::to_string(other)
+            .map(|text| text.trim_end().to_string())
+            .unwrap_or_default(),
+    });
+    let fields = [
+        ("file", anchor.file.as_deref().map(yaml_string)),
+        ("site", anchor.site.as_deref().map(yaml_string)),
+        ("covers", covers),
+    ];
+    let mut first = true;
+    for (key, value) in fields {
+        let Some(value) = value else { continue };
+        let lead = if first { "- " } else { "  " };
+        first = false;
+        let _ = writeln!(block, "{base}      {lead}{key}: {value}");
     }
 }
 
@@ -2919,6 +3172,10 @@ pub(crate) struct RawWaiverFull {
     rule: Option<String>,
     #[serde(default)]
     file: Option<WaiverPaths>,
+    /// The `(file, site)` anchors a hand waiver covers, each with its count; a departure
+    /// waiver keeps `file` instead (spec 020's `waiver-expiry`).
+    #[serde(default)]
+    anchors: Option<Vec<StoredAnchor>>,
     #[serde(default)]
     reason: Option<String>,
     #[serde(default, rename = "waived-at")]
@@ -2946,6 +3203,7 @@ mod tests {
         confidence: &str,
     ) -> ReviewFinding {
         ReviewFinding {
+            site: Some("walk".into()),
             rule: rule.into(),
             severity: severity
                 .parse()
@@ -2965,6 +3223,7 @@ mod tests {
 
     fn waiver(rule: &str, file: &str) -> WaiverRef {
         WaiverRef {
+            site: None,
             rule: rule.into(),
             file: file.into(),
             reason: "Justified for now.".into(),
@@ -3328,12 +3587,12 @@ mod tests {
                 .find(|d| d.key.as_deref() == Some(key))
                 .map(|d| d.gating)
         };
-        assert_eq!(gating("rule SEC-2 at src/b.rs"), Some(None));
-        assert_eq!(gating("rule SEC-1 at src/a.rs"), Some(Some(true)));
-        assert_eq!(gating("rule SEC-3 at src/c.rs"), Some(Some(true)));
+        assert_eq!(gating("rule SEC-2 at src/b.rs in `walk`"), Some(None));
+        assert_eq!(gating("rule SEC-1 at src/a.rs in `walk`"), Some(Some(true)));
+        assert_eq!(gating("rule SEC-3 at src/c.rs in `walk`"), Some(Some(true)));
     }
 
-    const STANDING_DEFERRAL: &str = "decisions:\n  - key: \"rule SEC-1 at src/a.rs\"\n    \
+    const STANDING_DEFERRAL: &str = "decisions:\n  - key: \"rule SEC-1 at src/a.rs in `walk`\"\n    \
          outcome: deferred\n    work-item: PROJ-1\n    gating: true\n    \
          decided-at: 2026-09-01T00:00:00Z\n    decided-by: first@example.com";
 
@@ -3379,7 +3638,7 @@ mod tests {
             decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
         let entry = stored
             .iter()
-            .find(|d| d.key.as_deref() == Some("rule SEC-1 at src/a.rs"))
+            .find(|d| d.key.as_deref() == Some("rule SEC-1 at src/a.rs in `walk`"))
             .unwrap();
         assert_eq!(entry.target.as_deref(), Some("specs/002-y/spec.md"));
         assert_eq!(entry.work_item, None);
@@ -3427,7 +3686,7 @@ mod tests {
                 .and_then(|d| d.work_item.clone())
         };
         assert_eq!(
-            item("rule SEC-1 at src/a.rs").as_deref(),
+            item("rule SEC-1 at src/a.rs in `walk`").as_deref(),
             Some("PROJ-1\u{1b}[31m")
         );
         assert_eq!(item("perf: noise").as_deref(), Some("PROJ-2\u{1b}[31m"));
@@ -3450,7 +3709,8 @@ mod tests {
             "{err:?}"
         );
         args.expired_decisions = vec![DecisionRef {
-            key: "rule SEC-1 at src/a.rs".into(),
+            covers: None,
+            key: "rule SEC-1 at src/a.rs in `walk`".into(),
             outcome: DecisionOutcome::Deferred,
             target: None,
             task: None,
@@ -3464,7 +3724,7 @@ mod tests {
         assert!(
             stored
                 .iter()
-                .all(|d| d.key.as_deref() != Some("rule SEC-1 at src/a.rs")),
+                .all(|d| d.key.as_deref() != Some("rule SEC-1 at src/a.rs in `walk`")),
             "{stored:?}"
         );
     }
@@ -4665,6 +4925,7 @@ mod tests {
 
         // Unless this run expired it: then the rule decides afresh.
         next.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "perf: a loop".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/spec.md".into()),
@@ -4732,6 +4993,7 @@ mod tests {
     fn must_at(rule: &str, file: &str) -> ReviewFinding {
         serde_json::from_value(serde_json::json!({
             "rule": rule, "severity": "must", "file": file, "line-range": "1", "confidence": "high",
+            "site": "walk",
         }))
         .unwrap()
     }
@@ -4760,7 +5022,7 @@ mod tests {
         let report = review_md(&tmp, "001-x");
         assert!(
             report.contains(
-                "waivers:\n  - rule: SEC-1\n    file:\n      - src/a.rs\n      - src/b.rs\n    reason: both are internal\n    waived-at: 2026-07-02T12:00:00Z\n    waived-by: dev@example.com\n"
+                "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/a.rs\n        site: walk\n        covers: 1\n      - file: src/b.rs\n        site: walk\n        covers: 1\n    reason: both are internal\n    waived-at: 2026-07-02T12:00:00Z\n    waived-by: dev@example.com\n"
             ),
             "{report}"
         );
@@ -4775,10 +5037,14 @@ mod tests {
                 feature: "001-x".into(),
                 fired: vec![
                     crate::schema::primitives::FiredFinding {
+                        site: Some("walk".into()),
+                        line_range: "1".into(),
                         rule: "SEC-1".into(),
                         file: "src/a.rs".into(),
                     },
                     crate::schema::primitives::FiredFinding {
+                        site: Some("walk".into()),
+                        line_range: "1".into(),
                         rule: "SEC-1".into(),
                         file: "src/b.rs".into(),
                     },
@@ -4791,8 +5057,8 @@ mod tests {
         assert_eq!(next.applied.len(), 2, "{next:?}");
     }
 
-    /// A file a stored waiver already holds is not listed again, since only the first
-    /// claim on a `(rule, file)` applies.
+    /// An anchor a stored waiver already holds is not listed again, since only the first
+    /// claim on a `(rule, file, site)` applies.
     #[test]
     fn a_new_waiver_lists_only_what_no_applied_waiver_holds() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -4800,6 +5066,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.findings = vec![must_at("SEC-1", "src/a.rs"), must_at("SEC-1", "src/b.rs")];
         args.applied_waivers = vec![WaiverRef {
+            site: None,
             rule: "SEC-1".into(),
             file: "src/a.rs".into(),
             reason: "earlier".into(),
@@ -4809,9 +5076,328 @@ mod tests {
         assert_eq!(result.must_violations, 0);
         let report = review_md(&tmp, "001-x");
         assert!(
-            report.contains("  - rule: SEC-1\n    file: src/b.rs\n    reason: this one too\n"),
+            report.contains(
+                "  - rule: SEC-1\n    anchors:\n      - file: src/b.rs\n        site: walk\n        covers: 1\n    reason: this one too\n"
+            ),
             "{report}"
         );
+    }
+
+    // -- a stored disposition covers only the findings at its anchor (020 AC19) -------------
+
+    /// `finding` at `site`, over `range`.
+    fn at(mut finding: ReviewFinding, site: Option<&str>, range: &str) -> ReviewFinding {
+        finding.site = site.map(Into::into);
+        finding.line_range = range.into();
+        finding
+    }
+
+    fn must(rule: &str, file: &str, site: Option<&str>, range: &str) -> ReviewFinding {
+        at(finding(rule, "must", file, range, "high"), site, range)
+    }
+
+    fn anchor_at(rule: &str, file: &str, site: &str) -> WaiverRef {
+        WaiverRef {
+            rule: rule.into(),
+            file: file.into(),
+            site: Some(site.into()),
+            reason: "decided".into(),
+        }
+    }
+
+    /// An applied waiver covers the findings at its site and no other in the file, nor a
+    /// finding whose pass named none: those count, and the report names each finding's site.
+    #[test]
+    fn a_waiver_covers_only_the_findings_at_its_site() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "1-2"),
+            must("SEC-1", "src/a.rs", Some("beta"), "10-12"),
+            must("SEC-1", "src/a.rs", None, "20-22"),
+        ];
+        args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.waived, 1, "{result:?}");
+        assert_eq!(
+            result.must_violations, 2,
+            "the other site and the site-less finding count: {result:?}"
+        );
+        assert!(result.blocking);
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("- **Site**: beta\n"), "{report}");
+        assert!(
+            report.contains("- **File**: `src/a.rs:1-2`\n- **Site**: alpha\n"),
+            "{report}"
+        );
+    }
+
+    /// A departure waiver's anchor names no site and covers every site in its file.
+    #[test]
+    fn an_anchor_with_no_site_covers_every_site_in_its_file() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "1-2"),
+            must("SEC-1", "src/a.rs", Some("beta"), "10-12"),
+            must("SEC-1", "src/a.rs", None, "20-22"),
+        ];
+        args.applied_waivers = vec![waiver("SEC-1", "src/a.rs")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            (result.waived, result.must_violations),
+            (3, 0),
+            "{result:?}"
+        );
+    }
+
+    /// `--waive` records one anchor per `(file, site)` its rule fires at with the number of
+    /// findings there, counted after the cross-pass collapse: two findings at one site over
+    /// separate lines are two, two reports of one finding over overlapping lines are one.
+    #[test]
+    fn a_new_waiver_records_one_anchor_per_site_with_its_count() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "1-2"),
+            must("SEC-1", "src/a.rs", Some("alpha"), "10-12"),
+            must("SEC-1", "src/a.rs", Some("beta"), "30-40"),
+            must("SEC-1", "src/a.rs", Some("beta"), "35"),
+            must("SEC-1", "src/b.rs", Some("alpha"), "1"),
+        ];
+        args.new_waivers = vec![waive("SEC-1", "decided")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            (result.waived, result.must_violations),
+            (4, 0),
+            "{result:?}"
+        );
+        let stored = recorded(&tmp, "001-x");
+        assert_eq!(stored.len(), 1);
+        let anchors: Vec<(String, String, Option<u32>)> = stored[0]
+            .anchors
+            .iter()
+            .flatten()
+            .map(|a| {
+                (
+                    a.file.clone().unwrap(),
+                    a.site.clone().unwrap(),
+                    a.covers_count(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            anchors,
+            vec![
+                ("src/a.rs".into(), "alpha".into(), Some(2)),
+                ("src/a.rs".into(), "beta".into(), Some(1)),
+                ("src/b.rs".into(), "alpha".into(), Some(1)),
+            ]
+        );
+        assert!(
+            stored[0].file.is_none(),
+            "an entry keeps `file` or `anchors`"
+        );
+    }
+
+    /// A run that applies an anchor to fewer findings than it covers lowers its count to
+    /// that many; one applied to more never raises it.
+    #[test]
+    fn covers_is_lowered_and_never_raised() {
+        let waivers = |covers: u32| {
+            format!(
+                "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/a.rs\n        site: walk\n        covers: {covers}\n    reason: decided\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com"
+            )
+        };
+        let covers_after = |covers: u32, findings: Vec<ReviewFinding>| {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            seed_waivers(&tmp, "001-x", &waivers(covers));
+            let mut args = base_args("001-x");
+            args.findings = findings;
+            args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "walk")];
+            run(&args, tmp.path()).unwrap();
+            recorded(&tmp, "001-x")[0].anchors.as_ref().unwrap()[0].covers_count()
+        };
+        let one = vec![must("SEC-1", "src/a.rs", Some("walk"), "1-2")];
+        let two = vec![
+            must("SEC-1", "src/a.rs", Some("walk"), "1-2"),
+            must("SEC-1", "src/a.rs", Some("walk"), "10-12"),
+        ];
+        assert_eq!(
+            covers_after(3, one.clone()),
+            Some(1),
+            "lowered to what applied"
+        );
+        assert_eq!(covers_after(3, two.clone()), Some(2));
+        assert_eq!(covers_after(1, two), Some(1), "never raised");
+        assert_eq!(covers_after(1, one), Some(1));
+    }
+
+    /// An expired anchor leaves its entry by `(file, site)`, the entry's other anchors stay,
+    /// and the entry goes with its last; an entry recorded before sites loses a path by
+    /// `(rule, file)` and a site anchor is never lost to one.
+    #[test]
+    fn an_expired_anchor_leaves_only_its_own_site() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        seed_waivers(
+            &tmp,
+            "001-x",
+            "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/a.rs\n        site: alpha\n        covers: 1\n      - file: src/a.rs\n        site: beta\n        covers: 1\n    reason: decided\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com\n  - rule: SEC-2\n    file: src/a.rs\n    reason: old\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com",
+        );
+        let mut args = base_args("001-x");
+        args.expired_waivers = vec![
+            anchor_at("SEC-1", "src/a.rs", "alpha"),
+            WaiverRef {
+                rule: "SEC-1".into(),
+                file: "src/a.rs".into(),
+                site: None,
+                reason: "x".into(),
+            },
+            WaiverRef {
+                rule: "SEC-2".into(),
+                file: "src/a.rs".into(),
+                site: None,
+                reason: "old".into(),
+            },
+        ];
+        run(&args, tmp.path()).unwrap();
+        let stored = recorded(&tmp, "001-x");
+        assert_eq!(stored.len(), 1, "the pre-site entry goes with its path");
+        let left = stored[0].anchors.as_ref().unwrap();
+        assert_eq!(left.len(), 1);
+        assert!(left[0].is_at("src/a.rs", "beta"));
+        assert!(
+            review_md(&tmp, "001-x").contains(
+                "    anchors:\n      - file: src/a.rs\n        site: beta\n        covers: 1\n"
+            ),
+            "{}",
+            review_md(&tmp, "001-x")
+        );
+        args.expired_waivers = vec![anchor_at("SEC-1", "src/a.rs", "beta")];
+        run(&args, tmp.path()).unwrap();
+        assert!(recorded(&tmp, "001-x").is_empty());
+    }
+
+    /// `--waive` of a rule that fires at a finding naming no site is refused, naming the
+    /// file, since an anchor without a site would cover nothing; the finding still counts.
+    #[test]
+    fn a_new_waiver_of_a_finding_that_names_no_site_is_refused() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "1-2"),
+            must("SEC-1", "src/b.rs", None, "1-2"),
+        ];
+        args.new_waivers = vec![waive("SEC-1", "why")];
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "new-waivers[0]" && reason.contains("src/b.rs") && reason.contains("no site")),
+            "{error}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+
+        args.new_waivers = Vec::new();
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 2, "a site-less finding counts");
+    }
+
+    fn deferred_at(finding: ReviewFinding) -> ReviewFinding {
+        deferred(finding, None, Some("PROJ-1"))
+    }
+
+    fn stored_decisions_of(tmp: &TempDir) -> Vec<RawDecision> {
+        decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap()
+    }
+
+    const SITE_KEY: &str = "rule SEC-1 at src/a.rs in `walk`";
+
+    /// A violation's deferral is keyed by its site and covers the findings sharing the key.
+    #[test]
+    fn a_deferral_is_keyed_by_site_and_covers_its_findings() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![
+            deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "1-2")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "10-12")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("other"), "30")),
+        ];
+        run(&args, tmp.path()).unwrap();
+        let stored = stored_decisions_of(&tmp);
+        let covers: Vec<(&str, Option<u32>)> = stored
+            .iter()
+            .map(|d| (d.key.as_deref().unwrap(), d.covers))
+            .collect();
+        assert_eq!(
+            covers,
+            vec![
+                (SITE_KEY, Some(2)),
+                ("rule SEC-1 at src/a.rs in `other`", Some(1)),
+            ]
+        );
+        assert!(
+            review_md(&tmp, "001-x").contains(&format!(
+                "  - key: {SITE_KEY}\n    outcome: deferred\n    work-item: PROJ-1\n    covers: 2\n"
+            )),
+            "{}",
+            review_md(&tmp, "001-x")
+        );
+    }
+
+    /// A matched deferral's `covers` is lowered to the findings now at its key and never
+    /// raised by a run that finds more.
+    #[test]
+    fn a_matched_deferrals_covers_is_lowered_and_never_raised() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let two = |key: Option<&str>| {
+            let mut found: Vec<ReviewFinding> = vec![
+                deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "1-2")),
+                deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "10-12")),
+            ];
+            for one in &mut found {
+                one.decision_key = key.map(Into::into);
+            }
+            found
+        };
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = two(None);
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(2));
+
+        args.findings = two(Some(SITE_KEY)).into_iter().take(1).collect();
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(1), "lowered");
+
+        args.findings = two(Some(SITE_KEY));
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(1), "never raised");
+    }
+
+    /// A deferral of a finding whose pass named no site is refused naming the finding; one
+    /// matched to a stored decision by its key is the stored deferral's and is not.
+    #[test]
+    fn a_deferral_of_a_finding_that_names_no_site_is_refused() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = vec![deferred_at(must("SEC-1", "src/a.rs", None, "1-2"))];
+        let error = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "findings[0].disposition"
+                    && reason.contains("SEC-1")
+                    && reason.contains("src/a.rs")
+                    && reason.contains("no site")),
+            "{error}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+
+        args.findings[0].decision_key = Some("rule SEC-1 at src/a.rs in `walk`".into());
+        run(&args, tmp.path()).unwrap();
     }
 
     /// Each refused `--waive` writes nothing: a waiver with nothing to waive, or nobody
@@ -4945,6 +5531,7 @@ mod tests {
         let mut after = base_args("001-x");
         after.decided_by = Some("dev@example.com".into());
         after.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "bug: src/a.rs — `src/a.rs`".into(),
             outcome: DecisionOutcome::Deferred,
             target: None,
@@ -5289,6 +5876,7 @@ mod tests {
         refused_over_the_rules_waiver(&carried, &tmp, &before);
 
         carried.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: key.into(),
             outcome: DecisionOutcome::Waived,
             target: None,
@@ -6037,6 +6625,7 @@ mod tests {
         rematched.decision_key = Some("other: settled earlier".into());
         args.observations = vec![rematched];
         args.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "bug: since fixed".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),

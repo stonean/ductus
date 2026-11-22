@@ -156,6 +156,13 @@ pub(crate) struct Classified {
 }
 
 impl Classified {
+    /// Expire `decision`, whose key is `key`, with a notice saying `why`.
+    fn expire(&mut self, key: &str, why: &str, decision: DecisionRef) {
+        self.notices
+            .push(format!("decision expired: {key} — {why}"));
+        self.expired.push(decision);
+    }
+
     /// Keep `decision`, which did not fire, with its own notice saying `why`,
     /// and record its class and that notice's index for [`run`].
     fn retain(&mut self, class: Retained, why: &str, decision: DecisionRef) {
@@ -269,7 +276,13 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
         }
         seen.push(key.clone());
 
-        if fired.contains(&key) {
+        let firing = fired.iter().filter(|held| **held == key).count();
+        if let Some(why) = expired_by_anchor(args.record, &decision, &key, firing) {
+            result.expire(&key, &why, decision);
+            continue;
+        }
+
+        if firing > 0 {
             if decision.outcome == DecisionOutcome::Deferred {
                 match decisions::work_state(
                     repo,
@@ -319,14 +332,34 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
             };
             result.retain(class, &why, decision);
         } else {
-            result.notices.push(format!(
-                "decision expired: {key} — the finding no longer fires ({})",
-                describe(&decision)
-            ));
-            result.expired.push(decision);
+            let why = format!("the finding no longer fires ({})", describe(&decision));
+            result.expire(&key, &why, decision);
         }
     }
     Ok(result)
+}
+
+/// Why `decision` expires whatever the run read, restricted or not, or `None` when it is
+/// classified by whether its key fired: a violation's key recorded before sites names no
+/// site, so it covers nothing (spec 020's `waiver-expiry`, rule 7), and one that covers
+/// fewer findings than fire, `firing`, is a count nobody judged (rule 6). The reason
+/// reads as the tail of the notice.
+fn expired_by_anchor(
+    record: DecisionRecord,
+    decision: &DecisionRef,
+    key: &str,
+    firing: usize,
+) -> Option<String> {
+    if record == DecisionRecord::Review && decisions::is_pre_site_violation_key(key) {
+        return Some(format!("recorded before sites ({})", describe(decision)));
+    }
+    let covers = decision.covers?;
+    (firing > covers as usize).then(|| {
+        format!(
+            "{firing} findings fire where it covers {covers} ({})",
+            describe(decision)
+        )
+    })
 }
 
 /// The decision's outcome and its companion, for a notice, each stored text
@@ -448,9 +481,122 @@ mod tests {
 
     #[test]
     fn a_silent_violation_on_a_file_the_run_did_not_read_is_retained() {
-        let tmp = windowed(&["rule BE-X-001 at src/old.rs"]);
+        let tmp = windowed(&["rule BE-X-001 at src/old.rs in `walk`"]);
         let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
         assert_eq!(result.retained.len(), 1);
+    }
+
+    // -- a violation's deferral covers the findings at its anchor (020 AC19) -------------
+
+    const SITE_KEY: &str = "rule BE-X-001 at src/a.rs in `walk`";
+
+    /// A stored decision under `key`, waived, covering `covers` findings.
+    fn covering(key: &str, covers: Option<u32>) -> String {
+        let covers = covers.map_or_else(String::new, |covers| format!("    covers: {covers}\n"));
+        format!(
+            "  - key: \"{key}\"\n{covers}    outcome: waived\n    reason: a person's reason\n    \
+             decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n"
+        )
+    }
+
+    /// A decision matches while no more findings share its key than it covers.
+    #[test]
+    fn a_decision_matches_while_no_more_findings_fire_than_it_covers() {
+        let tmp = repo_with("review.md", &covering(SITE_KEY, Some(2)));
+        for fired in [vec![SITE_KEY], vec![SITE_KEY, SITE_KEY]] {
+            let result = compute(&args(DecisionRecord::Review, &fired, false), tmp.path()).unwrap();
+            assert_eq!(result.matched.len(), 1, "{fired:?}");
+            assert_eq!(result.matched[0].covers, Some(2));
+            assert_eq!(result.expired, [] as [DecisionRef; 0]);
+        }
+    }
+
+    /// Past its count the decision covers none of the findings and expires with the count
+    /// notice, on a restricted run too, since a partial run's surplus is still a surplus.
+    #[test]
+    fn more_findings_than_it_covers_expire_the_decision_with_the_count_notice() {
+        let tmp = repo_with("review.md", &covering(SITE_KEY, Some(1)));
+        for restricted in [false, true] {
+            let result = compute(
+                &args(DecisionRecord::Review, &[SITE_KEY, SITE_KEY], restricted),
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(result.matched, [] as [DecisionRef; 0], "{restricted}");
+            assert_eq!(result.expired.len(), 1);
+            assert_eq!(
+                result.notices,
+                vec![format!(
+                    "decision expired: {SITE_KEY} — 2 findings fire where it covers 1 (waived: a person's reason)"
+                )]
+            );
+        }
+    }
+
+    /// A key recorded before sites, `rule {id} at {file}`, covers nothing: it expires
+    /// whether or not it fired and on a restricted run too, with the notice naming that.
+    #[test]
+    fn a_violation_key_recorded_before_sites_expires_whatever_fired() {
+        let key = "rule BE-X-001 at src/a.rs";
+        let tmp = repo_with("review.md", &waived(key));
+        let expected = vec![format!(
+            "decision expired: {key} — recorded before sites (waived: a person's reason)"
+        )];
+        for (fired, restricted) in [(vec![key], false), (vec![], false), (vec![key], true)] {
+            let result = compute(
+                &args(DecisionRecord::Review, &fired, restricted),
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(
+                result.matched,
+                [] as [DecisionRef; 0],
+                "{fired:?} {restricted}"
+            );
+            assert_eq!(result.retained, [] as [DecisionRef; 0]);
+            assert_eq!(result.expired.len(), 1);
+            assert_eq!(result.notices, expected);
+        }
+    }
+
+    /// An observation's decision has no count and no site: it matches however many times
+    /// its key fires, and an analysis key that reads like a violation's is not one.
+    #[test]
+    fn an_observation_decision_without_covers_is_unchanged() {
+        let key = "bug: a finding — `src/a.rs`";
+        let tmp = repo_with("review.md", &waived(key));
+        let result = compute(
+            &args(DecisionRecord::Review, &[key, key, key], false),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.matched.len(), 1);
+        assert_eq!(result.matched[0].covers, None);
+
+        let analysis_key = "rule X at somewhere — a message";
+        let tmp = repo_with("analysis.md", &waived(analysis_key));
+        let result = compute(
+            &args(DecisionRecord::Analysis, &[analysis_key], false),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.matched.len(), 1, "{result:?}");
+    }
+
+    /// A `covers` of zero covers nothing, so the entry is malformed under that field.
+    #[test]
+    fn a_covers_of_zero_is_malformed() {
+        let tmp = repo_with("review.md", &covering(SITE_KEY, Some(0)));
+        let result = compute(
+            &args(DecisionRecord::Review, &[SITE_KEY], false),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.matched, [] as [DecisionRef; 0]);
+        assert_eq!(
+            result.notices,
+            vec!["malformed decision at review.md decisions[0]: missing or invalid 'covers'"]
+        );
     }
 
     /// The run read the file and the finding is gone, so the decision is over.

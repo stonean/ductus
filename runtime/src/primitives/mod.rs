@@ -863,9 +863,10 @@ pub(crate) fn read_recorded_waivers<T: serde::de::DeserializeOwned>(
 
 /// A recorded waiver's `file`: one repo-relative path, or a list of them.
 ///
-/// Each path is its own `(rule, file)` anchor, so an entry listing N paths is
-/// N anchors sharing one `reason`, `waived-at` and `waived-by` (spec 020's
-/// `waiver-file-lists`). Both spellings read into the same list; the writer
+/// A departure waiver's paths, each its own `(rule, file)` anchor covering every site in
+/// the file, so an entry listing N paths is N anchors sharing one `reason`, `waived-at`
+/// and `waived-by` (spec 020's `waiver-file-lists`); on any other entry a path was recorded
+/// before sites and covers nothing. Both spellings read into the same list; the writer
 /// chooses the spelling from the count, never from how the entry was written.
 /// A value that is neither — a number, a mapping, a list holding a non-string —
 /// is a parse error, as a non-string known field is.
@@ -928,6 +929,65 @@ impl<'de> serde::Deserialize<'de> for WaiverPaths {
 
         deserializer.deserialize_any(PathsVisitor)
     }
+}
+
+/// One anchor of a recorded waiver: the `(file, site)` its rule fires at and the number
+/// of findings it covers (spec 020's `waiver-expiry`). Each field is optional, so an
+/// anchor missing one, or holding a `covers` that is not a positive integer, is a
+/// reportable malformed entry rather than a whole-list parse failure; an anchor that is not
+/// a mapping, or a `file` or `site` that is not a string, fails the parse as a known field
+/// of the wrong type does.
+#[derive(Clone, Debug, serde::Deserialize)]
+pub(crate) struct StoredAnchor {
+    #[serde(default)]
+    pub(crate) file: Option<String>,
+    #[serde(default)]
+    pub(crate) site: Option<String>,
+    #[serde(default)]
+    pub(crate) covers: Option<serde_norway::Value>,
+}
+
+impl StoredAnchor {
+    /// The anchor recorded for `file` and `site`, covering `covers` findings.
+    pub(crate) fn of(file: &str, site: &str, covers: u32) -> Self {
+        Self {
+            file: Some(file.to_string()),
+            site: Some(site.to_string()),
+            covers: Some(serde_norway::Value::Number(covers.into())),
+        }
+    }
+
+    /// The findings the anchor covers, when `covers` is a positive integer.
+    pub(crate) fn covers_count(&self) -> Option<u32> {
+        self.covers
+            .as_ref()
+            .and_then(serde_norway::Value::as_u64)
+            .filter(|covers| *covers > 0)
+            .and_then(|covers| u32::try_from(covers).ok())
+    }
+
+    /// The anchor's `(file, site, covers)`, when it is usable: a non-blank `file` and
+    /// `site` and a positive integer `covers`.
+    pub(crate) fn usable(&self) -> Option<(&str, &str, u32)> {
+        fn nonblank(value: Option<&str>) -> Option<&str> {
+            value.filter(|text| !text.trim().is_empty())
+        }
+        Some((
+            nonblank(self.file.as_deref())?,
+            nonblank(self.site.as_deref())?,
+            self.covers_count()?,
+        ))
+    }
+
+    /// Whether the anchor sits at `file` and `site`, each as written.
+    pub(crate) fn is_at(&self, file: &str, site: &str) -> bool {
+        self.file.as_deref() == Some(file) && self.site.as_deref() == Some(site)
+    }
+}
+
+/// Whether `anchors` names no usable anchor: an empty list, or any anchor that is not usable.
+pub(crate) fn anchors_unusable(anchors: &[StoredAnchor]) -> bool {
+    anchors.is_empty() || anchors.iter().any(|anchor| anchor.usable().is_none())
 }
 
 /// A list recorded under `key` in the frontmatter of `feature_dir/file`.

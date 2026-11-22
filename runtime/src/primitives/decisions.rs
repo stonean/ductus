@@ -60,6 +60,11 @@ pub(crate) struct RawDecision {
     pub(crate) work_item: Option<String>,
     #[serde(default)]
     pub(crate) reason: Option<String>,
+    /// On a deferred violation, the number of findings sharing its key: lowered by a
+    /// run that matches it to fewer, never raised, and the count `process-decisions`
+    /// guards (spec 020's `waiver-expiry`). Absent on an observation's decision.
+    #[serde(default)]
+    pub(crate) covers: Option<u32>,
     /// Derived on every write, never authored: `true` on a deferral of a
     /// gating finding that does not release it (spec 076), which
     /// `check-review-gate` reads to name what holds `done`.
@@ -100,6 +105,9 @@ impl RawDecision {
         };
         present(&self.decided_at).ok_or("decided-at")?;
         present(&self.decided_by).ok_or("decided-by")?;
+        if self.covers == Some(0) {
+            return Err("covers");
+        }
         let (target, task, work_item) = (
             present(&self.target),
             present(&self.task),
@@ -131,6 +139,7 @@ impl RawDecision {
         };
         Ok(DecisionRef {
             key,
+            covers: self.covers,
             outcome,
             target,
             task,
@@ -517,20 +526,33 @@ pub(crate) fn stored_as_a_break(stored: &[RawDecision], key: &str) -> bool {
 
 /// The file a stored review key names, in either shape `write-review` writes one: an
 /// observation's text, an em dash and its path in backticks, or a violation's
-/// `rule {id} at {file}`, without any `:line`. `None` for a key naming no file, as a
-/// hand-chosen one may.
+/// `` rule {id} at {file} in `{site}` ``, without any `:line`. The file of a violation's key
+/// ends at its first `` in ` ``, and a key recorded before sites, `rule {id} at {file}`, names
+/// the same file. `None` for a key naming no file, as a hand-chosen one may.
 pub(crate) fn key_anchor(key: &str) -> Option<&str> {
     let named = key
         .strip_suffix('`')
         .and_then(|rest| rest.rsplit_once(" — `"))
         .map(|(_, path)| path)
-        .or_else(|| {
-            key.strip_prefix("rule ")
-                .and_then(|rest| rest.split_once(" at "))
-                .map(|(_, file)| file)
-        })?;
+        .or_else(|| violation_key_file(key))?;
     let file = super::path_without_lines(named);
     (!file.is_empty()).then_some(file)
+}
+
+/// The file of a violation's key, `` rule {id} at {file} in `{site}` `` or, before sites,
+/// `rule {id} at {file}`: the text after the first `" at "` up to the first `` " in `" ``.
+fn violation_key_file(key: &str) -> Option<&str> {
+    let (_, rest) = key.strip_prefix("rule ")?.split_once(" at ")?;
+    Some(rest.split_once(" in `").map_or(rest, |(file, _)| file))
+}
+
+/// Whether `key` is a violation's key recorded before sites, `rule {id} at {file}`:
+/// it names no backticked site, so it covers nothing (spec 020's `waiver-expiry`, rule 7).
+/// A key holding a backtick is a key with a site, or an observation's.
+pub(crate) fn is_pre_site_violation_key(key: &str) -> bool {
+    key.strip_prefix("rule ")
+        .is_some_and(|rest| rest.contains(" at "))
+        && !key.contains('`')
 }
 
 /// The stored decision a run applies for `key`: the first well-formed entry
@@ -608,6 +630,7 @@ pub(crate) fn decision_for(disposition: &Disposition, key: &str) -> Option<Decis
     // runs [`require_companion`] first, which refuses one.
     Some(DecisionRef {
         key: flatten_line(key),
+        covers: None,
         outcome,
         target: flat(&disposition.target),
         task: flat(&disposition.task),
@@ -820,6 +843,7 @@ pub(crate) fn merge(
             task: decision.task.clone(),
             work_item: decision.work_item.clone(),
             reason: decision.reason.clone(),
+            covers: decision.covers,
             gating: None,
             contract_break: None,
             decided_at: Some(decided_at.to_string()),
@@ -870,6 +894,14 @@ pub(crate) fn render(block: &mut String, decisions: &[RawDecision]) {
                 ("work-item", decision.work_item.as_deref().into()),
                 ("reason", decision.reason.as_deref().into()),
                 (
+                    "covers",
+                    decision
+                        .covers
+                        .map_or(super::write_review::EntryValue::Absent, |covers| {
+                            super::write_review::EntryValue::Number(covers)
+                        }),
+                ),
+                (
                     "contract-break",
                     super::write_review::EntryValue::Flag(decision.contract_break == Some(true)),
                 ),
@@ -907,6 +939,62 @@ mod tests {
         assert_eq!(key_anchor("bug: x — `b.rs` — `src/a.rs`"), Some("src/a.rs"));
         assert_eq!(key_anchor("rule BE-X-001 at src/a.rs"), Some("src/a.rs"));
         assert_eq!(key_anchor("rule BE-X-001 at src/a.rs:4"), Some("src/a.rs"));
+    }
+
+    /// A violation's key is `` rule {id} at {file} in `{site}` ``, and it still names its file:
+    /// the file ends at the first `` in ` ``, and the closing backtick is not an
+    /// observation's path.
+    #[test]
+    fn a_violation_key_with_a_site_names_its_file() {
+        assert_eq!(
+            key_anchor("rule BE-X-001 at src/a.rs in `walk`"),
+            Some("src/a.rs")
+        );
+        assert_eq!(
+            key_anchor("rule BE-X-001 at src/a.rs:4 in `Type::method`"),
+            Some("src/a.rs")
+        );
+        assert_eq!(
+            key_anchor("rule BE-X-001 at src/a.rs in `(top level)`"),
+            Some("src/a.rs")
+        );
+        assert!(is_pre_site_violation_key("rule BE-X-001 at src/a.rs"));
+        assert!(!is_pre_site_violation_key(
+            "rule BE-X-001 at src/a.rs in `walk`"
+        ));
+        assert!(!is_pre_site_violation_key("bug: x — `src/a.rs`"));
+        assert!(!is_pre_site_violation_key(
+            "grounding — plan.md cites a path"
+        ));
+    }
+
+    /// `covers` is read, written back as a bare integer, and a fresh decision carries the
+    /// number its violation was decided with.
+    #[test]
+    fn covers_round_trips_through_the_record_as_an_integer() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut decision = decided(
+            "rule BE-X-001 at src/a.rs in `walk`",
+            DecisionOutcome::Waived,
+            "because",
+        );
+        decision.covers = Some(2);
+        let merged = merge(
+            Vec::new(),
+            &[],
+            &[decision],
+            "2026-09-25T00:00:00Z",
+            Some("dev"),
+        )
+        .unwrap();
+        assert_eq!(merged[0].covers, Some(2));
+        let mut block = String::new();
+        render(&mut block, &merged);
+        assert!(block.contains("    covers: 2\n"), "{block}");
+        write(dir.path(), "review.md", &block);
+        let read = read_decisions(dir.path(), "review.md").unwrap();
+        assert_eq!(read[0].covers, Some(2));
+        assert_eq!(read[0].to_ref().unwrap().covers, Some(2));
     }
 
     #[test]
@@ -956,6 +1044,7 @@ mod tests {
         assert_eq!(
             decision.to_ref(),
             Ok(DecisionRef {
+                covers: None,
                 key: "perf: a() is called in a loop — `src/a.rs`".into(),
                 outcome: DecisionOutcome::Deferred,
                 target: Some("specs/031-x/scenarios/loop.md".into()),
@@ -1001,6 +1090,7 @@ mod tests {
 
     fn stored(key: &str, outcome: &str, companion: &str) -> RawDecision {
         RawDecision {
+            covers: None,
             key: Some(key.into()),
             outcome: Some(outcome.into()),
             target: (outcome == "deferred").then(|| companion.to_string()),
@@ -1017,6 +1107,7 @@ mod tests {
 
     fn decided(key: &str, outcome: DecisionOutcome, companion: &str) -> DecisionRef {
         DecisionRef {
+            covers: None,
             key: key.into(),
             outcome,
             target: (outcome == DecisionOutcome::Deferred).then(|| companion.to_string()),

@@ -40,8 +40,8 @@ MUTATIONS = [
     (
         'M4 only a MUST departure derives a waiver',
         'src/primitives/write_review.rs',
-        '.filter(|finding| waiver_reason(finding, &args.applied_waivers).is_none())\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
-        '.filter(|finding| finding.severity.is_blocking() && waiver_reason(finding, &args.applied_waivers).is_none())\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
+        '.filter(|finding| {\n                waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
+        '.filter(|finding| {\n                finding.severity.is_blocking()\n                    && waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
         'departure_waivers::a_should_departure',
     ),
     (
@@ -75,15 +75,15 @@ MUTATIONS = [
     (
         'M9 a derived waiver anchors no finding, so none is counted waived',
         'src/primitives/write_review.rs',
-        '        anchors.extend(\n            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    reason: entry.reason.clone(),\n                }),\n        );\n        let fresh',
+        '        anchors.extend(\n            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),\n                }),\n        );\n        let fresh',
         '        let fresh',
         'departure_waivers::a_must_departure',
     ),
     (
         'M10 a stored departure waiver is not anchored again on the run that finds it held',
         'src/primitives/write_review.rs',
-        'firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    reason: entry.reason.clone(),',
-        'firing\n                .iter()\n                .filter(|file| !holds(surviving, &entry.rule, file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    reason: entry.reason.clone(),',
+        'firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),',
+        'firing\n                .iter()\n                .filter(|file| !holds(surviving, &entry.rule, file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),',
         'departure_waivers::a_run_writing',
     ),
     (

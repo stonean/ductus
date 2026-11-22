@@ -1734,6 +1734,7 @@ mod tests {
 
         let mut next = a.clone();
         next.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "grounding — cites a gone path".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/042-demo/spec.md".into()),
@@ -2405,6 +2406,7 @@ mod tests {
         // expired, and the next write drops it.
         let mut next = args();
         next.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "applicable-rules — BE-AUTHN-001 does not fire".into(),
             outcome: DecisionOutcome::Waived,
             target: None,
@@ -3376,6 +3378,7 @@ mod tests {
 
         // Unless this run expired it: then the rule decides afresh.
         next.expired_decisions = vec![DecisionRef {
+            covers: None,
             key: "grounding — cites a gone path".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/042-demo/spec.md".into()),

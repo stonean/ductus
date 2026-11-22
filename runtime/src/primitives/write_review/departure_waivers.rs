@@ -106,7 +106,7 @@ fn seed(dir: &Path) -> String {
 }
 
 fn finding(rule: &str, severity: &str, file: &str) -> Value {
-    json!({"rule": rule, "severity": severity, "file": file, "confidence": "high",
+    json!({"rule": rule, "severity": severity, "file": file, "site": "walk", "confidence": "high",
            "summary": "s", "finding": "f", "rule-text": "t"})
 }
 
@@ -121,6 +121,11 @@ fn run_review(
     let fired = findings
         .iter()
         .map(|finding| FiredFinding {
+            site: finding["site"].as_str().map(str::to_string),
+            line_range: finding["line-range"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
             rule: finding["rule"].as_str().unwrap().to_string(),
             file: finding["file"].as_str().unwrap().to_string(),
         })
@@ -168,7 +173,15 @@ fn waivers(dir: &Path) -> Vec<Value> {
         .unwrap_or_default()
 }
 
+/// The files an entry covers: its anchors' for a hand waiver, its `file` for a departure
+/// waiver's.
 fn files_of(waiver: &Value) -> Vec<String> {
+    if let Some(anchors) = waiver.get("anchors").and_then(Value::as_array) {
+        return anchors
+            .iter()
+            .map(|anchor| anchor["file"].as_str().unwrap().to_string())
+            .collect();
+    }
     match &waiver["file"] {
         Value::String(file) => vec![file.clone()],
         other => other
@@ -207,6 +220,43 @@ fn a_must_departure_waives_the_rule_at_both_files_and_writes_each_anchor() {
     );
     assert_eq!(stored[0]["waived-by"], "decider@example.com");
     assert_eq!(stored[0]["waived-at"], "2023-11-14T22:13:20Z");
+}
+
+/// A departure waiver covers every finding of its rule in each file, at any site and
+/// whatever their number, and a site added later: the entry is the spec's decision, so it
+/// carries neither a site nor a count (spec 020's `waiver-expiry`, rule 5).
+#[test]
+fn a_departure_waiver_covers_every_site_in_its_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), MUST_ENTRY);
+    let at = |site: &str, range: &str| {
+        let mut found = finding(MUST_RULE, "must", "src/a.rs");
+        found["site"] = json!(site);
+        found["line-range"] = json!(range);
+        found
+    };
+    let mut findings = vec![at("alpha", "1-2"), at("beta", "10-12"), at("alpha", "30")];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (3, 0),
+        "{written:?}"
+    );
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(files_of(&stored[0]), ["src/a.rs"]);
+    assert!(stored[0].get("anchors").is_none(), "{stored:?}");
+
+    findings.push(at("gamma", "50"));
+    let (classified, written) = run_review(tmp.path(), &findings, T2, &json!({}));
+    assert_eq!(classified.applied.len(), 1, "{classified:?}");
+    assert!(classified.applied[0].site.is_none(), "{classified:?}");
+    assert!(classified.expired.is_empty(), "{classified:?}");
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (4, 0),
+        "{written:?}"
+    );
 }
 
 #[test]
@@ -535,7 +585,7 @@ fn a_new_deferral_of_a_violation_an_entry_decides_is_refused_naming_the_entry() 
 fn a_stored_deferral_of_a_violation_an_entry_decides_is_superseded_not_stored_again() {
     let tmp = tempfile::tempdir().unwrap();
     let repository = fixture(tmp.path(), "");
-    let key = format!("rule {MUST_RULE} at src/a.rs");
+    let key = format!("rule {MUST_RULE} at src/a.rs in `walk`");
     // The deferral is stored while the spec holds no entry.
     let (_, written) = run_review(
         tmp.path(),
@@ -580,7 +630,7 @@ fn a_stored_deferral_of_a_violation_an_entry_decides_is_superseded_not_stored_ag
 fn the_departure_lists_past_the_read_size_name_a_file_holding_both_whole() {
     let tmp = tempfile::tempdir().unwrap();
     let repository = fixture(tmp.path(), "");
-    let key = format!("rule {MUST_RULE} at src/a.rs");
+    let key = format!("rule {MUST_RULE} at src/a.rs in `walk`");
     run_review(
         tmp.path(),
         &[deferred(MUST_RULE, "src/a.rs", None)],
@@ -704,7 +754,7 @@ fn a_marked_waiver_with_an_entry_is_classified_as_any_other() {
     // And an unmarked waiver whose rule has no entry is untouched by the marker's test.
     fs::write(
         tmp.path().join(format!("specs/{FEATURE}/review.md")),
-        "---\nspec: 001-widget\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: OTHER-1\n    file: src/b.rs\n    reason: kept\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n---\n\n# Review\n",
+        "---\nspec: 001-widget\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: OTHER-1\n    anchors:\n      - file: src/b.rs\n        site: walk\n        covers: 1\n    reason: kept\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n---\n\n# Review\n",
     )
     .unwrap();
     let (classified, _) = run_review(
@@ -760,12 +810,19 @@ fn a_run_writing_its_record_twice_counts_the_stored_departure_waived_both_times(
     assert_eq!(waivers(tmp.path()).len(), 1);
 }
 
-/// A record seeded with one waiver, whose `extra` lines (indented four spaces) follow it.
+/// A record seeded with one waiver, whose `extra` lines (indented four spaces) follow it: a
+/// hand waiver anchored at `walk` of `src/a.rs`, or, when `extra` marks it a departure
+/// waiver, one listing the file.
 fn seed_waiver(dir: &Path, extra: &str) {
+    let anchored = if extra.contains("departure") {
+        "file: src/a.rs"
+    } else {
+        "anchors:\n      - file: src/a.rs\n        site: walk\n        covers: 1"
+    };
     fs::write(
         dir.join(format!("specs/{FEATURE}/review.md")),
         format!(
-            "---\nspec: 001-widget\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: {MUST_RULE}\n    file: src/a.rs\n    reason: kept\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n{extra}---\n\n# Review\n"
+            "---\nspec: 001-widget\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  - rule: {MUST_RULE}\n    {anchored}\n    reason: kept\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n{extra}---\n\n# Review\n"
         ),
     )
     .unwrap();
@@ -776,6 +833,8 @@ fn classify(dir: &Path) -> crate::primitives::Result<Classified> {
         &ProcessWaiversArgs {
             feature: FEATURE.to_string(),
             fired: vec![FiredFinding {
+                site: Some("walk".to_string()),
+                line_range: String::new(),
                 rule: MUST_RULE.to_string(),
                 file: "src/a.rs".to_string(),
             }],

@@ -394,9 +394,14 @@ pub enum DecisionOutcome {
 #[serde(rename_all = "kebab-case")]
 pub struct DecisionRef {
     /// The finding key: `{family} — {message}` for analyze; for review, the
-    /// observation's rendered line, or `rule {rule-id} at {file}` for a MUST
-    /// or SHOULD violation.
+    /// observation's rendered line, or `` rule {rule-id} at {file} in `{site}` ``
+    /// for a MUST or SHOULD violation.
     pub key: String,
+    /// The number of findings sharing a violation's key when it was decided,
+    /// lowered by a run that matches it to fewer and never raised; absent on an
+    /// observation's and an analyze finding's decision.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub covers: Option<u32>,
     /// What was decided.
     pub outcome: DecisionOutcome,
     /// The pipeline work a deferral names, when `outcome` is `deferred`.
@@ -910,7 +915,7 @@ pub struct ReusableVerdict {
 
 // -- process-waivers ---------------------------------------------------------
 
-/// A currently-firing `(rule, file)` finding — input to `process-waivers`.
+/// A currently-firing finding — input to `process-waivers`, one per finding.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct FiredFinding {
@@ -918,10 +923,21 @@ pub struct FiredFinding {
     pub rule: String,
     /// Repo-relative file path where it fires.
     pub file: String,
+    /// The narrowest named unit enclosing the finding, or `(top level)`; blank or
+    /// absent when the pass named none. A site-less finding still counts but no
+    /// stored waiver covers it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
+    /// The finding's line range, as on a review finding: findings of one rule and
+    /// file whose ranges overlap are counted once. Empty means the whole file.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub line_range: String,
 }
 
-/// One `(rule, file)` anchor of a recorded waiver, in a `process-waivers`
-/// result. A waiver whose `file` lists several paths resolves to one per path.
+/// One anchor of a recorded waiver, in a `process-waivers` result: a
+/// `(rule, file, site)` triple, or `(rule, file)` with no site for a departure
+/// waiver's path and for an entry recorded before sites. A waiver listing several
+/// anchors or paths resolves to one per anchor.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct WaiverRef {
@@ -929,6 +945,10 @@ pub struct WaiverRef {
     pub rule: String,
     /// Anchored file path.
     pub file: String,
+    /// The anchored site; absent on a departure waiver's anchor, which covers every
+    /// site in its file, and on one recorded before sites.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
     /// Operator-supplied justification.
     pub reason: String,
 }
@@ -983,8 +1003,10 @@ pub struct ProcessWaiversArgs {
     /// Feature directory name whose `review.md` carries the recorded `waivers`.
     #[arg(long)]
     pub feature: String,
-    /// Currently-firing `(rule, file)` findings from the review passes.
-    /// On the CLI, `--fired-json FILE`.
+    /// Currently-firing findings from the review passes, one per finding, each
+    /// with its `site` and `line-range`: a stored waiver covers the findings at
+    /// its `(rule, file, site)` anchor, counted after collapsing those of one
+    /// rule and file whose line ranges overlap. On the CLI, `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<FiredFinding>,
@@ -1032,15 +1054,18 @@ pub struct ProcessWaiversResult {
     /// Entries in `notices`, in either form.
     #[serde(default)]
     pub notices_count: usize,
-    /// Anchors that apply this run (the file exists and the rule still fires
-    /// there). One per `(rule, file)` pair, so a waiver listing several paths
-    /// contributes one per path. Absent in the file form.
+    /// Anchors that apply this run (the file exists and one to `covers`
+    /// findings fire at the site). One per `(rule, file, site)` anchor, so a
+    /// waiver listing several anchors contributes one per anchor. Absent in the
+    /// file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applied: Option<Vec<WaiverRef>>,
-    /// Anchors that expired this run (the file is gone or the rule no longer
-    /// fires there); `write-review` drops each one's path on the next write,
-    /// and a waiver with its last path. Always empty on a dimension-restricted
-    /// run (see `skipped-passes`). Absent in the file form.
+    /// Anchors that expired this run (the file is gone, the rule no longer
+    /// fires at the site, more findings fire there than the anchor covers, or
+    /// the entry was recorded before sites); `write-review` drops each one on
+    /// the next write, and a waiver with its last anchor. On a
+    /// dimension-restricted run (see `skipped-passes`) only the last two
+    /// expire. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expired: Option<Vec<WaiverRef>>,
     /// Anchors left untouched this run because it was dimension-restricted and
@@ -1088,9 +1113,10 @@ pub struct ProcessDecisionsArgs {
     pub record: DecisionRecord,
     /// This run's finding keys — for each finding, the stored key the host
     /// matched it to, or else its own key: `{family} — {message}` for analyze;
-    /// for review, the observation's rendered line, or `rule {rule-id} at
-    /// {file}` for a MUST or SHOULD violation. On the CLI,
-    /// `--fired-json FILE`.
+    /// for review, the observation's rendered line, or `` rule {rule-id} at
+    /// {file} in `{site}` `` for a MUST or SHOULD violation, once for each
+    /// finding sharing it: a stored decision with `covers` matches while no
+    /// more findings than it covers fire. On the CLI, `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<String>,
@@ -1673,6 +1699,13 @@ pub struct ReviewFinding {
     pub severity: ReviewSeverity,
     /// Repo-relative file path the finding anchors to.
     pub file: String,
+    /// The narrowest named unit enclosing the finding that a pass can name again
+    /// on a later run — a function, a type, a key path, a heading — or
+    /// `(top level)`; blank or absent when the pass names none. A waiver or
+    /// deferral anchors to `(rule, file, site)`, so a finding with no site counts
+    /// and `--waive` and `--defer` refuse it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
     /// Line range within the file (e.g., "42-55" or "42"); empty means the
     /// whole file (overlaps any range with the same rule + file for dedup).
     #[serde(default)]
@@ -1704,7 +1737,7 @@ pub struct ReviewFinding {
     #[serde(default)]
     pub disposition: Disposition,
     /// The stored decision the host matched this violation to; absent, its
-    /// key is `rule {rule-id} at {file}`.
+    /// key is `` rule {rule-id} at {file} in `{site}` ``.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decision_key: Option<String>,
 }
@@ -1813,9 +1846,10 @@ pub struct WriteReviewArgs {
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub applied_waivers_json: Option<String>,
-    /// Expired anchors from `process-waivers`; each one's path is dropped
-    /// from the `waivers` list in `review.md`'s frontmatter on this write, and
-    /// a waiver left with no path with it. The `alias` reads
+    /// Expired anchors from `process-waivers`; each one is dropped from the
+    /// `waivers` list in `review.md`'s frontmatter on this write (a site
+    /// anchor by its `(rule, file, site)`, a departure waiver's or pre-site
+    /// path by its `(rule, file)`), and a waiver left with none with it. The `alias` reads
     /// `process-waivers`' `expired` result key (see `applied_waivers`).
     #[serde(default, alias = "expired")]
     #[arg(skip)]
@@ -1828,9 +1862,11 @@ pub struct WriteReviewArgs {
     #[arg(long, value_name = "PATH")]
     pub expired_waivers_json: Option<String>,
     /// Each `--waive` this run takes. One `waivers:` entry is recorded per item,
-    /// listing every file its rule fires at in this run that no applied waiver
-    /// holds, stamped from `reviewed-at` and `decided-by`, and those findings leave
-    /// the counts as an applied waiver's do (spec 079).
+    /// with one anchor per `(file, site)` its rule fires at in this run that no
+    /// applied waiver holds, each covering the number of findings there, stamped
+    /// from `reviewed-at` and `decided-by`, and those findings leave the counts as
+    /// an applied waiver's do (spec 079). Refused when the rule fires at a
+    /// finding that names no site.
     #[serde(default)]
     #[arg(skip)]
     pub new_waivers: Vec<NewWaiver>,
@@ -10790,6 +10826,7 @@ mod tests {
     fn process_decisions_result_round_trips_in_both_forms() {
         use super::{DecisionOutcome, DecisionRef, ListsForm, ProcessDecisionsResult};
         let decision = DecisionRef {
+            covers: None,
             key: "grounding — m".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),
@@ -10913,6 +10950,7 @@ mod tests {
         assert_eq!(round_trip(&counts), counts);
 
         let decision = DecisionRef {
+            covers: None,
             key: "grounding — m".into(),
             outcome: DecisionOutcome::Deferred,
             target: Some("specs/001-x/tasks.md".into()),

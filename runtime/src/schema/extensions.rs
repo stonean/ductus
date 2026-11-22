@@ -1507,6 +1507,7 @@ mod tests {
 
         let response = PerformReviewResponse {
             findings: vec![ReviewFinding {
+                site: None,
                 rule: "SEC-BE-014".into(),
                 severity: crate::schema::severity::ReviewSeverity::Must,
                 file: "runtime/src/main.rs".into(),

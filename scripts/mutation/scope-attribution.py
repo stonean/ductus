@@ -1247,15 +1247,15 @@ MUTATIONS = [
     (
         "M184 a waiver's scope ignores the run's since",
         'src/primitives/process_waivers.rs',
-        'RunScope::resolve(&args.feature, args.since.as_deref(), repo)',
-        'RunScope::resolve(&args.feature, None, repo)',
+        'RunScope::resolve(&self.args.feature, self.args.since.as_deref(), self.repo)',
+        'RunScope::resolve(&self.args.feature, None, self.repo)',
         'process_waivers::tests::the_runs_since_decides_what_it_read',
     ),
     (
         'M185 a waiver on an unread file expires',
         'src/primitives/process_waivers.rs',
-        '.why_unread(file, repo)\n',
-        '.why_unread(file, repo)\n                .filter(|_| false)\n',
+        '.why_unread(&anchor.file, self.repo)\n',
+        '.why_unread(&anchor.file, self.repo)\n            .filter(|_| false)\n',
         'process_waivers::tests::a_waiver_on_a_file_the_run_did_not_read_is_retained',
     ),
     (
@@ -1268,8 +1268,8 @@ MUTATIONS = [
     (
         "M187 a violation's key names no file",
         'src/primitives/decisions.rs',
-        'key.strip_prefix("rule ")',
-        'key.strip_prefix("no rule ")',
+        'let (_, rest) = key.strip_prefix("rule ")',
+        'let (_, rest) = key.strip_prefix("no rule ")',
         'decisions::tests::a_key_names_its_file_in_either_shape_without_a_line',
     ),
     (
@@ -1555,15 +1555,15 @@ MUTATIONS = [
     (
         "M230 a run's last write stores its new waiver again",
         'src/primitives/write_review.rs',
-        '            .filter(|file| !held(file))\n',
+        '            .filter(|((file, site), _)| !holds_anchor(surviving, &waiver.rule, file, site))\n',
         '            .filter(|_| true)\n',
         'write_review::tests::a_new_waiver_through_both_writes_is_stored_once',
     ),
     (
         'M231 a waiver held already leaves its finding counted',
         'src/primitives/write_review.rs',
-        '        anchors.extend(\n            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
-        '        anchors.extend(\n            firing\n                .iter()\n                .filter(|file| !held(file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
+        '        anchors.extend(\n            sites\n                .keys()\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
+        '        anchors.extend(\n            sites\n                .keys()\n                .filter(|(file, site)| !holds_anchor(surviving, &waiver.rule, file, site))\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {\n                    rule: waiver.rule.clone(),',
         'write_review::tests::a_new_waiver_through_both_writes_is_stored_once',
     ),
     (
@@ -1716,8 +1716,8 @@ MUTATIONS = [
     (
         'M255 a stored decision leaves a break open with no file',
         'src/primitives/write_review.rs',
-        '    let args = settled.as_ref();\n    an_open_break_names_its_file(args)?;\n',
-        '    let args = settled.as_ref();\n',
+        '    let args = settled.as_ref();\n    refuse_deferring_a_finding_with_no_site(args)?;\n    an_open_break_names_its_file(args)?;\n',
+        '    let args = settled.as_ref();\n    refuse_deferring_a_finding_with_no_site(args)?;\n',
         'write_review::tests::a_stored_break_left_open_with_no_file_refuses',
     ),
     (

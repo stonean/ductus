@@ -1267,7 +1267,8 @@ async fn process_waivers_applies_via_mcp() {
     fs::write(
         dir.join("review.md"),
         "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  \
-         - rule: SEC-BE-014\n    file: src/x.ts\n    reason: internal-only endpoint behind mTLS\n    \
+         - rule: SEC-BE-014\n    anchors:\n      - file: src/x.ts\n        site: handler\n        covers: 1\n    \
+         reason: internal-only endpoint behind mTLS\n    \
          waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n---\n\n# Review — 001-x\n",
     )
     .unwrap();
@@ -1280,7 +1281,7 @@ async fn process_waivers_applies_via_mcp() {
         "process-waivers",
         json!({
             "feature": "001-x",
-            "fired": [{"rule": "SEC-BE-014", "file": "src/x.ts"}],
+            "fired": [{"rule": "SEC-BE-014", "file": "src/x.ts", "site": "handler", "line-range": "3-9"}],
         }),
     )
     .await;
@@ -1309,7 +1310,8 @@ async fn process_waivers_past_the_read_size_reaches_the_host_through_its_list_fi
     fs::write(
         dir.join("review.md"),
         "---\nspec: 001-x\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n  \
-         - rule: SEC-BE-014\n    file: src/x.ts\n    reason: internal-only endpoint behind mTLS\n    \
+         - rule: SEC-BE-014\n    anchors:\n      - file: src/x.ts\n        site: handler\n        covers: 1\n    \
+         reason: internal-only endpoint behind mTLS\n    \
          waived-at: 2026-01-01T00:00:00Z\n    waived-by: dev@example.com\n---\n\n# Review — 001-x\n",
     )
     .unwrap();
@@ -1328,7 +1330,7 @@ async fn process_waivers_past_the_read_size_reaches_the_host_through_its_list_fi
         "process-waivers",
         json!({
             "feature": "001-x",
-            "fired": [{"rule": "SEC-BE-014", "file": "src/x.ts"}],
+            "fired": [{"rule": "SEC-BE-014", "file": "src/x.ts", "site": "handler", "line-range": "3-9"}],
         }),
     )
     .await;

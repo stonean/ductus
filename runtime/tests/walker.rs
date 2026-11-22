@@ -535,7 +535,7 @@ fn process_waivers_binds_fired_from_accumulated_pass_findings() {
     std::fs::write(
         spec_dir.join("review.md"),
         "---\nspec: 001-x\nlast-run: 2026-07-07T00:00:00Z\nblocking: false\nwaivers:\n  \
-         - rule: SEC-BE-001\n    file: src/a.rs\n    \
+         - rule: SEC-BE-001\n    anchors:\n      - file: src/a.rs\n        site: a\n        covers: 1\n    \
          reason: \"Internal-only path behind mTLS; rule targets public endpoints\"\n    \
          waived-at: 2026-07-07T00:00:00Z\n    waived-by: test@example.com\n---\n\n# Review — 001-x\n",
     )
@@ -580,7 +580,7 @@ fn process_waivers_binds_fired_from_accumulated_pass_findings() {
     context.insert("reviewed-against".into(), Value::String("headsha0".into()));
     context.insert("diff-base".into(), Value::String(String::new()));
 
-    let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"line-range\":\"1\",\"confidence\":\"high\"}]}}\n";
+    let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"site\":\"a\",\"line-range\":\"1\",\"confidence\":\"high\"}]}}\n";
     let mut reader = Cursor::new(responses.to_string());
     let mut writer: Vec<u8> = Vec::new();
     let mut walker = Walker::new(
@@ -636,7 +636,7 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
     std::fs::write(
         spec_dir.join("review.md"),
         "---\nspec: 001-x\nlast-run: 2026-07-07T00:00:00Z\nblocking: false\nwaivers:\n  \
-         - rule: SEC-BE-001\n    file: src/a.rs\n    \
+         - rule: SEC-BE-001\n    anchors:\n      - file: src/a.rs\n        site: a\n        covers: 1\n    \
          reason: \"Internal-only path behind mTLS; rule targets public endpoints\"\n    \
          waived-at: 2026-07-07T00:00:00Z\n    waived-by: test@example.com\n---\n\n# Review — 001-x\n",
     )
@@ -674,12 +674,12 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
     // it; seeded here so process-waivers can classify the waiver as applied.
     context.insert(
         "fired".into(),
-        serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs" }]),
+        serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs", "site": "a", "line-range": "1" }]),
     );
     context.insert(
         "findings".into(),
         serde_json::json!([{
-            "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs",
+            "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs", "site": "a",
             "line-range": "1", "confidence": "high"
         }]),
     );
@@ -732,7 +732,7 @@ fn file_form_process_waivers_reaches_write_review_whole() {
     // One waiver that still applies, and one anchored at a file that is gone.
     let entry = |file: &str, reason: &str| {
         format!(
-            "  - rule: SEC-BE-001\n    file: {file}\n    reason: \"{reason}\"\n    \
+            "  - rule: SEC-BE-001\n    anchors:\n      - file: {file}\n        site: a\n        covers: 1\n    reason: \"{reason}\"\n    \
              waived-at: 2026-07-07T00:00:00Z\n    waived-by: test@example.com\n"
         )
     };
@@ -778,12 +778,12 @@ fn file_form_process_waivers_reaches_write_review_whole() {
     context.insert("diff-base".into(), Value::String(String::new()));
     context.insert(
         "fired".into(),
-        serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs" }]),
+        serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs", "site": "a", "line-range": "1" }]),
     );
     context.insert(
         "findings".into(),
         serde_json::json!([{
-            "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs",
+            "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs", "site": "a",
             "line-range": "1", "confidence": "high"
         }]),
     );

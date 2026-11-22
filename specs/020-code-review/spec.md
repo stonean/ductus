@@ -260,7 +260,8 @@ it was the copy every gate actually read (057's `data-model.md`, the
 > will not be fixed, with its reason, and names no future work, so a waiver
 > carries no ticket. `/ductus:review --defer <rule-id>` defers it to its work —
 > `--target` (with `--task`), `--work-item`, or both — stored under
-> `decisions:` keyed `rule {rule-id} at {file}`. A violation its deferral releases
+> `decisions:` keyed `rule {rule-id} at {file}`, by site since AC19
+> (`` rule {rule-id} at {file} in `{site}` ``). A violation its deferral releases
 > leaves the counts and renders under **Deferred findings**; any other stays
 > counted, carries `gating: true`, and still holds `done`. The `dispositions:` map counts
 > `deferred` and `waived` where it counted `routed` and `discarded`.
