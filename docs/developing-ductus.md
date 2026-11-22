@@ -75,6 +75,15 @@ A subagent reviewer finishes a part only when the part fits the reading it will 
 
 So size a part by bytes read, not by entry count. Name the contract each part reads instead of the whole spec, plan and data model: the command's normative sources are the rule files, `AGENTS.md`'s sections, the acceptance criteria and the scenarios (`framework/reference/review.md` §Load rules). A reviewer that stops short with a named gap can be asked to finish it with `SendMessage`, keeping its context; the two asked to finish took 34K and 57K more tokens. A fix-round re-read's brief carries the spec, data model and scenarios whole, so keep each round's diff small enough to fit beside them. A re-read can write `"complete": true` over a path its brief names and it never opened, another session's uncommitted file among them: ask it which paths it read before taking the result (066's review, 2026-11-18).
 
+Since 020's AC17 a review loads only the rule files whose header names it. Here that is the three `security-*.md` files, `quality-cross.md` and `configuration-cross.md`, 232,805 bytes (`discover-rule-files`, 2026-11-21), so a part now carries less rule text than the measurement above. On 2026-11-21 one passes part over two or nine small windows, and one criteria part per spec or group of related specs, each finished at 120K to 400K tokens.
+
+A criterion saying a rule file's claims match the current text of the documents its Sources cite is judged only by fetching each document, never from recall (constitution §rules). 068's, 069's and 070's took 42, 62 and 54 fetches (2026-11-21). Brief that part to fetch, since a criteria part judged two such criteria from recall before it was told to.
+
+In one shared tree:
+
+- Write and commit each spec's review record before the next spec's first `write-review`. An uncommitted `review.md` is in every later spec's scope: 034's first write on 2026-11-21 counted 024's record in its scope.
+- Take `start-fix-rounds`' base before the run's first fix, as step 10 says. A fix made first is inside the base, so no round re-reads it.
+
 ## Sizing an analysis's judges
 
 `/{project}:analyze`'s rule judges read the design subjects whole beside their rule part, so size a cell by bytes read too. Measured on 022's analysis of 2026-11-17: 310 rules in 368 KB of rule text, a spec, plan and data model of 208 KB, and 78 scenarios of 397 KB. Nine cells, three rule parts by three scenario groups balanced by bytes, each about 450 to 480 KB, all finished with whole reads, at 264K to 306K tokens.
