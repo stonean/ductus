@@ -630,8 +630,9 @@ Each site the rule fires at in this run gets one decision in `review.md`'s
 `target`, `task` and `work-item` as given and `covers`, the number of findings
 there. A new deferral's target, and its task in that `tasks.md`, must exist, and
 a finding that names no site cannot be deferred. A deferral covers only the
-findings at its key, up to its `covers`, lowered as a waiver's is: more findings
-there, or a key with no backticked site, recorded before sites, expires it with
+findings at its key, up to its `covers`, counted and lowered as a waiver's are,
+from the violations step 9 passes as `fired-violations`: more findings there, or
+a key with no backticked site, recorded before sites, expires it with
 a notice, and those findings need a new disposition (spec 020's scenario
 `waiver-expiry`).
 

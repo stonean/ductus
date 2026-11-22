@@ -1064,12 +1064,15 @@ fn merged_decisions(
     repo: &Path,
     deduped: &[ReviewFinding],
 ) -> Result<Vec<RawDecision>> {
+    // A deferral covers the findings at its key as `process-decisions` counts them on the
+    // next run, per site, while the dedup decides which findings are reported and stored.
+    let counted = collapse_at_sites(&args.findings);
     let mut merged = decisions::merge(
         stored_decisions(feature_dir, args, repo)?,
         &args.expired_decisions,
         &[
             decided_observations(&args.observations),
-            decided_violations(deduped),
+            decided_violations(deduped, &counted),
         ]
         .concat(),
         &args.reviewed_at,
@@ -1085,7 +1088,7 @@ fn merged_decisions(
     // A deferral a run matches to fewer findings covers that many, never more.
     for entry in &mut merged {
         if let (Some(covers), Some(key)) = (entry.covers, entry.key.as_deref()) {
-            let count = findings_at_key(deduped, key);
+            let count = findings_at_key(&counted, key);
             if count > 0 && count < covers {
                 entry.covers = Some(count);
             }
@@ -1295,6 +1298,19 @@ impl Placed for ReviewFinding {
     }
 }
 
+impl Placed for crate::schema::primitives::FiredViolation {
+    fn place(&self) -> (&str, &str, Option<&str>) {
+        (
+            &self.rule,
+            &self.file,
+            decisions::nonblank(self.site.as_deref()).map(str::trim),
+        )
+    }
+    fn range(&self) -> &str {
+        &self.line_range
+    }
+}
+
 impl Placed for crate::schema::primitives::FiredFinding {
     fn place(&self) -> (&str, &str, Option<&str>) {
         (
@@ -1309,8 +1325,8 @@ impl Placed for crate::schema::primitives::FiredFinding {
 }
 
 /// The findings with each one overlapping an earlier one of its rule, file and site dropped:
-/// the findings at an anchor, as `process-waivers` counts them and `write-review` stores and
-/// lowers a waiver's `covers`. Two reports of one finding count once, and findings at
+/// the findings at an anchor, as `process-waivers` and `process-decisions` count them and
+/// `write-review` stores and lowers a waiver's or a deferral's `covers`. Two reports of one finding count once, and findings at
 /// different sites are counted apart, which the cross-pass dedup deciding the report does
 /// not do (spec 020 AC19).
 pub(crate) fn collapse_at_sites<T: Placed>(findings: &[T]) -> Vec<&T> {
@@ -1448,22 +1464,23 @@ fn sort_findings<'a>(
     Ok(sorted)
 }
 
-/// The decisions the deferred violations store, keyed by [`violation_key`], each covering
-/// the number of findings that share its key.
-fn decided_violations(findings: &[ReviewFinding]) -> Vec<DecisionRef> {
+/// The decisions the deferred violations among `findings` store, keyed by
+/// [`violation_key`], each covering the number of `counted` findings that share its key.
+fn decided_violations(findings: &[ReviewFinding], counted: &[&ReviewFinding]) -> Vec<DecisionRef> {
     findings
         .iter()
         .filter_map(|finding| {
             let key = violation_key(finding);
             let mut decision = decisions::decision_for(&finding.disposition, &key)?;
-            decision.covers = Some(findings_at_key(findings, &key));
+            decision.covers = Some(findings_at_key(counted, &key));
             Some(decision)
         })
         .collect()
 }
 
-/// How many of `findings` share `key` as their violation key.
-fn findings_at_key(findings: &[ReviewFinding], key: &str) -> u32 {
+/// How many of `findings`, counted as [`collapse_at_sites`] leaves them, share `key` as their
+/// violation key.
+fn findings_at_key(findings: &[&ReviewFinding], key: &str) -> u32 {
     let count = findings
         .iter()
         .filter(|finding| decisions::same_key(&violation_key(finding), key))
@@ -1477,16 +1494,11 @@ fn findings_at_key(findings: &[ReviewFinding], key: &str) -> u32 {
 /// `waiver-expiry`). A finding whose pass named no site has the key without one, which
 /// matches no stored decision and which `write-review` refuses to defer.
 fn violation_key(finding: &ReviewFinding) -> String {
-    decisions::nonblank(finding.decision_key.as_deref()).map_or_else(
-        || match finding_site(finding) {
-            Some(site) => format!(
-                "rule {} at {} in `{site}`",
-                finding.rule.trim(),
-                finding.file.trim()
-            ),
-            None => format!("rule {} at {}", finding.rule.trim(), finding.file.trim()),
-        },
-        str::to_string,
+    decisions::violation_key(
+        &finding.rule,
+        &finding.file,
+        finding.site.as_deref(),
+        finding.decision_key.as_deref(),
     )
 }
 
@@ -5506,6 +5518,92 @@ mod tests {
         args.findings = two(Some(SITE_KEY));
         run(&args, tmp.path()).unwrap();
         assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(1), "never raised");
+    }
+
+    /// A deferral's `covers`, recorded and lowered, is the count `process-decisions` reads on
+    /// the next review from the same findings passed as `fired-violations`: two overlapping
+    /// reports at one site once, findings at different sites apart. Counted raw on one side
+    /// and over the dedup on the other, two reports of one finding stored 1 and fired 2, so
+    /// the deferral expired on every review (spec 020 task 23).
+    #[test]
+    fn a_deferral_counts_the_findings_at_its_key_as_the_next_run_does() {
+        use crate::schema::primitives::{DecisionRecord, FiredViolation, ProcessDecisionsArgs};
+        let next_run = |tmp: &TempDir, findings: &[ReviewFinding]| {
+            let fired_violations = findings
+                .iter()
+                .map(|f| FiredViolation {
+                    rule: f.rule.clone(),
+                    file: f.file.clone(),
+                    site: f.site.clone(),
+                    line_range: f.line_range.clone(),
+                    decision_key: None,
+                })
+                .collect();
+            crate::primitives::process_decisions::compute(
+                &ProcessDecisionsArgs {
+                    feature: "001-x".into(),
+                    record: DecisionRecord::Review,
+                    fired: Vec::new(),
+                    fired_violations,
+                    restricted: false,
+                    since: None,
+                    fired_json: None,
+                    fired_violations_json: None,
+                },
+                tmp.path(),
+            )
+            .unwrap()
+        };
+        let covers_of = |tmp: &TempDir, key: &str| {
+            stored_decisions_of(tmp)
+                .iter()
+                .find(|d| d.key.as_deref() == Some(key))
+                .and_then(|d| d.covers)
+        };
+        let alpha = "rule SEC-1 at src/a.rs in `alpha`";
+        // Two reports of one finding at `walk`.
+        let duplicated = vec![
+            deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "10-20")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "15-18")),
+        ];
+        // Two findings at `alpha`, the second overlapping one at `beta`, so the dedup drops it.
+        let across = vec![
+            deferred_at(must("SEC-1", "src/a.rs", Some("alpha"), "33-34")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("beta"), "20-30")),
+            deferred_at(must("SEC-1", "src/a.rs", Some("alpha"), "26-27")),
+        ];
+        for (findings, key, covers) in [(&duplicated, SITE_KEY, 1), (&across, alpha, 2)] {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            let mut args = base_args("001-x");
+            args.decided_by = Some("dev@example.com".into());
+            args.findings = findings.clone();
+            run(&args, tmp.path()).unwrap();
+            assert_eq!(covers_of(&tmp, key), Some(covers), "{key}");
+            let next = next_run(&tmp, findings);
+            assert!(next.expired.is_empty(), "{key}: {:?}", next.notices);
+            assert!(next.matched.iter().any(|d| d.key == key), "{key}");
+        }
+
+        // Lowered by a run that matches it, never below the count the next run reads.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = ["1-2", "5-6", "33-34", "26-27"]
+            .into_iter()
+            .map(|range| deferred_at(must("SEC-1", "src/a.rs", Some("alpha"), range)))
+            .collect();
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(covers_of(&tmp, alpha), Some(4));
+        args.findings = across.clone();
+        for finding in &mut args.findings {
+            if finding.site.as_deref() == Some("alpha") {
+                finding.decision_key = Some(alpha.into());
+            }
+        }
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(covers_of(&tmp, alpha), Some(2), "lowered to what fires");
+        let next = next_run(&tmp, &across);
+        assert!(next.expired.is_empty(), "{:?}", next.notices);
     }
 
     /// A deferral of a finding whose pass named no site is refused naming the finding; one

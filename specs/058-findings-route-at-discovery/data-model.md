@@ -212,6 +212,7 @@ findings sharing a summary apart. A spent section never matches.
 | `feature` | string | Feature directory under the spec root. |
 | `record` | `review` \| `analysis` | Which record's `decisions:` to read. |
 | `fired` | list of strings | This run's finding keys; on the CLI, `--fired-json FILE` from a staging directory, as `process-waivers`' `fired` is (022 task 24). |
+| `fired-violations` | list of `{rule, file, site, line-range, decision-key}` | The review record's MUST and SHOULD violations, one entry per finding: each keyed `` rule {rule-id} at {file} in `{site}` ``, or by its `decision-key`, and the findings at a key counted per site as `process-waivers` counts its `fired` (020's AC19, task 23). Refused on the analysis record; on the CLI, `--fired-violations-json FILE`. |
 | `restricted` | bool | The run did not evaluate every source: a review pass did not run, or an analysis could not read a target it meant to examine or could not resolve a registered shared constitution. |
 | `since` | string, optional | A review's `--since`. On the review record a decision whose key names a file still on disk that this window's scope does not hold is retained (079). |
 

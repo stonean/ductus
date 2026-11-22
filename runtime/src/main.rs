@@ -334,9 +334,14 @@ fn hydrate_process_waivers(args: &mut ProcessWaiversArgs) -> Result<(), String> 
     hydrate_field("fired-json", args.fired_json.as_ref(), &mut args.fired)
 }
 
-/// Fill `process-decisions`' structured argument from its `--*-json` path.
+/// Fill `process-decisions`' structured arguments from their `--*-json` paths.
 fn hydrate_process_decisions(args: &mut ProcessDecisionsArgs) -> Result<(), String> {
-    hydrate_field("fired-json", args.fired_json.as_ref(), &mut args.fired)
+    hydrate_field("fired-json", args.fired_json.as_ref(), &mut args.fired)?;
+    hydrate_field(
+        "fired-violations-json",
+        args.fired_violations_json.as_ref(),
+        &mut args.fired_violations,
+    )
 }
 
 /// Fill `write-review`'s structured arguments from their `--*-json` paths.
@@ -2084,6 +2089,30 @@ mod tests {
         let mut absent = WriteReviewArgs::default();
         super::hydrate_write_review(&mut absent).unwrap();
         assert_eq!(absent.fix_rounds, None);
+
+        // `process-decisions` fills `fired` and `fired-violations` each from its own flag.
+        let keys = dir.path().join("keys.json");
+        std::fs::write(&keys, r#"["grounding — m"]"#).unwrap();
+        let violations = dir.path().join("violations.json");
+        std::fs::write(
+            &violations,
+            r#"[{"rule":"SEC-BE-014","file":"a.rs","site":"walk","line-range":"1-2"}]"#,
+        )
+        .unwrap();
+        let mut decisions = ductus::schema::primitives::ProcessDecisionsArgs {
+            feature: "001-x".into(),
+            record: ductus::schema::primitives::DecisionRecord::Review,
+            fired: Vec::new(),
+            fired_violations: Vec::new(),
+            restricted: false,
+            since: None,
+            fired_json: Some(keys.to_string_lossy().into_owned()),
+            fired_violations_json: Some(violations.to_string_lossy().into_owned()),
+        };
+        super::hydrate_process_decisions(&mut decisions).unwrap();
+        assert_eq!(decisions.fired, vec!["grounding — m".to_string()]);
+        assert_eq!(decisions.fired_violations.len(), 1);
+        assert_eq!(decisions.fired_violations[0].site.as_deref(), Some("walk"));
     }
 
     /// `BE-INPUT-004`: the exec seed refuses a shared default that is a

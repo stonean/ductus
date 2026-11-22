@@ -47,6 +47,7 @@ use std::path::Path;
 
 use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::decisions::{self, Work, read_decisions};
+use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
 };
@@ -211,8 +212,8 @@ impl Retained {
     }
 }
 
-/// Classify the record's stored decisions against `args.fired`, every list
-/// whole.
+/// Classify the record's stored decisions against `args.fired` and, on the review record,
+/// the keys of `args.fired-violations`, every list whole.
 ///
 /// # Errors
 ///
@@ -224,7 +225,8 @@ impl Retained {
 /// when the record's frontmatter block never closes,
 /// [`PrimitiveError::Yaml`] when its frontmatter or `decisions:` list does
 /// not parse — never an empty result, which would re-ask every settled
-/// question — or [`PrimitiveError::Io`] on read failure. An absent record, or
+/// question — [`PrimitiveError::InvalidArgument`] when `fired-violations` is given for
+/// the analysis record, or [`PrimitiveError::Io`] on read failure. An absent record, or
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classified> {
@@ -237,15 +239,9 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
             feature: args.feature.clone(),
         });
     }
-    let file = match args.record {
-        DecisionRecord::Review => REVIEW_RECORD_FILE,
-        DecisionRecord::Analysis => ANALYSIS_RECORD_FILE,
-    };
+    let file = record_file(args)?;
     let stored = read_decisions(&feature_dir, file)?;
-    // The writers store every key through `flatten_line`, so a fired key is
-    // compared in the same form: a finding whose message carried a stray line
-    // break still matches the decision stored for it.
-    let fired: Vec<String> = args.fired.iter().map(|key| flatten_line(key)).collect();
+    let fired = fired_keys(args);
 
     let mut result = Classified::default();
     let mut seen: Vec<String> = Vec::new();
@@ -339,6 +335,46 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
     Ok(result)
 }
 
+/// The record `args.record` names, refusing `fired-violations` on the analysis record, whose
+/// findings no site keys.
+fn record_file(args: &ProcessDecisionsArgs) -> Result<&'static str> {
+    match args.record {
+        DecisionRecord::Review => Ok(REVIEW_RECORD_FILE),
+        DecisionRecord::Analysis if !args.fired_violations.is_empty() => {
+            Err(PrimitiveError::InvalidArgument {
+                primitive: "process-decisions".into(),
+                argument: "fired-violations".into(),
+                reason: "only a review's violations are keyed by site; an analysis passes its findings' keys as `fired`".into(),
+            })
+        }
+        DecisionRecord::Analysis => Ok(ANALYSIS_RECORD_FILE),
+    }
+}
+
+/// This run's fired keys, each flattened as the writers store keys, so a finding whose
+/// message carried a stray line break still matches the decision stored for it: `fired`
+/// once per entry, then a review's `fired-violations`, keyed and counted as `write-review`
+/// stores a deferral's `covers`, two overlapping reports at one site once and findings at
+/// different sites apart.
+fn fired_keys(args: &ProcessDecisionsArgs) -> Vec<String> {
+    let violations = collapse_at_sites(&args.fired_violations)
+        .into_iter()
+        .map(|violation| {
+            decisions::violation_key(
+                &violation.rule,
+                &violation.file,
+                violation.site.as_deref(),
+                violation.decision_key.as_deref(),
+            )
+        });
+    args.fired
+        .iter()
+        .cloned()
+        .chain(violations)
+        .map(|key| flatten_line(&key))
+        .collect()
+}
+
 /// Why `decision` expires whatever the run read, restricted or not, or `None` when it is
 /// classified by whether its key fired: a violation's key recorded before sites names no
 /// site, so it covers nothing (spec 020's `waiver-expiry`, rule 7), and one that covers
@@ -428,9 +464,11 @@ mod tests {
             feature: "001-x".into(),
             record,
             fired: fired.iter().map(|k| (*k).to_string()).collect(),
+            fired_violations: Vec::new(),
             restricted,
             since: None,
             fired_json: None,
+            fired_violations_json: None,
         }
     }
 
@@ -590,6 +628,27 @@ mod tests {
                 "decision expired: {key} — recorded before sites (deferred to work item `PROJ-1`)"
             )]
         );
+    }
+
+    /// `fired-violations` keys a review's violations by site, so the analysis record refuses
+    /// it, naming the argument, rather than counting keys its findings never carry.
+    #[test]
+    fn the_analysis_record_refuses_fired_violations() {
+        let tmp = repo_with("analysis.md", DEFERRED);
+        let mut analysis = args(DecisionRecord::Analysis, &[], false);
+        analysis.fired_violations = vec![crate::schema::primitives::FiredViolation {
+            rule: "BE-AUTHN-001".into(),
+            file: "src/a.rs".into(),
+            site: Some("walk".into()),
+            ..Default::default()
+        }];
+        let error = compute(&analysis, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "fired-violations"),
+            "{error}"
+        );
+        analysis.fired_violations.clear();
+        assert!(compute(&analysis, tmp.path()).is_ok());
     }
 
     /// An observation's decision has no count and no site: it matches however many times

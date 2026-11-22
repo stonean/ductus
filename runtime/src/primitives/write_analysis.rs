@@ -3005,9 +3005,11 @@ mod tests {
                 feature: "042-demo".into(),
                 record: crate::schema::primitives::DecisionRecord::Analysis,
                 fired: keys.iter().map(|k| (*k).to_string()).collect(),
+                fired_violations: Vec::new(),
                 restricted: false,
                 since: None,
                 fired_json: None,
+                fired_violations_json: None,
             },
             tmp.path(),
         )

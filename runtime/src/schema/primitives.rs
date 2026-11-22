@@ -934,6 +934,31 @@ pub struct FiredFinding {
     pub line_range: String,
 }
 
+/// One violation a review's passes produced, in `process-decisions`' `fired-violations`:
+/// keyed `` rule {rule-id} at {file} in `{site}` ``, or by its `decision-key` when it has
+/// one, as `write-review` keys a deferral, and counted as `process-waivers` counts its
+/// `fired` (spec 020 AC19).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct FiredViolation {
+    /// Rule ID that fires.
+    pub rule: String,
+    /// Repo-relative file path where it fires.
+    pub file: String,
+    /// The narrowest named unit enclosing the finding, or `(top level)`; blank or
+    /// absent when the pass named none, which keys it with no site.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
+    /// The finding's line range: findings of one rule, file and site whose ranges
+    /// overlap are counted once. Empty means the whole file.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub line_range: String,
+    /// The stored decision's key the host matched the finding to, which keys it in
+    /// place of its rule, file and site.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decision_key: Option<String>,
+}
+
 /// One anchor of a recorded waiver, in a `process-waivers` result: a
 /// `(rule, file, site)` triple, or `(rule, file)` with no site for a departure
 /// waiver's path and for an entry recorded before sites. A waiver listing several
@@ -1114,13 +1139,22 @@ pub struct ProcessDecisionsArgs {
     pub record: DecisionRecord,
     /// This run's finding keys — for each finding, the stored key the host
     /// matched it to, or else its own key: `{family} — {message}` for analyze;
-    /// for review, the observation's rendered line, or `` rule {rule-id} at
-    /// {file} in `{site}` `` for a MUST or SHOULD violation, once for each
-    /// finding sharing it: a stored decision with `covers` matches while no
-    /// more findings than it covers fire. On the CLI, `--fired-json FILE`.
+    /// for review, the observation's rendered line. A review's violations go in
+    /// `fired-violations`; a key given here counts once per entry. On the CLI,
+    /// `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<String>,
+    /// The review record's MUST and SHOULD violations, one entry per finding with
+    /// its `site` and `line-range`, as `process-waivers`' `fired`: each is keyed
+    /// `` rule {rule-id} at {file} in `{site}` ``, or by its `decision-key`, and
+    /// the findings at a key are counted after collapsing those of one rule, file
+    /// and site whose line ranges overlap, so a stored decision with `covers`
+    /// matches while no more findings than it covers fire there. Refused on the
+    /// analysis record. On the CLI, `--fired-violations-json FILE`.
+    #[serde(default)]
+    #[arg(skip)]
+    pub fired_violations: Vec<FiredViolation>,
     /// CLI-only: path to a JSON file, read from a staging directory, holding the
     /// `fired` argument as the MCP tool takes it (spec 022).
     // `#[serde(skip)]` keeps it out of the MCP schema, as
@@ -1128,6 +1162,11 @@ pub struct ProcessDecisionsArgs {
     #[serde(skip)]
     #[arg(long, value_name = "PATH")]
     pub fired_json: Option<String>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `fired-violations` argument as the MCP tool takes it.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub fired_violations_json: Option<String>,
     /// The run did not evaluate every source — a review with a pass that did
     /// not run, or an analysis that could not read a target it meant to
     /// examine (a skipped target in the *could not be read* class) or could
@@ -10969,9 +11008,11 @@ mod tests {
             feature: "001-x".into(),
             record: DecisionRecord::Analysis,
             fired: vec!["grounding — m".into()],
+            fired_violations: Vec::new(),
             restricted: true,
             since: None,
             fired_json: None,
+            fired_violations_json: None,
         };
         let v = serde_json::to_value(&args).unwrap();
         assert_eq!(v["record"], "analysis");

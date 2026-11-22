@@ -546,6 +546,25 @@ fn violation_key_file(key: &str) -> Option<&str> {
     Some(rest.split_once(" in `").map_or(rest, |(file, _)| file))
 }
 
+/// A violation's key: `decision_key` when it is not blank, else `` rule {rule} at {file} in
+/// `{site}` ``, or `rule {rule} at {file}` when it names no site, which matches no stored
+/// decision. `write-review` stores a deferral under it and `process-decisions` counts a
+/// review's `fired-violations` by it.
+pub(crate) fn violation_key(
+    rule: &str,
+    file: &str,
+    site: Option<&str>,
+    decision_key: Option<&str>,
+) -> String {
+    nonblank(decision_key).map_or_else(
+        || match nonblank(site).map(str::trim) {
+            Some(site) => format!("rule {} at {} in `{site}`", rule.trim(), file.trim()),
+            None => format!("rule {} at {}", rule.trim(), file.trim()),
+        },
+        str::to_string,
+    )
+}
+
 /// Whether `key` is a violation's key recorded before sites, `rule {id} at {file}`: its
 /// `{id}` is a rule ID, by the grammar `check-rule-ids` reads, and it names no backticked
 /// site, so it covers nothing (spec 020's `waiver-expiry`, rule 7). A key holding a

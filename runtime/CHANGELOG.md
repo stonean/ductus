@@ -17,7 +17,11 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   `covers` the findings there, two overlapping reports at one site counted once
   and findings at different sites apart, lowered by a run that applies the
   anchor to fewer and never raised; a violation's deferral is keyed
-  `` rule {rule-id} at {file} in `{site}` `` and carries `covers`. More findings at
+  `` rule {rule-id} at {file} in `{site}` `` and carries `covers`, counted the
+  same way, and `process-decisions` takes a review's violations as
+  `fired-violations` (`--fired-violations-json` on the CLI), one entry per
+  finding with its `site` and `line-range`, keyed and counted as the deferral
+  was stored, where step 9 fired one key per finding. More findings at
   a site than an anchor covers expire it, on a restricted run too, with
   `waiver expired: … — {n} findings fire where it covers {m}` or
   `decision expired: … — {n} findings fire where it covers {m}`. An entry
