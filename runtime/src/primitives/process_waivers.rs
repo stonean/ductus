@@ -30,8 +30,8 @@
 //! An anchor is a `(rule, file, site)` triple with the count of findings it covers
 //! (spec 020's `waiver-expiry`); line numbers are not part of it, so code moving within
 //! its site does not expire a waiver. The findings at an anchor are counted after
-//! collapsing those of one rule and file whose line ranges overlap, as `write-review`
-//! counts them. A waiver `write-review` derived from a spec's departure entry carries
+//! collapsing those of one rule, file and site whose line ranges overlap, never across
+//! sites. A waiver `write-review` derived from a spec's departure entry carries
 //! `departure: true`, keeps `file`, and covers every finding of its rule at each file,
 //! at any site, with no count. Any other entry holding `file` and no `anchors` was
 //! recorded before sites: it covers nothing and always expires.
@@ -58,7 +58,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::compute_review_scope::RunScope;
-use crate::primitives::write_review::{parse_range, ranges_overlap};
+use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
     PrimitiveError, Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, departures,
 };
@@ -175,12 +175,12 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
     // next full run, which then prunes it.
     // A file the run did not read says nothing about a rule's firing there either,
     // so such a waiver stays too, read only when one did not fire (spec 079).
-    // The findings are counted as `write-review` counts them: one rule's findings in a
-    // file whose line ranges overlap are one.
+    // One rule's findings at one site of a file whose line ranges overlap are one, and
+    // findings at different sites are counted apart.
     let pass = Pass {
         args,
         repo,
-        counted: collapse_overlapping(&args.fired),
+        counted: collapse_at_sites(&args.fired),
         restricted: !args.skipped_passes.is_empty(),
         scope: OnceCell::new(),
     };
@@ -457,23 +457,6 @@ fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
             })
             .collect(),
     )
-}
-
-/// The findings with each one overlapping an earlier one of its rule and file dropped, the
-/// collapse `write-review` applies before counting (spec 020 AC13).
-fn collapse_overlapping(fired: &[FiredFinding]) -> Vec<&FiredFinding> {
-    let mut kept: Vec<&FiredFinding> = Vec::new();
-    for finding in fired {
-        let range = parse_range(&finding.line_range);
-        if !kept.iter().any(|existing| {
-            existing.rule == finding.rule
-                && existing.file == finding.file
-                && ranges_overlap(range, parse_range(&existing.line_range))
-        }) {
-            kept.push(finding);
-        }
-    }
-    kept
 }
 
 /// One waiver entry, parsed loosely so a malformed entry (missing field) is a
@@ -1207,8 +1190,8 @@ mod tests {
         assert_eq!(result.notices, expected);
     }
 
-    /// The count is of findings after the cross-pass collapse, so two reports of one finding
-    /// whose line ranges overlap are one, and a count of two covers two separate ones.
+    /// Two reports of one finding at a site whose line ranges overlap count once, and a count
+    /// of two covers two separate ones.
     #[test]
     fn findings_with_overlapping_ranges_count_once() {
         let tmp = setup("001-x", &site_waiver("alpha", 1), &["src/a.ts"]);
@@ -1233,6 +1216,27 @@ mod tests {
         .unwrap();
         assert_eq!(result.applied.len(), 1, "{result:?}");
         assert_eq!(result.notices, [] as [String; 0]);
+    }
+
+    /// The collapse never crosses sites: a whole-file finding of the rule at another site,
+    /// listed first, overlaps every range and still absorbs none of the anchored site's, so
+    /// the waiver applies while its finding fires (spec 020 task 21).
+    #[test]
+    fn a_finding_at_another_site_absorbs_none_at_the_anchored_site() {
+        let tmp = setup("001-x", &site_waiver("alpha", 1), &["src/a.ts"]);
+        for whole_file_site in [Some("(top level)"), None] {
+            let result = run(
+                &firing(vec![
+                    fired_at("SEC-BE-014", "src/a.ts", whole_file_site, ""),
+                    fired_at("SEC-BE-014", "src/a.ts", Some("alpha"), "10-12"),
+                ]),
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(result.applied.len(), 1, "{whole_file_site:?}: {result:?}");
+            assert_eq!(result.applied[0].site.as_deref(), Some("alpha"));
+            assert_eq!(result.notices, [] as [String; 0], "{whole_file_site:?}");
+        }
     }
 
     /// An entry recorded before sites, a `file` and no `anchors` that is not a departure

@@ -928,8 +928,8 @@ pub struct FiredFinding {
     /// stored waiver covers it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
-    /// The finding's line range, as on a review finding: findings of one rule and
-    /// file whose ranges overlap are counted once. Empty means the whole file.
+    /// The finding's line range, as on a review finding: findings of one rule, file
+    /// and site whose ranges overlap are counted once. Empty means the whole file.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub line_range: String,
 }
@@ -1006,7 +1006,8 @@ pub struct ProcessWaiversArgs {
     /// Currently-firing findings from the review passes, one per finding, each
     /// with its `site` and `line-range`: a stored waiver covers the findings at
     /// its `(rule, file, site)` anchor, counted after collapsing those of one
-    /// rule and file whose line ranges overlap. On the CLI, `--fired-json FILE`.
+    /// rule, file and site whose line ranges overlap, never across sites. On the
+    /// CLI, `--fired-json FILE`.
     #[serde(default)]
     #[arg(skip)]
     pub fired: Vec<FiredFinding>,

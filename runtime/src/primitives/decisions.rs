@@ -546,12 +546,16 @@ fn violation_key_file(key: &str) -> Option<&str> {
     Some(rest.split_once(" in `").map_or(rest, |(file, _)| file))
 }
 
-/// Whether `key` is a violation's key recorded before sites, `rule {id} at {file}`:
-/// it names no backticked site, so it covers nothing (spec 020's `waiver-expiry`, rule 7).
-/// A key holding a backtick is a key with a site, or an observation's.
+/// Whether `key` is a violation's key recorded before sites, `rule {id} at {file}`: its
+/// `{id}` is a rule ID, by the grammar `check-rule-ids` reads, and it names no backticked
+/// site, so it covers nothing (spec 020's `waiver-expiry`, rule 7). A key holding a
+/// backtick is a key with a site, or an observation's, and so is one whose word after
+/// `rule` is no rule ID, as an observation's rendered line may be (`rule engine at startup
+/// leaks`).
 pub(crate) fn is_pre_site_violation_key(key: &str) -> bool {
     key.strip_prefix("rule ")
-        .is_some_and(|rest| rest.contains(" at "))
+        .and_then(|rest| rest.split_once(" at "))
+        .is_some_and(|(id, _)| super::check_rule_ids::is_a_rule_id(id))
         && !key.contains('`')
 }
 
@@ -958,9 +962,9 @@ mod tests {
             key_anchor("rule BE-X-001 at src/a.rs in `(top level)`"),
             Some("src/a.rs")
         );
-        assert!(is_pre_site_violation_key("rule BE-X-001 at src/a.rs"));
+        assert!(is_pre_site_violation_key("rule BE-AUTHN-001 at src/a.rs"));
         assert!(!is_pre_site_violation_key(
-            "rule BE-X-001 at src/a.rs in `walk`"
+            "rule BE-AUTHN-001 at src/a.rs in `walk`"
         ));
         assert!(!is_pre_site_violation_key("bug: x — `src/a.rs`"));
         assert!(!is_pre_site_violation_key(

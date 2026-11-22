@@ -537,7 +537,7 @@ mod tests {
     /// whether or not it fired and on a restricted run too, with the notice naming that.
     #[test]
     fn a_violation_key_recorded_before_sites_expires_whatever_fired() {
-        let key = "rule BE-X-001 at src/a.rs";
+        let key = "rule BE-AUTHN-001 at src/a.rs";
         let tmp = repo_with("review.md", &waived(key));
         let expected = vec![format!(
             "decision expired: {key} — recorded before sites (waived: a person's reason)"
@@ -557,6 +557,39 @@ mod tests {
             assert_eq!(result.expired.len(), 1);
             assert_eq!(result.notices, expected);
         }
+    }
+
+    /// Only a key whose word after `rule` is a rule ID reads as a violation's recorded before
+    /// sites: an observation keyed `rule engine at startup leaks` matches while it fires, and
+    /// a deferral keyed by a rule ID with no site still expires as recorded before sites
+    /// (spec 020 task 22). `BE-X-001` is no rule ID by that grammar, whose category takes two
+    /// characters.
+    #[test]
+    fn only_a_rule_ids_key_reads_as_recorded_before_sites() {
+        let observation = "rule engine at startup leaks";
+        let tmp = repo_with("review.md", &waived(observation));
+        let result = compute(
+            &args(DecisionRecord::Review, &[observation], false),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.matched.len(), 1, "{result:?}");
+        assert_eq!(result.notices, [] as [String; 0]);
+
+        let key = "rule BE-AUTHN-001 at src/a.rs";
+        let deferred = format!(
+            "  - key: \"{key}\"\n    outcome: deferred\n    work-item: PROJ-1\n    \
+             decided-at: 2026-09-25T00:00:00Z\n    decided-by: dev@example.com\n"
+        );
+        let tmp = repo_with("review.md", &deferred);
+        let result = compute(&args(DecisionRecord::Review, &[key], false), tmp.path()).unwrap();
+        assert_eq!(result.matched, [] as [DecisionRef; 0], "{result:?}");
+        assert_eq!(
+            result.notices,
+            vec![format!(
+                "decision expired: {key} — recorded before sites (deferred to work item `PROJ-1`)"
+            )]
+        );
     }
 
     /// An observation's decision has no count and no site: it matches however many times

@@ -1278,6 +1278,55 @@ pub(crate) fn ranges_overlap(a: (u32, u32), b: (u32, u32)) -> bool {
     a.0 <= b.1 && b.0 <= a.1
 }
 
+/// What an anchor's count reads of a finding: a pass's, or one `process-waivers` is fired.
+pub(crate) trait Placed {
+    /// Its rule, file and site, the site trimmed and a blank one absent.
+    fn place(&self) -> (&str, &str, Option<&str>);
+    /// Its line range, as written: empty is the whole file.
+    fn range(&self) -> &str;
+}
+
+impl Placed for ReviewFinding {
+    fn place(&self) -> (&str, &str, Option<&str>) {
+        (&self.rule, &self.file, finding_site(self))
+    }
+    fn range(&self) -> &str {
+        &self.line_range
+    }
+}
+
+impl Placed for crate::schema::primitives::FiredFinding {
+    fn place(&self) -> (&str, &str, Option<&str>) {
+        (
+            &self.rule,
+            &self.file,
+            decisions::nonblank(self.site.as_deref()).map(str::trim),
+        )
+    }
+    fn range(&self) -> &str {
+        &self.line_range
+    }
+}
+
+/// The findings with each one overlapping an earlier one of its rule, file and site dropped:
+/// the findings at an anchor, as `process-waivers` counts them and `write-review` stores and
+/// lowers a waiver's `covers`. Two reports of one finding count once, and findings at
+/// different sites are counted apart, which the cross-pass dedup deciding the report does
+/// not do (spec 020 AC19).
+pub(crate) fn collapse_at_sites<T: Placed>(findings: &[T]) -> Vec<&T> {
+    let mut kept: Vec<&T> = Vec::new();
+    for finding in findings {
+        let range = parse_range(finding.range());
+        if !kept.iter().any(|existing| {
+            existing.place() == finding.place()
+                && ranges_overlap(range, parse_range(existing.range()))
+        }) {
+            kept.push(finding);
+        }
+    }
+    kept
+}
+
 /// The finding's site, trimmed, when its pass named one.
 fn finding_site(finding: &ReviewFinding) -> Option<&str> {
     decisions::nonblank(finding.site.as_deref()).map(str::trim)
@@ -2188,8 +2237,8 @@ struct Superseded {
 
 /// What this run's `new-waivers` add: one `waivers:` entry per item, anchored at every
 /// `(file, site)` its rule fires at in this run that no waiver holds, each covering the
-/// number of findings there, and every anchor to apply. The findings are counted after
-/// the cross-pass collapse, so the count is the one `process-waivers` reads on the next run.
+/// number of findings there, and every anchor to apply. The findings are counted as
+/// [`collapse_at_sites`] leaves them, the count `process-waivers` reads on the next run.
 /// A run writes its record twice with one set of arguments, so an anchor its earlier write
 /// stored applies and is not stored again, and a rule its fix has since cleared asks
 /// nothing of this write (spec 079). The departure entries add theirs after.
@@ -2211,10 +2260,11 @@ fn new_waiver_entries(
 )> {
     let mut entries = Vec::new();
     let mut anchors = Vec::new();
-    let deduped = dedup_findings(&args.findings);
+    let counted = collapse_at_sites(&args.findings);
     for (idx, waiver) in args.new_waivers.iter().enumerate() {
-        let firing: Vec<&ReviewFinding> = deduped
+        let firing: Vec<&ReviewFinding> = counted
             .iter()
+            .copied()
             .filter(|finding| {
                 finding.rule == waiver.rule
                     && waiver_reason(finding, &args.applied_waivers).is_none()
@@ -2304,7 +2354,7 @@ fn run_waivers(
     lower_covers(
         &mut surviving,
         &args.applied_waivers,
-        &dedup_findings(&args.findings),
+        &collapse_at_sites(&args.findings),
     );
     let reasons = refresh_departure_waivers(&mut surviving, &departures, &args.reviewed_at);
     let (entries, anchors, superseded) = new_waiver_entries(args, &surviving, &departures)?;
@@ -2359,10 +2409,11 @@ fn holds_anchor(waivers: &[RawWaiverFull], rule: &str, file: &str, site: &str) -
 
 /// Lower each recorded anchor that `applied` names to the number of `findings` at it, when
 /// that is fewer than it covers: an anchor covers what a run applied it to, never more.
+/// `findings` are counted as [`collapse_at_sites`] leaves them.
 fn lower_covers(
     waivers: &mut [RawWaiverFull],
     applied: &[crate::schema::primitives::WaiverRef],
-    findings: &[ReviewFinding],
+    findings: &[&ReviewFinding],
 ) {
     for waiver in waivers.iter_mut().filter(|waiver| !is_departure(waiver)) {
         let Some(rule) = waiver.rule.as_deref() else {
@@ -5152,7 +5203,7 @@ mod tests {
     }
 
     /// `--waive` records one anchor per `(file, site)` its rule fires at with the number of
-    /// findings there, counted after the cross-pass collapse: two findings at one site over
+    /// findings there, counted as `process-waivers` counts them: two findings at one site over
     /// separate lines are two, two reports of one finding over overlapping lines are one.
     #[test]
     fn a_new_waiver_records_one_anchor_per_site_with_its_count() {
@@ -5232,6 +5283,86 @@ mod tests {
         assert_eq!(covers_after(3, two.clone()), Some(2));
         assert_eq!(covers_after(1, two), Some(1), "never raised");
         assert_eq!(covers_after(1, one), Some(1));
+    }
+
+    /// The `covers` a waiver records, and a run lowers, is the count `process-waivers` reads
+    /// on the next run over the same findings: per site, never across sites. The finding at
+    /// `beta` overlaps the second at `alpha`, and the cross-pass dedup, which decides the
+    /// report, drops that one, so counting over the dedup stored 1 where the next run counts
+    /// 2 and the waiver expired on every review (spec 020 task 21).
+    #[test]
+    fn a_waiver_counts_the_findings_at_its_site_as_the_next_run_does() {
+        use crate::schema::primitives::{FiredFinding, ProcessWaiversArgs};
+        let findings = vec![
+            must("SEC-1", "src/a.rs", Some("alpha"), "33-34"),
+            must("SEC-1", "src/a.rs", Some("beta"), "20-30"),
+            must("SEC-1", "src/a.rs", Some("alpha"), "26-27"),
+        ];
+        let next_run = |tmp: &TempDir| {
+            let fired = findings
+                .iter()
+                .map(|f| FiredFinding {
+                    rule: f.rule.clone(),
+                    file: f.file.clone(),
+                    site: f.site.clone(),
+                    line_range: f.line_range.clone(),
+                })
+                .collect();
+            crate::primitives::process_waivers::compute(
+                &ProcessWaiversArgs {
+                    feature: "001-x".into(),
+                    fired,
+                    ..ProcessWaiversArgs::default()
+                },
+                tmp.path(),
+            )
+            .unwrap()
+        };
+        let alpha = |tmp: &TempDir| {
+            recorded(tmp, "001-x")[0]
+                .anchors
+                .iter()
+                .flatten()
+                .find(|a| a.site.as_deref() == Some("alpha"))
+                .and_then(StoredAnchor::covers_count)
+        };
+        let with_source = || {
+            let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+            std::fs::create_dir_all(tmp.path().join("src")).unwrap();
+            std::fs::write(tmp.path().join("src/a.rs"), "").unwrap();
+            tmp
+        };
+
+        // Recorded by `--waive`.
+        let tmp = with_source();
+        let mut args = base_args("001-x");
+        args.decided_by = Some("dev@example.com".into());
+        args.findings = findings.clone();
+        args.new_waivers = vec![waive("SEC-1", "decided")];
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(alpha(&tmp), Some(2));
+        let next = next_run(&tmp);
+        assert!(next.expired.is_empty(), "{:?}", next.notices);
+        assert!(
+            next.applied
+                .iter()
+                .any(|a| a.site.as_deref() == Some("alpha"))
+        );
+
+        // Lowered by a run that applies it.
+        let tmp = with_source();
+        seed_waivers(
+            &tmp,
+            "001-x",
+            "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/a.rs\n        site: alpha\n        covers: 2\n    reason: decided\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com",
+        );
+        let mut args = base_args("001-x");
+        args.findings = findings.clone();
+        args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
+        run(&args, tmp.path()).unwrap();
+        assert_eq!(alpha(&tmp), Some(2), "not lowered below what fires");
+        let next = next_run(&tmp);
+        assert!(next.expired.is_empty(), "{:?}", next.notices);
     }
 
     /// An expired anchor leaves its entry by `(file, site)`, the entry's other anchors stay,

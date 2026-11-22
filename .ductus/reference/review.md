@@ -560,7 +560,7 @@ findings (see **Run review passes**) and before counting them or writing the
 record, step 8 classifies each anchor — each one an entry's `anchors` lists, or
 each path a departure waiver's `file` lists, under its rule — against those
 findings, which the host passes as `fired`, one entry per finding with its
-`site` and `line-range`, so findings a dedup would collapse count once. A waiver can only be judged against findings that exist,
+`site` and `line-range`, so two reports of one finding at its site count once and findings at different sites are counted apart, as `write-review` counts the `covers` it stores. A waiver can only be judged against findings that exist,
 so an empty scope leaves the waivers untouched, and a dimension-restricted run
 retains those anchored to skipped dimensions rather than expiring them. The
 result's `applied`, `expired`, `retained` and `notices` lists, which grow with the

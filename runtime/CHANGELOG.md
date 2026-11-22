@@ -14,8 +14,9 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   enclosing it, and `fired` for `process-waivers` one entry per finding with its
   `site` and `line-range`. `write-review` records a `--waive` as one entry whose
   `anchors:` lists a `{file, site, covers}` per site its rule fires at,
-  `covers` the findings there after the cross-pass dedup, lowered by a run that
-  applies the anchor to fewer and never raised; a violation's deferral is keyed
+  `covers` the findings there, two overlapping reports at one site counted once
+  and findings at different sites apart, lowered by a run that applies the
+  anchor to fewer and never raised; a violation's deferral is keyed
   `` rule {rule-id} at {file} in `{site}` `` and carries `covers`. More findings at
   a site than an anchor covers expire it, on a restricted run too, with
   `waiver expired: … — {n} findings fire where it covers {m}` or
