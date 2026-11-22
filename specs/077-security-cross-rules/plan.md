@@ -9,7 +9,7 @@ Create `framework/rules/security-cross.md` with `SEC-` rules: one new rule (`SEC
 - **Register the prefix** in this spec's `data-model.md`, the rule-ID lint and the analyze reference.
 - **Deprecate the four old rules**, each reduced to a yield to its successor so `/{project}:analyze` reports a case once. `BE-DEPS-006` and `BE-AUTHN-020`, never tagged, are then removed in 0.60.0 by 008 (owner, 2026-11-19); `BE-AUTHN-009` and `BE-AUTHN-013` stay deprecated until 0.62.0, which removes them (task 14).
 - **Re-point every yield and Statement** that names them, and sweep every live citation.
-- **Ship the file**: the manifest row, `docs/rules.md`, the README, and `runtime/CHANGELOG.md`'s `## [Unreleased]` section.
+- **Ship the file**: the manifest row, `docs/rules.md`, the README, and `runtime/CHANGELOG.md`'s `## [0.60.0]` section, the release that shipped it.
 
 No runtime behaviour changes; one corpus test is added (§Verification). The rule-ID regexes in `runtime/src/primitives/check_rule_ids.rs`'s `citation_regex` and `runtime/src/primitives/rule_sections.rs`'s `heading_id_regex` already accept any two-to-five-letter prefix.
 
@@ -64,7 +64,7 @@ These name a deprecated rule and change to name its successor:
 
 `configuration-cross.md`'s `CFG-ENV-006` is the only rule outside the backend surface, other than this spec's `SEC-LOG-001`, that names `BE-LOG-002` or `BE-LOG-008` for a sensitive value (grep of `framework/rules/` for both IDs). For a non-configuration value in a log line it reads "`BE-LOG-002`'s where `security-backend.md` is also loaded and `security-cross.md` `SEC-LOG-001`'s otherwise", and the same for a non-configuration value in propagated trace context, while a sensitive configuration value there is `BE-LOG-008`'s where `security-backend.md` is also loaded and `CFG-ENV-006`'s otherwise, as 008's task 43 decided.
 
-`observability-backend.md`'s pointers to `BE-LOG-008` stay as they are: it installs on the backend surface, beside `security-backend.md`.
+`observability-backend.md`'s pointers to `BE-LOG-008` stay as they are: it installs on the backend surface, beside `security-backend.md`, as its `-backend.md` suffix places it (constitution §rules, Filename suffix).
 
 ### Sweep
 
@@ -89,7 +89,7 @@ These keep the old ID, because they record what was decided or measured: 008's `
 - `framework/bootstrap/ductus-procedure.md`'s §Security Audit (brownfield) triggers on a newly created `security-cross.md` as on either surface file, loads it, and checks each loaded file's IDs, `SEC-{CATEGORY}-{NNN}` among them, against the format `/{project}:analyze` reads for that file (owner, 2026-11-03, recorded on task 11), so the upgrade that installs it previews its rules' gaps on a project's existing specs; its §Per-rule check applies each rule to a spec as `/{project}:analyze` does, its trigger, commitment, flags and set-asides judged against the spec's `spec.md`, `plan.md`, `data-model.md` and scenarios together, with each cross-spec file the spec or a rule's Verification refers to, one finding per spec and rule (owner, 2026-11-03, recorded on task 11), and honours a yield wherever its Verification states one, judging a load condition against every rule file installed under `specs/rules/`, so a case it yields to a rule in an installed file is left to that rule, as `/{project}:analyze` leaves it: the audit reports the case under the owner's ID when it newly created the owner's file too, and not at all when that file was already installed, on an upgrade or a surface added alike (owner, 2026-11-02, two calls, recorded on task 8). An owner outside the security rule files, in a file the manifest pass newly created, has its file loaded with the same integrity checks and is applied to that case alone, as `/{project}:analyze` applies it — its whole Verification judged, whether or not the spec meets the yielding rule's commitment — so the case is reported under its ID where the yielding rule's trigger fires too and `/{project}:analyze` reports it (owner, 2026-11-03, recorded on task 11). A change under `framework/bootstrap/` is verified by a real adopter bootstrap (tasks 10 and 11).
 - `framework/constitution.md`'s canonical-sources row for rule ID conventions points any prefix but `BE` and `FE` at the data-model of the spec that introduced its file, else the file's header, so it lists no prefix one by one, and the constitution stays under `scripts/lint-governing-size.sh`'s 50,000 bytes. Its Secure principle, which named the `specs/rules/security-*.md` files rather than listing them, went with the Technology list `050-constitution` removed.
 
-`runtime/CHANGELOG.md`'s `## [Unreleased]` section gains one entry for the move, and a later one for 077's task 13. The move's entry names:
+`runtime/CHANGELOG.md`'s `## [0.60.0]` section holds one entry for the move, and a later one for 077's task 13; task 14's removal has its own entry, under the release that makes it. The move's entry names:
 
 - the four ID changes and their successors, and which of the old IDs 0.59.11 shipped (`BE-AUTHN-009` and `BE-AUTHN-013`; `BE-DEPS-006`, `BE-AUTHN-020` and `BE-LOG-008` came after it);
 - the deprecation and removal versions;
@@ -121,7 +121,7 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 | `framework/bootstrap/govern.md` | Modify | Byte copy of `ductus.md`, which audit family `transitional-bootstrap-parity` requires |
 | `docs/rules.md` | Modify | "What ships" row; what a moved rule's old ID does |
 | `README.md` | Modify | Security bullet; ID permanence |
-| `runtime/CHANGELOG.md` | Modify | `## [Unreleased]` entry |
+| `runtime/CHANGELOG.md` | Modify | `## [0.60.0]` entries, and task 14's removal entry |
 | `.github/workflows/framework-checks.yml` | Modify | Comment sweep |
 | `.github/workflows/runtime-release.yml` | Modify | Comment sweep |
 | `scripts/check-runtime-currency.sh` | Modify | Comment sweep |
@@ -146,8 +146,8 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 ## Trade-offs
 
 - **`SEC-LOG-001` restates `BE-LOG-002`'s value list rather than citing it.** Citing it would leave the rule empty where `security-backend.md` is not installed. The cost is two copies of one list, and a change to either must change both. Neither rule's text points an editor of `BE-LOG-002` at the copy (`framework/rules/security-backend.md`, `BE-LOG-002`, and `framework/rules/security-cross.md`, `SEC-LOG-001`), so `sec_log_001_bars_the_values_be_log_002_bars` (`runtime/src/primitives/rule_sections.rs`) fails when the two lists differ, or when either rule is missing.
-- **A deprecated rule's Verification is replaced by a pointer, not kept.** Keeping it would report every moved case under both IDs at `/{project}:analyze` in backend-only and full-stack projects until removal. Its Statement is kept, so `/{project}:review`, which applies Statements and no routing, still reports both until 020 task 15 lands (`spec.md` §Edge cases).
-- **`CFG-ENV-006` names both owners directly** rather than naming `SEC-LOG-001` alone and letting that rule yield onward. A direct name reaches the owner in one step, and a chain of yields is what 008's rounds found hardest to read alone.
+- **A deprecated rule's Verification is replaced by a pointer, not kept.** Keeping it would report every moved case under both IDs at `/{project}:analyze` in backend-only and full-stack projects until removal. Its Statement is kept, so `/{project}:review`, which applied Statements and no routing, reported both until 020 task 15 landed; since then review reports each case once, under its owner (`spec.md` §Edge cases).
+- **`CFG-ENV-006` names both owners directly** rather than naming `SEC-LOG-001` alone and letting that rule yield onward. A direct name reaches the owner in one step, where a chain of yields has a reader follow each rule in turn to find it.
 - **The deprecation version is computed when the labels are written** (`0.60.0`, removed in `0.62.0`). The release audit's Family 40 fails once `version` reaches a label's target while its rule remains (026's scenario `family-40-deprecated-rules-are-removed-on-time`), so the release that reaches the target removes the rule; 0.62.0 removes both (task 14). 008's task 43 closed a sibling release-time gap, `scripts/check-release-tag.sh` refusing a tag while `## [Unreleased]` holds an entry.
 - **A project that pins `security-backend.md` sees doubled findings** until it re-syncs. Nothing a shipped file says can reach a pinned copy, so the changelog entry is the remedy (spec §Edge cases).
 
