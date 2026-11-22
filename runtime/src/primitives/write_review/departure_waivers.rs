@@ -87,7 +87,6 @@ fn fixture(dir: &Path, entries: &str) -> Repository {
     repository
 }
 
-/// The sha of the repository's first commit, the `diff-base` every run takes.
 /// The fixture's `HEAD`, the sha a review's scope is resolved against and its
 /// record's `reviewed-against` (066 scenario
 /// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
@@ -97,6 +96,7 @@ fn head(dir: &Path) -> String {
     head.to_string()
 }
 
+/// The sha of the repository's first commit, the `diff-base` every run takes.
 fn seed(dir: &Path) -> String {
     let repository = Repository::open(dir).unwrap();
     let mut walk = repository.revwalk().unwrap();

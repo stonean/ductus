@@ -23,9 +23,13 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   (spec 066).** `compute-review-scope` returns `head`, the commit its scope was
   resolved against, and `/ductus:review` passes it as `reviewed-against`.
   `write-review` refuses, writing nothing, while a commit after that sha changed
-  a path its scope holds, naming each path and commit, since another spec's
-  window took such a path as read. A `reviewed-against` naming no commit, or one
-  `HEAD` does not descend from, is refused too.
+  a path its scope holds, since another spec's window took such a path as read.
+  The refusal names each path, counted once, with each commit that changed it,
+  and says to read each named path and each path a re-run of
+  `compute-review-scope` adds before writing with the new `head`. A
+  `reviewed-against` naming no commit, or one `HEAD` does not descend from, is
+  refused too. None of the three is checked with an empty `diff-base`, whose
+  scope is empty.
 
 ### Fixed
 

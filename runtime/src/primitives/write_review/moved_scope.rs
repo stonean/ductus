@@ -24,9 +24,12 @@ use crate::schema::paths;
 /// path `entries` holds. A commit after it that changed no scope path refuses
 /// nothing: nothing the passes should have read moved.
 ///
-/// Each moved path is named with its commit, since the remedy is the run's:
-/// re-run `compute-review-scope`, read each path it adds or list it in
-/// `unread`, and write again with its `head`.
+/// Each moved path is named with each commit that changed it, and counted once
+/// however many did, since the remedy is the run's: re-run
+/// `compute-review-scope`, read each path named here and each path it adds, or
+/// list it in `unread`, and write again with its `head`. A named path is
+/// usually one the scope already held, which the re-run does not add, so
+/// reading only the added paths would credit content no pass read.
 ///
 /// # Errors
 ///
@@ -72,6 +75,7 @@ pub(super) fn refuse_a_moved_scope(
     walk.hide(against.id())?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
     let mut moved = Vec::new();
+    let mut paths_moved = BTreeSet::new();
     for oid in walk {
         let commit = repository.find_commit(oid?)?;
         let subject = flatten_line(commit.summary().ok().flatten().unwrap_or_default());
@@ -86,6 +90,7 @@ pub(super) fn refuse_a_moved_scope(
                 flatten_line(&path),
                 short(commit.id())
             ));
+            paths_moved.insert(path);
         }
     }
     if moved.is_empty() {
@@ -93,12 +98,12 @@ pub(super) fn refuse_a_moved_scope(
     }
     Err(refuse(format!(
         "{} in this run's scope changed in commits after {}, which the passes did not \
-         read: {}; re-run compute-review-scope, read each path it adds or list it in \
-         unread, and write again with its head as reviewed-against",
-        if moved.len() == 1 {
+         read: {}; re-run compute-review-scope, read each path named here and each path \
+         it adds, or list it in unread, and write again with its head as reviewed-against",
+        if paths_moved.len() == 1 {
             "1 path".to_string()
         } else {
-            format!("{} paths", moved.len())
+            format!("{} paths", paths_moved.len())
         },
         short(against.id()),
         moved.join(", ")
@@ -166,6 +171,23 @@ mod tests {
         assert!(reason.contains(&landed[..8]), "{reason}");
         assert!(reason.contains("chore: tidy a"), "{reason}");
         assert!(reason.contains("re-run compute-review-scope"), "{reason}");
+        assert!(reason.contains("read each path named here"), "{reason}");
+    }
+
+    /// One scope path two later commits changed is one path, named with both
+    /// commits.
+    #[test]
+    fn a_path_two_later_commits_changed_counts_once_naming_both() {
+        let (tmp, repository, head) = repo();
+        write(&tmp.path().join("src/a.rs"), "fn a() { 1; }\n");
+        let first = commit_all(&repository, "chore: tidy a").to_string();
+        write(&tmp.path().join("src/a.rs"), "fn a() { 2; }\n");
+        let second = commit_all(&repository, "chore: tidy a again").to_string();
+        let err = refuse_a_moved_scope(&head, tmp.path(), &scope(&["src/a.rs"])).unwrap_err();
+        let reason = reason(&err);
+        assert!(reason.starts_with("1 path in this run's scope"), "{reason}");
+        assert!(reason.contains(&first[..8]), "{reason}");
+        assert!(reason.contains(&second[..8]), "{reason}");
     }
 
     #[test]

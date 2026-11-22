@@ -1826,6 +1826,47 @@ mod tests {
         );
     }
 
+    /// The result's three counts are the record's (066 scenario
+    /// `a-write-result-states-what-it-wrote`): a hard-fail finding released to
+    /// another spec's work leaves `hard-fail` one below the count passed, and
+    /// `advisory` is the count the record renders, so each count differs from
+    /// zero and `hard-fail` from its argument.
+    #[test]
+    fn the_result_states_each_count_the_record_holds() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let other = tmp.path().join("specs/043-other");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(
+            other.join("spec.md"),
+            "---\nstatus: in-progress\n---\n# 043\n",
+        )
+        .unwrap();
+        let mut a = args();
+        a.hard_fail = 2;
+        a.advisory = 3;
+        a.decided_by = Some("dev@example.com".into());
+        a.findings = vec![finding(
+            AnalysisTier::HardFail,
+            "frontmatter",
+            "a block never closes",
+            DispositionOutcome::Deferred,
+            Some("specs/043-other/spec.md"),
+        )];
+        let written = run(&a, tmp.path()).unwrap();
+        let report = analysis_md(&tmp);
+        assert!(report.contains("hard-fail: 1\n"), "{report}");
+        assert!(report.contains("advisory: 3\n"), "{report}");
+        assert_eq!(
+            (
+                written.hard_fail,
+                written.blocking_findings,
+                written.advisory
+            ),
+            (1, 0, 3),
+            "{written:?}"
+        );
+    }
+
     /// Spec 076: a deferral releases a gating finding only to work still to
     /// do on another spec, whose gate then holds it. A `done` spec's gate holds
     /// nothing, and a rule file has no gate, so a deferral to either stays

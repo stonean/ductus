@@ -12,7 +12,7 @@ An adopter on 0.61.0 reported that a structured write's result describes the cal
 
 - `write-analysis`'s result carries `hard-fail`, `blocking-findings` and `advisory` as the record holds them.
 - `write-review`'s result carries `excluded`, the count the record holds; `unread-count`, the entries in the record's `unread`, absent when the run stated none; and `decisions`, the entries the record's `decisions:` holds after the write.
-- Each value is the written record's, never an argument echoed back, so a result and its record cannot disagree.
+- Each value is the one the written record holds, so a result and its record cannot disagree. Where the record derives a count, the result carries the derived count, never the argument: `hard-fail` and `blocking-findings` net of each finding a deferral releases, and `excluded`, `unread-count` and `decisions` as written. `advisory` is the count the run passed, which the record renders as given.
 
 ## Edge Cases
 

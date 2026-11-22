@@ -40,9 +40,14 @@ pub struct ReviewBlock {
     /// ISO-8601 UTC timestamp of the last `/ductus:review`, if any.
     #[serde(default)]
     pub last_run: Option<String>,
-    /// HEAD sha at the time of the run — **provenance, not the staleness
-    /// basis**, exactly as [`AnalyzeBlock::analyzed_against`] is. Read for one
-    /// thing: the mechanical-sweep rename exemption, which needs two trees.
+    /// The head `compute-review-scope` returned for the scope the run's passes
+    /// read (066 scenario `a-commit-after-the-scope-was-resolved-refuses-the-write`)
+    /// — **provenance, not the staleness basis**, exactly as
+    /// [`AnalyzeBlock::analyzed_against`] is. Read for two things: the
+    /// mechanical-sweep rename exemption, which needs two trees, and the end of
+    /// the record's window, `diff-base` to `reviewed-against`, which
+    /// `compute-review-scope` reads to credit what the record states it read
+    /// (spec 081).
     #[serde(default)]
     pub reviewed_against: Option<String>,
     /// Per-path sha256 of the review's **durable contracts** — `scenarios/*.md`
@@ -1753,7 +1758,10 @@ pub struct WriteReviewArgs {
     /// ISO-8601 UTC timestamp recorded as `reviewed-at` / `review.last-run`.
     #[arg(long)]
     pub reviewed_at: String,
-    /// HEAD sha the review ran against (`reviewed-against`).
+    /// The head `compute-review-scope` returned for the scope the passes read
+    /// (`reviewed-against`). Refused when it names no commit, when `HEAD` does
+    /// not descend from it, or when a later commit changed a path in the scope,
+    /// unless `diff-base` is empty.
     #[arg(long)]
     pub reviewed_against: String,
     /// diff-base sha from `compute-review-scope` (recorded in the report).

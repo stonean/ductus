@@ -1399,6 +1399,30 @@ mod tests {
         assert_eq!(result.modified_since, [] as [String; 0]);
     }
 
+    /// `head` is the commit the scope's committed part was resolved against,
+    /// `HEAD` when the call ran, never the base: a review records it as
+    /// `reviewed-against`, which `write-review` guards (066 scenario
+    /// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
+    #[test]
+    fn head_is_the_commit_the_scope_was_resolved_against_not_the_base() {
+        let (tmp, _sha) = repo_with_progress();
+        let head = head_sha(&Repository::discover(tmp.path()).unwrap());
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_ne!(result.diff_base, head, "the fixture's base is not its HEAD");
+        assert_eq!(result.head, head);
+        // Uncommitted work is in the scope and does not move the head.
+        write(&tmp.path().join("src/c.rs"), "fn c() {}\n");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result
+                .scope
+                .as_ref()
+                .is_some_and(|scope| scope.contains(&"src/c.rs".to_string())),
+            "{result:?}"
+        );
+        assert_eq!(result.head, head);
+    }
+
     #[test]
     fn since_is_used_verbatim_with_no_parent_walk() {
         // An operator naming a commit means that commit. Passing the
