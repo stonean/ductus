@@ -6,6 +6,13 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **`resolve-anchor` counts a single-quoted heading and a double quote its line leaves open as `quoted-heading` references (spec 067, AC9).**
+  `§'Cache invalidation'` (straight or curly quotes) and `§"Cache` ending its
+  line with the heading continuing on the next were in no count; each is now a
+  reference of kind `quoted-heading`, unjudged `anchor-target-unjudgeable`,
+  counted as a closed double-quoted one is. A quote not directly after the `§`
+  is no reference. A scan of a file holding either form reports one more
+  reference and one more `quoted-heading` and `anchor-target-unjudgeable`.
 - **BREAKING: `write-analysis` refuses a gating finding at a design subject deferred to its own `tasks.md`, and one left undispositioned at a subject a fix of the run edited (spec 067, AC6).**
   A live hard-fail or blocking finding whose `path` is a design subject of the
   spec being recorded (`spec.md`, `plan.md`, `data-model.md` or a scenario,

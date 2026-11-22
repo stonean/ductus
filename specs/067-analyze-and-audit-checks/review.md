@@ -1,39 +1,42 @@
 ---
 spec: 067-analyze-and-audit-checks
-last-run: 2026-11-20T00:26:19Z
-reviewed-against: 83848622ac2517fc6bb010ac7b05a76dc32810f0
-diff-base: e78c99b1b57a5f23d802eba8f518f541c4cfacc4
+last-run: 2026-11-22T01:21:31Z
+reviewed-against: db227015b55be230e5e6a55f3c9baeeac7fb89e0
+diff-base: cdee8ab0659ec63e6a153c80a115e1ef3f9d0523
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 22
-scope: 26
+examined: 28
+scope: 35
 unread:
-  - runtime/src/primitives/mod.rs
-  - runtime/src/schema/descriptions.rs
-  - runtime/CHANGELOG.md
+  - .claude/commands/ductus/analyze.md
+  - .claude/commands/ductus/help.md
   - .ductus/reference/analyze.md
-excluded: 154
+  - .ductus/reference/review.md
+  - .pi/prompts/ductus-analyze.md
+  - .pi/prompts/ductus-help.md
+  - framework/commands/help.md
+excluded: 77
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 2
+fix-rounds: 1
 re-reads: 1
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 63e7b39d87041a7e99d43393137ee54c05f88f9f49aa861869304425cdd826c1
+  data-model.md: 7fad37f42b653a6ee81b643e575acbdef12d81de288d58e71b829ab2e892803b
   scenarios/a-bare-port-span-names-its-remedy.md: 063077e093ba121795cc3ebeca465d1865c2062bc04c46e16092ab96abbf3493
   scenarios/a-none-list-item-is-no-open-question.md: 890489963e11ff0727be863414613e80b5946acde2bdd7fe9af20281974170d9
   scenarios/a-plan-heading-is-matched-without-regard-to-case.md: 78eb3cfc25de466287a5a36b032a3456646381d652e39bc7964f65d379aab04e
-  scenarios/a-record-cites-a-removed-rule.md: 20b5adcfb587c0ad32b99376a81f772f92a2e31fd040d1948712a4039dc74474
+  scenarios/a-record-cites-a-removed-rule.md: 9a5ab72e4fe96df2d5c8ddf92aa2c2b8589efd47b4b3bc4719f2e79c434eabde
   scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: 73b4360b8740a08f023125fdae8fe14b859bc2ac7e60a8a39642ea51e3d08d1a
   scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md: 596fd2546524b3b353e1c077e85e496a3be0d52b44fec54480808571a36c6569
   scenarios/adopter-corpus-link-integrity.md: 5d5aca644cf0573708948c8030ddd1fb161ff263ca1c67af46fb38da30a9b35e
-  scenarios/adopter-generator-promotion.md: 7785b509ac9315624dd8061ccf745942c8de50864e2f951ba7d9bf5748bb469d
+  scenarios/adopter-generator-promotion.md: 826a9ee411c81076d4872529b63a2a3b5f31d1540209f4793251feb067d7202d
   scenarios/an-at-path-import-is-a-reference.md: 38631023408ed48edd5072f1c61394eb5ce8d70ee6d340cf2c79403ba55517a2
   scenarios/analyze-artifact-checks.md: 529dd14e7258557d249aeea8379c45a3f26d6b034a939036f327df572bdf8c46
-  scenarios/anchor-reference-kinds.md: c91dc7e263b77ff21f56a8866dcda145172facae7d471c094f96dabff8405795
+  scenarios/anchor-reference-kinds.md: b8915c5ed8f23f64326a6903b97ca1c2e724ac4b2a03ff69a00377981716b053
   scenarios/argument-hint-needs-a-token.md: 130b949e9ca72ab34b48e43d2179fbed5d21ef111b40213180c72ae41bc28ae7
   scenarios/block-element-scanner.md: 0b96c1dc41bd91f898e535c17c8964ef9da5ccf39411d888d8e244c82afe9c38
   scenarios/body-path-existence-family.md: f6150c2ef9a8ae7602a0127d074a311de792f1044d063d1e6d8ee4a6085496e6
@@ -66,24 +69,32 @@ reviewed-digest:
   scenarios/status-gated-families-are-not-silent.md: 1833246fc09413e940f018c8201286f35ca0ae386a567e7c52c8eac53c7d4059
   scenarios/the-promotion-coverage-line.md: 0d91757bfa43a8311441fd9d1319714c3756e192f0cb6c2dc22bfb35b245d48f
   scenarios/traverse-deps-cycle-check.md: cb48f788ea342102b3a02a737206b6b798523af71e910173a9e5875fde8cb7c6
-criteria-judged: 5
-criteria-met: 5
+criteria-judged: 9
+criteria-met: 9
 criteria-verdicts:
   - label: AC1
     digest: ce909595f4aa8d60e851da8ac19e897c4f7224cffb5cdd7cd5d7c76dde2160be
   - label: AC2
-    digest: 960459f4ebc72310ec7feb6eb1c99b4a35d97362f04b37c55356f220c6ac63f1
+    digest: 432aabbfceae673e7b27db40400e3866f72b64fdc7fff04bee21b1d62a480139
   - label: AC3
     digest: 26f4a67ce3206a5465af684ebad59525a00159ca787e7fe03f4faae07183335d
   - label: AC4
     digest: 6e976c84b76865332b13a6a5f40b0ece7ca4ba7e9fdcfae9ac7bc811865d24fc
   - label: AC5
     digest: c6c0663c549546f9d25af208f2d82c992e25236b5b61852366089b9c9caab616
+  - label: AC6
+    digest: f96d9e159bfb4add18a71479f60e52c40793831483d6c817bcc94f253b65bda0
+  - label: AC7
+    digest: 56f23851ef2367abb81639089275d3fc70404e19ebbe63e943438b1811b4a150
+  - label: AC8
+    digest: a9c4b5c0e425a18376bc6f09f4e9f1827eedb60c23d1bebc03e6648bb477cf56
+  - label: AC9
+    digest: 380541a569274d23b361dcf7317237a514e88af90ae950c545abdb27b034f5ab
 blocking: false
 dispositions:
-  fixed: 12
+  fixed: 14
   deferred: 0
-  waived: 11
+  waived: 9
   undispositioned: 0
 waivers:
   - rule: QUAL-CLAIM-001
@@ -238,17 +249,37 @@ decisions:
     reason: Each sentence names a retired root because the check matches it by design (the historical roots the orphan check carries), so the path is the subject, not a stale reference; the advisory finding is dispositioned in the analysis that reports it
     decided-at: 2026-11-20T00:26:19Z
     decided-by: rule
+  - key: "convention: `RESOLVE_ANCHOR`'s compiled description (the canonical source of the primitive's behavior) says nothing of what step 4 returns under ductus exec since f33dd7ea: scenarios-examined, each scenario reference's `path`, and scenario anchors listed as `<path>: <anchor>`; only field doc comments and the CHANGELOG state them (grep of `descriptions.rs` finds no `scenarios-examined`) — `runtime/src/schema/descriptions.rs`"
+    outcome: waived
+    reason: The two fields come from the ductus exec walker's dispatch, not from a direct call, so the primitive's description is right to leave them out; the result schema's field docs and 067's data model state them.
+    decided-at: 2026-11-22T01:19:04Z
+    decided-by: rule
+  - key: "other: a scenario that cannot be read under exec step 4 is counted once in anchor-target-unreadable and not named anywhere in the result, so the operator learns that one scenario went unread, not which — `runtime/src/primitives/resolve_anchor.rs`"
+    outcome: waived
+    reason: Under ductus exec the count records the scenario unexamined in the record, as every unexamined target is recorded, with no per-file detail for any reason; the interactive path now names the file in its output.
+    decided-at: 2026-11-22T01:19:04Z
+    decided-by: rule
+  - key: "bug: the new single-quote and open-double-quote forms also read a section sign quoted in prose, as in `the '§' mark`, as a `quoted-heading` reference — `runtime/src/primitives/resolve_anchor.rs`"
+    outcome: waived
+    reason: Such a line is counted one more unexamined target, never a false finding or a hidden one, and no file in this repository writes one; it errs toward unexamined, as a check that cannot judge must.
+    decided-at: 2026-11-22T01:19:04Z
+    decided-by: rule
+  - key: "other: fix round 1's NOTE: step 19's \"Deferred: with that design edit, the only write that reaches the operator, for a finding that is no chore and no such design edit\" reads awkwardly, its for-clause fitting only the deferral — `framework/commands/analyze.md`"
+    outcome: waived
+    reason: A style point the re-read found not wrong; rewording it would be a round of its own for no change of meaning.
+    decided-at: 2026-11-22T01:21:31Z
+    decided-by: rule
 ---
 
 # Review — 067-analyze-and-audit-checks
 
 ## Summary
 
-Review of 067's reopening for tasks 38 to 42 (a none item, plan headings without regard to case, the port hint, git-ignored local state, the promotion-table header). The window runs from the reopen e78c99b1 and its code is commit 2e66524d plus the 067 entry of the changelog commit; commits naming other specs are those specs'. Four parts read at the commit 'specs(067): scenario contexts state the pre-fix gaps in the past tense': the security pass over the three security rule files and check_artifacts.rs whole, the other four passes over the nine other rule files, AGENTS.md from Gotchas, system.md and read_spec.rs, check_orphaned_references.rs, check_promotion_coverage.rs, the mutation list and the analyze reference whole, the criteria step, and a whole read of the spec's spec, plan, data model, tasks and the twelve in-scope scenarios with every concrete claim checked against the tree. Unread, read in part: runtime/src/primitives/mod.rs, runtime/src/schema/descriptions.rs and runtime/CHANGELOG.md (only the hunks of 2e66524d and the 067 entry of the changelog commit, with their enclosing functions), and .ductus/reference/analyze.md, the generated copy, compared to its source by substitution (identical). 0 MUST, 1 SHOULD (QUAL-CLAIM-001 at check_orphaned_references.rs, waived by the stored owner decision), 0 low-confidence. One contract break found and fixed in the run: a none item with emphasis around the word and text after it (**None** — all resolved) was read as an open question, fixed in read_spec.rs with a test case and mutant M105 (killed with the fix in place, and the fix is what the mutant reverts). The other observations were stale claims in the spec artifacts, fixed in the run, one waived compact-delimiter limit of table_keys and one waived advisory about a retired root named on purpose. The 9 stored decisions on in-scope files were each confirmed still standing by the reader that read the file and matched; the other stored decisions are retained. All 5 criteria judged met; AC2 was reworded in the run (its document clause now names the code-span form with a slash) and judged again against the new text. Fix round 1 re-read read_spec.rs, the mutation list and the artifact edits and found only a NOTE on the plan, fixed; plan.md, spec.md and tasks.md edits are exempt and analyze reads them again.
+Five-pass review of 067's reopening (diff-base cdee8ab0, base-source reopen) at HEAD db227015. Its code commits are 28c3af3e and f33dd7ea (task 45, AC8 and AC9: `resolve-anchor` judges a scenario's `§` references, interactively and under `ductus exec`), 5fbf75dd (mutation anchors and two scenarios' references) and ba69ef5d (task 44, AC6 and AC7: an analysis fixes its own design finding in the run, and judges the plan against the spec), with the spec-only 53fde26d, 003c343a and f84932e8. Passes ran in two parts against the five rule files `discover-rule-files` selected (232,805 bytes, each read whole against `wc -c` by each part): P3 over `runtime/` and `scripts/`, P4 over the commands, references and 067's artifacts, each reading those commits' hunks and the files whole where a behavior needed context. They found one finding and fourteen observations. Fixed in this run: the QUAL-CLAIM-001 SHOULD (low confidence) that a `§` followed by a single quote, or by a double quote its line leaves open, landed in no count, now each a `quoted-heading` reference, with two tests in `runtime/src/primitives/resolve_anchor.rs` and five mutants in `scripts/mutation/quoted-heading-forms-067.py`, each killed; `scripts/analyze/detect.py`'s scenario scan, which merged only two lists, matched `.md` by case and aborted on an unreadable scenario, now matches the walker, and `scripts/analyze/record.py` takes the unexamined anchor counts from the result as the exec tally does (cases AH and AQ); a broken contract, `framework/commands/analyze.md`'s description, Purpose and Scope Boundaries still saying only a deferral reaches the operator; and the stale statements P4 found in the analyze command and reference and in 067's AC2, Resolved Questions, plan, data model, tasks and `anchor-reference-kinds` scenario. The owner chose on 2026-11-21 to reopen 079 rather than narrow AC6: `framework/constitution.md`'s Finding dispositions (49,199 bytes, under the 50,000-byte read size) and 079's AC17 now admit the operator-confirmed design edit, 079 is in-progress again, and 067's `cross-spec-impact:` lists it. Waived by the rule: `RESOLVE_ANCHOR` omitting the exec walker's fields, and an exec run naming no unreadable scenario. The stored waivers that still stand apply. P3 and P4 re-ran their passes over the fix; the re-runs raised four more, three fixed (a plan row, 079's rejected-option reason, step 19's revert) and one waived by the rule: a section sign quoted in prose now reads as a `quoted-heading`, counted unexamined and never a finding, and no file here writes one. The criteria step (part C4) judged every criterion individually: 9 of 9 met, driven with the release binary on fixtures; AC2's text now names `quoted-heading`. Examined 28 of 35; unread: the seven generated files (`framework/commands/help.md`, which `scripts/gen-help-tables.sh` writes, and `.claude/commands/ductus/analyze.md`, `.ductus/reference/analyze.md`, `.pi/prompts/ductus-analyze.md`, `.claude/commands/ductus/help.md`, `.pi/prompts/ductus-help.md`, `.ductus/reference/review.md`), confirmed in sync by `scripts/gen-claude-commands.sh --check` after both generators ran. The deleted path `specs/083-review-and-analysis-check-each-other/spec.md` is the retired 083's, removed by c5da762d, and no pass read it.
 
-2 fix round(s): 1 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 2.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
-5 of 5 acceptance criteria judged met.
+9 of 9 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -264,13 +295,7 @@ Review of 067's reopening for tasks 38 to 42 (a none item, plan headings without
 
 ## Waived findings
 
-### WAIVED: QUAL-CLAIM-001 — an unparseable migrations registry reads as watermark attribution without a skipped entry
-
-- **File**: `runtime/src/primitives/check_orphaned_references.rs`
-- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish examined the subject and found nothing from could not examine the subject.
-- **Finding**: A registry that does not parse is not distinguished from a missing one in the result; the compiled description states it, and the owner kept the choice (stored waiver).
-- **Auto-fixable**: no
-- **Waived**: an unparseable framework/migrations.toml reading as watermark attribution is the decided behavior: 067's review round 1 (2be18da6, 2026-10-26) documented it rather than add a skipped entry, and the compiled description states that the two cases read alike; the owner kept that choice on 2026-11-15
+*None.*
 
 ## Deferred findings
 
@@ -278,37 +303,41 @@ Review of 067's reopening for tasks 38 to 42 (a none item, plan headings without
 
 ## Acceptance criteria
 
-- AC1 — met: `check_artifacts.rs` `compute` runs exactly the 14 named families, driven on a fixture, and no code path reads `analysis.md`.
-- AC2 — met: `resolve_anchor.rs` `compute`/`judge`/`document_tokens` decide cross-document, qualified, intra-document and markers in order with the unjudged reasons counted, driven on a fixture; AC2's reworded document clause matches `document_tokens`.
-- AC3 — met: `record_unreadable_artifact` gives a blocking finding at done and an `artifact-unreadable` skip below, driven with a non-UTF-8 scenario.
-- AC4 — met: `check_promotion_coverage.rs` `compute` returns all four terms, refuses empty `sections`, reports missing-sections, unmatched-keys and table-state, errors on an unreadable table-file, and `scripts/audit/promotion-coverage.sh` renders the line, all driven on a fixture.
-- AC5 — met: `check_line_number_citations` with `line_citations::{find,find_set_apart}` reports each form blocking, with the port hint, and skips ports, fences, blockquotes and `review.md`, driven on a fixture.
+- AC1 — met: `check_artifacts.rs` runs all 14 named families (driven on fixtures: artifact-unreadable, line-number-citations, body-path-existence, scenario-open-questions, link-adjacent-drift fire); `analysis.md` judged by none, proven by `the_analysis_record_s_own_state_is_never_judged_here` and `the_analysis_record_is_not_judged_by_this_family`.
+- AC2 — met: `resolve_anchor.rs`, driven with the release binary on fixtures: qualified, intra-document, markers, cross-document (real 071 spec gives cross-document 2) kinds and counts; `fenced/commented` headings and a heading not ending at a word are no match; unjudged reasons anchor-target-unjudgeable and anchor-target-unreadable reported; unit tests `a_heading_must_end_where_a_word_ends`, `a_heading_inside_a_fenced_block_is_not_a_section`, `a_reference_into_a_registered_constitution_is_judged_against_its_markers`.
+- AC3 — met: `check_artifacts.rs` `record_unreadable_artifact`: driven on a non-UTF-8 scenario, blocking at done (4 families) and an artifact-unreadable skip at in-progress; test `an_unreadable_artifact_blocks_a_done_spec` and `an_unreadable_artifact_below_done_is_still_only_skipped`.
+- AC4 — met: `check_promotion_coverage.rs` driven: all four terms returned, no --section refused, absent section in missing-sections, no-table table-state, unreadable --table-file an `I/O` error; `scripts/audit/promotion-coverage.sh` renders the coverage line to stderr and emits unmatched-key and missing-section findings.
+- AC5 — met: `check_line_number_citations` in `check_artifacts.rs`, driven on a draft fixture: :N, :N-M, :N:C, #LN, #LN-LM, a listed `lib.rs`:44 and set-apart spans reported blocking; Makefile:3, a port, prose, fenced, blockquote and `review.md` not; tests `a_line_number_citation_is_reported_in_each_examined_artifact` and `a_line_number_citation_is_reported_at_every_status`; `analyze.md` reference has a Line-number citations section.
+- AC6 — met: `write_analysis.rs` `refuse_design_edit_deferrals` (called in run): tests `a_gating_design_finding_deferred_to_its_own_tasks_is_refused`, `a_gating_finding_left_undispositioned_at_an_edited_subject_is_refused` and the two accepted-record tests; mutants in `scripts/mutation/analysis-design-fix-067.py`; `analyze.md` steps 19 and 20 and the reference state the in-run design edit.
+- AC7 — met: `framework/commands/analyze.md` step 15 (the step judging the plan against `system.md`) now judges the plan against the spec's Behavior or acceptance criteria as a Blocking finding; `framework/reference/analyze.md` Plan consistency lists it; `data-model.md` plan-consistency line names it; no code or test, judged by reading the step.
+- AC8 — met: interactive: `analyze.md` step 4 plus `scenario_anchors` in `scripts/analyze/detect.py` (scenarios-examined, case AO); exec: `dispatch_primitive` resolve-anchor arm calls `run_with_scenarios` in `interpreter/mod.rs`; tests `an_exec_step_4_scans_each_scenario_under_the_spec` (0 for no scenarios, 2 for two) and `an_exec_step_4_records_an_unreadable_scenario_and_directory`; mutants in `exec-scenario-anchors-067.py`.
+- AC9 — met: driven with the release binary on a scenario fixture beside `spec.md` with Surface and Cache invalidation: bare `spec.md` §Surface resolves and is judged, §"Cache invalidation" is kind quoted-heading unjudged and counted, a line-wrapped reference is unresolved with wrapped true, `../spec.md` resolves, a path leaving the project (also a [services] checkout) is anchor-target-unjudgeable; --help states it; unit tests `a_bare_spec_md_in_a_scenario_names_the_parents`, `a_quoted_heading_is_reported_as_a_form_not_read`, `an_unresolved_reference_its_next_line_completes_is_wrapped`.
 
 ## Observations
 
-- other — lexical_in_project (new in task 27), resolve_sibling and check_corpus_links' lexical_join each walk path components with the same Normal/ParentDir/CurDir arms. The three differ where it matters: resolve_sibling and lexical_in_project refuse a rooted path and test containment against different bases, lexical_join drops a root component and tests nothing, so a shared helper would have to take both policies. — `runtime/src/primitives/check_artifacts.rs:2587` — `runtime/src/primitives/check_artifacts.rs` — **waived**: The three walkers take different policies for a rooted path and for the containment base, so one helper would carry two flags to save about ten lines each; the divergence is the point of each. (decided by the rule)
-- bug — with an outward link in the feature directory, a done spec reads clean: true with a non-empty skipped (family outward-link, reason target-unparseable) for a scenario carrying unresolved open questions, a review.md with blocking: true, a tasks.md with unchecked boxes or a spec.md, where AC3 makes the spec's own unreadable artifact a blocking finding at done because an unreadable scenario with unresolved questions would otherwise pass the gate built to catch it. The tests a_scenario_linked_outside_the_project_is_skipped_while_the_run_continues and a_spec_linked_outside_the_project_ends_the_run_with_the_skip_alone pin the skip, and the plan records the choice, so this is a design tension between AC3 and the sibling-symlink-trust-boundary scenario rather than an unnoticed gap. check-review-gate reads scenario questions through collect_scenario_open_questions with no guard, so the completion gate does not depend on this result. — `runtime/src/primitives/check_artifacts.rs:298` — `runtime/src/primitives/check_artifacts.rs` — **waived**: The plan and the sibling-symlink-trust-boundary scenario decide that a link out is recorded target-unparseable and never opened, with clean: true plus a non-empty skipped meaning partially examined (QUAL-CLAIM-001), and artifact-unreadable names a file the run tried and failed to read, not one it declines to open; the pre-done gate reads the scenario questions itself. (decided by the rule)
-- other — framework/reference/analyze.md is 62,697 bytes against the 50,000-byte read size: 72fd2ce6 cut it to 49,777, the next two commits (0a7787b4 of 041, 12ea0e44 of 063) left it at 49,917 and 50,479, and later commits including this group's f3ce20be (+1,596), a54ef591 (+1,017), 0cc0cc1e (+220), 8f3b4407 (+147) and a42867ae (+18) took it to 62,697; 079's ticked AC18 says it fits one read at that spec's close and no longer holds, and nothing (scripts/lint-governing-size.sh holds only AGENTS.md and the constitution) enforces it — `framework/reference/analyze.md` — `framework/reference/analyze.md` — **waived**: The claim belongs to 079's AC18 and 067's contract states none about the reference's size; the reference is read through read-section by heading, which the command's Instructions require, so a host never reads it whole, and the framework has no size gate for a reference file to hold it to, so this is an observation about the pipeline's own machinery (decided by the rule)
-- other — an unreadable plan.md on a done spec yields three blocking findings for one file, from link-adjacent-drift, body-path-existence and plan-consistency (reproduced on a fixture), so blocking-findings counts one defect three times — `runtime/src/primitives/check_artifacts.rs:932-958` — `runtime/src/primitives/check_artifacts.rs` — **waived**: Each family records an artifact it could not read through record_unreadable_artifact by design (scenario unreadable-scenario-is-reported), so a family's silence never reads as examined, and the findings are one defect named by three families; collapsing them would make a family's result depend on another's (decided by the rule)
-- other — lists_a_file counts any word holding a slash as a listed file, so a placeholder such as N/A or tbd/none under Affected Files passes plan-consistency (reproduced: the section reading N/A or tbd/none raised no finding) — `runtime/src/primitives/check_artifacts.rs:609` — `runtime/src/primitives/check_artifacts.rs` — **waived**: The plan decision and 8f3b4407 state the rule on purpose: the section is a planning aid the template calls non-exhaustive, so the blocking check catches only a section left empty or holding its scaffold and never judges a spelling or its content (decided by the rule)
-- other — task 35 (and task 33's second bullet at line 29) cite 026's analysis.md as recording the owner's 2026-11-15 deferral, but 026's committed analysis.md at HEAD (last commit 25e4234e, 2026-11-13) records deferred: 0 and names neither 067 nor either finding — `specs/067-analyze-and-audit-checks/tasks.md:47` — `specs/067-analyze-and-audit-checks/tasks.md` — **waived**: the authority for each deferral is the owner's decision, which the task commits b63f0cf3 and a15b6cf6 record; the record the sentence cites is 026's own analysis run to write. (decided by the rule)
-- perf — leaves_project_by_link resolves the project root through canonical_base once per candidate path, where check-corpus-links' Containment resolves its base once per scan; each call is a handful of lstat and readlink calls on the root's components — `runtime/src/primitives/check_artifacts.rs:2610` — `runtime/src/primitives/check_artifacts.rs` — **waived**: the cost is a few system calls per backticked path in one feature's criteria and body, no result changes, and hoisting the base is a signature change through three call sites, not a mechanical edit. (decided by the rule)
-- bug: `check-artifacts` aborts with an I/O error (exit 1, no result) on a non-UTF-8 `tasks.md`, at every status, instead of recording `artifact-unreadable` as `plan.md`, scenarios, `data-model.md` and `research.md` are; the failure is loud so it never reads as a pass — `runtime/src/primitives/check_artifacts.rs` — `runtime/src/primitives/check_artifacts.rs` — **waived**: The abort is the documented `PrimitiveError::Io` result of `check-artifacts`, a distinct non-passing outcome that never reads as clean, so `QUAL-CLAIM-001` holds; recording a `tasks.md` the task parser cannot read as an `artifact-unreadable` skip or finding would be a new behavior for 067's data model to state, not a mechanical fix, and AC3's finding-or-skip form holds for every artifact the families record. (decided by the rule)
-- bug: a non-UTF-8 `review.md` is read as no record, so a `done` spec returns exit 0 with no finding and no skip (grandfathered), where the constitution calls an unparseable record undeterminable, not never-run — `runtime/src/primitives/check_artifacts.rs` — `runtime/src/primitives/check_artifacts.rs` — **waived**: `check_artifacts.rs` treats an unparseable review record as absent by design, as its comment at the review-drift call states: a record that will not parse is `validate-frontmatter`'s hard fail and the completion gate's `record-unreadable` block, so reporting it here as well would name one defect twice in two vocabularies. (decided by the rule)
-- bug: `is_placeholder_question` did not ignore emphasis around the word none when text followed it, so `- **None** — all resolved` was read as an open question, against the scenario, the doc comment and the changelog entry — `runtime/src/primitives/read_spec.rs` (breaks the spec's contract) — **fixed** (decided by the rule)
-- bug: `table_keys` in `check_promotion_coverage.rs` does not see a compact table (`|---|---|` delimiter), so the header's first cell stays a key and a fully compact table reads zero rows — `runtime/src/primitives/check_promotion_coverage.rs` — **waived**: The spaced `| --- |` grammar is pre-existing and every table the audit reads uses it, no scenario or criterion claims the compact form, and the result is visible (a counted key or `table-rows` 0), never a clean pass; reading compact rows would be a new requirement for the scenario, not a mechanical fix (decided by the rule)
-- bug: AC2 says a document is named by a file with an extension, looser than `document_tokens`, which reads a code-span path of another extension only with an interior slash — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
-- convention: the module docstring of `scripts/mutation/owner-reviews-067.py` enumerated the list's behaviors up to M95 and omitted M96 to M104 — `scripts/mutation/owner-reviews-067.py` — **fixed** (decided by the rule)
-- convention: the doc comment of `is_placeholder_question` and scenario `a-none-list-item-is-no-open-question` named a trailing period where the code also trims an exclamation mark — `runtime/src/primitives/read_spec.rs` — **fixed** (decided by the rule)
-- bug: ticked tasks 31, 33, 35 and 36 state the gap they closed in the present tense (today ...) — `specs/067-analyze-and-audit-checks/tasks.md` — **fixed** (decided by the rule)
-- bug: scenario `derive-references-results-are-bounded` Context stated the pre-fix unbounded result as current — `specs/067-analyze-and-audit-checks/scenarios/derive-references-results-are-bounded.md` — **fixed** (decided by the rule)
-- bug: scenario `traverse-deps-cycle-check` Context named a retired `gen-spec-deps.sh` in the present and future tense — `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md` — **fixed** (decided by the rule)
-- bug: scenario `check-artifacts-skipped-targets` said the five pre-existing families return an empty `skipped`, false for `scenario-open-questions` and `link-adjacent-drift` — `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md` — **fixed** (decided by the rule)
-- convention: the plan's Overview and Affected Files omitted tasks 38 to 42 and the files they changed (`read_spec.rs`, `mod.rs`, the mutation list) — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
-- convention: the data model's `check-orphaned-references` enumeration of what is never reported omitted the git-ignored local state class — `specs/067-analyze-and-audit-checks/data-model.md` — **fixed** (decided by the rule)
-- convention: scenario `a-plan-heading-is-matched-without-regard-to-case` listed the exact-match readers as if complete, omitting `tables_under` and `dashboard`'s section reader — `specs/067-analyze-and-audit-checks/scenarios/a-plan-heading-is-matched-without-regard-to-case.md` — **fixed** (decided by the rule)
+- convention: `RESOLVE_ANCHOR`'s compiled description (the canonical source of the primitive's behavior) says nothing of what step 4 returns under ductus exec since f33dd7ea: scenarios-examined, each scenario reference's `path`, and scenario anchors listed as `<path>: <anchor>`; only field doc comments and the CHANGELOG state them (grep of `descriptions.rs` finds no `scenarios-examined`) — `runtime/src/schema/descriptions.rs` — **waived**: The two fields come from the ductus exec walker's dispatch, not from a direct call, so the primitive's description is right to leave them out; the result schema's field docs and 067's data model state them. (decided by the rule)
+- bug: `detect.py` `scenario_anchors` re-implements `run_with_scenarios` and diverges: it merges only references and unresolved into `det/resolve-anchor.json`, so references-count, unresolved-count, quoted-heading, wrapped and the anchor-target counts still describe `spec.md` alone beside lists that hold the scenarios' (the unjudged counts `record.py` takes from the references list are right); it lists scenarios with a case-sensitive endswith('.md') where the runtime's `is_markdown` ignores case; and a scenario it cannot read aborts the whole detection where the exec walker counts it in anchor-target-unreadable — `scripts/analyze/detect.py` — **fixed** (decided by the rule)
+- other: a scenario that cannot be read under exec step 4 is counted once in anchor-target-unreadable and not named anywhere in the result, so the operator learns that one scenario went unread, not which — `runtime/src/primitives/resolve_anchor.rs` — **waived**: Under ductus exec the count records the scenario unexamined in the record, as every unexamined target is recorded, with no per-file detail for any reason; the interactive path now names the file in its output. (decided by the rule)
+- convention: `framework/commands/analyze.md` still says three kinds of write are in scope and no others (Scope Boundaries: step 19's mechanical fix, a gating finding's deferral, `analysis.md`, --fix's revert), that step 19 writes a gating finding's deferral only after the operator confirms it (Purpose), and, in its frontmatter description, that only a gating finding's deferral reaches the operator; the new step 19 adds a fourth write, a non-mechanical, operator-confirmed edit to a design subject (`spec.md`, `plan.md`, `data-model.md`, a scenario) for a hard-fail or blocking finding. The sibling sections were not swept with steps 19 and 20, and the description is copied into the generated `help.md`. — `framework/commands/analyze.md` (breaks the spec's contract) — **fixed** (decided by the rule)
+- convention: `framework/reference/analyze.md` section Finding dispositions files the operator-confirmed design edit under Fixed, but the constitution (section brownfield-inbox, Finding dispositions) defines Fixed as a chore and says a review or analysis run asks the operator only for a gating finding's waiver or deferral, and the done spec 079 states the second as its ticked AC17; neither the constitution nor 079 is amended or back-linked, and 079 is not in 067's cross-spec-impact (058, 066 and 078 were added, and each links back). The framework constitution is a floor, so the reference departs from it without recording the departure. — `framework/reference/analyze.md` — **fixed** (decided by the rule)
+- bug: step 20 and the reference say write-analysis refuses a finding that first appears in the re-check at an edited design subject, but `refuse_design_edit_deferrals` (`runtime/src/primitives/write_analysis.rs`) refuses any live hard-fail or blocking finding recorded undispositioned at a subject a live:false finding cites, with no test of newness. A gating finding that was already live at step 19 and left undispositioned (the operator declined its deferral, or step 19's no-operator rule left it so) is refused too, so a host that also fixed a chore at that subject must revert the chore fix; step 19's no-operator sentence and step 20 do not say so. AC6's wording and the code agree; the command and reference describe a narrower case. — `framework/commands/analyze.md` — **fixed** (decided by the rule)
+- convention: step 19 says a design-subject gating fix that fails is proposed as a deferral that 'names another spec's work or none', never its own `tasks.md`. 'Or none' leaves a deferred gating finding with no destination, which section Finding dispositions (Deferred) does not allow (a home, or an external work-item ID) and write-analysis does not test for; say which is meant (an external work item alone) or drop the words. — `framework/commands/analyze.md` — **fixed** (decided by the rule)
+- convention: two Resolved Questions dated 2026-11-21 reject an option for the work it starts and name no result the option would have delivered or the chosen one gives up: 'What does a scenario's `spec.md` name?' rejects requiring `../spec.md` because it 'reopens the scenario template's owning spec and has adopters rewrite each citation by hand', and 'Is a path into a registered service's checkout read?' rejects judging it against that checkout because it 'widens 030 and reopens it'. This is the pattern `framework/reference/analyze.md` section Decision reasons (advisory) has step 15 flag, and `AGENTS.md` (Weigh what an option starts against what it delivers) asks for the result given up; step 15 run on 067 would raise both. — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
+- convention: AC2 (ticked) says resolve-anchor classifies each section-sign reference as qualified, intra-document or markers, with cross-document a fourth kind, and `data-model.md` says its kinds are 'the four kinds' and that quoted-heading is reported 'beside the four kinds' while also calling it 'a reference of kind quoted-heading'; `plan.md`'s interface table calls it a new value of kind, documented closed. kind now has five values, and AC2's enumeration and the data model's 'four kinds' wording (ductus resolve-anchor --help's decision order likewise omits it) no longer match the result. — `specs/067-analyze-and-audit-checks/spec.md` — **fixed** (decided by the rule)
+- convention: step 4 says to 'count each scenario file scanned as examined', and AC8 says the examined count includes the scenario files, but no artifact names where an interactive host puts the count: write-analysis has no field for it, step 22 renders none, and only the exec dispatch result and `scripts/analyze/detect.py` carry scenarios-examined, which the exec tally does not record either. A count with no destination in the record or the report cannot be read by the next run. — `framework/commands/analyze.md` — **fixed** (decided by the rule)
+- convention: step 4 has an interactive host call resolve-anchor on 'each file under the spec's scenarios/', while `data-model.md` and the exec walker scan each .md directly under scenarios/; a non-markdown or nested file is scanned by one path and not the other, and the command does not say which set is meant. — `framework/commands/analyze.md` — **fixed** (decided by the rule)
+- convention: `tasks.md` task 45's AC8 line is ticked but still reads 'Still owed before this box is ticked: the ductus exec walker dispatches step 4 once, on `spec.md` ...' and directs adding 022 to cross-spec-impact (already listed) and a 022 signpost (added in f33dd7ea); the handoff prose is now false beside its own tick. — `specs/067-analyze-and-audit-checks/tasks.md` — **fixed** (decided by the rule)
+- convention: `plan.md`'s design record lags tasks 44 and 45: the Overview enumerates the work only through tasks 38 to 42; Affected Files omits `framework/reference/review.md` (task 44's Fix-round loop paragraph), `runtime/CHANGELOG.md` and the 022, 058, 066 and 078 edits the tasks owed; and the task 45 row of the interface table lists kind and wrapped but not the exec result's path field and scenarios-examined, which f33dd7ea added. — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- bug: the new single-quote and open-double-quote forms also read a section sign quoted in prose, as in `the '§' mark`, as a `quoted-heading` reference — `runtime/src/primitives/resolve_anchor.rs` — **waived**: Such a line is counted one more unexamined target, never a false finding or a hidden one, and no file in this repository writes one; it errs toward unexamined, as a check that cannot judge must. (decided by the rule)
+- convention: the plan's new Affected Files row said `framework/reference/review.md`'s §Deferrals states the in-run design fix, where task 44 edited the first paragraph of its §Fix-round loop — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
+- convention: 079's new Resolved Question described the rejected option as making no edit in the run, where the option put to the owner was dropping the operator's confirmation so the edit is applied by the rule — `specs/079-review-and-analysis-work-converges/spec.md` — **fixed** (decided by the rule)
+- convention: step 19's reworded clause left a failed design fix undispositioned without saying the fix is reverted first, as step 20 and the reference do — `framework/commands/analyze.md` — **fixed** (decided by the rule)
+- other: fix round 1's NOTE: step 19's "Deferred: with that design edit, the only write that reaches the operator, for a finding that is no chore and no such design edit" reads awkwardly, its for-clause fitting only the deferral — `framework/commands/analyze.md` — **waived**: A style point the re-read found not wrong; rewording it would be a round of its own for no change of meaning. (decided by the rule)
+- other — 101 of the 116 references Family 39 counts as not judgeable by construction (run on this tree at HEAD: 544 files, 2400 references, exit 0) name a bare basename that exists elsewhere in the tracked tree but not at the citing directory or the project root, for example ductus-procedure.md section Pre-run Migrations in framework/migrations/ductus-rename.md line 16, ductus.md section Derived values in framework/reference/analyze.md line 329, spec.md and data-model.md in many scenarios. The primitive resolves a document only from the citing file's directory and then the project root (stated in its module docs and scenario anchor-reference-kinds), so these are excluded as 'absent' though the document exists; a renamed section behind such a pointer still fails no gate, contrary to the commit's aim that a renamed section fail CI instead of going unseen. The unexamined count is reported on stderr and recorded under anchor-target-unjudgeable, so nothing reads as passed. — `runtime/src/primitives/resolve_anchor.rs:568-644` — **waived**: The resolution bases (citing directory, then project root) are the decided design of scenarios anchor-reference-kinds and shared-constitution-references-are-judged, and the excluded references are counted and recorded unexamined, not reported clean. Resolving a bare basename to a unique tracked file would be a new requirement for the owner to decide (a basename can match several files), not a defect of this change. (decided by the rule)
+- other — framework/reference/analyze.md is 62,697 bytes against the 50,000-byte read size: 72fd2ce6 cut it to 49,777, the next two commits (0a7787b4 of 041, 12ea0e44 of 063) left it at 49,917 and 50,479, and later commits including this group's f3ce20be (+1,596), a54ef591 (+1,017), 0cc0cc1e (+220), 8f3b4407 (+147) and a42867ae (+18) took it to 62,697; 079's ticked AC18 says it fits one read at that spec's close and no longer holds, and nothing (scripts/lint-governing-size.sh holds only AGENTS.md and the constitution) enforces it — `framework/reference/analyze.md` — **waived**: The claim belongs to 079's AC18 and 067's contract states none about the reference's size; the reference is read through read-section by heading, which the command's Instructions require, so a host never reads it whole, and the framework has no size gate for a reference file to hold it to, so this is an observation about the pipeline's own machinery (decided by the rule)
+- other — task 35 (and task 33's second bullet at line 29) cite 026's analysis.md as recording the owner's 2026-11-15 deferral, but 026's committed analysis.md at HEAD (last commit 25e4234e, 2026-11-13) records deferred: 0 and names neither 067 nor either finding — `specs/067-analyze-and-audit-checks/tasks.md:47` — **waived**: the authority for each deferral is the owner's decision, which the task commits b63f0cf3 and a15b6cf6 record; the record the sentence cites is 026's own analysis run to write. (decided by the rule)
+- other — compute, bound and Labels in read_deprecation_labels.rs, and bound in resolve_anchor.rs, are pub but called only within their own module and its tests (run is the one entry); the check_corpus_links shape they copy is pub because main.rs calls its bound — `runtime/src/primitives/read_deprecation_labels.rs:44` — **waived**: each is called, so none is dead code, and run's doc comment links to them, which a private item would turn into a private intra-doc link; the visibility mirrors the sibling primitives' compute/bound split and widens nothing a caller can misuse. (decided by the rule)
 - convention: the data model and scenario `orphaned-reference-historical-roots` each name `scripts/lib/`, a retired root, in a sentence the spec's own `body-path-existence` family reports as an advisory finding — `specs/067-analyze-and-audit-checks/data-model.md` — **waived**: Each sentence names a retired root because the check matches it by design (the historical roots the orphan check carries), so the path is the subject, not a stale reference; the advisory finding is dispositioned in the analysis that reports it (decided by the rule)
-- convention: the fix round's re-read noted the plan's Affected Files row still said M96 to M104 after M105 was added — `specs/067-analyze-and-audit-checks/plan.md` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -316,160 +345,83 @@ Review of 067's reopening for tasks 38 to 42 (a none item, plan headings without
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/analyze.md`
-- `.claude/commands/ductus/clarify.md`
-- `.claude/commands/ductus/consolidate.md`
-- `.claude/commands/ductus/fold.md`
-- `.claude/commands/ductus/help.md`
-- `.claude/commands/ductus/implement.md`
-- `.claude/commands/ductus/plan.md`
-- `.claude/commands/ductus/prune.md`
 - `.claude/commands/ductus/review.md`
-- `.claude/commands/ductus/specify.md`
-- `.claude/commands/ductus/target.md`
-- `.ductus/reference/audit.md`
-- `.ductus/reference/clarify.md`
-- `.ductus/reference/consolidate.md`
-- `.ductus/reference/fold.md`
-- `.ductus/reference/plan.md`
-- `.ductus/reference/review.md`
-- `.ductus/reference/specify.md`
-- `.ductus/reference/status.md`
-- `.pi/prompts/ductus-analyze.md`
-- `.pi/prompts/ductus-clarify.md`
-- `.pi/prompts/ductus-consolidate.md`
-- `.pi/prompts/ductus-fold.md`
-- `.pi/prompts/ductus-help.md`
-- `.pi/prompts/ductus-implement.md`
-- `.pi/prompts/ductus-plan.md`
-- `.pi/prompts/ductus-prune.md`
 - `.pi/prompts/ductus-review.md`
-- `.pi/prompts/ductus-specify.md`
-- `.pi/prompts/ductus-target.md`
-- `framework/commands/analyze.md`
-- `framework/commands/clarify.md`
-- `framework/commands/consolidate.md`
-- `framework/commands/fold.md`
-- `framework/commands/help.md`
-- `framework/commands/implement.md`
-- `framework/commands/plan.md`
-- `framework/commands/prune.md`
+- `docs/analyze.md`
+- `docs/developing-ductus.md`
+- `docs/rules.md`
+- `docs/shared-constitution.md`
+- `framework/bootstrap/ductus.md`
+- `framework/bootstrap/govern.md`
 - `framework/commands/review.md`
-- `framework/commands/specify.md`
-- `framework/commands/target.md`
-- `framework/reference/audit.md`
-- `framework/reference/clarify.md`
-- `framework/reference/consolidate.md`
-- `framework/reference/fold.md`
-- `framework/reference/plan.md`
-- `framework/reference/review.md`
-- `framework/reference/specify.md`
-- `framework/reference/status.md`
-- `runtime/Cargo.toml`
-- `runtime/src/interpreter/mod.rs`
-- `runtime/src/interpreter/payload.rs`
-- `runtime/src/io.rs`
-- `runtime/src/main.rs`
-- `runtime/src/parser/mod.rs`
+- `framework/migrations/remove-legacy-constitutions-region.md`
+- `runtime/src/interpreter/analyze_tally.rs`
 - `runtime/src/primitives/analyze_subjects.rs`
-- `runtime/src/primitives/append_inbox.rs`
-- `runtime/src/primitives/check_command_flags.rs`
-- `runtime/src/primitives/check_corpus_links.rs`
-- `runtime/src/primitives/check_review_gate.rs`
-- `runtime/src/primitives/check_step_references.rs`
-- `runtime/src/primitives/classify_spec_edit.rs`
-- `runtime/src/primitives/commit_attribution.rs`
-- `runtime/src/primitives/compute_review_scope.rs`
-- `runtime/src/primitives/derive_routing_candidates.rs`
-- `runtime/src/primitives/merge_managed_block.rs`
-- `runtime/src/primitives/prune_plan.rs`
-- `runtime/src/primitives/prune_tasks.rs`
-- `runtime/src/primitives/relocate_audit_records.rs`
-- `runtime/src/primitives/rule_sections.rs`
-- `runtime/src/primitives/spec_links.rs`
-- `runtime/src/primitives/tool_loading.rs`
-- `runtime/src/primitives/write_review.rs`
-- `runtime/src/schema/primitives.rs`
-- `runtime/tests/bounded_list_gates.rs`
-- `runtime/tests/check_step_references_cli.rs`
-- `runtime/tests/derive_dependencies_golden.rs`
-- `runtime/tests/derive_references_golden.rs`
-- `runtime/tests/exec_stderr_gone.rs`
-- `runtime/tests/golden/implement-basic.jsonl`
-- `runtime/tests/golden/plan-basic.jsonl`
+- `runtime/src/primitives/brief_re_read.rs`
+- `runtime/src/primitives/discover_rule_files.rs`
+- `runtime/src/primitives/fix_rounds.rs`
+- `runtime/src/primitives/rule_verdicts.rs`
+- `runtime/src/primitives/start_fix_rounds.rs`
 - `runtime/tests/golden/review-basic.jsonl`
-- `runtime/tests/mcp.rs`
-- `scripts/audit/README.md`
-- `scripts/audit/step-reference-integrity.sh`
-- `scripts/mutation/exec-arguments.py`
-- `scripts/mutation/installed-file-modes.py`
-- `scripts/mutation/prune-open-region.py`
-- `scripts/mutation/prune-review-fixes-041.py`
-- `scripts/mutation/relocate-merge-children-057.py`
-- `scripts/mutation/reopen-measure.py`
-- `scripts/mutation/review-022-task-44.py`
-- `scripts/mutation/review-read-credit.py`
-- `scripts/mutation/scope-attribution.py`
-- `scripts/mutation/stderr-warnings-022.py`
-- `scripts/mutation/step-references-bounded.py`
-- `scripts/mutation/step-references-reach.py`
-- `scripts/tests/test-step-reference-integrity.sh`
-- `specs/020-code-review/analysis.md`
-- `specs/020-code-review/data-model.md`
+- `runtime/tests/line_ending_discipline.rs`
+- `scripts/analyze/briefs.py`
+- `scripts/analyze/judge-brief.md`
+- `scripts/analyze/split.py`
+- `scripts/mutation/criterion-ticks-outside-the-digest.py`
+- `scripts/mutation/reachable-trigger-bar-078.py`
+- `scripts/mutation/rule-files-left-to-analysis-020.py`
+- `scripts/mutation/rule-verdicts-converge.py`
+- `specs/020-code-review/plan.md`
 - `specs/020-code-review/review.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
 - `specs/022-deterministic-runtime/data-model.md`
-- `specs/022-deterministic-runtime/scenarios/a-closed-stdout-is-a-quiet-exit.md`
-- `specs/022-deterministic-runtime/scenarios/append-inbox-comment-aware-write.md`
-- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`
-- `specs/022-deterministic-runtime/scenarios/host-protocol-conformance.md`
-- `specs/022-deterministic-runtime/scenarios/installed-files-are-not-group-writable.md`
-- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
-- `specs/022-deterministic-runtime/scenarios/skipscanner-inline-code-exemption.md`
-- `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md`
+- `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md`
+- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
 - `specs/022-deterministic-runtime/spec.md`
-- `specs/022-deterministic-runtime/tasks.md`
-- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
-- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
-- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
-- `specs/026-framework-self-audit/spec.md`
-- `specs/026-framework-self-audit/tasks.md`
-- `specs/041-task-pruning/data-model.md`
-- `specs/041-task-pruning/scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
-- `specs/041-task-pruning/spec.md`
-- `specs/041-task-pruning/tasks.md`
-- `specs/046-scenario-open-question-visibility/spec.md`
-- `specs/051-branch-scoped-spec-numbering/spec.md`
-- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/024-rule-loader/review.md`
+- `specs/024-rule-loader/spec.md`
+- `specs/034-performance-backend-rules/review.md`
+- `specs/034-performance-backend-rules/spec.md`
+- `specs/037-observability-backend-rules/plan.md`
+- `specs/037-observability-backend-rules/review.md`
+- `specs/037-observability-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/plan.md`
+- `specs/038-concurrency-backend-rules/review.md`
+- `specs/038-concurrency-backend-rules/spec.md`
+- `specs/039-reliability-backend-rules/plan.md`
+- `specs/039-reliability-backend-rules/review.md`
+- `specs/039-reliability-backend-rules/spec.md`
+- `specs/050-constitution/spec.md`
 - `specs/055-shared-constitution/plan.md`
-- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
-- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
-- `specs/057-analyze-artifact-and-record-relocation/review.md`
-- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
-- `specs/057-analyze-artifact-and-record-relocation/spec.md`
-- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
-- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/055-shared-constitution/review.md`
+- `specs/055-shared-constitution/spec.md`
+- `specs/055-shared-constitution/tasks.md`
+- `specs/058-findings-route-at-discovery/spec.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md`
 - `specs/066-audit-records-and-the-completion-gate/data-model.md`
-- `specs/066-audit-records-and-the-completion-gate/plan.md`
-- `specs/066-audit-records-and-the-completion-gate/review.md`
-- `specs/066-audit-records-and-the-completion-gate/scenarios/record-paths-are-quoted-only-when-they-need-it.md`
 - `specs/066-audit-records-and-the-completion-gate/spec.md`
-- `specs/066-audit-records-and-the-completion-gate/tasks.md`
-- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
-- `specs/071-command-reference-split/spec.md`
-- `specs/071-command-reference-split/tasks.md`
-- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/068-api-backend-rules/review.md`
+- `specs/068-api-backend-rules/spec.md`
+- `specs/069-accessibility-frontend-rules/review.md`
+- `specs/069-accessibility-frontend-rules/spec.md`
+- `specs/070-performance-frontend-rules/review.md`
+- `specs/070-performance-frontend-rules/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/review.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
 - `specs/079-review-and-analysis-work-converges/plan.md`
-- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
-- `specs/079-review-and-analysis-work-converges/spec.md`
-- `specs/079-review-and-analysis-work-converges/tasks.md`
-- `specs/080-deterministic-runtime-efficiency/plan.md`
-- `specs/080-deterministic-runtime-efficiency/scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
-- `specs/080-deterministic-runtime-efficiency/spec.md`
-- `specs/080-deterministic-runtime-efficiency/tasks.md`
-- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
-- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
-- `specs/081-reviews-and-checks-follow-what-changed/review.md`
-- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
+- `specs/079-review-and-analysis-work-converges/research.md`
+- `specs/082-rule-assessments-converge-across-runs/analysis.md`
+- `specs/082-rule-assessments-converge-across-runs/data-model.md`
+- `specs/082-rule-assessments-converge-across-runs/plan.md`
+- `specs/082-rule-assessments-converge-across-runs/review.md`
+- `specs/082-rule-assessments-converge-across-runs/spec.md`
+- `specs/082-rule-assessments-converge-across-runs/tasks.md`
+- `specs/inbox.md`
 
 ## Unexamined governance
 

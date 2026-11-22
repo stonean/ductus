@@ -70,14 +70,22 @@ def constitution():
     raise lib.Unreadable("no constitution at framework/constitution.md or .ductus/constitution.md")
 
 
+COUNTS = ("qualified", "intra-document", "cross-document", "anchor-target-unjudgeable",
+          "anchor-target-unreadable", "quoted-heading", "wrapped")
+
+
 def scenario_anchors(feature, det):
-    """Step 4 on each scenario under the spec (spec 067, AC8): resolve-anchor
-    per file, its references merged into the spec's resolve-anchor.json, each
-    tagged with the path of the file that holds it, and an unresolved anchor of
-    a scenario listed as "<path>: <anchor>". scenarios-examined counts the
-    scenario files scanned, so a spec with no scenarios (0) reads apart from
-    scenarios left unscanned. A scenario whose call returns no result is
-    Unreadable, as a spec-level step is."""
+    """Step 4 on each scenario under the spec (spec 067, AC8), as the exec
+    walker's run_with_scenarios does: resolve-anchor per `.md` file directly
+    under scenarios/, matched without regard to case, its references merged
+    into the spec's resolve-anchor.json, each tagged with the path of the file
+    that holds it, an unresolved anchor of a scenario listed as "<path>:
+    <anchor>" and the whole list sorted, its counts added to the spec's, and
+    references-count and unresolved-count restated for the merged lists.
+    scenarios-examined counts the scenario files scanned, so a spec with no
+    scenarios (0) reads apart from scenarios left unscanned. A scenario whose
+    call returns no usable result is named in the output, counted in
+    anchor-target-unreadable and not examined, as the walker counts it."""
     spec = f"specs/{feature}/spec.md"
     merged = lib.read_json(os.path.join(det, "resolve-anchor.json"))
     if not isinstance(merged.get("references"), list):
@@ -85,24 +93,34 @@ def scenario_anchors(feature, det):
     for ref in merged["references"]:
         ref["path"] = spec
     d = os.path.join("specs", feature, "scenarios")
-    names = sorted(n for n in os.listdir(d) if n.endswith(".md")) if os.path.isdir(d) else []
+    names = sorted(n for n in os.listdir(d) if n.lower().endswith(".md")) if os.path.isdir(d) else []
+    markers = constitution() if names else None
+    examined = 0
     for n in names:
         path = f"{d}/{n}"
         try:
-            result, _ = lib.call("resolve-anchor", "--path", path, "--markers-path", constitution(),
+            result, _ = lib.call("resolve-anchor", "--path", path, "--markers-path", markers,
                                  allow_exit=True)
+            refs = result.get("references")
+            if not isinstance(refs, list):
+                raise lib.Unreadable("no references list")
         except lib.Unreadable as e:
-            raise lib.Unreadable(f"resolve-anchor on {path}: {e}") from e
-        refs = result.get("references")
-        if not isinstance(refs, list):
-            raise lib.Unreadable(f"resolve-anchor on {path} returned no references list")
+            merged["anchor-target-unreadable"] = merged.get("anchor-target-unreadable", 0) + 1
+            print(f"resolve-anchor {path}: UNREADABLE, counted in anchor-target-unreadable: {e}")
+            continue
+        examined += 1
         merged["references"] += [{**ref, "path": path} for ref in refs]
         merged["unresolved"] = (merged.get("unresolved") or []) + [
             f"{path}: {a}" for a in result.get("unresolved") or []]
+        for key in COUNTS:
+            merged[key] = merged.get(key, 0) + result.get(key, 0)
         print(f"resolve-anchor {path}: {summary('resolve-anchor', result)}")
-    merged["scenarios-examined"] = len(names)
+    merged["unresolved"] = sorted(merged.get("unresolved") or [])
+    merged["references-count"] = len(merged["references"])
+    merged["unresolved-count"] = len(merged["unresolved"])
+    merged["scenarios-examined"] = examined
     lib.write_json(os.path.join(det, "resolve-anchor.json"), merged)
-    print(f"resolve-anchor scenarios: examined={len(names)}")
+    print(f"resolve-anchor scenarios: examined={examined} unreadable={len(names) - examined}")
 
 
 def summary(name, r):

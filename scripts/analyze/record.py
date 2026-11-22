@@ -91,9 +91,11 @@ def unexamined(det):
     un = collections.Counter()
     for s in listed(load(det, "check-artifacts"), "skipped", "check-artifacts"):
         un[s["reason"]] += 1
-    for ref in listed(load(det, "resolve-anchor"), "references", "resolve-anchor"):
-        if ref.get("unjudged"):
-            un[ref["unjudged"]] += 1
+    anchors = load(det, "resolve-anchor")
+    for reason in ("anchor-target-unjudgeable", "anchor-target-unreadable"):
+        if not isinstance(anchors.get(reason), int):
+            raise lib.Unreadable(f"resolve-anchor's result has no {reason} count")
+        un[reason] += anchors[reason]  # a scenario detect.py could not read is in the second
     ids = load(det, "check-rule-ids")
     if not isinstance(ids.get("examined"), int):
         raise lib.Unreadable("check-rule-ids' result has no examined count")

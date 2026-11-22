@@ -88,6 +88,13 @@ Coverage:
      reference with its file's path, counts the scenario files as examined (0
      for a spec with none), and record.py counts their unjudged references
      unexamined (spec 067, AC8)
+  AQ. detect.py merges a scenario's counts into resolve-anchor.json as the
+     exec walker does (the kind and form counts, references-count and
+     unresolved-count restated, unresolved sorted), reads a scenario file
+     whatever the case of its `.md`, and names a scenario it cannot read in
+     its output and counts it in anchor-target-unreadable, not examined, and
+     record.py records the result's own anchor-target counts unexamined and
+     refuses a result missing either
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty
@@ -119,6 +126,9 @@ name = sys.argv[1]
 with open(os.path.join(d, "calls.log"), "a") as f:
     f.write(json.dumps(sys.argv[1:]) + "\n")
 if name in open(os.path.join(d, "broken")).read().split():
+    print("not json"); sys.exit(1)
+if name == "resolve-anchor" and "--path" in sys.argv and \
+        sys.argv[sys.argv.index("--path") + 1] in open(os.path.join(d, "broken-paths")).read().split():
     print("not json"); sys.exit(1)
 if name in open(os.path.join(d, "slow")).read().split():
     time.sleep(5)
@@ -202,7 +212,7 @@ class Project:
         self.write(".ductus/constitution.md", "# Constitution\n")
         self.write("stub/ductus", STUB)
         os.chmod(os.path.join(self.stub, "ductus"), 0o755)
-        for n in ("broken", "slow", "missing-headings"):
+        for n in ("broken", "slow", "missing-headings", "broken-paths"):
             self.write(f"stub/{n}", "")
         self.answer("process-decisions", {"matched": [], "expired": [], "lapsed": []})
         self.answer("discover-rule-files", {"rules-dir": "rules", "selected": RULES["selected"],
@@ -213,7 +223,8 @@ class Project:
         self.answer("check-rule-ids", {"examined": 3, "citations-count": 0})
         for name in ("check-artifact-size", "check-orphaned-references"):
             self.answer(name, {"skipped": []})
-        self.answer("resolve-anchor", {"references": []})
+        self.answer("resolve-anchor", {"references": [], "anchor-target-unjudgeable": 0,
+                                       "anchor-target-unreadable": 0})
         self.write("rules.json", json.dumps(RULES))
         self.git("init", "-q")
         self.git("config", "user.email", EMAIL)
@@ -713,7 +724,8 @@ def ag(p, name):
 STRICT = [  # (script, result, what the runtime always writes, the result without it)
     ("record.py", "check-orphaned-references", "skipped list", {"findings": []}),
     ("record.py", "check-artifacts", "skipped list", {"findings": []}),
-    ("record.py", "resolve-anchor", "references list", {"unresolved": []}),
+    ("record.py", "resolve-anchor", "anchor-target-unjudgeable count", {"references": [], "anchor-target-unreadable": 0}),
+    ("record.py", "resolve-anchor", "anchor-target-unreadable count", {"references": [], "anchor-target-unjudgeable": 0}),
     ("record.py", "check-artifact-size", "skipped list", {"oversized": []}),
     ("record.py", "check-rule-ids", "examined count", {"citations-count": 0}),
     ("record.py", "process-decisions", "matched list", {"expired": [], "lapsed": []}),
@@ -771,7 +783,8 @@ def aj(p, name):
 def ao(p, name):
     ref = {"anchor": "X", "line": 3, "resolved": True, "kind": "qualified",
            "unjudged": "anchor-target-unjudgeable"}
-    p.answer("resolve-anchor", {"references": [ref], "unresolved": ["Gone"]})
+    p.answer("resolve-anchor", {"references": [ref], "unresolved": ["Gone"], "anchor-target-unjudgeable": 1,
+                                "anchor-target-unreadable": 0})
     r = p.run("detect.py", F)
     calls = [c for c in p.calls("resolve-anchor") if "--path" in c][-4:]
     paths = [c[c.index("--path") + 1] for c in calls]
@@ -791,6 +804,30 @@ def ao(p, name):
            and r2.returncode == 0 and "anchor-target-unjudgeable=4" in wa
            and r3.returncode == 0 and none["scenarios-examined"] == 0 and len(none["references"]) == 1,
            r.stdout + r.stderr + r2.stderr + r3.stderr + json.dumps([paths, det, wa]))
+
+
+def aq(p, name):
+    ref = {"anchor": "X", "line": 3, "resolved": True, "kind": "qualified",
+           "unjudged": "anchor-target-unjudgeable"}
+    p.answer("resolve-anchor", {"references": [ref], "unresolved": ["zzz"], "references-count": 1,
+                                "unresolved-count": 1, "qualified": 2, "quoted-heading": 1,
+                                "anchor-target-unjudgeable": 1, "anchor-target-unreadable": 0})
+    p.write(f"specs/{F}/scenarios/Four.MD", "# four\n\n## Behavior\n\nx\n")
+    p.write("stub/broken-paths", f"specs/{F}/scenarios/two.md\n")
+    r = p.run("detect.py", F)
+    det = json.load(open(os.path.join(p.work, "det", "resolve-anchor.json")))
+    record_setup(p)
+    r2 = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    paths = [c[c.index("--path") + 1] for c in p.calls("resolve-anchor") if "--path" in c][-5:]
+    check_(name, r.returncode == 0 and f"specs/{F}/scenarios/Four.MD" in paths
+           and det["scenarios-examined"] == 3 and det["anchor-target-unreadable"] == 1
+           and f"resolve-anchor specs/{F}/scenarios/two.md: UNREADABLE" in r.stdout
+           and det["references-count"] == 4 == len(det["references"])
+           and det["unresolved-count"] == 4 and det["unresolved"] == sorted(det["unresolved"])
+           and det["qualified"] == 8 and det["quoted-heading"] == 4 and det["anchor-target-unjudgeable"] == 4
+           and r2.returncode == 0 and "anchor-target-unreadable=1" in wa and "anchor-target-unjudgeable=4" in wa,
+           r.stdout + r.stderr + r2.stderr + json.dumps([det, wa]))
 
 
 def z(name):
@@ -926,6 +963,7 @@ def main():
     case("AI. split.py refuses detection older than an untracked file", ai)
     case("AJ. split.py names the flag, value and bound of a bad budget", aj)
     case("AO. detect.py runs resolve-anchor on each scenario and counts them examined", ao)
+    case("AQ. detect.py merges a scenario's counts and names one it cannot read", aq)
     case("AP. step 15 states the plan-against-spec judgment, or it is unchecked", ap)
     z("Z. the whole chain against the real release binary")
     if failures:

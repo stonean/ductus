@@ -24,9 +24,9 @@ Resolving all of them against one file reported **112 unresolved anchors** acros
 
 ## Behavior
 
-Each reference is classified into one of four kinds, and the classification is what makes an unresolved one worth reading.
+Each reference is classified into one of four kinds, or is a fifth, `quoted-heading`, and the classification is what makes an unresolved one worth reading.
 
-This scenario introduced the three below; the fourth, `cross-document`, came with [`pointers-into-shipped-files-are-judged`](pointers-into-shipped-files-are-judged.md) and is decided before them (see *Ordering*).
+This scenario introduced the three below; the fourth, `cross-document`, came with [`pointers-into-shipped-files-are-judged`](pointers-into-shipped-files-are-judged.md) and is decided before them (see *Ordering*). A `§` followed directly by a quote is the fifth, `quoted-heading` (067's AC9): decided before all four, judged against nothing, and counted unjudgeable.
 
 - **`qualified`** — the reference's **line** names a markdown document other than the markers file: a backticked path, a markdown link target, or a bare `*.md` token. Counted, and since [`shared-constitution-references-are-judged`](shared-constitution-references-are-judged.md) also **judged** — against the readable documents the line names, the citing file's headings, the markers and any registered shared constitution named — unless the reference points into a shipped document and is `cross-document` instead. One that cannot be judged carries an `unjudged` reason rather than passing.
 

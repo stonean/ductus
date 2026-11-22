@@ -79,8 +79,9 @@
 //! heading its text begins with, ending where a word ends.
 //!
 //! Two forms are reported beside the four kinds rather than left out (067
-//! AC9). A `§` followed by a quoted heading is kind `quoted-heading`, a form
-//! this check does not read, counted as unjudgeable. An unresolved reference
+//! AC9). A `§` followed by a quoted heading (double or single quotes, or a
+//! double quote its line leaves open) is kind `quoted-heading`, a form this
+//! check does not read, counted as unjudgeable. An unresolved reference
 //! whose next line completes it carries `wrapped`. In a scenario (a file
 //! under a `scenarios` directory) a bare `spec.md` names the parent spec's.
 //!
@@ -1283,17 +1284,29 @@ fn quoted_references(
         {
             continue;
         }
-        found.push((whole, tally.quoted(cap[1].trim(), line_no)));
+        let quoted = cap
+            .get(1)
+            .or_else(|| cap.get(2))
+            .or_else(|| cap.get(3))
+            .map_or("", |m| m.as_str());
+        found.push((whole, tally.quoted(quoted.trim(), line_no)));
     }
     found
 }
 
-/// A `§` followed by a quoted heading, straight or curly quotes, capturing the
-/// quoted text.
+/// A `§` followed directly by a quoted heading, capturing the quoted text in
+/// one of three forms: double quotes, straight or curly, closed on the line;
+/// single quotes, straight or curly, closed on the line; or a double quote
+/// the line ends without closing, the heading continuing on the next. An
+/// apostrophe elsewhere in prose is none of them, since the quote must follow
+/// the `§`.
 fn quoted_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
-        Regex::new("§[\"\u{201C}]([^\"\u{201D}]+)[\"\u{201D}]").expect("hard-coded regex compiles")
+        Regex::new(
+            "§(?:[\"\u{201C}]([^\"\u{201D}]+)[\"\u{201D}]|['\u{2018}]([^'\u{2019}]+)['\u{2019}]|[\"\u{201C}]([^\"\u{201D}]*[^\"\u{201D}\\s])\\s*$)",
+        )
+        .expect("hard-coded regex compiles")
     })
 }
 
@@ -2473,6 +2486,54 @@ mod tests {
             ),
             (1, 1, 0)
         );
+    }
+
+    /// A single-quoted heading after `§` is a quoted heading too, in curly
+    /// quotes as well; an apostrophe in prose, or after a plain reference, is
+    /// none, since the quote must follow the `§` directly.
+    #[test]
+    fn a_single_quoted_heading_is_a_quoted_heading() {
+        let r = scan_scenario(
+            SCENARIO,
+            "# S\n\nSee §'Cache invalidation' and §\u{2018}Surface\u{2019}.\n\nThe owner's §known and §known's rule, the user's.\n",
+        );
+        assert_eq!(
+            kinds(&r),
+            [
+                KIND_QUOTED_HEADING,
+                KIND_QUOTED_HEADING,
+                KIND_MARKERS,
+                KIND_MARKERS
+            ]
+        );
+        assert_eq!(
+            r.references
+                .iter()
+                .map(|x| x.anchor.as_str())
+                .collect::<Vec<_>>(),
+            ["Cache invalidation", "Surface", "known", "known"]
+        );
+        assert_eq!((r.quoted_heading, r.anchor_target_unjudgeable), (2, 2));
+    }
+
+    /// A double quote its line leaves open, the heading continuing on the next
+    /// line, is a quoted heading counted once at its own line. A quoted
+    /// heading closed on the line is read as before, and a line holding no
+    /// `§` before the quote holds none.
+    #[test]
+    fn a_heading_quoted_across_a_line_break_is_a_quoted_heading() {
+        let r = scan_scenario(
+            SCENARIO,
+            "# S\n\nSee §\"Cache\ninvalidation\" for more.\n\nSee §\u{201C}Surface\nrule\u{201D} and \"quoted\" prose.\n\nSee §\"Cache\" and \"two.\n",
+        );
+        let lines: Vec<(&str, u32)> = r
+            .references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.line))
+            .collect();
+        assert_eq!(lines, [("Cache", 3), ("Surface", 6), ("Cache", 9)]);
+        assert_eq!(kinds(&r), [KIND_QUOTED_HEADING; 3]);
+        assert_eq!((r.quoted_heading, r.anchor_target_unjudgeable), (3, 3));
     }
 
     /// An unresolved reference whose next line completes it is wrapped, and
