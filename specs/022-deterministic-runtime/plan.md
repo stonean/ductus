@@ -88,7 +88,7 @@ The async runtime (tokio) is started for the MCP surface; the subprocess interpr
 
 ### JSON-over-stdio framing: line-delimited JSON, one message per line
 
-Newline-delimited JSON (`\n`-terminated). Each line is one complete JSON object. The protocol uses an envelope with a `type` discriminator (`llm-request`, `llm-response`, `gate-confirm`, `gate-response`, `progress`, `complete`, `error`) per the spec body. The set of message types is closed; adding one requires a versioned protocol bump per §runtime-boundary's lockstep-versioning rule. Stderr is human-readable text (no JSON), reserved for logs the host may surface to its own log streams.
+Newline-delimited JSON (`\n`-terminated). Each line is one complete JSON object. The protocol uses an envelope with a `type` discriminator (`llm-request`, `llm-response`, `gate-confirm`, `gate-response`, `progress`, `complete`, `error`) per the spec body. The set of message types is closed; adding one requires a versioned protocol bump per §runtime-boundary's lockstep-versioning rule. Stderr is human-readable text (no JSON), reserved for logs the host may surface to its own log streams. Rationale: a host frames the protocol with the line reader every language has, with no length prefix or header to compute, and a message never spans two lines: the runtime writes each with `serde_json::to_string` and one newline (`runtime/src/io.rs`), and JSON escapes a newline inside a string.
 
 A blank or unparseable line on stdin is reported on stderr and skipped, and the interpreter keeps reading for the response it is waiting on (`runtime/src/io.rs`), so a stray line from the host does not end the walk.
 
@@ -288,6 +288,8 @@ Per the spec's install-policy resolution, no slash command may detect-and-warn a
 ### This repository's generator scripts stay bash
 
 The `gen-*.sh` scripts under `scripts/` that build this repository's own artifacts (`gen-claude-commands.sh`, `gen-help-tables.sh`, `gen-configure-mcp.sh`) are not wrapped or replaced by the runtime; the pre-commit hook calls them directly. The two frontmatter derivations were the exception: `derive-dependencies` and `derive-references` replaced the adopter-facing generator scripts (067's scenario `adopter-generator-promotion`). The runtime's `run-generator` primitive invokes a generator with `--dry-run` for procedure use and surfaces drift as a finding — `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — but the pre-commit path never goes through it.
+
+Rationale: the three build this repository's own generated files and ship to no adopter (`framework/bootstrap/ductus.md` installs none of them and the shipped `ductus-pre-commit` calls none), while the runtime ships to every adopter, so a primitive for them would put this repository's build in every adopter's binary and MCP surface. §runtime-boundary's runtime runs the deterministic portions of pipeline commands, and these are no pipeline command's portion.
 
 ### `framework/runtime-tools.txt` is the manifest
 
