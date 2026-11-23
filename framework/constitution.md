@@ -10,7 +10,7 @@ A rule only one command applies lives in that command's reference, which this do
 
 ### Cost levers
 
-Token budgets are the AI platform's (Claude Code's `/cost`, say); `ductus` catches runaway loops with `/{project}:implement`'s stuck detection, and keeps autonomy off unless `--auto` is passed.
+Token budgets are the AI platform's; `ductus` catches runaway loops with `/{project}:implement`'s stuck detection, and keeps autonomy off unless `--auto` is passed.
 
 <!-- §design-principles -->
 
@@ -23,6 +23,7 @@ Constraints on anything the pipeline asks an author or a check to do. Each is a 
 - **Work that is not complete MUST never be indistinguishable from work that is.** Known outstanding work has exactly three dispositions (§brownfield-inbox): **fix it**; **defer it** where the pipeline will surface it again (a task, scenario, or criterion), the status following that record; or **waive it**, recording the requirement that puts it out of scope, not its cost. The inbox is none of the three, since no gate reads it, and neither is a caveat beside a completion claim. Residue knowable only by measuring is **measured**: an unmeasured gap is a task, not a caveat.
 - **Never design a pipeline feature that depends on human diligence.** What requires an author to *remember* is skipped when it matters most: derive the input from artifacts, frontmatter, or history, or do not ship it.
 - **A check whose subject is drawn from repository state can go vacuous, and a naive vacuity guard will then demand that an unhealthy repository exist.** **Build the subject** — a fixture carrying the condition, asserted in both directions — and let the pass over real state report *nothing to compare* as a distinct, non-failing state.
+- **Use what a task needs, and no more, however far below a limit.** Using more is a defect, and so is cutting what it needs (§text-first-artifacts' required content).
 
 <!-- §grounding -->
 

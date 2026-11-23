@@ -206,10 +206,10 @@ For a further tooling-language decision (a second binary the framework might shi
 ## Design Principles
 
 - **Reach for a runtime primitive first; a shell script is the fallback.** [§runtime-boundary](framework/constitution.md#runtime-boundary).
+- **A check that cannot run must never look like one that passed.** [§design-principles](framework/constitution.md#design-principles).
 - **Never close work with a caveat attached — the status is the claim, and a summary is not where residue lives.** [§design-principles](framework/constitution.md#design-principles).
 - **Never design framework features that depend on human diligence or discipline.** [§design-principles](framework/constitution.md#design-principles).
 - **Removing an embedded copy is a corpus sweep, not a deletion — grep for what pointed at it, including the artifacts that *describe* it.** [§drift-prevention](framework/constitution.md#drift-prevention).
 - **A `data-model.md` that claims "authoritative shapes" drifts from the runtime silently — check it against a record the runtime actually wrote, not against the code.** [§drift-prevention](framework/constitution.md#drift-prevention).
 - **Point at the canonical source — never embed a copy of it.** [§drift-prevention](framework/constitution.md#drift-prevention).
 - **A conformance test whose subject is drawn from corpus state can go vacuous, and its vacuity guard will then assert that an unhealthy corpus must exist.** [§design-principles](framework/constitution.md#design-principles).
-- **Never use more than a task needs, however far below a limit.** A download, read or file a run does not need is a defect: 015 AC14 cut the `/ductus` archive from 1,424 files to 78 (owner, 2026-11-23).
