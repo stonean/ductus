@@ -13,9 +13,14 @@
 #   D. a missing `version` fails rather than passing
 #   E. an empty `version` fails rather than passing
 #   F. no ref fails rather than passing
-#   G. an entry under `## [Unreleased]` fails, counting it
+#   G. an entry under `## [Unreleased]` fails, counting it and naming the
+#      newest version heading
 #   H. an `## [Unreleased]` section holding only prose passes
 #   I. a missing runtime/CHANGELOG.md fails rather than passing
+#   J. an entry under `## Unreleased`, unbracketed, fails as G does: every
+#      entry above the newest version heading counts, whatever its section is
+#      called
+#   K. an entry in a changelog with no version heading fails
 #
 # Usage: scripts/tests/test-check-release-tag.sh
 
@@ -100,7 +105,7 @@ if [ "$code" -eq 2 ]; then pass "exit 2"; else fail "F: exit $code: $out"; fi
 echo "G. an entry under [Unreleased]"
 new_tree g '0.60.0' $'# Changelog\n\n## [Unreleased]\n\nProse.\n\n### Added\n\n- a pending entry\n\n## [0.59.11] — 2026-10-17\n\n- shipped\n'
 run_check ductus-v0.60.0
-if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "2 entry line(s) still sit under '## \[Unreleased\]'"; then
+if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "2 entry line(s) sit above its newest version heading '## \[0.59.11\] — 2026-10-17'"; then
   pass "exit 1 counting the entry and its heading"
 else
   fail "G: exit $code: $out"
@@ -118,6 +123,24 @@ if [ "$code" -eq 2 ] && printf '%s' "$out" | grep -q 'CHANGELOG.md: not found'; 
   pass "exit 2"
 else
   fail "I: exit $code: $out"
+fi
+
+echo "J. an entry under an unbracketed Unreleased heading"
+new_tree j '0.60.0' $'# Changelog\n\n## Unreleased\n\n### Changed\n\n- a pending entry\n\n## [0.59.11] — 2026-10-17\n\n- shipped\n'
+run_check ductus-v0.60.0
+if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "2 entry line(s) sit above its newest version heading '## \[0.59.11\] — 2026-10-17'"; then
+  pass "exit 1 counting the entry and its heading"
+else
+  fail "J: exit $code: $out"
+fi
+
+echo "K. an entry in a changelog with no version heading"
+new_tree k '0.60.0' $'# Changelog\n\n- an entry\n'
+run_check ductus-v0.60.0
+if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "1 entry line(s) sit in it, and it has no version heading"; then
+  pass "exit 1"
+else
+  fail "K: exit $code: $out"
 fi
 
 if [ "$failures" -gt 0 ]; then

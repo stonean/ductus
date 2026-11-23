@@ -60,6 +60,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 50. `scripts/check-release-tag.sh` reads every entry above the newest version heading
 
-- [ ] Implement the behavior described in `scenarios/the-tag-check-reads-every-entry-above-the-newest-version.md`
+- [x] Implement the behavior described in `scenarios/the-tag-check-reads-every-entry-above-the-newest-version.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
