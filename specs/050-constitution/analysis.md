@@ -1,14 +1,14 @@
 ---
 spec: 050-constitution
-last-run: 2026-11-22T04:57:51Z
-analyzed-against: 037ee6ba506d98eb9cf90c9da29878f0cd168845
+last-run: 2026-11-23T23:33:03Z
+analyzed-against: cd8f39c42631150fad98d7a22cb7c567d73b6a5d
 hard-fail: 0
 blocking-findings: 0
-advisory: 5
+advisory: 6
 unexamined: 9
 analyzed-digest:
-  plan.md: 4c9d8322407d0bec5c8ae2b2b2ce032d94736a9383084258b6e4aa40d6d2f6dd
-  review.md: 6b47a4e05edfab1896bcf027bb076973122180a0e22c030a828281b5ea822501
+  plan.md: 62df97f643b4d55d06030c11d6eb63c090c9d87f1fa36594b9b2035d69b834af
+  review.md: 413b258b1eb81a4df7d25e0f434443a71f5f07f59034ecc8a1465e42eb9865e9
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 87a0dcce92143a717ff19e0ecc570e9262f7afaf42ac764fe43b197c6a7e48fa
   scenarios/a-decision-is-attributed-to-whoever-made-it.md: 0e91d8bb56e3c762d89879cd41d6aaa6cb26059d0f11e238031f938441983922
   scenarios/a-declared-cross-spec-impact-gates-done.md: 1f802a9ed0562b74fddc7984c9ff6d89d0d4c9a46d02138b874928381d03f92f
@@ -34,15 +34,15 @@ analyzed-digest:
   scenarios/reports-end-with-the-remaining-work.md: 816e498bb2ba5bd9bfa42682cad814955af57b5af656669754cdcec5c7dbdc3d
   scenarios/the-constitution-fits-one-read.md: 26c63cbf857a23a360fe4f887c62eccf2abcdf33763bce25fa973d4ae0605840
   scenarios/the-constitution-states-rules-not-stories.md: 691e5ea78b7012fd9f9a8114f20632d7852d5c319f54e3951b2ebaed65c013bc
-  spec.md: ee4764ff527d2b1fe7d68ba7c682daa448555995aea2bb297ba0fd1cfec13d2c
-  tasks.md: 4a7f0051ee0d7f995770883af9af617f7b4c79162bdc122e9a4f146ccba20aba
+  spec.md: 59192634aac7511c187294ca325ffff010c5563c02bfe1a18b17f79bfbe3e9c0
+  tasks.md: 97c4757dc97046f2b43e1a900f8c7623cfd6d594e77d0e2420447e81d18c4781
 unexamined-by-reason:
   anchor-target-unjudgeable: 2
   not-a-live-claim: 1
   root-absent: 4
   ships-to-adopter: 2
 rule-digest:
-  accessibility-frontend.md: 4d7f5ac09d457c99774f5fc341222a464d2b461cb0467cd58a13dc31c928359b
+  accessibility-frontend.md: 20fb956e35bb749f061090adf631329bafe3e37662a4e47b0076b697784bbf50
   api-backend.md: 8e496f92a50b68b1ae8b1954e30a85dd142dc65d3b3882089f9c48560096d800
   concurrency-backend.md: 2650d82125bd67945fd327f7fb9f76c57ca10d165925733139afa3cd50562dd4
   configuration-cross.md: 050a5b8dd375fe4790f5d92753db27ae53ac730db1557cbee84b923b72499ca9
@@ -51,9 +51,9 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 26c045df79b6a99319bd7dfa09490b4a2d5ac742eee70a6b3ad0235d49093d2a
-  security-backend.md: 511a68b25ceb148f8292cda2a829aaff03a38bc3453732e33a70bd5d6acf5df5
+  security-backend.md: c9d90cf6bfa6e4f5492e6d1a49e073fbee467ba08c7788bf6c7224ae8bd5d411
   security-cross.md: 26e287f06cdca2744d0972cbf7cf6a48f27d869526dd86c7c375ac4bdc0dadce
-  security-frontend.md: 5fddb21530faa805cb00f23c929e9402548ed0d6a0ed3e8e9a910561b74a45a3
+  security-frontend.md: 9a200916d11a5597a6860d1538840bf7d9aa573bddce953a0bef604379d1451b
 section-digest:
   "plan.md": e3b0c44298fc1c14
   "plan.md#050 — Constitution Plan": 4e311c0e063cf47e
@@ -61,11 +61,12 @@ section-digest:
   "plan.md#A decision is attributed to whoever made it": 14c0bbdf8f3050b2
   "plan.md#A primitive is probed in a local clone": ad30ed6b2f9a2649
   "plan.md#A reopen is a cost, not a reason": 53d66c2f430f93aa
+  "plan.md#A task uses what it needs, and no more": ff98e1f9fb85670f
   "plan.md#Adopter practices — classified 2026-11-12": 2b3eaae2bc8d58a9
-  "plan.md#Affected Files": 3a5be35d11d5ea43
+  "plan.md#Affected Files": 535dd44e48e6c25f
   "plan.md#Already promoted": 948661672006b1b5
   "plan.md#An answer is applied as chosen": db880aca5e8abd11
-  "plan.md#Artifacts are as short as their required content": 1e7f357d61e2a3e6
+  "plan.md#Artifacts are as short as their required content": 647ab8358f02aa93
   "plan.md#Classification": 42e5066a21ebf6af
   "plan.md#Fifth round — classified 2026-10-17": 19596a57c032d647
   "plan.md#Fifth round — project-only": c49beedfed64f614
@@ -273,9 +274,9 @@ section-digest:
   "scenarios/the-constitution-states-rules-not-stories.md#Open Questions": 9fc5979d590cdb97
   "scenarios/the-constitution-states-rules-not-stories.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/the-constitution-states-rules-not-stories.md#The Constitution States Rules, Not Stories": 65cf7677a688d317
-  "spec.md": fb1c3913a49fa485
+  "spec.md": d36cb2ad822db1ed
   "spec.md#050 — Constitution": 74239a38291aa397
-  "spec.md#Acceptance Criteria": 9f919eb7476600cc
+  "spec.md#Acceptance Criteria": 4b0013fae9c8e749
   "spec.md#Classification": 4ff595c8962e6d23
   "spec.md#Criterion verification": 90bd1e4a96242be2
   "spec.md#Current work: promoting universal rules": 229d7c748ac3d99e
@@ -285,9 +286,9 @@ section-digest:
   "spec.md#Resolved Questions": 3edb641eb1f45c44
 blocking: false
 dispositions:
-  fixed: 5
+  fixed: 0
   deferred: 0
-  waived: 5
+  waived: 6
   undispositioned: 0
 decisions:
   - key: plan-record — plan.md §Classification is outside the design record
@@ -305,15 +306,20 @@ decisions:
     reason: the figure is the approximate measurement the Resolved Question's decision rested on when it was taken; the constitution's per-section sizes as they stand are plan.md's table under The constitution fits one read, which states its method
     decided-at: 2026-11-22T04:57:51Z
     decided-by: rule
-  - key: "grounding — Acceptance Criteria AC25: 'no gate, check or command reads' the Technology and Business lists is a descriptive claim about the existing system with no citation or query"
+  - key: "grounding — Technical Decisions 'A reopen is a cost, not a reason' asserts a '2026-11-12 audit: six sessions where a reopen decided the recommendation' with no citation to the audit, its query or its population."
     outcome: waived
-    reason: "AC25 is a criterion, verified by review rather than by a citation in its text: the 2026-11-22 review's criteria step swept the live-artifact set for the 18 removed principle names and found no reader"
-    decided-at: 2026-11-22T04:57:51Z
+    reason: the count is the owner's 2026-11-12 finding that prompted the rule, recorded with its date; it was taken from session transcripts, which are no project artifact, and the decision rests on the failure being general to adopters, not on the count
+    decided-at: 2026-11-23T23:33:03Z
     decided-by: rule
-  - key: "grounding — Classification, Second round promote table, row 'A spec's own completion commit can destroy content': 'the blindness is in the shared markdown reader every adopter uses' describes existing code with no file, symbol or command cited"
+  - key: grounding — Technical Decisions 'The constitution fits one read' states a first cut 'falsified about 30 passages quoted or relied on in 16 done specs' with no stated method, denominator or source for the count.
     outcome: waived
-    reason: the row records why the gotcha was classified universal; the rule it promoted, the text-first-artifacts bullet to diff the structure and not only the prose, holds whatever reader a check uses, so no reader of the plan acts on the row's mechanism claim
-    decided-at: 2026-11-22T04:57:51Z
+    reason: the figure records why the first cut was restored (2026-10-27), a cut never committed, so nothing on disk re-derives it; the design rests on the second cut's hunk-by-hunk sweep, which the same paragraph states with its outcomes
+    decided-at: 2026-11-23T23:33:03Z
+    decided-by: rule
+  - key: grounding — Classification, Promoted-universal row for 'When an item routes to a chore' asserts 'The groom command and its five routes ship unchanged' without citing framework/commands/groom.md or its decision tree.
+    outcome: waived
+    reason: the row records why survey W29 was classified universal on 2026-08-17; the verdict rests on the groom command shipping to every adopter, and no reader of the plan acts on the route count, as the stored waiver on the second-round completion-commit row holds for its mechanism claim
+    decided-at: 2026-11-23T23:33:03Z
     decided-by: rule
 ---
 
@@ -321,7 +327,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 5 advisory; not blocking. 9 unexamined target(s). Dispositions: 5 fixed, 0 deferred, 5 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 6 advisory; not blocking. 9 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 6 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -333,11 +339,12 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Resolved Questions (do promoted rules join existing sections): the constitution's largest sections 'already run to roughly 69 lines' has no citation or counting method — `specs/050-constitution/spec.md` — **waived**: the figure is the approximate measurement the Resolved Question's decision rested on when it was taken; the constitution's per-section sizes as they stand are plan.md's table under The constitution fits one read, which states its method (decided by the rule)
-- grounding — Acceptance Criteria AC25: 'no gate, check or command reads' the Technology and Business lists is a descriptive claim about the existing system with no citation or query — `specs/050-constitution/spec.md` — **waived**: AC25 is a criterion, verified by review rather than by a citation in its text: the 2026-11-22 review's criteria step swept the live-artifact set for the 18 removed principle names and found no reader (decided by the rule)
-- grounding — Classification, Second round promote table, row 'A spec's own completion commit can destroy content': 'the blindness is in the shared markdown reader every adopter uses' describes existing code with no file, symbol or command cited — `specs/050-constitution/plan.md` — **waived**: the row records why the gotcha was classified universal; the rule it promoted, the text-first-artifacts bullet to diff the structure and not only the prose, holds whatever reader a check uses, so no reader of the plan acts on the row's mechanism claim (decided by the rule)
 - plan-record — plan.md §Classification is outside the design record — `specs/050-constitution/plan.md` — **waived**: the section is 050's AC1 verdict table, one promotion verdict per AGENTS.md rule-bearing entry, which the promotion-coverage audit reads; it is deliberately part of this plan's design, the case analyze.md names a Classification for
-- artifact-size — `specs/050-constitution/plan.md` is 66101 bytes, 2 read pages at the 50000-byte read size — `specs/050-constitution/plan.md` — **waived**: the excess is the §Classification table, AC1's verdict record that the promotion-coverage audit reads, and the per-section byte measurement the-constitution-fits-one-read requires
+- artifact-size — `specs/050-constitution/plan.md` is 66923 bytes, 2 read pages at the 50000-byte read size — `specs/050-constitution/plan.md` — **waived**: the excess is the §Classification table, AC1's verdict record that the promotion-coverage audit reads, and the per-section byte measurement the-constitution-fits-one-read requires
+- grounding — Resolved Questions (do promoted rules join existing sections) states the constitution's largest sections 'already run to roughly 69 lines' with no command, section table or method; the later measured table lives only in plan.md. — `specs/050-constitution/spec.md` — **waived**: the figure is the approximate measurement the Resolved Question's decision rested on when it was taken; the constitution's per-section sizes as they stand are plan.md's table under The constitution fits one read, which states its method (decided by the rule)
+- grounding — Technical Decisions 'A reopen is a cost, not a reason' asserts a '2026-11-12 audit: six sessions where a reopen decided the recommendation' with no citation to the audit, its query or its population. — `specs/050-constitution/plan.md` — **waived**: the count is the owner's 2026-11-12 finding that prompted the rule, recorded with its date; it was taken from session transcripts, which are no project artifact, and the decision rests on the failure being general to adopters, not on the count (decided by the rule)
+- grounding — Technical Decisions 'The constitution fits one read' states a first cut 'falsified about 30 passages quoted or relied on in 16 done specs' with no stated method, denominator or source for the count. — `specs/050-constitution/plan.md` — **waived**: the figure records why the first cut was restored (2026-10-27), a cut never committed, so nothing on disk re-derives it; the design rests on the second cut's hunk-by-hunk sweep, which the same paragraph states with its outcomes (decided by the rule)
+- grounding — Classification, Promoted-universal row for 'When an item routes to a chore' asserts 'The groom command and its five routes ship unchanged' without citing framework/commands/groom.md or its decision tree. — `specs/050-constitution/plan.md` — **waived**: the row records why survey W29 was classified universal on 2026-08-17; the verdict rests on the groom command shipping to every adopter, and no reader of the plan acts on the route count, as the stored waiver on the second-round completion-commit row holds for its mechanism claim (decided by the rule)
 
 ## Deferred to other specs
 
@@ -356,8 +363,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — Classification, Second round promote table, asserts 'the corpus link check ships in the pre-commit hook' for adopters, with no citation to the hook or manifest — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — Classification, Promoted - universal table, asserts 'the shipped adopter CI template runs exactly such a check' (a history-reading one), with no citation to the template — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, Memory routing lives in AGENTS.md, asserts 'both project templates are skip strategy' with no citation to the manifest row that sets the strategy — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — Classification, Promoted - universal table, row 'Use the Write tool, not Bash redirects, for .ductus/session.toml': 'adopters carry the same per-path grants' describes shipped permission configuration with no citation to the configure file — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, The version pin does not move: 'bumping all three declares a runtime release that must be tagged ductus-v* or every adopter fetches assets that do not exist' describes the release and acquisition mechanism with no citation (only the Family 20 script is cited, for the equality check) — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
+*None.*
