@@ -26,7 +26,7 @@ The download-then-extract sequence is deliberate over piping (`curl ... | tar -x
 
 - Pipes obscure which command failed — needed for the abort message's `{reason}` field.
 - The archive on disk lets the **Post-Write Integrity Check** re-read `ductus.md` cheaply if a corrupted write is detected (no second `curl`).
-- Disk pressure is small: the archive plus its extract came to about 15 MB at `ductus-v0.59.11`, 3,523,152 bytes compressed and 11,927,790 extracted (fetched from `codeload.github.com` with `curl` and summed with `tar -tzv` on 2026-11-09).
+- Disk pressure is small: the archive plus its extract come to about 1.7 MB, 403,618 bytes compressed and 1,312,690 extracted for `main` at `d56ff370` (fetched from `codeload.github.com` with `curl` and summed from the tarball's member sizes on 2026-11-23).
 
 ### Manifest source resolution
 
@@ -96,6 +96,6 @@ The open questions were resolved during `/ductus:clarify`. See the spec's **Reso
 
 ## Trade-offs
 
-- **Disk vs. memory for the archive** — the download-then-extract approach uses about 15 MB of temp disk at `ductus-v0.59.11` (measured under **Fetch and extract sequencing**). Piping `curl | tar` would skip the disk write but obscure which side failed (needed for the abort message) and force a second `curl` for the integrity-check re-read. The disk cost is negligible; the diagnostic clarity and re-read efficiency are not.
+- **Disk vs. memory for the archive** — the download-then-extract approach uses about 1.7 MB of temp disk (measured under **Fetch and extract sequencing**). Piping `curl | tar` would skip the disk write but obscure which side failed (needed for the abort message) and force a second `curl` for the integrity-check re-read. The disk cost is negligible; the diagnostic clarity and re-read efficiency are not.
 - **Archive ref hardcoded to `main`** — same as the current per-file flow; ref pinning is deferred to a later spec (see Resolved Questions in the spec). Adopted since by 061, which resolves the ref per run and defaults it to the latest release.
 - **One-time bootstrap cost** — existing adopters get the new `tar`/`mktemp` allow entries on their next routine `/ductus` re-run. The merge logic is additive and idempotent, so no migration step is needed.

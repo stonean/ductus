@@ -815,7 +815,7 @@ This is the direct `codeload.github.com` endpoint — the target that `https://g
 After fetching:
 
 1. Extract the archive into the existing temp directory: `tar -xzf {tempdir}/framework.tar.gz -C {tempdir}`.
-2. Derive the framework root, `{framework-root}`: **the single top-level directory the extraction produced** — `{tempdir}/` joined with the first path component every entry in `extract-archive`'s `files` shares (those paths are relative to the extraction's destination). Treat it as the local mirror of the `ductus` repo for the rest of the run; the framework files live at `{framework-root}/framework/...`. GitHub names that directory after the ref — `ductus-main/` for `main`, `ductus-ductus-v0.55.0/` for that tag — and the rule is GitHub's, so it is read from the extraction rather than predicted from the ref, where a restated rule would break silently the day GitHub changed it.
+2. Derive the framework root, `{framework-root}`: **the single top-level directory the extraction produced** — `{tempdir}/` joined with the first path component every entry in `extract-archive`'s `files` shares (those paths are relative to the extraction's destination). Treat it for the rest of the run as the local copy of the files a run reads from the `ductus` repo, which the archive carries and nothing else (spec 015 AC14); the framework files live at `{framework-root}/framework/...`. GitHub names that directory after the ref — `ductus-main/` for `main`, `ductus-ductus-v0.55.0/` for that tag — and the rule is GitHub's, so it is read from the extraction rather than predicted from the ref, where a restated rule would break silently the day GitHub changed it.
 
 If the fetch or extraction fails — non-zero exit from `curl`, an `extract-archive` call that refuses the archive or cannot run (Instructions step 3), or an extraction that produced zero or several top-level directories, so that no single `{framework-root}` exists — abort the run with this error and do not continue scaffolding:
 
@@ -843,8 +843,8 @@ The leftover directory is for inspection only — the next `/ductus` run creates
 The sections that follow the archive fetch do not live in this file. They ship
 **in** the archive this run just extracted, at
 `{framework-root}/framework/bootstrap/ductus-procedure.md` — the framework
-root §Archive fetch and extract derived above and called the local mirror of
-the `ductus` repo for the rest of the run. Read them from there when
+root §Archive fetch and extract derived above, which holds the files a run
+reads from the `ductus` repo and nothing else. Read them from there when
 the run reaches them: **Pre-run Migrations**, **Frontmatter Migration**,
 **Security Audit (brownfield)**, **Hook Installation**, **What This Command Does
 NOT Do**, **Edge Cases**, **Post-Scaffolding Output**, **Idempotency**, and
