@@ -32,9 +32,9 @@ Blocked on task 1: the line reads the counts `compute` returns.
 
 ## 4. Commit each task's code with its tick
 
-- [ ] Rewrite step 8 of `framework/reference/implement.md` §Walk through tasks (per task, in order) as the plan's §The commit step says, covering confirmation, decline, refusal, staging and no push
-- [ ] Point `framework/commands/implement.md`'s `--auto` Flags bullet and step 7's commit reminder at that step
-- [ ] Confirm that no line of `framework/` asks for a commit-subject form (AC14)
+- [x] Rewrite step 8 of `framework/reference/implement.md` §Walk through tasks (per task, in order) as the plan's §The commit step says, covering confirmation, decline, refusal, staging and no push
+- [x] Point `framework/commands/implement.md`'s `--auto` Flags bullet and step 7's commit reminder at that step
+- [x] Confirm that no line of `framework/` asks for a commit-subject form (AC14)
 
 - **Done when**: AC10, AC14 and AC15 hold on reading both files, and `framework-checks.yml`'s and `generators.yml`'s steps pass (`scripts/run-workflow-steps.py`).
 

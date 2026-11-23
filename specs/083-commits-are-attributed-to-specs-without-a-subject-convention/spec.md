@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [066-audit-records-and-the-completion-gate]
 next-criterion: 17

@@ -21,7 +21,7 @@ Use the session target: invoke `resolve-session` and display any notices and unr
 
 When `--auto` is set:
 
-- Skip the per-task "prompt the user to commit and push changes" confirmation. Commit on your own and proceed to the next task.
+- Skip the per-task commit confirmation: commit the task's code with its `tasks.md` tick on your own (step 8 of **§Walk through tasks (per task, in order)** in `.ductus/reference/implement.md`) and proceed to the next task.
 - **Commit, do not push.** Push is hard-to-reverse and externally visible; it stays gated even with `--auto`.
 
 The following gates **still fire and pause** even with `--auto` on:
@@ -62,7 +62,7 @@ Default is unset — without the flag, the user confirms each task as today.
 
 6. Invoke `mark-task` to flip the first incomplete subtask's checkbox from unchecked to checked in `tasks.md`.
 
-7. Invoke `diff-cross-spec` against the feature and render the per-task completion summary (host responsibility): list the task processed, surface the cross-spec impact from the result's `cross-spec-paths`, list the disposition tasks still pending on `tasks.md` — each one this task appended (step 5 of **§Walk through tasks (per task, in order)** in `.ductus/reference/implement.md`), and any earlier one not yet worked — by number and title, plus any disposition task this run worked, with its outcome (fixed, deferred with its work, or waived with its reason), remind the user to commit, and prompt for the next pipeline gate. The in-progress → done transition is its own invocation — re-run `/{project}:implement` after every task has been marked complete, review is clean with its record committed or `/{project}:review` reported `review-owed: false`, and `/{project}:analyze` has then run; that run walks the completion-gate steps below.
+7. Invoke `diff-cross-spec` against the feature and render the per-task completion summary (host responsibility): list the task processed, surface the cross-spec impact from the result's `cross-spec-paths`, list the disposition tasks still pending on `tasks.md` — each one this task appended (step 5 of **§Walk through tasks (per task, in order)** in `.ductus/reference/implement.md`), and any earlier one not yet worked — by number and title, plus any disposition task this run worked, with its outcome (fixed, deferred with its work, or waived with its reason), make the task's commit, its code with its `tasks.md` tick, as step 8 of **§Walk through tasks (per task, in order)** in `.ductus/reference/implement.md` says, and prompt for the next pipeline gate. The in-progress → done transition is its own invocation — re-run `/{project}:implement` after every task has been marked complete, review is clean with its record committed or `/{project}:review` reported `review-owed: false`, and `/{project}:analyze` has then run; that run walks the completion-gate steps below.
 
 <!-- audit:ignore-promotion -->
 8. Render the next-step offer (host responsibility; no primitive — the ordered task list is already in context from step 1), as step 9 of **§Walk through tasks (per task, in order)** in `.ductus/reference/implement.md` says. **Suppress the offer entirely when nothing is unchecked**; the run proceeds to the completion gate below. **On `ductus exec`** the walk is linear and cannot loop back to an earlier step, so the offer is rendered in the per-task summary and continuing is a fresh invocation; the reduction is documented rather than silent, matching `clarify.md`'s exec-path scope note.
