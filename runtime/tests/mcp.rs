@@ -1448,8 +1448,10 @@ async fn compute_review_scope_returns_structured_scope_via_mcp() {
 }
 
 /// The `[artifacts] read-size-bytes` both bounded tests set: small enough
-/// that twelve paths pass it inline, large enough for the file form.
-const SMALL_READ_SIZE: usize = 400;
+/// that twelve paths pass it inline, large enough for the file form. The
+/// largest file form here is `compute-review-scope`'s, 438 bytes since it
+/// carries its window's commit counts (spec 083).
+const SMALL_READ_SIZE: usize = 460;
 
 /// A repository whose `001-x` went in progress and then gained `n` source
 /// files, and whose sibling `002-y` gained `n` scenarios, with `[artifacts]
