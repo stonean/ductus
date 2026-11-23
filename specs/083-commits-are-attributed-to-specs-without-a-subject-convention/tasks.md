@@ -54,3 +54,9 @@ Blocked on tasks 1 and 3: the fields must exist, and the Size figures are measur
 - [ ] Run `scripts/stale-literals.sh`, then grep the live-artifact set by meaning for claims about `compute-review-scope`'s result fields, the Summary's lines, and `/{project}:implement`'s commit prompt; fix each stale one at its source
 
 - **Done when**: no live artifact describes the commit prompt or the result as they were before this spec. 083 then owes its review and analysis, and the completion gate, once every box here is ticked.
+
+## 7. Disposition out-of-spec finding: a path-list commit leaves the shared index holding the generated outputs' old blobs
+
+- [ ] `.githooks/pre-commit` — under `git commit -- <paths>` the hook writes each generated output it carries to `GIT_INDEX_FILE`, git's temporary index, so the commit holds the new outputs while the shared index keeps their pre-commit blobs, and a later whole-index commit would revert them. Seen on 7eb29d1f's three generated `implement` copies, reset by hand on 2026-11-23. Owner of the hook's staging rule: 017's scenario `a-commit-stages-only-its-own-generated-files`; the shipped `framework/bootstrap/hooks/ductus-pre-commit` is unchecked for the same.
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
