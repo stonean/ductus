@@ -2,6 +2,47 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING: `BE-DEPS-005` flags what its Statement requires (spec 008 task
+  47; the agent's recommendation, adopted by the operator, 2026-11-23).** Its
+  Verification flagged an omitted defence only in a project with private
+  packages or a high dependency-churn rate. It now flags a missing
+  private-registry mapping where private packages exist and a missing
+  integrity-verified install wherever the package manager supports one, in every
+  project, and (c) requires the plan to
+  name where a new dependency's name is checked: an allowlist, a lockfile-diff
+  review step or a tool, as `FE-DEPS-009` has since 0.60.0. Breaking for a spec
+  or plan covering dependency management, in a project with
+  `security-backend.md`, that omits either or names no such place: each is now
+  a blocking `/analyze` finding. `BE-DEPS-004` is unchanged.
+- **BREAKING: `FE-STORAGE-006` purges the per-user cache when the session ends
+  (spec 008 task 48; the agent's recommendation, adopted by the operator,
+  2026-11-23).** A service worker may cache user-specific authenticated content
+  other than tokens and credentials only when the spec states the cache is
+  partitioned per user and purged at sign-out and when the application learns
+  the session has expired or been revoked, the moment `FE-AUTHN-002` already
+  requires it to act on. Breaking for a service-worker spec that states the
+  sign-out purge alone: it is now a blocking `/analyze` finding.
+- **BREAKING: `BE-API-015` flags an absent `Origin` on a cookie-authenticated
+  connection (spec 008 task 49; the agent's recommendation, adopted by the
+  operator, 2026-11-23).** Its Statement already refused a WebSocket handshake
+  with no `Origin` unless the connection is authenticated by a credential the
+  browser does not attach automatically, but no Verification flag named the
+  case. Breaking for a spec whose endpoint accepts such a handshake on a
+  cookie-authenticated connection: it is now a blocking `/analyze` finding. The
+  Statement is unchanged.
+- **`BE-DATA-012` sets aside a throwaway credential (spec 008 task 46; the
+  agent's recommendation, adopted by the operator, 2026-11-23).** A credential
+  for a throwaway local or test resource that grants no access to a production
+  or shared system, such as a `docker-compose.yml` `POSTGRES_PASSWORD: postgres`
+  or a committed `.env.test` key for a local emulator, is not a secret under
+  the rule, in its Statement and its Verification, as `CFG-ENV-013` has it, so
+  a spec owes it no revocation path. It turns no passing `/analyze` into a
+  finding.
+
 ## [0.63.0] — 2026-11-23
 
 A minor release with a breaking change: 1 of the 3 entries below is marked

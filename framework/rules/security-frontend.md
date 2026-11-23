@@ -162,9 +162,9 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-STORAGE-006
 
-> Service worker code MUST NOT store responses that carry tokens or credentials in the Cache API. Responses that carry other user-specific authenticated content, PII included, MAY be stored only when the spec states the cache is partitioned per user and purged at sign-out.
+> Service worker code MUST NOT store responses that carry tokens or credentials in the Cache API. Responses that carry other user-specific authenticated content, PII included, MAY be stored only when the spec states the cache is partitioned per user and purged at sign-out and when the application learns the session has expired or been revoked (`FE-AUTHN-002`).
 
-**Verification:** Any spec or plan that introduces or changes a service worker that caches responses (offline support, precaching, runtime caching strategies) MUST name which routes or response types it caches and commit to excluding responses that carry tokens or credentials, and other user-specific authenticated content unless it states the per-user partition and the sign-out purge. `/{project}:analyze` flags service-worker specs that apply a caching strategy to all routes or to authenticated API responses without naming that exclusion, that cache user-specific authenticated content without both, or that rely on `Cache-Control: no-store` to keep responses out of the Cache API.
+**Verification:** Any spec or plan that introduces or changes a service worker that caches responses (offline support, precaching, runtime caching strategies) MUST name which routes or response types it caches and commit to excluding responses that carry tokens or credentials, and other user-specific authenticated content unless it states the per-user partition and the purge at sign-out and when the application learns the session has expired or been revoked. `/{project}:analyze` flags service-worker specs that apply a caching strategy to all routes or to authenticated API responses without naming that exclusion, that cache user-specific authenticated content without the partition or either purge, or that rely on `Cache-Control: no-store` to keep responses out of the Cache API.
 
 **Source:** OWASP HTML5 Security Cheat Sheet (Offline Applications), MDN Cache documentation
 

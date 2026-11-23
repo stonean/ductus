@@ -24,37 +24,37 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 46. `BE-DATA-012` sets aside a throwaway local or test credential (the owner's decision of 2026-11-23)
 
-- [ ] Implement the behavior described in `scenarios/a-throwaway-credential-owes-no-revocation-path.md`
-- [ ] `BE-DATA-012`'s Statement and Verification set aside a credential for a throwaway local or test resource that grants no access to a production or shared system, worded as `CFG-ENV-013` words it; `BE-DATA-003` and `BE-DATA-008` are unchanged
-- [ ] This spec's Resolved Questions record the decision with its reason, and why `BE-DATA-003` and `BE-DATA-008` keep the word
-- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
+- [x] Implement the behavior described in `scenarios/a-throwaway-credential-owes-no-revocation-path.md`
+- [x] `BE-DATA-012`'s Statement and Verification set aside a credential for a throwaway local or test resource that grants no access to a production or shared system, worded as `CFG-ENV-013` words it; `BE-DATA-003` and `BE-DATA-008` are unchanged
+- [x] This spec's Resolved Questions record the decision with its reason, and why `BE-DATA-003` and `BE-DATA-008` keep the word
+- [x] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
 
 ## 47. `BE-DEPS-005`'s Verification flags what its Statement requires (the owner's decision of 2026-11-23)
 
-- [ ] Implement the behavior described in `scenarios/be-deps-005-flags-what-its-statement-requires.md`
-- [ ] `BE-DEPS-005`'s Verification flags a missing (a) where private packages exist, a missing (b) and a plan naming no place for (c)'s check, with no dependency-churn condition, and (c) requires the plan to name that place; `BE-DEPS-004` is unchanged
-- [ ] This spec's Resolved Questions record the decision with its reason
-- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
+- [x] Implement the behavior described in `scenarios/be-deps-005-flags-what-its-statement-requires.md`
+- [x] `BE-DEPS-005`'s Verification flags a missing (a) where private packages exist, a missing (b) and a plan naming no place for (c)'s check, with no dependency-churn condition, and (c) requires the plan to name that place; `BE-DEPS-004` is unchanged
+- [x] This spec's Resolved Questions record the decision with its reason
+- [x] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
 
 ## 48. `FE-STORAGE-006` purges the per-user cache when the session ends (the owner's decision of 2026-11-23)
 
-- [ ] Implement the behavior described in `scenarios/a-cache-partition-is-purged-when-the-session-ends.md`
-- [ ] `FE-STORAGE-006`'s MAY requires the per-user partition purged at sign-out and when the application learns the session expired or was revoked, and its Verification flags a cache missing the partition or either purge; tokens and credentials stay a flat MUST NOT
-- [ ] This spec's Resolved Questions record the decision with its reason
-- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`, naming the narrowing
+- [x] Implement the behavior described in `scenarios/a-cache-partition-is-purged-when-the-session-ends.md`
+- [x] `FE-STORAGE-006`'s MAY requires the per-user partition purged at sign-out and when the application learns the session expired or was revoked, and its Verification flags a cache missing the partition or either purge; tokens and credentials stay a flat MUST NOT
+- [x] This spec's Resolved Questions record the decision with its reason
+- [x] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`, naming the narrowing
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
 
 ## 49. `BE-API-015`'s Verification flags an absent `Origin` on a cookie-authenticated connection (the owner's decision of 2026-11-23)
 
-- [ ] Implement the behavior described in `scenarios/an-absent-origin-on-a-cookie-connection-is-flagged.md`
-- [ ] `BE-API-015`'s Verification flags an endpoint that accepts a handshake with no `Origin` while the connection is authenticated by a credential the browser attaches automatically; the Statement is unchanged
-- [ ] This spec's Resolved Questions record the decision with its reason
-- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
+- [x] Implement the behavior described in `scenarios/an-absent-origin-on-a-cookie-connection-is-flagged.md`
+- [x] `BE-API-015`'s Verification flags an endpoint that accepts a handshake with no `Origin` while the connection is authenticated by a credential the browser attaches automatically; the Statement is unchanged
+- [x] This spec's Resolved Questions record the decision with its reason
+- [x] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
 
