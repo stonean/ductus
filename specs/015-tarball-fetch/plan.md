@@ -34,6 +34,14 @@ Existing manifest tables in ductus.md use source paths like `framework/constitut
 
 The `framework/bootstrap/ductus.md` self-install row resolves the same way: source path is `framework/bootstrap/ductus.md`, local path is `{framework-root}/framework/bootstrap/ductus.md`. The placeholder-substitution exception (keep `{project}` and `{cli-config-dir}` literal in this file) is unchanged.
 
+### The archive carries only what a run reads
+
+GitHub builds the `codeload.github.com` tarball with `git archive`, which leaves out every path whose `export-ignore` attribute the archived commit's own `.gitattributes` sets (AC14). `.gitattributes` sets it on everything (`* export-ignore`), unsets it on `framework/` and on the root `.markdownlint-cli2.jsonc`, the one manifest source outside `framework/`, and sets it again on the `framework/` files no run reads: `framework/bootstrap/govern.md`, which pre-rename adopters fetch from `raw.githubusercontent.com`; `framework/runtime-tools.txt`, a generator and test input; `framework/templates/ci/adopter-generators.yml`, which adopters copy by hand; and the maintainer-only `audit` command and its reference. The allow-list form keeps a new path outside `framework/` out by default, the agent's recommendation, adopted by the operator, 2026-11-23. The attribute is read from the archived commit, so the trim reaches `--ref=main` with the commit that adds it and the default source with the next release, and GitHub's release-page source downloads, the same archive, shrink with it.
+
+**The read set is derived, never listed:** every tracked file `framework/bootstrap/ductus.md` or `framework/bootstrap/ductus-procedure.md` names in a code span, with `{key}` expanded over the Agent Registry's keys, `{id}` over `framework/migrations.toml`'s ids and a glob over the tracked tree, plus those two files, minus each command `scripts/maintainer-only-commands.txt` names and that command's reference. Naming stands in for reading. A run reads only what its instructions name, so the set never omits a file a run reads; a file named for another reason counts as read, which the subtraction covers for the one such pair today.
+
+**The check is audit Family 42**, `scripts/audit/archive-contents.sh`: it lists the regular files `git archive HEAD` emits and fails on each read-set file the archive omits and on each archived file outside the read set. It is a family rather than a runtime primitive because its subject is this repository alone and no adopter runs it, as with Families 16 and 35, which read the same manifest. `git archive` reads the tree, not history, so it runs in a shallow checkout, and `framework-checks.yml` runs `run-all.sh` on every push with no `paths:` filter; step (ac) runs its fixture test, which fails the family in each direction.
+
 ### Per-language gitignore fetches stay separate
 
 The **.gitignore** subsection of **Shared Files with conflict handling** fetches per-language patterns from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore`. Those URLs are not in the governance repo and not in the archive. The replacement **File Fetching** section is silent about them (the .gitignore subsection's own text describes its fetch); the new section explicitly notes only governance-repo files are sourced from the archive. No code change to .gitignore handling.
@@ -70,6 +78,11 @@ Current text: "If it does not, the write was corrupted — report the error and 
 | `framework/bootstrap/ductus.md` | Modify | Update **Agent Registry** `settings_template` values (Claude); replace **File Fetching** section with archive-fetch + extract + per-file resolution; update **Post-Write Integrity Check** wording; rewrite the **Edge Cases** bullet for fetch failures; name `{tempdir}` in the archive abort message (task 6). |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of `ductus.md` |
 | `framework/bootstrap/ductus-procedure.md` | Modify | Post-Scaffolding Output names the temp directory (task 6) |
+| `.gitattributes` | Modify | `export-ignore` every path no run reads (task 7) |
+| `scripts/audit/archive-contents.sh` | Create | Family 42: the archive's files equal the read set (task 7) |
+| `scripts/audit/run-all.sh`, `scripts/audit/README.md`, `framework/reference/audit.md` | Modify | Register Family 42 (task 7) |
+| `scripts/tests/test-archive-contents.sh` | Create | Fails Family 42 on an omitted read file and on an extra archived file (task 7) |
+| `.github/workflows/framework-checks.yml` | Modify | Step (ac) runs the test (task 7) |
 
 The generator (`scripts/gen-claude-commands.sh`) does not need to run because ductus.md is not in its input set.
 
