@@ -84,8 +84,8 @@ jobs:
       - name: Install the ductus runtime
         timeout-minutes: 10
         env:
-          DUCTUS_VERSION: 0.62.0
-          DUCTUS_SHA256: e99a71f5aa41cc69fe47b7e302143df4ebb8c1f6ab4a8ab8cd0ddb2c45db17f4
+          DUCTUS_VERSION: 0.63.0
+          DUCTUS_SHA256: 2e23f59ace6563ebb9701d676c90822aa5579c40e22eb80d3a993003bb4459f1
           DOWNLOAD_CONNECT_TIMEOUT_SECONDS: "30"
           DOWNLOAD_MAX_TIME_SECONDS: "300"
         run: |
