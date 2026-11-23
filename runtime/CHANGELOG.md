@@ -4,6 +4,22 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ## [Unreleased]
 
+### Added
+
+- **A departure entry can name the sites it covers (spec 073, AC9 to AC15;
+  the agent's recommendations, adopted by the operator, 2026-11-23).** An
+  entry's optional `covers:` lists `` `file` in `site` `` items, and
+  `write-review` then waives its rule at those sites alone: the stored waiver
+  holds `anchors:` with no count, a finding of the rule at another site or
+  naming none counts, a deferral there stands, and `process-waivers` expires an
+  anchor the entry no longer lists. The result's new `departure-notices` names
+  each covered file not in the tree and each finding of the rule in a covered
+  file at a site the entry does not list, bounded with the other departure
+  lists. `check-departures` reports a malformed `covers:` as Blocking. An entry
+  with no `covers:` is unchanged, and analyze waives a scoped entry's rule as
+  an unscoped one's. A scoped waiver reads as malformed to a runtime that
+  predates it, which then waives nothing there.
+
 ### Changed
 
 - **BREAKING: a review record the gate holds, whose passes read their scope,

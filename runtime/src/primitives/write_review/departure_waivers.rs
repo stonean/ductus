@@ -222,7 +222,7 @@ fn a_must_departure_waives_the_rule_at_both_files_and_writes_each_anchor() {
     assert_eq!(stored[0]["waived-at"], "2023-11-14T22:13:20Z");
 }
 
-/// A departure waiver covers every finding of its rule in each file, at any site and
+/// An unscoped departure waiver covers every finding of its rule in each file, at any site and
 /// whatever their number, and a site added later: the entry is the spec's decision, so it
 /// carries neither a site nor a count (spec 020's `waiver-expiry`, rule 5).
 #[test]

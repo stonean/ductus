@@ -863,8 +863,8 @@ pub(crate) fn read_recorded_waivers<T: serde::de::DeserializeOwned>(
 
 /// A recorded waiver's `file`: one repo-relative path, or a list of them.
 ///
-/// A departure waiver's paths, each its own `(rule, file)` anchor covering every site in
-/// the file, so an entry listing N paths is N anchors sharing one `reason`, `waived-at`
+/// An unscoped departure waiver's paths, each its own `(rule, file)` anchor covering every
+/// site in the file, so an entry listing N paths is N anchors sharing one `reason`, `waived-at`
 /// and `waived-by` (spec 020's `waiver-file-lists`); on any other entry a path was recorded
 /// before sites and covers nothing. Both spellings read into the same list; the writer
 /// chooses the spelling from the count, never from how the entry was written.

@@ -543,12 +543,19 @@ entry under the spec's `## Applicable Rules`, of any tier, a SHOULD's included,
 is a decision the spec already holds: `write-review` stores one waiver for its
 rule from it, a `file` list over the files in this review's scope only, covering
 every site in each with no count, and `process-waivers`
-expires it once the spec no longer holds the entry. The review step reads the
-result's `malformed-departures`, which names each entry that derives nothing. The
-entry decides over a deferral of its violations: `write-review` refuses a new
-`--defer` of one, naming the entry's `spec.md` line, and a stored deferral is
-superseded, named in `superseded-deferrals`. Past the read size both lists are
-absent from the result and held whole in `lists-file`, under their own names.
+expires it once the spec no longer holds the entry. An entry whose `covers:`
+lists the sites it decides is scoped: its waiver holds an `anchors` list of
+those sites where the rule fires, each with no count, so its findings at any
+other site count as any other, and `process-waivers` expires an anchor once the
+entry no longer lists it. The review step reads the result's
+`malformed-departures`, which names each entry that derives nothing, and its
+`departure-notices`, which name each covered file not in the tree and each
+finding of a scoped entry's rule in a covered file at a site the entry does not
+list. The entry decides over a deferral of its violations at the sites it
+covers: `write-review` refuses a new `--defer` of one, naming the entry's
+`spec.md` line, and a stored deferral is superseded, named in
+`superseded-deferrals`. Past the read size the three lists are absent from the
+result and held whole in `lists-file`, under their own names.
 The derivation, the waiver's fields and the entry's grammar are
 `write-review`'s and `check-departures`' (`ductus write-review --help`, `ductus
 check-departures --help`).
@@ -557,8 +564,9 @@ check-departures --help`).
 
 On every `/ductus:review` run, after the review passes have produced their
 findings (see **Run review passes**) and before counting them or writing the
-record, step 8 classifies each anchor — each one an entry's `anchors` lists, or
-each path a departure waiver's `file` lists, under its rule — against those
+record, step 8 classifies each anchor — each one an entry's `anchors` lists, a
+scoped departure waiver's included, or each path an unscoped departure waiver's
+`file` lists, under its rule — against those
 findings, which the host passes as `fired`, one entry per finding with its
 `site` and `line-range`, so two reports of one finding at its site count once and findings at different sites are counted apart, as `write-review` counts the `covers` it stores. A waiver can only be judged against findings that exist,
 so an empty scope leaves the waivers untouched, and a dimension-restricted run
@@ -570,8 +578,9 @@ inline in both forms, and the host reads `applied` and `expired` from there to p
 to `write-review`.
 
 1. **Apply** when the file exists at the anchored path AND the rule still
-   fires at its site, at most as many times as the anchor covers — a departure
-   waiver's anywhere in the file. The finding appears under **Waived findings**
+   fires at its site, at most as many times as the anchor covers — an unscoped
+   departure waiver's anywhere in the file, and a scoped one's at its site with no
+   count. The finding appears under **Waived findings**
    with the waiver's `reason`, excluded from its severity's count.
 2. **Expire** when the file no longer exists at the anchored path, the rule no
    longer fires at its site in a file the run read (IDs are permanent per
@@ -590,14 +599,15 @@ to `write-review`.
 4. **Do not extend** a waiver to a file or site it does not list. If the same
    rule fires at a path or site other than the waiver's anchors, that is a
    separate finding; the operator records a fresh `--waive` if it is also
-   intentional. A departure waiver alone covers every site in its files.
+   intentional. An unscoped departure waiver alone covers every site in its files;
+   a scoped one covers the sites its entry's `covers:` lists.
 
 ## Malformed and duplicate waivers
 
-- A waiver entry missing any of `rule`, `anchors` (`file` on a departure
-  waiver), `reason`, `waived-at`, or `waived-by`, or whose `anchors` is empty or
-  holds an anchor with a blank `file` or `site` or a `covers` that is not a
-  positive integer, or whose `file` is an empty list or holds a blank path, is
+- A waiver entry missing any of `rule`, `anchors` (`file` on an unscoped
+  departure waiver), `reason`, `waived-at`, or `waived-by`, or whose `anchors` is
+  empty or holds an anchor with a blank `file` or `site` or, off a departure
+  waiver, a `covers` that is not a positive integer, or whose `file` is an empty list or holds a blank path, is
   **skipped** with a one-line warning and kept on the write: malformed entries
   are operator-authored state, not garbage for the framework to collect, so the
   operator cleans it up. Two exceptions: a re-render drops an entry with no
@@ -665,7 +675,7 @@ a fix, a waiver, or a new deferral. A new `--defer` naming other work than a
 standing deferral replaces it as a new decision. A finding holds one disposition
 across runs through step 11's drop lists, and `write-review` refuses one that
 carries both. A departure entry decides over a deferral of its rule's violations
-(**§Waivers**).
+at the sites it covers (**§Waivers**).
 
 ## Auto-fix scope
 

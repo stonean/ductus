@@ -1,5 +1,5 @@
 ---
-next-task: 21
+next-task: 23
 ---
 
 # 073 — Decided Rule Departures Are Recorded Tasks
@@ -46,10 +46,22 @@ Blocked on task 17: the notices read the covered findings it selects.
 
 Blocked on tasks 16 to 19: the data model's **Size** is measured on the binary they build, and the descriptions state what they do. Once every task is ticked, 073 owes `/ductus:review` and `/ductus:analyze`, and 020, reopened here, owes its own, over the window this change shares with 073.
 
-- [ ] `specs/073-decided-rule-departures-are-recorded/data-model.md`: the `covers:` row and its malformed forms, a scoped waiver's stored `anchors:`, and `departure-notices` in the departure lists' **Size**, its file form re-measured on the built binary
-- [ ] The Applicable Rules comment of `framework/templates/spec/spec.md`; `check-departures` and `write-review` in `runtime/src/schema/descriptions.rs`
-- [ ] `framework/reference/review.md` §Waivers, `docs/rules.md`, and `specs/066-audit-records-and-the-completion-gate/plan.md`'s account of `write-review`'s bounded file
-- [ ] `specs/020-code-review/scenarios/waiver-expiry.md`: rule 5's exception and the paragraph on a finding naming no site; reopen 020 `done → in-progress` with `set-status`
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]`; the prose-claim sweep, `scripts/stale-literals.sh` included
+- [x] `specs/073-decided-rule-departures-are-recorded/data-model.md`: the `covers:` row and its malformed forms, a scoped waiver's stored `anchors:`, and `departure-notices` in the departure lists' **Size**, its file form re-measured on the built binary
+- [x] The Applicable Rules comment of `framework/templates/spec/spec.md`; `check-departures` and `write-review` in `runtime/src/schema/descriptions.rs`
+- [x] `framework/reference/review.md` §Waivers, `docs/rules.md`, and `specs/066-audit-records-and-the-completion-gate/plan.md`'s account of `write-review`'s bounded file
+- [x] `specs/020-code-review/scenarios/waiver-expiry.md`: rule 5's exception and the paragraph on a finding naming no site; reopen 020 `done → in-progress` with `set-status`
+- [x] `runtime/CHANGELOG.md` `[Unreleased]`; the prose-claim sweep, `scripts/stale-literals.sh` included
 
 - **Done when**: every AC14 location states `covers:` or a scoped entry's waiver, the sweep finds no live claim that every entry covers every in-scope file, 020 is `in-progress`, and the pre-commit hook passes.
+
+## 21. Disposition out-of-spec finding: 022's review-runtime-acceleration scenario says every departure waiver anchors at its file
+
+- [x] `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` — "a departure waiver's the `(rule, file)` pair at any site" holds for an unscoped entry's waiver only; a scoped entry's (§Scoped entries in `spec.md`) anchors at `(rule, file, site)` with no count. The fix is a scenario edit that reopens 022 `done → in-progress`. — fixed: the sentence names both forms (the operator's choice, 2026-11-23); 022's reopen is the routing work's, in its tree.
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 22. Disposition out-of-spec finding: 066's process-waivers-file-lists scenario says every anchor carries covers
+
+- [x] `specs/066-audit-records-and-the-completion-gate/scenarios/process-waivers-file-lists.md` — "an entry's anchors are its `anchors` list, each `{file, site, covers}`" no longer holds for a scoped departure waiver, whose anchors carry no `covers` (§Scoped entries in `spec.md`). The fix is a scenario edit that reopens 066 `done → in-progress`. — fixed: the sentence names a scoped waiver's `{file, site}` anchors, and 066 is reopened `done → in-progress` (the operator's choice, 2026-11-23).
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
