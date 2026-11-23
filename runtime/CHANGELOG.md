@@ -2,7 +2,18 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.64.0] — 2026-11-23
+
+A minor release with breaking changes: 3 of the 5 entries below are marked
+BREAKING, under Changed. Four of `security-backend.md`'s and
+`security-frontend.md`'s rules change by the owner's decisions of 2026-11-23:
+`BE-DEPS-005` and `FE-STORAGE-006` hold a spec to more, `BE-API-015` flags a
+case its Statement already refused, and `BE-DATA-012` sets aside a throwaway
+local or test credential. Two `accessibility-frontend.md` Not-flagged clauses
+are reworded with the same behavior, and the adopter CI template installs
+0.63.0. No runtime code, lockfile or manifest change, and the MSRV stays 1.89.
+The entry for the accessibility clauses was added with this release; the
+others were written as their changes landed.
 
 ### Changed
 
@@ -42,6 +53,18 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   the rule, in its Statement and its Verification, as `CFG-ENV-013` has it, so
   a spec owes it no revocation path. It turns no passing `/analyze` into a
   finding.
+
+### Fixed
+
+- **`FE-A11YFORM-002`'s and `FE-KBD-001`'s Not-flagged clauses say what they
+  mean (spec 069).** `FE-A11YFORM-002`'s ended in a garbled phrase: it now
+  hands a timer that hides an error tooltip or popover, made visible by hover
+  or focus, while its trigger still has hover or focus, to `FE-KBD-007`, and
+  keeps a timer that hides an error message validation made visible as its
+  own. `FE-KBD-001`'s held a flagged case, which now sits in its flags
+  sentence: handwriting that enters text, and a signature that only
+  acknowledges something or confirms identity. No case moves between flagged
+  and not flagged.
 
 ## [0.63.0] — 2026-11-23
 
