@@ -1,9 +1,9 @@
 ---
 title: "015-tarball-fetch — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow, 012-multi-agent-govern, 029-bootstrap-runtime-autowire]
 tags: [bootstrap, performance]
-next-criterion: 14
+next-criterion: 15
 ---
 
 # 015 — Tarball Fetch
@@ -134,6 +134,7 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 - [x] AC11: Per-language gitignore fetches against `github.com/github/gitignore` remain unchanged (separate `curl` calls)
 - [x] AC12: A re-run on an already-adopted project still reports `unchanged` for files whose archive copy matches the destination
 - [x] AC13: Each `/ductus` invocation creates a fresh temp directory via `mktemp` and re-fetches the archive; a prior run's extracted directory is never reused as the source for the current run
+- [ ] AC14: The framework archive `/ductus` downloads carries exactly the files a `/ductus` run reads from it and no other tracked file, and a check over `git archive` of a commit fails both when the archive omits a file the run reads and when it carries a file no step of the run reads
 
 ## Open Questions
 
