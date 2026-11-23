@@ -162,7 +162,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         layout.specs_root, args.feature
     );
 
-    let (diff_base, base_source, base_left_open) =
+    let (diff_base, base_source, carried) =
         resolve_base(args, &project, &layout.specs_root, &feature_dir)?;
 
     let modified_since = if diff_base.is_empty() {
@@ -230,19 +230,17 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     }
 
     // What the record at `HEAD` leaves open is read again wherever the window starts,
-    // or a re-run would clear a finding with its file unread, and so is what a held
-    // record the window starts at leaves open, which a later run passed over need not
-    // list again. A path either names that is gone, or that leaves the project, has
-    // nothing to read.
+    // or a re-run would clear a finding with its file unread, and so is what the record
+    // the window starts at hands on, which a later run passed over need not list again.
+    // A path either names that is gone, or that leaves the project, has nothing to read.
     let rel_dir = format!("{}/{}", layout.specs_root, args.feature);
     let at_head = record_at(repository, &head_tree, &project.to_git(&record_rel))?;
     let changed_contracts = contracts_against_digest(at_head.as_ref(), repo, &rel_dir);
-    let mut left_open = at_head.map_or_else(Vec::new, |record| record.open_findings);
-    for path in base_left_open {
-        if !left_open.contains(&path) {
-            left_open.push(path);
-        }
-    }
+    let (mut left_open, mut unread) = at_head.map_or_else(Default::default, |record| {
+        (record.open_findings, record.unread.unwrap_or_default())
+    });
+    add_new(&mut left_open, carried.open_findings);
+    add_new(&mut unread, carried.unread);
     let held = left_open.iter().chain(&changed_contracts);
     hold_in_scope(held, repo, &mut scope, &mut excluded);
 
@@ -253,6 +251,8 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         &uncommitted,
         left_open,
     );
+    // Taken after `owed_by`, so only a change or an open finding owes a review.
+    join_unread(&unread, &plan_affected, repo, (&mut scope, &mut excluded));
     let record = load_review_record(&feature_dir);
     let run = record
         .as_present()
@@ -334,16 +334,34 @@ fn paths_owing_a_review(
     owed_by
 }
 
-/// Where the review's window starts, why, and what a held record the start comes
-/// from leaves open: a `--since` override used verbatim, `HEAD` while the spec's
-/// move into `in-progress` is uncommitted, where the last review run since its
-/// reopening started ended, or that start's parent.
+/// Each of `more` that `list` does not already hold, appended in order.
+fn add_new(list: &mut Vec<String>, more: Vec<String>) {
+    for path in more {
+        if !list.contains(&path) {
+            list.push(path);
+        }
+    }
+}
+
+/// What the record a review's window starts at hands the next scope, beside what the
+/// record at `HEAD` hands it: what it leaves open, which owes a review (spec 079, AC5),
+/// and what its passes left unread, which only joins one (AC30).
+#[derive(Default)]
+struct Carried {
+    open_findings: Vec<String>,
+    unread: Vec<String>,
+}
+
+/// Where the review's window starts, why, and what the record the start comes from
+/// hands on: a `--since` override used verbatim, `HEAD` while the spec's move into
+/// `in-progress` is uncommitted, where the last review run since its reopening
+/// started ended, or that start's parent.
 fn resolve_base(
     args: &ComputeReviewScopeArgs,
     project: &ProjectRepository,
     specs_root: &str,
     feature_dir: &Path,
-) -> Result<(String, BaseSource, Vec<String>)> {
+) -> Result<(String, BaseSource, Carried)> {
     let repository = &project.repository;
     let spec_rel = project.to_git(&format!("{specs_root}/{}/spec.md", args.feature));
     let record_rel = format!("{specs_root}/{}/{REVIEW_RECORD_FILE}", args.feature);
@@ -358,7 +376,7 @@ fn resolve_base(
                 .id()
                 .to_string(),
             BaseSource::Since,
-            Vec::new(),
+            Carried::default(),
         ),
         // The transition commit is the *boundary* of the work window, and a
         // boundary belongs inside the window it bounds — so a first run's base is
@@ -378,30 +396,35 @@ fn resolve_base(
             (
                 repository.head()?.peel_to_commit()?.id().to_string(),
                 BaseSource::UncommittedTransition,
-                Vec::new(),
+                Carried::default(),
             )
         }
         None => match find_in_progress_commit(repository, &spec_rel)? {
             Some(sha) => {
                 let last = last_review_commit(project, &record_rel, &spec_rel, &sha)?;
                 match last.end {
-                    Some(ReviewEnd::Finished(review)) => {
-                        (review, BaseSource::LastReview, Vec::new())
-                    }
+                    Some(ReviewEnd::Finished { commit, unread }) => (
+                        commit,
+                        BaseSource::LastReview,
+                        Carried {
+                            open_findings: Vec::new(),
+                            unread,
+                        },
+                    ),
                     Some(ReviewEnd::Held(held)) => held_base(repository, &sha, held)?,
                     None if last.passed_over => (
                         transition_parent(repository, &sha)?,
                         BaseSource::ReopenPastPartialReview,
-                        Vec::new(),
+                        Carried::default(),
                     ),
                     None => (
                         transition_parent(repository, &sha)?,
                         BaseSource::Reopen,
-                        Vec::new(),
+                        Carried::default(),
                     ),
                 }
             }
-            None => (String::new(), BaseSource::None, Vec::new()),
+            None => (String::new(), BaseSource::None, Carried::default()),
         },
     })
 }
@@ -413,21 +436,21 @@ fn held_base(
     repository: &Repository,
     transition_sha: &str,
     held: HeldRun,
-) -> Result<(String, BaseSource, Vec<String>)> {
+) -> Result<(String, BaseSource, Carried)> {
     let reopen = transition_parent(repository, transition_sha)?;
     let reopen_oid = Oid::from_str(&reopen)?;
     let after_the_reopen = held.against == reopen_oid
         || repository
             .graph_descendant_of(held.against, reopen_oid)
             .unwrap_or(false);
+    let carried = Carried {
+        open_findings: held.open_findings,
+        unread: Vec::new(),
+    };
     Ok(if after_the_reopen {
-        (
-            held.against.to_string(),
-            BaseSource::HeldReview,
-            held.open_findings,
-        )
+        (held.against.to_string(), BaseSource::HeldReview, carried)
     } else {
-        (reopen, BaseSource::Reopen, held.open_findings)
+        (reopen, BaseSource::Reopen, carried)
     })
 }
 
@@ -467,6 +490,8 @@ struct RecordedRun {
     stopped_early: bool,
     /// The gate holds the record until a review runs, and its passes read their scope.
     held: Option<HeldRun>,
+    /// The record's `unread`, empty when it states none.
+    unread: Vec<String>,
     /// The fix-round loop was still open at this write.
     loop_open: bool,
 }
@@ -501,6 +526,7 @@ fn recorded_run(
         .as_deref()
         .and_then(|sha| Oid::from_str(sha).ok());
     let read_its_scope = record.unread.as_ref().is_some_and(Vec::is_empty);
+    let unread = record.unread.unwrap_or_default();
     let held = match against {
         Some(against) if gate_holds && read_its_scope => Some(HeldRun {
             against,
@@ -514,6 +540,7 @@ fn recorded_run(
             || record.budget_stop == Some(true)
             || !record.skipped_passes.is_empty(),
         held,
+        unread,
         loop_open: record.fix_rounds_open == Some(true),
     }))
 }
@@ -533,6 +560,26 @@ fn hold_in_scope<'a>(
     }) {
         excluded.remove(path);
         scope.insert(path.clone());
+    }
+}
+
+/// Hold in scope each entry a review left unread, wherever the window starts: it joins
+/// the scope of the next review that runs and owes no review of its own, as a changed
+/// contract does (spec 079, AC30). A path joins as [`hold_in_scope`] holds one, and a
+/// plan entry as the entry it is, since a pattern names no path on disk.
+fn join_unread(
+    unread: &[String],
+    plan_affected: &[String],
+    repo: &Path,
+    (scope, excluded): (&mut BTreeSet<String>, &mut BTreeSet<String>),
+) {
+    hold_in_scope(unread.iter(), repo, scope, excluded);
+    for entry in unread
+        .iter()
+        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))
+    {
+        excluded.remove(entry);
+        scope.insert(entry.clone());
     }
 }
 
@@ -658,8 +705,8 @@ fn run_in_spec_block(
 /// Where a review run since the reopening ended, as [`last_review_commit`] finds it.
 enum ReviewEnd {
     /// The commit finishing a run whose record the gate does not hold, which also holds
-    /// that run's fixes, already re-read by its fix rounds.
-    Finished(String),
+    /// that run's fixes, already re-read by its fix rounds, with its record's `unread`.
+    Finished { commit: String, unread: Vec<String> },
     /// A run whose record the gate holds and whose passes read their scope.
     Held(HeldRun),
 }
@@ -765,7 +812,10 @@ fn last_review_commit(
             }
             let end = match run.held {
                 Some(held) => ReviewEnd::Held(held),
-                None => ReviewEnd::Finished(commit.id().to_string()),
+                None => ReviewEnd::Finished {
+                    commit: commit.id().to_string(),
+                    unread: run.unread,
+                },
             };
             return Ok(LastReview {
                 end: Some(end),
@@ -2463,6 +2513,82 @@ mod tests {
             (finished, BaseSource::LastReview)
         );
         assert_eq!(scope.scope, ["src/task.rs"]);
+    }
+
+    /// What a clean record left unread joins the next review's scope, though the window
+    /// starts after it, and owes no review of its own (spec 079, AC30).
+    #[test]
+    fn what_a_clean_record_left_unread_joins_the_next_scope_and_owes_no_review() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(
+            &tmp,
+            &repo,
+            "src/read.rs",
+            "feat(001): skipped by the passes",
+        );
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(&head_sha(&repo), "unread:\n  - src/read.rs\n"),
+        );
+        let finished = commit_all(&repo, "review(001)");
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base.as_str(), scope.base_source),
+            (finished.as_str(), BaseSource::LastReview)
+        );
+        assert_eq!(scope.scope, ["src/read.rs"]);
+        assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
+        assert!(!scope.review_owed);
+    }
+
+    /// What the record the window starts at left unread joins too, past a later run
+    /// passed over that does not list it again.
+    #[test]
+    fn what_the_start_record_left_unread_joins_past_a_later_partial_run() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(
+            &tmp,
+            &repo,
+            "src/read.rs",
+            "feat(001): skipped by the passes",
+        );
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(&head_sha(&repo), "unread:\n  - src/read.rs\n"),
+        );
+        let finished = commit_all(&repo, "review(001)");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(&head_sha(&repo), "skipped-passes: [quality]\nunread: []\n")
+                .replace("2026-11-01", "2026-11-02"),
+        );
+        commit_all(&repo, "review(001)");
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base.as_str(), scope.base_source),
+            (finished.as_str(), BaseSource::LastReview)
+        );
+        assert!(has(&scope, "src/read.rs"), "{:?}", scope.scope);
+        assert!(!scope.owed_by.iter().any(|path| path == "src/read.rs"));
+    }
+
+    /// An unread entry gone from disk, or leaving the project, has nothing to read, and a
+    /// plan entry joins as the entry it is, since a pattern is no path.
+    #[test]
+    fn an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does() {
+        let (tmp, repo, _) = two_specs(&["src/*.rs", "../outside/*.rs"], &[]);
+        let unread =
+            "unread:\n  - src/gone.rs\n  - src/../src/old.rs\n  - src/*.rs\n  - ../outside/*.rs\n";
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(&head_sha(&repo), unread),
+        );
+        commit_all(&repo, "review(001)");
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/gone.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/../src/old.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/*.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "../outside/*.rs"), "{:?}", scope.scope);
     }
 
     /// A record leaving `src/old.rs` open, the file committed before the window opens,

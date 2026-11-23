@@ -9,7 +9,7 @@ What this spec adds to records and results. A primitive's behavior is canonical 
 | `fix-rounds-open` | `true`, or absent | Every `write-review` of a run with a fix-round loop but the last, which omits it | `check-review-gate` blocks while it is present |
 | `excluded` | integer | Every write, counting the paths left out of scope | The record's Summary; the body lists each path (`ductus write-review --help`) |
 | `contract-breaks` | integer | Every write, counting observations marked `contract-break` that the run did not fix | The measurement, as a gating finding left by that run |
-| `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD`, and `check-review-gate`, which blocks on a listed break |
+| `open-findings` | list of paths, or absent | Each write leaving one open: each counted violation's file, and each broken contract's that the run did not fix, a person did not waive and no deferral releases | `compute-review-scope` from the record at `HEAD` and from a held record the window starts at, and `check-review-gate`, which blocks on a listed break |
 
 An absent field means an older record or a `ductus exec` run, which has no loop; neither blocks. A run's two writes carry the same `reviewed-at`, so its `last-run` is one value. In `decisions:`, `decided-by: rule` marks a disposition AC2's rule decided, any other value names a person, and `contract-break: true` marks a decision on a broken contract, so a later run matching it still counts and lists the break, the file its key names when the run passes no path, unless it is in `expired-decisions`.
 
@@ -17,7 +17,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `base-source` | `reopen`, `last-review`, `since`, `uncommitted-transition` or `none` | Where the window starts |
+| `base-source` | `reopen`, `reopen-past-partial-review`, `last-review`, `held-review`, `since`, `uncommitted-transition` or `none` | Where the window starts, `held-review` at a held record's `reviewed-against` and `reopen-past-partial-review` at the reopen because every run since it did not read its scope (AC5) |
 | `excluded`, `excluded-count` | list of paths, integer | As `ductus compute-review-scope --help` states; the list joins the bounded lists |
 | `review-owed` | boolean | As `ductus compute-review-scope --help` states, narrowed by spec 081 so a scenario or data-model edit owes an analysis alone; true with no review record naming a run |
 

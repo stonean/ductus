@@ -24,6 +24,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   passed over for not reading its scope, which read `reopen` before. Breaking
   for a consumer matching `base-source` against its earlier values, and for a
   held record's next window, which narrows to what came after its passes.
+- **What a review left unread joins the next review's scope (spec 079, AC30;
+  the agent's recommendations, adopted by the operator, 2026-11-23).** Through
+  0.64.0 a record the gate does not hold moved the window's start past its
+  own `unread` entries, so nothing brought them back. `compute-review-scope`
+  now holds in scope each entry the record at `HEAD`, or the record the window
+  starts at, lists in `unread`, wherever the window starts, a plan entry as
+  the entry it is; like a changed contract, such an entry owes no review of
+  its own, so `review-owed` reads as before. `write-review` derives its
+  denominator from that same window when it starts at the run's own
+  `diff-base`, so a carried entry the run lists in `unread` is accepted and
+  counted.
 
 ## [0.64.0] — 2026-11-23
 

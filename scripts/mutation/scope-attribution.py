@@ -126,8 +126,8 @@ MUTATIONS = [
     (
         'M17 a review commit does not move the start',
         'src/primitives/compute_review_scope.rs',
-        '                    Some(ReviewEnd::Finished(review)) => {\n                        (review, BaseSource::LastReview, Vec::new())\n                    }',
-        '                    Some(ReviewEnd::Finished(_)) => (\n                        transition_parent(repository, &sha)?,\n                        BaseSource::Reopen,\n                        Vec::new(),\n                    ),',
+        '                    Some(ReviewEnd::Finished { commit, unread }) => (\n                        commit,\n                        BaseSource::LastReview,',
+        '                    Some(ReviewEnd::Finished { commit: _, unread }) => (\n                        transition_parent(repository, &sha)?,\n                        BaseSource::Reopen,',
         'compute_review_scope::tests::a_review_in_the_reopening_moves_the_start_to_its_commit',
     ),
     (
@@ -379,8 +379,8 @@ MUTATIONS = [
     (
         'M57 a spec never in progress reads as a reopen',
         'src/primitives/compute_review_scope.rs',
-        '            None => (String::new(), BaseSource::None, Vec::new()),',
-        '            None => (String::new(), BaseSource::Reopen, Vec::new()),',
+        '            None => (String::new(), BaseSource::None, Carried::default()),',
+        '            None => (String::new(), BaseSource::Reopen, Carried::default()),',
         'compute_review_scope::tests::no_in_progress_and_no_since_yields_empty_scope',
     ),
     (
@@ -1016,8 +1016,8 @@ MUTATIONS = [
     (
         'M151 the list comes from the working tree',
         'src/primitives/compute_review_scope.rs',
-        'let mut left_open = at_head.map_or_else(Vec::new, |record| record.open_findings);',
-        'let _ = at_head;\n    let mut left_open: Vec<String> = load_review_record(&feature_dir).as_present().map(|r| r.open_findings.clone()).unwrap_or_default();',
+        'let (mut left_open, mut unread) = at_head.map_or_else(Default::default, |record| {\n        (record.open_findings, record.unread.unwrap_or_default())\n    });',
+        'let _ = at_head;\n    let (mut left_open, mut unread): (Vec<String>, Vec<String>) = load_review_record(&feature_dir).as_present().map(|r| (r.open_findings.clone(), r.unread.clone().unwrap_or_default())).unwrap_or_default();',
         'compute_review_scope::tests::a_path_left_open_comes_from_head_and_is_named_as_owing_a_review',
     ),
     (
@@ -1866,7 +1866,7 @@ MUTATIONS = [
         'M325 a held run ends at the commit finishing it',
         'src/primitives/compute_review_scope.rs',
         '                Some(held) => ReviewEnd::Held(held),\n',
-        '                Some(_) => ReviewEnd::Finished(commit.id().to_string()),\n',
+        '                Some(_) => ReviewEnd::Finished {\n                    commit: commit.id().to_string(),\n                    unread: Vec::new(),\n                },\n',
         'compute_review_scope::tests::a_held_review_that_read_its_scope_starts_the_next_window_where_it_read_up_to',
     ),
     (
@@ -1886,8 +1886,8 @@ MUTATIONS = [
     (
         "M328 a held start's open findings do not join the scope",
         'src/primitives/compute_review_scope.rs',
-        '    for path in base_left_open {\n',
-        '    for path in base_left_open.into_iter().take(0) {\n',
+        '    add_new(&mut left_open, carried.open_findings);\n',
+        '',
         'compute_review_scope::tests::a_held_start_keeps_what_its_record_leaves_open_past_a_later_partial_run',
     ),
     (
@@ -1903,5 +1903,47 @@ MUTATIONS = [
         '            passed_over = true;\n            continue;\n',
         '            continue;\n',
         'compute_review_scope::tests::a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start',
+    ),
+    (
+        'M331 what a record left unread does not join the scope',
+        'src/primitives/compute_review_scope.rs',
+        '    hold_in_scope(unread.iter(), repo, scope, excluded);\n',
+        '    hold_in_scope(unread.iter().take(0), repo, scope, excluded);\n',
+        'compute_review_scope::tests::what_a_clean_record_left_unread_joins_the_next_scope_and_owes_no_review',
+    ),
+    (
+        'M332 what a record left unread owes a review',
+        'src/primitives/compute_review_scope.rs',
+        '        &uncommitted,\n        left_open,\n    );\n',
+        '        &uncommitted,\n        left_open.into_iter().chain(unread.clone()).collect(),\n    );\n',
+        'compute_review_scope::tests::what_a_clean_record_left_unread_joins_the_next_scope_and_owes_no_review',
+    ),
+    (
+        'M333 what the start record left unread does not join',
+        'src/primitives/compute_review_scope.rs',
+        '    add_new(&mut unread, carried.unread);\n',
+        '',
+        'compute_review_scope::tests::what_the_start_record_left_unread_joins_past_a_later_partial_run',
+    ),
+    (
+        'M334 a plan entry left unread does not join',
+        'src/primitives/compute_review_scope.rs',
+        '        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))\n',
+        '        .filter(|entry| plan_affected.contains(*entry) && entry.is_empty())\n',
+        'compute_review_scope::tests::an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does',
+    ),
+    (
+        'M335 a plan entry left unread joins though it leaves the project',
+        'src/primitives/compute_review_scope.rs',
+        '        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))\n',
+        '        .filter(|entry| plan_affected.contains(*entry))\n',
+        'compute_review_scope::tests::an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does',
+    ),
+    (
+        "M336 write-review's denominator ignores what the start record hands on",
+        'src/primitives/write_review.rs',
+        '        Ok(scope) if scope.diff_base == args.diff_base => scope,\n',
+        '        Ok(scope) if scope.diff_base.is_empty() && scope.diff_base == args.diff_base => scope,\n',
+        'write_review::tests::the_derived_scope_carries_what_the_start_record_hands_on',
     ),
 ]

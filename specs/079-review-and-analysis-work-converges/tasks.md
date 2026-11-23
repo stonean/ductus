@@ -1,5 +1,5 @@
 ---
-next-task: 43
+next-task: 44
 ---
 
 # 079 — Review and analysis work converges Tasks
@@ -47,8 +47,15 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 42. What a review left unread joins the next review's scope (AC30; the agent's recommendations, adopted by the operator, 2026-11-23)
 
-- [ ] `compute` (`runtime/src/primitives/compute_review_scope.rs`) holds in scope, wherever the window starts and out of `excluded`, each entry the record at `HEAD` lists in `unread` and each the record the window starts at lists there (`ReviewEnd::Finished` carries its record's `unread`): an entry on disk joins as the path it is, a plan entry as the entry it is, and one gone or leaving the project does not; none joins `owed_by`, so `review-owed` reads as before
-- [ ] `COMPUTE_REVIEW_SCOPE` (`runtime/src/schema/descriptions.rs`), the module doc comment, `framework/reference/review.md` §Window and coverage and its installed copy state it; `runtime/CHANGELOG.md`'s Unreleased entry gains it
-- [ ] Fixture tests, each failing with its behavior removed: a clean record listing an older path in `unread` holds it in the next scope with `review-owed` false; one passed over by a later partial run still has the start record's entry held; an entry gone from disk, one leaving the project and a plan pattern each behave as stated; new mutants in `scripts/mutation/scope-attribution.py` killed
+- [x] `compute` (`runtime/src/primitives/compute_review_scope.rs`) holds in scope, wherever the window starts and out of `excluded`, each entry the record at `HEAD` lists in `unread` and each the record the window starts at lists there (`ReviewEnd::Finished` carries its record's `unread`): an entry on disk joins as the path it is, a plan entry as the entry it is, and one gone or leaving the project does not; none joins `owed_by`, so `review-owed` reads as before
+- [x] `COMPUTE_REVIEW_SCOPE` (`runtime/src/schema/descriptions.rs`), the module doc comment, `framework/reference/review.md` §Window and coverage and its installed copy state it; `runtime/CHANGELOG.md`'s Unreleased entry gains it
+- [x] Fixture tests, each failing with its behavior removed: a clean record listing an older path in `unread` holds it in the next scope with `review-owed` false; one passed over by a later partial run still has the start record's entry held; an entry gone from disk, one leaving the project and a plan pattern each behave as stated; new mutants in `scripts/mutation/scope-attribution.py` killed
 
 - **Done when**: AC30's text holds against the tree: each fixture's scope holds the entries AC30 names and its `review-owed` reads as before, the tests and mutants pass, and the description, the reference and the changelog state it.
+
+## 43. write-review's denominator carries what the record the window starts at leaves, as the run's scope did
+
+- [x] Task 41's held-start carry left `resolve_scope` (`runtime/src/primitives/write_review.rs`) behind: it resolves the scope with `since` set to the run's own diff base, which reads `base-source: since` and carries nothing from the record the window starts at, so after a held start and a later partial run the record's `scope` misses the carried open findings the passes read, an `unread` entry naming one is refused, and the moved-scope guard does not watch them. `resolve_scope` takes the default scope when it resolves to the run's own diff base, and `since` otherwise
+- [x] A test: a held start record's open finding, under a later partial run, is in the scope `write-review` derives, an `unread` entry naming it is accepted, and the case fails with the behavior removed; a mutant in `scripts/mutation/scope-attribution.py` killed
+
+- **Done when**: `write-review`'s derived scope equals `compute-review-scope`'s for the run's own window on the fixture, and its test and mutant pass.

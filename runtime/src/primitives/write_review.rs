@@ -842,7 +842,9 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 ///
 /// Resolved through `compute-review-scope` against the run's own `diff-base`,
 /// so it is the scope the review was told to cover rather than whatever that
-/// base resolves to at some later moment. An empty base, what `compute-review-scope`
+/// base resolves to at some later moment: the default window when it starts
+/// there, with what the record it starts at hands on, and that base verbatim
+/// otherwise. An empty base, what `compute-review-scope`
 /// returns for a spec that never entered `in-progress`, records a scope of zero, though that
 /// scope still holds a first review's plan entries. Any other base the derivation fails on refuses the write: a
 /// mistyped sha once recorded `scope: 0` beside `examined: 8`, a window no
@@ -870,21 +872,31 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<S
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
         return Ok((0, BTreeSet::new()));
     }
+    // The window's default start, when it is the run's own diff-base, also hands the
+    // scope what the record it starts at leaves open or left unread (spec 079), which
+    // the same base passed as `--since` does not: the denominator is then the scope the
+    // passes were given. Any other base is used verbatim.
+    let own_window = crate::schema::primitives::ComputeReviewScopeArgs {
+        feature: args.feature.clone(),
+        since: None,
+    };
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
         feature: args.feature.clone(),
         since: Some(args.diff_base.clone()),
     };
-    let result =
-        crate::primitives::compute_review_scope::compute(&scope_args, repo).map_err(|source| {
-            PrimitiveError::InvalidArgument {
+    let result = match crate::primitives::compute_review_scope::compute(&own_window, repo) {
+        Ok(scope) if scope.diff_base == args.diff_base => scope,
+        _ => crate::primitives::compute_review_scope::compute(&scope_args, repo).map_err(
+            |source| PrimitiveError::InvalidArgument {
                 primitive: "write-review".into(),
                 argument: "diff-base".into(),
                 reason: format!(
                     "no scope can be derived from it ({source}); pass the diff-base \
                  compute-review-scope returned"
                 ),
-            }
-        })?;
+            },
+        )?,
+    };
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
     let own_record = own_record_path(args, repo)?;
@@ -3563,6 +3575,75 @@ mod tests {
         // A refused entry is the caller's text, carried on one line.
         assert!(!err.contains(['\n', '\u{1b}']), "{err:?}");
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
+    }
+
+    /// A record the window starts at hands the scope what it leaves open or left
+    /// unread, past a later run passed over, and the denominator `write-review`
+    /// derives for that window holds the same, so an `unread` entry naming it is the
+    /// run's own (spec 079, task 43).
+    #[test]
+    fn the_derived_scope_carries_what_the_start_record_hands_on() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        const DISPOSITIONS: &str =
+            "dispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  undispositioned: 0\n";
+        for (fields, carried) in [
+            (
+                "should-violations: 1\nunread: []\nopen-findings:\n  - src/carried.rs\n",
+                "src/carried.rs",
+            ),
+            ("unread:\n  - src/carried.rs\n", "src/carried.rs"),
+        ] {
+            let tmp = tempdir().unwrap();
+            let repository = git2::Repository::init(tmp.path()).unwrap();
+            let spec =
+                |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
+            write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+            write(&tmp.path().join("src/carried.rs"), "fn c() {}\n");
+            commit_all(&repository, "chore: seed");
+            write(
+                &tmp.path().join("specs/001-x/spec.md"),
+                &spec("in-progress"),
+            );
+            let start = commit_all(&repository, "status(001): start").to_string();
+            let record = |against: &str, run: &str, fields: &str| {
+                format!(
+                    "---\nspec: 001-x\nlast-run: {run}\nreviewed-against: {against}\nmust-violations: 0\n{fields}{DISPOSITIONS}---\n\n# Review\n"
+                )
+            };
+            write(
+                &tmp.path().join("specs/001-x/review.md"),
+                &record(&start, "2026-11-01T00:00:00Z", fields),
+            );
+            let first = commit_all(&repository, "review(001)").to_string();
+            write(
+                &tmp.path().join("specs/001-x/review.md"),
+                &record(
+                    &first,
+                    "2026-11-02T00:00:00Z",
+                    "skipped-passes: [quality]\nunread: []\n",
+                ),
+            );
+            commit_all(&repository, "review(001)");
+
+            let window = crate::primitives::compute_review_scope::compute(
+                &crate::schema::primitives::ComputeReviewScopeArgs {
+                    feature: "001-x".into(),
+                    since: None,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert!(
+                window.scope.iter().any(|entry| entry == carried),
+                "{fields}: {:?}",
+                window.scope
+            );
+            let mut args = base_args("001-x");
+            args.diff_base = window.diff_base.clone();
+            args.unread = Some(vec![carried.to_string()]);
+            let out = run(&args, tmp.path()).unwrap_or_else(|error| panic!("{fields}: {error}"));
+            assert!(out.scope >= 1, "{fields}: {out:?}");
+        }
     }
 
     #[test]
