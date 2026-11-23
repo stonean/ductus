@@ -30,7 +30,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Physical, as the runner resolves a working directory's symbolic links: a
+# checkout reached through one (macOS's /var under $TMPDIR) would fail F.
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd -P)"
 RUNNER="$REPO_ROOT/scripts/run-workflow-steps.py"
 
 failures=0
