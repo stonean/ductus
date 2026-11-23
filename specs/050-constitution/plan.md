@@ -203,7 +203,7 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 ### A task uses what it needs, and no more
 
-§design-principles' last bullet carries it (AC26), the owner's rule from 015's archive trim, generic to every adopter (owner, 2026-11-23). Its bound against over-cutting points at §text-first-artifacts' required content rather than restating it. It lands within the 50,000-byte ceiling by dropping §Cost levers' `/cost` example, which no artifact quotes, and `AGENTS.md` keeps no copy, so 40dea24c's bullet goes and the bullet it displaced, which survey DP1 keys, returns.
+§design-principles' last bullet carries it (AC26), the owner's rule from 015's archive trim, generic to every adopter (owner, 2026-11-23). Its bound against over-cutting points at §text-first-artifacts' required content rather than restating it. It lands within the 50,000-byte ceiling by dropping §cost-levers' `/cost` example, which no artifact quotes, and `AGENTS.md` keeps no copy, so 40dea24c's bullet goes and the bullet it displaced, which survey DP1 keys, returns.
 
 ## Classification
 
@@ -522,7 +522,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | --- | --- | --- |
 | `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, the mechanical-edit test in §spec-lifecycle, and a §drift-prevention canonical-sources row naming this spec |
 | `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
-| `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §Cost levers' example cut to fit the ceiling (task 53) |
+| `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §cost-levers' example cut to fit the ceiling (task 53) |
 | `AGENTS.md` | Modify | 40dea24c's restatement of the filter removed, and the bullet it displaced restored (task 53) |
 | `specs/` | Modify | The sweep: no spec artifact carries a line-number citation (task 49) |
 | `AGENTS.md` | Modify | Each promoted entry rewritten to a pointer; project-only entries untouched |
