@@ -2,6 +2,29 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING: a review record the gate holds, whose passes read their scope,
+  moves the next review's window to its `reviewed-against` (spec 079, AC5; the
+  agent's recommendation, adopted by the operator, 2026-11-23).** Through 0.64.0
+  a record carrying a gating count, an open finding, a contract break, a
+  criterion not met, the open fix-round mark or an unwaived round left the
+  window at the reopening, so each re-run read the whole reopening again.
+  `compute-review-scope` now starts it at that record's `reviewed-against`, no
+  earlier than the reopen, when the record states `unread: []`: the fixes its
+  open loop or an unwaived round left unread lie after that commit, and what
+  it leaves open joins the scope as before, as does what the held record the
+  window starts at leaves open when a later run is passed over. A clean record
+  keeps the commit finishing it. A held record stating no empty `unread` or no
+  `reviewed-against`, every one written before 0.60.0's `unread` among them,
+  still moves no start. `base-source` gains `held-review` and
+  `reopen-past-partial-review`, the second when every run since the reopen was
+  passed over for not reading its scope, which read `reopen` before. Breaking
+  for a consumer matching `base-source` against its earlier values, and for a
+  held record's next window, which narrows to what came after its passes.
+
 ## [0.64.0] — 2026-11-23
 
 A minor release with breaking changes: 3 of the 5 entries below are marked

@@ -1363,8 +1363,15 @@ pub enum BaseSource {
     /// The parent of the commit the spec's reopening started at: where it last left
     /// `done` or, never `done`, first entered `in-progress`.
     Reopen,
+    /// That start, because every review run since it was passed over for not reading
+    /// its scope: a skipped pass, a budget stop, or a record the gate holds that states
+    /// no empty `unread` or no `reviewed-against` (spec 079, AC5).
+    ReopenPastPartialReview,
     /// The last review commit since that start.
     LastReview,
+    /// The `reviewed-against` of the last review since that start, when the gate holds
+    /// its record until a review runs and its passes read their scope (spec 079, AC5).
+    HeldReview,
     /// A `--since` override, used verbatim.
     Since,
     /// `HEAD`, because the move into `in-progress` is not committed yet.
