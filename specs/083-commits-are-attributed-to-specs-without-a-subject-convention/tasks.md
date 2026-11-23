@@ -4,18 +4,18 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Count the window's examined and unclaimed commits
 
-- [ ] Count in `attribute_window` per the plan's §Counting in the window walk, carried on `WindowClaims` into `ReviewScope` as an `Option`, `None` when `diff_base` is empty
-- [ ] Add `commits-examined` and `commits-unclaimed` to `ComputeReviewScopeResult`, inline in both forms and omitted when `None`
-- [ ] State both, and their absence without a window, in `COMPUTE_REVIEW_SCOPE`
-- [ ] Fixtures in `runtime/src/primitives/compute_review_scope.rs` for each AC13 direction: unclaimed commits reported, a credited one still reported, zero beside the count examined, a clean merge examined and not unclaimed, and an empty diff base reporting neither
-- [ ] Prove each fixture fails with its counting removed
+- [x] Count in `attribute_window` per the plan's §Counting in the window walk, carried on `WindowClaims` into `ReviewScope` as an `Option`, `None` when `diff_base` is empty
+- [x] Add `commits-examined` and `commits-unclaimed` to `ComputeReviewScopeResult`, inline in both forms and omitted when `None`
+- [x] State both, and their absence without a window, in `COMPUTE_REVIEW_SCOPE`
+- [x] Fixtures in `runtime/src/primitives/compute_review_scope.rs` for each AC13 direction: unclaimed commits reported, a credited one still reported, zero beside the count examined, a clean merge examined and not unclaimed, and an empty diff base reporting neither
+- [x] Prove each fixture fails with its counting removed
 
 - **Done when**: the AC13 fixtures pass, each fails when its behavior is removed, and `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` are clean.
 
 ## 2. Prove a ticked commit is attributed whatever its subject
 
-- [ ] A fixture in `runtime/src/primitives/compute_review_scope.rs` with specs 022 and 034: a commit with subject `123 - 022: x` holding a code change and a tick in 022's `tasks.md` puts the code in 022's scope and not in 034's (AC11)
-- [ ] The same code change committed with no tick under the same subject stays in both scopes (AC12)
+- [x] A fixture in `runtime/src/primitives/compute_review_scope.rs` with specs 022 and 034: a commit with subject `123 - 022: x` holding a code change and a tick in 022's `tasks.md` puts the code in 022's scope and not in 034's (AC11)
+- [x] The same code change committed with no tick under the same subject stays in both scopes (AC12)
 
 - **Done when**: both fixtures pass and each fails when the tick, or its absence, is swapped.
 

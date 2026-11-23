@@ -1307,6 +1307,17 @@ pub struct ComputeReviewScopeResult {
     pub deleted_count: usize,
     /// Entries in `excluded`, in either form.
     pub excluded_count: usize,
+    /// How many commits the window's walk examined, in either form (spec 083).
+    /// Absent when there is no window to walk: an empty `diff-base`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commits_examined: Option<usize>,
+    /// How many of those commits no spec claimed although they changed a path in
+    /// the project, whether or not a committed review credited their paths, so a
+    /// clean merge is examined and never unclaimed (spec 083). What still owes a
+    /// review is in `scope`, and what a review credited in `excluded`. Absent
+    /// with `commits-examined`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commits_unclaimed: Option<usize>,
     /// Entries in `criteria-owing`, in either form; absent when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub criteria_owing_count: usize,

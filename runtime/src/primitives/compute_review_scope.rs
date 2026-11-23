@@ -68,6 +68,8 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         plan_affected_count: scope.plan_affected.len(),
         deleted_count: scope.deleted.len(),
         excluded_count: excluded.len(),
+        commits_examined: scope.commits.map(|commits| commits.examined),
+        commits_unclaimed: scope.commits.map(|commits| commits.unclaimed),
         criteria_owing_count: scope.criteria_owing.len(),
         criteria_owing: scope.criteria_owing.clone(),
         scope: Some(scope.scope.clone()),
@@ -128,6 +130,34 @@ pub(crate) struct ReviewScope {
     pub(crate) deleted: Vec<String>,
     /// Each path `modified_since` holds that the scope left out.
     pub(crate) excluded: BTreeSet<String>,
+    /// The window's commit counts; `None` when there is no window to walk.
+    pub(crate) commits: Option<WindowCommits>,
+}
+
+/// How many commits a window's walk examined, and how many of them no spec
+/// claimed although they changed a path in the project (spec 083). The count is
+/// taken before credit, so a review crediting a commit's paths leaves it counted:
+/// it measures attribution, while what still owes a review is in the scope.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct WindowCommits {
+    /// See [`ComputeReviewScopeResult::commits_examined`].
+    pub(crate) examined: usize,
+    /// See [`ComputeReviewScopeResult::commits_unclaimed`].
+    pub(crate) unclaimed: usize,
+}
+
+impl WindowCommits {
+    /// Count `commits` as the walk attributed them. A clean merge changed no path
+    /// itself, so it is examined and never unclaimed.
+    fn of(commits: &[(Oid, CommitClaims)]) -> Self {
+        Self {
+            examined: commits.len(),
+            unclaimed: commits
+                .iter()
+                .filter(|(_, claims)| claims.claimants.is_empty() && !claims.paths.is_empty())
+                .count(),
+        }
+    }
 }
 
 /// Resolve the review's diff base and scope, every list whole. `write-review`
@@ -275,6 +305,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         plan_affected,
         deleted: deleted.into_iter().collect(),
         excluded,
+        commits: window.commits,
     })
 }
 
@@ -837,6 +868,8 @@ struct WindowClaims {
     /// Paths a staging spec folded into this one below `done` brought, wherever
     /// the window starts, since no review has read them.
     folded_in: BTreeSet<String>,
+    /// The walk's commit counts; `None` when no window was walked.
+    commits: Option<WindowCommits>,
 }
 
 impl WindowClaims {
@@ -878,14 +911,23 @@ fn attribute_window(
     plan_affected: &[String],
 ) -> Result<WindowClaims> {
     let mut window = WindowClaims::default();
-    let Some(form) = parse_feature_dir(feature) else {
-        return Ok(window);
-    };
     let repository = &project.repository;
     let mut walk = repository.revwalk()?;
     walk.push_head()?;
     walk.hide(Oid::from_str(base)?)?;
     let attributor = Attributor::new(project, repo, specs_root)?;
+    let commits: Vec<(Oid, CommitClaims)> = walk
+        .map(|oid| -> Result<(Oid, CommitClaims)> {
+            let oid = oid?;
+            Ok((oid, attributor.claims(&repository.find_commit(oid)?)?))
+        })
+        .collect::<Result<_>>()?;
+    // Counted before the spec is placed, so a window the walk could attribute to no
+    // spec still says what it held.
+    window.commits = Some(WindowCommits::of(&commits));
+    let Some(form) = parse_feature_dir(feature) else {
+        return Ok(window);
+    };
     let own_prefix = format!("{specs_root}/{feature}/");
     let own_plan = PlanEntries::new(plan_affected);
     let mut plans: BTreeMap<String, PlanEntries> = BTreeMap::new();
@@ -897,12 +939,6 @@ fn attribute_window(
     };
     let mut folded = fold.uncommitted()?;
 
-    let commits: Vec<(Oid, CommitClaims)> = walk
-        .map(|oid| -> Result<(Oid, CommitClaims)> {
-            let oid = oid?;
-            Ok((oid, attributor.claims(&repository.find_commit(oid)?)?))
-        })
-        .collect::<Result<_>>()?;
     let records = read_records(project, specs_root, &commits)?;
     for (oid, claims) in commits {
         let commit = repository.find_commit(oid)?;
@@ -3601,6 +3637,188 @@ mod tests {
 
     /// A subject naming no spec keeps 079's plan rule: a path one claimant's plan lists
     /// is that claimant's, and the other claimant's scope leaves it out.
+    /// How many commits `base..HEAD` holds, counted by a walk of the test's own.
+    fn commits_since(repo: &Repository, base: &str) -> usize {
+        let mut walk = repo.revwalk().unwrap();
+        walk.push_head().unwrap();
+        walk.hide(Oid::from_str(base).unwrap()).unwrap();
+        walk.count()
+    }
+
+    /// The window counts every commit it walked and those no spec claimed, and the
+    /// result carries both (spec 083, AC13).
+    #[test]
+    fn the_window_counts_its_commits_and_those_no_spec_claimed() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/unclaimed.rs", "chore: lint cleanup");
+        change(&tmp, &repo, "src/named.rs", "fix(001): a bug");
+        change(&tmp, &repo, "specs/002-y/notes.md", "chore: y's notes");
+
+        // The reopening's status commit, the chore, the named fix and 002-y's own.
+        let counts = WindowCommits {
+            examined: 4,
+            unclaimed: 1,
+        };
+        assert_eq!(x(&tmp).commits, Some(counts));
+        let result = serde_json::to_value(run(&args("001-x", None), tmp.path()).unwrap()).unwrap();
+        assert_eq!(result["commits-examined"], 4);
+        assert_eq!(result["commits-unclaimed"], 1);
+    }
+
+    /// A window every commit of which a spec claimed reports zero beside the count it
+    /// examined, never an absent count (spec 083, AC13).
+    #[test]
+    fn a_window_whose_commits_are_all_claimed_reports_zero_unclaimed() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/named.rs", "fix(001): a bug");
+
+        let counts = WindowCommits {
+            examined: 2,
+            unclaimed: 0,
+        };
+        assert_eq!(x(&tmp).commits, Some(counts));
+    }
+
+    /// A review crediting an unclaimed commit's paths takes them out of the scope and
+    /// leaves the commit counted, since the count measures attribution (spec 083).
+    #[test]
+    fn a_credited_unclaimed_commit_is_still_counted() {
+        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", holding_the_chore);
+        let repo = Repository::open(tmp.path()).unwrap();
+        let scope = x(&tmp);
+        assert!(scope.excluded.contains("src/x.rs"), "{:?}", scope.scope);
+        let counts = WindowCommits {
+            examined: commits_since(&repo, &scope.diff_base),
+            unclaimed: 1,
+        };
+        assert_eq!(scope.commits, Some(counts));
+    }
+
+    /// A clean merge changed no path itself, so it is examined and never unclaimed
+    /// (spec 083, AC13).
+    #[test]
+    fn a_clean_merge_is_examined_and_never_unclaimed() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let main_ref = repo.head().unwrap().name().unwrap().to_string();
+        let base = repo.head().unwrap().target().unwrap();
+        let branch =
+            Oid::from_str(&change(&tmp, &repo, "src/a.rs", "fix(001): on a branch")).unwrap();
+        let mut checkout = git2::build::CheckoutBuilder::new();
+        checkout.force().remove_untracked(true);
+        repo.set_head_detached(base).unwrap();
+        repo.checkout_head(Some(&mut checkout)).unwrap();
+        repo.reference(&main_ref, base, true, "rewind main")
+            .unwrap();
+        repo.set_head(&main_ref).unwrap();
+        change(&tmp, &repo, "src/b.rs", "fix(001): on main");
+        write(&tmp.path().join("src/a.rs"), "fix(001): on a branch\n");
+        let mut index = repo.index().unwrap();
+        index
+            .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+            .unwrap();
+        index.write().unwrap();
+        let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        let other = repo.find_commit(branch).unwrap();
+        let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "Merge branch 'story'",
+            &tree,
+            &[&head, &other],
+        )
+        .unwrap();
+
+        // The status commit, the branch's commit, main's commit and the merge.
+        let counts = WindowCommits {
+            examined: 4,
+            unclaimed: 0,
+        };
+        assert_eq!(x(&tmp).commits, Some(counts));
+    }
+
+    /// A spec with no window, an empty diff base, reports neither count, so a window
+    /// that held no unclaimed commit is never mistaken for one never walked (spec 083).
+    #[test]
+    fn a_spec_with_no_window_reports_neither_commit_count() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/003-z/spec.md"), &spec("planned"));
+        write(&tmp.path().join("src/z.rs"), "fn z() {}\n");
+        commit_all(&repo, "chore: seed");
+
+        let scope = compute(&args("003-z", None), tmp.path()).unwrap();
+        assert!(scope.diff_base.is_empty(), "{}", scope.diff_base);
+        assert_eq!(scope.commits, None);
+        let result = serde_json::to_value(run(&args("003-z", None), tmp.path()).unwrap()).unwrap();
+        assert!(result.get("commits-examined").is_none(), "{result}");
+        assert!(result.get("commits-unclaimed").is_none(), "{result}");
+    }
+
+    /// Specs 022-a and 034-b, both reopened by one committed transition, each with a
+    /// `tasks.md` holding one unticked task; `src/lib.rs` is code neither has changed.
+    fn two_open_specs() -> (tempfile::TempDir, Repository) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        for dir in ["022-a", "034-b"] {
+            write(
+                &tmp.path().join(format!("specs/{dir}/spec.md")),
+                &spec("planned"),
+            );
+            write(
+                &tmp.path().join(format!("specs/{dir}/tasks.md")),
+                "## 1. Work\n\n- [ ] do it\n",
+            );
+        }
+        write(&tmp.path().join("src/lib.rs"), "fn old() {}\n");
+        commit_all(&repo, "chore: seed");
+        for dir in ["022-a", "034-b"] {
+            write(
+                &tmp.path().join(format!("specs/{dir}/spec.md")),
+                &spec("in-progress"),
+            );
+        }
+        commit_all(&repo, "chore: start both");
+        (tmp, repo)
+    }
+
+    /// A commit holding a code change and a tick in 022's `tasks.md`, under a subject in
+    /// a work-item form no parser reads, is 022's to review and no other spec's
+    /// (spec 083, AC11).
+    #[test]
+    fn a_ticked_commit_is_its_specs_whatever_its_subject() {
+        let (tmp, repo) = two_open_specs();
+        write(&tmp.path().join("src/lib.rs"), "fn new() {}\n");
+        write(
+            &tmp.path().join("specs/022-a/tasks.md"),
+            "## 1. Work\n\n- [x] do it\n",
+        );
+        commit_all(&repo, "123 - 022: x");
+
+        let own = compute(&args("022-a", None), tmp.path()).unwrap();
+        let other = compute(&args("034-b", None), tmp.path()).unwrap();
+        assert!(has(&own, "src/lib.rs"), "{:?}", own.scope);
+        assert!(!has(&other, "src/lib.rs"), "{:?}", other.scope);
+        assert!(other.excluded.contains("src/lib.rs"));
+    }
+
+    /// The same code change committed with no tick names no spec by its subject and
+    /// touches no spec directory, so it stays in every open spec's scope (spec 083,
+    /// AC12).
+    #[test]
+    fn an_unticked_commit_under_the_same_subject_stays_in_every_window() {
+        let (tmp, repo) = two_open_specs();
+        write(&tmp.path().join("src/lib.rs"), "fn new() {}\n");
+        commit_all(&repo, "123 - 022: x");
+
+        for feature in ["022-a", "034-b"] {
+            let scope = compute(&args(feature, None), tmp.path()).unwrap();
+            assert!(has(&scope, "src/lib.rs"), "{feature}: {:?}", scope.scope);
+        }
+    }
+
     #[test]
     fn a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it() {
         let (tmp, repo, _) = two_specs(&["src/x.rs"], &[]);
