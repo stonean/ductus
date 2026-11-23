@@ -1,27 +1,62 @@
 ---
 spec: 015-tarball-fetch
-last-run: 2026-11-11T15:52:57Z
-reviewed-against: 788971619cbf64a76e152dab17a64cb50d6b1489
-diff-base: 581673ae330ba418fbdfcf801e2b15f8fa0bcc1b
+last-run: 2026-11-23T21:33:47Z
+reviewed-against: 0db66fcc2811a609f2b2801a0b8d55ef6b271876
+diff-base: 93ff4777b013994863228ab1a25fc35d188a523b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 3
-scope: 6
-excluded: 168
+examined: 11
+scope: 14
+unread:
+  - .ductus/reference/audit.md
+  - framework/bootstrap/govern.md
+  - specs/083-commit-subjects-name-specs-in-a-form-the-project-declares/spec.md
+excluded: 1
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 1
-re-reads: 0
+fix-rounds: 2
+re-reads: 2
 diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest: {}
+criteria-judged: 14
+criteria-met: 14
+criteria-verdicts:
+  - label: AC1
+    digest: b1e79960a469129a4cb90cff3a7b6789c60d011090beeb575861325829c803ed
+  - label: AC2
+    digest: 9aa6ce65f4fb70cf4b91bbb77bea5138e7e6c031bf4faa478553d4b10f588dea
+  - label: AC3
+    digest: 87c0d6875ec5e21b789adf894073f4faed4f606208034c3d26c1923523c97d51
+  - label: AC4
+    digest: 650fb75074f1f3b082dcffbcdd1ca771d99a6214f8d0adf60579bd1cf8998c3d
+  - label: AC5
+    digest: c2ef6cc02689edef5a6dabe76df019908f431111e9bb25e8e496cc9702d8d20e
+  - label: AC6
+    digest: 8422bd284a4387ac561ebbb1e450c574bf8c67396983c9ba775b001282cd3a69
+  - label: AC7
+    digest: b6968d58863e1fb8506637e87be2dddcf0ba64a7a67997d9f47f564cf983bc18
+  - label: AC8
+    digest: 268ca11a4f4f32698a82dba41d958cfb518fc2c1f79710bb9aeb3b16e2a282d8
+  - label: AC9
+    digest: 7bff14ae322eb397dca8c5a15be02eba856082e0c1a6cbc1d824b21f8c509e17
+  - label: AC10
+    digest: 7868719e7f6c33ba0dba0fdd0d47e789a0b1d8482eb3100c071516c1385ecd9e
+  - label: AC11
+    digest: 1a58cf4be8cb4b510c63222344e1c9e3e6fb3b08b40c86c3ae49d04331197b37
+  - label: AC12
+    digest: 207a7c9fde87f2bd92306341fd136e67a35487dcefd1b9cb83c1249b38187a5d
+  - label: AC13
+    digest: 2e11b7e73cc32b7d98b1090b5b28e62f08b00d7a09dd26044129890626257d71
+  - label: AC14
+    digest: 361ffd177081df2745a0ffbb890c215c358d6f1e20055e7f399298fec0284551
 blocking: false
 dispositions:
-  fixed: 5
+  fixed: 6
   deferred: 0
-  waived: 9
+  waived: 7
   undispositioned: 0
 decisions:
   - key: "convention: no numbered step of the bootstrap names the two managed-block merges — `framework/bootstrap/ductus.md`"
@@ -44,11 +79,6 @@ decisions:
     reason: an artifact of the test harness, whose tool list belonged to another project's session; a real adopter session lists only its own
     decided-at: 2026-11-11T15:52:57Z
     decided-by: andy@stone.dev
-  - key: "other: an adopter with an installed .augment, .agents or .opencode tree gets no notice from /ductus, nothing removes it, and the managed .gitignore block no longer ignores it — `framework/bootstrap/ductus.md`"
-    outcome: waived
-    reason: the owner dropped the three hosts as a breaking change; the CHANGELOG's Removed entry tells such an adopter to remove the tree by hand, the runtime refuses writes there by the owner's exception, and detecting a dropped host's tree would be new bootstrap behavior rather than a fix to this change
-    decided-at: 2026-11-11T15:52:57Z
-    decided-by: rule
   - key: "other: with surface-instruction gone, the MCP registration table's mechanism column holds one value — `framework/bootstrap/ductus.md`"
     outcome: waived
     reason: the column is the extension point the Adding a new agent steps cite; dropping it is a design change, not removal residue
@@ -69,15 +99,22 @@ decisions:
     reason: the template has frontmatter, so the walk skips it with a report line and writes nothing
     decided-at: 2026-11-11T15:52:57Z
     decided-by: andy@stone.dev
+  - key: "other: the trimmed archive, which is also GitHub's release-page 'Source code' download, now carries no LICENSE and no notice of the MIT terms anywhere (git archive HEAD holds 0 files with the copyright or permission text), although it carries substantial portions of the Software (rules, constitution, templates, hooks) and every /ductus run copies parts of it into adopter trees. Before the trim LICENSE rode in every archive. A fix is not mechanical: carrying /LICENSE requires Family 42 to exempt it, a durable requirement. — `.gitattributes`"
+    outcome: waived
+    reason: AC14 limits the archive to the files a /ductus run reads and no run reads LICENSE; no manifest row ever copied it into an adopter's tree, so what adopters receive is unchanged, and carrying it would add a requirement to AC14, which is the owner's to make
+    decided-at: 2026-11-23T21:31:39Z
+    decided-by: rule
 ---
 
 # Review — 015-tarball-fetch
 
 ## Summary
 
-015's reopening window, 581673ae..78897161 (base-source reopen), holds 6 scope entries from three commits. edebca93 is its sweep, which dropped Auggie from the spec, plan and tasks. 0afc0c00 is the two-line edit to the bootstrap's Pi prompt-template paragraph that b1d319f1's agent-host removal owed, with govern.md mirroring it. 4b6f0411 is task 6: the criteria verification before this review found AC6 held only by the Cleanup paragraph, as neither template the host renders carried the temp path, and the owner chose to have them carry it (2026-11-11). The archive abort message in ductus.md and govern.md now names {tempdir}, and the procedure's Post-Scaffolding Output gains a temp-directory line; {tempdir} exists on every run, created first by the Pre-flight Phase. 012's task 12 holds the real adopter run that checks it. Per AGENTS.md's shared-window rule, b1d319f1 and 0afc0c00 were read in depth once, by 064's review 2411dca9, whose window holds 0afc0c00; ductus.md and ductus-procedure.md are unchanged since 064's close at fb587c87 but for task 6's two lines. This review read task 6's hunks with the sections around them (Archive fetch and extract and Cleanup in ductus.md; Post-Scaffolding Output in the procedure), re-read 0afc0c00's hunk, and leans on 064's read for the rest of both files. The seven decisions on ductus.md and two on ductus-procedure.md that 064's record stores are carried with byte-identical text and disposition. One of them waives the missing notice for a dropped host's leftover tree, which the owner has since scheduled as 012's task 13 (2026-11-11); each clause of its reason still holds. Examined counts the 3 in-scope files the passes read in full, of 6: 015's spec.md, plan.md and tasks.md. Not opened in full: ductus.md and ductus-procedure.md, read as above; govern.md, byte-identical to ductus.md by cmp. All 12 rule files were selected. The 3 frontend files have no subject in this scope, and no rule of the 9 backend and cross files fires on the window's change: the sweep's prose, and two template lines naming a temp path, which SEC-LOG-001 does not cover, since a temp directory is no secret. 0 MUST, 0 SHOULD, 0 low-confidence. Five new observations, each a stale claim the passes found in 015's own spec or plan, are fixed by the rule in this run: the temp directory's creation order, the narrowed mktemp seed, the plan's hardcoded framework root and archive name, its retired CLAUDE.md citation, and its Affected Files and question count. The fixes' one round holds only spec.md and plan.md, which the analysis reads again before done, so it is exempt from a re-read.
+Window 93ff4777..0db66fcc (base-source reopen), passes in one subagent over the four loaded rule files, each read whole (configuration-cross.md 29,932, quality-cross.md 9,060, security-backend.md 118,346, security-cross.md 24,283 bytes), AGENTS.md, and 11 of the 14 scope entries read whole; the five backend files whose headers give their rules to analysis were not loaded. Unread, by name: framework/bootstrap/govern.md, byte-identical to framework/bootstrap/ductus.md by cmp, which was read whole; .ductus/reference/audit.md, the generator's copy of framework/reference/audit.md, read whole, whose diff after the {project} substitution is empty and whose generators step reported in sync; and specs/083-commit-subjects-name-specs-in-a-form-the-project-declares/spec.md, another session's untracked draft spec that entered the derived scope after the passes ran and is no part of 015's change. No finding. Seven observations: six fixed in the run by the rule (stale size prose in ductus.md and govern.md, plan Overview, spec Problem, and three comments in scripts/audit/archive-contents.sh, one adding a coverage count), one waived by the rule (LICENSE no longer in the archive). Six stored decisions on ductus.md fired again and stand; one expired because ductus.md now names a dropped host's leftover tree; two on ductus-procedure.md are retained, that file being out of scope. Criteria: 14 judged, 14 met. AC7 was judged not met, since 022's task 18 dropped Bash(tar *) from Claude's seed, and its annotation was corrected in the run (the agent's recommendation, adopted by the operator, 2026-11-23), then judged met. Round 1's re-read, which read each path's round diff, found two SHOULDs on the {download-timeout} row's archive size; they were fixed with wording naming both archives rather than the prescribed edit, which would have misdescribed the runtime's release archives (7,288,539 to 8,132,268 bytes at ductus-v0.64.0), and round 2's re-read was clean. A scratch-adopter /ductus --ref=main at 0db66fcc completed: 78 files extracted, apply-manifest source-missing 0 on the shared and per-agent calls.
 
-1 fix round(s): 0 re-read, 0 diff-checked, 1 exempt, 0 not re-read. Exempt: round 1.
+2 fix round(s): 2 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+14 of 14 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -99,22 +136,38 @@ decisions:
 
 *None.*
 
+## Acceptance criteria
+
+- AC1 — met: framework/bootstrap/ductus.md ## File Fetching holds ### Archive fetch and extract (one codeload curl, extract-archive, {framework-root} derivation) and ### Per-file resolution; no per-file curl flow remains for ductus-repo files.
+- AC2 — met: ductus.md ### Archive fetch and extract issues exactly one codeload.github.com archive curl; the pre-flight pin, self-update and latest-release/migration-registry fetches (### Source resolution, ### Self-update check) are the ones the annotation names, and the only per-language curls are the .gitignore ones in ## Shared Files.
+- AC3 — met: apply-manifest tests all pass (cargo test apply_manifest: 66 passed): update_creates_when_dest_absent, update_updates_when_dest_differs, create_writes_only_when_dest_absent, skip_if_conflict_does_not_apply_substitutions, pinned_short_circuits_before_any_io_regardless_of_strategy; merge is merge-managed-block (ductus.md Instructions steps 5-6, ## Shared Files .gitignore/constitution imports), not an apply-manifest strategy, and I did not drive it here.
+- AC4 — met: ductus.md ### Archive fetch and extract abort message fires before any manifest write (Instructions steps 2-4), ductus-procedure.md Edge Cases 'Archive fetch or extract fails' says clean abort with no ductus.md or wiring writes pending; Pre-flight abort (read whole) shows the only earlier writes are seed, recorded source and wiring/ductus.md, not scaffolding; the fetch failure itself is a documented procedure, not run.
+- AC5 — met: runtime test source_missing_returns_action_not_error passes (absent.md gives action source-missing, source_missing=1, the present entry still created); ductus-procedure.md Edge Cases 'A required source file is absent' and Post-Scaffolding Output list the warning line 'Source not found in archive: {source-path}; skipping.'.
+- AC6 — met: ductus-procedure.md ## Post-Scaffolding Output (read whole) lists 'temp directory: {tempdir} - left for the OS to sweep'; ductus.md ### Archive fetch and extract abort message names {tempdir}; ### Cleanup says /ductus does not delete it and no rm is seeded.
+- AC7 — met: corrected in this run (the agent's recommendation, adopted by the operator, 2026-11-23): framework/bootstrap/ductus.md Agent Registry's claude settings_template carries Bash(mktemp -d -t ductus-XXXXXX), no Bash(tar *) and no rm allow, Permission Setup says curl and tar are not seeded (022 task 18), and pi's is {}
+- AC8 — met: Claude settings_template in ductus.md ## Agent Registry carries Read(//private/var/folders/**/T/ductus-*/**), Read(//var/folders/**/T/ductus-*/**) and Read(//tmp/ductus-*/**), covering both macOS temp roots and Linux /tmp; the single-slash forms are in the retired list.
+- AC9 — met: ductus.md ## Post-Write Integrity Check re-reads {tempdir}/ductus.md.upstream or {framework-root}/framework/bootstrap/ductus.md on failure, no curl.
+- AC10 — met: ductus.md ### Self-update check (Per-agent comparison, Stale -> defer to pre-flight abort) still byte-compares the installed ductus.md against the resolved ref's copy and notices on stale; the copy now comes from a small raw fetch at the same ref as the archive, which the spec body records.
+- AC11 — met: ductus.md ## Shared Files .gitignore step 5 still runs a separate curl to raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore, outside the archive; ## File Fetching intro states it is not part of the archive.
+- AC12 — met: runtime tests update_is_unchanged_and_preserves_mtime_when_matched and full_re_run_is_idempotent_with_unchanged_actions pass (second run: unchanged=1, skipped_exists=2, mtimes preserved); ductus-procedure.md Edge Cases 'ductus.md content already matches' and ## Idempotency state the same.
+- AC13 — met: ductus.md ## Pre-flight Phase 'Create {tempdir} first' runs mktemp -d -t ductus-XXXXXX every run and says never reuse a prior directory; ### Cleanup repeats it; the Claude seed allows exactly that command.
+- AC14 — met: Ran bash scripts/audit/archive-contents.sh (78 read, 78 archived, 78 in both, 0 findings, rc 0) and bash scripts/tests/test-archive-contents.sh (cases A-N all PASS: B omitted read file fails, C/D carried unread file fails, N real tree passes); git archive HEAD lists the same 78 files, only .markdownlint-cli2.jsonc outside framework/; .gitattributes allow-list; run-all.sh Family 42 and framework-checks.yml run it.
+
 ## Observations
 
+- convention: framework/bootstrap/ductus.md still describes the framework archive by its pre-trim size in three places the AC14 change left unswept: Pre-flight Phase intro ('Neither pays the cost of the multi-megabyte archive'), Branch 2 step 1 ('it is the archive's multi-megabyte cost this phase avoids'), and the Cleanup subsection ('several megabytes of extracted files'). The archive is now 78 files, about 0.4 MB compressed and 1.3 MB extracted. framework/bootstrap/govern.md is its byte-identical copy and carries the same three. — `framework/bootstrap/ductus.md` — **fixed** (decided by the rule)
+- convention: specs/015-tarball-fetch/plan.md Overview still says 'The change is localized to a single source file' and 'No new files; no template changes; no scaffolding-manifest changes', which task 7's own Affected Files rows contradict (a new audit family script, a new test, .gitattributes lines, a workflow step). The plan is the design as it stands. — `specs/015-tarball-fetch/plan.md` — **fixed** (decided by the rule)
+- convention: specs/015-tarball-fetch/spec.md Problem still claims 'the entire framework directory is well under a megabyte'; tracked framework/ is 82 files and 1,541,517 bytes and the extracted archive is 1,312,777 bytes at 0db66fcc, which the spec's own Cleanup section records as about 1.3 MB. — `specs/015-tarball-fetch/spec.md` — **fixed** (decided by the rule)
+- other: the trimmed archive, which is also GitHub's release-page 'Source code' download, now carries no LICENSE and no notice of the MIT terms anywhere (git archive HEAD holds 0 files with the copyright or permission text), although it carries substantial portions of the Software (rules, constitution, templates, hooks) and every /ductus run copies parts of it into adopter trees. Before the trim LICENSE rode in every archive. A fix is not mechanical: carrying /LICENSE requires Family 42 to exempt it, a durable requirement. — `.gitattributes` — **waived**: AC14 limits the archive to the files a /ductus run reads and no run reads LICENSE; no manifest row ever copied it into an adopter's tree, so what adopters receive is unchanged, and carrying it would add a requirement to AC14, which is the owner's to make (decided by the rule)
+- convention: archive-contents.sh re-implements two parsers lib.sh already owns, the maintainer-only list (lib.sh maintainer_only_commands) and the Agent Registry table header (lib.sh agent_config_dirs, same regex), and says nowhere why. The reason exists (lib.sh reads the worktree, the family must read HEAD, since the archive is a commit's), so it belongs in a comment at the code. — `scripts/audit/archive-contents.sh` — **fixed** (decided by the rule)
+- convention: archive-contents.sh's header claims the derived read set 'omits nothing a run reads', but it scans only ductus.md and ductus-procedure.md; the per-migration procedure files a run also reads (framework/migrations/{id}.md) are not scanned. None names a framework file to read today (checked all 15; audit-record-relocate.md and ductus-rename.md name two files only in messages or prose), and a future one would fail closed as 'carried, no run reads it', whose suggested fix (mark it export-ignore) would then break that migration. The header should state the bound. — `scripts/audit/archive-contents.sh` — **fixed** (decided by the rule)
+- convention: archive-contents.sh parses markdown structure (code spans, manifest table rows, the Agent Registry table) in an embedded python3 heredoc, the shape scripts/audit/README.md Contract names as 'the signal that a check took the fallback without earning it' ('Several families here predate that standard ... the legacy shape, not the pattern to copy'). The reason it is not a primitive-backed entry point exists only in 015's plan.md (subject is this repository alone, no adopter runs it), and neither the script header nor its README or audit.md entry says so. — `scripts/audit/archive-contents.sh` — **fixed** (decided by the rule)
 - convention: no numbered step of the bootstrap names the two managed-block merges — `framework/bootstrap/ductus.md` — **waived**: Instructions step 4 lists what apply-manifest replaces, not every Shared Files step, and two real adopter bootstraps on this text wrote both blocks from Shared Files
 - convention: a language with no github/gitignore template, such as markdown, prints a fetch failure on every run — `framework/bootstrap/ductus.md` — **waived**: the run names the failed URL and writes nothing for it, which is the procedure's stated outcome; the subject's markdown language is an input no project has a template for
 - convention: the Pi Bridge step says verbatim while the per-agent apply-manifest call carries a substitutions map — `framework/bootstrap/ductus.md` — **waived**: the Bridge step's verbatim copy is its own call, and the subject's bridge matched the framework source byte for byte
 - convention: the detection step counts deferred mcp__ductus__ tool names as State A — `framework/bootstrap/ductus.md` — **waived**: an artifact of the test harness, whose tool list belonged to another project's session; a real adopter session lists only its own
-- other: an adopter with an installed .augment, .agents or .opencode tree gets no notice from /ductus, nothing removes it, and the managed .gitignore block no longer ignores it — `framework/bootstrap/ductus.md` — **waived**: the owner dropped the three hosts as a breaking change; the CHANGELOG's Removed entry tells such an adopter to remove the tree by hand, the runtime refuses writes there by the owner's exception, and detecting a dropped host's tree would be new bootstrap behavior rather than a fix to this change (decided by the rule)
 - other: with surface-instruction gone, the MCP registration table's mechanism column holds one value — `framework/bootstrap/ductus.md` — **waived**: the column is the extension point the Adding a new agent steps cite; dropping it is a design change, not removal residue (decided by the rule)
 - stale: the Derived values row label Command/skill path still names the skill layout — `framework/bootstrap/ductus.md` — **waived**: a label, not a claim: it still names the command-file path both layouts use, no parser keys on it, and renaming it is a seven-spec sweep, two of them scenarios, for no behavior change (decided by the rule)
-- convention: the Closing restart gives no single form for Pi wired in the run beside Claude already registered — `framework/bootstrap/ductus-procedure.md` — **waived**: the per-agent forms compose into an accurate notice, as the subject's run shows, so no host reads it wrong
-- convention: the Frontmatter Migration's specs/**/spec.md walk reports specs/templates/spec.md as already frontmatter on every run — `framework/bootstrap/ductus-procedure.md` — **waived**: the template has frontmatter, so the walk skips it with a report line and writes nothing
-- stale: the Extract section had the temp directory created after the archive fetch, where the Pre-flight Phase creates it before anything is fetched — `specs/015-tarball-fetch/spec.md` — **fixed** (decided by the rule)
-- stale: the spec's and the plan's Claude seed edit give Bash(mktemp *), which 022's task 18 narrowed to the exact command Bash(mktemp -d -t ductus-XXXXXX) — `specs/015-tarball-fetch/spec.md` — **fixed** (decided by the rule)
-- stale: the plan hardcoded {tempdir}/ductus-main/ as the framework root and named the archive ductus.tar.gz, where the root is the extraction's one top-level directory and the archive is framework.tar.gz — `specs/015-tarball-fetch/plan.md` — **fixed** (decided by the rule)
-- stale: the plan cited the project's CLAUDE.md for ductus.md being hand-maintained, a line CLAUDE.md no longer carries — `specs/015-tarball-fetch/plan.md` — **fixed** (decided by the rule)
-- stale: the plan's Affected Files said no other file changes, missing task 6's govern.md and ductus-procedure.md, and its resolved-questions summary still counted four after the sweep removed Auggie's — `specs/015-tarball-fetch/plan.md` — **fixed** (decided by the rule)
 
 ## Skipped passes
 
@@ -122,177 +175,8 @@ decisions:
 
 ## Excluded from scope
 
-- `.claude/commands/ductus/analyze.md` — 067-analyze-and-audit-checks
-- `.claude/commands/ductus/target.md` — 009-scenario-targeting
-- `.ductus/reference/analyze.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `.ductus/reference/audit.md` — 064-pi-host-support
-- `.githooks/pre-commit` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `.github/workflows/framework-checks.yml` — 022-deterministic-runtime
-- `.pi/prompts/ductus-analyze.md` — 067-analyze-and-audit-checks
-- `.pi/prompts/ductus-configure.md` — 064-pi-host-support
-- `.pi/prompts/ductus-target.md` — 009-scenario-targeting
-- `AGENTS.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `README.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `docs/developing-ductus.md` — 071-command-reference-split
-- `framework/bootstrap/configure/pi.md` — 064-pi-host-support
-- `framework/bootstrap/hooks/ductus-pre-commit` — 012-multi-agent-govern, 067-analyze-and-audit-checks
-- `framework/commands/analyze.md` — 067-analyze-and-audit-checks
-- `framework/commands/target.md` — 009-scenario-targeting
-- `framework/reference/analyze.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `framework/reference/audit.md` — 064-pi-host-support
-- `runtime/CHANGELOG.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `runtime/src/host.rs` — 064-pi-host-support
-- `runtime/src/primitives/apply_manifest.rs` — 064-pi-host-support
-- `runtime/src/primitives/check_artifacts.rs` — 064-pi-host-support
-- `runtime/src/primitives/enforce_manifest.rs` — 064-pi-host-support
-- `runtime/src/primitives/host_config.rs` — 064-pi-host-support
-- `runtime/src/primitives/merge_managed_block.rs` — 064-pi-host-support
-- `runtime/src/primitives/merge_permissions.rs` — 064-pi-host-support
-- `runtime/src/schema/descriptions.rs` — 064-pi-host-support
-- `runtime/src/schema/primitives.rs` — 064-pi-host-support
-- `scripts/audit/README.md` — 064-pi-host-support
-- `scripts/audit/done-spec-criteria.sh` — 026-framework-self-audit
-- `scripts/audit/host-namespace-parity.sh` — 022-deterministic-runtime, 064-pi-host-support
-- `scripts/audit/installer-registry-parity.sh` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `scripts/audit/manifest-parity.sh` — 064-pi-host-support
-- `scripts/audit/permission-entry-shape.sh` — 064-pi-host-support
-- `scripts/audit/permission-wildcard-position.sh` — 064-pi-host-support
-- `scripts/audit/runtime-probe-parity.sh` — 064-pi-host-support
-- `scripts/gen-configure-mcp.sh` — 064-pi-host-support, 067-analyze-and-audit-checks, 071-command-reference-split
-- `scripts/tests/test-host-namespace-parity.sh` — 022-deterministic-runtime
-- `scripts/tests/test-install.sh` — 064-pi-host-support
-- `specs/002-project-scaffolding/analysis.md` — 002-project-scaffolding
-- `specs/002-project-scaffolding/plan.md` — 002-project-scaffolding
-- `specs/002-project-scaffolding/review.md` — 002-project-scaffolding
-- `specs/002-project-scaffolding/spec.md` — 002-project-scaffolding
-- `specs/003-bootstrap-automation/tasks.md` — 003-bootstrap-automation
-- `specs/009-scenario-targeting/analysis.md` — 009-scenario-targeting
-- `specs/009-scenario-targeting/plan.md` — 009-scenario-targeting
-- `specs/009-scenario-targeting/review.md` — 009-scenario-targeting
-- `specs/009-scenario-targeting/spec.md` — 009-scenario-targeting
-- `specs/009-scenario-targeting/tasks.md` — 009-scenario-targeting
-- `specs/012-multi-agent-govern/tasks.md` — 012-multi-agent-govern, 067-analyze-and-audit-checks
-- `specs/017-derive-dont-ask/plan.md` — 017-derive-dont-ask
-- `specs/017-derive-dont-ask/scenarios/a-commit-stages-only-its-own-generated-files.md` — 017-derive-dont-ask
-- `specs/017-derive-dont-ask/tasks.md` — 017-derive-dont-ask
-- `specs/022-deterministic-runtime/data-model.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/plan.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/commands-dir-parameterization.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/coverage-residue-cleanup.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/framework-list-dedup.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/merge-managed-block-subsection-insertion.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/the-constitutions-registry-validates-its-values.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/scenarios/writecode-payload-bundling.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/spec.md` — 022-deterministic-runtime
-- `specs/022-deterministic-runtime/tasks.md` — 022-deterministic-runtime
-- `specs/023-govern-refinement/plan.md` — 023-govern-refinement
-- `specs/023-govern-refinement/scenarios/configure-dedup-permissions.md` — 023-govern-refinement
-- `specs/023-govern-refinement/scenarios/configure-inert-write-path-entries.md` — 023-govern-refinement
-- `specs/023-govern-refinement/scenarios/configure-permission-pattern-safety.md` — 023-govern-refinement
-- `specs/023-govern-refinement/scenarios/configure-retires-formerly-canonical-entries.md` — 023-govern-refinement
-- `specs/023-govern-refinement/spec.md` — 023-govern-refinement
-- `specs/023-govern-refinement/tasks.md` — 023-govern-refinement
-- `specs/026-framework-self-audit/plan.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/scenarios/host-namespace-parity.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/spec.md` — 026-framework-self-audit
-- `specs/026-framework-self-audit/tasks.md` — 026-framework-self-audit
-- `specs/029-bootstrap-runtime-autowire/plan.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/scenarios/archive-fetch-direct-codeload.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/scenarios/project-inputs-asked-once.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/scenarios/runtime-probe-parity-audit.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/spec.md` — 029-bootstrap-runtime-autowire
-- `specs/029-bootstrap-runtime-autowire/tasks.md` — 029-bootstrap-runtime-autowire
-- `specs/042-consolidate-govern-per-project-files-under-govern-directory/plan.md` — 042-consolidate-govern-per-project-files-under-govern-directory
-- `specs/042-consolidate-govern-per-project-files-under-govern-directory/spec.md` — 042-consolidate-govern-per-project-files-under-govern-directory
-- `specs/042-consolidate-govern-per-project-files-under-govern-directory/tasks.md` — 042-consolidate-govern-per-project-files-under-govern-directory
-- `specs/043-workflows-sunset/plan.md` — 043-workflows-sunset
-- `specs/043-workflows-sunset/spec.md` — 043-workflows-sunset
-- `specs/043-workflows-sunset/tasks.md` — 043-workflows-sunset
-- `specs/045-decision-state-drift-detection/data-model.md` — 045-decision-state-drift-detection
-- `specs/045-decision-state-drift-detection/spec.md` — 045-decision-state-drift-detection
-- `specs/046-scenario-open-question-visibility/analysis.md` — 046-scenario-open-question-visibility
-- `specs/046-scenario-open-question-visibility/plan.md` — 046-scenario-open-question-visibility
-- `specs/046-scenario-open-question-visibility/review.md` — 046-scenario-open-question-visibility
-- `specs/046-scenario-open-question-visibility/spec.md` — 046-scenario-open-question-visibility
-- `specs/048-govern-acquired-runtime/data-model.md` — 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/plan.md` — 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/scenarios/retired-namespace-tools-are-off-limits.md` — 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md` — 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/spec.md` — 048-govern-acquired-runtime
-- `specs/048-govern-acquired-runtime/tasks.md` — 048-govern-acquired-runtime
-- `specs/049-rename-govern-to-ductus/plan.md` — 049-rename-govern-to-ductus
-- `specs/049-rename-govern-to-ductus/spec.md` — 049-rename-govern-to-ductus
-- `specs/049-rename-govern-to-ductus/tasks.md` — 049-rename-govern-to-ductus
-- `specs/050-constitution/plan.md` — 050-constitution
-- `specs/050-constitution/scenarios/memory-routing-lives-in-agents-md.md` — 050-constitution
-- `specs/050-constitution/scenarios/the-constitution-fits-one-read.md` — 050-constitution
-- `specs/054-remove-supersession/plan.md` — 054-remove-supersession
-- `specs/054-remove-supersession/spec.md` — 054-remove-supersession
-- `specs/054-remove-supersession/tasks.md` — 054-remove-supersession
-- `specs/055-shared-constitution/plan.md` — 055-shared-constitution
-- `specs/055-shared-constitution/tasks.md` — 055-shared-constitution
-- `specs/056-bootstrap-archive-boundary-split/spec.md` — 056-bootstrap-archive-boundary-split
-- `specs/058-findings-route-at-discovery/plan.md` — 058-findings-route-at-discovery
-- `specs/058-findings-route-at-discovery/spec.md` — 058-findings-route-at-discovery
-- `specs/058-findings-route-at-discovery/tasks.md` — 058-findings-route-at-discovery
-- `specs/061-updates-track-the-latest-release-tag/plan.md` — 061-updates-track-the-latest-release-tag
-- `specs/061-updates-track-the-latest-release-tag/spec.md` — 061-updates-track-the-latest-release-tag
-- `specs/061-updates-track-the-latest-release-tag/tasks.md` — 061-updates-track-the-latest-release-tag
-- `specs/062-concurrent-session-targets/plan.md` — 062-concurrent-session-targets
-- `specs/062-concurrent-session-targets/tasks.md` — 062-concurrent-session-targets
-- `specs/063-oversized-artifacts-warn-with-a-fix/plan.md` — 063-oversized-artifacts-warn-with-a-fix
-- `specs/063-oversized-artifacts-warn-with-a-fix/tasks.md` — 063-oversized-artifacts-warn-with-a-fix
-- `specs/064-pi-host-support/analysis.md` — 064-pi-host-support
-- `specs/064-pi-host-support/plan.md` — 064-pi-host-support
-- `specs/064-pi-host-support/review.md` — 064-pi-host-support
-- `specs/064-pi-host-support/spec.md` — 064-pi-host-support
-- `specs/064-pi-host-support/tasks.md` — 064-pi-host-support
-- `specs/066-audit-records-and-the-completion-gate/tasks.md` — 066-audit-records-and-the-completion-gate
-- `specs/067-analyze-and-audit-checks/data-model.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/criterion-adopter-scope-destinations.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/every-agents-generated-copies-are-excluded.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/frontmatter-severity-tiers-on-both-sides.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/scenarios/per-agent-scaffold-paths-ship-to-adopter.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/status-gated-families-are-not-silent.md` — 067-analyze-and-audit-checks
-- `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/067-analyze-and-audit-checks/tasks.md` — 012-multi-agent-govern, 067-analyze-and-audit-checks
-- `specs/069-accessibility-frontend-rules/plan.md` — 069-accessibility-frontend-rules
-- `specs/071-command-reference-split/analysis.md` — 071-command-reference-split
-- `specs/071-command-reference-split/plan.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/071-command-reference-split/review.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/071-command-reference-split/spec.md` — 071-command-reference-split
-- `specs/071-command-reference-split/tasks.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `specs/072-governing-documents-stay-within-one-read/plan.md` — 072-governing-documents-stay-within-one-read
-- `specs/075-agents-md-holds-what-every-session-needs/plan.md` — 075-agents-md-holds-what-every-session-needs
-- `specs/075-agents-md-holds-what-every-session-needs/spec.md` — 075-agents-md-holds-what-every-session-needs
-- `specs/075-agents-md-holds-what-every-session-needs/tasks.md` — 075-agents-md-holds-what-every-session-needs
-- `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md` — 078-review-fix-rounds-are-re-read-within-a-bound
-- `specs/079-review-and-analysis-work-converges/plan.md` — 079-review-and-analysis-work-converges
-- `specs/079-review-and-analysis-work-converges/tasks.md` — 079-review-and-analysis-work-converges
-- `specs/080-deterministic-runtime-efficiency/analysis.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/data-model.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/plan.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/research.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/review.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/scenarios/configure-types-no-permission-entries.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/scenarios/help-answers-with-no-model-turn.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/spec.md` — 080-deterministic-runtime-efficiency
-- `specs/080-deterministic-runtime-efficiency/tasks.md` — 080-deterministic-runtime-efficiency
-- `specs/009-scenario-targeting/spec.md` — left out of fix round 1
-- `specs/067-analyze-and-audit-checks/scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md` — left out of fix round 1
-- `specs/067-analyze-and-audit-checks/tasks.md` — left out of fix round 1
+- `specs/073-decided-rule-departures-are-recorded/spec.md`
+- `specs/073-decided-rule-departures-are-recorded/spec.md` — left out of fix round 1
 
 ## Unexamined governance
 

@@ -22,7 +22,7 @@ Today `framework/bootstrap/ductus.md` issues one `curl` per file in the manifest
 - 1 `framework/bootstrap/ductus.md` (self-install)
 - 0–N workflow templates (only those the user accepts)
 
-That's ~35 fetches for one agent, ~50+ for two agents on first run, and the same volume on every routine re-run because `update`-strategy files have to be fetched before the content-equality check can decide whether to write. The bottleneck is per-call tool-invocation overhead, not bytes — the entire framework directory is well under a megabyte.
+That's ~35 fetches for one agent, ~50+ for two agents on first run, and the same volume on every routine re-run because `update`-strategy files have to be fetched before the content-equality check can decide whether to write. The bottleneck is per-call tool-invocation overhead, not bytes (see **Tradeoffs**, Bytes over the wire).
 
 A single archive fetch removes that overhead while keeping every other guarantee `/ductus` makes today (idempotency, per-file strategies, pinning, failure granularity within the manifest pass).
 
@@ -127,14 +127,14 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 - [x] AC4: A failed archive fetch produces a clean abort with a clear error message and no partial scaffolding
 - [x] AC5: A missing source file within the archive produces a per-entry warning and the remaining manifest continues
 - [x] AC6: The temp directory path is logged in the run summary (and on abort, in the error message); `/ductus` does not delete it
-- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither; Claude's carries both
+- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** 022's task 18 dropped `Bash(tar *)` from Claude's seed, since `tar` runs any command, and narrowed `Bash(mktemp *)` to the exact `Bash(mktemp -d -t ductus-XXXXXX)`, so Claude's carries that `mktemp` entry and no `tar`; Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither
 - [x] AC8: The Claude `settings_template` also adds `Read(...)` globs for `ductus-*` temp paths under both macOS temp roots and Linux `/tmp`, so per-run `Read(...)` entries do not accumulate across `/ductus` invocations
 - [x] AC9: The **Post-Write Integrity Check** for `ductus.md` works against the local source — no additional `curl`
 - [x] AC10: The self-update notice continues to fire when the installed `ductus.md` differs from the archive's copy
 - [x] AC11: Per-language gitignore fetches against `github.com/github/gitignore` remain unchanged (separate `curl` calls)
 - [x] AC12: A re-run on an already-adopted project still reports `unchanged` for files whose archive copy matches the destination
 - [x] AC13: Each `/ductus` invocation creates a fresh temp directory via `mktemp` and re-fetches the archive; a prior run's extracted directory is never reused as the source for the current run
-- [ ] AC14: The framework archive `/ductus` downloads carries exactly the files a `/ductus` run reads from it and no other tracked file, and a check over `git archive` of a commit fails both when the archive omits a file the run reads and when it carries a file no step of the run reads
+- [x] AC14: The framework archive `/ductus` downloads carries exactly the files a `/ductus` run reads from it and no other tracked file, and a check over `git archive` of a commit fails both when the archive omits a file the run reads and when it carries a file no step of the run reads
 
 ## Open Questions
 

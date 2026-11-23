@@ -8,7 +8,7 @@ Implements [015 — Tarball Fetch](spec.md).
 
 ## Overview
 
-The change is localized to a single source file: `framework/bootstrap/ductus.md`. Three sections need edits — the **Agent Registry** table (the Claude `settings_template` value), the **File Fetching** section (replaced wholesale), and the **Post-Write Integrity Check** plus one **Edge Cases** bullet (wording reconciled with the new transport). No new files; no template changes; no scaffolding-manifest changes; no `configure.md` changes.
+The installer change is localized to one source file: `framework/bootstrap/ductus.md`. Three sections need edits — the **Agent Registry** table (the Claude `settings_template` value), the **File Fetching** section (replaced wholesale), and the **Post-Write Integrity Check** plus one **Edge Cases** bullet (wording reconciled with the new transport). No template, scaffolding-manifest or `configure.md` changes. Task 7's trim (AC14) adds the `.gitattributes` export-ignore lines and audit Family 42 with its fixture test, as **The archive carries only what a run reads** and **Affected Files** say.
 
 The generator (`scripts/gen-claude-commands.sh`) does not regenerate `ductus.md`, a hand-maintained `framework/` source (`AGENTS.md`, Project Structure: "everything that ships to adopted projects via `/ductus`"). Edits land directly in the source.
 

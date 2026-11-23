@@ -30,8 +30,12 @@
 # Only sources count: a destination the halves name is no read from the
 # archive, though this repository tracks many of them. Naming stands in for
 # reading: a run reads only what its instructions name, so the set omits
-# nothing a run reads, while a file named for another reason counts as read,
-# which the maintainer-only subtraction covers for the one such pair. A
+# nothing the two halves direct a run to read, while a file named for another
+# reason counts as read, which the maintainer-only subtraction covers for the
+# one such pair. The migration procedure files a run reads are not scanned for
+# the files they name, since their prose also names retired paths (`govern.md`
+# in `ductus-rename.md`): a file only a migration names is not derived, so the
+# coverage line counts the migration files left unscanned. A
 # `framework/` path holding a placeholder this family does not expand is a
 # finding, since the files it stands for were not derived. A manifest source
 # that does not exist is Family 35's finding, not this one's.
@@ -41,6 +45,15 @@
 # GitHub serves is a commit's, attributes included. Uncommitted edits are
 # invisible here; run the family after committing, as run-all.sh is run.
 # `git archive` reads the tree, not history, so a shallow checkout suffices.
+# For the same reason the maintainer-only list and the Agent Registry header
+# are parsed here, at HEAD, rather than through lib.sh's
+# `maintainer_only_commands` and `agent_config_dirs`, which read the work tree;
+# the registry header pattern is `agent_config_dirs`' and changes with it.
+#
+# The parse is python over markdown rather than a runtime primitive, the shape
+# README.md's Contract calls the fallback, because the subject is this
+# repository alone: no adopter has an archive of its own to check, so a
+# primitive would ship a capability no adopter runs.
 #
 # A run that could not derive the read set or list the archive is a finding,
 # never a pass, and every run ends with a coverage line on stderr naming both
@@ -224,8 +237,9 @@ if not read and halves:
     finding(INSTALLER, "the installer names no file under framework/, so the read set is empty",
             "the code spans this family reads no longer match; update the family with the installer")
 
-say("coverage", "archive-contents: %d file(s) in the read set, %d in the archive, %d in both (%d unexpanded placeholder(s))"
-    % (len(read), len(archived), len(read & archived), unexpanded))
+unscanned = len([p for p in read if p.startswith("framework/migrations/") and p.endswith(".md")])
+say("coverage", "archive-contents: %d file(s) in the read set, %d in the archive, %d in both (%d unexpanded placeholder(s); %d migration file(s) read but not scanned for the files they name)"
+    % (len(read), len(archived), len(read & archived), unexpanded, unscanned))
 PY
 }
 
