@@ -1,22 +1,49 @@
 ---
 spec: 050-constitution
-last-run: 2026-11-22T04:49:56Z
-reviewed-against: 7606a4093837c5d47afa1ba903c72d2758fcac34
-diff-base: 3f5b066eda91c8b697c5aa2cb1bb971362d17b61
+last-run: 2026-11-23T23:22:45Z
+reviewed-against: 4ace1d513115bf8f30422035b03eae640134fff7
+diff-base: 124092e12dc3d49cca8c05c548bf3b4df6199260
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 10
-scope: 10
-unread: []
-excluded: 8
+examined: 5
+scope: 27
+unread:
+  - .claude/commands/ductus/implement.md
+  - .claude/commands/ductus/review.md
+  - .ductus/reference/implement.md
+  - .pi/prompts/ductus-implement.md
+  - .pi/prompts/ductus-review.md
+  - framework/commands/implement.md
+  - framework/commands/review.md
+  - framework/reference/implement.md
+  - runtime/src/primitives/write_analysis.rs
+  - runtime/src/primitives/write_review.rs
+  - runtime/src/primitives/write_review/departure_waivers.rs
+  - runtime/src/schema/primitives.rs
+  - runtime/tests/golden/review-basic.jsonl
+  - runtime/tests/mcp.rs
+  - scripts/mutation/departure-waivers.py
+  - scripts/mutation/departures.py
+  - scripts/mutation/freshness-results-have-a-bounded-size.py
+  - scripts/mutation/review-departures-bounded.py
+  - scripts/mutation/waiver-notices-flatten.py
+  - specs/073-decided-rule-departures-are-recorded/plan.md
+  - specs/073-decided-rule-departures-are-recorded/tasks.md
+  - specs/083-commits-are-attributed-to-specs-without-a-subject-convention/spec.md
+excluded: 17
 contract-breaks: 0
 skipped-passes: []
 fix-rounds: 1
-re-reads: 1
+re-reads: 0
 diff-checked: 0
-not-re-read: 0
+not-re-read: 1
 budget-stop: false
+round-waivers:
+  - round: 1
+    reason: the round's 6 paths are other sessions' uncommitted work made after the run's base, none a 050 fix, and 050's one fix, the plan.md correction, is exempt; re-read declined (the agent's recommendation, adopted by the operator, 2026-11-23)
+    waived-by: andy@stone.dev
+    waived-at: 2026-11-23T23:22:45Z
 reviewed-digest:
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 87a0dcce92143a717ff19e0ecc570e9262f7afaf42ac764fe43b197c6a7e48fa
   scenarios/a-decision-is-attributed-to-whoever-made-it.md: 0e91d8bb56e3c762d89879cd41d6aaa6cb26059d0f11e238031f938441983922
@@ -43,8 +70,8 @@ reviewed-digest:
   scenarios/reports-end-with-the-remaining-work.md: 816e498bb2ba5bd9bfa42682cad814955af57b5af656669754cdcec5c7dbdc3d
   scenarios/the-constitution-fits-one-read.md: 26c63cbf857a23a360fe4f887c62eccf2abcdf33763bce25fa973d4ae0605840
   scenarios/the-constitution-states-rules-not-stories.md: 691e5ea78b7012fd9f9a8114f20632d7852d5c319f54e3951b2ebaed65c013bc
-criteria-judged: 25
-criteria-met: 25
+criteria-judged: 26
+criteria-met: 26
 criteria-verdicts:
   - label: AC1
     digest: 4745828ccd0ef4a19caccefd50497a7057ce43d00240ff07b84ddd5f204cd310
@@ -96,9 +123,11 @@ criteria-verdicts:
     digest: 9bf3fb9aa805944d3ad70d4bc1b3e3bf6d8a1642b34e4d5780db9505ba36bf2f
   - label: AC25
     digest: 5411d8ff5ef51e289c3fc30321d2262a5fbeae6c8330a2e4ee156bec138495cc
+  - label: AC26
+    digest: 249ab6ada03fe79ebec75b7c39b281107cfd88c2135a867381991766bc999751
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 1
   deferred: 0
   waived: 1
   undispositioned: 0
@@ -399,11 +428,11 @@ decisions:
 
 ## Summary
 
-Reviewed 050's reopening (adopter report against 0.61.0, items 1 and 2) from its reopen, diff-base 3f5b066e, against 7606a409, the HEAD the passes read; the commits landing after it (048's and 066's) changed no scope path and are excluded. Five passes, run in a subagent, read all 10 scope entries whole: the 9 at the scope's first resolution and AGENTS.md (49,793 bytes, read whole as a rule source before this run's one-line fix to it, which the fix-round loop re-read). Every loaded rule file was read whole, each bytes-read equal to its size: configuration-cross.md, quality-cross.md, security-backend.md, security-cross.md and security-frontend.md, after a first hand-back that left the three security files unread and configuration-cross.md short was sent back to finish. No finding; one observation, matched to its stored waiver: principle 3 still says pipeline commands MAY assume determinism (fired after a check of framework/constitution.md found it still stands); a stored waiver on the plan.md-naming constitution line expired, since the audit's shipped-anchors family now judges qualified references. Criteria step, in a second subagent: 25 of 25 met. AC2 and AC3 were enumerated over the plan's 47 universal entries and AC25 swept by the 18 removed principle names, after a first pass that sampled them. AC3 was first judged not met: five AGENTS.md lines carried rules the owner later recorded for this repository, and the Local-checks line had no pointer. AC3 was corrected (Superseded in part, the agent's recommendation, adopted by the operator, 2026-11-22), and the Local-checks line now points at §grounding.
+Reviewed 050's reopening for AC26 (owner decision, 2026-11-23) from its reopen, diff-base 124092e1, against 4ace1d51. The passes read bcc439f9's tree; 4ace1d51 (079's tasks 42 and 43) landed during the write and changed none of the five files they read. Of the window's 9 commits, 4 are 050's (52cba526, dd9ece1e, 7339c3ac, 7b782f43); 073's, 079's and 083's are excluded. The five passes, run in one subagent, read 5 of the 27 scope entries whole, each bytes read equal to its size: AGENTS.md (49,905), framework/constitution.md (49,990), specs/050-constitution/plan.md (66,896), spec.md (34,895) and tasks.md (6,287). They also read every loaded rule file whole: configuration-cross.md, quality-cross.md, security-backend.md, security-cross.md and security-frontend.md. The scope was 12 entries when resolved; other sessions' uncommitted work grew it to 27 while the run went on, and the scope was resolved again in the same command as this write. The other 22 entries are other sessions' uncommitted work, were not read, and every one is listed in unread. They include 073's departure-notices change and mutation lists, 073's plan.md and tasks.md, 083's spec.md, and an implement command change. The runtime/target/release/ductus binary that wrote this record, and that .ductus/bin/ductus links, was built from that uncommitted work; 050 has no Applicable Rules section, so the change does not reach this record. No finding. Two observations. In plan.md, a stale claim that §cost-levers' /cost example stays verbatim for 010's AC11 contradicted task 53's drop of it; it was fixed in the run as a correction, which takes no back-edge, and 010's AC11 still holds because §Cost levers says token budgets are the AI platform's. The principle 3 observation was matched to its stored waiver after a check of framework/constitution.md found it still stands. The criteria step ran in a second subagent, as on 050's last review: 26 of 26 met. It read plan.md, the constitution and AGENTS.md in the sections each criterion names, not whole. AC2 and AC3 were enumerated over 44 of 44 promote rows and AC4 over 51 project-only keys. The host re-checked four criteria. AC1: 50 rows of the 54-entry corpus remain; 072 removed three project-only rows and 079 the create-scenario row, and plan.md notes each removal. AC4: in this window, dd9ece1e touched only DP1's pointer and 40dea24c's post-survey bullet. AC24: check-artifacts parsed 77 of 77 specs and found 0 line-number-citations findings. AC26: the filter is the last bullet of §design-principles, and AGENTS.md carries no copy. AC26 is ticked.
 
-1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+1 fix round(s): 0 re-read, 0 diff-checked, 0 exempt, 1 not re-read. Round 1 was not re-read, waived: the round's 6 paths are other sessions' uncommitted work made after the run's base, none a 050 fix, and 050's one fix, the plan.md correction, is exempt; re-read declined (the agent's recommendation, adopted by the operator, 2026-11-23).
 
-25 of 25 acceptance criteria judged met.
+26 of 26 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -427,35 +456,37 @@ Reviewed 050's reopening (adopter report against 0.61.0, items 1 and 2) from its
 
 ## Acceptance criteria
 
-- AC1 — met: specs/050-constitution/plan.md '## Classification' records one verdict and reason per entry of the 2026-08-17 corpus (54 entries, lead-phrase keyed) and the criterion's scope note matches; the clarify/attribution edits add no AGENTS.md entry to classify.
-- AC2 — met: Plan Classification enumerated: 22 'Promoted - universal' + 3 'Already promoted' + 21 second-round promote + 1 fourth-round promote = 47 universal rows, plus 2 rule-file routes (QUAL-DELEG-001, QUAL-TEST-001 in framework/rules/quality-cross.md), 2 in-substance rows and the 7 adopter practices; each distinctive phrase found by script in framework/constitution.md or the named framework/reference/{review,groom}.md section (59 of 60 string probes hit, the 60th, remove-inbox-item, confirmed by hand at groom.md '## Inbox upkeep' 'Remove an inbox item by matching its own text'); primitive-moved entries are excused by the 079 note.
-- AC3 — met: AGENTS.md: each of the 47 universal entries' lines points at its canonical section (the Local-checks line at AGENTS.md:84 now names §grounding's blast-radius rule); five carry rules the owner later recorded for this repo (local checks, after-push no-wait, push gate, prose-sweep procedure, recommendation incident), which AC3's 2026-11-22 annotation admits; none restates its promoted rule's text
-- AC4 — met: No project-only entry altered by this spec's passes; commit 3ebafd8c exists (git cat-file -t = commit) and is the tasks(050) contributor-learning edit the criterion names; HEAD's two commits touch only framework/constitution.md and framework/reference/clarify.md plus spec records.
-- AC5 — met: The two rules added this reopening are repo-path-free: §recommendations' attribution sentence ('the agent's recommendation, adopted by the operator, DATE') and §grounding's 'Probe a primitive ... in a git clone --local copy' bullet cite only git, the project's runtime binary and MCP tools; grep of framework/constitution.md for scripts/ finds none in promoted rules.
-- AC6 — met: framework/constitution.md §implement-phase bullet 'A spec's ticked acceptance criteria are verified against the tree before it closes' states check-artifacts examines in-progress and done specs and proves only that a path resolves, not that a claim about contents holds, matching the superseded-in-part text.
-- AC7 — met: framework/bootstrap/ductus.md Shared Files table row maps 'framework/constitution.md' to '.ductus/constitution.md'; installer-command-parity in scripts/audit/run-all.sh checked 25 .ductus/reference/<name>.md pointers against 12 Shared Files destinations (exit 0).
-- AC8 — met: scripts/audit/run-all.sh run once at HEAD, exit 0, 38 families registered and compared (audit-family-parity), no family reported a failure.
-- AC9 — met: npx markdownlint-cli2 framework/constitution.md AGENTS.md exit 0, 'Summary: 0 issues in 0 files'.
-- AC10 — met: framework/constitution.md keeps every '<!-- §name -->' marker and the section order (principles, cost-levers, design-principles, grounding, governance-precedence, recommendations, pipeline ... markdown-standards) and the two new rules are a sentence and a bullet, not sections; run-all.sh shipped-anchors resolved 2556 § references over 567 files with no failure.
-- AC11 — met: framework/constitution.md Canonical sources table row 'Constitution content — what belongs in it, which rules adopters receive' names specs/050-constitution/spec.md.
-- AC12 — met: git log -- version runtime/Cargo.toml runtime/CHANGELOG.md shows no commit naming 050 (latest are 0.61.0 release and other specs); version, Cargo.toml version and the CHANGELOG heading are 0.61.0/[Unreleased] unchanged by HEAD's constitution edits; run-all.sh Family 20 area (deprecation-removal vs 0.61.0) exit 0.
-- AC13 — met: framework/constitution.md §spec-lifecycle third back-edge bullet states correction (spec/plan/tasks, no criterion/question/unchecked-task change) vs mechanical (a)/(b)/(c) and the following paragraph says any other edit reopens, a typo in one file as much as a factual correction; specs/inbox.md holds no 045 item.
-- AC14 — met: framework/constitution.md §design-principles bullet 'Work that is not complete MUST never be indistinguishable from work that is' names fix/defer/waive and the measured-residue clause; §implement-phase 'A spec does not reach done with an outstanding SHOULD' opens 'This is §design-principles' completion filter' (pointer, not restatement).
-- AC15 — met: framework/constitution.md §brownfield-inbox 'Finding dispositions' bullet 'In /{project}:implement, scope decides the destination' gives task/spec/outside-the-spec tiers and 'tasks.md is still no capture queue'; 'Three dispositions' makes a chore Fixed; AGENTS.md 'A finding made during implementation becomes a task' is a pointer.
-- AC16 — met: framework/constitution.md §spec-lifecycle 'A retired feature's spec is deleted, not left at done' names consolidate / delete / partial-edit and re-pointing before removal; AGENTS.md mirror is a pointer; specs/050-constitution/scenarios/a-retired-feature-leaves-no-spec.md states 'Nothing enforces it'.
-- AC17 — met: specs/050-constitution/spec.md '## Classification' has the three-tier population table with shared tier, narrowed reword test, framework-as-floor bound pointing at §governance-precedence, and states no AGENTS.md entry is reclassified; framework/constitution.md §governance-precedence heading exists.
-- AC18 — met: framework/constitution.md §cross-spec-impact '#### What the framework enforces, and what it does not' states a declared impact gates done, discharge is B's back-link, nothing detects an undeclared one; §text-first-artifacts frontmatter table carries the cross-spec-impact row.
-- AC19 — met: framework/constitution.md §drift-prevention bullet 'A retired filename is not a retired name' names ladder/fallback, migration, prose/shell/config spelling, current-name end state, ticked-criterion sweep with annotation only for superseded behavior, and 'The runtime computes which specs a sweep reopens from the diff'.
-- AC20 — met: framework/constitution.md §drift-prevention 'Shared knowledge stays in git' states the two ordered questions and population routing; AGENTS.md header '> Agents:' points at §drift-prevention; framework/templates/project/agents.md ships an empty 'BEGIN/END ductus:memory-routing' block beneath its header; framework/templates/project/claude-md.md holds only imports and the constitutions block.
-- AC21 — met: framework/constitution.md §grounding Rules: bullet 'A recorded measurement states its method and its units' sits immediately after 'Cite what you consulted' (the new clone bullet precedes both, order intact) with denominator, failure, re-derive-at-commit and 'unmeasured gap wearing a number'; AGENTS.md carries a pointer only.
-- AC22 — met: specs/050-constitution/spec.md Classification names the code-subject destination via §rules; framework/rules/quality-cross.md has '### QUAL-DELEG-001'; AGENTS.md 'Replacing a hand-rolled predicate...' line cites `QUAL-DELEG-001` in framework/rules/quality-cross.md.
-- AC23 — met: wc -c framework/constitution.md = 49786 (<=50000) and scripts/lint-governing-size.sh exit 0; framework/templates/project/claude-md.md and CLAUDE.md use '@.ductus/constitution.md' / '@framework/constitution.md' @path form; framework/migrations/claude-md-import-syntax.md and constitution-import.md exist and do the stated conversions.
-- AC24 — met: framework/constitution.md §grounding 'Cite what you consulted' bullet states never a line number in a spec, plan, data model, research file, scenario or task list; framework/commands/plan.md, framework/reference/plan.md, framework/reference/clarify.md point at '§grounding's Cite what you consulted' with no restated 'bare line number'; AGENTS.md 'Cite code by symbol' is a pointer; ductus check-artifacts --feature 050-constitution returns findings: [] clean: true; clarify.md step 4 now points at §recommendations without touching this.
-- AC25 — met: framework/constitution.md '## Guiding Principles' holds only the marker, §cost-levers and §design-principles; scenario succinctness-is-a-guiding-principle.md is absent; swept framework/ scripts/ runtime/ .github/ docs/ README.md AGENTS.md specs/ for all 18 removed principle names (Secure..Cost-conscious) and Technology/Business near principle/list: every remaining hit is past-tense (008, 010 Resolved Q6, 016, 037, 039, 072, 077), a rejected alternative, an annotated-superseded criterion (008 AC28) or a review/analysis record, none describes the lists as current.
+- AC1 — met: plan.md Classification tables: 22 promoted + 3 already promoted + 25 project-only rows = 50 of 54 (4 rows removed by 072 and 079, each noted beside its table); each row carries a reason; AGENTS.md 2026-08-17 corpus scope stated
+- AC2 — met: Checked 44 of 44 promote rows (first-round 22 + second-round 21 + fourth-round 1): each AGENTS.md entry resolves and points at a framework/constitution.md# anchor, reference or rule file; shipped-anchors audit resolves all anchors; 079 supersession annotation holds
+- AC3 — met: Same 44 of 44 AGENTS.md lines are pointers (none lacks a framework/constitution.md#, reference or rule pointer); the three 079-moved entries are absent from AGENTS.md as annotated
+- AC4 — met: 49 of 51 project-only keys resolve to unaltered-looking AGENTS.md entries by lead phrase (the other 2 carry survey markers and were found by hand); 3ebafd8c appended the one sentence the criterion names; wording-level immutability since 08-17 not byte-diffed
+- AC5 — met: framework/constitution.md cites no scripts/, .github/ or docs/-only repo path in promoted rules; its only repo-specific path is the canonical-sources row naming runtime/src/schema/descriptions.rs, which is a map row from 022, not a promoted rule
+- AC6 — met: constitution Implement Phase bullet: ticked criteria verified by review; check examines in-progress and done specs and proves only a path resolves, not that its claim holds (as the superseded-in-part annotation states)
+- AC7 — met: constitution ships via Shared Files manifest to .ductus/constitution.md; audit manifest-dest 35a/35b and archive-contents (78 of 78) pass in scripts/audit/run-all.sh (exit 0)
+- AC8 — met: scripts/audit/run-all.sh exit 0 over the whole run (82 lines read); promotion-coverage 49 unclassified is a notice for post-survey entries, which AC1 excludes
+- AC9 — met: npx markdownlint-cli2 on framework/constitution.md and AGENTS.md: 0 issues, exit 0 (config globs 903 files)
+- AC10 — met: Anchor markers intact (principles, cost-levers, design-principles, grounding, governance-precedence, etc.); audit shipped-anchors examined 576 of 576 files, 2579 refs, no failure
+- AC11 — met: framework/constitution.md Canonical sources table row 'Constitution content' names specs/050-constitution/spec.md
+- AC12 — met: git diff HEAD on version, runtime/Cargo.toml, runtime/CHANGELOG.md empty; audit Family 20 passes; criterion's 061 annotation (releases may move the pin) is the only drift
+- AC13 — met: constitution Spec lifecycle third back-edge and 'Any other edit there reopens' paragraph state the mechanical test (a)(b)(c) and the correction case, matching the 079 annotation
+- AC14 — met: constitution Design principles: 'Work that is not complete MUST never be indistinguishable...' with fix/defer/waive and the measured-residue clause; Implement Phase SHOULD bullet says 'This is design-principles completion filter' instead of restating
+- AC15 — met: Brownfield Inbox Finding dispositions: In implement, scope decides (task/spec/outside = one of three dispositions); tasks.md no capture queue; AGENTS.md 'A finding made during implementation' points at it; 058 and 079 annotations match
+- AC16 — met: constitution Spec lifecycle: retired feature spec deleted, consolidate when content survives, spec goes when nothing survives, partial retirement is body edit, re-point before removal; AGENTS.md pointer; scenario a-retired-feature-leaves-no-spec states nothing enforces it
+- AC17 — met: spec.md Classification states the shared tier and population table, reword test narrowed, floor bound points to governance-precedence (marker exists in constitution); config.toml has no [constitutions.*]; no reclassification
+- AC18 — met: constitution Cross-Spec Impact 'What the framework enforces, and what it does not' states declared gates done, discharge by back-link, undeclared undetected; schema table carries cross-spec-impact; old acceptance-criterion enforcement sentence absent
+- AC19 — met: constitution Cross-document references 'A retired filename is not a retired name' names ladder/migration/spelling categories, current name elsewhere, ticked criterion swept, annotation for superseded behavior, runtime computes reopens from the diff
+- AC20 — met: constitution Shared knowledge stays in git states two questions and population routing; AGENTS.md header points at it; framework/templates/project/agents.md ships empty ductus:memory-routing markers; bootstrap/ductus.md writes the one-line block; both CLAUDE.md files hold only imports (template plus constitutions block)
+- AC21 — met: constitution Grounding Rules: 'A recorded measurement states its method and its units' sits right after 'Cite what you consulted' and states every named element; AGENTS.md general entry is a pointer; only the git -E gotcha keeps a corollary per annotation
+- AC22 — met: quality-cross.md has QUAL-DELEG-001; AGENTS.md entry points at it; spec.md Classification states the fourth destination; 036 in cross-spec-impact
+- AC23 — met: constitution is 49990 bytes (<=50000) and scripts/lint-governing-size.sh exit 0; template and repo CLAUDE.md use @path imports; migrations claude-md-import-syntax and constitution-import exist and match the description
+- AC24 — met: Grounding bullet states the rule; grep of spec/plan/tasks/data-model/research/scenario files finds no path:N citation; check-artifacts on 050 clean; reference/plan.md, reference/clarify.md, commands/plan.md point at it with no 'bare line number' text; AGENTS.md citation gotcha is a pointer
+- AC25 — met: Guiding Principles holds only cost-levers and design-principles; no Technology or Business heading (03f78075 removed 18 principles); succinctness scenario deleted; 008 AC28 annotated superseded; remaining mentions in 008/010/072 are decision records
+- AC26 — met: constitution Design principles final bullet 'Use what a task needs, and no more, however far below a limit' states the filter; grep finds no restatement in AGENTS.md; lint-governing-size passes at 49990
 
 ## Observations
 
-- other — principle 3 of §runtime-boundary still says pipeline commands MAY assume determinism rather than specifying two executable paths to one result — `framework/constitution.md` — **waived**: the sentence is still true of the commands, which each specify one executable path, and it is the stated reason acquisition halts the run; principle 3's wording is quoted by 021 and 048 and the plan keeps the five runtime principles byte-identical (decided by the rule)
+- convention: plan.md contradicts itself on §cost-levers' `/cost` example: §Artifacts are as short as their required content keeps it verbatim for 010-agent-autonomy AC11, while §A task uses what it needs, and no more says task 53 dropped it; the constitution no longer carries it, and 010's AC11 needs only that §Cost levers point at platform tooling — `specs/050-constitution/plan.md` — **fixed** (decided by the rule)
+- other — principle 3 of §runtime-boundary still says commands assume determinism rather than specifying two executable paths to one result and that a quietly absent requirement leaves both paths alive, wording from the two-paths era that ad4fae5b's message says is gone from framework/ (its grep for two-paths and two paths does not match two executable paths) — `framework/constitution.md:387` — **waived**: the sentence is still true of the commands, which each specify one executable path, and it is the stated reason acquisition halts the run; principle 3's wording is quoted by 021 and 048 and the plan keeps the five runtime principles byte-identical (decided by the rule)
 
 ## Skipped passes
 
@@ -463,14 +494,23 @@ Reviewed 050's reopening (adopter report against 0.61.0, items 1 and 2) from its
 
 ## Excluded from scope
 
-- `specs/048-govern-acquired-runtime/analysis.md`
-- `specs/048-govern-acquired-runtime/plan.md`
-- `specs/048-govern-acquired-runtime/review.md`
-- `specs/048-govern-acquired-runtime/spec.md`
-- `specs/066-audit-records-and-the-completion-gate/scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md`
-- `specs/066-audit-records-and-the-completion-gate/scenarios/a-write-result-states-what-it-wrote.md`
-- `specs/066-audit-records-and-the-completion-gate/spec.md`
-- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `.ductus/reference/review.md`
+- `framework/reference/review.md`
+- `runtime/CHANGELOG.md`
+- `runtime/src/primitives/check_departures.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/departures.rs`
+- `runtime/src/primitives/mod.rs`
+- `runtime/src/primitives/process_waivers.rs`
+- `runtime/src/schema/descriptions.rs`
+- `scripts/mutation/scope-attribution.py`
+- `specs/073-decided-rule-departures-are-recorded/spec.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/plan.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/tasks.md`
 
 ## Unexamined governance
 
