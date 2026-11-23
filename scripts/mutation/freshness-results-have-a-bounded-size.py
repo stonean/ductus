@@ -76,7 +76,7 @@ MUTATIONS = [
     (
         'M9 write-review reads the read size when no path is stale',
         'src/primitives/write_review.rs',
-        '    if stale_paths.is_empty()\n        && result.malformed_departures.is_empty()\n        && result.superseded_deferrals.is_empty()\n    {\n        return Ok(result);\n    }\n',
+        '    if stale_paths.is_empty()\n        && result.malformed_departures.is_empty()\n        && result.superseded_deferrals.is_empty()\n        && result.departure_notices.is_empty()\n    {\n        return Ok(result);\n    }\n',
         '',
         'resolve_constitutions::tests::write_review_and_write_analysis_keep_the_unmeasured_resolution',
     ),

@@ -2172,12 +2172,18 @@ async fn a_review_result_past_the_read_size_reaches_the_host_through_its_list_fi
         &tmp,
         obj,
         REVIEW_READ_SIZE,
-        &["malformed-departures", "superseded-deferrals"],
+        &[
+            "malformed-departures",
+            "superseded-deferrals",
+            "departure-notices",
+        ],
     );
     assert_eq!(obj["malformed-departures-count"], 12);
     assert_eq!(lists["malformed-departures"].as_array().unwrap().len(), 12);
     assert_eq!(obj["superseded-deferrals-count"], 0);
     assert_eq!(lists["superseded-deferrals"], json!([]));
+    assert_eq!(obj["departure-notices-count"], 0);
+    assert_eq!(lists["departure-notices"], json!([]));
     assert_eq!(obj["analyze-stale-paths-count"], 0);
     assert_eq!(lists["analyze-stale-paths"], json!([]));
 }

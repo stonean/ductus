@@ -82,8 +82,8 @@ MUTATIONS = [
     (
         'M9 a result whose only list is superseded-deferrals is never bounded',
         'src/primitives/write_review.rs',
-        '        && result.superseded_deferrals.is_empty()\n    {\n        return Ok(result);',
-        '    {\n        return Ok(result);',
+        '        && result.superseded_deferrals.is_empty()\n        && result.departure_notices.is_empty()\n    {\n        return Ok(result);',
+        '        && result.departure_notices.is_empty()\n    {\n        return Ok(result);',
         'departure_waivers::the_departure_lists_past_the_read_size',
     ),
     (
@@ -92,5 +92,34 @@ MUTATIONS = [
         '"write-review", feature, &result, &lists)?',
         '"write-review", feature, &lists, &lists)?',
         'departure_waivers::the_departure_lists_past_the_read_size',
+    ),
+    # -- departure-notices (spec 073, task 18) ---------------------------------
+    (
+        'M11 departure-notices stays inline in the file form',
+        'src/primitives/write_review.rs',
+        '        result.departure_notices.clear();\n',
+        '',
+        'departure_waivers::departure_notices_past_the_read_size',
+    ),
+    (
+        'M12 the list file drops departure-notices',
+        'src/primitives/write_review.rs',
+        '        "departure-notices": result.departure_notices,\n',
+        '',
+        'departure_waivers::departure_notices_past_the_read_size',
+    ),
+    (
+        'M13 a file-form result counts no departure notice',
+        'src/primitives/write_review.rs',
+        '    result.departure_notices_count = result.departure_notices.len();\n',
+        '',
+        'departure_waivers::departure_notices_past_the_read_size departure_waivers::a_covered_file_not_in_the_tree',
+    ),
+    (
+        'M14 a result whose only list is departure-notices is never bounded',
+        'src/primitives/write_review.rs',
+        '        && result.departure_notices.is_empty()\n    {\n        return Ok(result);',
+        '    {\n        return Ok(result);',
+        'departure_waivers::departure_notices_past_the_read_size',
     ),
 ]

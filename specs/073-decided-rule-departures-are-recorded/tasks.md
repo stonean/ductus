@@ -29,16 +29,16 @@ Blocked on task 16: the derivation reads `Entry.covers`.
 
 Blocked on task 17: the notices read the covered findings it selects.
 
-- [ ] `runtime/src/primitives/write_review.rs`: per scoped entry, a notice for each covered `file` not in the tree and for each in-scope finding of its rule in a covered file at a site it does not list or naming none; `departure-notices` and its count in `WriteReviewResult` (`runtime/src/schema/primitives.rs`), bounded in `bound_lists`
-- [ ] Fixtures for AC12's three cases; `runtime/tests/mcp.rs`'s file form naming `departure-notices`; mutants in `scripts/mutation/departure-waivers.py` and `scripts/mutation/review-departures-bounded.py` for the notices and their bound, each killed
-- [ ] `framework/commands/review.md` step 11 prints `departure-notices`; run `scripts/gen-claude-commands.sh`; re-bless `review-basic` with its diff read
+- [x] `runtime/src/primitives/write_review.rs`: per scoped entry, a notice for each covered `file` not in the tree and for each in-scope finding of its rule in a covered file at a site it does not list or naming none; `departure-notices` and its count in `WriteReviewResult` (`runtime/src/schema/primitives.rs`), bounded in `bound_lists`
+- [x] Fixtures for AC12's three cases; `runtime/tests/mcp.rs`'s file form naming `departure-notices`; mutants in `scripts/mutation/departure-waivers.py` and `scripts/mutation/review-departures-bounded.py` for the notices and their bound, each killed
+- [x] `framework/commands/review.md` step 11 prints `departure-notices`; run `scripts/gen-claude-commands.sh`; re-bless `review-basic` with its diff read
 
-- **Done when**: AC12's three fixtures and the MCP file-form test pass, every new mutant is killed, and the re-blessed golden's diff is step 11's text alone.
+- **Done when**: AC12's three fixtures and the MCP file-form test pass, every new mutant is killed, and the re-blessed golden's diff is the review-basic fixture's `reviewed-against` sha alone, which moves with the command source.
 
 ## 19. Prove analyze waives a scoped entry's rule
 
-- [ ] `runtime/src/primitives/write_analysis.rs`: a fixture over a spec whose entry carries `covers:`, recording its rule `waived` with the entry's reason, attribution and citation (AC15)
-- [ ] A mutant in `scripts/mutation/departures.py` leaving a scoped entry out of `departures::parse`'s `entries`, killed by that fixture
+- [x] `runtime/src/primitives/write_analysis.rs`: a fixture over a spec whose entry carries `covers:`, recording its rule `waived` with the entry's reason, attribution and citation (AC15)
+- [x] A mutant in `scripts/mutation/departures.py` leaving a scoped entry out of `departures::parse`'s `entries`, killed by that fixture
 
 - **Done when**: the fixture passes, and fails under the mutant.
 

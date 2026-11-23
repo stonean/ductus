@@ -4521,6 +4521,36 @@ mod tests {
         assert_eq!(record.dispositions.map_or(0, |d| d.waived), 0);
     }
 
+    /// AC15: a scoped entry's rule is waived as an unscoped one's is, with the
+    /// entry's reason, attribution and citation: analyze judges the design, so its
+    /// `covers:` takes effect at review alone.
+    #[test]
+    fn a_scoped_entry_waives_its_rule_as_an_unscoped_one_does() {
+        let (tmp, repository) = departing_repo(false);
+        set_spec_tail(
+            &tmp,
+            &format!("{DEPARTURE}  - covers:\n    - `src/a.rs` in `walk`\n"),
+        );
+        crate::primitives::git_fixture::commit_all(&repository, "c");
+        let result = run(&waived_args(), tmp.path()).unwrap();
+        assert!(!result.blocking);
+        let record = written_record(&tmp);
+        assert_eq!(record.blocking_findings, 0);
+        let RuleVerdict::Waived {
+            reason,
+            decided_by,
+            decided_at,
+            cited,
+        } = &record.rule_verdicts["TS-RULE-001"]
+        else {
+            panic!("{:?}", record.rule_verdicts);
+        };
+        assert_eq!(reason, "removed rather than versioned");
+        assert_eq!(decided_by, "test@example.com");
+        assert!(decided_at.as_deref().is_some_and(|at| at.ends_with('Z')));
+        assert_eq!(cited.as_deref(), Some("§shared-exceptions"));
+    }
+
     /// A rule with an entry whose trigger does not fire has no verdict, as
     /// any rule that does not fire has none.
     #[test]

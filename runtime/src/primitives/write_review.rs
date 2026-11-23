@@ -680,6 +680,7 @@ fn run_between(
         decisions: u32::try_from(decisions.len()).unwrap_or(u32::MAX),
         malformed_departures: waivers.malformed,
         superseded_deferrals: waivers.superseded.into_iter().map(|s| s.notice).collect(),
+        departure_notices: waivers.notices,
         criteria_judged: criteria.as_ref().map(|c| c.judged),
         criteria_met: criteria.as_ref().map(|c| c.met),
         criteria_not_met: criteria.as_ref().map(CriteriaRecord::not_met_count),
@@ -690,8 +691,8 @@ fn run_between(
 
 /// Move the result's lists to a file when it passes the read size, naming it
 /// in `lists-file` and leaving each count inline: `analyze-freshness`' `paths`
-/// (as `analyze-stale-paths`), `malformed-departures` and
-/// `superseded-deferrals`, which grow with the tree and with a spec's
+/// (as `analyze-stale-paths`), `malformed-departures`, `superseded-deferrals`
+/// and `departure-notices`, which grow with the tree and with a spec's
 /// departure entries (066 scenario `freshness-results-have-a-bounded-size`;
 /// 073 BE-PAYLOAD-001). The record is written already, as
 /// `rewrite-spec-links` writes before it bounds.
@@ -707,11 +708,13 @@ fn bound_lists(
     result.analyze_stale_paths_count = stale_paths.len();
     result.malformed_departures_count = result.malformed_departures.len();
     result.superseded_deferrals_count = result.superseded_deferrals.len();
+    result.departure_notices_count = result.departure_notices.len();
     // Nothing to move reads no setting, so a malformed `read-size-bytes` halts
     // only a result with a list to bound (`QUAL-DELEG-001`).
     if stale_paths.is_empty()
         && result.malformed_departures.is_empty()
         && result.superseded_deferrals.is_empty()
+        && result.departure_notices.is_empty()
     {
         return Ok(result);
     }
@@ -719,6 +722,7 @@ fn bound_lists(
         "analyze-stale-paths": stale_paths,
         "malformed-departures": result.malformed_departures,
         "superseded-deferrals": result.superseded_deferrals,
+        "departure-notices": result.departure_notices,
     });
     if let Some(file) = super::bounded_lists::place(repo, "write-review", feature, &result, &lists)?
     {
@@ -727,6 +731,7 @@ fn bound_lists(
         }
         result.malformed_departures.clear();
         result.superseded_deferrals.clear();
+        result.departure_notices.clear();
         result.form = ListsForm::File;
         result.lists_file = Some(file);
     }
@@ -2257,6 +2262,8 @@ struct RunWaivers {
     malformed: Vec<String>,
     /// Each stored deferral an entry supersedes.
     superseded: Vec<Superseded>,
+    /// Each place a scoped entry's coverage is lost ([`lost_coverage`]).
+    notices: Vec<String>,
 }
 
 /// A stored deferral of a violation a departure entry decides: not stored again.
@@ -2392,6 +2399,7 @@ fn run_waivers(
     );
     let reasons = refresh_departure_waivers(&mut surviving, &departures, &args.reviewed_at);
     let (entries, anchors, superseded) = new_waiver_entries(args, &surviving, &departures)?;
+    let notices = lost_coverage(args, &departures);
     Ok(RunWaivers {
         entries,
         anchors,
@@ -2399,6 +2407,7 @@ fn run_waivers(
         reasons,
         malformed: departures.malformed,
         superseded,
+        notices,
     })
 }
 
@@ -2413,6 +2422,22 @@ struct Departures {
     spec_rel: String,
     /// The project root the history is read from.
     project: std::path::PathBuf,
+    /// The run's scope, resolved on the first finding an entry could decide, so a run with
+    /// none reads no scope.
+    scope: std::cell::OnceCell<RunScope>,
+}
+
+impl Departures {
+    /// Whether the run's scope holds `file`; a run with an empty `diff-base` has no scope.
+    fn in_scope(&self, args: &WriteReviewArgs, file: &str) -> bool {
+        !args.diff_base.is_empty()
+            && self
+                .scope
+                .get_or_init(|| {
+                    RunScope::resolve(&args.feature, Some(&args.diff_base), &self.project)
+                })
+                .holds(file)
+    }
 }
 
 /// Whether a waiver in `waivers` already holds `rule` at `file`, by a path an entry lists.
@@ -2521,7 +2546,61 @@ fn read_departures(repo: &Path, root: &str, feature: &str, content: &str) -> Dep
         malformed,
         spec_rel,
         project: repo.to_path_buf(),
+        scope: std::cell::OnceCell::new(),
     }
+}
+
+/// Each place a scoped entry's coverage is lost, as a notice naming the entry's `spec.md`
+/// line and its covered sites in the file (spec 073 AC12): a covered file not in the tree,
+/// and a finding of the entry's rule, in a covered file the run's scope holds, at a site
+/// the entry does not list or naming none, which counts. A covered site where nothing
+/// fires adds none, since no finding is hidden; a notice repeated for a second finding at
+/// the same site is given once.
+fn lost_coverage(args: &WriteReviewArgs, departures: &Departures) -> Vec<String> {
+    let mut notices: Vec<String> = Vec::new();
+    for entry in &departures.entries {
+        let Some(covers) = &entry.covers else {
+            continue;
+        };
+        let mut files: Vec<&str> = Vec::new();
+        for covered in covers {
+            if !files.contains(&covered.file.as_str()) {
+                files.push(&covered.file);
+            }
+        }
+        for file in files {
+            let sites = covers
+                .iter()
+                .filter(|covered| covered.file == file)
+                .map(|covered| format!("`{}`", covered.site))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let line = entry.line;
+            if !departures.project.join(file).exists() {
+                notices.push(format!(
+                    "spec.md line {line} covers {file} in {sites}, but {file} is not in the tree, so the entry waives nothing there; edit its `covers:`"
+                ));
+                continue;
+            }
+            for finding in args.findings.iter().filter(|finding| {
+                finding.rule == entry.rule
+                    && finding.file == file
+                    && !entry_decides(entry, finding)
+                    && departures.in_scope(args, file)
+            }) {
+                let at = finding_site(finding)
+                    .map_or_else(|| "no site".into(), |site| format!("`{site}`"));
+                let notice = format!(
+                    "spec.md line {line} covers {file} in {sites}; `{}` fires there at {at}, which it does not cover, so the finding counts",
+                    entry.rule
+                );
+                if !notices.contains(&notice) {
+                    notices.push(notice);
+                }
+            }
+        }
+    }
+    notices
 }
 
 /// Whether `waiver` carries the departure marker `write-review` sets.
@@ -2623,16 +2702,7 @@ fn departure_waiver_entries(
 ) -> Result<Vec<Superseded>> {
     use crate::primitives::departures::attribute;
     let mut superseded = Vec::new();
-    // Resolved on the first finding an entry could decide, so a run with none reads no scope.
-    let scope: std::cell::OnceCell<RunScope> = std::cell::OnceCell::new();
-    let in_scope = |file: &str| {
-        !args.diff_base.is_empty()
-            && scope
-                .get_or_init(|| {
-                    RunScope::resolve(&args.feature, Some(&args.diff_base), &departures.project)
-                })
-                .holds(file)
-    };
+    let in_scope = |file: &str| departures.in_scope(args, file);
     // Every place the rule fires at is anchored, so a second write of the run, which finds
     // the waiver already stored, still counts its findings waived; only a place no waiver
     // holds is stored.

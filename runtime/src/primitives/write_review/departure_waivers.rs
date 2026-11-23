@@ -1238,3 +1238,97 @@ fn a_run_writing_its_record_twice_stores_a_scoped_entrys_site_once() {
     assert_eq!(stored.len(), 1, "{stored:?}");
     assert_eq!(sites_of(&stored[0]), [site("src/a.rs", "walk")]);
 }
+
+// -- lost coverage (spec 073 AC12) -------------------------------------------
+
+/// AC12: a covered file not in the tree is named, with the entry's line and its sites.
+#[test]
+fn a_covered_file_not_in_the_tree_is_a_notice_naming_the_entry_and_its_sites() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/gone.rs` in `walk`\n    - `src/gone.rs` in `(top level)`\n",
+    );
+    let (_, written) = run_review(tmp.path(), &[], T1, &json!({}));
+    assert_eq!(written.departure_notices.len(), 1, "{written:?}");
+    let notice = &written.departure_notices[0];
+    assert!(notice.contains("spec.md line 10"), "{notice}");
+    assert!(
+        notice.contains("src/gone.rs in `walk`, `(top level)`"),
+        "{notice}"
+    );
+    assert!(notice.contains("not in the tree"), "{notice}");
+    assert_eq!(written.departure_notices_count, 1);
+}
+
+/// AC12: the rule firing in a covered file at a site the entry does not list, or naming
+/// none, is named with the site it fires at, once per site; a finding in a file the entry
+/// does not cover is no notice.
+#[test]
+fn the_rule_firing_at_an_uncovered_site_of_a_covered_file_is_a_notice_naming_both_sites() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), SCOPED_ENTRY);
+    let findings = [
+        at_site("src/a.rs", Some("walk")),
+        at_site("src/a.rs", Some("other")),
+        at_site("src/a.rs", Some("other")),
+        at_site("src/a.rs", None),
+        at_site("src/b.rs", Some("other")),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    let notices = &written.departure_notices;
+    assert_eq!(notices.len(), 2, "{notices:?}");
+    for notice in notices {
+        assert!(notice.contains("spec.md line 10"), "{notice}");
+        assert!(notice.contains("covers src/a.rs in `walk`"), "{notice}");
+        assert!(notice.contains("which it does not cover"), "{notice}");
+    }
+    assert!(notices[0].contains("fires there at `other`"), "{notices:?}");
+    assert!(notices[1].contains("fires there at no site"), "{notices:?}");
+}
+
+/// AC12: a covered site where the rule does not fire, in a file in the tree, is no notice.
+#[test]
+fn a_covered_site_where_the_rule_does_not_fire_is_no_notice() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), SCOPED_ENTRY);
+    let (_, written) = run_review(
+        tmp.path(),
+        &[at_site("src/b.rs", Some("walk"))],
+        T1,
+        &json!({}),
+    );
+    assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
+    assert_eq!(written.departure_notices_count, 0);
+}
+
+/// BE-PAYLOAD-001: `departure-notices` alone is enough to move the lists past the read
+/// size, held whole in the one file `lists-file` names with its count inline.
+#[test]
+fn departure_notices_past_the_read_size_move_to_the_list_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/gone.rs` in `walk`\n",
+    );
+    let (_, inline) = run_review(tmp.path(), &[], T1, &json!({}));
+    assert_eq!(inline.form, ListsForm::Inline, "{inline:?}");
+    assert_eq!(inline.departure_notices.len(), 1, "{inline:?}");
+    write(
+        tmp.path(),
+        ".ductus/config.toml",
+        "[artifacts]\nread-size-bytes = 10\n",
+    );
+    let (_, file) = run_review(tmp.path(), &[], T2, &json!({}));
+    assert_eq!(file.form, ListsForm::File, "{file:?}");
+    assert!(file.departure_notices.is_empty(), "{file:?}");
+    assert_eq!(file.departure_notices_count, 1);
+    let listed: Value = serde_json::from_str(
+        &fs::read_to_string(tmp.path().join(file.lists_file.as_ref().unwrap())).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(listed["departure-notices"], json!(inline.departure_notices));
+    let wire = serde_json::to_value(&file).unwrap();
+    assert!(wire.get("departure-notices").is_none(), "{wire}");
+    crate::primitives::bounded_lists::assert_counts_name_the_file("write-review", &wire, &listed);
+}

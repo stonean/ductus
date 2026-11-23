@@ -26,8 +26,8 @@ MUTATIONS = [
     (
         'M2 a marked waiver is expired although its rule has an entry',
         'src/primitives/process_waivers.rs',
-        '    Ok(!entry_rules\n        .as_deref()\n        .unwrap_or_default()\n        .iter()\n        .any(|held| held == rule))',
-        '    Ok(entry_rules\n        .as_deref()\n        .unwrap_or_default()\n        .iter()\n        .any(|held| held == rule))',
+        '        (Kind::Departure, None) => false,',
+        '        (Kind::Departure, None) => true,',
         'departure_waivers::',
     ),
     (
@@ -40,8 +40,8 @@ MUTATIONS = [
     (
         'M4 only a MUST departure derives a waiver',
         'src/primitives/write_review.rs',
-        '.filter(|finding| {\n                waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
-        '.filter(|finding| {\n                finding.severity.is_blocking()\n                    && waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| finding.file.as_str())\n            .collect();\n        anchors.extend(',
+        '.filter(|finding| {\n                waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| {\n                let site',
+        '.filter(|finding| {\n                finding.severity.is_blocking()\n                    && waiver_reason(finding, &args.applied_waivers).is_none()\n                    && waiver_reason(finding, anchors).is_none()\n            })\n            .map(|finding| {\n                let site',
         'departure_waivers::a_should_departure',
     ),
     (
@@ -75,15 +75,15 @@ MUTATIONS = [
     (
         'M9 a derived waiver anchors no finding, so none is counted waived',
         'src/primitives/write_review.rs',
-        '        anchors.extend(\n            firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),\n                }),\n        );\n        let fresh',
+        '        anchors.extend(\n            firing\n                .iter()\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: site.map(str::to_string),\n                    reason: entry.reason.clone(),\n                }),\n        );\n        let fresh',
         '        let fresh',
         'departure_waivers::a_must_departure',
     ),
     (
         'M10 a stored departure waiver is not anchored again on the run that finds it held',
         'src/primitives/write_review.rs',
-        'firing\n                .iter()\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),',
-        'firing\n                .iter()\n                .filter(|file| !holds(surviving, &entry.rule, file))\n                .map(|file| crate::schema::primitives::WaiverRef {\n                    rule: entry.rule.clone(),\n                    file: (*file).to_string(),\n                    site: None,\n                    reason: entry.reason.clone(),',
+        'firing\n                .iter()\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {',
+        'firing\n                .iter()\n                .filter(|(file, _)| !holds(surviving, &entry.rule, file))\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {',
         'departure_waivers::a_run_writing',
     ),
     (
@@ -96,8 +96,8 @@ MUTATIONS = [
     (
         'M12 an entry waives a finding of any rule',
         'src/primitives/write_review.rs',
-        '.filter(|(_, finding)| finding.rule == entry.rule && in_scope(&finding.file))',
-        '.filter(|(_, finding)| in_scope(&finding.file))',
+        '                finding.rule == entry.rule\n                    && in_scope(&finding.file)\n                    && entry_decides(entry, finding)',
+        '                in_scope(&finding.file)\n                    && entry_decides(entry, finding)',
         'departure_waivers::an_entry_whose_rule_fires_nowhere',
     ),
     (
@@ -124,8 +124,8 @@ MUTATIONS = [
     (
         'M16 a departure waiver is not bounded by the review scope',
         'src/primitives/write_review.rs',
-        '.filter(|(_, finding)| finding.rule == entry.rule && in_scope(&finding.file))',
-        '.filter(|(_, finding)| finding.rule == entry.rule)',
+        '                finding.rule == entry.rule\n                    && in_scope(&finding.file)\n',
+        '                finding.rule == entry.rule\n',
         'departure_waivers::a_violation_outside_the_review_scope',
     ),
     (
@@ -254,5 +254,41 @@ MUTATIONS = [
         '                    !holds_anchor(surviving, &entry.rule, file, site)',
         '                    true',
         'departure_waivers::a_run_writing_its_record_twice_stores_a_scoped_entrys_site_once',
+    ),
+    # -- lost coverage (spec 073, task 18) -------------------------------------
+    (
+        'M35 a covered file not in the tree is no notice',
+        'src/primitives/write_review.rs',
+        '            if !departures.project.join(file).exists() {',
+        '            if false {',
+        'departure_waivers::a_covered_file_not_in_the_tree',
+    ),
+    (
+        'M36 the rule firing at an uncovered site is no notice',
+        'src/primitives/write_review.rs',
+        '                    && !entry_decides(entry, finding)\n                    && departures.in_scope(args, file)',
+        '                    && false',
+        'departure_waivers::the_rule_firing_at_an_uncovered_site',
+    ),
+    (
+        'M37 a covered file in the tree is named as gone',
+        'src/primitives/write_review.rs',
+        '            if !departures.project.join(file).exists() {',
+        '            if departures.project.join(file).exists() {',
+        'departure_waivers::a_covered_site_where_the_rule_does_not_fire_is_no_notice',
+    ),
+    (
+        'M38 a second finding at one uncovered site repeats its notice',
+        'src/primitives/write_review.rs',
+        '                if !notices.contains(&notice) {\n                    notices.push(notice);\n                }',
+        '                notices.push(notice);',
+        'departure_waivers::the_rule_firing_at_an_uncovered_site',
+    ),
+    (
+        'M39 the result drops the departure notices',
+        'src/primitives/write_review.rs',
+        '        departure_notices: waivers.notices,\n',
+        '',
+        'departure_waivers::a_covered_file_not_in_the_tree departure_waivers::the_rule_firing_at_an_uncovered_site',
     ),
 ]

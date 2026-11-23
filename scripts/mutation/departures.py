@@ -440,4 +440,11 @@ MUTATIONS = [
         '_ if false => {}',
         'a_repeated_covers_child_is_a_repeated_key_and_its_items_are_passed_over',
     ),
+    (
+        'M62 a scoped entry is left out of entries, so analyze cannot waive its rule',
+        'src/primitives/departures.rs',
+        '    let well_formed = entry.problems.is_empty();',
+        '    let well_formed = entry.problems.is_empty() && entry.covers.is_none();',
+        'write_analysis::tests::a_scoped_entry_waives_its_rule_as_an_unscoped_one_does',
+    ),
 ]

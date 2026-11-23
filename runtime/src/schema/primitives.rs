@@ -2149,6 +2149,15 @@ pub struct WriteReviewResult {
     /// Entries in `superseded-deferrals`, in either form.
     #[serde(default)]
     pub superseded_deferrals_count: usize,
+    /// Each place a scoped departure entry's coverage is lost, as a sentence naming the
+    /// entry's `spec.md` line and its covered sites: a covered file not in the tree, or a
+    /// finding of its rule in a covered file at a site the entry does not list (spec 073
+    /// AC12). Absent when there are none, and in the file form.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub departure_notices: Vec<String>,
+    /// Entries in `departure-notices`, in either form.
+    #[serde(default)]
+    pub departure_notices_count: usize,
     /// The criteria the run judged, as recorded; absent when it passed none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub criteria_judged: Option<u32>,
