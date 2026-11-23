@@ -47,8 +47,8 @@ A read-only sweep on 2026-11-18, at `6f1286dc`, by meaning and by every principl
 
 ## 53. A task uses what it needs, and no more (AC26, owner decision 2026-11-23)
 
-- [ ] `framework/constitution.md` §design-principles ends with the bullet the plan's **A task uses what it needs, and no more** names, and §Cost levers drops its `/cost` example, leaving the file within 50,000 bytes (`scripts/lint-governing-size.sh`)
-- [ ] `AGENTS.md` drops 40dea24c's restatement of the filter and restores the Design Principles bullet it displaced, so audit Family 38 finds survey DP1's entry again
-- [ ] `scripts/audit/run-all.sh` exits 0 after committing, and `cargo test` passes, since `framework/constitution.md` is a `runtime.yml` trigger
+- [x] `framework/constitution.md` §design-principles ends with the bullet the plan's **A task uses what it needs, and no more** names, and §Cost levers drops its `/cost` example, leaving the file within 50,000 bytes (`scripts/lint-governing-size.sh`)
+- [x] `AGENTS.md` drops 40dea24c's restatement of the filter and restores the Design Principles bullet it displaced, so audit Family 38 finds survey DP1's entry again
+- [x] `scripts/audit/run-all.sh` exits 0 after committing, and `cargo test` passes, since `framework/constitution.md` is a `runtime.yml` trigger
 
 - **Done when**: the constitution carries the filter within its ceiling, `AGENTS.md` carries no copy of it, and the audit and `cargo test` pass
