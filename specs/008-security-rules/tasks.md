@@ -1,6 +1,6 @@
 ---
 title: "008-security-rules — tasks"
-next-task: 46
+next-task: 47
 ---
 
 # 008 — Security Rules Tasks
@@ -21,3 +21,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Left as they are, on reading the rule text against the audit's finding: `BE-DATA-013` and `FE-XSS-010`
 
 - **Done when**: each item is stated in the rule file as decided, the spec records the requirement (scenario `security-rules-flag-what-their-sources-support`, and a Resolved Questions entry per decision with its reason) and corrects any criterion the change makes false, any external claim the new text makes is fetched and not recalled, bytes before and after are measured per rule and per file, `runtime/CHANGELOG.md` `[Unreleased]` gains an entry per changed rule, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+## 46. `BE-DATA-012` sets aside a throwaway local or test credential (the owner's decision of 2026-11-23)
+
+- [ ] Implement the behavior described in `scenarios/a-throwaway-credential-owes-no-revocation-path.md`
+- [ ] `BE-DATA-012`'s Statement and Verification set aside a credential for a throwaway local or test resource that grants no access to a production or shared system, worded as `CFG-ENV-013` words it; `BE-DATA-003` and `BE-DATA-008` are unchanged
+- [ ] This spec's Resolved Questions record the decision with its reason, and why `BE-DATA-003` and `BE-DATA-008` keep the word
+- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
+
+- **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
