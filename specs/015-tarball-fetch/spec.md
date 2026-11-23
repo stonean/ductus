@@ -12,7 +12,7 @@ Collapse `/ductus`'s ~35–50 individual `curl` fetches into a single archive do
 
 ## Problem
 
-Today `framework/bootstrap/ductus.md` issues one `curl` per file in the manifest. A single-agent run touches:
+Before this spec, `framework/bootstrap/ductus.md` issued one `curl` per file in the manifest. A single-agent run touched:
 
 - ~14 `ductus`-owned shared files (constitution, rules, templates, registry)
 - ~4 project-specific shared files (system, errors, events, inbox)
@@ -22,7 +22,7 @@ Today `framework/bootstrap/ductus.md` issues one `curl` per file in the manifest
 - 1 `framework/bootstrap/ductus.md` (self-install)
 - 0–N workflow templates (only those the user accepts)
 
-That's ~35 fetches for one agent, ~50+ for two agents on first run, and the same volume on every routine re-run because `update`-strategy files have to be fetched before the content-equality check can decide whether to write. The bottleneck is per-call tool-invocation overhead, not bytes (see **Tradeoffs**, Bytes over the wire).
+That was ~35 fetches for one agent, ~50+ for two agents on first run, and the same volume on every routine re-run because `update`-strategy files had to be fetched before the content-equality check could decide whether to write. The bottleneck was per-call tool-invocation overhead, not bytes (see **Tradeoffs**, Bytes over the wire).
 
 A single archive fetch removes that overhead while keeping every other guarantee `/ductus` makes today (idempotency, per-file strategies, pinning, failure granularity within the manifest pass).
 
@@ -66,7 +66,7 @@ The manifest's source paths (e.g., `framework/constitution.md`, `framework/comma
 
 ### Cleanup
 
-`/ductus` does not delete the temp directory. The path is logged in the run summary (and, on abort, in the error message) so the user can inspect it if needed. Both macOS (`/var/folders/.../T/`) and Linux (`/tmp` on systemd-tmpfiles distros) sweep their temp directories automatically; about 1.3 MB of extracted files (1,312,690 bytes across 78 files, the member sizes of the `codeload.github.com` tarball of `main` at `d56ff370`, summed on 2026-11-23) waiting for the next sweep is acceptable in exchange for not granting an `rm -rf` permission to the bootstrap.
+`/ductus` does not delete the temp directory. The path is logged in the run summary (and, on abort, in the error message) so the user can inspect it if needed. Both macOS (`/var/folders/.../T/`) and Linux (`/tmp` on systemd-tmpfiles distros) are assumed to sweep their temp directories automatically, as their default temp policies do; about 1.3 MB of extracted files (1,312,690 bytes across 78 files, the member sizes of the `codeload.github.com` tarball of `main` at `d56ff370`, summed on 2026-11-23) waiting for the next sweep is acceptable in exchange for not granting an `rm -rf` permission to the bootstrap.
 
 The leftover directory is for inspection only — the next `/ductus` run creates its own fresh temp directory via `mktemp` and never reuses a prior extract.
 
@@ -107,16 +107,16 @@ Adopters who ran the tarball flow before this fix shipped will already have seve
 
 ### Self-update notice
 
-The integrity check that re-fetches `ductus.md` on a corrupted write currently re-runs `curl`. With a tarball, re-fetch means reading the same file again from the extracted archive — no second network call. The check itself is unchanged; it just operates on the local source.
+Before this spec, the integrity check that re-fetches `ductus.md` on a corrupted write re-ran `curl`. With a tarball, re-fetch means reading the same file again from the extracted archive — no second network call. The check itself is unchanged; it just operates on the local source.
 
 The self-update notice (shown when the installed `ductus.md` differs from the fetched version) continues to fire. The comparison has since moved ahead of the archive: `framework/bootstrap/ductus.md` §Self-update check fetches the bootstrap on its own in pre-flight, at the same resolved ref as the archive, so the copy it compares against is the one the archive carries for that ref.
 
 ## Tradeoffs
 
-- **One archive failure vs. many per-file warnings.** Today a single 404 on `framework/templates/project/inbox.md` produces a warning and the rest of the manifest proceeds. With a tarball, that file would simply not exist in the extract, producing the same per-entry warning. The genuine new failure mode is the archive itself failing — and that's a clean abort, since partial scaffolding from a missing archive is impossible.
-- **New permissions.** For Claude, two `Bash` additions (`tar`, `mktemp`) plus six `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), with both single-leading-slash and double-leading-slash forms because Claude Code's permission matcher treats them as distinct prefixes (see **Permission bootstrap → Why both leading-slash forms**, whose signpost records that the seed now keeps the three `//` forms alone). Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
+- **One archive failure vs. many per-file warnings.** Under the per-file flow a single 404 on `framework/templates/project/inbox.md` produced a warning and the rest of the manifest proceeded. With a tarball, that file would simply not exist in the extract, producing the same per-entry warning. The genuine new failure mode is the archive itself failing — and that's a clean abort, since partial scaffolding from a missing archive is impossible.
+- **New permissions.** For Claude, two `Bash` additions (`tar`, `mktemp`; 022's task 18 has since dropped `tar` and narrowed `mktemp` to the exact command, as AC7 records) plus six `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), with both single-leading-slash and double-leading-slash forms because Claude Code's permission matcher treats them as distinct prefixes (see **Permission bootstrap → Why both leading-slash forms**, whose signpost records that the seed now keeps the three `//` forms alone). Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
 - **Bytes over the wire.** The archive carries only the files a run reads (AC14): 78 files and 403,618 bytes compressed for `main` at `d56ff370`, fetched from `codeload.github.com` on 2026-11-23. Untrimmed, it was the whole repository, 1,424 files and 6,096,062 bytes compressed at `ductus-v0.64.0` (`git archive --format=tar.gz` of the tag, which matched codeload's own 3,523,152 bytes at `ductus-v0.59.11` to within 0.06%). Against per-file fetches the design saves round-trips and tool-call invocations, and perceived run time.
-- **Loss of partial progress.** A network failure mid-fetch today produces ~10 successful files plus warnings on the rest; with a tarball, a network failure produces zero files and a clean abort. Both outcomes leave the project in a recoverable state — re-run resumes idempotently.
+- **Loss of partial progress.** Under the per-file flow a network failure mid-fetch produced ~10 successful files plus warnings on the rest; with a tarball, a network failure produces zero files and a clean abort. Both outcomes leave the project in a recoverable state — re-run resumes idempotently.
 - **Pinning at a ref.** When this spec shipped, every fetch was hardcoded to `main` and the tarball URL pointed at `main` too. A `.ductus/config.toml` `[source] ref` option overriding the ref was named as a natural follow-up and left out of scope — see **Resolved Questions**. **Adopted by 061**, which resolves the ref per run and defaults it to the latest release rather than `main`.
 
 ## Acceptance Criteria
