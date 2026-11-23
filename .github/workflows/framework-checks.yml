@@ -361,6 +361,17 @@ jobs:
       - name: (ab) Analysis orchestration scripts
         run: python3 -I scripts/tests/test-analyze-scripts.py
 
+      # (ac) Family 42 holds the archive /ductus downloads to the files a run
+      # reads (spec 015 AC14). Step (h) runs it over this repository, whose
+      # .gitattributes agrees with the installer, so a family that stopped
+      # comparing in either direction would pass there. The test builds
+      # fixture repositories and shows the family fails on a read file the
+      # archive omits and on an archived file no run reads, and on each input
+      # it cannot read. `git archive` reads the tree, not history, so the
+      # checkout's depth does not matter to it.
+      - name: (ac) Archive carries only what a run reads
+        run: bash scripts/tests/test-archive-contents.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

@@ -97,5 +97,6 @@ run_check "Family 38 — promotion coverage" "scripts/audit/promotion-coverage.s
 run_check "Family 39 — shipped anchor resolution" "scripts/audit/shipped-anchor-resolution.sh"
 run_check "Family 40 — deprecated rules are removed on time" "scripts/audit/deprecation-removal.sh"
 run_check "Family 41 — feature-directory grammar parity" "scripts/audit/feature-dir-grammar-parity.sh"
+run_check "Family 42 — the archive carries only what a run reads" "scripts/audit/archive-contents.sh"
 
 exit "$drift"

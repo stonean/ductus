@@ -7,3 +7,27 @@
 # default to core.autocrlf=true) would break those comparisons, so LF is
 # pinned repo-wide rather than per-path.
 * text=auto eol=lf
+
+# The archive /ductus downloads carries only the files a run reads (spec 015
+# AC14). GitHub builds the codeload tarball with `git archive`, which leaves
+# out every path marked export-ignore in the archived commit's own copy of
+# this file. Everything is marked, framework/ and the one manifest source
+# outside it are unmarked, and the framework/ files no run reads are marked
+# again. /audit Family 42 (scripts/audit/archive-contents.sh) holds this list
+# to the installer in both directions, so a file a run newly reads that is
+# marked here, or a new path a run never reads that is not, fails it.
+* export-ignore
+/framework -export-ignore
+/framework/** -export-ignore
+/.markdownlint-cli2.jsonc -export-ignore
+# Fetched by pre-rename adopters from raw.githubusercontent.com, never from
+# the archive (049; /audit Family 21 keeps it identical to ductus.md).
+/framework/bootstrap/govern.md export-ignore
+# The generator and test input for the MCP tool list.
+/framework/runtime-tools.txt export-ignore
+# Copied into an adopter's CI by hand; no run writes it.
+/framework/templates/ci/adopter-generators.yml export-ignore
+# The maintainer-only command and its reference, withheld from adopters
+# (scripts/maintainer-only-commands.txt).
+/framework/commands/audit.md export-ignore
+/framework/reference/audit.md export-ignore
