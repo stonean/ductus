@@ -1,6 +1,6 @@
 ---
 title: "008-security-rules — tasks"
-next-task: 50
+next-task: 51
 ---
 
 # 008 — Security Rules Tasks
@@ -57,3 +57,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+## 50. `scripts/check-release-tag.sh` reads every entry above the newest version heading
+
+- [ ] Implement the behavior described in `scenarios/the-tag-check-reads-every-entry-above-the-newest-version.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
