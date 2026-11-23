@@ -1,6 +1,6 @@
 ---
 title: "008-security-rules — tasks"
-next-task: 47
+next-task: 48
 ---
 
 # 008 — Security Rules Tasks
@@ -27,6 +27,15 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] Implement the behavior described in `scenarios/a-throwaway-credential-owes-no-revocation-path.md`
 - [ ] `BE-DATA-012`'s Statement and Verification set aside a credential for a throwaway local or test resource that grants no access to a production or shared system, worded as `CFG-ENV-013` words it; `BE-DATA-003` and `BE-DATA-008` are unchanged
 - [ ] This spec's Resolved Questions record the decision with its reason, and why `BE-DATA-003` and `BE-DATA-008` keep the word
+- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
+
+- **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+## 47. `BE-DEPS-005`'s Verification flags what its Statement requires (the owner's decision of 2026-11-23)
+
+- [ ] Implement the behavior described in `scenarios/be-deps-005-flags-what-its-statement-requires.md`
+- [ ] `BE-DEPS-005`'s Verification flags a missing (a) where private packages exist, a missing (b) and a plan naming no place for (c)'s check, with no dependency-churn condition, and (c) requires the plan to name that place; `BE-DEPS-004` is unchanged
+- [ ] This spec's Resolved Questions record the decision with its reason
 - [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
