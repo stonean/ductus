@@ -9,15 +9,15 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 - **BREAKING: `BE-DEPS-005` flags what its Statement requires (spec 008 task
   47; the agent's recommendation, adopted by the operator, 2026-11-23).** Its
   Verification flagged an omitted defence only in a project with private
-  packages or a high dependency-churn rate. It now flags a missing
-  private-registry mapping where private packages exist and a missing
-  integrity-verified install wherever the package manager supports one, in every
-  project, and (c) requires the plan to
-  name where a new dependency's name is checked: an allowlist, a lockfile-diff
-  review step or a tool, as `FE-DEPS-009` has since 0.60.0. Breaking for a spec
-  or plan covering dependency management, in a project with
-  `security-backend.md`, that omits either or names no such place: each is now
-  a blocking `/analyze` finding. `BE-DEPS-004` is unchanged.
+  packages or a high dependency-churn rate. It now flags, in every project, a
+  missing private-registry mapping where private packages exist, a missing
+  integrity-verified install where the package manager supports one, and a
+  plan that names no place where a new dependency's name is checked, and its
+  Statement's (c) now requires the plan to name that place: an allowlist, a
+  lockfile-diff review step or a tool, as `FE-DEPS-009` has since 0.60.0.
+  Breaking for a spec or plan covering dependency management, in a project with
+  `security-backend.md`, that omits any of the three: each is now a blocking
+  `/analyze` finding. `BE-DEPS-004` is unchanged.
 - **BREAKING: `FE-STORAGE-006` purges the per-user cache when the session ends
   (spec 008 task 48; the agent's recommendation, adopted by the operator,
   2026-11-23).** A service worker may cache user-specific authenticated content

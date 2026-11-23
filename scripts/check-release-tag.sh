@@ -34,7 +34,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 case "${1:-}" in
   -h|--help)
-    sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
+    # The header comment, from line 2 to the first line that is not a comment.
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
     exit 0
     ;;
   '')
