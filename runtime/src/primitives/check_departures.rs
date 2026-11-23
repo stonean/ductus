@@ -509,6 +509,58 @@ mod tests {
     }
 
     #[test]
+    fn a_scoped_entry_is_listed_with_no_finding() {
+        let tmp = project(
+            "",
+            "- departs: `DM-MUST-001`\n  - reason: r\n  - covers:\n    - `src/a.rs` in `f`\n",
+        );
+        let result = check(&tmp);
+        assert_eq!(result.findings, vec![]);
+        assert_eq!(result.entries.len(), 1);
+        assert_eq!(result.entries[0].rule, "DM-MUST-001");
+    }
+
+    #[test]
+    fn each_malformed_covers_is_blocking_and_keeps_its_entry_out() {
+        // One entry per form AC13 names: not a list, empty, a blank site, a repeated
+        // item, an absolute file and a file holding `..`.
+        let malformed = [
+            "  - covers: `a.rs` in `f`\n",
+            "  - covers:\n",
+            "  - covers:\n    - `a.rs` in ` `\n",
+            "  - covers:\n    - `a.rs` in `f`\n    - `a.rs` in `f`\n",
+            "  - covers:\n    - `/a.rs` in `f`\n",
+            "  - covers:\n    - `src/../a.rs` in `f`\n",
+        ];
+        let entries = malformed
+            .iter()
+            .map(|covers| format!("- departs: `DM-MUST-001`\n  - reason: r\n{covers}"))
+            .collect::<Vec<_>>()
+            .concat();
+        let result = check(&project("", &entries));
+        assert_eq!(result.entries, vec![]);
+        let messages: Vec<&str> = tiers(&result)
+            .into_iter()
+            .map(|(tier, message)| {
+                assert_eq!(tier, AnalyzeSeverity::Blocking, "{message}");
+                message
+            })
+            .collect();
+        let expected = [
+            "is not a list",
+            "lists no site",
+            "not two non-blank code spans",
+            "twice",
+            "absolute or holds",
+            "absolute or holds",
+        ];
+        assert_eq!(messages.len(), expected.len(), "{messages:?}");
+        for (message, phrase) in messages.iter().zip(expected) {
+            assert!(message.contains(phrase), "{message} lacks {phrase}");
+        }
+    }
+
+    #[test]
     fn an_unknown_rule_is_blocking_and_a_known_one_is_not() {
         let tmp = project("", &entry("DM-NONE-999"));
         let result = check(&tmp);

@@ -2,8 +2,9 @@
 //! attribution every consumer shares (spec 073).
 //!
 //! An entry is a list item under `## Applicable Rules` that reads `departs:`
-//! and one backticked rule ID, with a `reason:` child and an optional `cited:`
-//! child (`specs/073-decided-rule-departures-are-recorded/data-model.md`,
+//! and one backticked rule ID, with a `reason:` child, an optional `cited:`
+//! child and an optional `covers:` child listing the sites it decides, each
+//! item `` `file` in `site` `` (`specs/073-decided-rule-departures-are-recorded/data-model.md`,
 //! §Departure entry). `check-departures`, `write-analysis` and the exec
 //! walker's tally, and `write-review` with `process-waivers`, all read the
 //! grammar and the attribution here, so none restates either.
@@ -23,7 +24,8 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use crate::primitives::resolve_anchor::{heading_lines, section_range};
 use crate::primitives::{
-    FeatureForm, ProjectRepository, SkipScanner, parse_feature_dir, without_inline_comments,
+    FeatureForm, ProjectRepository, SkipScanner, inline_code_spans, parse_feature_dir,
+    without_inline_comments,
 };
 
 /// The heading a spec's departure entries sit under.
@@ -42,7 +44,23 @@ pub struct Entry {
     /// The 1-based first and last lines of the `cited:` child, a wrapped
     /// citation's continuation lines included; absent with `cited`.
     pub cited_lines: Option<(usize, usize)>,
+    /// The sites a scoped entry decides, in document order; `None` for an entry
+    /// with no `covers:`, which covers the spec's whole review scope. Never an
+    /// empty list: an empty `covers:` makes the entry malformed.
+    pub covers: Option<Vec<Covered>>,
     /// The 1-based line of the `departs:` item.
+    pub line: usize,
+}
+
+/// One site a scoped entry's `covers:` lists: a file and a site, spelled as
+/// review records a finding's site.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Covered {
+    /// The file's path from the project root, never absolute or holding `..`.
+    pub file: String,
+    /// The site in it, `(top level)` included.
+    pub site: String,
+    /// The 1-based line of the item.
     pub line: usize,
 }
 
@@ -57,10 +75,27 @@ pub enum ProblemKind {
     MissingReason,
     /// The entry's `reason:` child has no text.
     EmptyReason,
-    /// A child key other than `reason` and `cited`.
+    /// A child key other than `reason`, `cited` and `covers`.
     UnknownKey(String),
-    /// A `reason` or `cited` child given twice.
+    /// A `reason`, `cited` or `covers` child given twice.
     DuplicateKey(String),
+    /// A `covers:` child with text after its colon, or a line under it that is
+    /// no list item.
+    CoversNotAList,
+    /// A `covers:` child with no item.
+    CoversEmpty,
+    /// A `covers:` item that is not two code spans joined by `in`, or holds a
+    /// blank span.
+    CoversItem,
+    /// A `covers:` item whose file and site an earlier item names.
+    CoversRepeated {
+        /// The repeated item's file.
+        file: String,
+        /// The repeated item's site.
+        site: String,
+    },
+    /// A `covers:` item whose file is absolute or holds a `..` component.
+    CoversPath(String),
     /// A second entry for a rule an earlier entry names. Both entries stay in
     /// [`Parsed::entries`], so a consumer sees which rules are named twice
     /// from this problem and attributes each rule once.
@@ -83,11 +118,20 @@ impl ProblemKind {
             Self::MissingReason => "the entry has no `reason:`, so it waives nothing".into(),
             Self::EmptyReason => "the entry's `reason:` is empty, so it waives nothing".into(),
             Self::UnknownKey(key) => format!(
-                "the entry has a `{key}:` child, which the grammar does not allow (`reason:` and `cited:` only), so it waives nothing"
+                "the entry has a `{key}:` child, which the grammar does not allow (`reason:`, `cited:` and `covers:` only), so it waives nothing"
             ),
             Self::DuplicateKey(key) => {
                 format!("the entry gives `{key}:` twice, so it waives nothing")
             }
+            Self::CoversNotAList => "the entry's `covers:` is not a list of items, each a file and a site (text after its colon, or a line under it that is no list item), so it waives nothing".into(),
+            Self::CoversEmpty => "the entry's `covers:` lists no site, so it waives nothing".into(),
+            Self::CoversItem => "a `covers:` item is not two non-blank code spans joined by `in`, a file then a site, so the entry waives nothing".into(),
+            Self::CoversRepeated { file, site } => format!(
+                "the entry's `covers:` lists {file} in {site} twice, so it waives nothing"
+            ),
+            Self::CoversPath(file) => format!(
+                "the entry's `covers:` names {file}, which is absolute or holds a `..` component, so it waives nothing"
+            ),
             Self::DuplicateRule(rule) => {
                 format!("an earlier entry already departs from `{rule}`; a rule has one departure")
             }
@@ -122,6 +166,19 @@ struct Open {
     reason: Option<String>,
     cited: Option<String>,
     cited_lines: Option<(usize, usize)>,
+    /// The `covers:` items read so far; `None` until the child is read.
+    covers: Option<Vec<Covered>>,
+    /// The `covers:` child's line, for an empty one's problem.
+    covers_line: usize,
+    /// The `covers:` child's indent while it is the open child: a deeper line
+    /// is one of its items.
+    covers_indent: Option<usize>,
+    /// Whether the `covers:` child already has a problem, so an empty one is
+    /// not reported twice.
+    covers_malformed: bool,
+    /// Whether the open `covers:` child is a repeated one, whose items are
+    /// passed over: the repeated key is its problem.
+    covers_repeated: bool,
     /// The key of the child the next continuation line extends.
     last_key: Option<String>,
     problems: Vec<Problem>,
@@ -155,7 +212,7 @@ pub fn parse(content: &str) -> Parsed {
         let item = list_item(&text);
         if let Some(entry) = open.as_mut() {
             if indent > entry.indent {
-                read_child(entry, index + 1, item, text.trim());
+                read_child(entry, index + 1, indent, item, text.trim());
                 continue;
             }
             // CommonMark's lazy continuation: unindented text directly after a
@@ -166,7 +223,7 @@ pub fn parse(content: &str) -> Parsed {
                 && !opens_block(text.trim_start())
                 && entry.last_key.is_some()
             {
-                read_child(entry, index + 1, None, text.trim());
+                read_child(entry, index + 1, indent, None, text.trim());
                 continue;
             }
             finish(open.take(), &mut parsed);
@@ -252,18 +309,48 @@ fn start_entry(indent: usize, line: usize, rest: &str) -> Open {
         reason: None,
         cited: None,
         cited_lines: None,
+        covers: None,
+        covers_line: line,
+        covers_indent: None,
+        covers_malformed: false,
+        covers_repeated: false,
         last_key: None,
         problems,
     }
 }
 
-/// Read one line under an entry: a `key: value` child item, or the wrapped
-/// continuation of the previous child's value.
-fn read_child(entry: &mut Open, line: usize, item: Option<&str>, text: &str) {
+/// Record `kind` at `line` as a problem of the entry's `covers:` child.
+fn covers_problem(entry: &mut Open, line: usize, kind: ProblemKind) {
+    entry.covers_malformed = true;
+    entry.problems.push(Problem { line, kind });
+}
+
+/// Read one line under an entry: a `key: value` child item, an item of the
+/// open `covers:` child, or the wrapped continuation of the previous child's
+/// value. `indent` is the line's own, which places it under `covers:` or not.
+fn read_child(entry: &mut Open, line: usize, indent: usize, item: Option<&str>, text: &str) {
+    if let Some(covers_indent) = entry.covers_indent {
+        if indent > covers_indent {
+            match item {
+                _ if entry.covers_repeated => {}
+                Some(item) => read_covered(entry, line, item),
+                None => covers_problem(entry, line, ProblemKind::CoversNotAList),
+            }
+            return;
+        }
+        entry.covers_indent = None;
+        entry.covers_repeated = false;
+    }
     let Some(item) = item else {
         let Some(key) = entry.last_key.clone() else {
             return;
         };
+        if key == "covers" {
+            // A paragraph line continuing `covers:` is text after its colon.
+            entry.last_key = None;
+            covers_problem(entry, line, ProblemKind::CoversNotAList);
+            return;
+        }
         let slot = if key == "reason" {
             &mut entry.reason
         } else {
@@ -284,6 +371,10 @@ fn read_child(entry: &mut Open, line: usize, item: Option<&str>, text: &str) {
     };
     let (key, value) = item.split_once(':').unwrap_or((item, ""));
     let key = key.trim();
+    if key == "covers" {
+        open_covers(entry, line, indent, value);
+        return;
+    }
     let slot = match key {
         "reason" => &mut entry.reason,
         "cited" => &mut entry.cited,
@@ -311,6 +402,92 @@ fn read_child(entry: &mut Open, line: usize, item: Option<&str>, text: &str) {
     entry.last_key = Some(key.to_string());
 }
 
+/// Open the entry's `covers:` child at `line` and `indent`, the deeper list
+/// items after it being its items. `value` is the text after its colon, which
+/// the grammar allows none of; a second `covers:` is a repeated key.
+fn open_covers(entry: &mut Open, line: usize, indent: usize, value: &str) {
+    if entry.covers.is_some() {
+        entry.problems.push(Problem {
+            line,
+            kind: ProblemKind::DuplicateKey("covers".into()),
+        });
+        entry.last_key = None;
+        entry.covers_indent = Some(indent);
+        entry.covers_repeated = true;
+        return;
+    }
+    entry.covers = Some(Vec::new());
+    entry.covers_line = line;
+    entry.covers_indent = Some(indent);
+    entry.last_key = Some("covers".into());
+    if !value.trim().is_empty() {
+        entry.last_key = None;
+        covers_problem(entry, line, ProblemKind::CoversNotAList);
+    }
+}
+
+/// Read one `covers:` item, `item` being its text after the list marker.
+fn read_covered(entry: &mut Open, line: usize, item: &str) {
+    entry.last_key = None;
+    let Some((file, site)) = covered_parts(item) else {
+        covers_problem(entry, line, ProblemKind::CoversItem);
+        return;
+    };
+    let path = Path::new(&file);
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|part| part == std::path::Component::ParentDir)
+    {
+        covers_problem(entry, line, ProblemKind::CoversPath(file));
+        return;
+    }
+    let covers = entry.covers.get_or_insert_with(Vec::new);
+    if covers
+        .iter()
+        .any(|earlier| earlier.file == file && earlier.site == site)
+    {
+        covers_problem(entry, line, ProblemKind::CoversRepeated { file, site });
+        return;
+    }
+    covers.push(Covered { file, site, line });
+}
+
+/// The file and site of a `covers:` item: exactly two code spans, found as
+/// `CommonMark` finds them ([`inline_code_spans`]), with the word `in` between
+/// them and nothing else outside them, each span's content non-blank once one
+/// leading and one trailing space are stripped as `CommonMark` strips them.
+fn covered_parts(item: &str) -> Option<(String, String)> {
+    let spans = inline_code_spans(item);
+    let [first, second] = spans.as_slice() else {
+        return None;
+    };
+    // A span's content range sits between two equal backtick runs.
+    let delimiter = |content: &std::ops::Range<usize>| {
+        item[..content.start]
+            .bytes()
+            .rev()
+            .take_while(|b| *b == b'`')
+            .count()
+    };
+    let (first_len, second_len) = (delimiter(first), delimiter(second));
+    let before = &item[..first.start - first_len];
+    let between = &item[first.end + first_len..second.start - second_len];
+    let after = &item[second.end + second_len..];
+    if !before.trim().is_empty() || between.trim() != "in" || !after.trim().is_empty() {
+        return None;
+    }
+    let content = |range: &std::ops::Range<usize>| {
+        let text = &item[range.clone()];
+        let text = match text.strip_prefix(' ').and_then(|t| t.strip_suffix(' ')) {
+            Some(inner) if !text.trim().is_empty() => inner,
+            _ => text,
+        };
+        Some(text.to_string()).filter(|text| !text.trim().is_empty())
+    };
+    Some((content(first)?, content(second)?))
+}
+
 /// Close an entry: record its problems, and the entry itself when none is
 /// structural.
 fn finish(open: Option<Open>, parsed: &mut Parsed) {
@@ -327,6 +504,12 @@ fn finish(open: Option<Open>, parsed: &mut Parsed) {
             kind: ProblemKind::EmptyReason,
         }),
         Some(_) => {}
+    }
+    if entry.covers.as_ref().is_some_and(Vec::is_empty) && !entry.covers_malformed {
+        entry.problems.push(Problem {
+            line: entry.covers_line,
+            kind: ProblemKind::CoversEmpty,
+        });
     }
     let well_formed = entry.problems.is_empty();
     parsed.problems.append(&mut entry.problems);
@@ -349,6 +532,7 @@ fn finish(open: Option<Open>, parsed: &mut Parsed) {
                 .is_some_and(|cited| !cited.is_empty())
         }),
         cited: entry.cited.filter(|cited| !cited.is_empty()),
+        covers: entry.covers,
         line: entry.line,
     });
 }
@@ -600,6 +784,7 @@ mod tests {
                 reason: "the field is removed".into(),
                 cited: Some("§shared-exceptions".into()),
                 cited_lines: Some((7, 7)),
+                covers: None,
                 line: 5,
             }]
         );
@@ -879,6 +1064,158 @@ mod tests {
                 .map(|e| e.rule.as_str())
                 .collect::<Vec<_>>(),
             vec!["B-1"]
+        );
+    }
+
+    // -- covers: ------------------------------------------------------------
+
+    fn covered(file: &str, site: &str, line: usize) -> Covered {
+        Covered {
+            file: file.into(),
+            site: site.into(),
+            line,
+        }
+    }
+
+    /// The problems of a spec holding one `A-1` entry whose children are
+    /// `children`, which leave the entry out of `entries`.
+    fn covers_problems(children: &str) -> Vec<Problem> {
+        let parsed = parse(&spec_with(&format!("- departs: `A-1`\n{children}")));
+        assert_eq!(parsed.entries, vec![], "{:?}", parsed.problems);
+        parsed.problems
+    }
+
+    #[test]
+    fn a_scoped_entry_is_read_with_each_covered_site_and_line() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: r\n  - covers:\n    - `src/a.rs` in `reserve_slot`\n\n    - `src/a.rs` in `(top level)`\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(
+            parsed.entries[0].covers,
+            Some(vec![
+                covered("src/a.rs", "reserve_slot", 8),
+                covered("src/a.rs", "(top level)", 10),
+            ])
+        );
+    }
+
+    #[test]
+    fn a_child_after_the_covers_items_is_read_as_a_child() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - covers:\n    - `a.rs` in `f`\n  - reason: r\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(parsed.entries[0].reason, "r");
+        assert_eq!(
+            parsed.entries[0].covers,
+            Some(vec![covered("a.rs", "f", 7)])
+        );
+    }
+
+    #[test]
+    fn a_covered_site_holding_a_backtick_is_written_with_a_longer_delimiter() {
+        let parsed = parse(&spec_with(
+            "- departs: `A-1`\n  - reason: r\n  - covers:\n    - `doc.md` in `` The `covers:` child ``\n",
+        ));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(
+            parsed.entries[0].covers,
+            Some(vec![covered("doc.md", "The `covers:` child", 8)])
+        );
+    }
+
+    #[test]
+    fn covers_with_text_after_its_colon_is_not_a_list() {
+        assert_eq!(
+            covers_problems("  - reason: r\n  - covers: `a.rs` in `f`\n"),
+            vec![Problem {
+                line: 7,
+                kind: ProblemKind::CoversNotAList
+            }]
+        );
+    }
+
+    #[test]
+    fn a_line_under_covers_that_is_no_item_is_not_a_list() {
+        assert_eq!(
+            covers_problems("  - reason: r\n  - covers:\n    `a.rs` in `f`\n"),
+            vec![Problem {
+                line: 8,
+                kind: ProblemKind::CoversNotAList
+            }]
+        );
+    }
+
+    #[test]
+    fn an_empty_covers_lists_no_site() {
+        assert_eq!(
+            covers_problems("  - reason: r\n  - covers:\n"),
+            vec![Problem {
+                line: 7,
+                kind: ProblemKind::CoversEmpty
+            }]
+        );
+    }
+
+    #[test]
+    fn a_covers_item_that_is_not_file_in_site_is_malformed() {
+        assert_eq!(
+            covers_problems(
+                "  - reason: r\n  - covers:\n    - `a.rs`\n    - `a.rs` at `f`\n    - `a.rs` in ` `\n    - `a.rs` in `f` and more\n",
+            ),
+            [8, 9, 10, 11]
+                .into_iter()
+                .map(|line| Problem {
+                    line,
+                    kind: ProblemKind::CoversItem
+                })
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn a_repeated_covers_item_is_malformed() {
+        assert_eq!(
+            covers_problems(
+                "  - reason: r\n  - covers:\n    - `a.rs` in `f`\n    - `a.rs` in `f`\n"
+            ),
+            vec![Problem {
+                line: 9,
+                kind: ProblemKind::CoversRepeated {
+                    file: "a.rs".into(),
+                    site: "f".into()
+                }
+            }]
+        );
+    }
+
+    #[test]
+    fn a_covers_file_that_is_absolute_or_climbs_is_malformed() {
+        assert_eq!(
+            covers_problems(
+                "  - reason: r\n  - covers:\n    - `/etc/a.rs` in `f`\n    - `../a.rs` in `f`\n    - `src/../a.rs` in `f`\n",
+            ),
+            [("/etc/a.rs", 8), ("../a.rs", 9), ("src/../a.rs", 10)]
+                .into_iter()
+                .map(|(file, line)| Problem {
+                    line,
+                    kind: ProblemKind::CoversPath(file.into())
+                })
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn a_repeated_covers_child_is_a_repeated_key_and_its_items_are_passed_over() {
+        assert_eq!(
+            covers_problems(
+                "  - reason: r\n  - covers:\n    - `a.rs` in `f`\n  - covers:\n    - `a.rs` in `f`\n",
+            ),
+            vec![Problem {
+                line: 9,
+                kind: ProblemKind::DuplicateKey("covers".into())
+            }]
         );
     }
 

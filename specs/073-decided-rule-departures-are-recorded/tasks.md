@@ -8,9 +8,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 16. Read `covers:` in the entry reader
 
-- [ ] `runtime/src/primitives/departures.rs`: the `covers:` child and its items, two code spans joined by `in` found by `inline_code_spans`; `Entry.covers`; the `CoversNotAList`, `CoversEmpty`, `CoversItem`, `CoversRepeated` and `CoversPath` problems; `UnknownKey`'s message naming the three keys
-- [ ] Fixtures in `departures.rs` for a well-formed scoped entry, a site holding a backtick written with a longer delimiter, and each problem; fixtures in `runtime/src/primitives/check_departures.rs` for each AC13 form as a Blocking finding
-- [ ] `scripts/mutation/departures.py`: a mutant per `covers:` problem, each killed
+- [x] `runtime/src/primitives/departures.rs`: the `covers:` child and its items, two code spans joined by `in` found by `inline_code_spans`; `Entry.covers`; the `CoversNotAList`, `CoversEmpty`, `CoversItem`, `CoversRepeated` and `CoversPath` problems; `UnknownKey`'s message naming the three keys
+- [x] Fixtures in `departures.rs` for a well-formed scoped entry, a site holding a backtick written with a longer delimiter, and each problem; fixtures in `runtime/src/primitives/check_departures.rs` for each AC13 form as a Blocking finding
+- [x] `scripts/mutation/departures.py`: a mutant per `covers:` problem, each killed
 
 - **Done when**: a scoped entry is in `entries` with each item's file, site and line; each AC13 form is a Blocking `check-departures` finding and keeps its entry out of `entries`; every new mutant is killed; `cargo test` passes.
 
