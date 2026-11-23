@@ -19,7 +19,7 @@ One shared reader, `runtime/src/primitives/departures.rs`, parses a spec's depar
 
 At analyze, a rule an entry names is still judged for whether its trigger fires, as any rule is, but a fired outcome is recorded as a third rule-verdict shape, `waived`, never `finding`, so no finding exists to count or to refuse. At review, `write-review` turns each entry into per-file waivers for the files its rule fires at, marked as departures so that `process-waivers` expires them when the entry is gone.
 
-An entry's optional `covers:` (spec §Scoped entries) narrows its review waiver to named sites: the reader parses the items, `write-review` derives and stores the waiver at those sites and reports lost coverage, and `process-waivers` applies a stored site anchor only while the entry still lists it. Analyze reads a scoped entry as any well-formed one, so it waives the whole rule there.
+An entry's optional `covers:` (§Scoped entries in `spec.md`) narrows its review waiver to named sites: the reader parses the items, `write-review` derives and stores the waiver at those sites and reports lost coverage, and `process-waivers` applies a stored site anchor only while the entry still lists it. Analyze reads a scoped entry as any well-formed one, so it waives the whole rule there.
 
 ## Technical Decisions
 
