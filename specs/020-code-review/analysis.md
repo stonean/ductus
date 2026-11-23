@@ -1,21 +1,21 @@
 ---
 spec: 020-code-review
-last-run: 2026-11-22T21:50:40Z
-analyzed-against: a641a31e5284b0e608db93c30581d292f3a0658c
+last-run: 2026-11-23T00:05:09Z
+analyzed-against: 7028efa8ea7114362dcbb6407468124ca5844952
 hard-fail: 0
 blocking-findings: 0
-advisory: 2
+advisory: 3
 unexamined: 4
 analyzed-digest:
   data-model.md: 2b2765b2d9c821ff57a660e6616eeb317e27f271b133e106b9cb2854a618150c
-  plan.md: 560a9c574514d554094439d4ee82c6abb742275b165405f976b5f26a00f633f0
+  plan.md: 30a7e6749b1241d3eac88a02131b633e1e95a63a5d81d7e0117dd86a6f491008
   review.md: 7dfa0bc2ef544caf6d39e2d93763180f9fbdf1203bc16a9c257040bf11957763
   scenarios/every-loaded-rule-file-has-a-pass.md: 1f684e5b4c4c3d6aa764a4744f27fda185952ca95ae7743de1190e042337b78b
   scenarios/review-flag-parsing-is-specified.md: a19fe0f4f50c954363f7cca4d913a81d96374535d31a986792243be5263631c1
   scenarios/review-reports-a-defect-under-its-owner.md: ef91f01e38d96520853db62f5ee62b9b8893d41582f055f4f01a25d5a796b665
   scenarios/waiver-expiry.md: 626f92a6e7ee0063e17e4a8135fc21e72a555e6caa0b731401acd29212337b42
   scenarios/waiver-file-lists.md: 3a76e64b910f1a1e0be02c6b603909803a959b70c71b1c50ff5ed12c2420684c
-  spec.md: 5ab7ccb3924ff243fadaf914fd61dcac1b2ed91adc5c929533979ae9d1cef952
+  spec.md: 8995181277d8441c20d988395230a8033463a054b8b1b8d7cc1f0187fe43a457
   tasks.md: 9e63882a08184259eb22671367a909a335c61f76b8398d2953332af8c32ab584
 unexamined-by-reason:
   never-existed: 1
@@ -49,16 +49,16 @@ section-digest:
   "plan.md": 6d0edc78b49e423e
   "plan.md#020 — `/ductus:review` Plan": 55d3c5e776a78643
   "plan.md#A finding needs a trigger the project can reach (AC18)": d3f828da6c5dda55
-  "plan.md#A review leaves out a rule file its header gives to analysis (AC17)": b1eef63f5e35e766
-  "plan.md#A stored disposition covers only the findings at its anchor (AC19)": d762425baca4a75e
+  "plan.md#A review leaves out a rule file its header gives to analysis (AC17)": b882235347e5cd37
+  "plan.md#A stored disposition covers only the findings at its anchor (AC19)": 386e5584d913182c
   "plan.md#Affected Files": d1126fe2e3015428
   "plan.md#CI template stays minimal": 047fa7d247858711
   "plan.md#Considered and rejected": 602b7ae4ca3f08fa
   "plan.md#Frontmatter `review:` block ships in templates": 39698467844ca23b
   "plan.md#Idempotency invariant is a property of inputs, not state": ca0561d6b7de0ac1
   "plan.md#Known limitations": 847819a1af5ca5c6
-  "plan.md#Markdown-instructed implementation, no new code": b66dc73d890315b3
-  "plan.md#Overview": f20667f1a52f5795
+  "plan.md#Markdown-instructed passes, runtime-backed steps": e15c58794fbf7a13
+  "plan.md#Overview": 9820eaf9072e979c
   "plan.md#Rule files map to passes in one compiled table, and the reference states it in prose a test holds to it": 637c39364c07cb04
   "plan.md#Tech-stack alignment is an agent judgment, not a parser": 2ccdadbcf5c12a7a
   "plan.md#Technical Decisions": ad85a1d406c0b799
@@ -101,7 +101,7 @@ section-digest:
   "scenarios/waiver-file-lists.md#Open Questions": 9fc5979d590cdb97
   "scenarios/waiver-file-lists.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/waiver-file-lists.md#Waiver-file-lists": aaf1e1299b50c29a
-  "spec.md": 414ee872a8589d42
+  "spec.md": 49c43f6371a81033
   "spec.md#020 — `/ductus:review` code review command with blocking gate": a867b9f5873b9bcb
   "spec.md#Acceptance Criteria": de9afefde55b9537
   "spec.md#Affected files": 3da3125affec7ca8
@@ -115,19 +115,23 @@ section-digest:
   "spec.md#Summary": b16d9e57f8341894
   "spec.md#Tasks": 079030de60900b7b
 rule-verdicts:
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#Waiver record"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#A stored disposition covers only the findings at its anchor (AC19)"}
+  BE-INPUT-001: {verdict: addressed, cite: "plan.md#A stored disposition covers only the findings at its anchor (AC19)"}
+  BE-INPUT-002: {verdict: addressed, cite: "plan.md#A stored disposition covers only the findings at its anchor (AC19)"}
   BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Waiver-expiry warrants a scenario file"}
   CFG-ENV-001: {verdict: addressed, cite: "data-model.md#`.ductus/config.toml [review]` section"}
   CFG-ENV-002: {verdict: addressed, cite: "plan.md#`.ductus/config.toml` follows the shared-database convention"}
   CFG-ENV-008: {verdict: addressed, cite: "data-model.md#`.ductus/config.toml [review]` section"}
   CFG-ENV-012: {verdict: addressed, cite: "data-model.md#`.ductus/config.toml [review]` section"}
-  QUAL-GROUND-001: {verdict: addressed, cite: "plan.md#Rule files map to passes in one compiled table, and the reference states it in prose a test holds to it"}
+  QUAL-CLAIM-001: {verdict: addressed, cite: "plan.md#A review leaves out a rule file its header gives to analysis (AC17)"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#A stored disposition covers only the findings at its anchor (AC19)"}
+  QUAL-GROUND-001: {verdict: addressed, cite: "plan.md#A stored disposition covers only the findings at its anchor (AC19)"}
   QUAL-TEST-001: {verdict: addressed, cite: "plan.md#Rule files map to passes in one compiled table, and the reference states it in prose a test holds to it"}
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 2
   deferred: 0
-  waived: 2
+  waived: 3
   undispositioned: 0
 decisions:
   - key: grounding — Decision 'A finding needs a trigger the project can reach (AC18)' states that an adopter's review on 0.60.0 spent about four hours of fix rounds on unreachable cases, citing only 'the adopter's report', which is no reachable artifact, query or command.
@@ -135,10 +139,15 @@ decisions:
     reason: "advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it"
     decided-at: 2026-11-22T02:09:17Z
     decided-by: rule
-  - key: grounding — AC15 states that one /review call wrote both record copies from the same values, so the retired Family 31 could never have compared independent observations; this is a descriptive claim about past runtime behavior with no file-and-symbol or commit citation (§Grounding (advisory)).
+  - key: "grounding — Acceptance Criteria AC15: 'Nothing reads `examined` now; it is read at the completion gate by a person' is an uncited absence claim about current system behavior."
     outcome: waived
-    reason: "advisory and no chore: AC15 says why the retired Family 31 compared nothing independent, history 057 records beside the criterion; a citation would reword a ticked criterion, which owes a review, to support a claim about a check that no longer exists and on which no behavior rests"
-    decided-at: 2026-11-22T21:50:40Z
+    reason: "advisory and no chore: the absence holds, since WriteReviewArgs::examined's doc comment (runtime/src/schema/primitives.rs) says no check reads it and no reader of the recorded field exists outside write_review; a citation inside the ticked AC15 is a criterion edit that reopens 020 for no change in what it requires"
+    decided-at: 2026-11-23T00:05:09Z
+    decided-by: rule
+  - key: "decision-reasons — Technical Decisions, AC18: the rejected 'bar on severity alone' is rejected because a recorded NOTE 'still costs a round to dismiss', a fix-round (review-run) cost as the stated reason; borderline, since the false-positive result it would leave is implied but not stated."
+    outcome: waived
+    reason: "advisory and low confidence: the rejected severity bar's result, an unreachable case that does not block, is delivered by the chosen bar too, so rejecting it gives up no result; the stated reason is what the option would still leave, a recorded NOTE dismissed in a round"
+    decided-at: 2026-11-23T00:05:09Z
     decided-by: rule
 ---
 
@@ -146,7 +155,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 2 advisory; not blocking. 4 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 2 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 3 advisory; not blocking. 4 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 3 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -158,8 +167,9 @@ decisions:
 
 ## Advisory findings
 
-- grounding — The decision 'A finding needs a trigger the project can reach (AC18)' states as fact that an adopter's review on 0.60.0 spent about four hours of fix rounds on unreachable cases, citing only 'the adopter's report', which is no artifact, command or link a reader can open (§Grounding (advisory)). — `specs/020-code-review/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
-- grounding — AC15 states that one /review call wrote both record copies from the same values, so the retired Family 31 could never have compared independent observations; this is a descriptive claim about past runtime behavior with no file-and-symbol or commit citation (§Grounding (advisory)). — `specs/020-code-review/spec.md` — **waived**: advisory and no chore: AC15 says why the retired Family 31 compared nothing independent, history 057 records beside the criterion; a citation would reword a ticked criterion, which owes a review, to support a claim about a check that no longer exists and on which no behavior rests (decided by the rule)
+- grounding — Technical Decisions, AC18 'A finding needs a trigger the project can reach': the adopter's review on 0.60.0 'spend about four hours of fix rounds' is an incident claim attributed to an unlinked 'adopter's report', with no artifact or command substantiating the duration or cases. — `specs/020-code-review/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
+- grounding — Acceptance Criteria AC15: 'Nothing reads `examined` now; it is read at the completion gate by a person' is an uncited absence claim about current system behavior. — `specs/020-code-review/spec.md` — **waived**: advisory and no chore: the absence holds, since WriteReviewArgs::examined's doc comment (runtime/src/schema/primitives.rs) says no check reads it and no reader of the recorded field exists outside write_review; a citation inside the ticked AC15 is a criterion edit that reopens 020 for no change in what it requires (decided by the rule)
+- decision-reasons — Technical Decisions, AC18: the rejected 'bar on severity alone' is rejected because a recorded NOTE 'still costs a round to dismiss', a fix-round (review-run) cost as the stated reason; borderline, since the false-positive result it would leave is implied but not stated. — `specs/020-code-review/plan.md` — **waived**: advisory and low confidence: the rejected severity bar's result, an unreachable case that does not block, is delivered by the chosen bar too, so rejecting it gives up no result; the stated reason is what the option would still leave, a recorded NOTE dismissed in a round (decided by the rule)
 
 ## Deferred to other specs
 
@@ -177,4 +187,5 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- grounding — Technical Decisions, 'Markdown-instructed implementation, no new code': 'This matches every other /ductus:* command' is stated as fact about existing commands with no citation or assumption marker. — `specs/020-code-review/plan.md` — **fixed** (decided by the rule)
+- grounding — Overview: 'no new code, no new runtime' describes the delivered feature as fact, with no source, and the plan's own later sections (AC17-AC19, Affected Files) name runtime/ source edits. — `specs/020-code-review/plan.md` — **fixed** (decided by the rule)
