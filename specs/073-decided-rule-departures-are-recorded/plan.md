@@ -19,6 +19,8 @@ One shared reader, `runtime/src/primitives/departures.rs`, parses a spec's depar
 
 At analyze, a rule an entry names is still judged for whether its trigger fires, as any rule is, but a fired outcome is recorded as a third rule-verdict shape, `waived`, never `finding`, so no finding exists to count or to refuse. At review, `write-review` turns each entry into per-file waivers for the files its rule fires at, marked as departures so that `process-waivers` expires them when the entry is gone.
 
+An entry's optional `covers:` (spec §Scoped entries) narrows its review waiver to named sites: the reader parses the items, `write-review` derives and stores the waiver at those sites and reports lost coverage, and `process-waivers` applies a stored site anchor only while the entry still lists it. Analyze reads a scoped entry as any well-formed one, so it waives the whole rule there.
+
 ## Technical Decisions
 
 ### The entry grammar is a nested bullet
@@ -61,7 +63,23 @@ A stored `waived` verdict is reused like any fired verdict while its subjects ar
 
 Without the marker, a removed entry would leave its waivers applying while the rule fires, which the Edge Case "an entry removed" forbids. `process-waivers` reads the entries through `departures.rs`, whatever wrote the marker (a hand-written `departure: true` is expired or classified by the same test, and a non-boolean value fails the call naming the field), and expires a marked waiver whose rule has no well-formed entry, with its existing `waiver expired:` notice, on every run, and reads the spec only when a waiver carries the marker: a dimension-restricted run holds back a rule's silence, not the removal of the entry that waived it. A hand `--waive` on the same rule and file stays the first claim (`framework/reference/review.md` §Malformed and duplicate waivers).
 
-**`BE-COMPAT-001`:** breaking for a `process-waivers` result past `[artifacts] read-size-bytes`, as 066's plan classifies `process-decisions`' (*Freshness paths go to a file past the read size*): its `applied`, `expired`, `retained` and `notices`, inline at `ductus-v0.59.11`, are absent inline there and held whole in the file `lists-file` names (task 14). Additive: `form`, `lists-file` and the four counts, and every other list this design returns, none of which `ductus-v0.59.11` carries: `check-departures`, a new primitive, with its three lists; `write-analysis`' `waived`; `write-review`'s `malformed-departures` and `superseded-deferrals`. It ships with the pending minor bump.
+**`BE-COMPAT-001`:** breaking for a `process-waivers` result past `[artifacts] read-size-bytes`, as 066's plan classifies `process-decisions`' (*Freshness paths go to a file past the read size*): its `applied`, `expired`, `retained` and `notices`, inline at `ductus-v0.59.11`, are absent inline there and held whole in the file `lists-file` names (task 14). Additive: `form`, `lists-file` and the four counts, and every other list this design returns, none of which `ductus-v0.59.11` carries: `check-departures`, a new primitive, with its three lists; `write-analysis`' `waived`; `write-review`'s `malformed-departures` and `superseded-deferrals`. It ships with the pending minor bump. The scoped entries add `write-review`'s `departure-notices` and its count, additive. A scoped entry's stored waiver, `anchors:` with no `covers`, reads as malformed to a runtime that predates it, which then waives nothing there, so the findings count: a mixed-version run fails toward blocking.
+
+### A `covers:` item is a file and a site in two code spans
+
+Decided by the operator, 2026-11-23, of three options (`` `file` in `site` ``, a keyed line, sites grouped under their file). `covers:` is a child of the entry, beside `reason:` and `cited:`, with no text after its colon; its items are the list items one level under it, each holding exactly two code spans, found by `inline_code_spans` (`runtime/src/primitives/mod.rs`), with the word `in` between them and nothing else outside them. A span's content is taken as `CommonMark` takes it, one leading and one trailing space stripped when both are present, so a site holding a backtick is written with a longer delimiter. The reader keeps the `covers:` child's indent while it is the open child: a deeper list item is an item, a deeper line that is not one is a problem, and a line back at the children's indent is the next child. `Entry` gains `covers: Option<Vec<Covered>>`, each `Covered` a `file`, a `site` and its line, `None` for an entry without the child. New `ProblemKind`s, each keeping the entry out of `entries` so it waives nothing and reaching `check-departures`' Blocking findings and `write-review`'s `malformed-departures` through the message both already use (AC13): `CoversNotAList` (text after the colon, or a deeper line that is not an item), `CoversEmpty` (no items), `CoversItem` (an item that is not two spans joined by `in`, or a blank span), `CoversRepeated` (an item whose file and site an earlier item names) and `CoversPath` (a file that is absolute or holds a `..` component, by `std::path::Path::components`). A second `covers:` is the existing `DuplicateKey`, and `UnknownKey`'s message names the three allowed keys.
+
+### A scoped waiver is stored, applied and expired at its sites
+
+`departure_waiver_entries` (`write_review.rs`) keeps, for a scoped entry, only the findings of its rule at a covered `(file, site)` among those the scope holds, a finding naming no site being at none, so the anchors it applies (`WaiverRef.site` set), the waivers it stores and the deferrals `superseded_deferrals` refuses or supersedes are the covered sites' alone (AC10, AC11); an unscoped entry takes the path above unchanged (AC9). A scoped entry's stored waiver holds `anchors:`, each a `file` and a `site` with no `covers`, beside `departure: true`, where an unscoped one keeps its `file:` list, so `review.md` names the sites the waiver applied at; `holds_anchor` gates storing a site a waiver already holds, as `holds` does a file. `process-waivers`' `read_anchors` reads a marked waiver's `anchors` as a new `Kind::DepartureSite`, each anchor's file and site non-blank or the waiver is malformed, and `place` applies one where its rule fires at that site with no count guard, so 020's rules 1 to 4 hold and 6 and 7 do not. `departure_gone` becomes whether the entry still decides the anchor: no well-formed entry for the rule, an unscoped entry against a site anchor, a scoped one against a file anchor, or a scoped one whose `covers:` no longer lists the anchor expires it with the existing `waiver expired:` notice, whatever the run's restrictions, so an edited `covers:` stops waiving a dropped site at once and the next write stores the entry's current form. `lower_covers` already skips a departure waiver.
+
+### Lost coverage is a `write-review` notice
+
+`write-review` holds the run's in-scope findings and the entries, so it reports what `process-waivers`, which sees only stored waivers, cannot: a covered site never stored. For each scoped entry it adds to a new result list, `departure-notices`, one notice per covered `file` not in the tree (`repo.join(file).exists()`, the test `place` applies to an anchor's file), naming the entry's `spec.md` line, the file and its covered sites, and one per in-scope finding of the entry's rule in a covered file at a site the entry does not list, or naming none, naming the line, the covered sites and the site the rule fires at, or `no site` (AC12). A covered site where nothing fires adds none. The list is bounded through `bound_lists`' one `bounded_lists::place` call with `malformed-departures` and `superseded-deferrals`, `departure-notices-count` inline in both forms, and step 11 of `framework/commands/review.md`, which reads the other two, prints it.
+
+### Analyze needs no change for a scoped entry
+
+`departures::parse` returns a scoped entry in `entries` like any well-formed one, so `check-departures`, `fill_waived` (`rule_verdicts.rs`) and the exec walker's `loaded.departed` (`payload.rs`) waive its rule with no code of their own (Resolved Questions). AC15's fixture is a `write-analysis` fixture over a spec whose entry carries `covers:`.
 
 ### The constitution gains one bullet and loses two restated sentences
 
@@ -77,40 +95,42 @@ AC7's unit tests build their own repositories in a temp directory, so they run i
 
 ### Every agent
 
-The runtime and the reference prose are agent-neutral, and the command sources are generated per layout. Walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows: the edited steps name commands by `{project}`, so both layouts regenerate from one source; the new tool's allow entry is generated into `framework/bootstrap/configure/claude.md` by `scripts/gen-configure-mcp.sh`; pi gates no tool and its bridge (`framework/bootstrap/pi/ductus-bridge.ts`) lists tools through `tools/list`, checked with `node scripts/tests/pi-bridge-harness.mjs`; the native rules file is unchanged. The `analyze-basic` and `review-basic` goldens move with the command sources and are re-blessed with the diff read.
+The runtime and the reference prose are agent-neutral, and the command sources are generated per layout. Walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows: the edited steps name commands by `{project}`, so both layouts regenerate from one source; the new tool's allow entry is generated into `framework/bootstrap/configure/claude.md` by `scripts/gen-configure-mcp.sh`; pi gates no tool and its bridge (`framework/bootstrap/pi/ductus-bridge.ts`) lists tools through `tools/list`, checked with `node scripts/tests/pi-bridge-harness.mjs`; the native rules file is unchanged. The `analyze-basic` and `review-basic` goldens move with the command sources and are re-blessed with the diff read. The scoped entries edit one command source, step 11 of `framework/commands/review.md`, so `review-basic` is re-blessed again.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/departures.rs` | Create | Entry reader, structural validation, attribution |
-| `runtime/src/primitives/check_departures.rs` | Create | The `check-departures` primitive (AC1) |
+| `runtime/src/primitives/departures.rs` | Create | Entry reader, structural validation, attribution; the `covers:` items and their problems |
+| `runtime/src/primitives/check_departures.rs` | Create | The `check-departures` primitive (AC1); the malformed-`covers:` fixtures (AC13) |
 | `runtime/src/primitives/mod.rs` | Modify | Register both modules |
-| `runtime/src/schema/primitives.rs` | Modify | `RuleVerdict::Waived`; `check-departures` arguments and result; `write-analysis`' `waived` |
+| `runtime/src/schema/primitives.rs` | Modify | `RuleVerdict::Waived`; `check-departures` arguments and result; `write-analysis`' `waived`; `write-review`'s `departure-notices` |
+| `runtime/src/schema/descriptions.rs` | Modify | `check-departures` and `write-review` state `covers:` and `departure-notices` (AC14) |
 | `runtime/src/schema/registry.rs`, `runtime/src/schema/descriptions.rs`, `runtime/src/mcp/server.rs`, `runtime/src/main.rs`, `runtime/src/interpreter/mod.rs`, `runtime/tests/result_sizes.rs` | Modify | The registration sites for `check-departures` |
 | `runtime/src/primitives/rule_verdicts.rs`, `runtime/src/interpreter/analyze_tally.rs` | Modify | `Waived` currency, contradiction, exec tally |
-| `runtime/src/primitives/write_analysis.rs` | Modify | Derive and refuse `waived`; `## Waived rules`; result list |
-| `runtime/src/primitives/write_review.rs`, `runtime/src/primitives/process_waivers.rs`, `runtime/src/primitives/compute_review_scope.rs` | Modify | Departure waivers, bounded by the scope (`RunScope::holds`), refreshed from the entry, deciding over a deferral, and their expiry (AC5, AC8) |
-| `runtime/src/primitives/write_review/departure_waivers.rs`, `scripts/mutation/departure-waivers.py`, `scripts/mutation/review-departures-bounded.py` | Create | The review fixtures (AC5, AC8), a mutant per behavior of the marker, and the mutants of the departure lists' bound |
+| `runtime/src/primitives/write_analysis.rs` | Modify | Derive and refuse `waived`; `## Waived rules`; result list; AC15's fixture |
+| `runtime/src/primitives/write_review.rs`, `runtime/src/primitives/process_waivers.rs`, `runtime/src/primitives/compute_review_scope.rs` | Modify | Departure waivers, bounded by the scope (`RunScope::holds`), refreshed from the entry, deciding over a deferral, and their expiry (AC5, AC8); a scoped entry's site anchors, their expiry and `departure-notices` (AC10 to AC12) |
+| `runtime/src/primitives/write_review/departure_waivers.rs`, `scripts/mutation/departure-waivers.py`, `scripts/mutation/review-departures-bounded.py` | Create, Modify | The review fixtures (AC5, AC8, AC9 to AC13), a mutant per behavior of the marker and of a scoped entry, and the mutants of the departure lists' bound, `departure-notices` included |
 | `scripts/mutation/waivers-bounded.py`, `runtime/tests/walker.rs` | Create, Modify | The mutants of `process-waivers`' bound, and the exec walker's proof that `write-review` reads its file form whole (task 14) |
 | `scripts/mutation/freshness-results-have-a-bounded-size.py` | Modify | Its anchors follow `write-review`'s `bound_lists` (066's scenario) |
 | `runtime/CHANGELOG.md` | Modify | `[Unreleased]` entry |
-| `scripts/mutation/departures.py` | Create | A mutant per refusal and per attribution state |
-| `runtime/tests/mcp.rs`, `runtime/tests/specs_root_override.rs`, `scripts/mutation/departures-bounded.py`, `scripts/mutation/exec-departures.py` | Modify, Create | The bound's MCP and specs-root fixtures, and its mutants and the exec walker's (BE-PAYLOAD-001) |
+| `scripts/mutation/departures.py` | Create, Modify | A mutant per refusal, per attribution state and per `covers:` problem |
+| `runtime/tests/mcp.rs`, `runtime/tests/specs_root_override.rs`, `scripts/mutation/departures-bounded.py`, `scripts/mutation/exec-departures.py` | Modify, Create | The bound's MCP and specs-root fixtures, and its mutants and the exec walker's (BE-PAYLOAD-001); `write-review`'s file form holding `departure-notices` |
 | `scripts/tests/test-departure-attribution.sh`, `.github/workflows/framework-checks.yml` | Create, Modify | AC7 over real history, a depth-1 clone included |
 | `framework/runtime-tools.txt`, `framework/bootstrap/configure/claude.md` | Modify | Tool name; generated allow entry |
-| `framework/commands/analyze.md`, `framework/commands/review.md` | Modify | The `check-departures` step; steps 11, 12 and 22; the review waiver step |
-| `framework/reference/analyze.md`, `framework/reference/review.md`, `docs/analyze.md` | Modify | `Departure entries (blocking)`; the `rule-verdicts` row; §Waivers |
-| `framework/templates/spec/spec.md`, `scripts/audit/template-alignment.sh` | Modify | The grammar in the Applicable Rules comment; the new blocking heading judged |
+| `framework/commands/analyze.md`, `framework/commands/review.md` | Modify | The `check-departures` step; steps 11, 12 and 22; the review waiver step; review step 11 prints `departure-notices` |
+| `framework/reference/analyze.md`, `framework/reference/review.md`, `docs/analyze.md`, `docs/rules.md` | Modify | `Departure entries (blocking)`; the `rule-verdicts` row; §Waivers, a scoped entry's waiver included; the departure paragraph of `docs/rules.md` |
+| `framework/templates/spec/spec.md`, `scripts/audit/template-alignment.sh` | Modify | The grammar in the Applicable Rules comment, `covers:` included; the new blocking heading judged |
 | `framework/constitution.md` | Modify | One bullet added, two restated sentences cut |
-| `specs/073-decided-rule-departures-are-recorded/data-model.md` | Create | Entry grammar, `waived` shape, `check-departures` result, the review marker |
+| `specs/073-decided-rule-departures-are-recorded/data-model.md` | Create, Modify | Entry grammar, `covers:` included; `waived` shape; `check-departures` result; the review marker and a scoped waiver's stored form; `departure-notices` in the departure lists' **Size** |
+| `specs/020-code-review/scenarios/waiver-expiry.md`, `specs/066-audit-records-and-the-completion-gate/plan.md` | Modify | Rule 5's exception and the paragraph on a finding naming no site describe a scoped entry (reopens 020); `write-review`'s bounded lists name `departure-notices` |
 | `specs/082-rule-assessments-converge-across-runs/data-model.md` | Modify | The third verdict shape (reopens 082) |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md`, `specs/020-code-review/scenarios/waiver-expiry.md`, `specs/020-code-review/plan.md`, `specs/022-deterministic-runtime/data-model.md` | Modify | The `rule-verdicts` description and the `process-waivers` result's bound; the exception sentence; the `assessSpecQuality` answer |
 | `specs/050-constitution/spec.md`, `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md`, `specs/067-analyze-and-audit-checks/spec.md` | Modify | Signposts back-linking 073 |
 
 ## Data Model
 
-[data-model.md](data-model.md) defines the entry grammar, the `waived` verdict, `check-departures`' result and the review waiver's `departure` marker. 082's data model and 066's record schema carry the verdict shape in the record (**§The analyze waiver** in `spec.md`); 073's data model owns the entry and the primitive's result and points at them.
+[data-model.md](data-model.md) defines the entry grammar, its `covers:` child included, the `waived` verdict, `check-departures`' result, and the review waiver's `departure` marker with a scoped entry's stored form. 082's data model and 066's record schema carry the verdict shape in the record (**§The analyze waiver** in `spec.md`); 073's data model owns the entry and the primitive's result and points at them.
 
 ## Trade-offs
 
@@ -121,6 +141,9 @@ The runtime and the reference prose are agent-neutral, and the command sources a
 - **Known limits**: a rename `find_similar` does not detect reads as creation, attributing the renaming commit's author; a squash or rebase attributes to its author, which no check can see; `decided-by` is who committed the entry, who accepted it for the spec, not necessarily who decided the departure, which a `cited:` document records.
 - **Measured, 2026-11-13:** `attribute` over a temporary repository of 5,000 first-parent commits, the entry present from the first commit, in a release build, one run each: 324 ms when `spec.md` is unchanged in every commit, 826 ms when every commit rewrites it (parsed each time). Wall time of the one call, on the author's machine; the worst case, since a walk ends at the first commit without the entry. Re-derive with the ignored test `attribution_over_5000_first_parent_commits` in `runtime/src/primitives/departures.rs`: `cargo test --release --lib -- --ignored --nocapture attribution_over_5000_first_parent_commits`.
 - **Not measured**: the compile time a `cargo test` step would add to `framework-checks`, whose `timeout-minutes` is 15; the script step avoids it.
+- **A scoped waiver stores its sites** rather than keeping a `file:` list that `process-waivers` filters through the entry's `covers:` on every classification: the record names where it applied, at the cost of the form switch an edited `covers:` expires with a notice.
+- **The lost-coverage notices are `write-review`'s**, not `process-waivers`': a covered site that was never stored, because its rule never fired there under the old name, is one only `write-review` can see.
+- **Known limit of a scoped entry**: a covered site renamed while nothing fires under either name is not reported. Nothing is hidden, and the stale item covers nothing until code under the old name fires again, which it would then waive.
 
 ## Open Questions Resolved
 
@@ -130,10 +153,15 @@ The runtime and the reference prose are agent-neutral, and the command sources a
 - *`decided-by` from history* (4): `departures.rs`' attribution, `unattributed` as its own state, the test in `framework-checks`' full-depth job.
 - *No count field* (5): `waived-count` is the result's derived figure, not a record field.
 - *SHOULD rules too* (6): the review path is tier-agnostic, and AC8's fixture proves a SHOULD.
+- *A scoped entry at analyze*: waived as any entry, so analyze changes nothing.
+- *What `covers:` names*: a site, an item of two code spans joined by `in`.
+- *Two entries for one rule*: `DuplicateRule` stands, scoped or not.
+- *A covered site gone*: `write-review`'s `departure-notices`, from the tree and the run's findings.
+- *No rewritten item offered*: the notice names the sites and nothing more.
 
 ## Cross-spec impact
 
-- **082 (`done`) reopens** `done → in-progress` when its `data-model.md` gains the third verdict shape, a data-model edit that is no correction (`classify-spec-edit`, §spec-lifecycle); it then owes the analysis its return to `done` requires, and a review only if `compute-review-scope` owes one. The back-link to 073 sits in that data model.
-- **066, 020, 050** (`in-progress`): the `rule-verdicts` description in 066's data model; the exception sentence in 020's `waiver-expiry` scenario; a signpost in 050 for the constitution bullet and cut. No reopen.
-- **022, 060, 067** (`in-progress`) join `cross-spec-impact:` with this plan, by AGENTS.md's rule that a change to a shared runtime surface holds `done` until the surface's owner links back: the exec walker and the `assessSpecQuality` answer (022, 060) and the analyze checks and report (067). Each is discharged by a back-link; no reopen.
+- **082, 066, 020, 050, 022, 060, 067**: the third verdict shape in 082's data model, the `rule-verdicts` description in 066's, the exception sentence in 020's `waiver-expiry` scenario, a signpost in 050 for the constitution bullet and cut, the exec walker and the `assessSpecQuality` answer (022, 060) and the analyze checks and report (067), each back-linking 073, which discharges it (AGENTS.md: a change to a shared runtime surface holds `done` until the surface's owner links back).
+- **020 (`done`) reopens** `done → in-progress` for the scoped entries, since rule 5's exception and the paragraph on a finding naming no site in its `waiver-expiry` scenario describe them, a scenario edit that is no correction (`classify-spec-edit`, §spec-lifecycle); it then owes the review and analysis its return to `done` requires. The scenario already links 073.
+- **066 (`done`)**: its plan's account of `write-review`'s one bounded file gains `departure-notices`, a `plan.md` correction with no back-edge.
 - **058 is unchanged**: AC30 and the refusal stand by decision.
