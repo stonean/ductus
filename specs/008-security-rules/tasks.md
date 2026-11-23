@@ -1,6 +1,6 @@
 ---
 title: "008-security-rules — tasks"
-next-task: 49
+next-task: 50
 ---
 
 # 008 — Security Rules Tasks
@@ -46,5 +46,14 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] `FE-STORAGE-006`'s MAY requires the per-user partition purged at sign-out and when the application learns the session expired or was revoked, and its Verification flags a cache missing the partition or either purge; tokens and credentials stay a flat MUST NOT
 - [ ] This spec's Resolved Questions record the decision with its reason
 - [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`, naming the narrowing
+
+- **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+## 49. `BE-API-015`'s Verification flags an absent `Origin` on a cookie-authenticated connection (the owner's decision of 2026-11-23)
+
+- [ ] Implement the behavior described in `scenarios/an-absent-origin-on-a-cookie-connection-is-flagged.md`
+- [ ] `BE-API-015`'s Verification flags an endpoint that accepts a handshake with no `Origin` while the connection is authenticated by a credential the browser attaches automatically; the Statement is unchanged
+- [ ] This spec's Resolved Questions record the decision with its reason
+- [ ] `runtime/CHANGELOG.md` gains an entry for the changed rule under `## [Unreleased]`
 
 - **Done when**: the rule file states what the scenario does, its bytes before and after are measured for the rule and the file, the spec records the decision in Resolved Questions, the changelog entry sits under `## [Unreleased]`, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
