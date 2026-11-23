@@ -941,3 +941,300 @@ fn an_entry_whose_rule_fires_nowhere_stores_nothing_and_refuses_nothing() {
     assert!(waivers(tmp.path()).is_empty(), "no waiver stored");
     assert!(!review_md(tmp.path()).contains("waivers:"));
 }
+
+// -- scoped entries (spec 073 §Scoped entries: AC10, AC11, AC13) --------------
+
+/// A scoped entry covering `src/a.rs` in `walk`, the site [`finding`] names.
+const SCOPED_ENTRY: &str = "- departs: `BE-COMPAT-001`\n  - reason: the guard is declined at this one check\n  - covers:\n    - `src/a.rs` in `walk`\n";
+const T3: &str = "2026-11-12T12:00:00Z";
+
+/// A MUST finding of [`MUST_RULE`] at `file`, in `site` or naming none.
+fn at_site(file: &str, site: Option<&str>) -> Value {
+    let mut found = finding(MUST_RULE, "must", file);
+    found["site"] = site.map_or(Value::Null, |site| json!(site));
+    found
+}
+
+/// The `(file, site)` of each anchor a stored waiver holds.
+fn sites_of(waiver: &Value) -> Vec<(String, String)> {
+    waiver["anchors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|anchor| {
+            (
+                anchor["file"].as_str().unwrap().to_string(),
+                anchor["site"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect()
+}
+
+fn site(file: &str, site: &str) -> (String, String) {
+    (file.to_string(), site.to_string())
+}
+
+/// Rewrite the spec with `entries` and commit it.
+fn decide(dir: &Path, repository: &Repository, entries: &str) {
+    write(
+        dir,
+        &format!("specs/{FEATURE}/spec.md"),
+        &spec_with(entries),
+    );
+    commit(repository, "decide it");
+}
+
+/// AC10: the covered site is waived, and the rule's findings at another site of the same
+/// file, naming no site, or in another file count, on a first run and on one that finds
+/// the waiver stored.
+#[test]
+fn a_scoped_entry_waives_its_rule_at_its_sites_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), SCOPED_ENTRY);
+    let findings = [
+        at_site("src/a.rs", Some("walk")),
+        at_site("src/a.rs", Some("other")),
+        at_site("src/a.rs", None),
+        at_site("src/b.rs", Some("walk")),
+    ];
+    for at in [T1, T2] {
+        let (classified, written) = run_review(tmp.path(), &findings, at, &json!({}));
+        assert_eq!(
+            (written.waived, written.must_violations),
+            (1, 3),
+            "{written:?}"
+        );
+        assert!(written.blocking);
+        if at == T2 {
+            // The stored waiver is read by its site anchor and applied there alone.
+            assert_eq!(classified.applied.len(), 1, "{classified:?}");
+            assert_eq!(classified.applied[0].site.as_deref(), Some("walk"));
+        }
+        let stored = waivers(tmp.path());
+        assert_eq!(stored.len(), 1, "{stored:?}");
+        assert_eq!(stored[0]["departure"], true);
+        assert!(stored[0].get("file").is_none(), "{stored:?}");
+        assert_eq!(sites_of(&stored[0]), [site("src/a.rs", "walk")]);
+        assert!(
+            stored[0]["anchors"][0].get("covers").is_none(),
+            "{stored:?}"
+        );
+    }
+}
+
+fn deferred_at(file: &str, site: &str, key: Option<&str>) -> Value {
+    let mut found = deferred(MUST_RULE, file, key);
+    found["site"] = json!(site);
+    found
+}
+
+fn key_at(site: &str) -> String {
+    format!("rule {MUST_RULE} at src/a.rs in `{site}`")
+}
+
+/// AC11: a new deferral at a site the entry does not cover is stored, and one at a site
+/// it covers is refused, naming the entry.
+#[test]
+fn a_scoped_entry_refuses_a_new_deferral_only_at_a_site_it_covers() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), SCOPED_ENTRY);
+    let decided_by = json!({"decided-by": "person@example.com"});
+    let (_, written) = run_review(
+        tmp.path(),
+        &[deferred_at("src/a.rs", "other", None)],
+        T1,
+        &decided_by,
+    );
+    assert!(written.superseded_deferrals.is_empty(), "{written:?}");
+    assert!(review_md(tmp.path()).contains(&key_at("other")));
+
+    let args: WriteReviewArgs = serde_json::from_value(json!({
+        "feature": FEATURE, "reviewed-at": T2, "reviewed-against": head(tmp.path()),
+        "diff-base": seed(tmp.path()), "empty-scope": false,
+        "findings": [deferred_at("src/a.rs", "walk", None)],
+        "decided-by": "person@example.com",
+    }))
+    .unwrap();
+    let err = write_review::run(&args, tmp.path())
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("spec.md line 10"), "{err}");
+    assert!(err.contains("remove the entry first"), "{err}");
+}
+
+/// AC11: once a scoped entry is committed, a stored deferral at its site is superseded
+/// and one at another site stands.
+#[test]
+fn a_scoped_entry_supersedes_a_stored_deferral_only_at_a_site_it_covers() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), "");
+    let decided_by = json!({"decided-by": "person@example.com"});
+    let (_, written) = run_review(
+        tmp.path(),
+        &[
+            deferred_at("src/a.rs", "walk", None),
+            deferred_at("src/a.rs", "other", None),
+        ],
+        T1,
+        &decided_by,
+    );
+    assert!(written.superseded_deferrals.is_empty(), "{written:?}");
+
+    decide(tmp.path(), &repository, SCOPED_ENTRY);
+    let findings = [
+        deferred_at("src/a.rs", "walk", Some(&key_at("walk"))),
+        deferred_at("src/a.rs", "other", Some(&key_at("other"))),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T2, &decided_by);
+    assert_eq!(written.superseded_deferrals.len(), 1, "{written:?}");
+    assert_eq!(written.waived, 1, "{written:?}");
+    let report = review_md(tmp.path());
+    assert!(!report.contains(&key_at("walk")), "superseded: {report}");
+    assert!(report.contains(&key_at("other")), "stands: {report}");
+}
+
+/// AC13: a malformed `covers:` derives no waiver, and the run names the entry.
+#[test]
+fn a_malformed_covers_waives_nothing_and_the_run_names_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n",
+    );
+    let (_, written) = run_review(
+        tmp.path(),
+        &[at_site("src/a.rs", Some("walk"))],
+        T1,
+        &json!({}),
+    );
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (0, 1),
+        "{written:?}"
+    );
+    assert_eq!(written.malformed_departures.len(), 1, "{written:?}");
+    assert!(written.malformed_departures[0].contains("lists no site"));
+    assert!(waivers(tmp.path()).is_empty(), "no waiver stored");
+}
+
+/// An item dropped from `covers:` stops waiving its site at once, with the expiry notice,
+/// and the entry's edited reason reaches the stored waiver and the report.
+#[test]
+fn a_dropped_covers_item_expires_its_anchor_and_an_edited_reason_reaches_the_report() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: declined at both\n  - covers:\n    - `src/a.rs` in `walk`\n    - `src/a.rs` in `other`\n",
+    );
+    let findings = [
+        at_site("src/a.rs", Some("walk")),
+        at_site("src/a.rs", Some("other")),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (2, 0),
+        "{written:?}"
+    );
+
+    decide(
+        tmp.path(),
+        &repository,
+        "- departs: `BE-COMPAT-001`\n  - reason: declined at walk alone\n  - covers:\n    - `src/a.rs` in `walk`\n",
+    );
+    let (classified, written) = run_review(tmp.path(), &findings, T2, &json!({}));
+    assert_eq!(classified.expired.len(), 1, "{classified:?}");
+    assert_eq!(classified.expired[0].site.as_deref(), Some("other"));
+    assert!(
+        classified
+            .notices
+            .iter()
+            .any(|notice| notice
+                .starts_with("waiver expired: rule BE-COMPAT-001 at src/a.rs in other")),
+        "{:?}",
+        classified.notices
+    );
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (1, 1),
+        "{written:?}"
+    );
+    let stored = waivers(tmp.path());
+    assert_eq!(sites_of(&stored[0]), [site("src/a.rs", "walk")]);
+    assert_eq!(stored[0]["reason"], "declined at walk alone");
+    let report = review_md(tmp.path());
+    assert!(report.contains("declined at walk alone"), "{report}");
+    assert!(!report.contains("declined at both"), "{report}");
+}
+
+/// An entry switched from unscoped to scoped, and back, expires the waiver stored in the
+/// old form with its notice, and the run stores the entry's current form.
+#[test]
+fn switching_an_entry_between_scoped_and_unscoped_expires_the_stored_form() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), MUST_ENTRY);
+    let findings = [
+        at_site("src/a.rs", Some("walk")),
+        at_site("src/a.rs", Some("other")),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(written.waived, 2, "{written:?}");
+    assert_eq!(files_of(&waivers(tmp.path())[0]), ["src/a.rs"]);
+
+    decide(tmp.path(), &repository, SCOPED_ENTRY);
+    let (classified, written) = run_review(tmp.path(), &findings, T2, &json!({}));
+    assert_eq!(classified.expired.len(), 1, "{classified:?}");
+    assert!(classified.expired[0].site.is_none(), "{classified:?}");
+    assert!(
+        classified
+            .notices
+            .iter()
+            .any(|notice| notice.starts_with("waiver expired: rule BE-COMPAT-001 at src/a.rs (")),
+        "{:?}",
+        classified.notices
+    );
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (1, 1),
+        "{written:?}"
+    );
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert!(stored[0].get("file").is_none(), "{stored:?}");
+    assert_eq!(sites_of(&stored[0]), [site("src/a.rs", "walk")]);
+
+    decide(tmp.path(), &repository, MUST_ENTRY);
+    let (classified, written) = run_review(tmp.path(), &findings, T3, &json!({}));
+    assert_eq!(classified.expired.len(), 1, "{classified:?}");
+    assert_eq!(classified.expired[0].site.as_deref(), Some("walk"));
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (2, 0),
+        "{written:?}"
+    );
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert!(stored[0].get("anchors").is_none(), "{stored:?}");
+    assert_eq!(files_of(&stored[0]), ["src/a.rs"]);
+}
+
+/// A run's two writes carry one set of arguments, so the second finds the scoped waiver
+/// stored and stores the site once.
+#[test]
+fn a_run_writing_its_record_twice_stores_a_scoped_entrys_site_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), SCOPED_ENTRY);
+    let findings = [at_site("src/a.rs", Some("walk"))];
+    let args: WriteReviewArgs = serde_json::from_value(json!({
+        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": head(tmp.path()),
+        "diff-base": seed(tmp.path()), "empty-scope": false, "findings": findings,
+    }))
+    .unwrap();
+    let first = write_review::run(&args, tmp.path()).unwrap();
+    let second = write_review::run(&args, tmp.path()).unwrap();
+    assert_eq!(first.must_violations, 0, "{first:?}");
+    assert_eq!(second.must_violations, 0, "{second:?}");
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(sites_of(&stored[0]), [site("src/a.rs", "walk")]);
+}

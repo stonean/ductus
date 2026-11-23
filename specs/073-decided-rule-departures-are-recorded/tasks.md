@@ -18,10 +18,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on task 16: the derivation reads `Entry.covers`.
 
-- [ ] `runtime/src/primitives/write_review.rs`: `departure_waiver_entries` keeps only the findings at a covered `(file, site)` for a scoped entry, applies site anchors, stores `anchors:` with no `covers` (gated by `holds_anchor`), and passes `superseded_deferrals` the covered findings alone
-- [ ] `runtime/src/primitives/process_waivers.rs`: `Kind::DepartureSite` in `read_anchors` and `place`; `departure_gone` expires an anchor the entry no longer lists, a scoped-to-unscoped switch and back included; the module doc comment
-- [ ] Fixtures in `runtime/src/primitives/write_review/departure_waivers.rs`: AC10 both directions, a finding naming no site included; AC11 both directions; AC13's `malformed-departures` half; a dropped `covers:` item and each form switch expiring with a notice
-- [ ] `scripts/mutation/departure-waivers.py`: a mutant per scoped behavior, each killed
+- [x] `runtime/src/primitives/write_review.rs`: `departure_waiver_entries` keeps only the findings at a covered `(file, site)` for a scoped entry, applies site anchors, stores `anchors:` with no `covers` (gated by `holds_anchor`), and passes `superseded_deferrals` the covered findings alone
+- [x] `runtime/src/primitives/process_waivers.rs`: `Kind::DepartureSite` in `read_anchors` and `place`; `departure_gone` expires an anchor the entry no longer lists, a scoped-to-unscoped switch and back included; the module doc comment
+- [x] Fixtures in `runtime/src/primitives/write_review/departure_waivers.rs`: AC10 both directions, a finding naming no site included; AC11 both directions; AC13's `malformed-departures` half; a dropped `covers:` item and each form switch expiring with a notice
+- [x] `scripts/mutation/departure-waivers.py`: a mutant per scoped behavior, each killed
 
 - **Done when**: the new fixtures pass, `git diff` shows the fixtures proving AC5 and AC8 unedited and passing (AC9), and every new mutant is killed.
 

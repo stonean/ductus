@@ -2573,13 +2573,22 @@ fn refresh_departure_waivers(
                     reason: entry.reason.clone(),
                 }),
         );
+        // A scoped entry's waiver is held at its sites.
+        reasons.extend(waiver.anchors.iter().flatten().filter_map(|anchor| {
+            Some(crate::schema::primitives::WaiverRef {
+                rule: entry.rule.clone(),
+                file: anchor.file.clone()?,
+                site: Some(anchor.site.clone()?),
+                reason: entry.reason.clone(),
+            })
+        }));
     }
     reasons
 }
 
 /// The second source of new waivers: each well-formed departure entry, of any tier,
 /// stored for the files its rule fires at in the run's scope that no waiver holds, hand
-/// `--waive` first. A finding on a file the scope does not hold is nobody's here (spec
+/// `--waive` first, or, for a scoped entry, for the sites its `covers:` lists among them. A finding on a file the scope does not hold is nobody's here (spec
 /// 020's `waiver-expiry`: a waiver is bounded by the spec's own scope), so it stays
 /// counted. A rule firing nowhere stores nothing and refuses nothing, since an entry is
 /// the spec's standing decision rather than a request of this run. The waiver carries the
@@ -2612,43 +2621,54 @@ fn departure_waiver_entries(
                 })
                 .holds(file)
     };
-    // Every file the rule fires at is anchored, so a second write of the run, which finds
-    // the waiver already stored, still counts its findings waived; only a file no waiver
+    // Every place the rule fires at is anchored, so a second write of the run, which finds
+    // the waiver already stored, still counts its findings waived; only a place no waiver
     // holds is stored.
-    let mut firing_by_rule: Vec<(&crate::primitives::departures::Entry, Vec<String>)> = Vec::new();
+    let mut firing_by_rule: Vec<(&crate::primitives::departures::Entry, Vec<Place>)> = Vec::new();
     for entry in &departures.entries {
         let decided: Vec<(usize, &ReviewFinding)> = args
             .findings
             .iter()
             .enumerate()
-            .filter(|(_, finding)| finding.rule == entry.rule && in_scope(&finding.file))
+            .filter(|(_, finding)| {
+                finding.rule == entry.rule
+                    && in_scope(&finding.file)
+                    && entry_decides(entry, finding)
+            })
             .collect();
         superseded.extend(superseded_deferrals(args, surviving, entry, &decided)?);
-        let firing: std::collections::BTreeSet<&str> = decided
+        let firing: std::collections::BTreeSet<(&str, Option<&str>)> = decided
             .iter()
             .map(|(_, finding)| *finding)
             .filter(|finding| {
                 waiver_reason(finding, &args.applied_waivers).is_none()
                     && waiver_reason(finding, anchors).is_none()
             })
-            .map(|finding| finding.file.as_str())
+            .map(|finding| {
+                let site = entry.covers.as_ref().and(finding_site(finding));
+                (finding.file.as_str(), site)
+            })
             .collect();
         anchors.extend(
             firing
                 .iter()
-                .map(|file| crate::schema::primitives::WaiverRef {
+                .map(|(file, site)| crate::schema::primitives::WaiverRef {
                     rule: entry.rule.clone(),
                     file: (*file).to_string(),
-                    site: None,
+                    site: site.map(str::to_string),
                     reason: entry.reason.clone(),
                 }),
         );
-        let fresh: Vec<String> = firing
+        let fresh: Vec<Place> = firing
             .into_iter()
-            .filter(|file| {
-                !holds(surviving, &entry.rule, file) && !holds(entries, &entry.rule, file)
+            .filter(|(file, site)| match site {
+                None => !holds(surviving, &entry.rule, file) && !holds(entries, &entry.rule, file),
+                Some(site) => {
+                    !holds_anchor(surviving, &entry.rule, file, site)
+                        && !holds_anchor(entries, &entry.rule, file, site)
+                }
             })
-            .map(str::to_string)
+            .map(|(file, site)| (file.to_string(), site.map(str::to_string)))
             .collect();
         if !fresh.is_empty() {
             firing_by_rule.push((entry, fresh));
@@ -2666,10 +2686,11 @@ fn departure_waiver_entries(
         let (by, at) = attributed
             .get(&entry.rule)
             .map_or_else(|| Attribution::Unattributed.decided(), Attribution::decided);
+        let (file, sites) = stored_places(entry, fresh);
         entries.push(RawWaiverFull {
             rule: Some(entry.rule.clone()),
-            file: Some(WaiverPaths::of(fresh)),
-            anchors: None,
+            file,
+            anchors: sites,
             reason: Some(entry.reason.clone()),
             waived_at: Some(at.unwrap_or_else(|| args.reviewed_at.clone())),
             waived_by: Some(by),
@@ -2682,9 +2703,48 @@ fn departure_waiver_entries(
     Ok(superseded)
 }
 
+/// A place a departure entry's waiver is held at: a file for an entry with no `covers:`,
+/// and a covered `(file, site)` for a scoped one.
+type Place = (String, Option<String>);
+
+/// The `file` and `anchors` a departure waiver stores for `fresh`, the places it holds:
+/// an unscoped entry's lists its files, and a scoped one's its sites, with no count, so the
+/// record names where it applied (spec 073 §Scoped entries).
+fn stored_places(
+    entry: &crate::primitives::departures::Entry,
+    fresh: Vec<Place>,
+) -> (Option<WaiverPaths>, Option<Vec<StoredAnchor>>) {
+    if entry.covers.is_some() {
+        let sites = fresh
+            .iter()
+            .filter_map(|(file, site)| {
+                site.as_deref()
+                    .map(|site| StoredAnchor::uncounted(file, site))
+            })
+            .collect();
+        (None, Some(sites))
+    } else {
+        let files = fresh.into_iter().map(|(file, _)| file).collect();
+        (Some(WaiverPaths::of(files)), None)
+    }
+}
+
+/// Whether `entry` decides `finding`, a finding of its rule: every one for an entry with no
+/// `covers:`, and for a scoped entry one at a site it lists, a finding naming no site being
+/// at none (spec 073 §Scoped entries).
+fn entry_decides(entry: &crate::primitives::departures::Entry, finding: &ReviewFinding) -> bool {
+    entry.covers.as_ref().is_none_or(|covers| {
+        finding_site(finding).is_some_and(|site| {
+            covers
+                .iter()
+                .any(|covered| covered.file == finding.file && covered.site.trim() == site)
+        })
+    })
+}
+
 /// The stored deferrals `entry` supersedes among `decided`, the findings of its rule the
-/// run's scope holds: each deferred violation no hand waiver claims, which must carry its
-/// stored decision's key.
+/// run's scope holds and the entry decides: each deferred violation no hand waiver claims,
+/// which must carry its stored decision's key.
 ///
 /// # Errors
 ///
@@ -3244,8 +3304,9 @@ pub(crate) struct RawWaiverFull {
     rule: Option<String>,
     #[serde(default)]
     file: Option<WaiverPaths>,
-    /// The `(file, site)` anchors a hand waiver covers, each with its count; a departure
-    /// waiver keeps `file` instead (spec 020's `waiver-expiry`).
+    /// The `(file, site)` anchors a hand waiver covers, each with its count, or a scoped
+    /// departure entry's sites, with none; an unscoped departure waiver keeps `file`
+    /// instead (spec 020's `waiver-expiry`, spec 073 §Scoped entries).
     #[serde(default)]
     anchors: Option<Vec<StoredAnchor>>,
     #[serde(default)]

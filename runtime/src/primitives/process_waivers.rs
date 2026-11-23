@@ -32,14 +32,18 @@
 //! its site does not expire a waiver. The findings at an anchor are counted after
 //! collapsing those of one rule, file and site whose line ranges overlap, never across
 //! sites. A waiver `write-review` derived from a spec's departure entry carries
-//! `departure: true`, keeps `file`, and covers every finding of its rule at each file,
-//! at any site, with no count. Any other entry holding `file` and no `anchors` was
+//! `departure: true`. One derived from an entry with no `covers:` keeps `file`, and covers
+//! every finding of its rule at each file, at any site, with no count; one derived from a
+//! scoped entry holds `anchors` and no `file`, and covers the findings at each anchor's
+//! site, with no count either. Any other entry holding `file` and no `anchors` was
 //! recorded before sites: it covers nothing and always expires.
 //!
-//! A departure waiver is expired whatever the run's restrictions when the spec's
-//! `## Applicable Rules` holds no well-formed entry for its rule, so a removed entry
-//! stops waiving at once (spec 073); a waiver with the marker and an entry is classified
-//! as any other. Read-only: frontmatter mutation belongs to `write-review`.
+//! A departure waiver's anchor is expired whatever the run's restrictions when the spec's
+//! `## Applicable Rules` no longer decides it: no well-formed entry for its rule, an entry
+//! whose form, scoped or not, is not the anchor's, or a scoped entry whose `covers:` no
+//! longer lists the anchor's site, so a removed entry or a dropped item stops waiving at
+//! once (spec 073); an anchor its entry still decides is classified as any other.
+//! Read-only: frontmatter mutation belongs to `write-review`.
 //!
 //! The four lists grow with a spec's waivers, and a departure entry adds one per rule and
 //! in-scope file, so [`run`] bounds them as `process-decisions` does (`bounded_lists::place`;
@@ -60,7 +64,8 @@ use serde::Deserialize;
 use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
-    PrimitiveError, Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, departures,
+    PrimitiveError, Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, decisions,
+    departures,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -193,7 +198,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
     let mut seen: Vec<(String, String, Option<String>)> = Vec::new();
     // Read only when a waiver carries the marker, so a record with none depends on nothing
     // else. The first marked waiver reads the spec, which this function has found to exist.
-    let mut entry_rules: Option<Vec<String>> = None;
+    let mut entries: Option<Vec<departures::Entry>> = None;
 
     for (index, waiver) in waivers.iter().enumerate() {
         let located = read_anchors(waiver);
@@ -220,7 +225,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
         for located in located.unwrap_or_default() {
             let file = located.file;
             let site = match located.kind {
-                Kind::Site { site, .. } => Some(site),
+                Kind::Site { site, .. } | Kind::DepartureSite { site } => Some(site),
                 Kind::Departure | Kind::PreSite => None,
             };
             let shown_file = super::flatten_line(file);
@@ -252,11 +257,11 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
                 classified.expired.push(anchor);
                 continue;
             }
-            if located.kind == Kind::Departure
-                && departure_gone(waiver, &rule, &spec_path, &mut entry_rules)?
+            if matches!(located.kind, Kind::Departure | Kind::DepartureSite { .. })
+                && departure_gone(waiver, &rule, &located, &spec_path, &mut entries)?
             {
                 classified.notices.push(format!(
-                    "waiver expired: rule {shown_rule} at {shown_file} ({shown_reason})"
+                    "waiver expired: rule {shown_rule} at {at} ({shown_reason})"
                 ));
                 classified.expired.push(anchor);
                 continue;
@@ -348,34 +353,43 @@ impl Pass<'_> {
     }
 }
 
-/// Whether `waiver` carries the departure marker and the spec's `## Applicable Rules`
-/// holds no well-formed entry for `rule`. `entry_rules` caches the entries' rules, read
+/// Whether `waiver` carries the departure marker and the spec's `## Applicable Rules` no
+/// longer decides `located`, one of its anchors: no well-formed entry for `rule`, the first
+/// one being the rule's; an entry whose form is not the anchor's, a file anchor needing an
+/// entry with no `covers:` and a site anchor a scoped one; or a scoped entry whose
+/// `covers:` does not list the anchor's file and site. `entries` caches the entries, read
 /// from the spec at `spec_path` by the first marked waiver, so a record with no marker
 /// reads nothing else.
 fn departure_gone(
     waiver: &RawWaiver,
     rule: &str,
+    located: &Located<'_>,
     spec_path: &Path,
-    entry_rules: &mut Option<Vec<String>>,
+    entries: &mut Option<Vec<departures::Entry>>,
 ) -> Result<bool> {
     if waiver.departure != Some(true) {
         return Ok(false);
     }
-    if entry_rules.is_none() {
+    if entries.is_none() {
         let content = super::read_text(spec_path)?;
-        *entry_rules = Some(
-            departures::parse(&content)
-                .entries
-                .into_iter()
-                .map(|entry| entry.rule)
-                .collect(),
-        );
+        *entries = Some(departures::parse(&content).entries);
     }
-    Ok(!entry_rules
+    let Some(entry) = entries
         .as_deref()
         .unwrap_or_default()
         .iter()
-        .any(|held| held == rule))
+        .find(|entry| entry.rule == rule)
+    else {
+        return Ok(true);
+    };
+    Ok(match (located.kind, &entry.covers) {
+        (Kind::Departure, None) => false,
+        (Kind::DepartureSite { site }, Some(covers)) => !covers
+            .iter()
+            .any(|covered| covered.file == located.file && covered.site.trim() == site.trim()),
+        // The entry's form is not the anchor's: the next write stores its current one.
+        _ => true,
+    })
 }
 
 /// Return the first required field that is absent or empty, or `None` when the
@@ -405,8 +419,11 @@ fn first_missing_field(waiver: &RawWaiver, anchors_read: bool) -> Option<&'stati
 enum Kind<'a> {
     /// A `(file, site)` anchor covering up to `covers` findings.
     Site { site: &'a str, covers: u32 },
-    /// A departure waiver's file, covering every finding of its rule there.
+    /// An unscoped departure waiver's file, covering every finding of its rule there.
     Departure,
+    /// A scoped departure waiver's `(file, site)`, covering every finding of its rule at
+    /// that site, with no count.
+    DepartureSite { site: &'a str },
     /// A path of an entry recorded before sites: it covers nothing.
     PreSite,
 }
@@ -417,13 +434,33 @@ struct Located<'a> {
     kind: Kind<'a>,
 }
 
-/// The entry's anchors, or `None` when it names no usable one. A departure waiver is read
-/// by its `file`, one anchor per path covering every site, whatever else it holds, as
-/// `write-review` refreshes it. Any other entry holding `anchors` is read from them alone,
-/// and one holding a blank or unusable anchor, or none, is malformed; otherwise a usable
+/// The entry's anchors, or `None` when it names no usable one. A departure waiver holding a
+/// usable `file` is read by it, one anchor per path covering every site, whatever else it
+/// holds, as `write-review` refreshes it; one holding none is a scoped entry's, read from
+/// its `anchors`, each a non-blank file and site and no count, and malformed when any is
+/// blank or there is none. Any other entry holding `anchors` is read from them alone, and
+/// one holding a blank or unusable anchor, or none, is malformed; otherwise a usable
 /// `file` is one anchor per path, recorded before sites.
 fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
     let departure = waiver.departure == Some(true);
+    let usable_file = waiver.file.as_ref().is_some_and(|paths| !paths.is_blank());
+    if departure && !usable_file {
+        let anchors = waiver
+            .anchors
+            .as_ref()
+            .filter(|anchors| !anchors.is_empty())?;
+        return anchors
+            .iter()
+            .map(|anchor| {
+                Some(Located {
+                    file: decisions::nonblank(anchor.file.as_deref())?,
+                    kind: Kind::DepartureSite {
+                        site: decisions::nonblank(anchor.site.as_deref())?,
+                    },
+                })
+            })
+            .collect();
+    }
     if !departure && let Some(anchors) = &waiver.anchors {
         if anchors_unusable(anchors) {
             return None;

@@ -957,6 +957,16 @@ impl StoredAnchor {
         }
     }
 
+    /// The anchor a scoped departure entry's waiver records for `file` and `site`, with
+    /// no count: the entry, not a count, decides what it covers (spec 073).
+    pub(crate) fn uncounted(file: &str, site: &str) -> Self {
+        Self {
+            file: Some(file.to_string()),
+            site: Some(site.to_string()),
+            covers: None,
+        }
+    }
+
     /// The findings the anchor covers, when `covers` is a positive integer.
     pub(crate) fn covers_count(&self) -> Option<u32> {
         self.covers
