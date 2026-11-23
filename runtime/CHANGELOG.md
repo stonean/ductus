@@ -2,7 +2,17 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## Unreleased
+## [0.63.0] — 2026-11-23
+
+A minor release with a breaking change: 1 of the 3 entries below is marked
+BREAKING, under Changed. A stored waiver or violation deferral covers only the
+findings at its `(rule, file, site)` anchor, up to the number it covers, so an
+adopter's existing waivers and violation deferrals expire once, on each spec's
+next review, and are decided again. The constitution's §brownfield-inbox again
+says a question is deferred with its trigger, in Resolved Questions. One
+lockfile patch update, no manifest change, and the MSRV stays 1.89. The
+entries for the lockfile and the constitution were added with this release;
+the other was written as its change landed.
 
 ### Changed
 
@@ -40,6 +50,22 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   key whose site is a heading holding an em dash and a backtick still names its
   file, so its deferral on a file the run did not read is retained. An adopter's
   existing waivers and violation deferrals expire once and are decided again.
+- **Lockfile, net from 0.62.0 to the release head: 1 dependency changes version, none is added or removed, and no advisory is open.**
+  Counted as the `[[package]]` name and version pairs of `runtime/Cargo.lock`
+  at `ductus-v0.62.0` against the release commit (`git diff ductus-v0.62.0
+  HEAD -- runtime/Cargo.lock`), the crate's own version aside; the lockfile's
+  268 package entries stay 268. `zip` 9.8.1 to 9.8.2, the highest compatible
+  with Rust 1.89. `scripts/check-runtime-currency.sh` scanned 268 crates and
+  found no advisory, and the manifest's dependencies are unchanged.
+
+### Fixed
+
+- **The constitution again says a question is deferred with its trigger (spec 076).**
+  §brownfield-inbox's Deferred disposition says a question is deferred with
+  its trigger, in Resolved Questions, which 0.60.0 dropped from it, leaving
+  §spec-requirements' pointer for a deferred decision on a definition that
+  named findings alone. No gate changes: a deferred question stays in Resolved
+  Questions and holds nothing.
 
 ## [0.62.0] — 2026-11-22
 
