@@ -1,5 +1,5 @@
 ---
-next-task: 41
+next-task: 42
 ---
 
 # 079 — Review and analysis work converges Tasks
@@ -35,3 +35,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Spec 081's AC13 lost its clause that a credited path is listed under a spec, and 081 was reopened for it
 
 - **Done when**: the spec's Resolved Questions state each decision with its reason and its measured effect
+
+## 41. A held record that read its scope moves the window's start to its `reviewed-against` (the agent's recommendation, adopted by the operator, 2026-11-23)
+
+- [ ] `last_review_commit` (`runtime/src/primitives/compute_review_scope.rs`) takes a record `holds_done_until_reviewed` holds, with no skipped pass, no budget stop and `unread` present and empty, as ending the window at its `reviewed-against`, no earlier than the reopen's base; a clean record keeps the commit finishing it, and a held one stating no `unread`, or a non-empty one, finishes nothing
+- [ ] `BaseSource` (`runtime/src/schema/primitives.rs`) gains `held-review` and `reopen-past-partial-review`, the second when every run since the reopen was passed over for not reading its scope; `COMPUTE_REVIEW_SCOPE` (`runtime/src/schema/descriptions.rs`), the module doc comments and `framework/reference/review.md` §Window and coverage state the rule; `runtime/CHANGELOG.md` records it as breaking, since `base-source` gains values
+- [ ] Fixture tests: a held record, one per hold (a SHOULD, an open finding, a contract break, a criterion not met, the open mark, an unwaived round), stating `unread: []`, reads `held-review`, and its next scope holds a fix committed after `reviewed-against`, its `open-findings` and a code path changed after it, but not an older path the run read; with `unread` absent or non-empty, or a skipped pass, it reads `reopen-past-partial-review`; each case fails with its behavior removed, and the window mutants in `scripts/mutation/scope-attribution.py` are updated and killed
+- [ ] An adopter-shaped fixture reproduces the report first: a reopening whose first review is held by the open mark, a SHOULD, a deferred contract break and a criterion not met, followed by task commits, reads `base-source: reopen` before the change and `held-review` after it
+
+- **Done when**: AC5's text holds against the tree: `compute-review-scope` on each fixture reads the start AC5 names, the tests and mutants pass, `framework/reference/review.md` and the description state the rule, and `runtime/CHANGELOG.md` has its entry.
