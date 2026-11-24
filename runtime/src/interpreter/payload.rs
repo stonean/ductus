@@ -1059,8 +1059,9 @@ const INBOX_ROUTES: [&str; 5] = ["rule", "spec", "scenario", "chore", "discard"]
 /// - `unclaimed-paths` — the paths that result names and no spec's plan
 ///   claims, threaded the same way and omitted when empty.
 ///
-/// Past the read size `available-specs`, which grows with the corpus, and
-/// `candidates` move to a file ([`bound_lists`]); the request carries no body.
+/// Past the read size `available-specs`, which grows with the corpus,
+/// `candidates` and `unclaimed-paths` move to a file ([`bound_lists`]); the
+/// request carries no body.
 ///
 /// `item-text` falls back to `description` — the key `/ductus:specify` seeds —
 /// so the specify path needs no second context key for the same value.
