@@ -73,7 +73,7 @@ The detection uses commit count on `tasks.md`, not on the full affected-files li
 
 Behavior with `--auto`:
 
-- Skip the per-task "prompt the user to commit and push changes" confirmation. The agent commits (see below) on its own and proceeds.
+- Skip the per-task commit confirmation. The agent commits the task's code with its `tasks.md` tick on its own (see below, and step 8 of the implement reference's walk, spec 083) and proceeds.
 - All other gates still fire and pause:
   - The completion transition (`in-progress`→`done`). `planned`→`in-progress` is not gated at all: invoking `/ductus:implement` is the approval to start, with or without `--auto` (000's `implement-skips-planned-prompt` scenario)
   - Stuck-detection events

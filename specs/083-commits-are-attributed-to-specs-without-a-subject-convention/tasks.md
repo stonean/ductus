@@ -51,7 +51,7 @@ Blocked on tasks 1 and 3: the fields must exist, and the Size figures are measur
 
 ## 6. Sweep prose claims
 
-- [ ] Run `scripts/stale-literals.sh`, then grep the live-artifact set by meaning for claims about `compute-review-scope`'s result fields, the Summary's lines, and `/{project}:implement`'s commit prompt; fix each stale one at its source
+- [x] Run `scripts/stale-literals.sh`, then grep the live-artifact set by meaning for claims about `compute-review-scope`'s result fields, the Summary's lines, and `/{project}:implement`'s commit prompt; fix each stale one at its source
 
 - **Done when**: no live artifact describes the commit prompt or the result as they were before this spec. 083 then owes its review and analysis, and the completion gate, once every box here is ticked.
 
