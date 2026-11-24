@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [018-adopter-owned-pre-commit, 020-code-review, 022-deterministic-runtime, 046-scenario-open-question-visibility, 050-constitution, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed, 083-commits-are-attributed-to-specs-without-a-subject-convention]
 next-criterion: 22
