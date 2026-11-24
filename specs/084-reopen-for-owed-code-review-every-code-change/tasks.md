@@ -230,3 +230,9 @@ This is the last task. The about 9 `done` specs measured as owing a review are r
 - [x] `runtime/tests/merge_status_hook.rs` — `claude_printing` writes a script and execs it at once; on Linux a parallel test's fork can inherit the still-open write handle, so the exec fails `ExecutableFileBusy` ("Text file busy"). It failed `the_probe_reads_the_claude_on_the_inherited_path` in run 45445822818 (`build + test (ubuntu-latest)`, 210e9a8f, whose own change was comments only); macOS passed the same suite
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+### 21. Disposition out-of-spec finding: two lib tests exec a freshly written script and can hit ETXTBSY
+
+- [ ] `runtime/src/primitives/merge_status_hook.rs`'s `the_probe_reads_a_version_and_names_each_failure` (three scripts) and `runtime/src/primitives/lint_markdown.rs`'s `a_linter_that_outlives_its_timeout_is_stopped` (one stub) write a script with `fs::write` and exec it at once, inside the lib test binary, the race task 20 fixed in `runtime/tests/merge_status_hook.rs` (68132f95). No failure so far: none of the 40 failed `runtime` runs from 2026-08-03 to 2026-11-23 failed on it (`gh run view --log-failed` grepped for `Text file busy`; every hit was the `pointer-running-cp` diagnostic). Task 20's retried warm-up exec does not fit here, since two of the scripts run `sleep 5`; a candidate, not yet measured, is writing each script from a child process, so no write handle exists in the test process for another thread's fork to inherit
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
