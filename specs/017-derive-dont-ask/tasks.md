@@ -1,5 +1,5 @@
 ---
-next-task: 48
+next-task: 49
 ---
 
 # 017 — Derive, Don't Ask Tasks
@@ -25,3 +25,11 @@ Landed on 2026-11-14 after 000's review record; with the real `markdownlint-cli2
 - [x] Left as it is: `CFG-ENV-011` stays a MUST
 
 - **Done when**: each item is stated in the rule file as decided, the spec records the requirement (scenario `a-throwaway-credential-is-not-a-secret`, and a Resolved Questions entry per decision with its reason) and corrects any criterion the change makes false, any external claim the new text makes is fetched and not recalled, bytes before and after are measured per rule and per file, `runtime/CHANGELOG.md` `[Unreleased]` gains an entry per changed rule, the whole `cargo test` and both artifact workflows' steps pass, and the spec's next review and analysis read the change
+
+### 48. A path-list commit leaves the shared index current (deferred from 083 task 7, operator decision 2026-11-23)
+
+- [ ] Implement the behavior described in `scenarios/a-path-list-commit-leaves-the-shared-index-current.md`
+- [ ] `.githooks/pre-commit` carries each generated output it adds to a path-list commit into the shared index as well, leaving every other shared-index entry as it was
+- [ ] `scripts/tests/test-pre-commit-staging.sh` holds the path-list case, and it fails with the behavior removed
+
+- **Done when**: after `git commit -- <paths>` whose staged sources regenerate an output, `git diff --cached` names no carried output, the test case proves it in both directions, and `generators.yml`'s and `framework-checks.yml`'s steps pass locally
