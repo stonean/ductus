@@ -6,6 +6,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ### 1. The owed-work helper and `check-owed-work`
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unchecked_task_block`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it, each keeping the half it read: `waiting_features` the boxes alone
 - [ ] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
 - [ ] Its corpus form: with no feature, every `done` spec that owes work, `examined-count` and `skipped`
@@ -14,6 +16,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - **Done when**: `check-owed-work` reports a `done` fixture's unchecked box and unticked criterion, reports `owes: false` for one with neither, its corpus form names only the owing `done` specs and counts every one examined, every former reader passes its own tests through the helper, and the mutants are killed.
 
 ### 2. Commands reopen from state, and `classify-spec-edit` retires
+
+Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [ ] `framework/commands/amend.md` step 5, its intro, its criterion route's wording, its Scope Boundaries line and its status-table row call `check-owed-work` in place of `classify-spec-edit`; its scenario and criterion routes call it before they write `in-progress`
 - [ ] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same; its step 6 calls it before it writes `in-progress`
@@ -31,6 +35,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ### 3. The constitution states the rule
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] §spec-lifecycle: one `- **Backward via owed code**` bullet in place of the second and third back-edges, the "Any other edit there reopens" paragraph and the canonical-record bullet, naming `/review`'s one status write
 - [ ] §implement-phase, §drift-prevention, §cross-spec-impact and §bug-handling's fourth route (AC10)
 - [ ] "Three back-edges exist", "one of the two above" and §drift-prevention's two bullets citing the mechanical class; the mechanical-sweep rule's statement moves into §drift-prevention, or to `framework/reference/analyze.md` if the budget does not hold it
@@ -42,6 +48,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ### 4. Sites outside the spec corpus
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 Blocked on task 3: the sweep corrects what states the old rule only once the new one stands.
 
 - [ ] Read each whole and correct it: `AGENTS.md` (held to its ceiling), `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`
@@ -52,6 +60,8 @@ Blocked on task 3: the sweep corrects what states the old rule only once the new
 - **Done when**: no site outside the spec corpus states that an edit's diff reopens a `done` spec, `scripts/stale-literals.sh` finds none, and the census's sites in the spec's Resolved Questions are each read whole.
 
 ### 5. Sites in the spec corpus
+
+Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Blocked on task 3: under the old rule each edit here to a `done` spec's scenario or criterion would reopen it.
 
@@ -66,6 +76,8 @@ Blocked on task 3: under the old rule each edit here to a `done` spec's scenario
 
 ### 6. The review window starts where the last review ended
 
+Model: fable (owner, 2026-11-24).
+
 - [ ] `compute_review_scope::resolve_base` and `last_review_commit` stop hiding the reopen; `held_base`'s clamp and the carried-in branch go, and `UncommittedTransition` stays only for a spec with no counted review
 - [ ] A `check_stuck` lookup for the commit that set a spec `done` or added it as `done`, for a `done` spec no review recorded
 - [ ] Invert the tests asserting the old start; update the module doc, `COMPUTE_REVIEW_SCOPE`, `BaseSource`'s docs, `framework/reference/review.md` §Window and coverage, `framework/commands/review.md`'s `--since` row, `runtime/tests/golden/review-basic.jsonl` and `scripts/mutation/scope-attribution.py`
@@ -74,6 +86,8 @@ Blocked on task 3: under the old rule each edit here to a `done` spec's scenario
 
 ### 7. Code no spec claims leaves open specs' scopes
 
+Model: fable (owner, 2026-11-24).
+
 - [ ] `attribute_window`'s no-claimant branch records its paths in `window.others`, so they leave the scope; `take_unclaimed`, `ReadRecord`, `read_records` and `commits_between` go, with `scripts/mutation/review-read-credit.py`, `reviews-follow-what-changed.py` and `commit-counts.py`
 - [ ] Move the per-path claim rule into `commit_attribution`, taking its source (the working tree or a commit's tree) and its walk's start, for `fix_rounds::changed_only_by_other_specs` and task 9 to share
 - [ ] Rewrite 081's AC13 and AC14 fixtures to the new rule
@@ -81,6 +95,8 @@ Blocked on task 3: under the old rule each edit here to a `done` spec's scenario
 - **Done when**: a fixture with a code commit naming no spec leaves it out of an `in-progress` spec's scope, `commits-unclaimed` still counts it, and AC6's second half holds.
 
 ### 8. The project record
+
+Model: fable (owner, 2026-11-24).
 
 - [ ] `write-review` with no `feature` writes `{specs-root}/review.md` as `data-model.md` states, and `--seed` writes the seed
 - [ ] The function that finds the code no spec claims after the project record's window start, a seed's starting after the commit that added it; the project review's scope reads it, and task 9 exposes it
@@ -91,6 +107,8 @@ Blocked on task 3: under the old rule each edit here to a `done` spec's scenario
 - **Done when**: AC6 and AC14 hold, a project review over a fixture's unclaimed commit records it, and its fix rounds leave its own record out.
 
 ### 9. `check-unreviewed-code`
+
+Model: fable (owner, 2026-11-24).
 
 Blocked on tasks 6 to 8: it reads their window, their claim rule and the project record.
 
@@ -103,6 +121,8 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 10. `/ductus:review` on a `done` spec
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] Step 7.3 asks the owner before a `done` spec's ticked criterion judged not met changes, corrects or unticks it, and writes `in-progress` on an untick
 - [ ] Step 10 writes `in-progress` on a deferral to the spec's own work, and records no gating finding without a disposition
 - [ ] Scope Boundaries, `framework/reference/review.md` §Criteria step and §Deferrals, and goldens re-blessed and read
@@ -110,6 +130,8 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 - **Done when**: AC3 and AC5 hold in the command and reference text, and the goldens match.
 
 ### 11. The pre-push hook
+
+Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [ ] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
 - [ ] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed, mirrored in `framework/bootstrap/govern.md` and `install.sh`; `framework/bootstrap/ductus-procedure.md` §Hook Installation
@@ -120,6 +142,8 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 12. The seed migration
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] `framework/migrations/project-review-record.md` and its `framework/migrations.toml` entry, ordered after every existing one
 - [ ] `framework/bootstrap/ductus-procedure.md` seeds the record on a fresh install
 - [ ] After the seed, the migration runs `check-unreviewed-code` once and reports the backlog with `[review] unreviewed-push` and its two values, writing no configuration
@@ -128,6 +152,8 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 13. The CI template and the audit backstop
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
 - [ ] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
 
@@ -135,17 +161,23 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 14. The status count
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] `dashboard`'s `unreviewed-code` block, `pipeline_view`'s line, `framework/commands/status.md` and `docs/slash-commands.md`
 
 - **Done when**: `/ductus:status` shows the count in each of its states on every run.
 
 ### 15. Measuring the bar
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] `measure_reopenings`' `held-owed-work` and `never-owed-count`, with a fixture for each direction
 
 - **Done when**: AC16 holds, and `measure-reopenings --since 2026-11-11 --at 47cae941` reproduces the estimate's 74 never-owed reopenings or the commit names why it differs.
 
 ### 16. This repository's hook
+
+Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
 
@@ -155,11 +187,15 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 17. `check-artifact-size` names no per-fix reopen
 
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
 - [ ] `on_done` and `OnDone` go, with `OnDone`'s schema docs and their mutants; a `done` spec's warning states the state rule once; the table's tests rewritten
 
 - **Done when**: AC18 and AC12 hold, no result or description names a per-fix reopen, and `grep -rn classify.spec.edit` over the live-artifact set finds only historical records.
 
 ### 18. Back-links and the changelog
+
+Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [ ] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
 - [ ] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
@@ -169,7 +205,9 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 19. This repository blocks
 
-This is the last task. The about 9 `done` specs measured as owing a review are reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079); this task waits on them.
+Model: opus, with fable as advisor (owner, 2026-11-24).
+
+This is the last task. The about 9 `done` specs measured as owing a review are reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079); this task waits on them. Once 084 reaches `done`, tell the owner the date of the commit that set it: the bar's two weeks start there (spec, Resolved Questions, the bar for starting the three items).
 
 - [ ] Remove `[review] unreviewed-push = "warn"` from `.ductus/config.toml` once `check-unreviewed-code` reports nothing here
 

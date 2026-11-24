@@ -45,7 +45,7 @@ A deferral to a `done` spec is decided the same way. `framework/commands/analyze
 `/ductus:analyze --fix` sets a `done` spec back to `in-progress` when a scenario under it holds an unresolved open question (046's AC23 and AC30), and `/ductus:amend` writes such a question without reading the parent's status. That reopening holds no unchecked box and no unticked criterion. The finding stays: `check-artifacts`' `scenario-open-questions` family is blocking at `done`, with its two exits, and the gate still holds a spec short of `done` while one stands. Only the revert goes (the agent's recommendation, adopted by the operator, 2026-11-24). The spec reopens when the answer adds a task or a criterion. The text that changes:
 
 - `framework/commands/analyze.md`'s description, its Purpose paragraph and its report step, which name the revert;
-- `framework/reference/analyze.md` §Scenario open questions' `--fix` paragraph;
+- the `--fix` paragraph of `framework/reference/analyze.md` §Scenario open questions (blocking at `done`, advisory otherwise);
 - `docs/analyze.md`'s account of what `--fix` reverts;
 - the constitution's new back-edge bullet, which says a scenario's question arriving after `done` is reported and reopens nothing, where the second back-edge said it took that edge.
 
