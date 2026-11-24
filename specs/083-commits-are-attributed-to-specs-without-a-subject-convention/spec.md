@@ -33,7 +33,7 @@ next-criterion: 17
 - **A spec with no window.** An empty diff base walks no commit, so the counts are absent, never a zero that reads as a window fully attributed.
 - **A task that changes no code.** Its commit holds only artifacts and owes an analysis and no review, as 081 has it.
 - **Code committed outside `/{project}:implement`.** It is attributed as before this spec and counted when no spec claims it.
-- **A squash merge on the host.** It carries the code and the tick in one commit, so the spec still claims it. A merge commit claims nothing and contributes only what it changed itself, as before.
+- **A squash merge on the host.** It carries the code and the tick in one commit, so the spec still claims it. A merge commit claims nothing and contributes only what it changed itself, as before (`Attributor::own_paths` in `runtime/src/primitives/commit_attribution.rs`).
 
 ## Acceptance Criteria
 
