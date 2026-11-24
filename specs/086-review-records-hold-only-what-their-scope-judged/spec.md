@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 084-reopen-for-owed-code-review-every-code-change]
 cross-spec-impact: [020-code-review, 041-task-pruning, 058-findings-route-at-discovery, 066-audit-records-and-the-completion-gate, 079-review-and-analysis-work-converges, 084-reopen-for-owed-code-review-every-code-change]
 next-criterion: 7
