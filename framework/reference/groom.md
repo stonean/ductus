@@ -20,6 +20,7 @@ For each item, walk the steps in order; the first matching step names the route.
 **Step 2: Does a spec exist for this behavior?** (route: `spec`, no matched feature)
 
 - Search `specs/` for a feature directory that covers this area, starting from the candidates `derive-routing-candidates` returned where the command derived them, as `/{project}:groom` and `/{project}:specify` do, rather than searching spec bodies through the shell. The one exception is an item no candidate matches: a slug list that matches nothing says nothing of what the bodies cover, so whether to search them as well is the model's call (§grounding). The candidates are advisory: whether one covers the item is the routing judgment.
+- **Ownership is evidenced by a plan claiming the code, never by a name.** A spec's name, or a task already filed in it, is no evidence that it owns the code an item names; a plan whose Affected Files claim the path is, though only that its spec changed the path, so the judgment above still decides. A path the derivation reports in `unclaimed-paths` is code no spec's plan changed: route it to a new spec through `/{project}:specify`'s procedure or, for a finding, to an external work item, never to the nearest-named spec.
 - If no spec exists — recommend creating one via `/{project}:specify`. Ask the user whether to create the spec now or skip this item. (If the item is a chore rather than a feature gap — see Step 4 — it never needs a spec; do it in this pass and remove it.)
 
 **Step 3: Is the spec ambiguous or incomplete?** (route: `spec`, matched feature)

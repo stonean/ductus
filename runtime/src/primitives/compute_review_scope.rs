@@ -1268,8 +1268,10 @@ impl PlanEntries {
 
 /// The regular expression an entry stands for: `None` for a literal path, and
 /// for a pattern too malformed to compile, such as an unclosed `{`, which is
-/// then matched only as the text it is.
-fn entry_pattern(entry: &str) -> Option<Regex> {
+/// then matched only as the text it is. `derive-routing-candidates`' path-claim
+/// source reads a plan's claims through it too, so both agree on what a plan's
+/// entry names.
+pub(crate) fn entry_pattern(entry: &str) -> Option<Regex> {
     if !entry.ends_with('/') && !entry.contains(['*', '?', '{']) {
         return None;
     }

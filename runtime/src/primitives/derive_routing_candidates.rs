@@ -8,8 +8,15 @@
 //! tree entirely, at the one moment the rules matter.
 //!
 //! This primitive supplies the deterministic half: given the proposed work in
-//! the requester's words, it derives candidate homes from three sources —
+//! the requester's words, it derives candidate homes from four sources —
 //!
+//! - **path-claim** — each path the description names, read from its inline
+//!   code spans by `check-artifacts`' path grammar, offered to every spec whose
+//!   plan claims it under Affected Files, read as `compute-review-scope` reads
+//!   one: an exact path first, then a glob, then a directory, then by spec
+//!   number. A claim records that a plan *changed* the path, not that its spec
+//!   owns it, so the reason says so. A named path no plan claims is reported
+//!   in `unclaimed-paths`, not left to read as an empty list.
 //! - **runtime-work** — the description names a runtime artifact (a primitive,
 //!   a path under `runtime/`), and some spec's plan claims `runtime/` under its
 //!   Affected Files. That spec is the home, *derived from the corpus* rather
@@ -18,6 +25,7 @@
 //! - **rule-surface** — a rule file whose category stem the description shares.
 //! - **spec-corpus** — a spec whose slug the description shares vocabulary with.
 //!
+//! A spec an earlier source offered is not offered again by a later one.
 //! Matching is lexical and the result is advisory: the semantic judgment stays
 //! at the `routeInboxItem` extension point (groom's tree, reused rather than
 //! copied) and the decision stays with the operator. It reports, it does not
@@ -29,7 +37,8 @@
 //! only when `skipped` is empty (`QUAL-CLAIM-001`).
 //!
 //! Read-only but for the list file past the read size. Defined by
-//! `specs/022-deterministic-runtime/scenarios/specify-routes-before-scaffolding.md`.
+//! `specs/022-deterministic-runtime/scenarios/specify-routes-before-scaffolding.md`
+//! and, for `path-claim`, `routing-ranks-by-claimed-path.md` beside it.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -80,6 +89,8 @@ pub fn run(
         description: derived.description,
         candidates_count: derived.candidates.len(),
         candidates: Some(derived.candidates),
+        named_paths: derived.named_paths,
+        unclaimed_paths: derived.unclaimed_paths,
         sources_examined: derived.sources_examined,
         skipped: derived.skipped,
         gate_required: derived.gate_required,
@@ -108,6 +119,8 @@ pub fn run(
 pub(crate) struct Derived {
     pub(crate) description: String,
     pub(crate) candidates: Vec<RoutingCandidate>,
+    pub(crate) named_paths: Vec<String>,
+    pub(crate) unclaimed_paths: Vec<String>,
     pub(crate) sources_examined: Vec<String>,
     pub(crate) skipped: Vec<RoutingSkip>,
     pub(crate) gate_required: bool,
@@ -145,6 +158,8 @@ pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result
         return Ok(Derived {
             description: args.description.clone(),
             candidates: Vec::new(),
+            named_paths: Vec::new(),
+            unclaimed_paths: Vec::new(),
             sources_examined: vec![format!("routed-by:{routed_by}")],
             skipped: Vec::new(),
             gate_required: false,
@@ -157,6 +172,13 @@ pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result
     let mut examined: Vec<String> = Vec::new();
     let mut skipped: Vec<RoutingSkip> = Vec::new();
 
+    let claims = derive_path_claims(
+        &args.description,
+        repo,
+        &mut candidates,
+        &mut examined,
+        &mut skipped,
+    )?;
     derive_runtime_work(
         &args.description,
         repo,
@@ -171,11 +193,183 @@ pub(crate) fn compute(args: &DeriveRoutingCandidatesArgs, repo: &Path) -> Result
     Ok(Derived {
         description: args.description.clone(),
         candidates,
+        named_paths: claims.named,
+        unclaimed_paths: claims.unclaimed,
         sources_examined: examined,
         skipped,
         gate_required: true,
         derivation_incomplete,
     })
+}
+
+// -- source: path claims -----------------------------------------------------
+
+/// How a plan's Affected Files entry claims a named path, most specific first:
+/// the order `path-claim` candidates are offered in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum ClaimRank {
+    /// The entry is the path.
+    Exact,
+    /// A `*`, `?` or `{a, b}` pattern matching it.
+    Glob,
+    /// A directory, ending in `/`, holding it.
+    Directory,
+}
+
+/// The paths a description names, and those of them no plan claims.
+#[derive(Debug, Default)]
+struct PathClaims {
+    named: Vec<String>,
+    unclaimed: Vec<String>,
+}
+
+/// The path-claim source: each path the description names, offered to every
+/// spec whose plan's Affected Files claims it.
+///
+/// A plan that cannot be read is a skip naming it, and while one is, no path
+/// is reported unclaimed: that plan may claim it (`QUAL-CLAIM-001`). A
+/// description naming no path reads no plan and is examined.
+fn derive_path_claims(
+    description: &str,
+    repo: &Path,
+    candidates: &mut Vec<RoutingCandidate>,
+    examined: &mut Vec<String>,
+    skipped: &mut Vec<RoutingSkip>,
+) -> Result<PathClaims> {
+    let named = crate::primitives::check_artifacts::candidate_paths(
+        &crate::primitives::line_citations::strip(description),
+    );
+    if named.is_empty() {
+        examined.push("path-claim".into());
+        return Ok(PathClaims::default());
+    }
+    let layout = paths::Paths::load(repo)?;
+    let specs_dir = repo.join(&layout.specs_root);
+    // A spec root that leaves the project is not listed (`BE-INPUT-004`).
+    let listed = list_feature_dirs(repo, &layout.specs_root)
+        .ok()
+        .filter(|_| specs_dir.is_dir());
+    let Some(listed) = listed else {
+        skipped.push(RoutingSkip {
+            source: "path-claim".into(),
+            reason: "spec root is missing or unreadable, so no plan's claims can be read".into(),
+            path: layout.specs_root.clone(),
+        });
+        return Ok(PathClaims {
+            named,
+            unclaimed: Vec::new(),
+        });
+    };
+
+    // Each spec's most specific claim on any named path, with the path it
+    // claims; then how many specs claim each named path at all.
+    let mut claims: Vec<(ClaimRank, String, String, String)> = Vec::new();
+    let mut claimants = vec![0_usize; named.len()];
+    let mut unread = false;
+    for slug in listed {
+        let plan_rel = format!("{}/{slug}/plan.md", layout.specs_root);
+        // A plan that is, or lies under, a link leaving the project is not
+        // read (`BE-INPUT-004`); like an unreadable one, it is named.
+        let entries = if crate::primitives::leaves_project(repo, &plan_rel) {
+            None
+        } else {
+            crate::primitives::compute_review_scope::read_plan_affected(&specs_dir.join(&slug)).ok()
+        };
+        let Some(entries) = entries else {
+            unread = true;
+            skipped.push(RoutingSkip {
+                source: "path-claim".into(),
+                reason: "plan could not be read, so a path it may claim is not reported unclaimed"
+                    .into(),
+                path: plan_rel,
+            });
+            continue;
+        };
+        let mut best: Option<(ClaimRank, usize, String)> = None;
+        for (index, path) in named.iter().enumerate() {
+            let Some((rank, entry)) = entries
+                .iter()
+                .filter_map(|entry| claim_rank(entry, path).map(|rank| (rank, entry)))
+                .min_by_key(|(rank, _)| *rank)
+            else {
+                continue;
+            };
+            claimants[index] += 1;
+            if best.as_ref().is_none_or(|(held, _, _)| rank < *held) {
+                best = Some((rank, index, entry.clone()));
+            }
+        }
+        if let Some((rank, index, entry)) = best {
+            claims.push((rank, slug, named[index].clone(), entry));
+        }
+    }
+    // Stable: specs keep their listing's number order within a rank.
+    claims.sort_by_key(|(rank, ..)| *rank);
+    for (rank, slug, path, entry) in claims {
+        let index = named.iter().position(|named| *named == path).unwrap_or(0);
+        let feature_dir = specs_dir.join(&slug);
+        let status = read_status(repo, &layout.specs_root, &slug);
+        candidates.push(RoutingCandidate {
+            route: "scenario".into(),
+            source: "path-claim".into(),
+            target: slug,
+            path: rel_path(&feature_dir, repo),
+            reopens: status == "done",
+            status,
+            reason: claim_reason(rank, &path, &entry, claimants[index]),
+        });
+    }
+    let unclaimed = if unread {
+        Vec::new()
+    } else {
+        examined.push("path-claim".into());
+        named
+            .iter()
+            .zip(&claimants)
+            .filter(|(_, count)| **count == 0)
+            .map(|(path, _)| path.clone())
+            .collect()
+    };
+    Ok(PathClaims { named, unclaimed })
+}
+
+/// How `entry`, one of a plan's Affected Files entries, claims `path`, or
+/// `None` when it does not. An entry is matched as `compute-review-scope`
+/// matches one ([`entry_pattern`](crate::primitives::compute_review_scope::entry_pattern)),
+/// and an entry that is the path, a trailing `/` aside, is exact.
+fn claim_rank(entry: &str, path: &str) -> Option<ClaimRank> {
+    if entry.trim_end_matches('/') == path.trim_end_matches('/') {
+        return Some(ClaimRank::Exact);
+    }
+    let pattern = crate::primitives::compute_review_scope::entry_pattern(entry)?;
+    if !pattern.is_match(path) {
+        return None;
+    }
+    Some(if entry.contains(['*', '?', '{']) {
+        ClaimRank::Glob
+    } else {
+        ClaimRank::Directory
+    })
+}
+
+/// A path-claim candidate's reason: what its plan changed, never that its spec
+/// owns the path, with how many plans claim it, since that count is the
+/// evidence a claim is history.
+fn claim_reason(rank: ClaimRank, path: &str, entry: &str, claimants: usize) -> String {
+    let of = if claimants == 1 {
+        "the only plan that did".to_string()
+    } else {
+        format!("1 of {claimants} plans that did")
+    };
+    match rank {
+        ClaimRank::Exact => format!("its plan changed `{path}` ({of})"),
+        ClaimRank::Glob => {
+            format!("its plan changed paths matching `{entry}`, which holds `{path}` ({of})")
+        }
+        ClaimRank::Directory => {
+            format!("its plan changed files under `{entry}`, which holds `{path}` ({of})")
+        }
+    }
 }
 
 // -- source: runtime work ----------------------------------------------------
@@ -211,6 +405,11 @@ fn derive_runtime_work(
         return Ok(());
     }
     match runtime_home(repo, &layout.specs_root) {
+        // Already offered by `path-claim`, the more specific claim: a second
+        // entry for the same spec would read as two independent matches.
+        Some(slug) if candidates.iter().any(|c| c.target == slug) => {
+            examined.push("runtime-work".into());
+        }
         Some(slug) => {
             let feature_dir = specs_dir.join(&slug);
             let status = read_status(repo, &layout.specs_root, &slug);
@@ -379,7 +578,7 @@ fn derive_spec_corpus(
         return Ok(());
     };
     for slug in listed {
-        // Already offered by the runtime-work source, which is the more
+        // Already offered by `path-claim` or `runtime-work`, each a more
         // specific claim; a second entry for the same spec would read as two
         // independent matches.
         if candidates.iter().any(|c| c.target == slug) {
@@ -670,9 +869,10 @@ mod tests {
         assert!(!result.derivation_incomplete);
         assert_eq!(
             result.sources_examined,
-            vec!["runtime-work", "rule-surface", "spec-corpus"],
+            vec!["path-claim", "runtime-work", "rule-surface", "spec-corpus"],
             "every source must account for itself"
         );
+        assert!(result.named_paths.is_empty(), "{:?}", result.named_paths);
         assert!(result.gate_required);
     }
 
@@ -695,10 +895,15 @@ mod tests {
         for (description, repo) in [
             ("a security rule about tokens", corpus()),
             ("check-artifacts family work", corpus()),
+            ("a fix in `runtime/src/lib.rs`", corpus()),
             ("webhook delivery", tempdir().unwrap()),
+            (
+                "webhook delivery in `src/hooks/send.rs`",
+                tempdir().unwrap(),
+            ),
         ] {
             let result = run(&args(description), repo.path()).unwrap();
-            for source in ["runtime-work", "rule-surface", "spec-corpus"] {
+            for source in ["path-claim", "runtime-work", "rule-surface", "spec-corpus"] {
                 let examined = result.sources_examined.iter().any(|s| s == source);
                 let skipped = result.skipped.iter().any(|s| s.source == source);
                 assert!(
@@ -751,18 +956,25 @@ mod tests {
     #[test]
     fn candidates_are_ordered_by_source_precedence_and_are_stable() {
         let tmp = corpus();
-        let description = "quality rules for the check-artifacts family and security review";
+        write(
+            &tmp.path().join("specs/036-quality-cross-rules/plan.md"),
+            "# Plan\n\n## Affected Files\n\n| Path | Change |\n| --- | --- |\n| `framework/rules/quality-cross.md` | edit |\n",
+        );
+        let description = "quality rules for the check-artifacts family and security review \
+                           in `framework/rules/quality-cross.md`";
         let first = run(&args(description), tmp.path()).unwrap();
         let second = run(&args(description), tmp.path()).unwrap();
         assert_eq!(first, second, "the derivation must be deterministic");
         let sources: Vec<&str> = first.candidates.iter().map(|c| c.source.as_str()).collect();
         let mut sorted = sources.clone();
         sorted.sort_by_key(|s| match *s {
-            "runtime-work" => 0,
-            "rule-surface" => 1,
-            _ => 2,
+            "path-claim" => 0,
+            "runtime-work" => 1,
+            "rule-surface" => 2,
+            _ => 3,
         });
         assert_eq!(sources, sorted, "{:?}", first.candidates);
+        assert_eq!(sources.first(), Some(&"path-claim"), "{sources:?}");
     }
 
     /// A spec directory that is a link leaving the project is not read for
@@ -854,5 +1066,263 @@ mod tests {
             result.skipped
         );
         assert!(result.derivation_incomplete);
+    }
+
+    // -- path claims (scenario `routing-ranks-by-claimed-path`) --------------
+
+    /// Plans claiming `src/api/send.rs` every way: two exactly, one by a glob,
+    /// one by its directory, and one plan claiming something else.
+    fn claims_corpus() -> TempDir {
+        let tmp = tempdir().unwrap();
+        for (slug, entry) in [
+            ("001-sweep", "`src/**`"),
+            ("002-layout", "`src/api/`"),
+            ("010-retries", "`src/api/send.rs`"),
+            ("020-backoff", "`src/api/send.rs`"),
+            ("030-guide", "`docs/guide.md`"),
+        ] {
+            write(
+                &tmp.path().join(format!("specs/{slug}/spec.md")),
+                "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+            );
+            write(
+                &tmp.path().join(format!("specs/{slug}/plan.md")),
+                &format!(
+                    "# Plan\n\n## Affected Files\n\n| Path | Change |\n| --- | --- |\n| {entry} | edit |\n"
+                ),
+            );
+        }
+        tmp
+    }
+
+    fn path_claims(result: &Derived) -> Vec<&str> {
+        result
+            .candidates
+            .iter()
+            .filter(|c| c.source == "path-claim")
+            .map(|c| c.target.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn path_claims_rank_exact_then_glob_then_directory_then_by_number() {
+        let tmp = claims_corpus();
+        let result = run(&args("retries never stop in `src/api/send.rs`"), tmp.path()).unwrap();
+        assert_eq!(
+            path_claims(&result),
+            ["010-retries", "020-backoff", "001-sweep", "002-layout"],
+            "{:?}",
+            result.candidates
+        );
+        assert_eq!(result.named_paths, ["src/api/send.rs"]);
+        assert!(
+            result.unclaimed_paths.is_empty(),
+            "{:?}",
+            result.unclaimed_paths
+        );
+        assert!(result.sources_examined.iter().any(|s| s == "path-claim"));
+        // `retries` names 010's slug too: the claim precedes the word match,
+        // and the spec is offered once.
+        assert_eq!(result.candidates[0].source, "path-claim");
+        assert_eq!(
+            result
+                .candidates
+                .iter()
+                .filter(|c| c.target == "010-retries")
+                .count(),
+            1,
+            "{:?}",
+            result.candidates
+        );
+    }
+
+    #[test]
+    fn a_path_claims_reason_says_its_plan_changed_the_path_never_that_it_owns_it() {
+        let tmp = claims_corpus();
+        let result = run(&args("`src/api/send.rs`"), tmp.path()).unwrap();
+        let claims: Vec<_> = result
+            .candidates
+            .iter()
+            .filter(|c| c.source == "path-claim")
+            .collect();
+        assert_eq!(claims.len(), 4, "{claims:?}");
+        for candidate in claims {
+            assert!(
+                candidate.reason.starts_with("its plan changed"),
+                "{}",
+                candidate.reason
+            );
+            assert!(
+                candidate.reason.contains("1 of 4 plans that did"),
+                "{}",
+                candidate.reason
+            );
+            assert!(!candidate.reason.contains("own"), "{}", candidate.reason);
+        }
+    }
+
+    #[test]
+    fn a_named_path_no_plan_claims_is_its_own_result_not_an_empty_list() {
+        let tmp = claims_corpus();
+        let result = run(&args("a new route in `lib/routes/hooks.rs`"), tmp.path()).unwrap();
+        assert_eq!(result.named_paths, ["lib/routes/hooks.rs"]);
+        assert_eq!(result.unclaimed_paths, ["lib/routes/hooks.rs"]);
+        assert!(path_claims(&result).is_empty(), "{:?}", result.candidates);
+        assert!(!result.derivation_incomplete);
+
+        // A description naming no path is a different answer: nothing named.
+        let none = run(&args("a new route for hooks"), tmp.path()).unwrap();
+        assert!(none.named_paths.is_empty(), "{:?}", none.named_paths);
+        assert!(
+            none.unclaimed_paths.is_empty(),
+            "{:?}",
+            none.unclaimed_paths
+        );
+        assert!(none.sources_examined.iter().any(|s| s == "path-claim"));
+    }
+
+    #[test]
+    fn a_path_is_read_from_a_code_span_with_its_line_citation_stripped() {
+        let tmp = claims_corpus();
+        let cited = run(
+            &args("the loop at `src/api/send.rs:42` never stops"),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(cited.named_paths, ["src/api/send.rs"]);
+        assert_eq!(cited.candidates[0].target, "010-retries");
+
+        // Outside a code span a slash names no path: neither `and/or` nor a
+        // bare path, as the acceptance-criterion path grammar reads prose.
+        let bare = run(
+            &args("retries and/or backoff in src/api/send.rs"),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(bare.named_paths.is_empty(), "{:?}", bare.named_paths);
+        assert!(path_claims(&bare).is_empty(), "{:?}", bare.candidates);
+    }
+
+    #[test]
+    fn a_path_named_only_in_a_plans_prose_claims_nothing() {
+        let tmp = tempdir().unwrap();
+        write(
+            &tmp.path().join("specs/001-a/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# a\n",
+        );
+        write(
+            &tmp.path().join("specs/001-a/plan.md"),
+            "# Plan\n\n## Affected Files\n\nNot changed: `src/api/send.rs`.\n\n| Path | Change |\n| --- | --- |\n| `src/other.rs` | edit |\n",
+        );
+        let result = run(&args("`src/api/send.rs`"), tmp.path()).unwrap();
+        assert!(path_claims(&result).is_empty(), "{:?}", result.candidates);
+        assert_eq!(result.unclaimed_paths, ["src/api/send.rs"]);
+    }
+
+    #[test]
+    fn runtime_work_does_not_offer_again_a_spec_a_path_claim_offered() {
+        let tmp = corpus();
+        let result = run(&args("a fix in `runtime/src/lib.rs`"), tmp.path()).unwrap();
+        let hits: Vec<_> = result
+            .candidates
+            .iter()
+            .filter(|c| c.target == "022-deterministic-runtime")
+            .collect();
+        assert_eq!(hits.len(), 1, "{:?}", result.candidates);
+        assert_eq!(hits[0].source, "path-claim");
+        assert!(result.sources_examined.iter().any(|s| s == "runtime-work"));
+    }
+
+    /// A plan that cannot be read is named in `skipped`, and while one is, no
+    /// named path is reported unclaimed: that plan may claim it.
+    #[test]
+    fn an_unreadable_plan_is_skipped_by_name_and_holds_back_unclaimed() {
+        let tmp = claims_corpus();
+        // Present where the plan belongs, but not a file that reads.
+        fs::create_dir_all(tmp.path().join("specs/040-broken/plan.md")).unwrap();
+        write(
+            &tmp.path().join("specs/040-broken/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# b\n",
+        );
+        let result = run(
+            &args("`lib/routes/hooks.rs` and `src/api/send.rs`"),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.source == "path-claim" && s.path == "specs/040-broken/plan.md"),
+            "{:?}",
+            result.skipped
+        );
+        assert!(
+            result.unclaimed_paths.is_empty(),
+            "{:?}",
+            result.unclaimed_paths
+        );
+        assert_eq!(
+            result.named_paths,
+            ["lib/routes/hooks.rs", "src/api/send.rs"]
+        );
+        assert!(result.derivation_incomplete);
+        assert!(!result.sources_examined.iter().any(|s| s == "path-claim"));
+        // The plans that were read still offer what they claim.
+        assert_eq!(result.candidates[0].target, "010-retries");
+    }
+
+    /// The bounded result `derive-routing-candidates` returns carries both
+    /// path lists, not only the derivation the other tests read.
+    #[test]
+    fn the_returned_result_carries_the_named_and_the_unclaimed_paths() {
+        let tmp = claims_corpus();
+        let result = super::run(
+            &args("`src/api/send.rs` and `lib/routes/hooks.rs`"),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(
+            result.named_paths,
+            ["src/api/send.rs", "lib/routes/hooks.rs"]
+        );
+        assert_eq!(result.unclaimed_paths, ["lib/routes/hooks.rs"]);
+        let value = serde_json::to_value(&result).unwrap();
+        assert_eq!(
+            value["unclaimed-paths"],
+            serde_json::json!(["lib/routes/hooks.rs"])
+        );
+    }
+
+    /// A plan that is a link leaving the project is not read: it is skipped by
+    /// name and claims nothing (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_plan_linked_outside_the_project_is_skipped_by_name_not_read() {
+        let repo = tempdir().unwrap();
+        write(
+            &repo.path().join("specs/001-a/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# a\n",
+        );
+        let _outside = crate::primitives::outward::file(
+            repo.path(),
+            "specs/001-a/plan.md",
+            "# Plan\n\n## Affected Files\n\n| Path | Change |\n| --- | --- |\n| `src/x.rs` | edit |\n",
+        );
+        let result = run(&args("`src/x.rs`"), repo.path()).unwrap();
+        assert!(path_claims(&result).is_empty(), "{:?}", result.candidates);
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.source == "path-claim" && s.path == "specs/001-a/plan.md"),
+            "{:?}",
+            result.skipped
+        );
+        assert!(
+            result.unclaimed_paths.is_empty(),
+            "{:?}",
+            result.unclaimed_paths
+        );
     }
 }

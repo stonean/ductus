@@ -62,6 +62,22 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   denominator from that same window when it starts at the run's own
   `diff-base`, so a carried entry the run lists in `unread` is accepted and
   counted.
+- **BREAKING: routing candidates offer first the specs whose plans claim a
+  path the work names (spec 022, task 62; the agent's recommendations, adopted
+  by the operator, 2026-11-23).** `derive-routing-candidates` gains a
+  `path-claim` source ahead of the other three: each path a description names
+  in an inline code span, read by the acceptance-criterion path grammar once a
+  `:N` citation is stripped, is offered to every spec whose plan's Affected
+  Files claims it, an exact path, then a glob, then a directory, then by spec
+  number, each reason saying that the plan changed the path and how many plans
+  did, never that the spec owns it. The result gains `named-paths` and
+  `unclaimed-paths`, each absent when empty, so a path no plan claims is
+  reported rather than read as an empty list; a plan that cannot be read is a
+  `path-claim` skip, and no path is reported unclaimed while one is.
+  `routeInboxItem`'s request carries `unclaimed-paths`, and groom's decision
+  tree holds that a spec's name, or a task filed in it, is no evidence that it
+  owns the code. Breaking for a consumer matching `sources-examined` or a
+  candidate's `source` against the three earlier values.
 
 ## [0.64.0] — 2026-11-23
 

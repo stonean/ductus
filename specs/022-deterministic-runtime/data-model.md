@@ -591,20 +591,20 @@ Result:
       "reason": "names the primitive `check-artifacts`; this spec's plan claims `runtime/`"
     }
   ],
-  "sources-examined": ["runtime-work", "rule-surface", "spec-corpus"],
+  "sources-examined": ["path-claim", "runtime-work", "rule-surface", "spec-corpus"],
   "skipped": [],
   "gate-required": true,
   "derivation-incomplete": false
 }
 ```
 
-The deterministic half of `/{project}:specify`'s routing gate, run **before** `create-feature` writes anything (scenario `specify-routes-before-scaffolding`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26). The three sources, in result precedence order, are `ductus derive-routing-candidates --help`'s. `runtime-work` takes a primitive from the parser's `PRIMITIVE_NAMES` and resolves to the lowest-numbered feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through `compute_review_scope::read_plan_affected`. `rule-surface` sets the `-backend` / `-frontend` / `-cross` suffix aside and resolves directories as `discover-rule-files` does. `spec-corpus` omits a spec `runtime-work` already offered.
+The deterministic half of `/{project}:specify`'s routing gate, run **before** `create-feature` writes anything (scenario `specify-routes-before-scaffolding`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26). The four sources, in result precedence order, are `ductus derive-routing-candidates --help`'s. `path-claim` (scenario `routing-ranks-by-claimed-path`) reads the description's paths through `check_artifacts::candidate_paths`, the acceptance-criterion path grammar of 045's data model, after `line_citations::strip`, and matches each against every plan's entries through `read_plan_affected` and `compute_review_scope::entry_pattern`, so it and `compute-review-scope` agree on what an entry names. `runtime-work` takes a primitive from the parser's `PRIMITIVE_NAMES` and resolves to the lowest-numbered feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through `compute_review_scope::read_plan_affected`. `rule-surface` sets the `-backend` / `-frontend` / `-cross` suffix aside and resolves directories as `discover-rule-files` does. A later source omits a spec an earlier one offered. `named-paths` and `unclaimed-paths` are absent when empty.
 
 Advisory matching, the candidate fields, the examined-or-skipped invariant and `routed-by` are `ductus derive-routing-candidates --help`'s. Tokens are lowercased alphanumerics of four or more characters, minus a short stopword list; `route` is drawn from the `routeInboxItem` vocabulary and `spec` is never a candidate; the runtime-work signal with no derivable home is a skip. `description` carries a `title` alias and is echoed in the result, and only an empty one is an operational error.
 
 ### `routeInboxItem` — `candidates` request field (addendum)
 
-The request gains an optional `candidates` array carrying `derive-routing-candidates`' output, `skip_serializing_if` empty so the `/{project}:groom` payload is byte-unchanged. This keeps **one** routing point: `/{project}:specify` sends the proposed feature description as `item-text` with its derived candidates, so work arriving through conversation is routed by the same tree as work arriving through the inbox. Two routing rules that could disagree is the drift the scenario was written against. `item-text` falls back to the `description` key on the specify path, so neither entry point needs a second context key for the same value. The router treats candidates as evidence to weigh, never as a decision already made.
+The request gains an optional `candidates` array carrying `derive-routing-candidates`' output, and an optional `unclaimed-paths` array carrying its paths no plan claims, each `skip_serializing_if` empty so the `/{project}:groom` payload is byte-unchanged. This keeps **one** routing point: `/{project}:specify` sends the proposed feature description as `item-text` with its derived candidates, so work arriving through conversation is routed by the same tree as work arriving through the inbox. Two routing rules that could disagree is the drift the scenario was written against. `item-text` falls back to the `description` key on the specify path, so neither entry point needs a second context key for the same value. The router treats candidates as evidence to weigh, never as a decision already made.
 
 ### `remove-inbox-item` — remove one bullet from the inbox
 

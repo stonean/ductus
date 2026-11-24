@@ -2404,8 +2404,10 @@ fn is_live_assertion(text: &str) -> bool {
 }
 
 /// Candidate filesystem paths named inside `text`'s inline code spans, in
-/// first-appearance order.
-fn candidate_paths(text: &str) -> Vec<String> {
+/// first-appearance order. `derive-routing-candidates`' path-claim source reads
+/// the paths a description names through it, so a path is one by the same
+/// grammar wherever the framework reads one from prose.
+pub(crate) fn candidate_paths(text: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for line in text.lines() {
         for span in inline_code_spans(line) {

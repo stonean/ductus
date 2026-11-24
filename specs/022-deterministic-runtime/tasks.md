@@ -1,5 +1,5 @@
 ---
-next-task: 62
+next-task: 64
 ---
 
 # 022 — Deterministic Runtime Tasks
@@ -26,3 +26,15 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] the in-fence toggle in `runtime/src/primitives/spec_links.rs`
 
 - **Done when**: each of the three sites reads a fence by the length-aware rule scenario `skipscanner-inline-code-exemption` states, a test per site fails without it, and the release binary before and after gives identical results for every spec, taken on one committed tree
+
+## 62. Routing ranks by claimed path
+
+- [x] Implement the behavior described in `scenarios/routing-ranks-by-claimed-path.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 63. Disposition out-of-spec finding: 080's groom-derives-routing-candidates scenario lists three routing sources
+
+- [ ] specs/080-deterministic-runtime-efficiency/scenarios/groom-derives-routing-candidates.md — its Context says derive-routing-candidates derives homes from "a runtime-owning spec, a rule file, a spec sharing vocabulary", and task 62 added a fourth source, path-claim, ranked first; 080 is done, so editing the scenario reopens it
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

@@ -7825,8 +7825,9 @@ pub struct RoutingCandidate {
     /// to an existing spec). `spec` — create a new one — is the absence of
     /// candidates, never a candidate itself.
     pub route: String,
-    /// Which derivation produced it: `runtime-work`, `rule-surface`, or
-    /// `spec-corpus`. Ordered by that precedence in the result.
+    /// Which derivation produced it: `path-claim`, `runtime-work`,
+    /// `rule-surface`, or `spec-corpus`. Ordered by that precedence in the
+    /// result.
     pub source: String,
     /// The home: a rule-file basename, or a feature slug.
     pub target: String,
@@ -7840,9 +7841,9 @@ pub struct RoutingCandidate {
     /// back-edge, so the confirmation can name the reopen before it happens
     /// exactly as `/ductus:groom`'s does.
     pub reopens: bool,
-    /// Why it matched — the shared tokens, or the runtime artifact named.
-    /// Surfaced in the gate so the operator can judge the match rather than
-    /// take it on trust.
+    /// Why it matched — the path its plan changed, the shared tokens, or the
+    /// runtime artifact named. Surfaced in the gate so the operator can judge
+    /// the match rather than take it on trust.
     pub reason: String,
 }
 
@@ -7851,8 +7852,8 @@ pub struct RoutingCandidate {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RoutingSkip {
-    /// Source that could not run: `rule-surface`, `spec-corpus`, or
-    /// `runtime-work`.
+    /// Source that could not run: `path-claim`, `runtime-work`,
+    /// `rule-surface`, or `spec-corpus`.
     pub source: String,
     /// What stopped it, in the operator's terms.
     pub reason: String,
@@ -7877,13 +7878,27 @@ pub struct DeriveRoutingCandidatesResult {
     /// extension point downstream reads one key whichever name the caller
     /// supplied it under.
     pub description: String,
-    /// Derived homes, ordered by source precedence (`runtime-work`,
-    /// `rule-surface`, `spec-corpus`), then by descending match strength,
-    /// then by target for a stable render. Absent in the file form.
+    /// Derived homes, ordered by source precedence (`path-claim`,
+    /// `runtime-work`, `rule-surface`, `spec-corpus`); `path-claim`'s by the
+    /// claim's rank (an exact path, then a glob, then a directory), then by
+    /// spec number, and each other source's in its listing's order, rule files
+    /// by name and specs by number, for a stable render. Absent in the file
+    /// form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidates: Option<Vec<RoutingCandidate>>,
     /// Entries in `candidates`, in either form.
     pub candidates_count: usize,
+    /// The paths the description names, read from its inline code spans by
+    /// the acceptance-criterion path grammar after any line-number citation is
+    /// stripped. Absent when it names none, which is not the same answer as a
+    /// named path every plan's claims miss (`unclaimed-paths`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub named_paths: Vec<String>,
+    /// Each named path no plan's Affected Files claims, exactly, by glob or by
+    /// directory: code no spec's plan changed. Listed only once every plan was
+    /// read, since an unread plan may claim it; absent when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unclaimed_paths: Vec<String>,
     /// Sources that ran to completion. A source appears here or in
     /// `skipped`, never both and never neither.
     pub sources_examined: Vec<String>,

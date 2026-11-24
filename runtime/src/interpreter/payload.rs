@@ -1056,6 +1056,8 @@ const INBOX_ROUTES: [&str; 5] = ["rule", "spec", "scenario", "chore", "discard"]
 ///   groom path. Omitted from the payload when empty, so groom's request is
 ///   byte-unchanged and the two entry points share one routing point rather
 ///   than growing a second tree.
+/// - `unclaimed-paths` — the paths that result names and no spec's plan
+///   claims, threaded the same way and omitted when empty.
 ///
 /// Past the read size `available-specs`, which grows with the corpus, and
 /// `candidates` move to a file ([`bound_lists`]); the request carries no body.
@@ -1077,11 +1079,17 @@ fn build_route_inbox_item_request(
         .cloned()
         .and_then(|value| serde_json::from_value(value).ok())
         .unwrap_or_default();
+    let unclaimed_paths = context
+        .get("unclaimed-paths")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_default();
     let typed = RouteInboxItemRequest {
         item_text,
         routes: INBOX_ROUTES.iter().map(ToString::to_string).collect(),
         available_specs: load_available_specs(repo)?,
         candidates,
+        unclaimed_paths,
     };
     bound_lists(
         repo,
@@ -4305,6 +4313,30 @@ mod tests {
         let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["item-text"], "the inbox item");
         assert!(value.as_object().unwrap().get("candidates").is_none());
+        assert!(value.as_object().unwrap().get("unclaimed-paths").is_none());
+    }
+
+    #[test]
+    fn route_inbox_item_carries_the_paths_no_plan_claims() {
+        // A path no spec's plan claims reaches the router as its own fact,
+        // so the decision can route the code to a new spec or an external
+        // item rather than to the nearest-named spec (022's scenario
+        // `routing-ranks-by-claimed-path`).
+        let tmp = tempdir().unwrap();
+        let mut ctx = Map::new();
+        ctx.insert(
+            "description".into(),
+            Value::String("a new route in `lib/routes/hooks.rs`".into()),
+        );
+        ctx.insert(
+            "unclaimed-paths".into(),
+            serde_json::json!(["lib/routes/hooks.rs"]),
+        );
+        let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
+        assert_eq!(
+            value["unclaimed-paths"],
+            serde_json::json!(["lib/routes/hooks.rs"])
+        );
     }
 
     #[test]

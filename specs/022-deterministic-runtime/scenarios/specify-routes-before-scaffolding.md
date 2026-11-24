@@ -20,7 +20,7 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md). 
 
 **`/{project}:specify` runs the routing decision before scaffolding.** After the feature name is known and before `create-feature` writes anything, the command derives candidate homes and presents them. It reuses groom's tree rather than growing a second one — two routing rules that could disagree is the drift this repo has been bitten by before.
 
-**Candidates are derived, not recalled.** From the rule-file directory (a rule surface whose category matches), from the spec corpus (a spec whose subject covers the area), and from the runtime-work signal: work naming a primitive or a path under `runtime/` is offered, as a scenario, to the lowest-numbered spec whose plan claims a `runtime/` path. That candidate is a lexical hint; which spec owns the primitive is the routing decision. An empty derivation is reported as *no candidate found* rather than silently yielding "new spec".
+**Candidates are derived, not recalled.** From the plans claiming a path the work names, ranked first (scenario `routing-ranks-by-claimed-path`), from the rule-file directory (a rule surface whose category matches), from the spec corpus (a spec whose subject covers the area), and from the runtime-work signal: work naming a primitive or a path under `runtime/` is offered, as a scenario, to the lowest-numbered spec whose plan claims a `runtime/` path. That candidate is a lexical hint; which spec owns the primitive is the routing decision. An empty derivation is reported as *no candidate found* rather than silently yielding "new spec".
 
 **"New spec" becomes a confirmed choice, not the default.** When candidates exist, the gate names them and the operator picks — a scenario on `NNN`, a rule-file amendment, or a new spec anyway. When no candidate is found, the gate says so and the run proceeds as it does today. Either way the spec is created only after the routing is confirmed, so the rules bind wherever work enters.
 
@@ -58,3 +58,7 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md). 
   So the candidate stays a lexical hint, and which spec owns the primitive
   stays with the operator at the `routeInboxItem` judgment, where `AGENTS.md`'s
   routing entry names the runtime's three homes: 022, 066 and 067.
+
+  Superseded in part on 2026-11-23 by `routing-ranks-by-claimed-path`'s
+  resolution: a plan claiming a path the work names is now offered first,
+  still as history rather than ownership, and ownership stays the operator's.

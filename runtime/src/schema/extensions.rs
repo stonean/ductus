@@ -509,6 +509,12 @@ pub struct RouteInboxItemRequest {
     /// them as evidence to weigh, never as a decision already made.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub candidates: Vec<crate::schema::primitives::RoutingCandidate>,
+    /// Paths the item names that no spec's plan claims, from the same
+    /// derivation: code no spec's plan changed, which routes to a new spec or
+    /// an external work item rather than to the nearest-named spec. Absent
+    /// when none, so groom's request is byte-unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unclaimed_paths: Vec<String>,
 }
 
 /// Route decision discriminator — the groom decision tree's leaves.
@@ -1642,6 +1648,7 @@ mod tests {
                 status: "done".into(),
             }],
             candidates: Vec::new(),
+            unclaimed_paths: Vec::new(),
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         let keys: Vec<&str> = value
