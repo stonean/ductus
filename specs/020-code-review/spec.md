@@ -45,7 +45,7 @@ Adds `/ductus:review`, a verb-named slash command that audits implementation cod
 > **Audit Family 31 is gone.** It reconciled the two copies of the record, which
 > is a check with no subject once there is one copy; AC15 is annotated below.
 >
-> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the review this spec delivered. Its default window starts at the last review of the reopening, its scope holds the spec's own change and names what it leaves out, a run decides a non-gating observation by rule, and a reopening that changed no code owes no review (081 counts the spec root and `.ductus/` as artifacts, so a scenario or data-model edit owes an analysis only). `compute-review-scope` and `write-review` state the rules.
+> **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the review this spec delivered. Its default window starts where the spec's last review ended, its scope holds the spec's own change and names what it leaves out, a run decides a non-gating observation by rule, and a reopening that changed no code owes no review (081 counts the spec root and `.ductus/` as artifacts, so a scenario or data-model edit owes an analysis only). `compute-review-scope` and `write-review` state the rules.
 >
 > **Signpost:** [081](../081-reviews-and-checks-follow-what-changed/spec.md) made the review record state what its passes did not read: `unread`, which step 11 of `framework/commands/review.md` passes and `data-model.md`'s record table lists. From it `compute-review-scope` credits a commit naming no spec and touching no spec directory as read in every other window, so such a commit owes one review rather than one per open spec.
 

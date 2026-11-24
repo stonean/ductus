@@ -62,7 +62,8 @@ a change outside the project directory is still left out, and a deleted file
 is reported by its old path, in `modified-since` and `deleted` but not in
 `scope` (scenario `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
 
-**An uncommitted transition puts the base at `HEAD`.** When `spec.md` on disk
+**An uncommitted transition puts the base at `HEAD`, for a spec with no review to
+start from (spec 084 starts any other where its last review ended).** When `spec.md` on disk
 reads `in-progress` and the spec at `HEAD` does not, the transition that opened
 this window has not been committed yet, so the window starts at `HEAD` and
 `diff-base` is `HEAD`'s sha. "Does not" covers `done`, `planned`, any other

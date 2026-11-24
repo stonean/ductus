@@ -17,7 +17,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `base-source` | `reopen`, `reopen-past-partial-review`, `last-review`, `held-review`, `since`, `uncommitted-transition` or `none` | Where the window starts, `held-review` at a held record's `reviewed-against` and `reopen-past-partial-review` at the reopen because every run since it did not read its scope (AC5) |
+| `base-source` | as `ductus compute-review-scope --help` lists them | Where the window starts, `held-review` at a held record's `reviewed-against` and `reopen-past-partial-review` at the reopen because every run recorded did not read its scope (AC5); spec 084 added `reached-done` |
 | `excluded`, `excluded-count` | list of paths, integer | As `ductus compute-review-scope --help` states; the list joins the bounded lists |
 | `review-owed` | boolean | As `ductus compute-review-scope --help` states, narrowed by spec 081 so a scenario or data-model edit owes an analysis alone; true with no review record naming a run |
 
