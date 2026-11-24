@@ -129,22 +129,20 @@ Wherever a command acts on a path under the spec root, substitute the configured
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
 ```
 
-`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`; `/review` changes no status. The gate composes with `/analyze`, which flags drifted `done` specs, and the shipped CI template. Three back-edges exist:
+`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`. The gate composes with `/analyze`, which flags drifted `done` specs, and the shipped CI template. Two back-edges exist:
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question, in the same write; the next `/clarify` resolves it. `draft` is the only status that tolerates open questions in the spec body.
-- **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario; its task is implemented and the spec returns to `done`. A scenario carrying open questions takes this edge too, and the spec does not reach `done` while any remain.
-- **Backward via meaningful body edit** — `done` → `in-progress`, through the same `/amend` flow, when an edit under `specs/{feature}/` changes a criterion, an open question, an unchecked task, a scenario, a data model or another file; `classify-spec-edit` decides from the diff. Two kinds take no back-edge. A **correction** edits `spec.md`, `plan.md` or `tasks.md` and changes none of those, a label's assignment and a factual correction included. An edit elsewhere is **mechanical** when every change is **(a)** one token substitution, uniform across the live artifacts §drift-prevention enumerates, mapping a deprecated label to its current one, **(b)** an added, removed or rewritten **cross-service reference** and its regenerated `references:`, or **(c)** a citation's line number removed.
+- **Backward via owed code** — `done` → `in-progress` exactly while the spec's `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, read from that state and never from an edit's diff. The command whose write leaves that work owed sets the status in the same action, reading it from `check-owed-work`, and on the spec it reviews `/review` writes this and no other status, when it unticks a criterion or defers a finding to that spec's own work. So a new criterion, or a scenario through its task, reopens a `done` spec, and an edit to a scenario's text, a data model, prose or another file leaves it `done`, as does a scenario's open question, which `/analyze` reports.
 
-Any other edit there reopens, a typo fixed in one file as much as a **factual correction**, since a scenario's text is the requirement and no diff tells the two apart. Spec bodies are living documents that represent current state, and scenarios evolve the existing spec rather than spawning a new one.
+Spec bodies are living documents that represent current state, and scenarios evolve the existing spec rather than spawning a new one.
 
-**A branch-scoped spec is a staging form, not a fourth state.** A spec numbered `{identifier}.{n}-{slug}` (§numbering) names in `folds-into:` the upstream spec it stands in for. A pending fold never holds it short of `done`; then fold-back moves its content upstream and removes it, adding **no new back-edge** — a `done` upstream spec reopens by one of the two above.
+**A branch-scoped spec is a staging form, not a fourth state.** A spec numbered `{identifier}.{n}-{slug}` (§numbering) names in `folds-into:` the upstream spec it stands in for. A pending fold never holds it short of `done`; then fold-back moves its content upstream and removes it, adding **no new back-edge** — a `done` upstream spec reopens only for owed code.
 
 Operational rules:
 
 - **A retired feature's spec is deleted, not left at `done`**, which means *delivered, and still true*. When its content survives elsewhere, `/{project}:consolidate` re-points every inbound pointer it reads **before** removing the directory, lest it dangle; when nothing survives, the spec goes; retiring *part* of a feature is an ordinary body edit.
 - **A `done` stop never says the request is built.** A command that stops on or shows a `done` spec says "Not built yet: {request}." first if new work is asked for, then qualifies `done` ("`{slug}` is `done` for what it specifies; this request is not part of it.").
-- **Re-open a `done` spec with the status primitive when the only intent is to reflect edits already on disk.**
-- **Syncing a canonical record on another spec leaves it `done` only as a correction** (`classify-spec-edit`): one in its `spec.md` outside the criteria, `plan.md` or `tasks.md`; one in its data model or a scenario reopens it, and a table synced twice moves to the spec owning the behavior.
+- **Re-open a `done` spec with the status primitive when edits already on disk left it owing work.**
 - **Restoring a spec directory from git silently reverts uncommitted pipeline state**, status flips and ticked checkboxes included; re-apply them. Commit a status transition alone only when the spec file holds nothing else, since the pre-commit hook restages the file whole; to separate one from edits on disk, set them aside, commit it, then restore them, or transition first.
 
 <!-- §plan-phase -->
@@ -185,7 +183,7 @@ Before implementation begins, a pass/fail gate:
 #### Implementation requirements
 
 - Code matches the spec's contracts and tests verify its criteria; if new work is discovered, add it as a task first, and a refactor that reveals a missing requirement updates the spec or adds a scenario first
-- **A spec's ticked acceptance criteria are verified against the tree before it closes**, by `/{project}:review`, which judges every criterion on each run wherever its code lies and ticks each to its verdict, so the completion gate judges none. The artifact check that compares criteria to the tree examines `in-progress` and `done` specs, and proves only that a path *resolves*, not that a claim about its contents holds. A criterion that no longer holds means the spec is edited — reopened and corrected, or consolidated away — not left ticked.
+- **A spec's ticked acceptance criteria are verified against the tree before it closes**, by `/{project}:review`, which judges every criterion on each run wherever its code lies and ticks each to its verdict, so the completion gate judges none. The artifact check that compares criteria to the tree examines `in-progress` and `done` specs, and proves only that a path *resolves*, not that a claim about its contents holds. A ticked criterion the code contradicts is never left as it stands: once the owner, or an agent told to decide, says which is right, its text is corrected and stays ticked, or it is unticked and the spec reopens, or the spec is consolidated away.
 - **A spec does not reach `done` with an outstanding SHOULD.** This is §design-principles' completion filter at the review gate, where advisory is not ignorable: it blocks on an unwaived SHOULD as on a MUST; a SHOULD is addressed only when **fixed**, waived with its rationale, or deferred to another spec.
 - **Nothing durable goes in a review record's body.** `/{project}:review` regenerates it whole, keeping only its waiver and decision lists; a triage of findings is not a record, and the fixes it plans are tasks.
 - The review's window and coverage counts are `.ductus/reference/review.md` **§Window and coverage**.
@@ -206,7 +204,7 @@ Before implementation begins, a pass/fail gate:
 
 ## Bug Handling
 
-Bugs are unwritten or violated requirements: each shows a gap in a rule (cross-cutting), spec (feature-wide), or scenario (situational), and the fix makes that requirement more precise.
+Bugs are unwritten or violated requirements: each shows a gap in a rule (cross-cutting), spec (feature-wide), or scenario (situational), and the fix makes that requirement more precise where it fell short.
 
 A **chore** — lint, dependency or repo-hygiene cleanup, a standalone refactor — adds no requirement and belongs to no feature, so it spawns no rule, spec, or scenario. **A chore a run finds is fixed in that run** (§brownfield-inbox); one a person logs stays a checkbox in `specs/inbox.md` until done, then is removed. The test is **durability**: rules, specs and scenarios hold what must stay accurate, while a chore's value is spent once complete.
 
@@ -217,7 +215,7 @@ The first matching condition determines the route:
 1. **No rule covers this cross-cutting concern** — promote a rule, then fix the code.
 2. **No spec exists for the behavior** — write the spec, then fix the code.
 3. **The spec is ambiguous or incomplete** — correct the spec, then the implementation.
-4. **The spec is clear but the implementation is wrong** — add a scenario, then fix the code.
+4. **The spec is clear but the implementation is wrong** — fix the code, adding a scenario only when the requirement needs more precision; a fix to code an existing criterion describes is reviewed without one.
 
 <!-- §scenarios -->
 
@@ -424,9 +422,9 @@ For every kind of fact described in multiple places, one location is authoritati
 
 When document B describes content authored in document A, B back-links to A — a relative link, an anchor reference (`§anchor`), or a section name. Changing A includes auditing every back-link to A.
 
-- **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), rules, command sources, scripts, CI, docs, README. The uniform sweep is mechanical (§spec-lifecycle), kept apart from unrelated edits; **keep the sweep's own target list current**.
-- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime computes which specs a sweep reopens from the diff, so a reworded line is not mechanical. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
-- **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning; one in a `done` spec's scenario or data model is a meaningful edit.
+- **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), rules, command sources, scripts, CI, docs, README. The sweep is kept apart from unrelated edits, and **mechanical** when each change is one token substitution, uniform across those artifacts, mapping a deprecated label to its current one, or a citation's line number removed; the analysis record's freshness and the review record's digest read such a sweep as no change. **Keep the sweep's own target list current**.
+- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime judges a sweep from its diff, so a reworded line is not mechanical. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
+- **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.
 - **An anchor reference resolves by line, and a line wrap alone breaks it.** A `§name` resolves when its text begins with a heading of a document its line names, a registered shared constitution's marker, a heading of the citing file, or a constitution marker; one into a document the check cannot read is recorded unexamined, and a subsection has no marker, so cite its marked section.
@@ -472,7 +470,7 @@ Per-process targets isolate the target only: agents in one tree share files, ind
 
 ### Cross-Spec Impact
 
-A change one spec's work finds another spec needs is recorded **in the affected spec** — a criterion, scenario, or signpost back-linking the originating spec — reopening it if `done` and `classify-spec-edit` says the edit does. Changing the project configuration file is cross-spec impact only when it modifies a key another spec documented.
+A change one spec's work finds another spec needs is recorded **in the affected spec** — a criterion, scenario, or signpost back-linking the originating spec — reopening a `done` one only when it then owes work (§spec-lifecycle). Changing the project configuration file is cross-spec impact only when it modifies a key another spec documented.
 
 #### What the framework enforces, and what it does not
 

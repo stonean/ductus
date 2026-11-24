@@ -4,8 +4,8 @@
 # The rename sweep required by §drift-prevention greps a fixed set of
 # live-artifact paths. That set is enumerated in AGENTS.md between
 # `<!-- audit:sweep-targets:begin -->` and `<!-- audit:sweep-targets:end -->`,
-# and the constitution's §spec-lifecycle case (a) resolves the scope of a
-# mechanical edit through it. A list naming a relocated directory sends the
+# and the constitution's §drift-prevention resolves the scope of a mechanical
+# sweep through it. A list naming a relocated directory sends the
 # grep somewhere clean: the sweep misses the files that moved and exits 0.
 #
 # Not hypothetical. 042 moved the generators from `scripts/` to

@@ -230,8 +230,9 @@ sub_1c() {
   # The canonical back-edges per spec 014 and the constitution, as BACK_EDGES
   # holds them:
   #   * clarified/planned/in-progress → draft  (new question via /amend)
-  #   * done → in-progress                      (new scenario, or a meaningful
-  #                                              body edit, via /amend)
+  #   * done → in-progress                      (owed code: an unchecked task
+  #                                              or an unticked criterion, set
+  #                                              by the command that writes it)
   # Both should be referenced from framework/commands/amend.md (which owns
   # the back-edges) and framework/commands/target.md (which surfaces the
   # next-action implications).

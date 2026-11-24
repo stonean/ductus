@@ -1,9 +1,9 @@
 //! Mechanical-sweep detection — "did this file change by more than spelling?"
 //!
-//! §spec-lifecycle case (a) calls a uniform token substitution across live
-//! artifacts a **mechanical** edit: it is why a rename sweep does not reopen a
-//! `done` spec. A contract that changed only in spelling states what it
-//! stated before, so the same rule has to hold wherever a record's digest is
+//! §drift-prevention's mechanical sweep calls a uniform token substitution
+//! across live artifacts a **mechanical** edit: it is why a rename sweep does
+//! not stale an audit record. A contract that changed only in spelling states
+//! what it stated before, so the same rule has to hold wherever a record's digest is
 //! compared with the tree. Without it the rules disagree, and one repo-wide
 //! rename turns every done spec's record stale at once.
 //!
@@ -33,7 +33,7 @@
 //! repo-wide test.
 //!
 //! A removed **line-number citation** is no rewrite at all (066 AC6,
-//! §spec-lifecycle case (c)): a line whose only change strips one, as
+//! §drift-prevention's mechanical sweep): a line whose only change strips one, as
 //! `line_citations` defines it, adds no pair, and a token whose only change
 //! strips one is skipped. Only the removed side is stripped, so adding or
 //! renumbering a citation is still a rewrite, which the three parts judge.

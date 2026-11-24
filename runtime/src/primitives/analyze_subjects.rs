@@ -407,7 +407,7 @@ pub(crate) fn freshness_of(
 ///
 /// The one place `analyzed-against` is still read. A contract that changed only
 /// in spelling states what it stated before, so a rename sweep must not stale
-/// the record — the §spec-lifecycle case (a) rule, which the review record's digest
+/// the record — §drift-prevention's mechanical-sweep rule, which the review record's digest
 /// applies through the same exemption. Measured on the review half before it had the
 /// exemption, the un-exempted rule called 19 of 46 `done` specs stale, every
 /// one a consequence of 049's `govern → ductus` sweep and none a real change.

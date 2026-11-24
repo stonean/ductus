@@ -41,10 +41,10 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Task 2 found that only the retired classifier applied the mechanical rule's cross-service-reference case (b): `derive_references::ReferenceScrub` went dead with it, and neither remaining reader, the analysis record's freshness nor the review record's digest (`mechanical_sweep.rs`, `analyze_subjects.rs`), reads a reference. So the statement moved into §drift-prevention carries the sweep (a) and the line-number strip (c) alone. Four live sites cite the rule as `§spec-lifecycle case (a)` or `case (c)` and are re-pointed in the same commit: `runtime/src/primitives/mechanical_sweep.rs` (twice), `runtime/src/primitives/analyze_subjects.rs`, `scripts/audit/sweep-target-manifest-parity.sh`.
 
-- [ ] §spec-lifecycle: one `- **Backward via owed code**` bullet in place of the second and third back-edges, the "Any other edit there reopens" paragraph and the canonical-record bullet, naming `/review`'s one status write
-- [ ] §implement-phase, §drift-prevention, §cross-spec-impact and §bug-handling's fourth route (AC10)
-- [ ] "Three back-edges exist", "one of the two above" and §drift-prevention's two bullets citing the mechanical class; the mechanical-sweep rule's statement moves into §drift-prevention, or to `framework/reference/analyze.md` if the budget does not hold it
-- [ ] `scripts/audit/cross-doc-consistency.sh` family 1c's `sub_1c` comment; `BACK_EDGES` is unchanged
+- [x] §spec-lifecycle: one `- **Backward via owed code**` bullet in place of the second and third back-edges, the "Any other edit there reopens" paragraph and the canonical-record bullet, naming `/review`'s one status write
+- [x] §implement-phase, §drift-prevention, §cross-spec-impact and §bug-handling's fourth route (AC10)
+- [x] "Three back-edges exist", "one of the two above" and §drift-prevention's two bullets citing the mechanical class; the mechanical-sweep rule's statement moves into §drift-prevention, or to `framework/reference/analyze.md` if the budget does not hold it
+- [x] `scripts/audit/cross-doc-consistency.sh` family 1c's `sub_1c` comment; `BACK_EDGES` is unchanged
 
 - **Done when**: `scripts/lint-governing-size.sh` passes on the staged constitution, family 1c derives the same edge set, `run-all.sh` exits 0 after the commit, and no sentence of the constitution says an edit's diff reopens a `done` spec.
 
@@ -55,6 +55,8 @@ Task 2 found that only the retired classifier applied the mechanical rule's cros
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Blocked on task 3: the sweep corrects what states the old rule only once the new one stands.
+
+Task 3 moved the mechanical-sweep rule from §spec-lifecycle to §drift-prevention, without the cross-service-reference case. Two sites here still point at it in §spec-lifecycle: `AGENTS.md`'s live-artifact-set bullet ("the scope of §spec-lifecycle case (a)") and `specs/README.md`'s "mechanical-vs-meaningful boundary". Re-point both by meaning.
 
 - [ ] Read each whole and correct it: `AGENTS.md` (held to its ceiling), `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`
 - [ ] `framework/commands/prune.md`, `consolidate.md`, `help.md`, `fold.md`; `framework/reference/implement.md`, `review.md`, `fold.md`
