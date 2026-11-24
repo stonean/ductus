@@ -224,3 +224,9 @@ This is the last task. The about 9 `done` specs measured as owing a review are r
 - [ ] Remove `[review] unreviewed-push = "warn"` from `.ductus/config.toml` once `check-unreviewed-code` reports nothing here
 
 - **Done when**: the key is gone and a push from this checkout passes the hook at `block`.
+
+### 20. Disposition out-of-spec finding: merge_status_hook's fake `claude` can fail to exec with ETXTBSY
+
+- [ ] `runtime/tests/merge_status_hook.rs` — `claude_printing` writes a script and execs it at once; on Linux a parallel test's fork can inherit the still-open write handle, so the exec fails `ExecutableFileBusy` ("Text file busy"). It failed `the_probe_reads_the_claude_on_the_inherited_path` in run 45445822818 (`build + test (ubuntu-latest)`, 210e9a8f, whose own change was comments only); macOS passed the same suite
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
