@@ -53,7 +53,7 @@ use crate::schema::procedure::{Procedure, SourceRange, Step, StepNumber};
 /// the [`crate::schema::registry::CLI_ONLY_PRIMITIVES`] by construction.
 pub const PRIMITIVE_NAMES: &[&str] = crate::schema::registry::PRIMITIVE_REGISTRY;
 
-/// Parse errors raised by [`parse`] and [`check`].
+/// Parse errors raised by [`parse`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseError {
     /// The file does not declare a parseable Instructions section, or its
@@ -110,16 +110,6 @@ pub fn parse(source: &str, command_name: &str) -> Result<Procedure, ParseError> 
         command: command_name.into(),
         steps: walker.steps,
     })
-}
-
-/// Lightweight wrapper around [`parse`] that discards the AST. Used by
-/// `ductus parse --check` and `scripts/lint-procedure-parseability.sh`.
-///
-/// # Errors
-///
-/// See [`ParseError`].
-pub fn check(source: &str) -> Result<(), ParseError> {
-    parse(source, "").map(|_| ())
 }
 
 struct Walker {
@@ -1170,26 +1160,25 @@ mod tests {
             .parent()
             .expect("runtime/.. exists")
             .join("framework/commands");
-        for command in [
-            "status",
-            "target",
-            "analyze",
-            "fold",
-            "implement",
-            "plan",
-            "specify",
-            "review",
-            "link",
-            "prune",
-            "clarify",
-            "groom",
-            "log",
-        ] {
-            let path = commands_dir.join(format!("{command}.md"));
+        let mut checked = 0;
+        for entry in std::fs::read_dir(&commands_dir).expect("read framework/commands") {
+            let path = entry.expect("directory entry").path();
+            if path.extension().is_none_or(|ext| ext != "md") {
+                continue;
+            }
+            let command = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .expect("utf-8 file name");
             let source = std::fs::read_to_string(&path)
                 .unwrap_or_else(|err| panic!("read {}: {err}", path.display()));
-            let procedure = parse(&source, command)
-                .unwrap_or_else(|err| panic!("{command}.md must parse: {err}"));
+            let procedure = match parse(&source, command) {
+                Ok(procedure) => procedure,
+                // The allowlisted legacy-prose commands carry no procedure.
+                Err(ParseError::LegacyProse) => continue,
+                Err(err) => panic!("{command}.md must parse: {err}"),
+            };
+            checked += 1;
 
             let top_level: Vec<u32> = step_numbers(&procedure)
                 .into_iter()
@@ -1219,6 +1208,7 @@ mod tests {
                 );
             }
         }
+        assert!(checked > 0, "no command file parsed as a procedure");
     }
 
     /// Top-level ordered-list markers (`N. `) inside the `## Instructions`

@@ -522,17 +522,6 @@ mod tests {
         assert!(text.contains("- [ ] AC1: First.\r\n"));
     }
 
-    /// Appends a line to the file as a second writer landing between the
-    /// primitive's read and its write would.
-    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
-        let path = path.to_path_buf();
-        move || {
-            let mut text = std::fs::read_to_string(&path).unwrap();
-            text.push_str("\nTheirs.\n");
-            std::fs::write(&path, text).unwrap();
-        }
-    }
-
     /// A change another writer lands between the read and the write is kept:
     /// the write is refused, never made over it (`BE-TXN-002`).
     #[test]
@@ -541,8 +530,10 @@ mod tests {
         write_spec(tmp.path(), UNLABELLED);
         let file = tmp.path().join("specs/feat/spec.md");
         let before = fs::read_to_string(&file).unwrap();
-        let err = guarded::between_read_and_write(theirs_lands(&file), || run(&args(), tmp.path()))
-            .unwrap_err();
+        let err = guarded::between_read_and_write(guarded::theirs_lands(&file), || {
+            run(&args(), tmp.path())
+        })
+        .unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::ChangedSinceRead { path } if path == Path::new("specs/feat/spec.md")),
             "{err:?}"

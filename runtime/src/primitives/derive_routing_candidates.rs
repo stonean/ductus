@@ -263,7 +263,7 @@ fn derive_path_claims(
 
     // Each spec's most specific claim on any named path, with the path it
     // claims; then how many specs claim each named path at all.
-    let mut claims: Vec<(ClaimRank, String, String, String)> = Vec::new();
+    let mut claims: Vec<(ClaimRank, String, usize, String)> = Vec::new();
     let mut claimants = vec![0_usize; named.len()];
     let mut unread = false;
     for slug in listed {
@@ -300,13 +300,12 @@ fn derive_path_claims(
             }
         }
         if let Some((rank, index, entry)) = best {
-            claims.push((rank, slug, named[index].clone(), entry));
+            claims.push((rank, slug, index, entry));
         }
     }
     // Stable: specs keep their listing's number order within a rank.
     claims.sort_by_key(|(rank, ..)| *rank);
-    for (rank, slug, path, entry) in claims {
-        let index = named.iter().position(|named| *named == path).unwrap_or(0);
+    for (rank, slug, index, entry) in claims {
         let feature_dir = specs_dir.join(&slug);
         let status = read_status(repo, &layout.specs_root, &slug);
         candidates.push(RoutingCandidate {
@@ -316,7 +315,7 @@ fn derive_path_claims(
             path: rel_path(&feature_dir, repo),
             reopens: status == "done",
             status,
-            reason: claim_reason(rank, &path, &entry, claimants[index]),
+            reason: claim_reason(rank, &named[index], &entry, claimants[index]),
         });
     }
     let unclaimed = if unread {
@@ -887,6 +886,24 @@ mod tests {
             !result.sources_examined.contains(&"spec-corpus".to_string()),
             "a source is examined or skipped, never both"
         );
+    }
+
+    #[test]
+    fn a_named_path_with_no_spec_root_skips_the_path_claim_source() {
+        let tmp = tempdir().unwrap();
+        let result = run(&args("a fix in `src/api/send.rs`"), tmp.path()).unwrap();
+        assert!(
+            result.skipped.iter().any(|s| s.source == "path-claim"),
+            "{:?}",
+            result.skipped
+        );
+        assert!(
+            !result.sources_examined.contains(&"path-claim".to_string()),
+            "a source is examined or skipped, never both: {:?}",
+            result.sources_examined
+        );
+        assert_eq!(result.named_paths, ["src/api/send.rs"]);
+        assert_eq!(result.unclaimed_paths, Vec::<String>::new());
     }
 
     #[test]

@@ -37,6 +37,12 @@
 //!   the file is not rewritten (preserves mtime, idempotent for build
 //!   tools).
 //!
+//! CRLF tolerance: both styles find their markers and group lines with a
+//! trailing `\r` ignored, and both compare an existing block with `\r`
+//! removed from each side, so a CRLF file whose block already matches is
+//! `unchanged`. A rewritten managed region is emitted with LF endings;
+//! content outside it keeps its own.
+//!
 //! Trailing-newline normalization: when the primitive writes, the file
 //! ends with exactly one trailing newline regardless of marker style.
 //! For `line-prefix`, the block is followed by a single blank line if
@@ -231,7 +237,15 @@ fn merge_html_comment(
     let end = format!("<!-- END {marker} -->");
     match (text.find(&begin), text.find(&end)) {
         (None, None) => {
-            let separator = if text.ends_with('\n') { "\n" } else { "\n\n" };
+            // An empty file takes no separator, as `line-prefix` does: the
+            // block would otherwise follow two blank lines.
+            let separator = if text.is_empty() {
+                ""
+            } else if text.ends_with('\n') {
+                "\n"
+            } else {
+                "\n\n"
+            };
             let combined = format!("{text}{separator}{begin}\n{block}\n{end}\n");
             Ok((Some(combined), "inserted"))
         }
@@ -244,8 +258,8 @@ fn merge_html_comment(
             // `inner` retains a trailing `\r` per line, so a byte-for-byte
             // compare against the LF-normalized `block` would never match and
             // the region would be rewritten (with LF markers) on every run —
-            // mtime thrash and CRLF→LF corruption. The `line-prefix` path was
-            // hardened for CRLF the same way; this mirrors it.
+            // mtime thrash and CRLF→LF corruption. The `line-prefix` path
+            // compares the same way (`merge_line_prefix`).
             if inner.replace('\r', "") == block.replace('\r', "") {
                 return Ok((None, "unchanged"));
             }
@@ -579,7 +593,11 @@ fn merge_line_prefix(
                 )
             }
             Some((line_start, body_end, body)) => {
-                if body == block {
+                // Compared with `\r` removed from both sides, so a CRLF file
+                // whose block already matches is unchanged, not rewritten. A
+                // rewrite emits the managed region with LF endings; the lines
+                // outside it keep their own.
+                if body.replace('\r', "") == block.replace('\r', "") {
                     let block_end = body_end;
                     (text.to_string(), "unchanged", line_start, block_end)
                 } else {
@@ -590,7 +608,7 @@ fn merge_line_prefix(
                     // one trailing newline.
                     let after_normalized = if after.is_empty() {
                         String::new()
-                    } else if after.starts_with('\n') {
+                    } else if after.starts_with('\n') || after.starts_with("\r\n") {
                         after.to_string()
                     } else {
                         format!("\n{after}")
@@ -1006,6 +1024,50 @@ mod tests {
         // Surrounding lines kept verbatim.
         assert!(body.starts_with("node\r\n\r\n# ductus-managed"));
         assert!(body.contains("user-tail\r\n"));
+    }
+
+    /// A CRLF file whose managed block already matches is `unchanged` and not
+    /// written: the compare ignores `\r` on both sides.
+    #[test]
+    fn line_prefix_crlf_file_with_matching_block_is_unchanged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".gitignore");
+        let text = "node\r\n\r\n# ductus-managed\r\n.claude/\r\nspecs/.cache/\r\n\r\nuser-tail\r\n";
+        fs::write(&path, text).unwrap();
+        let block = ".claude/\nspecs/.cache/";
+        let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
+        assert_eq!(result.action, "unchanged");
+        assert_eq!(fs::read_to_string(&path).unwrap(), text);
+    }
+
+    /// An update of a CRLF block followed by a CRLF blank line keeps exactly
+    /// one blank line, not two.
+    #[test]
+    fn line_prefix_crlf_update_adds_no_extra_blank_line() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".gitignore");
+        fs::write(&path, "# ductus-managed\r\n.old/\r\n\r\nuser-tail\r\n").unwrap();
+        let result = run(&args(&path, ".claude/", Some("line-prefix")), tmp.path()).unwrap();
+        assert_eq!(result.action, "updated");
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# ductus-managed\n.claude/\n\r\nuser-tail\r\n"
+        );
+    }
+
+    /// An html-comment block inserted into an existing empty file follows no
+    /// blank lines.
+    #[test]
+    fn html_comment_insertion_into_an_empty_file_has_no_leading_blank_lines() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("CLAUDE.md");
+        fs::write(&path, "").unwrap();
+        let result = run(&args(&path, "framework", None), tmp.path()).unwrap();
+        assert_eq!(result.action, "inserted");
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "<!-- BEGIN ductus-managed -->\nframework\n<!-- END ductus-managed -->\n"
+        );
     }
 
     // -- cross-boundary dedup (line-prefix only) ----------------------------
@@ -1860,17 +1922,6 @@ Thumbs.db";
         );
     }
 
-    /// Appends a line to the file as a second writer landing between the
-    /// primitive's read and its write would.
-    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
-        let path = path.to_path_buf();
-        move || {
-            let mut text = std::fs::read_to_string(&path).unwrap();
-            text.push_str("\nTheirs.\n");
-            std::fs::write(&path, text).unwrap();
-        }
-    }
-
     /// A change another writer lands between the read and the write is kept:
     /// the write is refused, never made over it (`BE-TXN-002`).
     #[test]
@@ -1879,7 +1930,7 @@ Thumbs.db";
         let file = tmp.path().join("CLAUDE.md");
         fs::write(&file, "# Mine\n").unwrap();
         let before = fs::read_to_string(&file).unwrap();
-        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+        let err = guarded::between_read_and_write(guarded::theirs_lands(&file), || {
             run(&args(&file, "block body", None), tmp.path())
         })
         .unwrap_err();

@@ -49,11 +49,11 @@ MUTATIONS = [
         'src/main.rs',
         [
             '    let overrides = match exec_overrides(args) {\n        Ok(overrides) => overrides,\n        Err(message) => {\n            emit_exec_error("invalid-argument", &message);\n            warn(format_args!("ductus exec: {message}"));\n            return ExitCode::from(1);\n        }\n    };\n    let host = match Host::load(repo) {\n',
-            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(path, &err),\n    };\n',
+            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(repo, path, &err),\n    };\n',
         ],
         [
             '    let host = match Host::load(repo) {\n',
-            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(path, &err),\n    };\n    let overrides = match exec_overrides(args) {\n        Ok(overrides) => overrides,\n        Err(message) => {\n            emit_exec_error("invalid-argument", &message);\n            warn(format_args!("ductus exec: {message}"));\n            return ExitCode::from(1);\n        }\n    };\n',
+            '    let procedure = match parser::parse(&source, command) {\n        Ok(p) => p,\n        Err(err) => return emit_exec_parse_error(repo, path, &err),\n    };\n    let overrides = match exec_overrides(args) {\n        Ok(overrides) => overrides,\n        Err(message) => {\n            emit_exec_error("invalid-argument", &message);\n            warn(format_args!("ductus exec: {message}"));\n            return ExitCode::from(1);\n        }\n    };\n',
         ],
         '--test exec_subprocess exec_refuses_an_argument_it_cannot_bind',
     ),

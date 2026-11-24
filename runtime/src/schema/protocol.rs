@@ -19,7 +19,7 @@ pub struct ErrorLocation {
     pub file: String,
     /// 1-based line.
     pub line: u32,
-    /// 1-based column.
+    /// 1-based byte column.
     pub col: u32,
 }
 

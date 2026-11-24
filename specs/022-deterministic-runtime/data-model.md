@@ -346,7 +346,7 @@ Result:
 }
 ```
 
-The derivation and its directory-zone globs are `ductus derive-boundary --help`'s. The exec walker merges it into `write-boundary` as a **union** with any session-seeded value; with neither, the first out-of-spec writeCode edit halts with `out-of-boundary-edit` (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)).
+The derivation and its directory-zone globs are `ductus derive-boundary --help`'s. The exec walker merges it into `write-boundary` as a **union** with any session-seeded value; with neither, the first out-of-spec writeCode edit halts with `out-of-boundary-edit` (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)). The result also carries `guidance`, present only when no commit touches the spec directory or the repository has none, the boundary then being the spec directory's glob alone: `/{project}:plan`'s gate refuses to advance on it, and `/{project}:implement` surfaces it.
 
 ### `check-stuck` — count tasks.md commits since `in-progress`
 
@@ -361,6 +361,8 @@ Result:
 ```json
 { "commit-count": 3, "stuck": false, "since-sha": "<sha>", "threshold": 10 }
 ```
+
+The result also carries `guidance` when a shallow clone cannot place the reopening's start, so `stuck: false` there is no answer.
 
 ### `run-generator` — invoke a bash generator in `--dry-run`
 

@@ -410,17 +410,6 @@ mod tests {
         assert!(!tmp.path().join("specs").exists());
     }
 
-    /// Appends a line to the file as a second writer landing between the
-    /// primitive's read and its write would.
-    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
-        let path = path.to_path_buf();
-        move || {
-            let mut text = std::fs::read_to_string(&path).unwrap();
-            text.push_str("\nTheirs.\n");
-            std::fs::write(&path, text).unwrap();
-        }
-    }
-
     /// A change another writer lands between the read and the write is kept:
     /// the write is refused, never made over it (`BE-TXN-002`).
     #[test]
@@ -430,7 +419,7 @@ mod tests {
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(&file, "# Inbox\n\n- [ ] first\n").unwrap();
         let before = fs::read_to_string(&file).unwrap();
-        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+        let err = guarded::between_read_and_write(guarded::theirs_lands(&file), || {
             run(&args("second"), tmp.path())
         })
         .unwrap_err();

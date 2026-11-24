@@ -43,32 +43,32 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn copy_recursively(src: &Path, dst: &Path) {
-    fs::create_dir_all(dst).unwrap();
-    for entry in fs::read_dir(src).unwrap() {
-        let entry = entry.unwrap();
-        let ty = entry.file_type().unwrap();
-        let dst_path = dst.join(entry.file_name());
-        if ty.is_dir() {
-            copy_recursively(&entry.path(), &dst_path);
-        } else {
-            fs::copy(entry.path(), dst_path).unwrap();
-        }
-    }
-}
-
 /// Vendor a `markdownlint-cli2` that reports nothing and exits 0, which
 /// `lint-markdown` prefers over `npx` — so a test whose subject is not the lint
 /// never waits on a download.
 fn vendor_a_clean_markdownlint(root: &Path) {
+    vendor_markdownlint(root, "exit 0", "@exit /b 0");
+}
+
+/// Vendor a `markdownlint-cli2` that runs `unix_body` (a `sh` script body) or,
+/// on Windows, `windows_body` (a `.cmd` body).
+fn vendor_markdownlint(root: &Path, unix_body: &str, windows_body: &str) {
     let bin = root.join("node_modules").join(".bin");
     fs::create_dir_all(&bin).unwrap();
     #[cfg(windows)]
-    fs::write(bin.join("markdownlint-cli2.cmd"), "@exit /b 0\r\n").unwrap();
+    {
+        let _ = unix_body;
+        fs::write(
+            bin.join("markdownlint-cli2.cmd"),
+            format!("{windows_body}\r\n"),
+        )
+        .unwrap();
+    }
     #[cfg(not(windows))]
     {
+        let _ = windows_body;
         let stub = bin.join("markdownlint-cli2");
-        fs::write(&stub, "#!/bin/sh\nexit 0\n").unwrap();
+        fs::write(&stub, format!("#!/bin/sh\n{unix_body}\n")).unwrap();
         #[cfg(unix)]
         {
             let mut perms = fs::metadata(&stub).unwrap().permissions();
@@ -924,7 +924,13 @@ async fn resolve_anchor_returns_references() {
     )
     .await;
     let obj = structured_object(&result);
-    assert!(obj["references"].is_array());
+    let references = obj["references"].as_array().unwrap();
+    assert!(
+        references
+            .iter()
+            .any(|r| r["anchor"] == "runtime-boundary" && r["resolved"] == true),
+        "{obj:?}"
+    );
 }
 
 #[tokio::test]
@@ -993,7 +999,13 @@ async fn check_rule_ids_returns_citations() {
     )
     .await;
     let obj = structured_object(&result);
-    assert!(obj["citations"].is_array());
+    let citations = obj["citations"].as_array().unwrap();
+    assert!(
+        citations
+            .iter()
+            .any(|c| c["rule-id"] == "BE-AUTHN-001" && c["found"] == true),
+        "{obj:?}"
+    );
 }
 
 #[tokio::test]
@@ -1081,7 +1093,7 @@ async fn gate_confirm_returns_prompt_payload_without_blocking() {
 #[tokio::test]
 async fn mark_task_against_scratch_copy_flips_checkbox() {
     let tmp = tempfile::tempdir().unwrap();
-    copy_recursively(&fixture_repo(), tmp.path());
+    common::copy_dir_recursive(&fixture_repo(), tmp.path());
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
         &client,
@@ -1103,7 +1115,7 @@ async fn mark_task_against_scratch_copy_flips_checkbox() {
 #[tokio::test]
 async fn mark_criterion_against_scratch_copy_flips_checkbox() {
     let tmp = tempfile::tempdir().unwrap();
-    copy_recursively(&fixture_repo(), tmp.path());
+    common::copy_dir_recursive(&fixture_repo(), tmp.path());
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
         &client,
@@ -1125,7 +1137,7 @@ async fn mark_criterion_against_scratch_copy_flips_checkbox() {
 /// `derive-boundary`) have a real repo to operate on.
 fn init_git_fixture() -> tempfile::TempDir {
     let tmp = tempfile::tempdir().unwrap();
-    copy_recursively(&fixture_repo(), tmp.path());
+    common::copy_dir_recursive(&fixture_repo(), tmp.path());
     let repo = git2::Repository::init(tmp.path()).unwrap();
     let mut index = repo.index().unwrap();
     index
@@ -1197,7 +1209,17 @@ async fn run_generator_is_not_an_mcp_tool() {
 
 #[tokio::test]
 async fn lint_markdown_returns_violations_array() {
-    let client = start_pair(fixture_repo()).await;
+    // A copy with a vendored linter that reports one violation: the shared
+    // fixture vendors none, so `lint-markdown` would fall back to `npx` and
+    // download the tool (see `vendor_a_clean_markdownlint`).
+    let tmp = tempfile::tempdir().unwrap();
+    common::copy_dir_recursive(&fixture_repo(), tmp.path());
+    vendor_markdownlint(
+        tmp.path(),
+        "echo 'specs/001-basic/spec.md:3 MD013/line-length Line length'\nexit 1",
+        "@echo specs/001-basic/spec.md:3 MD013/line-length Line length\r\n@exit /b 1",
+    );
+    let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
         &client,
         "lint-markdown",
@@ -1205,17 +1227,19 @@ async fn lint_markdown_returns_violations_array() {
     )
     .await;
     let obj = structured_object(&result);
-    // The fixture spec may or may not be clean depending on the local
-    // markdownlint config; assert only the response shape is valid.
-    assert!(obj["violations"].is_array());
-    assert!(obj["clean"].is_boolean());
-    assert!(obj["exit-code"].is_number());
+    let violations = obj["violations"].as_array().unwrap();
+    assert_eq!(violations.len(), 1, "{obj:?}");
+    assert_eq!(violations[0]["path"], "specs/001-basic/spec.md");
+    assert_eq!(violations[0]["line"], 3);
+    assert_eq!(violations[0]["rule"], "MD013");
+    assert_eq!(obj["clean"], false);
+    assert_eq!(obj["exit-code"], 1);
 }
 
 #[tokio::test]
 async fn set_status_against_scratch_copy_updates_field() {
     let tmp = tempfile::tempdir().unwrap();
-    copy_recursively(&fixture_repo(), tmp.path());
+    common::copy_dir_recursive(&fixture_repo(), tmp.path());
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
         &client,

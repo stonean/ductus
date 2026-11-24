@@ -88,6 +88,30 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   ID in a double-backtick span named none; it now finds the spans as a
   `covers:` item's are found, so the first is a malformed entry naming no rule
   ID and the second a well-formed one.
+- **`ductus exec`'s parse-error envelope names its command file repo-relative
+  (spec 022's review, 2026-11-24).** `location.file` was the file's absolute
+  path, while `ErrorLocation` and 022's data model say a payload path is
+  repo-relative; it is now relative to the project root, with `/` separators.
+  `location.col` is documented as the 1-based byte column it has always been.
+- **`read-spec`'s sections skip a heading inside a fenced block or an HTML
+  comment (spec 022's review, 2026-11-24),** as its criteria and question walks
+  already did; such a line stays in the enclosing section's body. A spec that
+  quotes a template in a fence no longer reports its headings as sections or
+  has a section's body cut at one.
+- **`check-corpus-links` examines a titled link by its destination (spec 022's
+  review, 2026-11-24).** A link such as `[a](x.md "t")` was dropped unexamined
+  and uncounted; a destination followed by a CommonMark title is now checked
+  like any other.
+- **`merge-managed-block` leaves a CRLF file whose line-prefix block already
+  matches unchanged, and inserts an html-comment block into an empty file with
+  no leading blank lines (spec 022's review, 2026-11-24).** The block was
+  compared with each line's `\r` kept, so such a file was rewritten, and an
+  update after a CRLF blank line added another blank line.
+- **`merge-permissions` writes a caller's duplicate entry once when it creates
+  the file or an array the file lacks (spec 022's review, 2026-11-24),** as it
+  already did for an existing array, counting the dropped copy in
+  `allow-deduped` or `deny-deduped`, so the next identical call reports
+  `unchanged`.
 
 ## [0.64.0] — 2026-11-23
 

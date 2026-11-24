@@ -14,7 +14,7 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
 The killing tests are in runtime/src/primitives/derive_routing_candidates.rs
-(M1-M10, M12) and runtime/src/interpreter/payload.rs (M11). M6's test is Unix
+(M1-M10, M12, M13) and runtime/src/interpreter/payload.rs (M11). M6's test is Unix
 only, so on Windows M6 survives.
 """
 
@@ -104,5 +104,12 @@ MUTATIONS = [
         '        unclaimed_paths: derived.unclaimed_paths,\n',
         '        unclaimed_paths: Vec::new(),\n',
         'primitives::derive_routing_candidates::tests::the_returned_result_carries_the_named_and_the_unclaimed_paths',
+    ),
+    (
+        'M13 a spec root that cannot be listed counts the path-claim source as examined, not skipped',
+        'src/primitives/derive_routing_candidates.rs',
+        '    let Some(listed) = listed else {\n        skipped.push(RoutingSkip {\n            source: "path-claim".into(),\n',
+        '    let Some(listed) = listed else {\n        examined.push("path-claim".into());\n        skipped.push(RoutingSkip {\n            source: "path-claim".into(),\n',
+        'primitives::derive_routing_candidates::tests::a_named_path_with_no_spec_root_skips_the_path_claim_source',
     ),
 ]

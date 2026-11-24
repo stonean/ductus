@@ -455,14 +455,42 @@ fn link_targets(line: &str) -> Vec<&str> {
             continue;
         }
         let rest = &line[cursor..];
-        let Some(end) = rest.find(')') else { continue };
-        let target = &rest[..end];
-        if target.is_empty() || target.chars().any(char::is_whitespace) {
+        let Some(target) = link_destination(rest) else {
             continue;
-        }
+        };
         out.push(target);
     }
     out
+}
+
+/// The destination of the link whose text after `](` is `rest`: the run up to
+/// the closing `)`, or — when whitespace follows it and what follows is a
+/// `CommonMark` link title (`"…"`, `'…'` or `(…)`) closed by the link's `)` — the
+/// run up to that whitespace. `None` for an empty destination and for a run
+/// holding whitespace that is not destination-plus-title, which is not read as
+/// a link.
+fn link_destination(rest: &str) -> Option<&str> {
+    let end = rest.find(|c: char| c == ')' || c.is_whitespace())?;
+    let target = &rest[..end];
+    if target.is_empty() {
+        return None;
+    }
+    if rest[end..].starts_with(')') {
+        return Some(target);
+    }
+    let title = rest[end..].trim_start();
+    let closer = match title.chars().next()? {
+        '"' => '"',
+        '\'' => '\'',
+        '(' => ')',
+        _ => return None,
+    };
+    let inside = &title[1..];
+    let close = inside.find(closer)?;
+    inside[close + 1..]
+        .trim_start()
+        .starts_with(')')
+        .then_some(target)
 }
 
 /// Decide what one link target is, and record it when it is broken.
@@ -746,6 +774,37 @@ mod tests {
             "{}",
             result.broken[0].guidance
         );
+    }
+
+    #[test]
+    fn a_titled_link_is_examined_by_its_destination() {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/041-real/spec.md", "# Real\n");
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            "# Demo\n\nSee [a](../041-real/spec.md \"t\") and [b](../041-gone/spec.md 'a)b') \
+             and [c](../041-gone/other.md (t)).\n",
+        );
+        let result = run_at(tmp.path());
+        let targets: Vec<&str> = result.broken.iter().map(|b| b.target.as_str()).collect();
+        assert_eq!(
+            targets,
+            ["../041-gone/spec.md", "../041-gone/other.md"],
+            "{:?}",
+            result.broken
+        );
+    }
+
+    #[test]
+    fn link_targets_takes_the_destination_of_a_titled_link_only() {
+        assert_eq!(link_targets("[a](x.md \"t\")"), ["x.md"]);
+        assert_eq!(link_targets("[a](x.md 't' )"), ["x.md"]);
+        assert_eq!(link_targets("[a](x.md (t))"), ["x.md"]);
+        // Whitespace that is not destination-plus-title keeps being dropped.
+        assert_eq!(link_targets("[a](x y)"), Vec::<&str>::new());
+        assert_eq!(link_targets("[a](x.md \"unclosed)"), Vec::<&str>::new());
+        assert_eq!(link_targets("[a](x.md \"t\" junk)"), Vec::<&str>::new());
     }
 
     #[test]

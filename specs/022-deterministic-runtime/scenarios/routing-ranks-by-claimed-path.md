@@ -26,7 +26,7 @@ Observed: an adopting project reported findings sent to the wrong spec on the ev
 
 ## Edge Cases
 
-- A path many plans claim (`runtime/src/primitives/check_artifacts.rs`, 11 at the time of writing): every claiming spec is offered in rank and number order, and the gate shows the count rather than picking one.
+- A path many plans claim (`runtime/src/primitives/check_artifacts.rs`): every claiming spec is offered in rank and number order, and the gate shows the count rather than picking one.
 - A path claimed only by a sweep's glob or a directory (049's `runtime/src/**`, 022's `runtime/src/primitives/`): offered at that rank, below every exact claim.
 - A path the description writes outside an inline code span: not read as one, since the description's paths are read by the acceptance-criterion path grammar, as a criterion's are (045's data model), so `and/or` names no path; a `:N` line citation after a path is stripped first, so a finding's `file:line` names its file.
 - A path named only in a plan's prose, such as a "not changed" note: claims nothing, since only the section's table rows are read.

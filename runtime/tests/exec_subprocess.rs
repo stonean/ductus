@@ -705,6 +705,10 @@ fn exec_emits_terminal_error_envelope_on_unparseable_command_file() {
     assert_eq!(envelope["type"], "error");
     assert_eq!(envelope["code"], "parse-error");
     assert_eq!(
+        envelope["location"]["file"], "framework/commands/broken.md",
+        "location.file is repo-relative with `/` separators"
+    );
+    assert_eq!(
         envelope["runtime-version"],
         env!("CARGO_PKG_VERSION"),
         "error envelope carries the runtime version"

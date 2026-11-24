@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, checkbox, list_scenario_files, parse_atx_heading, read_text, rel_path,
-    section_line_indices, split_frontmatter,
+    PrimitiveError, Result, SkipScanner, checkbox, list_scenario_files, parse_atx_heading,
+    read_text, rel_path, section_line_indices, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -295,6 +295,9 @@ pub(crate) fn scenario_names(questions: &[ScenarioOpenQuestion]) -> Vec<&str> {
 }
 
 /// Split a spec body into its `##`-and-deeper sections, in document order.
+/// Headings inside fenced code blocks and HTML comments are not sections
+/// ([`SkipScanner`] semantics, as for [`section_line_indices`]); those lines
+/// stay in the enclosing section's body.
 ///
 /// The single reader for the section scan, kept in one place because a
 /// second splitter is a second answer to "what are this spec's sections", and
@@ -303,8 +306,17 @@ pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection>
     let mut sections: Vec<SpecSection> = Vec::new();
     let mut pending_body: Vec<&str> = Vec::new();
     let mut current: Option<(String, u8)> = None;
+    let mut skip = SkipScanner::default();
 
     for line in body.lines() {
+        // A line inside a fenced block or HTML comment is no heading, but it
+        // still belongs to the enclosing section's body.
+        if skip.skip(line) {
+            if current.is_some() {
+                pending_body.push(line);
+            }
+            continue;
+        }
         if let Some((level, heading)) = parse_atx_heading(line)
             && level >= 2
         {
@@ -800,6 +812,18 @@ mod tests {
             "template guidance-comment checkboxes counted as criteria: {:?}",
             result.acceptance_criteria
         );
+    }
+
+    #[test]
+    fn headings_inside_fences_and_comments_are_not_sections() {
+        let body = "# T\n\n## Real\n\nintro\n```text\n## Fenced\n```\n<!--\n## Commented\n-->\ntail\n\n## Next\n\nend\n";
+        let sections = parse_sections(body, true);
+        let headings: Vec<&str> = sections.iter().map(|s| s.heading.as_str()).collect();
+        assert_eq!(headings, vec!["Real", "Next"]);
+        let real = &sections[0].body;
+        assert!(real.contains("## Fenced"), "{real}");
+        assert!(real.contains("## Commented"), "{real}");
+        assert!(real.ends_with("tail"), "{real}");
     }
 
     #[test]

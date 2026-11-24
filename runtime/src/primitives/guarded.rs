@@ -103,6 +103,19 @@ pub(crate) fn between_read_and_write<R>(
     out
 }
 
+/// A second writer's change for [`between_read_and_write`]: appends a line to
+/// the file, as one landing between a primitive's read and its write would.
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+pub(crate) fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
+    let path = path.to_path_buf();
+    move || {
+        let mut text = std::fs::read_to_string(&path).unwrap();
+        text.push_str("\nTheirs.\n");
+        std::fs::write(&path, text).unwrap();
+    }
+}
+
 #[cfg(test)]
 mod write_new_bytes_tests {
     #![allow(clippy::unwrap_used)]

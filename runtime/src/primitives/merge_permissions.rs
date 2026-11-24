@@ -430,13 +430,28 @@ fn compute_merge(existing: Option<&str>, sets: &Sets<'_>, path: &Path) -> Result
     }
 }
 
+/// `entries` with each later duplicate dropped, first occurrence winning, and
+/// the number dropped: the dedup an existing array gets from [`merge_array`].
+fn dedup_entries(entries: &[String]) -> (Vec<&String>, u32) {
+    let mut unique: Vec<&String> = Vec::with_capacity(entries.len());
+    for entry in entries {
+        if !unique.contains(&entry) {
+            unique.push(entry);
+        }
+    }
+    let dropped = u32::try_from(entries.len() - unique.len()).unwrap_or(u32::MAX);
+    (unique, dropped)
+}
+
 fn fresh_merge(sets: &Sets<'_>) -> MergeOutcome {
-    let allow_added = u32::try_from(sets.allow.len()).unwrap_or(u32::MAX);
-    let deny_added = u32::try_from(sets.deny.len()).unwrap_or(u32::MAX);
+    let (allow, allow_deduped) = dedup_entries(sets.allow);
+    let (deny, deny_deduped) = dedup_entries(sets.deny);
+    let allow_added = u32::try_from(allow.len()).unwrap_or(u32::MAX);
+    let deny_added = u32::try_from(deny.len()).unwrap_or(u32::MAX);
     let mut post_value = json!({
         "permissions": {
-            "allow": sets.allow,
-            "deny": sets.deny,
+            "allow": allow,
+            "deny": deny,
         }
     });
     if !sets.directories.is_empty() {
@@ -446,11 +461,11 @@ fn fresh_merge(sets: &Sets<'_>) -> MergeOutcome {
         post_value,
         action: "created",
         allow_added,
-        allow_deduped: 0,
+        allow_deduped,
         allow_revoked: 0,
         revoked: Vec::new(),
         deny_added,
-        deny_deduped: 0,
+        deny_deduped,
         directories_added: sets.directories.to_vec(),
     }
 }
@@ -579,16 +594,22 @@ fn merge_array(
     path: &Path,
 ) -> Result<ArrayOutcome> {
     let Some(array_value) = permissions.get_mut(field) else {
+        let (unique, deduped) = dedup_entries(canonical);
+        let added = u32::try_from(unique.len()).unwrap_or(u32::MAX);
         permissions.insert(
             field.into(),
-            Value::Array(canonical.iter().map(|s| Value::String(s.clone())).collect()),
+            Value::Array(
+                unique
+                    .into_iter()
+                    .map(|s| Value::String(s.clone()))
+                    .collect(),
+            ),
         );
-        let added = u32::try_from(canonical.len()).unwrap_or(u32::MAX);
         // No array on disk means nothing to retire, so `revoke` has no
         // subject here even when non-empty.
         return Ok(ArrayOutcome {
             added,
-            deduped: 0,
+            deduped,
             revoked: 0,
             revoked_entries: Vec::new(),
         });
@@ -747,6 +768,48 @@ mod tests {
         "Write(.ductus/session.toml)",
         "Write(.ductus/config.toml)",
     ];
+
+    /// A duplicate in a call that creates the file is written once and counted
+    /// as deduped, so the next identical call finds nothing to change.
+    #[test]
+    fn a_fresh_merge_writes_a_duplicate_entry_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("s.json");
+        let call = || {
+            run(
+                &args("s.json", &["Edit", "Edit"], &["Bash(rm *)", "Bash(rm *)"]),
+                tmp.path(),
+            )
+            .unwrap()
+        };
+        let first = call();
+        assert_eq!(first.action, "created");
+        assert_eq!((first.allow_added, first.allow_deduped), (1, 1));
+        assert_eq!((first.deny_added, first.deny_deduped), (1, 1));
+        let parsed: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(parsed["permissions"]["allow"], json!(["Edit"]));
+        assert_eq!(parsed["permissions"]["deny"], json!(["Bash(rm *)"]));
+        let second = call();
+        assert_eq!(second.action, "unchanged");
+        assert_eq!((second.allow_deduped, second.deny_deduped), (0, 0));
+    }
+
+    #[test]
+    fn an_existing_file_with_no_array_gains_a_duplicate_entry_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("s.json");
+        fs::write(&path, "{\"permissions\": {}}\n").unwrap();
+        let first = run(
+            &args("s.json", &["Edit", "Edit"], &["Bash(rm *)", "Bash(rm *)"]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!((first.allow_added, first.allow_deduped), (1, 1));
+        assert_eq!((first.deny_added, first.deny_deduped), (1, 1));
+        let parsed: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(parsed["permissions"]["allow"], json!(["Edit"]));
+        assert_eq!(parsed["permissions"]["deny"], json!(["Bash(rm *)"]));
+    }
 
     #[test]
     fn creates_file_when_absent_with_canonical_set() {
@@ -1458,25 +1521,12 @@ mod tests {
     /// task 18) fails this test until `CANONICAL_ALLOW_STATIC` moves with it.
     #[test]
     fn the_ceiling_is_configure_claudes_canonical_allow_set() {
-        let path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../framework/bootstrap/configure/claude.md"
-        );
-        let text = fs::read_to_string(path).unwrap();
-        let start = text
-            .find("\n2. Canonical `permissions.allow` entries")
-            .expect("step 2 heading");
-        let end = start
-            + text[start..]
-                .find("\n3. Canonical `permissions.deny` entries")
-                .expect("step 3 heading");
-        let documented: std::collections::BTreeSet<String> = text[start..end]
-            .lines()
-            .filter_map(|line| {
-                let item = line.trim().strip_prefix("- `")?.strip_suffix('`')?;
-                (!item.contains('`')).then(|| item.to_string())
-            })
-            .collect();
+        let documented: std::collections::BTreeSet<String> = configure_bullets(
+            "\n2. Canonical `permissions.allow` entries",
+            "\n3. Canonical `permissions.deny` entries",
+        )
+        .into_iter()
+        .collect();
         assert!(
             documented.len() > 60 && documented.iter().any(|e| e.starts_with("mcp__ductus__")),
             "the parse found the bullets: {documented:?}"
@@ -1855,17 +1905,6 @@ mod tests {
         );
     }
 
-    /// Appends a line to the file as a second writer landing between the
-    /// primitive's read and its write would.
-    fn theirs_lands(path: &std::path::Path) -> impl FnOnce() + 'static {
-        let path = path.to_path_buf();
-        move || {
-            let mut text = std::fs::read_to_string(&path).unwrap();
-            text.push_str("\nTheirs.\n");
-            std::fs::write(&path, text).unwrap();
-        }
-    }
-
     /// A change another writer lands between the read and the write is kept:
     /// the write is refused, never made over it (`BE-TXN-002`).
     #[test]
@@ -1875,7 +1914,7 @@ mod tests {
         fs::create_dir_all(file.parent().unwrap()).unwrap();
         fs::write(&file, "{}\n").unwrap();
         let before = fs::read_to_string(&file).unwrap();
-        let err = guarded::between_read_and_write(theirs_lands(&file), || {
+        let err = guarded::between_read_and_write(guarded::theirs_lands(&file), || {
             run(&args(".pi/settings.json", &["Edit"], &[]), tmp.path())
         })
         .unwrap_err();

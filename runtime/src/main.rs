@@ -564,8 +564,8 @@ fn report_cycles(cycles: &[Vec<String>]) {
 /// Render broken corpus links to stderr, so an author whose commit is blocked
 /// sees the citation and the fix rather than a JSON blob.
 ///
-/// Each line is `path:line` first, which is what an editor and a terminal both
-/// make clickable.
+/// Each line begins `broken link: ` (or `skipped: `), then `path:line`, which
+/// is what an editor and a terminal both make clickable.
 fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
     for link in &result.broken {
         warn(format_args!(
@@ -727,7 +727,11 @@ fn exec_overrides(args: &[String]) -> Result<Vec<(&str, &str)>, String> {
 /// by a terminal `error` message on stdout carrying the runtime version,
 /// so a host can suspect a framework/runtime version mismatch instead of
 /// facing a message-less failure.
-fn emit_exec_parse_error(path: &std::path::Path, err: &ductus::parser::ParseError) -> ExitCode {
+fn emit_exec_parse_error(
+    repo: &std::path::Path,
+    path: &std::path::Path,
+    err: &ductus::parser::ParseError,
+) -> ExitCode {
     use ductus::io::write_envelope;
     use ductus::parser::ParseError;
     use ductus::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -737,7 +741,15 @@ fn emit_exec_parse_error(path: &std::path::Path, err: &ductus::parser::ParseErro
             location: Some(loc),
             ..
         } => Some(ErrorLocation {
-            file: path.display().to_string(),
+            // `path` is `repo.join(candidate)` ([`locate_exec_command`]), so the
+            // strip always succeeds; the location is repo-relative with `/`.
+            file: path
+                .strip_prefix(repo)
+                .unwrap_or(path)
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("/"),
             line: loc.start_line,
             col: loc.start_col,
         }),
@@ -980,7 +992,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
     };
     let procedure = match parser::parse(&source, command) {
         Ok(p) => p,
-        Err(err) => return emit_exec_parse_error(path, &err),
+        Err(err) => return emit_exec_parse_error(repo, path, &err),
     };
 
     // Seed the walker context from the session (see `seed_context`), then

@@ -4491,8 +4491,9 @@ pub struct EnforceManifestResult {
 /// Generalization of the retired `merge-claude-md` shim that handles configurable
 /// marker shapes. `marker-style: "html-comment"` (default) reproduces
 /// `merge-claude-md`'s exact behavior; `marker-style: "line-prefix"`
-/// uses a single `# {marker}` preamble line followed by the block,
-/// terminated by a blank line or EOF — matching `.gitignore` and
+/// uses a single `# {marker}` preamble line followed by the block, its
+/// extent on disk found by aligning blank-line-delimited subsections
+/// (so it can span interior blank lines) — matching `.gitignore` and
 /// `.gitattributes` conventions.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -4502,8 +4503,8 @@ pub struct MergeManagedBlockArgs {
     #[arg(long)]
     pub path: String,
     /// Markdown / plain-text block the framework wants to install.
-    /// Trailing whitespace is normalized to a single newline before
-    /// write.
+    /// Leading and trailing newlines are trimmed before the block is
+    /// compared and written; the written region ends with one newline.
     #[arg(long)]
     pub block: String,
     /// Marker name used to delimit the framework-managed region.
@@ -4514,8 +4515,10 @@ pub struct MergeManagedBlockArgs {
     pub marker: Option<String>,
     /// One of `html-comment` (default) or `line-prefix`. The former
     /// uses `<!-- BEGIN/END {marker} -->` pairs; the latter uses a
-    /// single `# {marker}` preamble line followed by the block,
-    /// terminated by a blank line or EOF.
+    /// single `# {marker}` preamble line followed by the block, whose
+    /// extent on disk is found by aligning its blank-line-delimited
+    /// subsections with the supplied block's, so it can span interior
+    /// blank lines.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub marker_style: Option<String>,
