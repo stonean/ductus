@@ -90,7 +90,7 @@ MUTATIONS = [
         'M11 the spec is read although no waiver carries the marker',
         'src/primitives/process_waivers.rs',
         '    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
-        '    let _ = super::read_text(spec_path)?;\n    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
+        '    if let Some(spec_path) = spec_path {\n        let _ = super::read_text(spec_path)?;\n    }\n    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
         'departure_waivers::a_spec_that_cannot_be_read',
     ),
     (

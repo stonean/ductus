@@ -1026,8 +1026,10 @@ pub struct RelocateAuditRecordsResult {
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessWaiversArgs {
     /// Feature directory name whose `review.md` carries the recorded `waivers`.
+    /// Omitted: the project record, `{specs-root}/review.md` (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
     /// Currently-firing findings from the review passes, one per finding, each
     /// with its `site` and `line-range`: a stored waiver covers the findings at
     /// its `(rule, file, site)` anchor, counted after collapsing those of one
@@ -1130,9 +1132,12 @@ pub enum DecisionRecord {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessDecisionsArgs {
-    /// Feature directory whose record carries the `decisions:` list.
+    /// Feature directory whose record carries the `decisions:` list. Omitted:
+    /// the project's review record, `{specs-root}/review.md` (spec 084), which
+    /// has no analysis record beside it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
     /// Which record to read. Required: the two lists key different findings,
     /// so there is no sensible default to fall back on.
     #[arg(long, value_enum)]
@@ -1407,8 +1412,10 @@ pub enum ListsForm {
 #[serde(rename_all = "kebab-case")]
 pub struct StartFixRoundsArgs {
     /// Feature directory name whose review run is starting its fix rounds.
+    /// Omitted: the project's review of the code no spec claims (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
 }
 
 /// Result for `start-fix-rounds`.
@@ -1434,9 +1441,11 @@ pub struct StartFixRoundsResult {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct BriefReReadArgs {
-    /// Feature directory name under review.
+    /// Feature directory name under review. Omitted: the project's review of
+    /// the code no spec claims (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
     /// The round's base: `start-fix-rounds`' `base` for the first round, the
     /// previous round's `snapshot` after it.
     #[arg(long)]
@@ -1535,9 +1544,11 @@ pub struct BriefReReadResult {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReadReReadArgs {
-    /// Feature directory name under review.
+    /// Feature directory name under review. Omitted: the project's review of
+    /// the code no spec claims (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
     /// The base the round was briefed at: the `base` passed to `brief-re-read`.
     #[arg(long)]
     pub base: String,
@@ -1645,9 +1656,11 @@ pub struct ReadReReadResult {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckPrescriptionsArgs {
-    /// Feature directory name under review.
+    /// Feature directory name under review. Omitted: the project's review of
+    /// the code no spec claims (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
     /// The **previous** round's base: its `round.toml` names the snapshot the
     /// edits apply to, and its `result.json` holds the edits.
     #[arg(long)]
@@ -1839,20 +1852,36 @@ pub struct ReviewObservation {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct WriteReviewArgs {
-    /// Feature directory name whose `review.md` is written.
+    /// Feature directory name whose `review.md` is written. Omitted: the
+    /// project record, `{specs-root}/review.md`, the review of the code no
+    /// spec claims (spec 084).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
-    pub feature: String,
+    pub feature: Option<String>,
+    /// Write the project record's seed and nothing else: a record no review
+    /// wrote, with `last-run: null` and `reviewed-against` at `HEAD`, so the
+    /// window for code no spec claims starts after the commit that adds it
+    /// (spec 084). Takes no other argument, and leaves an existing project
+    /// record as it is.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[arg(long)]
+    pub seed: bool,
     /// ISO-8601 UTC timestamp recorded as `reviewed-at` / `review.last-run`.
-    #[arg(long)]
+    /// Required unless `seed`.
+    #[serde(default)]
+    #[arg(long, default_value = "", hide_default_value = true)]
     pub reviewed_at: String,
     /// The head `compute-review-scope` returned for the scope the passes read
     /// (`reviewed-against`). Refused when it names no commit, when `HEAD` does
     /// not descend from it, or when a later commit changed a path in the scope,
-    /// unless `diff-base` is empty.
-    #[arg(long)]
+    /// unless `diff-base` is empty. Required unless `seed`.
+    #[serde(default)]
+    #[arg(long, default_value = "", hide_default_value = true)]
     pub reviewed_against: String,
-    /// diff-base sha from `compute-review-scope` (recorded in the report).
-    #[arg(long)]
+    /// diff-base sha from `compute-review-scope` (recorded in the report); for
+    /// the project record, the commit its window starts after, never empty.
+    #[serde(default)]
+    #[arg(long, default_value = "", hide_default_value = true)]
     pub diff_base: String,
     /// Scenario slug, when the run was scenario-targeted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2054,19 +2083,35 @@ pub struct WriteReviewArgs {
     pub criteria_json: Option<String>,
 }
 
+/// What `write-review`'s `seed` did with the project record (spec 084).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum SeedOutcome {
+    /// No project record existed, and the seed was written.
+    Written,
+    /// A project record existed, a seed or a review's, and was left as it is.
+    Kept,
+}
+
 /// Result for `write-review`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct WriteReviewResult {
-    /// Repo-relative path of the `review.md` written.
+    /// Repo-relative path of the `review.md` written, or for a seed that found
+    /// a record, of the record left as it is.
     pub path: String,
-    /// Repo-relative path of the spec file this run read and validated.
+    /// What a `seed` call did; absent from every other call's result.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<SeedOutcome>,
+    /// Repo-relative path of the spec file this run read and validated; absent
+    /// for the project record, which has no spec.
     ///
     /// Read, not written: spec 057 left the record one home, so `write-review`
     /// parses `spec.md`'s frontmatter as a precondition and writes only
     /// `review.md`. The path is still reported because a caller identifying
     /// which spec the record belongs to should not have to re-derive it.
-    pub spec_path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec_path: Option<String>,
     /// MUST violations counted (waived findings, and those their deferral
     /// releases, excluded).
     pub must_violations: u32,
@@ -11128,7 +11173,7 @@ mod tests {
         assert_eq!(round_trip(&decision), decision);
 
         let args = ProcessDecisionsArgs {
-            feature: "001-x".into(),
+            feature: Some("001-x".into()),
             record: DecisionRecord::Analysis,
             fired: vec!["grounding — m".into()],
             fired_violations: Vec::new(),

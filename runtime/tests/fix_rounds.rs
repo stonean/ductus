@@ -90,7 +90,7 @@ fn untouched_state(dir: &Path, repository: &Repository) -> (String, Vec<String>,
 fn brief(dir: &Path, base: &str) -> BriefReReadResult {
     brief_re_read::run(
         &BriefReReadArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             base: base.to_string(),
         },
         dir,
@@ -101,7 +101,7 @@ fn brief(dir: &Path, base: &str) -> BriefReReadResult {
 fn read(dir: &Path, base: &str) -> ReadReReadResult {
     read_re_read::run(
         &ReadReReadArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             base: base.to_string(),
         },
         dir,
@@ -112,7 +112,7 @@ fn read(dir: &Path, base: &str) -> ReadReReadResult {
 fn check(dir: &Path, base: &str) -> CheckPrescriptionsResult {
     check_prescriptions::run(
         &CheckPrescriptionsArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             base: base.to_string(),
         },
         dir,
@@ -174,7 +174,7 @@ fn two_rounds_each_brief_only_their_own_paths() {
 
     let base = start_fix_rounds::run(
         &StartFixRoundsArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
         },
         dir,
     )
@@ -311,7 +311,7 @@ fn another_specs_commit_between_rounds_leaves_the_round() {
     );
     let start = start_fix_rounds::run(
         &StartFixRoundsArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
         },
         dir,
     )
@@ -366,7 +366,7 @@ fn a_cut_off_review_leaves_the_mark_its_last_write_clears() {
     let write = |loop_open: bool| {
         write_review::run(
             &WriteReviewArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 reviewed_at: "2026-11-05T00:00:00Z".to_string(),
                 reviewed_against: "HEAD".to_string(),
                 diff_base: "HEAD".to_string(),
@@ -388,4 +388,113 @@ fn a_cut_off_review_leaves_the_mark_its_last_write_clears() {
     write(false);
     let record = fs::read_to_string(dir.join("specs").join(FEATURE).join("review.md")).unwrap();
     assert!(!record.contains("fix-rounds-open"), "{record}");
+}
+
+/// Spec 084, AC14: a project review's rounds leave out `{specs-root}/review.md`, its own
+/// record, and its share of a landing is a spec's inverted: a commit no spec claims
+/// stays in the round and a commit a spec claims leaves it. The same history divides
+/// the other way for the feature, whose round keeps its own landing and the project's
+/// record, which is not its own.
+#[test]
+fn a_project_reviews_rounds_leave_out_its_record_and_what_a_spec_claims() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    let repository = fixture(dir);
+    commit(&repository, "chore: the tree the reviews start from");
+    let start_of = |feature: Option<&str>| {
+        start_fix_rounds::run(
+            &StartFixRoundsArgs {
+                feature: feature.map(str::to_string),
+            },
+            dir,
+        )
+        .unwrap()
+        .base
+    };
+    let brief_of = |feature: Option<&str>, base: &str| {
+        brief_re_read::run(
+            &BriefReReadArgs {
+                feature: feature.map(str::to_string),
+                base: base.to_string(),
+            },
+            dir,
+        )
+        .unwrap()
+    };
+    let feature_start = start_of(Some(FEATURE));
+    let start = start_of(None);
+    // Each subject has its own round directory, and starting one leaves the other's.
+    let rounds = dir.join(".ductus/review-rounds");
+    assert!(rounds.join("project/start.toml").is_file());
+    assert!(rounds.join(FEATURE).join("start.toml").is_file());
+
+    // A run whose only write is its record has no round.
+    write(&dir.join("specs/review.md"), "---\nspec: project\n---\n");
+    let round = brief_of(None, &start);
+    assert_eq!(round.kind, RoundKind::Empty, "{round:?}");
+
+    write(&dir.join("src/landed.rs"), "fn landed() {}\n");
+    commit(&repository, "feat(001): a spec's landing");
+    write(&dir.join("src/unclaimed.rs"), "fn unclaimed() {}\n");
+    commit(&repository, "chore: a landing no spec claims");
+    write(&dir.join("src/a.rs"), "fn a() -> u8 { 11 }\n");
+
+    let round = brief_of(None, &start);
+    assert_eq!(round.kind, RoundKind::ReRead, "{round:?}");
+    assert_eq!(
+        round.paths.as_deref().unwrap(),
+        ["src/a.rs", "src/unclaimed.rs"]
+    );
+    assert_eq!(round.excluded.as_deref().unwrap(), ["src/landed.rs"]);
+    assert_eq!(round.exempt.as_deref().unwrap(), [] as [String; 0]);
+    let brief_rel = round.brief.as_ref().unwrap();
+    assert!(
+        brief_rel.starts_with(&format!(".ductus/review-rounds/project/{start}/")),
+        "{brief_rel}"
+    );
+    let text = fs::read_to_string(dir.join(brief_rel)).unwrap();
+    assert!(
+        text.contains("a review of the code no spec claims"),
+        "{text}"
+    );
+    assert!(text.contains("no spec claims this code"), "{text}");
+    assert!(!text.contains("spec.md"), "{text}");
+
+    // The project's re-read is read and checked under the same subject.
+    write(
+        &dir.join(round.result.as_ref().unwrap()),
+        r#"{"complete": true, "findings": [
+            {"severity": "SHOULD", "path": "src/a.rs", "text": "the value regressed",
+             "edits": [{"path": "src/a.rs", "old": "{ 11 }", "new": "{ 12 }"}]}]}"#,
+    );
+    let read = read_re_read::run(
+        &ReadReReadArgs {
+            feature: None,
+            base: start.clone(),
+        },
+        dir,
+    )
+    .unwrap();
+    assert_eq!((read.state, read.should), (ReReadState::Complete, 1));
+    write(&dir.join("src/a.rs"), "fn a() -> u8 { 12 }\n");
+    // The record, rewritten by the run's last write, is no change of the round's.
+    write(
+        &dir.join("specs/review.md"),
+        "---\nspec: project\nlast-run: null\n---\n",
+    );
+    let checked = check_prescriptions::run(
+        &CheckPrescriptionsArgs {
+            feature: None,
+            base: start,
+        },
+        dir,
+    )
+    .unwrap();
+    assert_eq!(checked.verdict, PrescriptionVerdict::Matched, "{checked:?}");
+
+    let round = brief_of(Some(FEATURE), &feature_start);
+    let paths = round.paths.unwrap();
+    assert!(paths.contains(&"src/landed.rs".to_string()), "{paths:?}");
+    assert!(paths.contains(&"specs/review.md".to_string()), "{paths:?}");
+    assert_eq!(round.excluded.as_deref().unwrap(), ["src/unclaimed.rs"]);
 }

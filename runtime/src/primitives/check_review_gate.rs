@@ -3911,7 +3911,7 @@ mod tests {
     fn write_gate_review(repo: &Path, at: &str) {
         crate::primitives::write_review::run(
             &crate::schema::primitives::WriteReviewArgs {
-                feature: "007-gate".into(),
+                feature: Some("007-gate".into()),
                 reviewed_at: at.into(),
                 reviewed_against: "abc123".into(),
                 examined: Some(1),
@@ -4088,7 +4088,7 @@ mod tests {
         git_commit_all(repo, "status(007): reopen");
         crate::primitives::write_review::run(
             &crate::schema::primitives::WriteReviewArgs {
-                feature: "007-gate".into(),
+                feature: Some("007-gate".into()),
                 reviewed_at: "2026-10-02T00:00:00Z".into(),
                 reviewed_against: "abc123".into(),
                 examined: Some(1),
@@ -4205,7 +4205,7 @@ mod tests {
         );
         crate::primitives::write_review::run(
             &crate::schema::primitives::WriteReviewArgs {
-                feature: "007-gate".into(),
+                feature: Some("007-gate".into()),
                 reviewed_at: "2026-10-02T00:00:00Z".into(),
                 reviewed_against: "abc123".into(),
                 examined: Some(1),

@@ -49,6 +49,7 @@ use std::path::Path;
 
 use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::decisions::{self, Work, read_decisions};
+use crate::primitives::review_subject::ReviewSubject;
 use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
@@ -71,6 +72,7 @@ use crate::schema::primitives::{
 /// for a malformed read size or a list file that cannot be written.
 pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
     let classified = compute(args, repo)?;
+    let subject = ReviewSubject::of(args.feature.as_deref());
     // The host acts on no retained decision: it neither asks about one nor
     // passes one to the writer. So each, with its own notice, goes to the list
     // file, and the result carries their count and one line per reason (066
@@ -118,7 +120,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         lists_file: None,
     };
     if let Some(file) =
-        super::bounded_lists::place(repo, "process-decisions", &args.feature, &result, &lists)?
+        super::bounded_lists::place(repo, "process-decisions", subject.name(), &result, &lists)?
     {
         result.form = ListsForm::File;
         result.matched = None;
@@ -131,7 +133,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         result.lists_file = Some(super::bounded_lists::write(
             repo,
             "process-decisions",
-            &args.feature,
+            subject.name(),
             &lists,
         )?);
     }
@@ -222,26 +224,22 @@ impl Retained {
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute,
 /// or carries a parent-directory component,
 /// or when the feature directory, or a link inside it, resolves outside the
-/// project, [`PrimitiveError::FeatureNotFound`]
+/// project, or when with no `feature` the spec root does,
+/// [`PrimitiveError::FeatureNotFound`]
 /// when the feature has no `spec.md`, [`PrimitiveError::UnclosedFrontmatter`]
 /// when the record's frontmatter block never closes,
 /// [`PrimitiveError::Yaml`] when its frontmatter or `decisions:` list does
 /// not parse — never an empty result, which would re-ask every settled
 /// question — [`PrimitiveError::InvalidArgument`] when `fired-violations` is given for
-/// the analysis record or an entry's `decision-key` is not its own key, or
+/// the analysis record, the analysis record is asked for with no `feature`, or an
+/// entry's `decision-key` is not its own key, or
 /// [`PrimitiveError::Io`] on read failure. An absent record, or
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classified> {
     let layout = paths::Paths::load(repo)?;
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
-    let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
-    if !feature_dir.join("spec.md").is_file() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root,
-            feature: args.feature.clone(),
-        });
-    }
+    let (_, feature_dir) =
+        ReviewSubject::resolve(args.feature.as_deref(), repo, &layout.specs_root)?;
     let file = record_file(args)?;
     refuse_a_foreign_violation_key(args)?;
     let stored = read_decisions(&feature_dir, file)?;
@@ -321,7 +319,9 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
             .filter(|_| args.record == DecisionRecord::Review)
             .and_then(|path| {
                 scope
-                    .get_or_init(|| RunScope::resolve(&args.feature, args.since.as_deref(), repo))
+                    .get_or_init(|| {
+                        RunScope::resolve(args.feature.as_deref(), args.since.as_deref(), repo)
+                    })
                     .why_unread(path, repo)
             })
         {
@@ -351,6 +351,11 @@ fn record_file(args: &ProcessDecisionsArgs) -> Result<&'static str> {
                 reason: "only a review's violations are keyed by site; an analysis passes its findings' keys as `fired`".into(),
             })
         }
+        DecisionRecord::Analysis if args.feature.is_none() => Err(PrimitiveError::InvalidArgument {
+            primitive: "process-decisions".into(),
+            argument: "record".into(),
+            reason: "the project has a review record and no analysis record; name a feature, or pass `review`".into(),
+        }),
         DecisionRecord::Analysis => Ok(ANALYSIS_RECORD_FILE),
     }
 }
@@ -485,7 +490,7 @@ mod tests {
 
     fn args(record: DecisionRecord, fired: &[&str], restricted: bool) -> ProcessDecisionsArgs {
         ProcessDecisionsArgs {
-            feature: "001-x".into(),
+            feature: Some("001-x".into()),
             record,
             fired: fired.iter().map(|k| (*k).to_string()).collect(),
             fired_violations: Vec::new(),
@@ -494,6 +499,34 @@ mod tests {
             fired_json: None,
             fired_violations_json: None,
         }
+    }
+
+    /// Spec 084: with no `feature` the decisions are the project's review record's, in
+    /// the spec root, and the project has no analysis record to ask for.
+    #[test]
+    fn the_project_records_decisions_are_classified_with_no_feature() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        std::fs::write(
+            tmp.path().join("specs/review.md"),
+            format!("---\nspec: project\nlast-run: null\ndecisions:\n{WAIVED}---\n"),
+        )
+        .unwrap();
+        let project = |record| ProcessDecisionsArgs {
+            feature: None,
+            ..args(
+                record,
+                &["applicable-rules — BE-AUTHN-001 does not fire"],
+                false,
+            )
+        };
+        let result = run(&project(DecisionRecord::Review), tmp.path()).unwrap();
+        assert_eq!((result.matched_count, result.expired_count), (1, 0));
+        let err = run(&project(DecisionRecord::Analysis), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "record"),
+            "{err}"
+        );
     }
 
     /// A stored decision, waived, under `key`.

@@ -108,10 +108,10 @@ Model: fable (owner, 2026-11-24).
 
 Model: fable (owner, 2026-11-24).
 
-- [ ] `write-review` with no `feature` writes `{specs-root}/review.md` as `data-model.md` states, and `--seed` writes the seed
-- [ ] The function that finds the code no spec claims after the project record's window start, a seed's starting after the commit that added it; the project review's scope reads it, and task 9 exposes it
-- [ ] `fix_rounds::RoundSubject` takes an optional feature, `round_paths` leaves out `{specs-root}/review.md`, and its callers, `read_re_read::run` among them, accept a project subject (AC14)
-- [ ] Seed this repository's `specs/review.md`
+- [x] `write-review` with no `feature` writes `{specs-root}/review.md` as `data-model.md` states, and `--seed` writes the seed
+- [x] The function that finds the code no spec claims after the project record's window start, a seed's starting after the commit that added it; the project review's scope reads it, and task 9 exposes it
+- [x] `fix_rounds::RoundSubject` takes an optional feature, `round_paths` leaves out `{specs-root}/review.md`, and its callers, `read_re_read::run` among them, accept a project subject (AC14)
+- [x] Seed this repository's `specs/review.md`
 
 - **Done when**: AC6 and AC14 hold, a project review over a fixture's unclaimed commit records it, and its fix rounds leave its own record out.
 
@@ -120,6 +120,15 @@ Model: fable (owner, 2026-11-24).
 Model: fable (owner, 2026-11-24).
 
 Blocked on tasks 6 to 8: it reads their window, their claim rule and the project record.
+
+Handed on from task 8, which built `check_unreviewed_code.rs`'s `project_window`, `unclaimed_code` and `project_scope` and reads them at `HEAD` from `write-review`. Owed here:
+
+- `Attributor::at_tree` lists the specs from the commit's tree, and `plan_of` still reads the disk: a `done` spec's share at a commit needs its claimants' plans from that tree.
+- `project_window` and `compute_review_scope::last_review_commit` take `at`, and task 8 only ever passes `HEAD`: the fixture with an `at` that is not `HEAD` is their first test off it.
+- `NotPlaced` carries no reason text: `not-examined` words it, and the reason for `NoRecord` names the seed.
+- `unclaimed_code` leaves out a path the commit's tree no longer holds. A deletion is still a change, so report it as `compute_review_scope::paths_owing_a_review` counts a spec's own deletions.
+- Under `ductus exec` the walker seeds the session's `feature` into every primitive, so `--project` has to drop it, or each review primitive reviews the targeted feature.
+- `framework/commands/review.md`'s Scope Boundaries names `specs/NNN/review.md` and `.ductus/review-rounds/{feature}/` as what a run writes: a `--project` run writes `{specs-root}/review.md` and `.ductus/review-rounds/project/`.
 
 - [ ] The primitive at `at`, reading spec directories, statuses, plans and review records from that commit's tree and never the disk, with `done-specs`, `unclaimed`, `not-examined` and `mode`, and its seven registration sites
 - [ ] `[review] unreviewed-push`'s reader, its `PrimitiveError` variant, `runtime/src/schema/config_keys.rs` and `framework/bootstrap/ductus.md` §Project Configuration
@@ -209,11 +218,11 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
+- [ ] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 078, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
 - [ ] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]` entries for every change adopters see (AC13)
 
-- **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 084 and no new finding on the twelve, and the changelog names each primitive added and retired.
+- **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 084 and no new finding on the thirteen, and the changelog names each primitive added and retired.
 
 ### 19. This repository blocks
 
@@ -234,5 +243,11 @@ This is the last task. The about 9 `done` specs measured as owing a review are r
 ### 21. Disposition out-of-spec finding: two lib tests exec a freshly written script and can hit ETXTBSY
 
 - [ ] `runtime/src/primitives/merge_status_hook.rs`'s `the_probe_reads_a_version_and_names_each_failure` (three scripts) and `runtime/src/primitives/lint_markdown.rs`'s `a_linter_that_outlives_its_timeout_is_stopped` (one stub) write a script with `fs::write` and exec it at once, inside the lib test binary, the race task 20 fixed in `runtime/tests/merge_status_hook.rs` (68132f95). No failure so far: none of the 40 failed `runtime` runs from 2026-08-03 to 2026-11-23 failed on it (`gh run view --log-failed` grepped for `Text file busy`; every hit was the `pointer-running-cp` diagnostic). Task 20's retried warm-up exec does not fit here, since two of the scripts run `sleep 5`; a candidate, not yet measured, is writing each script from a child process, so no write handle exists in the test process for another thread's fork to inherit
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+### 22. Disposition out-of-spec finding: six mutants in two lists do not die on unchanged `HEAD`
+
+- [ ] `scripts/mutation/departure-waivers.py`, `scripts/mutation/site-anchors-020.py` — at `a6cba0be`, before task 8's change, `scripts/mutation/run.py` from a worktree of that commit reports `departure-waivers` M5, M8 and M11 and `site-anchors-020` M19 and M39 as SURVIVED, and `departure-waivers` M14 as a compile error (2026-11-24). Neither list names an expected survivor, so five tests pass with the behavior they name removed and one mutant proves nothing. Found by task 8's run of every mutant reaching the files it changed; `run.py --check`, the only run CI makes, validates anchors and runs none
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.

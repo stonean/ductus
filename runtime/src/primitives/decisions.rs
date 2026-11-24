@@ -352,15 +352,21 @@ pub(crate) fn target_feature<'a>(root: &str, target: &'a str) -> Option<&'a str>
 /// Whether `disposition` defers a finding to pipeline work on a spec other
 /// than `feature` that is still to do — the one deferral that releases a
 /// gating finding from `feature`'s gate, because that spec's own gate then
-/// holds the work (spec 076). A deferral to its own spec, to a rule file, to
+/// holds the work (spec 076). With no `feature` the record is the project's,
+/// which has no work of its own, so every spec is another (spec 084). A deferral to its own spec, to a rule file, to
 /// an external work item alone, or to work already complete (its task
 /// checked, its spec `done`) or unreadable releases nothing: no gate holds
 /// it.
-pub(crate) fn releases(repo: &Path, root: &str, feature: &str, disposition: &Disposition) -> bool {
+pub(crate) fn releases(
+    repo: &Path,
+    root: &str,
+    feature: Option<&str>,
+    disposition: &Disposition,
+) -> bool {
     disposition.outcome == DispositionOutcome::Deferred
         && nonblank(disposition.target.as_deref())
             .and_then(|target| target_feature(root, target))
-            .is_some_and(|other| other != feature)
+            .is_some_and(|other| Some(other) != feature)
         && work_state(
             repo,
             root,

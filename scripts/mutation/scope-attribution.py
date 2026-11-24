@@ -455,8 +455,8 @@ MUTATIONS = [
     (
         "M72 a mixed round's exempt path stays in its brief",
         'src/primitives/brief_re_read.rs',
-        '    let (exempt, paths) = split_exempt(round.paths, &format!("{feature_rel}/"));',
-        '    let (mut exempt, mut paths) = split_exempt(round.paths, &format!("{feature_rel}/"));\n    if !paths.is_empty() {\n        paths.append(&mut exempt);\n        paths.sort();\n    }',
+        ['    let (exempt, paths) = match &feature_rel {', '        None => (Vec::new(), round.paths),\n    };'],
+        ['    let (mut exempt, mut paths) = match &feature_rel {', '        None => (Vec::new(), round.paths),\n    };\n    if !paths.is_empty() {\n        paths.append(&mut exempt);\n        paths.sort();\n    }'],
         'brief_re_read::tests::an_exempt_path_leaves_a_mixed_rounds_brief_and_record brief_re_read::tests::a_spec_body_edit_with_code_needs_a_re_read',
     ),
     (
@@ -491,14 +491,14 @@ MUTATIONS = [
         'M77 loop-open writes no mark',
         'src/primitives/write_review.rs',
         '    if args.loop_open {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
-        '    if args.loop_open && args.feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        '    if args.loop_open && feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
         'write_review::tests::the_open_mark_follows_the_loop_open_argument',
     ),
     (
         'M78 the mark is written whatever the argument says',
         'src/primitives/write_review.rs',
         '    if args.loop_open {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
-        '    if !args.feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
+        '    if !feature.is_empty() {\n        let _ = writeln!(fm, "fix-rounds-open: true");',
         'write_review::tests::the_open_mark_follows_the_loop_open_argument',
     ),
     (
@@ -728,15 +728,15 @@ MUTATIONS = [
     (
         'M111 a relocation moves the start',
         'src/primitives/compute_review_scope.rs',
-        '            if holds_it\n                || run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()\n                    == Some(&run.last_run)\n            {',
-        '            if holds_it {',
+        'run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)',
+        'false && run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)',
         'compute_review_scope::tests::a_record_relocated_out_of_spec_md_does_not_move_the_start',
     ),
     (
         'M112 any run after a relocation is read as the relocation',
         'src/primitives/compute_review_scope.rs',
-        '            if holds_it\n                || run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()\n                    == Some(&run.last_run)\n            {',
-        '            if holds_it\n                || run_in_spec_block(repository, &tree, spec_git_path)?.is_some()\n            {',
+        'run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)',
+        'run_in_spec_block(repository, &tree, spec)?.is_some()',
         'compute_review_scope::tests::a_new_run_after_a_relocation_moves_the_start',
     ),
     (
@@ -882,7 +882,7 @@ MUTATIONS = [
     (
         'M136 a deferral that releases stays listed',
         'src/primitives/write_review.rs',
-        '                && !decisions::releases(repo, root, feature, &observation.disposition)\n',
+        '                && !decisions::releases(repo, root, subject.feature(), &observation.disposition)\n',
         '',
         'write_review::tests::the_record_lists_what_it_leaves_open',
     ),
@@ -1204,8 +1204,8 @@ MUTATIONS = [
     (
         "M182 a decision's scope ignores the run's since",
         'src/primitives/process_decisions.rs',
-        'RunScope::resolve(&args.feature, args.since.as_deref(), repo)',
-        'RunScope::resolve(&args.feature, None, repo)',
+        'RunScope::resolve(args.feature.as_deref(), args.since.as_deref(), repo)',
+        'RunScope::resolve(args.feature.as_deref(), None, repo)',
         'process_decisions::tests::the_runs_since_decides_what_it_read',
     ),
     (
@@ -1218,8 +1218,8 @@ MUTATIONS = [
     (
         "M184 a waiver's scope ignores the run's since",
         'src/primitives/process_waivers.rs',
-        'RunScope::resolve(&self.args.feature, self.args.since.as_deref(), self.repo)',
-        'RunScope::resolve(&self.args.feature, None, self.repo)',
+        '                    self.args.since.as_deref(),\n                    self.repo,',
+        '                    None,\n                    self.repo,',
         'process_waivers::tests::the_runs_since_decides_what_it_read',
     ),
     (
@@ -1617,8 +1617,8 @@ MUTATIONS = [
     (
         'M243 a record reverted away keeps the window it moved',
         'src/primitives/compute_review_scope.rs',
-        '    if feature_file_in_tree(repository, &head_tree, &git_path).is_none() {\n        return Ok(none(false));\n    }\n',
-        '    let _ = &head_tree;\n',
+        '    if feature_file_in_tree(repository, &at.tree()?, &git_path).is_none() {\n        return Ok(none(false));\n    }\n',
+        '',
         'compute_review_scope::tests::a_record_reverted_away_starts_at_the_reopen',
     ),
     (
@@ -1708,7 +1708,7 @@ MUTATIONS = [
     (
         'M261 a review records with a task still open',
         'src/primitives/write_review.rs',
-        '    refuse_while_implementation_is_open(args, &root, &feature_dir)?;\n',
+        '    refuse_while_implementation_is_open(args, &root, subject, &feature_dir)?;\n',
         '',
         'write_review::tests::a_review_records_only_once_every_task_is_done',
     ),
@@ -1737,8 +1737,8 @@ MUTATIONS = [
     (
         'M265 a base no scope can be derived from records scope 0',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n',
-        '    if args.diff_base.is_empty()\n        || crate::primitives::compute_review_scope::compute(\n            &crate::schema::primitives::ComputeReviewScopeArgs {\n                feature: args.feature.clone(),\n                since: Some(args.diff_base.clone()),\n            },\n            repo,\n        )\n        .is_err()\n    {\n',
+        '        return resolve_project_scope(args, repo);\n    };\n    if args.diff_base.is_empty() {\n',
+        '        return resolve_project_scope(args, repo);\n    };\n    if args.diff_base.is_empty()\n        || crate::primitives::compute_review_scope::compute(\n            &crate::schema::primitives::ComputeReviewScopeArgs {\n                feature: feature.to_string(),\n                since: Some(args.diff_base.clone()),\n            },\n            repo,\n        )\n        .is_err()\n    {\n',
         'write_review::tests::a_base_that_names_no_commit_refuses_the_write',
     ),
     (
@@ -1907,7 +1907,7 @@ MUTATIONS = [
         'M338 the walk for the last review stops at the reopen (spec 084, AC7)',
         'src/primitives/compute_review_scope.rs',
         '    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
-        '    if let Some(sha) = find_in_progress_commit(repository, spec_git_path)? {\n        walk.hide(Oid::from_str(&sha)?)?;\n    }\n    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
+        '    if let Some(spec) = spec_git_path\n        && let Some(sha) = find_in_progress_commit(repository, spec)?\n    {\n        walk.hide(Oid::from_str(&sha)?)?;\n    }\n    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
         'compute_review_scope::tests::a_reopen_keeps_the_code_committed_while_done_in_the_window compute_review_scope::tests::a_done_specs_window_starts_where_its_last_review_ended',
     ),
     (

@@ -61,11 +61,13 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+#[cfg(doc)]
+use crate::primitives::PrimitiveError;
 use crate::primitives::compute_review_scope::RunScope;
+use crate::primitives::review_subject::ReviewSubject;
 use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
-    PrimitiveError, Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, decisions,
-    departures,
+    Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, decisions, departures,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -123,9 +125,13 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
     if nothing {
         return Ok(result);
     }
-    if let Some(file) =
-        bounded_lists::place(repo, "process-waivers", &args.feature, &result, &lists)?
-    {
+    if let Some(file) = bounded_lists::place(
+        repo,
+        "process-waivers",
+        ReviewSubject::of(args.feature.as_deref()).name(),
+        &result,
+        &lists,
+    )? {
         result.form = ListsForm::File;
         result.applied = None;
         result.expired = None;
@@ -143,7 +149,8 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute,
 /// or carries a parent-directory component,
 /// or when the feature directory, or a link inside it, resolves outside the
-/// project, [`PrimitiveError::FeatureNotFound`]
+/// project, or when with no `feature` the spec root does,
+/// [`PrimitiveError::FeatureNotFound`]
 /// when the feature has no `spec.md`, [`PrimitiveError::UnclosedFrontmatter`]
 /// when `review.md`'s frontmatter block never closes, [`PrimitiveError::Yaml`]
 /// when its frontmatter or `waivers:` list fails to parse, or
@@ -151,22 +158,16 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
 /// opens no frontmatter block, records no waivers.
 pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classified> {
     let layout = paths::Paths::load(repo)?;
-    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
-    let spec_path = repo
-        .join(&layout.specs_root)
-        .join(&args.feature)
-        .join("spec.md");
-    if !spec_path.is_file() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root: layout.specs_root,
-            feature: args.feature.clone(),
-        });
-    }
     // The waivers live in `review.md`'s frontmatter, beside the rest of the
-    // review record (spec 057). `spec.md` is still read above, because its
-    // existence is what makes this a feature at all.
-    let waivers: Vec<RawWaiver> =
-        super::read_recorded_waivers(spec_path.parent().unwrap_or_else(|| Path::new(".")))?;
+    // review record (spec 057): a feature's in its directory, whose `spec.md`
+    // is what makes it a feature at all, and the project's in the spec root
+    // (spec 084).
+    let (subject, record_dir) =
+        ReviewSubject::resolve(args.feature.as_deref(), repo, &layout.specs_root)?;
+    // The spec whose `## Applicable Rules` a departure waiver's entry lives in:
+    // the project has none, so a waiver marked as one there has no entry left.
+    let spec_path = subject.feature().map(|_| record_dir.join("spec.md"));
+    let waivers: Vec<RawWaiver> = super::read_recorded_waivers(&record_dir)?;
 
     // A dimension-restricted run (any pass skipped) cannot see the full set
     // of findings, so it must not expire a waiver on the strength of "the
@@ -258,7 +259,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
                 continue;
             }
             if matches!(located.kind, Kind::Departure | Kind::DepartureSite { .. })
-                && departure_gone(waiver, &rule, &located, &spec_path, &mut entries)?
+                && departure_gone(waiver, &rule, &located, spec_path.as_deref(), &mut entries)?
             {
                 classified.notices.push(format!(
                     "waiver expired: rule {shown_rule} at {at} ({shown_reason})"
@@ -335,7 +336,11 @@ impl Pass<'_> {
         } else if let Some(why) = self
             .scope
             .get_or_init(|| {
-                RunScope::resolve(&self.args.feature, self.args.since.as_deref(), self.repo)
+                RunScope::resolve(
+                    self.args.feature.as_deref(),
+                    self.args.since.as_deref(),
+                    self.repo,
+                )
             })
             .why_unread(&anchor.file, self.repo)
         {
@@ -359,20 +364,22 @@ impl Pass<'_> {
 /// entry with no `covers:` and a site anchor a scoped one; or a scoped entry whose
 /// `covers:` does not list the anchor's file and site. `entries` caches the entries, read
 /// from the spec at `spec_path` by the first marked waiver, so a record with no marker
-/// reads nothing else.
+/// reads nothing else; the project record has no spec, and so no entry.
 fn departure_gone(
     waiver: &RawWaiver,
     rule: &str,
     located: &Located<'_>,
-    spec_path: &Path,
+    spec_path: Option<&Path>,
     entries: &mut Option<Vec<departures::Entry>>,
 ) -> Result<bool> {
     if waiver.departure != Some(true) {
         return Ok(false);
     }
     if entries.is_none() {
-        let content = super::read_text(spec_path)?;
-        *entries = Some(departures::parse(&content).entries);
+        *entries = Some(match spec_path {
+            Some(spec_path) => departures::parse(&super::read_text(spec_path)?).entries,
+            None => Vec::new(),
+        });
     }
     let Some(entry) = entries
         .as_deref()
@@ -519,6 +526,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::primitives::PrimitiveError;
     use crate::schema::primitives::FiredFinding;
     use std::fmt::Write as _;
     use tempfile::TempDir;
@@ -611,7 +619,7 @@ mod tests {
 
     fn args(feature: &str, fired_pairs: &[(&str, &str)]) -> ProcessWaiversArgs {
         ProcessWaiversArgs {
-            feature: feature.to_string(),
+            feature: Some(feature.to_string()),
             fired: fired(fired_pairs),
             skipped_passes: Vec::new(),
             since: None,
@@ -625,12 +633,87 @@ mod tests {
         skipped: &[&str],
     ) -> ProcessWaiversArgs {
         ProcessWaiversArgs {
-            feature: feature.to_string(),
+            feature: Some(feature.to_string()),
             fired: fired(fired_pairs),
             skipped_passes: skipped.iter().map(|s| (*s).to_string()).collect(),
             since: None,
             ..ProcessWaiversArgs::default()
         }
+    }
+
+    /// Spec 084: with no `feature` the waivers are the project record's, in the spec
+    /// root, with no `spec.md` beside it. One that fires applies; one that does not, on
+    /// a file the project's scope holds, expires; and one on a file the scope does not
+    /// hold is retained, as a feature's is.
+    #[test]
+    fn the_project_records_waivers_are_classified_with_no_feature() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = TempDir::new().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        let waiver = |file: &str| {
+            format!(
+                "  - rule: SEC-BE-014\n    anchors:\n      - file: {file}\n        site: s\n        \
+                 covers: 1\n    reason: Endpoint is internal-only behind mTLS.\n    \
+                 waived-at: 2026-05-10T14:40:00Z\n    waived-by: dev@example.com\n"
+            )
+        };
+        write(&tmp.path().join("src/outside.rs"), "code\n");
+        write(
+            &tmp.path().join("specs/review.md"),
+            &format!(
+                "---\nspec: project\nlast-run: null\nblocking: false\nwaivers:\n{}{}{}---\n",
+                waiver("src/fires.rs"),
+                waiver("src/quiet.rs"),
+                waiver("src/outside.rs"),
+            ),
+        );
+        commit_all(&repo, "chore: install");
+        write(&tmp.path().join("src/fires.rs"), "code\n");
+        write(&tmp.path().join("src/quiet.rs"), "code\n");
+        commit_all(&repo, "chore: code no spec claims");
+        let result = run(
+            &ProcessWaiversArgs {
+                feature: None,
+                fired: fired(&[("SEC-BE-014", "src/fires.rs")]),
+                ..ProcessWaiversArgs::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let files = |refs: &[WaiverRef]| -> Vec<String> {
+            refs.iter().map(|waiver| waiver.file.clone()).collect()
+        };
+        assert_eq!(files(&result.applied), ["src/fires.rs"]);
+        assert_eq!(files(&result.expired), ["src/quiet.rs"]);
+        assert_eq!(files(&result.retained), ["src/outside.rs"]);
+    }
+
+    /// The project has no spec to hold a departure entry, so a waiver marked as one
+    /// in its record has no entry left and expires.
+    #[test]
+    fn a_departure_waiver_in_the_project_record_expires() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = TempDir::new().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/review.md"),
+            "---\nspec: project\nlast-run: null\nblocking: false\nwaivers:\n  - rule: SEC-BE-014\n    \
+             file: src/a.rs\n    departure: true\n    reason: Endpoint is internal-only behind mTLS.\n    \
+             waived-at: 2026-05-10T14:40:00Z\n    waived-by: dev@example.com\n---\n",
+        );
+        write(&tmp.path().join("src/a.rs"), "code\n");
+        commit_all(&repo, "chore: install");
+        let result = run(
+            &ProcessWaiversArgs {
+                feature: None,
+                fired: fired(&[("SEC-BE-014", "src/a.rs")]),
+                ..ProcessWaiversArgs::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.expired.len(), 1, "{result:?}");
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
     }
 
     const ONE_WAIVER: &str = "    - rule: SEC-BE-014\n      anchors:\n        - file: src/api/internal.ts\n          site: s\n          covers: 1\n      reason: Endpoint is internal-only behind mTLS.\n      waived-at: 2026-05-10T14:40:00Z\n      waived-by: dev@example.com\n";
@@ -1151,7 +1234,7 @@ mod tests {
 
     fn firing(findings: Vec<FiredFinding>) -> ProcessWaiversArgs {
         ProcessWaiversArgs {
-            feature: "001-x".to_string(),
+            feature: Some("001-x".to_string()),
             fired: findings,
             ..ProcessWaiversArgs::default()
         }

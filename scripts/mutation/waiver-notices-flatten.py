@@ -46,8 +46,8 @@ MUTATIONS = [
     (
         'M5 the departure-expiry notice prints the stored values raw',
         'src/primitives/process_waivers.rs',
-        '                && departure_gone(waiver, &rule, &located, &spec_path, &mut entries)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {at} ({shown_reason})"\n                ));',
-        '                && departure_gone(waiver, &rule, &located, &spec_path, &mut entries)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
+        '                && departure_gone(waiver, &rule, &located, spec_path.as_deref(), &mut entries)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {shown_rule} at {at} ({shown_reason})"\n                ));',
+        '                && departure_gone(waiver, &rule, &located, spec_path.as_deref(), &mut entries)?\n            {\n                classified.notices.push(format!(\n                    "waiver expired: rule {rule} at {file} ({reason})"\n                ));',
         'process_waivers::tests::the_departure_expiry_notice_flattens_stored_text',
     ),
     (

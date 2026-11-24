@@ -43,28 +43,28 @@ use crate::schema::primitives::{
 /// neither is ever a match.
 pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescriptionsResult> {
     let layout = paths::Paths::load(repo)?;
-    fix_rounds::validate_feature(
+    let review = fix_rounds::validate_subject(
         "check-prescriptions",
         repo,
         &layout.specs_root,
-        &args.feature,
+        args.feature.as_deref(),
     )?;
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;
-    let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
+    let dir = fix_rounds::round_dir_to_read(repo, review, &base)?;
     let could_not_run = |problem: String| CheckPrescriptionsResult {
         problem: Some(problem),
         ..CheckPrescriptionsResult::default()
     };
     let (record, mut findings) = match load_round(&dir)? {
         Ok(round) => round,
-        Err(problem) => return bounded(repo, &args.feature, could_not_run(problem)),
+        Err(problem) => return bounded(repo, review.name(), could_not_run(problem)),
     };
     // A finding outside the round is a NOTE, as `read-re-read` counts it.
     fix_rounds::demote_out_of_round(&mut findings, &record.paths);
     let by_file = match edits_by_file(repo, &findings) {
         Ok(by_file) => by_file,
-        Err(problem) => return bounded(repo, &args.feature, could_not_run(problem)),
+        Err(problem) => return bounded(repo, review.name(), could_not_run(problem)),
     };
     let open = findings
         .iter()
@@ -77,7 +77,7 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     let subject = fix_rounds::RoundSubject {
         repo,
         specs_root: &layout.specs_root,
-        feature: &args.feature,
+        feature: review.feature(),
     };
     let unprescribed: Vec<String> =
         fix_rounds::round_paths(&project, subject, &record.snapshot, &now)?
@@ -93,7 +93,7 @@ pub fn run(args: &CheckPrescriptionsArgs, repo: &Path) -> Result<CheckPrescripti
     };
     bounded(
         repo,
-        &args.feature,
+        review.name(),
         CheckPrescriptionsResult {
             verdict,
             problem: None,
@@ -305,6 +305,7 @@ mod tests {
     use super::*;
     use crate::primitives::PrimitiveError;
     use crate::primitives::git_fixture::{commit_all, write};
+    use crate::primitives::review_subject::ReviewSubject;
     use crate::primitives::{brief_re_read, start_fix_rounds};
     use crate::schema::primitives::{BriefReReadArgs, StartFixRoundsArgs};
 
@@ -325,7 +326,7 @@ mod tests {
         commit_all(&repository, "init");
         let base = start_fix_rounds::run(
             &StartFixRoundsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
             },
             tmp.path(),
         )
@@ -334,7 +335,7 @@ mod tests {
         write(&tmp.path().join("a.txt"), "hello world, again\n");
         let brief = brief_re_read::run(
             &BriefReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base: base.clone(),
             },
             tmp.path(),
@@ -352,7 +353,7 @@ mod tests {
     fn check(tmp: &tempfile::TempDir, base: &str) -> CheckPrescriptionsResult {
         run(
             &CheckPrescriptionsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base: base.to_string(),
             },
             tmp.path(),
@@ -405,7 +406,7 @@ mod tests {
         commit_all(&repository, "init");
         let base = start_fix_rounds::run(
             &StartFixRoundsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
             },
             &project,
         )
@@ -414,7 +415,7 @@ mod tests {
         write(&project.join("a.txt"), "hello world, again\n");
         let brief = brief_re_read::run(
             &BriefReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base: base.clone(),
             },
             &project,
@@ -429,7 +430,7 @@ mod tests {
         write(&project.join("a.txt"), "hello world, once more\n");
         let result = run(
             &CheckPrescriptionsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base,
             },
             &project,
@@ -463,7 +464,10 @@ mod tests {
         let (tmp, base) = briefed(AGAIN);
         write(
             &tmp.path()
-                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(fix_rounds::round_rel(
+                    ReviewSubject::Feature(FEATURE),
+                    &base,
+                ))
                 .join(RESULT_FILE),
             &format!(
                 r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "SHOULD", "path": "b.txt", "text": "outside"}}]}}"#
@@ -487,7 +491,10 @@ mod tests {
             let (tmp, base) = briefed(AGAIN);
             write(
                 &tmp.path()
-                    .join(fix_rounds::round_rel(FEATURE, &base))
+                    .join(fix_rounds::round_rel(
+                        ReviewSubject::Feature(FEATURE),
+                        &base,
+                    ))
                     .join(RESULT_FILE),
                 &format!(
                     r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "NOTE", "path": "a.txt", "text": "y", "edits": [{{"path": "a.txt", "old": "hello", "new": "hi"}}]}}]}}"#
@@ -509,7 +516,10 @@ mod tests {
         let (tmp, base) = briefed(AGAIN);
         write(
             &tmp.path()
-                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(fix_rounds::round_rel(
+                    ReviewSubject::Feature(FEATURE),
+                    &base,
+                ))
                 .join(RESULT_FILE),
             &format!(
                 r#"{{"complete": true, "findings": [{{"severity": "SHOULD", "path": "a.txt", "text": "x", "edits": [{AGAIN}]}}, {{"severity": "NOTE", "path": "a.txt", "text": "y", "edits": [{{"path": "a.txt", "old": "hello", "new": "hi"}}]}}]}}"#
@@ -604,7 +614,10 @@ mod tests {
         let (tmp, base) = briefed(AGAIN);
         let result_path = tmp
             .path()
-            .join(fix_rounds::round_rel(FEATURE, &base))
+            .join(fix_rounds::round_rel(
+                ReviewSubject::Feature(FEATURE),
+                &base,
+            ))
             .join(RESULT_FILE);
         let text = std::fs::read_to_string(&result_path).unwrap();
         write(
@@ -639,7 +652,10 @@ mod tests {
 
         let result_path = tmp
             .path()
-            .join(fix_rounds::round_rel(FEATURE, &base))
+            .join(fix_rounds::round_rel(
+                ReviewSubject::Feature(FEATURE),
+                &base,
+            ))
             .join(RESULT_FILE);
         for (body, expect) in [
             (None, "does not exist"),
@@ -718,7 +734,7 @@ mod tests {
         let (tmp, base) = briefed(AGAIN);
         let err = run(
             &CheckPrescriptionsArgs {
-                feature: ".".to_string(),
+                feature: Some(".".to_string()),
                 base,
             },
             tmp.path(),

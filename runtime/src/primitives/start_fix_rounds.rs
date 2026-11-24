@@ -2,7 +2,8 @@
 //! round (spec 078).
 //!
 //! Called once per run, when the passes end and before any fix: it clears the
-//! feature's earlier rounds, records when the loop starts (AC17) and snapshots
+//! subject's earlier rounds, a feature's or with no `feature` the project's
+//! (spec 084), records when the loop starts (AC17) and snapshots
 //! the working tree, so the first round's changed paths are exactly the fixes
 //! made after the passes.
 //!
@@ -33,14 +34,19 @@ use crate::schema::primitives::{StartFixRoundsArgs, StartFixRoundsResult};
 /// as not re-read.
 pub fn run(args: &StartFixRoundsArgs, repo: &Path) -> Result<StartFixRoundsResult> {
     let layout = paths::Paths::load(repo)?;
-    fix_rounds::validate_feature("start-fix-rounds", repo, &layout.specs_root, &args.feature)?;
+    let subject = fix_rounds::validate_subject(
+        "start-fix-rounds",
+        repo,
+        &layout.specs_root,
+        args.feature.as_deref(),
+    )?;
     // Read before the run writes any fix, so a malformed switch halts the run
     // here rather than at the first round, after its fixes have landed.
     fix_rounds::re_reads_off(repo)?;
     // Discovered before anything is cleared, so a project outside any work
     // tree errors with its earlier rounds intact.
     let project = ProjectRepository::discover(repo)?;
-    let dir = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
+    let dir = fix_rounds::subject_rounds_dir(repo, subject)?;
     fix_rounds::clear_rounds(&dir)?;
     fix_rounds::record_start(&dir, std::time::SystemTime::now())?;
     let (base, files) = fix_rounds::snapshot(&project)?;
@@ -66,7 +72,7 @@ mod tests {
 
     fn args(feature: &str) -> StartFixRoundsArgs {
         StartFixRoundsArgs {
-            feature: feature.to_string(),
+            feature: Some(feature.to_string()),
         }
     }
 

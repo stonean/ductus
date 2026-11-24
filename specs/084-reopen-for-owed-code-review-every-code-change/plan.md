@@ -81,17 +81,21 @@ In `runtime/src/primitives/compute_review_scope.rs`, `resolve_base` takes the la
 
 ### The project record
 
-`write-review` takes `feature` as optional. Without it the record is `{specs-root}/review.md`, written whole through `write_if_unchanged` like a feature's (`BE-TXN-002`), and skipping what has no meaning there:
+`write-review` takes `feature` as optional. The subject, a feature or the project (`review_subject::ReviewSubject`), is resolved once at the top of `run_between`, and the record's path, its `spec:` label, the rounds directory and the list files' key all come from it, so there is one path through the primitive. Only an absent `feature` names the project: an empty one is refused. Without it the record is `{specs-root}/review.md`, written whole through `write_if_unchanged` like a feature's (`BE-TXN-002`), and skipping exactly what has no meaning there:
 
 - `spec.md`, criteria and departures;
 - `tasks.md`'s refusal;
 - the contracts digest and analysis freshness.
 
-Its scope is the code no spec claims after the record's window start, at the run's head, computed by the function `check-unreviewed-code` later exposes, which this decision's task builds. A `seed` flag writes the record with `last-run: null` and `reviewed-against` at `HEAD`, the commit substituted by the runtime, never transcribed.
+`criteria` and `scenario` are refused when supplied, never dropped. The waiver and decision lists, the loop record, the `unread` refusal, the moved-scope guard and the empty-scope refusal apply as for a feature. The project record has no work of its own, so no deferral can name it and every deferral to a spec's pending work releases its finding. `process-waivers` and `process-decisions` take the same optional `feature`, since the record keeps both lists (the agent's recommendation, adopted by the operator, 2026-11-24); the project has no analysis record, and a departure waiver in its record has no entry and expires.
 
-A seed's window starts after the commit that added the record to history, not at its `reviewed-against`. The install or update that writes the seed is committed after it, with the hooks, command files and lint configuration it brought, and those are code naming no spec (`is_project_artifact` counts only the spec root, `.ductus/`, `AGENTS.md` and `CLAUDE.md`). Starting at `reviewed-against` would stop the first push after every install and update on the framework's own files. The commit is found from history, as the commit that set a spec `done` is. A record a review wrote starts at its `reviewed-against` (Open Questions Resolved, below).
+Its scope is the code no spec claims after the record's window start, at the run's head, computed by `check_unreviewed_code::project_scope`, which `check-unreviewed-code` later exposes. It reads `HEAD`'s tree and commits only, never the disk, so uncommitted unclaimed work stays with open specs (Trade-offs). A commit is the project's by `commit_attribution::project_share`, the unclaimed test `WindowCommits::of` counts by, and the specs that may claim one are listed from the commit's tree. What a project record leaves open or left unread is held in scope, as a spec's is. `diff-base` is the commit the window starts after: the record's own start when it matches, otherwise used verbatim as a spec's `--since` is, and the record states the one used.
 
-`fix_rounds::RoundSubject` takes an optional feature. `round_paths` leaves out `{specs-root}/review.md` for the project subject (AC14). `validate_feature`, `feature_rounds_dir` (a project subject uses `.ductus/review-rounds/project`, a name no feature directory can take) and the callers `start_fix_rounds::run`, `brief_re_read::run`, `read_re_read::run` (with `round_dir_to_read`) and `check_prescriptions` accept it.
+The window starts as a spec's does, through `compute_review_scope::last_review_commit`, which takes the record and an optional spec: after the commit finishing the newest review that read its scope, which holds that run's fixes, or at the `reviewed-against` of one whose record is held (the agent's recommendation, adopted by the operator, 2026-11-24). Rejected: a reviewed record starting at its `reviewed-against`, which left every project review that fixed code owing another for its own fix. With no such review the window starts after the commit that added the record to history, found as `check_stuck::find_done_commit` finds a `done` pass. That is a seed's start: the install or update that writes the seed is committed after it, with the hooks, command files and lint configuration it brought, and those are code naming no spec (`is_project_artifact` counts only the spec root, `.ductus/`, `AGENTS.md` and `CLAUDE.md`). Starting at the seed's `reviewed-against` would stop the first push after every install and update on the framework's own files. A shallow cut at the record, or a commit holding none, places no window: a distinct state, never an empty scope.
+
+A `seed` flag writes the record with `last-run: null` and `reviewed-against` at `HEAD`, the commit substituted by the runtime, never transcribed. It takes no other argument, a feature or a finding refusing it, and leaves an existing record, seeded or reviewed, as it is, saying which in its result, so a second run writes nothing. In a repository with no commit it states no `reviewed-against`, which nothing reads (the agent's recommendation, adopted by the operator, 2026-11-24).
+
+`fix_rounds::RoundSubject` takes an optional feature. `round_paths` leaves out `{specs-root}/review.md` for the project subject (AC14), whose share of a landing is a spec's inverted: a commit no spec claims is its own, and one a spec claims is another review's. `validate_subject`, `subject_rounds_dir` (a project subject uses `.ductus/review-rounds/project`, a name no feature directory can take) and the callers `start_fix_rounds::run`, `brief_re_read::run`, `read_re_read::run` (with `round_dir_to_read`) and `check_prescriptions` accept it. A project round's brief names no spec, and no path of it is exempt.
 
 `/ductus:review --project` reviews under the project record, and `--all` includes it. The command reads its window start and its paths from `check-unreviewed-code`'s `unclaimed`, so its text lands with that primitive and no second primitive reads the record (the agent's recommendation, adopted by the operator, 2026-11-24). Rejected: `compute-review-scope` answering for the project when called with no feature, which gives the record a second reader and one more primitive an optional feature. The record's shape is in [data-model.md](data-model.md).
 
@@ -100,7 +104,7 @@ A seed's window starts after the commit that added the record to history, not at
 A new primitive (`runtime/src/primitives/check_unreviewed_code.rs`) reads the committed tree at `at` (default `HEAD`), never the working tree, since a push carries commits, and the hook passes a pushed commit that need not be `HEAD`. So everything it reads comes from that tree: the spec directories, each spec's status, each claimant's `plan.md` and each review record. The attribution it shares with `compute-review-scope` reads the disk and `HEAD` today: `Attributor::new` lists the spec root on disk, `claimant_plan` reads `plan.md` from disk, and the walks start at `HEAD`. The shared function therefore takes its source and its walk's start: the working tree and `HEAD` for a review's scope, a commit and its tree for the check. The source is the `Attributor`'s, which lists the spec directories and reads each claimant's plan (`plan_of`); the caller walks its commits and hands each one's claims to `SpecShare::split`, which returns the spec's paths and the rest. It reports:
 
 - **for each `done` spec**, the code paths changed after its window start (the decision above), by commits that claim it;
-- **for code no spec claims**, the code paths changed after the project record's window start: its `reviewed-against`, or for a seed the commit that added it.
+- **for code no spec claims**, the code paths changed after the project record's window start (the decision above).
 
 Code is every path for which `is_project_artifact` is false. A path a commit gives an `in-progress` spec is not reported. A `done` spec's paths include what a staging spec folded into it below `done` brought (`folded_in`). The per-path claim rule now inside `attribute_window` moves to `commit_attribution` as one function both read, so the two never disagree (`QUAL-DELEG-001`).
 
@@ -209,7 +213,8 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 | `runtime/src/primitives/check_stuck.rs` | Modify | The commit that set a spec `done` |
 | `runtime/src/primitives/commit_attribution.rs` | Modify | The per-path claim rule, shared |
 | `runtime/src/primitives/write_review.rs`, `runtime/src/primitives/write_review/` | Modify | The project record and its seed |
-| `runtime/src/primitives/fix_rounds.rs`, `start_fix_rounds.rs`, `brief_re_read.rs`, `read_re_read.rs`, `check_prescriptions.rs` | Modify | A project subject (AC14); the shared claim rule in fix rounds |
+| `runtime/src/primitives/review_subject.rs` | Create | The review subject: a feature or the project |
+| `runtime/src/primitives/fix_rounds.rs`, `start_fix_rounds.rs`, `brief_re_read.rs`, `read_re_read.rs`, `check_prescriptions.rs`, `process_waivers.rs`, `process_decisions.rs`, `decisions.rs`, `write_analysis.rs` | Modify | A project subject (AC14); the shared claim rule in fix rounds |
 | `runtime/src/primitives/measure_reopenings.rs` | Modify | `held-owed-work`, `never-owed-count` (AC16) |
 | `runtime/src/primitives/dashboard.rs`, `pipeline_view.rs`, `render_status.rs` | Modify | The status count (AC9) |
 | `runtime/src/primitives/check_artifacts.rs`, `check_review_gate.rs`, `read_tasks.rs`, `read_spec.rs` | Modify | Read the shared helper |
@@ -230,7 +235,7 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 | `framework/templates/ci/adopter-generators.yml` | Modify | Full history, two steps (AC9, AC15) |
 | `scripts/audit/done-spec-criteria.sh`, `cross-doc-consistency.sh`, `ssot-invariants.sh`, `rename-sweep-residue.sh`, `adopter-shell-behavior.sh`, `run-all.sh`, `README.md` | Modify | Family 27, family 1c, the sweep, the hook fixture |
 | `scripts/tests/test-done-spec-owed-work.sh` | Create | AC15's test |
-| `scripts/mutation/reopen-measure.py`, `review-022-task-46.py`, `line-citation-strip-066.py`, `review-read-credit.py`, `reviews-follow-what-changed.py`, `commit-counts.py`, `scope-attribution.py`, `plan-edit-takes-no-back-edge.py` | Modify | Retired mutants |
+| `scripts/mutation/reopen-measure.py`, `review-022-task-46.py`, `line-citation-strip-066.py`, `review-read-credit.py`, `reviews-follow-what-changed.py`, `commit-counts.py`, `scope-attribution.py`, `plan-edit-takes-no-back-edge.py`, `loop-inputs-screened.py`, `process-decisions-results-bounded.py`, `waiver-notices-flatten.py`, `waivers-bounded.py`, `project-record-084.py` | Modify, Create | Retired and re-anchored mutants; the project record's |
 | `framework/migrations/audit-record-relocate.md`, `criterion-label-backfill.md` | Modify | The sweep: each calls its edit a correction under §spec-lifecycle |
 | `.github/workflows/runtime.yml`, `framework-checks.yml` | Modify | Hook path triggers, the new test |
 | `.githooks/pre-push`, `.ductus/config.toml`, `specs/review.md` | Create, Modify, Create | This repository's hook, its `warn`, its seed |
@@ -254,6 +259,7 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 - **Rejected: bar (c) from a hook log or the remote's push history.** See the spec's Resolved Questions.
 - **Limitation: uncommitted unclaimed code still joins an open spec's scope.** Uncommitted work has no commit to attribute, as `split_changes` has it today.
 - **Limitation: a framework update after the first owes a project review.** Its commit brings changed hooks and command files, which are code no spec claims; only the commit that adds the seed is covered.
+- **Limitation: unclaimed code committed between a project review's last write and the commit of its record is owed to no review.** The next window starts after that commit, and the moved-scope guard reads only up to the write. A spec's window has the same gap.
 - **Limitation: a branch cut before the seed is not examined.** Its tree holds no project record, so under `block` its push stops until it holds the seed's commit.
 - **Limitation: an adopter with a backlog is stopped at its first push after the update.** The update's report says so before that push, with the key that turns the block into a warning.
 - **Limitation: a `done` spec can hold an open scenario question until an analysis reports it.** Nothing but `/ductus:analyze` reads it once `--fix` no longer reverts.
@@ -287,6 +293,7 @@ Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md
 - **057:** the CI template's new steps.
 - **066:** the project record in the review record's schema, and its scenario `criteria-are-verified-in-review`'s `done`-spec exception.
 - **067:** `review-state-drift` read through the shared helper.
+- **078:** its four loop primitives and its round directory take the project subject.
 - **079:** AC5, AC15, AC25 and the retirement.
 - **081:** AC10 and AC13.
 - **083:** the unclaimed-commit count staying while unclaimed code leaves open specs' scopes.

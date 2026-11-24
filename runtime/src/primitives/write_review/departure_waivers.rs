@@ -132,7 +132,7 @@ fn run_review(
         .collect();
     let classified = process_waivers::compute(
         &ProcessWaiversArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             fired,
             ..ProcessWaiversArgs::default()
         },
@@ -376,7 +376,7 @@ fn a_removed_entry_expires_on_a_dimension_restricted_run_too() {
     commit(&repository, "drop the departure");
     let classified = process_waivers::compute(
         &ProcessWaiversArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             fired: Vec::new(),
             skipped_passes: vec!["efficiency".to_string()],
             ..ProcessWaiversArgs::default()
@@ -867,7 +867,7 @@ fn seed_waiver(dir: &Path, extra: &str) {
 fn classify(dir: &Path) -> crate::primitives::Result<Classified> {
     process_waivers::compute(
         &ProcessWaiversArgs {
-            feature: FEATURE.to_string(),
+            feature: Some(FEATURE.to_string()),
             fired: vec![FiredFinding {
                 site: Some("walk".to_string()),
                 line_range: String::new(),

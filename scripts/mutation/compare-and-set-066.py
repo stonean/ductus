@@ -27,7 +27,7 @@ MUTATIONS = [
         'M2 write-review takes its snapshot only when it writes',
         'src/primitives/write_review.rs',
         '    write_record(&record, &report, between)?;\n',
-        '    between();\n    let _ = &record;\n    super::ReadSnapshot::read(repo, &format!("{root}/{}/{}", args.feature, super::REVIEW_RECORD_FILE))?.write_if_unchanged(&report)?;\n',
+        '    between();\n    let _ = &record;\n    super::ReadSnapshot::read(repo, &subject.record_rel(&root))?.write_if_unchanged(&report)?;\n',
         'primitives::write_review::tests::a_record_written_after_it_was_read_is_refused_and_kept',
     ),
     (
@@ -62,7 +62,7 @@ MUTATIONS = [
         'M7 write-review takes a second snapshot just before the write, after the point a test changes the record',
         'src/primitives/write_review.rs',
         '    write_record(&record, &report, between)?;\n',
-        '    let record = record_snapshot(repo, &root, &args.feature)?;\n    write_record(&record, &report, between)?;\n',
+        '    let record = record_snapshot(repo, &root, subject)?;\n    write_record(&record, &report, between)?;\n',
         'primitives::write_review::tests::a_record_written_just_after_the_snapshot_is_refused_and_kept',
     ),
     (

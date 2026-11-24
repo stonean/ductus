@@ -1,4 +1,5 @@
-//! `write-review` — render `specs/NNN/review.md` for `/ductus:review`. What it does is
+//! `write-review` — render `specs/NNN/review.md` for `/ductus:review`, or with no
+//! `feature` the project record, `{specs-root}/review.md` (spec 084). What it does is
 //! `schema::descriptions::WRITE_REVIEW`.
 //!
 //! A cross-pass dedup breaks a severity tie by the higher confidence, and a
@@ -23,6 +24,7 @@ use crate::primitives::compute_review_scope::{RunScope, WindowCommits};
 use crate::primitives::criterion_verdicts;
 use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::departures::Attribution;
+use crate::primitives::review_subject::ReviewSubject;
 use crate::primitives::{
     PrimitiveError, Result, StoredAnchor, WaiverPaths, analyze_subjects, fix_rounds, read_text,
     rel_path, split_frontmatter,
@@ -341,7 +343,9 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     // fields are separately quoted via `yaml_string`.
     let single_line =
         |argument: &str, value: &str| super::validate_single_line("write-review", argument, value);
-    single_line("feature", &args.feature)?;
+    if let Some(feature) = args.feature.as_deref() {
+        single_line("feature", feature)?;
+    }
     single_line("reviewed-at", &args.reviewed_at)?;
     // A blank timestamp would be stamped onto every new decision as a blank
     // `decided-at`, an entry the decisions reader classifies as malformed.
@@ -486,6 +490,9 @@ fn validate_new_waivers(args: &WriteReviewArgs) -> Result<()> {
 /// - [`PrimitiveError::InvalidReReadsOff`] when `fix-rounds` is given and
 ///   `[review] re-reads-off` is malformed, and [`PrimitiveError::Toml`] when
 ///   the config file it is read from does not parse.
+/// - [`PrimitiveError::InvalidArgument`] for the project record, written with no `feature`:
+///   on `criteria` or `scenario` when either is given, and on `seed` when a seed is asked
+///   for with any other argument (spec 084).
 /// - [`PrimitiveError::FeatureNotFound`] when the feature has no `spec.md`.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no frontmatter
 ///   block, and [`PrimitiveError::UnclosedFrontmatter`] when the block in
@@ -506,11 +513,12 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
 /// `review.md` as this run first reads it, taken before any helper reads the
 /// lists it keeps: the write renames over it only while it still holds these
 /// bytes (`BE-TXN-002`).
-fn record_snapshot(repo: &Path, root: &str, feature: &str) -> Result<super::ReadSnapshot> {
-    super::ReadSnapshot::read(
-        repo,
-        &format!("{root}/{feature}/{}", super::REVIEW_RECORD_FILE),
-    )
+fn record_snapshot(
+    repo: &Path,
+    root: &str,
+    subject: ReviewSubject<'_>,
+) -> Result<super::ReadSnapshot> {
+    super::ReadSnapshot::read(repo, &subject.record_rel(root))
 }
 
 /// Rename `report` over the record `record` read, calling `between` first, and
@@ -535,24 +543,22 @@ fn run_between(
     between: &mut dyn FnMut(),
 ) -> Result<WriteReviewResult> {
     let root = paths::Paths::load(repo)?.specs_root;
-    super::validate_feature_argument(repo, &root, &args.feature)?;
-    validate_arguments(args)?;
-    let feature_dir = repo.join(&root).join(&args.feature);
-    let spec_path = feature_dir.join("spec.md");
-    if !spec_path.is_file() {
-        return Err(PrimitiveError::FeatureNotFound {
-            root,
-            feature: args.feature.clone(),
-        });
+    if args.seed {
+        return seed::write(args, repo, &root);
     }
-    let record = record_snapshot(repo, &root, &args.feature).inspect(|_| after_snapshot())?;
-    refuse_while_implementation_is_open(args, &root, &feature_dir)?;
+    // The subject is resolved once, here: the record's path, its `spec:`, the
+    // scope and the list files' key all come from it (spec 084). `feature_dir`
+    // is where the record lives, the spec root for the project's.
+    let (subject, feature_dir) = ReviewSubject::resolve(args.feature.as_deref(), repo, &root)?;
+    validate_arguments(args)?;
+    refuse_what_only_a_spec_has(args, subject)?;
+    let record = record_snapshot(repo, &root, subject).inspect(|_| after_snapshot())?;
+    refuse_while_implementation_is_open(args, &root, subject, &feature_dir)?;
     // The denominator `examined` is a claim against — see `resolve_scope`.
-    let (scope, excluded, commits) = resolve_scope(args, repo)?;
+    let (scope, excluded, commits) = resolve_scope(args, subject, repo)?;
     refuse_an_empty_scope_over_a_finding(args, &feature_dir, scope)?;
-    // Read once: the departure entries and the frontmatter check below both use it.
-    let spec_content = read_text(&spec_path)?;
-    let waivers = run_waivers(args, repo, &root, &feature_dir, &spec_content)?;
+    let (spec, departures) = read_the_spec(subject, &feature_dir, repo, &root)?;
+    let waivers = run_waivers(args, &feature_dir, departures)?;
     let settled = settled(args, &waivers, &feature_dir)?;
     let args = settled.as_ref();
     refuse_deferring_a_finding_with_no_site(args)?;
@@ -560,7 +566,7 @@ fn run_between(
 
     // Dedup, then bucket the survivors.
     let deduped = dedup_findings(&args.findings);
-    let sorted = sort_findings(&deduped, args, repo, &root)?;
+    let sorted = sort_findings(&deduped, args, repo, (&root, subject))?;
     let (must, should, low, waived) = (&sorted.must, &sorted.should, &sorted.low, &sorted.waived);
 
     let must_n = u32::try_from(must.len()).unwrap_or(u32::MAX);
@@ -578,8 +584,9 @@ fn run_between(
     // the writes below, because `write-review` does not touch `scenarios/` or
     // `data-model.md` and must not fold its own output into the record's
     // subject — the reason `review.md` and `spec.md` are outside the set.
-    let contracts =
-        analyze_subjects::subject_digest(&feature_dir, analyze_subjects::is_review_contract);
+    let contracts = subject.feature().map(|_| {
+        analyze_subjects::subject_digest(&feature_dir, analyze_subjects::is_review_contract)
+    });
     // What governance did this run actually have? Resolved here rather than
     // passed in: a caller that had to supply it could omit it, and the whole
     // point of the section is that a report cannot quietly claim clean over
@@ -595,7 +602,10 @@ fn run_between(
     // is unknown (spec 022 task 12).
     let governance_section = render_unexamined_governance(repo);
     // Resolve the surviving waivers BEFORE the render: the report carries them.
-    let criteria = validated_criteria(args, &spec_content, &spec_path)?;
+    let criteria = match &spec {
+        Some((path, content)) => validated_criteria(args, content, path)?,
+        None => None,
+    };
     // A not-met criterion blocks as a MUST violation does: the spec cannot
     // close while one stands (066 task 27).
     let blocking = must_n > 0 || criteria.as_ref().is_some_and(|c| !c.not_met.is_empty());
@@ -608,10 +618,10 @@ fn run_between(
     let open_findings = open_findings(
         must.iter().chain(should.iter()).map(|f| f.file.as_str()),
         &args.observations,
-        (repo, &root, &args.feature),
+        (repo, &root, subject),
     );
     let report = render_report(
-        args,
+        (args, subject),
         &Buckets {
             must,
             should,
@@ -632,9 +642,9 @@ fn run_between(
             criteria: criteria.as_ref(),
             commits,
         },
-        &contracts,
+        contracts.as_ref(),
     );
-    let review_path = feature_dir.join("review.md");
+    let review_path = feature_dir.join(super::REVIEW_RECORD_FILE);
 
     // Everything computed and validated; only now touch the filesystem.
     //
@@ -657,11 +667,11 @@ fn run_between(
     // answer matched the bytes being written. With the record in its own
     // artifact — one this call does not touch — reading it from disk *is* the
     // consistent answer.
-    let analyze_freshness = analyze_freshness_of(&feature_dir, &args.feature, repo)?;
+    let analyze_freshness = analyze_freshness_of(&feature_dir, subject, repo)?;
 
     let result = WriteReviewResult {
         path: rel_path(&review_path, repo),
-        spec_path: rel_path(&spec_path, repo),
+        spec_path: spec.as_ref().map(|(path, _)| rel_path(path, repo)),
         must_violations: must_n,
         should_violations: should_n,
         low_confidence: low_n,
@@ -687,7 +697,47 @@ fn run_between(
         criteria_not_met: criteria.as_ref().map(CriteriaRecord::not_met_count),
         ..WriteReviewResult::default()
     };
-    bound_lists(result, repo, &args.feature)
+    bound_lists(result, repo, subject.name())
+}
+
+/// The spec a run reads, its path and its text, read once for the departure
+/// entries and the frontmatter check, with those entries. The project has no
+/// spec, and so no departure entry and no criterion (spec 084).
+fn read_the_spec(
+    subject: ReviewSubject<'_>,
+    feature_dir: &Path,
+    repo: &Path,
+    root: &str,
+) -> Result<(Option<(std::path::PathBuf, String)>, Departures)> {
+    let Some(feature) = subject.feature() else {
+        return Ok((None, Departures::default()));
+    };
+    let path = feature_dir.join("spec.md");
+    let content = read_text(&path)?;
+    let departures = read_departures(repo, root, feature, &content);
+    Ok((Some((path, content)), departures))
+}
+
+/// Refuse, for the project subject, what only a spec has: criteria to judge
+/// and a scenario to target. Supplied, each is refused rather than dropped,
+/// since the record would otherwise read as a run that judged or targeted
+/// nothing (spec 084).
+fn refuse_what_only_a_spec_has(args: &WriteReviewArgs, subject: ReviewSubject<'_>) -> Result<()> {
+    if subject != ReviewSubject::Project {
+        return Ok(());
+    }
+    let supplied = [
+        ("criteria", args.criteria.is_some()),
+        ("scenario", args.scenario.is_some()),
+    ];
+    match supplied.iter().find(|(_, given)| *given) {
+        Some((argument, _)) => Err(PrimitiveError::InvalidArgument {
+            primitive: "write-review".into(),
+            argument: (*argument).into(),
+            reason: "the project record has no spec, and so none; name a feature".into(),
+        }),
+        None => Ok(()),
+    }
 }
 
 /// Move the result's lists to a file when it passes the read size, naming it
@@ -744,11 +794,16 @@ fn bound_lists(
 fn refuse_while_implementation_is_open(
     args: &WriteReviewArgs,
     root: &str,
+    subject: ReviewSubject<'_>,
     feature_dir: &Path,
 ) -> Result<()> {
+    // The project has no tasks, so no implementation of its own to be open.
+    let Some(feature) = subject.feature() else {
+        return Ok(());
+    };
     let deferred_here = decisions::tasks_deferred_here(
         root,
-        &args.feature,
+        feature,
         args.observations
             .iter()
             .map(|observation| &observation.disposition)
@@ -828,16 +883,6 @@ fn refuse_an_empty_scope_over_a_finding(
     Ok(())
 }
 
-/// This run's own record, which it writes and does not read.
-fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
-    Ok(format!(
-        "{}/{}/{}",
-        paths::Paths::load(repo)?.specs_root,
-        args.feature,
-        super::REVIEW_RECORD_FILE
-    ))
-}
-
 /// How many files this review's scope covers — the denominator.
 ///
 /// Derived here rather than accepted as an argument, the same discipline that
@@ -875,8 +920,12 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// the entries are.
 fn resolve_scope(
     args: &WriteReviewArgs,
+    subject: ReviewSubject<'_>,
     repo: &Path,
 ) -> Result<(u32, BTreeSet<String>, Option<WindowCommits>)> {
+    let ReviewSubject::Feature(feature) = subject else {
+        return resolve_project_scope(args, repo);
+    };
     if args.diff_base.is_empty() {
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
         return Ok((0, BTreeSet::new(), None));
@@ -886,11 +935,11 @@ fn resolve_scope(
     // the same base passed as `--since` does not: the denominator is then the scope the
     // passes were given. Any other base is used verbatim.
     let own_window = crate::schema::primitives::ComputeReviewScopeArgs {
-        feature: args.feature.clone(),
+        feature: feature.to_string(),
         since: None,
     };
     let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
-        feature: args.feature.clone(),
+        feature: feature.to_string(),
         since: Some(args.diff_base.clone()),
     };
     let result = match crate::primitives::compute_review_scope::compute(&own_window, repo) {
@@ -908,7 +957,7 @@ fn resolve_scope(
     };
     // The record is what the run writes, not what it read, so a run's two writes state
     // one denominator.
-    let own_record = own_record_path(args, repo)?;
+    let own_record = subject.record_rel(&paths::Paths::load(repo)?.specs_root);
     let entries: BTreeSet<String> = result
         .scope
         .into_iter()
@@ -920,6 +969,47 @@ fn resolve_scope(
         u32::try_from(entries.len()).unwrap_or(u32::MAX),
         result.excluded,
         result.commits,
+    ))
+}
+
+/// A project review's denominator: the code no spec claims in its window, read
+/// from `HEAD`'s tree, with what a project record leaves open or left unread
+/// (`check_unreviewed_code::project_scope`). The window is the record's own
+/// when it starts at the run's `diff-base`, and otherwise that base verbatim,
+/// as a spec's is; the record states the start used either way. The project has
+/// no state before a window, so an empty base names no commit and is refused as
+/// any such base is, never recorded as a scope of zero. The record itself is an
+/// artifact and never in the scope.
+fn resolve_project_scope(
+    args: &WriteReviewArgs,
+    repo: &Path,
+) -> Result<(u32, BTreeSet<String>, Option<WindowCommits>)> {
+    use crate::primitives::check_unreviewed_code::project_scope;
+    let refuse = |reason: String| PrimitiveError::InvalidArgument {
+        primitive: "write-review".into(),
+        argument: "diff-base".into(),
+        reason,
+    };
+    let scope = match project_scope(repo, None) {
+        Ok(Ok(scope)) if scope.diff_base == args.diff_base => scope,
+        // A named start places its own window, so only an error is left.
+        _ => match project_scope(repo, Some(&args.diff_base)) {
+            Ok(Ok(scope)) => scope,
+            other => {
+                let why = other.err().map(|source| format!(" ({source})"));
+                return Err(refuse(format!(
+                    "no scope can be derived from it{}; pass the commit the window starts after",
+                    why.unwrap_or_default()
+                )));
+            }
+        },
+    };
+    refuse_unread_outside_the_scope(args, &scope.scope)?;
+    moved_scope::refuse_a_moved_scope(&args.reviewed_against, repo, &scope.scope)?;
+    Ok((
+        u32::try_from(scope.scope.len()).unwrap_or(u32::MAX),
+        BTreeSet::new(),
+        Some(scope.commits),
     ))
 }
 
@@ -967,7 +1057,15 @@ fn refuse_unread_outside_the_scope(
 /// itself has already been written by this point, and failing the whole call
 /// over the notice would trade a report for a row. A project config that
 /// cannot be read or parsed is an error, as it is for every primitive.
-fn analyze_freshness_of(feature_dir: &Path, feature: &str, repo: &Path) -> Result<RecordFreshness> {
+fn analyze_freshness_of(
+    feature_dir: &Path,
+    subject: ReviewSubject<'_>,
+    repo: &Path,
+) -> Result<RecordFreshness> {
+    // The project record has no analysis beside it, so none has run.
+    let Some(feature) = subject.feature() else {
+        return Ok(RecordFreshness::NeverRun);
+    };
     let root = paths::Paths::load(repo)?.specs_root;
     let rel_dir = format!("{root}/{feature}");
     // An unreadable record is reported as never-run here, deliberately: this
@@ -1206,7 +1304,7 @@ fn contract_breaks(observations: &[ReviewObservation]) -> usize {
 fn open_findings<'a>(
     violations: impl Iterator<Item = &'a str>,
     observations: &'a [ReviewObservation],
-    (repo, root, feature): (&Path, &str, &str),
+    (repo, root, subject): (&Path, &str, ReviewSubject<'_>),
 ) -> Vec<String> {
     let open_breaks = observations
         .iter()
@@ -1216,7 +1314,7 @@ fn open_findings<'a>(
                     observation.disposition.outcome,
                     DispositionOutcome::Fixed | DispositionOutcome::Waived
                 )
-                && !decisions::releases(repo, root, feature, &observation.disposition)
+                && !decisions::releases(repo, root, subject.feature(), &observation.disposition)
         })
         .map(|observation| super::path_without_lines(&observation.path));
     violations
@@ -1455,7 +1553,7 @@ fn sort_findings<'a>(
     deduped: &'a [ReviewFinding],
     args: &WriteReviewArgs,
     repo: &Path,
-    root: &str,
+    (root, subject): (&str, ReviewSubject<'_>),
 ) -> Result<Sorted<'a>> {
     let mut sorted = Sorted {
         must: Vec::new(),
@@ -1479,7 +1577,9 @@ fn sort_findings<'a>(
         }
         if waived {
             sorted.waived.push(finding);
-        } else if deferred && decisions::releases(repo, root, &args.feature, &finding.disposition) {
+        } else if deferred
+            && decisions::releases(repo, root, subject.feature(), &finding.disposition)
+        {
             sorted.deferred.push(finding);
         } else if finding.confidence.eq_ignore_ascii_case("low") {
             sorted.low.push(finding);
@@ -1797,13 +1897,13 @@ fn render_open_findings(fm: &mut String, open_findings: &[String]) {
 
 /// Render the full `review.md` document (frontmatter + fixed skeleton).
 fn render_report(
-    args: &WriteReviewArgs,
+    (args, subject): (&WriteReviewArgs, ReviewSubject<'_>),
     buckets: &Buckets<'_>,
     blocking: bool,
     governance_section: &str,
     scope: u32,
     record: &Record<'_>,
-    contracts: &crate::primitives::analyze_subjects::SubjectDigest,
+    contracts: Option<&crate::primitives::analyze_subjects::SubjectDigest>,
 ) -> String {
     let (must, should, low, waived, deferred) = (
         buckets.must,
@@ -1812,7 +1912,7 @@ fn render_report(
         buckets.waived,
         buckets.deferred,
     );
-    let feature = &args.feature;
+    let feature = subject.name();
 
     let mut fm = String::from("---\n");
     let _ = writeln!(fm, "spec: {feature}");
@@ -1857,7 +1957,10 @@ fn render_report(
     // durable contracts" stays distinct from "pre-digest record"), `blocking`
     // is still derived rather than accepted, and waivers still carry their
     // adopter-authored extras verbatim.
-    render_contracts(&mut fm, contracts);
+    // Absent from the project record, which has no contracts to digest.
+    if let Some(contracts) = contracts {
+        render_contracts(&mut fm, contracts);
+    }
     render_criteria(&mut fm, record.criteria);
     let _ = writeln!(fm, "blocking: {blocking}");
     decisions::render_dispositions(&mut fm, record.dispositions);
@@ -2411,12 +2514,9 @@ fn new_waiver_entries(
 /// As [`new_waiver_entries`].
 fn run_waivers(
     args: &WriteReviewArgs,
-    repo: &Path,
-    root: &str,
     feature_dir: &Path,
-    spec_content: &str,
+    departures: Departures,
 ) -> Result<RunWaivers> {
-    let departures = read_departures(repo, root, &args.feature, spec_content);
     let mut surviving = surviving_waivers(feature_dir, args)?;
     lower_covers(
         &mut surviving,
@@ -2460,7 +2560,11 @@ impl Departures {
             && self
                 .scope
                 .get_or_init(|| {
-                    RunScope::resolve(&args.feature, Some(&args.diff_base), &self.project)
+                    RunScope::resolve(
+                        args.feature.as_deref(),
+                        Some(&args.diff_base),
+                        &self.project,
+                    )
                 })
                 .holds(file)
     }
@@ -4161,7 +4265,7 @@ mod tests {
 
     fn base_args(feature: &str) -> WriteReviewArgs {
         WriteReviewArgs {
-            feature: feature.into(),
+            feature: Some(feature.into()),
             reviewed_at: "2026-07-02T12:00:00Z".into(),
             reviewed_against: "abc1234".into(),
             diff_base: String::new(),
@@ -5387,7 +5491,7 @@ mod tests {
         }
         let next = crate::primitives::process_waivers::compute(
             &crate::schema::primitives::ProcessWaiversArgs {
-                feature: "001-x".into(),
+                feature: Some("001-x".into()),
                 fired: vec![
                     crate::schema::primitives::FiredFinding {
                         site: Some("walk".into()),
@@ -5612,7 +5716,7 @@ mod tests {
                 .collect();
             crate::primitives::process_waivers::compute(
                 &ProcessWaiversArgs {
-                    feature: "001-x".into(),
+                    feature: Some("001-x".into()),
                     fired,
                     ..ProcessWaiversArgs::default()
                 },
@@ -5831,7 +5935,7 @@ mod tests {
                 .collect();
             crate::primitives::process_decisions::compute(
                 &ProcessDecisionsArgs {
-                    feature: "001-x".into(),
+                    feature: Some("001-x".into()),
                     record: DecisionRecord::Review,
                     fired: Vec::new(),
                     fired_violations,
@@ -8176,6 +8280,9 @@ mod tests {
 }
 
 mod moved_scope;
+#[cfg(test)]
+mod project_record;
+mod seed;
 
 #[cfg(test)]
 mod departure_waivers;

@@ -23,15 +23,15 @@ EXPECTED_SURVIVORS = {}
 MUTATIONS = [
     (
         'M1 a clean merge counts as unclaimed',
-        'src/primitives/compute_review_scope.rs',
-        '.filter(|(_, claims)| claims.claimants.is_empty() && !claims.paths.is_empty())',
-        '.filter(|(_, claims)| claims.claimants.is_empty())',
+        'src/primitives/commit_attribution.rs',
+        'self.claimants.is_empty() && !self.paths.is_empty()',
+        'self.claimants.is_empty()',
         'compute_review_scope::tests::a_clean_merge_is_examined_and_never_unclaimed',
     ),
     (
         'M2 no commit counts as unclaimed',
         'src/primitives/compute_review_scope.rs',
-        '.filter(|(_, claims)| claims.claimants.is_empty() && !claims.paths.is_empty())',
+        '.filter(|(_, claims)| claims.is_unclaimed())',
         '.filter(|_| false)',
         'compute_review_scope::tests::the_window_counts_its_commits_and_those_no_spec_claimed',
     ),

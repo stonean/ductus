@@ -11,9 +11,10 @@ use std::time::SystemTime;
 
 use git2::{IndexAddOption, Oid, Signature};
 
-use crate::primitives::commit_attribution::{Attributor, SpecShare};
-use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
+use crate::primitives::commit_attribution::{Attributor, SpecShare, project_share};
+use crate::primitives::compute_review_scope::{PlanEntries, project_diff_options, project_paths};
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
+use crate::primitives::review_subject::ReviewSubject;
 use crate::primitives::{PrimitiveError, ProjectRepository, Result, parse_feature_dir};
 use crate::schema::paths;
 use crate::schema::primitives::{ReReadFinding, ReReadSeverity};
@@ -39,7 +40,7 @@ pub(crate) const BRIEF_FILE: &str = "brief.md";
 /// The file a re-read writes its findings and prescriptions to, last.
 pub(crate) const RESULT_FILE: &str = "result.json";
 
-/// The feature's round directory's record of when the run's loop started,
+/// The subject's round directory's record of when the run's loop started,
 /// written by `start-fix-rounds` (spec 078, AC17). A file beside the round
 /// subdirectories, never inside one, so a round's own files are unchanged.
 pub(crate) const START_FILE: &str = "start.toml";
@@ -143,10 +144,10 @@ pub(crate) fn is_unprescribed(finding: &ReReadFinding) -> bool {
     finding.severity != ReReadSeverity::Note && finding.edits.is_empty()
 }
 
-/// A briefed round's directory, `{feature rounds}/{base}`, from the project
+/// A briefed round's directory, `{subject's rounds}/{base}`, from the project
 /// root. `base` is a full sha [`resolve_base`] returned, so it is a safe name.
-pub(crate) fn round_rel(feature: &str, base: &str) -> String {
-    format!("{ROUNDS_DIR}/{feature}/{base}")
+pub(crate) fn round_rel(subject: ReviewSubject<'_>, base: &str) -> String {
+    format!("{ROUNDS_DIR}/{}/{base}", subject.name())
 }
 
 /// A briefed round's directory for reading, checked to resolve inside the
@@ -156,8 +157,12 @@ pub(crate) fn round_rel(feature: &str, base: &str) -> String {
 ///
 /// [`PrimitiveError::InvalidPath`] when it, or a link on the way to it,
 /// resolves outside the project.
-pub(crate) fn round_dir_to_read(repo: &Path, feature: &str, base: &str) -> Result<PathBuf> {
-    let rel = round_rel(feature, base);
+pub(crate) fn round_dir_to_read(
+    repo: &Path,
+    subject: ReviewSubject<'_>,
+    base: &str,
+) -> Result<PathBuf> {
+    let rel = round_rel(subject, base);
     super::validate_contained(repo, &rel)?;
     Ok(repo.join(rel))
 }
@@ -466,23 +471,30 @@ const SNAPSHOT_EMAIL: &str = "ductus@localhost";
 /// to anyone who finds it with `git cat-file`.
 const SNAPSHOT_MESSAGE: &str = "ductus fix-round snapshot\n";
 
-/// Screen a loop primitive's `feature` argument: a feature directory name by
-/// the runtime's allowlist (`validate_session_feature`, `BE-INPUT-002`), then
-/// contained in the project and present under the spec root. The name names
-/// the directory [`clear_rounds`] empties and is rendered into the brief, so
-/// `.` or a nested path is refused before either.
+/// Screen a loop primitive's `feature` argument and name the round's subject.
+/// A feature is a feature directory name by the runtime's allowlist
+/// (`validate_session_feature`, `BE-INPUT-002`), then contained in the project
+/// and present under the spec root: the name names the directory
+/// [`clear_rounds`] empties and is rendered into the brief, so `.` or a nested
+/// path is refused before either. With no `feature` the subject is the project
+/// (spec 084), whose spec root is checked to resolve inside the project.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidArgument`] for a name outside the allowlist,
-/// [`PrimitiveError::InvalidPath`] for one that would leave the spec root, and
+/// [`PrimitiveError::InvalidArgument`] for a name outside the allowlist, an
+/// empty one among them, [`PrimitiveError::InvalidPath`] for one that would
+/// leave the spec root or a spec root that leaves the project, and
 /// [`PrimitiveError::FeatureNotFound`] when its directory is absent.
-pub(crate) fn validate_feature(
+pub(crate) fn validate_subject<'a>(
     primitive: &str,
     repo: &Path,
     specs_root: &str,
-    feature: &str,
-) -> Result<()> {
+    feature: Option<&'a str>,
+) -> Result<ReviewSubject<'a>> {
+    let Some(feature) = feature else {
+        super::validate_contained(repo, specs_root)?;
+        return Ok(ReviewSubject::Project);
+    };
     super::validate_session_feature(primitive, "feature", feature)?;
     super::validate_feature_argument(repo, specs_root, feature)?;
     if !repo.join(specs_root).join(feature).is_dir() {
@@ -491,24 +503,24 @@ pub(crate) fn validate_feature(
             feature: feature.to_string(),
         });
     }
-    Ok(())
+    Ok(ReviewSubject::Feature(feature))
 }
 
-/// The feature's round directory, checked to resolve inside the project, with
+/// The subject's round directory, checked to resolve inside the project, with
 /// the rounds directory's own `.gitignore` in place.
 ///
 /// The `.gitignore` holds `*`, so nothing under the rounds directory ever
 /// enters a snapshot or a `modified-since` list, whatever the repository's own
 /// `.gitignore` says — the reason `.ductus/sessions/` ignores itself too.
-/// `feature` must already have passed [`validate_feature`].
+/// `subject` is one [`validate_subject`] returned.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidPath`] when the directory, or a link on the way to
 /// it, resolves outside the project; [`PrimitiveError::Io`] when the
 /// `.gitignore` cannot be written.
-pub(crate) fn feature_rounds_dir(repo: &Path, feature: &str) -> Result<PathBuf> {
-    let rel = format!("{ROUNDS_DIR}/{feature}");
+pub(crate) fn subject_rounds_dir(repo: &Path, subject: ReviewSubject<'_>) -> Result<PathBuf> {
+    let rel = format!("{ROUNDS_DIR}/{}", subject.name());
     super::validate_contained(repo, &rel)?;
     ignore_everything(&repo.join(ROUNDS_DIR))?;
     Ok(repo.join(rel))
@@ -541,10 +553,10 @@ pub(crate) fn ignore_everything(dir: &Path) -> Result<()> {
     }
 }
 
-/// Remove every earlier round of the feature, leaving its directory empty:
+/// Remove every earlier round of the subject, leaving its directory empty:
 /// a review run starts from no rounds (spec 078, *The budget*).
 ///
-/// `dir` comes from [`feature_rounds_dir`], which judged where it resolves.
+/// `dir` comes from [`subject_rounds_dir`], which judged where it resolves.
 /// `remove_dir_all` removes a link in its way rather than following it.
 ///
 /// # Errors
@@ -621,25 +633,28 @@ pub(crate) fn snapshot(project: &ProjectRepository) -> Result<(String, usize)> {
 pub(crate) struct RoundPaths {
     /// The paths that belong to the round.
     pub(crate) paths: Vec<String>,
-    /// The paths only commits another spec claims changed (spec 079, AC3).
+    /// The paths only commits another review reads changed (spec 079, AC3):
+    /// another spec's, or for the project subject any spec's (spec 084).
     pub(crate) excluded: Vec<String>,
 }
 
-/// Which feature a round belongs to, and where its project keeps its specs.
+/// Whose review a round belongs to, and where its project keeps its specs.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RoundSubject<'a> {
     /// The project root.
     pub(crate) repo: &'a Path,
     /// The spec root, from the project root.
     pub(crate) specs_root: &'a str,
-    /// The feature directory's name.
-    pub(crate) feature: &'a str,
+    /// The feature directory's name, or none for the project's review of the
+    /// code no spec claims (spec 084).
+    pub(crate) feature: Option<&'a str>,
 }
 
 /// A round's paths: [`changed_between`] its base and snapshot, less the
-/// reviewed feature's own `review.md` (spec 078, scenario
-/// `a-reviews-own-record-is-no-fix-round`), and with what only another spec's
-/// commits changed set apart. The record is the command's own output,
+/// review's own record, a feature's `review.md` (spec 078, scenario
+/// `a-reviews-own-record-is-no-fix-round`) or the project's
+/// `{specs-root}/review.md` (spec 084, AC14), and with what only another
+/// review's commits changed set apart. The record is the command's own output,
 /// regenerated whole on every run, so a round never re-reads it, whoever wrote
 /// it, and a run that fixed and deferred nothing has no round.
 ///
@@ -653,12 +668,7 @@ pub(crate) fn round_paths(
     base: &str,
     snapshot: &str,
 ) -> Result<RoundPaths> {
-    let record = format!(
-        "{}/{}/{}",
-        subject.specs_root,
-        subject.feature,
-        super::REVIEW_RECORD_FILE
-    );
+    let record = ReviewSubject::of(subject.feature).record_rel(subject.specs_root);
     let others = changed_only_by_other_specs(project, subject, base, snapshot)?;
     let (excluded, paths) = changed_between(project, base, snapshot)?
         .into_iter()
@@ -668,7 +678,7 @@ pub(crate) fn round_paths(
 }
 
 /// The paths a commit between the round's two snapshots changed for another
-/// spec, with nothing else behind the change.
+/// review, with nothing else behind the change.
 ///
 /// Each snapshot's parent is `HEAD` at its time, so those commits are knowable
 /// with nothing reported by the agent. A path qualifies when a commit left it to
@@ -684,8 +694,12 @@ fn changed_only_by_other_specs(
     base: &str,
     snapshot: &str,
 ) -> Result<BTreeSet<String>> {
-    let Some(form) = parse_feature_dir(subject.feature) else {
-        return Ok(BTreeSet::new());
+    // The project subject comes first: it has no directory name to parse, and
+    // a feature whose name parses as none can be claimed by no commit.
+    let form = match subject.feature.map(parse_feature_dir) {
+        Some(None) => return Ok(BTreeSet::new()),
+        Some(Some(form)) => Some(form),
+        None => None,
     };
     let repository = &project.repository;
     let base = repository.find_commit(Oid::from_str(base)?)?;
@@ -696,8 +710,14 @@ fn changed_only_by_other_specs(
     }
 
     let attributor = Attributor::new(project, subject.repo, subject.specs_root)?;
-    let own_plan = attributor.plan_of(subject.feature)?;
-    let mut share = SpecShare::new(&attributor, &form, subject.feature, &own_plan);
+    let own_plan = match subject.feature {
+        Some(feature) => attributor.plan_of(feature)?,
+        None => PlanEntries::new(&[]),
+    };
+    let mut share = form
+        .as_ref()
+        .zip(subject.feature)
+        .map(|(form, feature)| SpecShare::new(&attributor, form, feature, &own_plan));
     let mut walk = repository.revwalk()?;
     walk.push(snapshot_head.id())?;
     walk.hide(base_head.id())?;
@@ -705,7 +725,11 @@ fn changed_only_by_other_specs(
     let mut own: BTreeSet<String> = BTreeSet::new();
     for oid in walk {
         let claims = attributor.claims(&repository.find_commit(oid?)?)?;
-        let (mine, left) = share.split(claims)?;
+        // The project's share is a spec's inverted: unclaimed is its own.
+        let (mine, left) = match share.as_mut() {
+            Some(share) => share.split(claims)?,
+            None => project_share(claims),
+        };
         own.extend(mine);
         others.extend(left);
     }
@@ -824,6 +848,32 @@ mod tests {
     /// The elapsed time is the clock less the recorded start, whole seconds;
     /// a missing or unreadable start, or a clock before it, is absent with a
     /// reason, never zero (AC17, `QUAL-CLAIM-001`).
+    /// Only an absent `feature` names the project: an empty one is refused, so a
+    /// loop primitive that clears a round directory never clears the project's on a
+    /// name that failed to arrive (spec 084).
+    #[test]
+    fn only_an_absent_feature_is_the_project_subject() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("specs/001-x")).unwrap();
+        let subject = |feature| validate_subject("start-fix-rounds", tmp.path(), "specs", feature);
+        assert_eq!(subject(None).unwrap(), ReviewSubject::Project);
+        assert_eq!(
+            subject(Some("001-x")).unwrap(),
+            ReviewSubject::Feature("001-x")
+        );
+        for refused in ["", "project", ".", "001-x/.."] {
+            let err = subject(Some(refused)).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidArgument { .. }),
+                "{refused:?}: {err}"
+            );
+        }
+        assert_eq!(
+            round_rel(ReviewSubject::Project, "abc"),
+            ".ductus/review-rounds/project/abc"
+        );
+    }
+
     #[test]
     fn elapsed_is_the_clock_less_the_recorded_start() {
         let tmp = tempfile::tempdir().unwrap();

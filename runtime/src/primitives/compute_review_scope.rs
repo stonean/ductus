@@ -40,8 +40,8 @@ use crate::primitives::check_stuck::{
 use crate::primitives::commit_attribution::{Attributor, CommitClaims, SpecShare};
 use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
-    frontmatter_status, is_project_artifact, load_review_record, parse_affected_files,
-    parse_feature_dir, split_frontmatter,
+    check_unreviewed_code, frontmatter_status, is_project_artifact, load_review_record,
+    parse_affected_files, parse_feature_dir, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -152,12 +152,12 @@ pub(crate) struct WindowCommits {
 impl WindowCommits {
     /// Count `commits` as the walk attributed them. A clean merge changed no path
     /// itself, so it is examined and never unclaimed.
-    fn of(commits: &[(Oid, CommitClaims)]) -> Self {
+    pub(crate) fn of(commits: &[(Oid, CommitClaims)]) -> Self {
         Self {
             examined: commits.len(),
             unclaimed: commits
                 .iter()
-                .filter(|(_, claims)| claims.claimants.is_empty() && !claims.paths.is_empty())
+                .filter(|(_, claims)| claims.is_unclaimed())
                 .count(),
         }
     }
@@ -414,7 +414,8 @@ fn resolve_base(
             Carried::default(),
         ));
     }
-    let last = last_review_commit(project, &record_rel, &spec_rel)?;
+    let tip = repository.head()?.peel_to_commit()?;
+    let last = last_review_commit(project, &tip, &record_rel, Some(&spec_rel))?;
     Ok(match last.end {
         Some(ReviewEnd::Finished { commit, unread }) => (
             // A record committed with the reopen is of a run from before it, and the
@@ -555,11 +556,11 @@ struct RecordedRun {
 /// an unwaived round left unread stay in it, and what it leaves open joins the scope
 /// wherever that is (spec 079, AC5).
 #[derive(Clone)]
-struct HeldRun {
+pub(crate) struct HeldRun {
     /// The record's `reviewed-against`.
-    against: Oid,
+    pub(crate) against: Oid,
     /// The record's `open-findings`.
-    open_findings: Vec<String>,
+    pub(crate) open_findings: Vec<String>,
 }
 
 /// The review run the record at `git_path` in `tree` states: `None` when the
@@ -657,7 +658,7 @@ fn contracts_against_digest(
 
 /// The record at `git_path` in `tree`: none when the tree holds no record, or one that
 /// does not parse.
-fn record_at(
+pub(crate) fn record_at(
     repository: &Repository,
     tree: &Tree<'_>,
     git_path: &str,
@@ -693,8 +694,19 @@ pub(crate) enum RunScope {
 }
 
 impl RunScope {
-    /// The scope of a run over `feature`'s window, or its `--since` when it took one.
-    pub(crate) fn resolve(feature: &str, since: Option<&str>, repo: &Path) -> Self {
+    /// The scope of a run over `feature`'s window, or its `--since` when it took one,
+    /// and with no feature the project's review of the code no spec claims (spec 084).
+    pub(crate) fn resolve(feature: Option<&str>, since: Option<&str>, repo: &Path) -> Self {
+        let Some(feature) = feature else {
+            return match check_unreviewed_code::project_scope(repo, since) {
+                Ok(Ok(scope)) => Self::Known {
+                    read: scope.scope,
+                    plan: PlanEntries::new(&[]),
+                },
+                // A window that cannot be placed leaves nothing known to be read.
+                Ok(Err(_)) | Err(_) => Self::Unreadable,
+            };
+        };
         let args = ComputeReviewScopeArgs {
             feature: feature.to_string(),
             since: since.map(str::to_string),
@@ -761,7 +773,7 @@ fn run_in_spec_block(
 }
 
 /// Where a review run ended, as [`last_review_commit`] finds it.
-enum ReviewEnd {
+pub(crate) enum ReviewEnd {
     /// The commit finishing a run whose record the gate does not hold, which also holds
     /// that run's fixes, already re-read by its fix rounds, with its record's `unread`.
     Finished { commit: String, unread: Vec<String> },
@@ -771,10 +783,10 @@ enum ReviewEnd {
 
 /// What [`last_review_commit`] found: where the newest run that read its scope
 /// ended, and whether it passed over a run that did not.
-struct LastReview {
-    end: Option<ReviewEnd>,
+pub(crate) struct LastReview {
+    pub(crate) end: Option<ReviewEnd>,
     /// A run newer than `end`, or every run when `end` is `None`, stopped early.
-    passed_over: bool,
+    pub(crate) passed_over: bool,
 }
 
 /// The review runs the records in a walk's trees state, each record parsed once: the
@@ -802,10 +814,13 @@ impl RecordedRuns<'_> {
     }
 }
 
-/// Where the spec's newest review run ended, a run that did not stop early: the
+/// Where the newest review run the record at `record_rel` states ended, as the
+/// commit `at` and its history hold it, a run that did not stop early: the
 /// commit finishing it, or, when the gate holds its record, the `reviewed-against`
 /// its passes read up to. All of history is walked, so a run from before the spec's
-/// last reopen counts as one since it does (spec 084, AC7).
+/// last reopen counts as one since it does (spec 084, AC7). The record is a
+/// spec's, whose `spec.md` is at `spec_git_path`, or the project's, which has none
+/// and reads the same way (spec 084, AC6).
 ///
 /// A commit finishes a run when no parent's record already holds that run with its
 /// loop closed: a run's two writes share one `last-run`, and the fixes committed
@@ -820,10 +835,11 @@ impl RecordedRuns<'_> {
 /// [`PrimitiveError::ShallowHistory`] when a shallow clone's history stops at a commit
 /// already holding a run and no later commit ends one, so the run's end may lie
 /// before the cut; and any libgit2 failure.
-fn last_review_commit(
+pub(crate) fn last_review_commit(
     project: &ProjectRepository,
+    at: &Commit<'_>,
     record_rel: &str,
-    spec_git_path: &str,
+    spec_git_path: Option<&str>,
 ) -> Result<LastReview> {
     let none = |passed_over| LastReview {
         end: None,
@@ -834,12 +850,11 @@ fn last_review_commit(
     // A record reverted away leaves no earlier review, whatever history once held. One
     // whose `last-run` a fold's invalidation nulled still stands: its window keeps its
     // start, and what the fold brought joins by its own rule.
-    let head_tree = repository.head()?.peel_to_commit()?.tree()?;
-    if feature_file_in_tree(repository, &head_tree, &git_path).is_none() {
+    if feature_file_in_tree(repository, &at.tree()?, &git_path).is_none() {
         return Ok(none(false));
     }
     let mut walk = repository.revwalk()?;
-    walk.push_head()?;
+    walk.push(at.id())?;
     walk.set_sorting(Sort::TOPOLOGICAL)?;
     let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
     let shallow = repository.is_shallow();
@@ -859,7 +874,7 @@ fn last_review_commit(
         };
         if shallow && commit.parent_count() == 0 {
             return Err(PrimitiveError::ShallowHistory {
-                spec: spec_git_path.to_string(),
+                spec: spec_git_path.unwrap_or(&git_path).to_string(),
             });
         }
         if run.stopped_early {
@@ -878,10 +893,13 @@ fn last_review_commit(
             let holds_it = runs
                 .at(&tree)?
                 .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
-            if holds_it
-                || run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
-                    == Some(&run.last_run)
-            {
+            let moved_from_spec = match spec_git_path {
+                Some(spec) => {
+                    run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)
+                }
+                None => false,
+            };
+            if holds_it || moved_from_spec {
                 finishes_a_run = false;
                 break;
             }
@@ -4589,7 +4607,7 @@ mod tests {
         commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         change(&tmp, &repo, "src/{a}.rs", "feat(001): after the review");
 
-        let scope = RunScope::resolve("001-x", None, tmp.path());
+        let scope = RunScope::resolve(Some("001-x"), None, tmp.path());
         assert_eq!(scope.why_unread("src/{a}.rs", tmp.path()), None);
         assert!(scope.why_unread("src/a.rs", tmp.path()).is_some());
     }

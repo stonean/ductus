@@ -2110,7 +2110,7 @@ mod tests {
         )
         .unwrap();
         let mut decisions = ductus::schema::primitives::ProcessDecisionsArgs {
-            feature: "001-x".into(),
+            feature: Some("001-x".into()),
             record: ductus::schema::primitives::DecisionRecord::Review,
             fired: Vec::new(),
             fired_violations: Vec::new(),

@@ -4,14 +4,14 @@ The structures this spec adds or changes. Once each is built, the primitive's co
 
 ## Project review record — `{specs-root}/review.md`
 
-The review record's schema, in one file beside `inbox.md` and `system.md`, holding the latest review of code no spec claims. It has no status and no gate; `check-unreviewed-code` is its only reader.
+The review record's schema, in one file beside `inbox.md` and `system.md`, holding the latest review of code no spec claims. It has no status and no gate; its readers are `check-unreviewed-code` and the project review's own primitives.
 
 | Field | Value in the project record |
 | --- | --- |
 | `spec` | `project`, a name no feature directory can take, since every feature directory carries a number |
 | `last-run` | the run's time; `null` in the seed, which no review wrote |
-| `reviewed-against` | how far unclaimed code has been read: the window for code no spec claims starts here; in the seed, `HEAD` at the update, and a seed's window starts after the commit that added the record |
-| `diff-base` | the previous record's `reviewed-against`; absent in the seed |
+| `reviewed-against` | the head the run's passes read up to; in the seed, `HEAD` at the update, absent when the repository had no commit. The window for code no spec claims starts after the commit finishing the newest review that read its scope, or here while that review's record is held, and until one exists after the commit that added the record |
+| `diff-base` | the commit the run's window started after; absent in the seed |
 | `must-violations`, `should-violations`, `low-confidence`, `blocking` | as in a feature's record; `blocking` holds no gate here |
 | criteria fields (`criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts`) | absent: the record has no criteria to judge |
 | `reviewed-digest` | absent: there are no contracts to digest |

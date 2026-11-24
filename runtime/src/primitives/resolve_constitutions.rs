@@ -895,7 +895,7 @@ mod tests {
         fs::remove_file(feature.join("analysis.md")).unwrap();
         crate::primitives::write_review::run(
             &crate::schema::primitives::WriteReviewArgs {
-                feature: "055-x".into(),
+                feature: Some("055-x".into()),
                 reviewed_at: "2026-10-29T00:00:00Z".into(),
                 reviewed_against: "abc1234".into(),
                 ..Default::default()

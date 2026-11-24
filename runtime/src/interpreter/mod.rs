@@ -3846,6 +3846,43 @@ mod tests {
         Walker::new(procedure, fixture_repo(), Map::new(), reader, writer).unwrap()
     }
 
+    /// Spec 084: a review-record primitive with no `feature` names the project
+    /// subject, where a missing one used to fail as a bad argument. A walk of
+    /// `/review` with no session target still halts before any of them:
+    /// `compute-review-scope`, which the walk reaches first, requires a feature.
+    #[test]
+    fn a_walk_with_no_target_halts_at_the_scope_and_never_reaches_the_project_subject() {
+        let scope = dispatch_primitive("compute-review-scope", &Map::new(), &fixture_repo());
+        assert!(matches!(scope, Err(DispatchError::BadArgs(_))), "{scope:?}");
+        // `write-review` parses with no feature, and then refuses the run for
+        // what it lacks, writing nothing.
+        let written = dispatch_primitive("write-review", &Map::new(), &fixture_repo());
+        assert!(
+            matches!(
+                &written,
+                Err(DispatchError::Primitive(primitives::PrimitiveError::InvalidArgument { argument, .. }))
+                    if argument == "reviewed-at"
+            ),
+            "{written:?}"
+        );
+        let command = std::fs::read_to_string(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../framework/commands/review.md"),
+        )
+        .unwrap();
+        let steps = command
+            .split_once("\n## Instructions\n")
+            .expect("the command has its steps")
+            .1;
+        let first = |name: &str| steps.find(&format!("`{name}`"));
+        let scope_step = first("compute-review-scope").expect("the review walk resolves a scope");
+        for later in ["process-waivers", "write-review"] {
+            assert!(
+                first(later).is_some_and(|at| at > scope_step),
+                "`{later}` is invoked after the scope is resolved"
+            );
+        }
+    }
+
     /// A context `path` that leaves the project is not probed for being a
     /// directory, so the spec-file binding never names a file beneath a place
     /// outside it: the path stands as given, for the primitive to refuse.

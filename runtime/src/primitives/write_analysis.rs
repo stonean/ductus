@@ -1092,7 +1092,7 @@ fn gating_counts(args: &WriteAnalysisArgs, repo: &Path, root: &str) -> Gating {
         holding: Vec::new(),
     };
     for (idx, finding) in args.findings.iter().enumerate().filter(|(_, f)| gates(f)) {
-        if decisions::releases(repo, root, &args.feature, &finding.disposition) {
+        if decisions::releases(repo, root, Some(&args.feature), &finding.disposition) {
             gating.released.push(idx);
             let count = match finding.tier {
                 AnalysisTier::HardFail => &mut gating.hard_fail,
@@ -3002,7 +3002,7 @@ mod tests {
         assert_eq!(stored[0].reason.as_deref(), Some("why\t#not"));
         let classified = crate::primitives::process_decisions::compute(
             &crate::schema::primitives::ProcessDecisionsArgs {
-                feature: "042-demo".into(),
+                feature: Some("042-demo".into()),
                 record: crate::schema::primitives::DecisionRecord::Analysis,
                 fired: keys.iter().map(|k| (*k).to_string()).collect(),
                 fired_violations: Vec::new(),

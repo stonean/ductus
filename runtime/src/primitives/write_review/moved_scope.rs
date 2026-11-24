@@ -385,7 +385,7 @@ mod tests {
         write(&tmp.path().join("src/c.rs"), "fn c() {}\n");
         let landed = commit_all(&repository, "feat(001): c").to_string();
         let args = |against: &str| WriteReviewArgs {
-            feature: "001-x".into(),
+            feature: Some("001-x".into()),
             reviewed_at: "2026-11-22T00:00:00Z".into(),
             reviewed_against: against.into(),
             diff_base: base.clone(),

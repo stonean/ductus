@@ -29,8 +29,8 @@ MUTATIONS = [
     (
         'M1 the bound removed: every process-waivers result keeps its lists inline',
         'src/primitives/process_waivers.rs',
-        '    if let Some(file) =\n        bounded_lists::place(repo, "process-waivers", &args.feature, &result, &lists)?\n    {',
-        '    if let Some(file) = None::<String>\n    {',
+        '    if let Some(file) = bounded_lists::place(\n        repo,\n        "process-waivers",\n        ReviewSubject::of(args.feature.as_deref()).name(),\n        &result,\n        &lists,\n    )? {',
+        '    if let Some(file) = None::<String> {',
         'process_waivers::tests::the_lists_past_the_read_size',
     ),
     (
@@ -141,8 +141,8 @@ MUTATIONS = [
     (
         'M17 the bound measures the lists alone, not the whole result',
         'src/primitives/process_waivers.rs',
-        '&args.feature, &result, &lists)?',
-        '&args.feature, &lists, &lists)?',
+        '        &result,\n        &lists,\n    )? {',
+        '        &lists,\n        &lists,\n    )? {',
         'process_waivers::tests::the_lists_past_the_read_size',
     ),
 ]

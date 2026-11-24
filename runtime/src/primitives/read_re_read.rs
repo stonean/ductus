@@ -36,10 +36,15 @@ use crate::schema::primitives::{
 /// re-read: the host counts the round as not re-read.
 pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
     let layout = paths::Paths::load(repo)?;
-    fix_rounds::validate_feature("read-re-read", repo, &layout.specs_root, &args.feature)?;
+    let subject = fix_rounds::validate_subject(
+        "read-re-read",
+        repo,
+        &layout.specs_root,
+        args.feature.as_deref(),
+    )?;
     let project = ProjectRepository::discover(repo)?;
     let base = fix_rounds::resolve_base(&project, &args.base)?;
-    let dir = fix_rounds::round_dir_to_read(repo, &args.feature, &base)?;
+    let dir = fix_rounds::round_dir_to_read(repo, subject, &base)?;
     let result = match fix_rounds::read_result(&dir.join(RESULT_FILE))? {
         ResultFile::Incomplete(problem) => ReadReReadResult {
             state: ReReadState::Incomplete,
@@ -60,7 +65,7 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
                 Err(problem) => {
                     return bounded(
                         repo,
-                        &args.feature,
+                        subject.name(),
                         ReadReReadResult {
                             state: ReReadState::Unparseable,
                             problem: Some(problem),
@@ -87,7 +92,7 @@ pub fn run(args: &ReadReReadArgs, repo: &Path) -> Result<ReadReReadResult> {
             }
         }
     };
-    bounded(repo, &args.feature, result)
+    bounded(repo, subject.name(), result)
 }
 
 /// Bound `result` to one read (spec 078, scenario
@@ -118,6 +123,7 @@ mod tests {
     use super::*;
     use crate::primitives::PrimitiveError;
     use crate::primitives::git_fixture::{commit_all, write};
+    use crate::primitives::review_subject::ReviewSubject;
 
     const FEATURE: &str = "001-x";
 
@@ -132,7 +138,10 @@ mod tests {
             "---\nstatus: in-progress\ndependencies: []\n---\n",
         );
         let base = commit_all(&repository, "init").to_string();
-        let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
+        let round = tmp.path().join(fix_rounds::round_rel(
+            ReviewSubject::Feature(FEATURE),
+            &base,
+        ));
         write(
             &round.join(fix_rounds::ROUND_FILE),
             &toml::to_string(&fix_rounds::RoundRecord {
@@ -147,7 +156,7 @@ mod tests {
     fn read(tmp: &tempfile::TempDir, base: &str) -> ReadReReadResult {
         run(
             &ReadReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base: base.to_string(),
             },
             tmp.path(),
@@ -333,7 +342,7 @@ mod tests {
         let (tmp, base, _) = fixture();
         let err = run(
             &ReadReReadArgs {
-                feature: ".".to_string(),
+                feature: Some(".".to_string()),
                 base,
             },
             tmp.path(),

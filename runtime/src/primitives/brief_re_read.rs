@@ -1,8 +1,8 @@
 //! `brief-re-read` — open a fix round of a `/{project}:review` run (spec 078). What it
 //! returns and writes is `schema::descriptions::BRIEF_RE_READ`.
 //!
-//! The host supplies only the feature and the base, so no scope the fixer wrote can
-//! reach the brief.
+//! The host supplies only the feature, or none for the project's review (spec 084), and
+//! the base, so no scope the fixer wrote can reach the brief.
 //!
 //! Shapes: `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`.
 
@@ -12,6 +12,7 @@ use std::time::SystemTime;
 
 use crate::primitives::analyze_subjects::{is_analyze_subject, is_review_contract};
 use crate::primitives::fix_rounds::{self, BRIEF_FILE, RESULT_FILE, ROUND_FILE, RoundRecord};
+use crate::primitives::review_subject::ReviewSubject;
 use crate::primitives::{PrimitiveError, ProjectRepository, Result, write_atomic};
 use crate::schema::paths;
 use crate::schema::primitives::{BriefReReadArgs, BriefReReadResult, ListsForm, RoundKind};
@@ -56,8 +57,15 @@ const RESULT_CONTRACT: &str = r#"```json
 /// counts the round as not re-read.
 pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     let layout = paths::Paths::load(repo)?;
-    fix_rounds::validate_feature("brief-re-read", repo, &layout.specs_root, &args.feature)?;
-    let feature_rel = format!("{}/{}", layout.specs_root, args.feature);
+    let review = fix_rounds::validate_subject(
+        "brief-re-read",
+        repo,
+        &layout.specs_root,
+        args.feature.as_deref(),
+    )?;
+    let feature_rel = review
+        .feature()
+        .map(|feature| format!("{}/{feature}", layout.specs_root));
     // Read before anything is written, so a malformed switch halts the round
     // rather than briefing it.
     let re_reads_off = fix_rounds::re_reads_off(repo)?;
@@ -67,15 +75,19 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
     // the snapshot never holds the loop's own files. The snapshot is taken
     // whatever the round turns out to be: its tree is what the round's paths
     // are diffed against.
-    let rounds = fix_rounds::feature_rounds_dir(repo, &args.feature)?;
+    let rounds = fix_rounds::subject_rounds_dir(repo, review)?;
     let (snapshot, _) = fix_rounds::snapshot(&project)?;
     let subject = fix_rounds::RoundSubject {
         repo,
         specs_root: &layout.specs_root,
-        feature: &args.feature,
+        feature: review.feature(),
     };
     let round = fix_rounds::round_paths(&project, subject, &base, &snapshot)?;
-    let (exempt, paths) = split_exempt(round.paths, &format!("{feature_rel}/"));
+    // The exemption is a feature's analyze subjects: the project has none.
+    let (exempt, paths) = match &feature_rel {
+        Some(feature_rel) => split_exempt(round.paths, &format!("{feature_rel}/")),
+        None => (Vec::new(), round.paths),
+    };
     let kind = classify(&paths, &exempt, &round.excluded);
     let mut result = BriefReReadResult {
         kind,
@@ -86,10 +98,10 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         ..BriefReReadResult::default()
     };
     if kind == RoundKind::Empty || result.re_reads_off.is_some() {
-        return bounded(repo, &rounds, &args.feature, result);
+        return bounded(repo, &rounds, review.name(), result);
     }
     if kind == RoundKind::ReRead {
-        let round_rel = fix_rounds::round_rel(&args.feature, &base);
+        let round_rel = fix_rounds::round_rel(review, &base);
         let round_dir = rounds.join(&base);
         // A base briefed again starts its round afresh, so a `result.json`
         // written for the earlier brief is never read for this one.
@@ -108,10 +120,10 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         write_atomic(&record_path, &record_text)?;
         let result_rel = format!("{round_rel}/{RESULT_FILE}");
         let brief = render_brief(&Brief {
-            feature: &args.feature,
-            feature_rel: &feature_rel,
-            has_data_model: repo.join(&feature_rel).join("data-model.md").is_file(),
-            has_scenarios: repo.join(&feature_rel).join("scenarios").is_dir(),
+            subject: review,
+            sources: feature_rel
+                .as_deref()
+                .map(|feature_rel| spec_sources(repo, feature_rel)),
             base: &base,
             snapshot: &snapshot,
             paths: &paths,
@@ -122,7 +134,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
         result.result = Some(result_rel);
     }
     result.snapshot = Some(snapshot);
-    bounded(repo, &rounds, &args.feature, result)
+    bounded(repo, &rounds, review.name(), result)
 }
 
 /// Bound `result` to one read (spec 078, scenario
@@ -130,7 +142,7 @@ pub fn run(args: &BriefReReadArgs, repo: &Path) -> Result<BriefReReadResult> {
 /// read-size-bytes`, and past it with its lists in the file `lists-file` names,
 /// as `compute-review-scope` bounds its lists. `round.toml` and the brief
 /// already hold every path of the round, whatever the form. Also sets the
-/// loop's figures, counted from `rounds`, the feature's round directory (AC17).
+/// loop's figures, counted from `rounds`, the subject's round directory (AC17).
 fn bounded(
     repo: &Path,
     rounds: &Path,
@@ -190,12 +202,25 @@ fn classify(paths: &[String], exempt: &[String], excluded: &[String]) -> RoundKi
     }
 }
 
+/// What a feature's round must satisfy: its spec, and its data model and
+/// scenarios when it has them. `feature_rel` is the feature directory.
+fn spec_sources(repo: &Path, feature_rel: &str) -> String {
+    let mut sources = format!("`{feature_rel}/spec.md`");
+    if repo.join(feature_rel).join("data-model.md").is_file() {
+        let _ = write!(sources, ", `{feature_rel}/data-model.md`");
+    }
+    if repo.join(feature_rel).join("scenarios").is_dir() {
+        let _ = write!(sources, ", the scenarios under `{feature_rel}/scenarios/`");
+    }
+    sources
+}
+
 /// The inputs a brief is rendered from, every one derived by the runtime.
 struct Brief<'a> {
-    feature: &'a str,
-    feature_rel: &'a str,
-    has_data_model: bool,
-    has_scenarios: bool,
+    subject: ReviewSubject<'a>,
+    /// What a feature's round must satisfy ([`spec_sources`]); none for the
+    /// project, whose code no spec claims.
+    sources: Option<String>,
     base: &'a str,
     snapshot: &'a str,
     paths: &'a [String],
@@ -206,27 +231,30 @@ struct Brief<'a> {
 /// names only two shas, so no file name — which may hold any character but
 /// NUL — can be read as an instruction or reach a shell.
 fn render_brief(brief: &Brief<'_>) -> String {
-    let mut sources = format!("`{}/spec.md`", brief.feature_rel);
-    if brief.has_data_model {
-        let _ = write!(sources, ", `{}/data-model.md`", brief.feature_rel);
-    }
-    if brief.has_scenarios {
-        let _ = write!(
-            sources,
-            ", the scenarios under `{}/scenarios/`",
-            brief.feature_rel
-        );
-    }
+    let (reviewed, judge, sources) = match (brief.subject, &brief.sources) {
+        (ReviewSubject::Feature(feature), Some(sources)) => (
+            format!("`{feature}`"),
+            "Judge the round against what the spec requires",
+            format!("{sources}."),
+        ),
+        _ => (
+            "the code no spec claims".to_string(),
+            "Judge whether the round breaks a behavior that held before it",
+            "no spec claims this code, so there is none to read: the round must keep what the \
+             code did before it, apart from what it fixes."
+                .to_string(),
+        ),
+    };
     // `Value`'s alternate `Display` is pretty JSON and cannot fail.
     let paths = format!("{:#}", serde_json::Value::from(brief.paths.to_vec()));
     format!(
-        "# Re-read of a fix round — {feature}
+        "# Re-read of a fix round — {name}
 
-You are re-reading one round of fixes made during a review of `{feature}`. You did not make them. Judge the round against what the spec requires, and write what you find to the result file below. Change no other file.
+You are re-reading one round of fixes made during a review of {reviewed}. You did not make them. {judge}, and write what you find to the result file below. Change no other file.
 
 ## The round
 
-- **What it must satisfy:** {sources}.
+- **What it must satisfy:** {sources}
 - **The change:** run `git diff --relative {base} {snapshot}` from the project root. Both are commits holding the whole tree, before and after this round. The diff can also show paths left out of the round, because another check reads them: judge only the paths listed here.
 - **The paths it changed**, from the project root:
 
@@ -244,7 +272,7 @@ Write `{result}`, from the project root, as JSON:
 
 {RESULT_CONTRACT}
 ",
-        feature = brief.feature,
+        name = brief.subject.name(),
         base = brief.base,
         snapshot = brief.snapshot,
         result = brief.result_rel,
@@ -282,7 +310,7 @@ mod tests {
     fn start(tmp: &tempfile::TempDir) -> String {
         start_fix_rounds::run(
             &StartFixRoundsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
             },
             tmp.path(),
         )
@@ -293,7 +321,7 @@ mod tests {
     fn brief(tmp: &tempfile::TempDir, base: &str) -> Result<BriefReReadResult> {
         run(
             &BriefReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base: base.to_string(),
             },
             tmp.path(),
@@ -413,7 +441,10 @@ mod tests {
 
         let round = fs::read_to_string(
             tmp.path()
-                .join(fix_rounds::round_rel(FEATURE, &base))
+                .join(fix_rounds::round_rel(
+                    ReviewSubject::Feature(FEATURE),
+                    &base,
+                ))
                 .join(ROUND_FILE),
         )
         .unwrap();
@@ -648,7 +679,7 @@ mod tests {
         commit_all(&repository, "init");
         let base = start_fix_rounds::run(
             &StartFixRoundsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
             },
             &project,
         )
@@ -662,7 +693,7 @@ mod tests {
 
         let result = run(
             &BriefReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base,
             },
             &project,
@@ -695,7 +726,10 @@ mod tests {
         let lists: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(tmp.path().join(file)).unwrap()).unwrap();
         assert_eq!(lists["paths"], serde_json::json!(["src/a.rs"]));
-        let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
+        let round = tmp.path().join(fix_rounds::round_rel(
+            ReviewSubject::Feature(FEATURE),
+            &base,
+        ));
         let record: RoundRecord =
             toml::from_str(&fs::read_to_string(round.join(ROUND_FILE)).unwrap()).unwrap();
         assert_eq!(record.paths, ["src/a.rs"]);
@@ -716,7 +750,7 @@ mod tests {
         commit_all(&repository, "init");
         let base = start_fix_rounds::run(
             &StartFixRoundsArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
             },
             &project,
         )
@@ -725,7 +759,7 @@ mod tests {
         write(&project.join("src/a.rs"), "fn a() { let _ = 1; }\n");
         let result = run(
             &BriefReReadArgs {
-                feature: FEATURE.to_string(),
+                feature: Some(FEATURE.to_string()),
                 base,
             },
             &project,
@@ -776,7 +810,10 @@ mod tests {
         assert_eq!(result.paths.as_deref().unwrap(), expected);
 
         let snapshot = result.snapshot.clone().unwrap();
-        let round = tmp.path().join(fix_rounds::round_rel(FEATURE, &base));
+        let round = tmp.path().join(fix_rounds::round_rel(
+            ReviewSubject::Feature(FEATURE),
+            &base,
+        ));
         let record: RoundRecord =
             toml::from_str(&fs::read_to_string(round.join(ROUND_FILE)).unwrap()).unwrap();
         assert_eq!(record.paths, expected);
@@ -787,10 +824,8 @@ mod tests {
         assert_eq!(
             text,
             render_brief(&Brief {
-                feature: FEATURE,
-                feature_rel: "specs/001-x",
-                has_data_model: true,
-                has_scenarios: false,
+                subject: ReviewSubject::Feature(FEATURE),
+                sources: Some("`specs/001-x/spec.md`, `specs/001-x/data-model.md`".to_string()),
                 base: &base,
                 snapshot: &snapshot,
                 paths: result.paths.as_deref().unwrap(),
@@ -819,7 +854,10 @@ mod tests {
         );
         assert_eq!(
             result_rel,
-            format!("{}/result.json", fix_rounds::round_rel(FEATURE, &base))
+            format!(
+                "{}/result.json",
+                fix_rounds::round_rel(ReviewSubject::Feature(FEATURE), &base)
+            )
         );
     }
 
@@ -1042,7 +1080,7 @@ mod tests {
         let base = start(&tmp);
         let err = run(
             &BriefReReadArgs {
-                feature: ".".to_string(),
+                feature: Some(".".to_string()),
                 base,
             },
             tmp.path(),

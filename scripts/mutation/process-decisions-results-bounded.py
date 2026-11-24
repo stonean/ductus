@@ -24,8 +24,8 @@ MUTATIONS = [
     (
         'M1 the bound removed: every process-decisions result stays inline',
         'src/primitives/process_decisions.rs',
-        '        super::bounded_lists::place(repo, "process-decisions", &args.feature, &result, &lists)?\n',
-        '        super::bounded_lists::place(repo, "process-decisions", &args.feature, &result, &lists)?.filter(|_| false)\n',
+        '        super::bounded_lists::place(repo, "process-decisions", subject.name(), &result, &lists)?\n',
+        '        super::bounded_lists::place(repo, "process-decisions", subject.name(), &result, &lists)?.filter(|_| false)\n',
         'process_decisions::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),
     (

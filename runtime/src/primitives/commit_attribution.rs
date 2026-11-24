@@ -57,6 +57,25 @@ impl CommitClaims {
     pub(crate) fn is_claimed_by(&self, form: &FeatureForm) -> bool {
         self.claimants.contains(form)
     }
+
+    /// Whether no spec claims the commit although it changed a path in the
+    /// project: a clean merge changed none itself, so it is never unclaimed.
+    /// Such a commit's code is the project record's to review (spec 084, AC6).
+    pub(crate) fn is_unclaimed(&self) -> bool {
+        self.claimants.is_empty() && !self.paths.is_empty()
+    }
+}
+
+/// The project record's share of a commit: [`SpecShare`]'s rule inverted (spec
+/// 084, AC6). A commit no spec claims is the project's whole, and one any spec
+/// claims gives the project nothing, since that spec's review reads it. Returns
+/// the paths the project's review reads, and those it leaves to a spec's.
+pub(crate) fn project_share(claims: CommitClaims) -> (Vec<String>, Vec<String>) {
+    if claims.is_unclaimed() {
+        (claims.paths, Vec::new())
+    } else {
+        (Vec::new(), claims.paths)
+    }
 }
 
 /// Attributes commits for one project. Built once per walk, since it lists the
@@ -88,6 +107,44 @@ impl<'a> Attributor<'a> {
             .into_iter()
             .filter_map(|name| parse_feature_dir(&name).map(|form| (form, name)))
             .collect();
+        Ok(Self {
+            project,
+            repo,
+            specs_root,
+            known,
+        })
+    }
+
+    /// An attributor whose specs are the directories `tree` holds under the spec
+    /// root, for a walk that reads a commit and never the disk: an uncommitted
+    /// spec directory can claim nothing there, and one deleted from disk and
+    /// not yet committed still claims (spec 084). Only the spec list comes from
+    /// the tree; [`Self::plan_of`] reads the disk, and [`project_share`], which
+    /// such a walk divides by, reads no plan.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::primitives::PrimitiveError::Git`] when the spec root's tree
+    /// cannot be read. A tree holding no spec root holds no spec.
+    pub(crate) fn at_tree(
+        project: &'a ProjectRepository,
+        repo: &'a Path,
+        specs_root: &'a str,
+        tree: &Tree<'_>,
+    ) -> Result<Self> {
+        let root = project.to_git(specs_root);
+        let known = match tree.get_path(Path::new(&root)) {
+            Ok(entry) => entry
+                .to_object(&project.repository)?
+                .peel_to_tree()?
+                .iter()
+                .filter(|entry| entry.kind() == Some(git2::ObjectType::Tree))
+                .filter_map(|entry| entry.name().ok().map(str::to_string))
+                .filter_map(|name| parse_feature_dir(&name).map(|form| (form, name)))
+                .collect(),
+            Err(err) if err.code() == git2::ErrorCode::NotFound => Vec::new(),
+            Err(err) => return Err(err.into()),
+        };
         Ok(Self {
             project,
             repo,
@@ -382,6 +439,58 @@ mod tests {
             .unwrap()
             .claims(&commit)
             .unwrap()
+    }
+
+    /// The project's share is a spec's inverted (spec 084, AC6): a commit no spec
+    /// claims is the project's whole, one a spec claims gives it nothing, and a
+    /// commit that changed no path is neither.
+    #[test]
+    fn the_projects_share_is_the_commits_no_spec_claims() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = project_with_two_specs(tmp.path());
+        let unclaimed = claims_for(tmp.path(), &repository, "src/lib.rs", "chore: tidy");
+        assert!(unclaimed.is_unclaimed());
+        assert_eq!(
+            project_share(unclaimed),
+            (vec!["src/lib.rs".to_string()], Vec::new())
+        );
+        let claimed = claims_for(tmp.path(), &repository, "src/lib.rs", "fix(012): a bug");
+        assert!(!claimed.is_unclaimed());
+        assert_eq!(
+            project_share(claimed),
+            (Vec::new(), vec!["src/lib.rs".to_string()])
+        );
+        let empty = CommitClaims::default();
+        assert!(!empty.is_unclaimed());
+        assert_eq!(project_share(empty), (Vec::new(), Vec::new()));
+    }
+
+    /// A tree's attributor knows the specs the tree holds and no other: a spec
+    /// directory on disk alone claims nothing, one gone from disk still does, and a
+    /// file under the spec root is no spec.
+    #[test]
+    fn a_trees_attributor_lists_the_specs_the_tree_holds() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = project_with_two_specs(tmp.path());
+        write(&tmp.path().join("specs/review.md"), "a record\n");
+        write(
+            &tmp.path().join("specs/078-notes"),
+            "a file named as a spec is\n",
+        );
+        let oid = commit_all(&repository, "chore: files in the spec root");
+        std::fs::remove_dir_all(tmp.path().join("specs/034-b")).unwrap();
+        write(&tmp.path().join("specs/056-c/spec.md"), "c\n");
+        let project = ProjectRepository::discover(tmp.path()).unwrap();
+        let tree = project.repository.find_commit(oid).unwrap().tree().unwrap();
+        let attributor = Attributor::at_tree(&project, tmp.path(), "specs", &tree).unwrap();
+        assert_eq!(attributor.directory_of(&seq(12)), Some("012-a"));
+        assert_eq!(attributor.directory_of(&seq(34)), Some("034-b"));
+        assert_eq!(attributor.directory_of(&seq(56)), None);
+        assert_eq!(attributor.directory_of(&seq(78)), None);
+        assert_eq!(attributor.known.len(), 2);
+        let on_disk = Attributor::new(&project, tmp.path(), "specs").unwrap();
+        assert_eq!(on_disk.directory_of(&seq(34)), None);
+        assert_eq!(on_disk.directory_of(&seq(56)), Some("056-c"));
     }
 
     #[test]
