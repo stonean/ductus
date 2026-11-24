@@ -38,7 +38,7 @@ Every shipped rule's Statement and the rule format's severity classification agr
 - **A Statement with MAY and no obligation keyword.** It has no tier, so it is not assessable and fails the corpus test. No shipped Statement has that shape.
 - **Adopter copies.** The security rule files ship with the `update` strategy, so an adopter's unpinned copy receives the split on the next `/ductus` run. A pinned copy does not and keeps the mixed Statements until its owner acts. No check reads it, and `/{project}:analyze` reads each of its mixed rules as MUST-tier.
 - **Adopter citations and waivers.** An adopter's citation of one of the 16 IDs keeps resolving to the MUST half. A waiver on one of them keeps covering the MUST half it already silenced, and the new SHOULD rule's findings are unwaived.
-- **Three data models state the invariant.** `specs/008-security-rules/data-model.md` is canonical, and `specs/017-derive-dont-ask/data-model.md` and `specs/036-quality-cross-rules/data-model.md` restate it. All three change together, or they disagree. 017 and 036 are `done`, so the edit reopens both under the meaningful-body-edit back-edge.
+- **Three data models state the invariant.** `specs/008-security-rules/data-model.md` is canonical, and `specs/017-derive-dont-ask/data-model.md` and `specs/036-quality-cross-rules/data-model.md` restate it. All three change together, or they disagree. 017 and 036 are `done`, and an edit to a data model leaves a `done` spec `done` (spec 084).
 
 ## Open Questions
 

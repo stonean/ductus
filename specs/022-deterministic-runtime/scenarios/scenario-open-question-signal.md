@@ -18,7 +18,7 @@ Every runtime surface answering *"does this spec have unresolved questions?"* re
 
 **The completion gate.** The pre-done review gate evaluates scenario open questions as a third check, ordered after markdown lint and before the review-record checks, first failure still winning. Its blocked message names the scenarios carrying questions. An unresolved design question is more upstream than a missing review, so surfacing it first avoids sending a contributor to run review against a design about to change.
 
-**The analyze family.** `check-artifacts` gains a `scenario-open-questions` family — blocking on a `done` spec, advisory otherwise — and `--fix` reverts `done → in-progress` with a non-silent notice, mirroring the review-state-drift revert. No grandfather exemption: an absent review record genuinely marks a spec as predating its feature, but an unresolved scenario question is a present-tense defect whenever it arrived.
+**The analyze family.** `check-artifacts` gains a `scenario-open-questions` family — blocking on a `done` spec, advisory otherwise — and it reopens nothing: `--fix` no longer reverts a `done` spec for it (spec 084), and the finding blocks `done` while it stands. No grandfather exemption: an absent review record genuinely marks a spec as predating its feature, but an unresolved scenario question is a present-tense defect whenever it arrived.
 
 **The readouts.** The dashboard's existing Scenarios column gains an outstanding-count suffix, the Next Action cell overrides to scenario-targeted clarify, and a callout below the table names the specs and their question-carrying scenarios with no cap within the read size (past it the lines collapse to one counting them, spec 080). Recovery state wins the Next Action cell when both apply; both callouts render.
 
@@ -30,7 +30,7 @@ Every runtime surface answering *"does this spec have unresolved questions?"* re
 - An unreadable or malformed scenario file contributes nothing and never blocks the gate — nothing can be proven about a file that will not parse, and an unknown is not escalated into a defect.
 - Non-`.md` files and case-varying filenames are decided by the shared listing, not re-derived here.
 - A question resolved between the gate check and the status write is accepted: the gate re-reads at check time and the resolution can only turn a block into a pass.
-- Adding a scenario that carries questions still takes the scenario back-edge to `in-progress`, never the question back-edge to `draft` — the spec body's own Open Questions section is not written to.
+- Adding a scenario that carries questions still reopens a `done` spec through the task it appends (backward via owed code, spec 084), never the question back-edge to `draft` — the spec body's own Open Questions section is not written to.
 - A feature with a zero `scenario-open-questions-count` sees no change to any clarify branch: the report is suppressed entirely rather than rendered as "0 outstanding", so a clean feature reads exactly as it does today.
 - Clarify's report never mutates. The `already {status}` and `done` branches keep their guarantee of modifying no file, and a feature-targeted run never writes to a scenario even when it names one.
 - Recovery state and outstanding scenario questions together: recovery is the more upstream defect and governs the walk, exactly as it wins the dashboard's Next Action cell. The scenario questions are still reported, and remain to be resolved after the recovery walk returns the spec to `clarified`.

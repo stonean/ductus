@@ -10,7 +10,7 @@ The spec's third deferred follow-on, never shipped: `/ductus:groom` remains lega
 
 ## Behavior
 
-`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore / discard, per the decision tree; a chore is done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly and leaves `legacy-prose-commands.txt`; its reference keeps the routing tree.
+`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore / discard, per the decision tree; a chore is done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen when `check-owed-work` reports owed work, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly and leaves `legacy-prose-commands.txt`; its reference keeps the routing tree.
 
 ## Edge Cases
 

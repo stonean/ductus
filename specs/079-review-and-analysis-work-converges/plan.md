@@ -4,7 +4,7 @@ Implements [079 — Review and analysis work converges](spec.md).
 
 ## Overview
 
-A shared commit-attribution helper gives the review window, scope, fix rounds and `diff-cross-spec` one answer to whose change a commit is. Two new primitives decide from history and from a diff what a person used to judge: `measure-reopenings` reports the outcome, and `classify-spec-edit` says whether an edit reopens. The review and analyze commands stop asking about non-gating observations. Each primitive gets one compiled description, the constitution makes the binary the source of its rules, and the references shrink last, so the cuts cannot hold up the changes that end the cycle.
+A shared commit-attribution helper gives the review window, scope, fix rounds and `diff-cross-spec` one answer to whose change a commit is. A new primitive decides from history what a person used to judge: `measure-reopenings` reports the outcome. `classify-spec-edit`, added here to say whether an edit reopens, is retired (spec 084). The review and analyze commands stop asking about non-gating observations. Each primitive gets one compiled description, the constitution makes the binary the source of its rules, and the references shrink last, so the cuts cannot hold up the changes that end the cycle.
 
 `specs/events.md` and `specs/errors.md` do not exist in this repository (`git ls-files specs/events.md specs/errors.md` lists neither), and `specs/system.md` states only the runtime's network facts, which this plan touches nowhere, so there is nothing to conflict with there. This spec declares no dependencies.
 
@@ -54,11 +54,9 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 ### What reopens
 
-`classify-spec-edit` decides from the diff, since a rule that depends on an agent remembering it would be skipped (§design-principles). It compares `spec.md`'s criteria and open questions through `read-spec`'s parser, unchecked boxes through `unchecked_lines` (`runtime/src/primitives/read_tasks.rs`), the one test of what `tasks.md` owes, by a line's text under any heading, which `prune-plan`'s `reopen-required`, `measure-reopenings`' `waiting`, the gate and `check-artifacts` share (owner, 2026-11-06), and the changed path set, and returns `correction` only when the diff touches nothing but `spec.md`, `plan.md` and `tasks.md` and changes no criterion text, question or unchecked task, since a `tasks.md` edit adding no unchecked task takes no back-edge (§spec-lifecycle). A label's assignment stays a correction, and a run's record is no edit. `/{project}:amend`'s reconcile pass calls it before proposing a reopen, and `check_artifact_size.rs`'s `OnDone` hints follow it, so trimming `spec.md` reopens only when a criterion or question changes and trimming `data-model.md` always does. Beyond the review-state drift below, nothing enforces a reopen, so this adds no gate. `scripts/audit/cross-doc-consistency.sh` pins only the transitions, so it does not change.
+A `done` spec reopens by its state, never an edit's diff (spec 084): it is `in-progress` while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, by one test of what `tasks.md` owes, a line's text under any heading (`unchecked_lines` in `runtime/src/primitives/read_tasks.rs`, behind `runtime/src/primitives/owed_work.rs`), which `check-owed-work`, `prune-plan`'s `reopen-required`, `measure-reopenings`' `waiting`, the gate and `check-artifacts` share. `classify-spec-edit` and the correction class this spec added are retired; `check_artifact_size.rs`'s `OnDone` hints keep following the diff-based rule until spec 084's task 17.
 
-A contract edit, or one to any other file under the spec, reads `mechanical` when `ReferenceScrub` (`runtime/src/primitives/derive_references.rs`, on the predicate `derive-references` harvests by) leaves both sides equal, or when `SweepIndex` over a snapshot of the working tree finds it a sweep, so the classifier and the gate's staleness share one sweep rule and its blind spot (owner, 2026-11-06). They read a reference-only contract edit apart: `mechanical` here and stale there, since exempting references from the digest is a change of its own, with 0 occurrences while no spec here carries `references:` (0 of 78 at `b0d8ea87`, by `git grep -l '^references:'` over `specs/*/spec.md`). Sweeps committed one spec at a time show the index one file each, and read `reopens`.
-
-Taking a tick back reads `reopens`, and a `done` spec holding an unticked criterion or an unchecked box reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows and `--fix` already reverts it, and the gate blocks `done` over an unchecked box (owner, 2026-11-06).
+The mechanical-sweep rule stays (`mechanical_sweep.rs`, §drift-prevention), read by the analysis record's freshness and the review record's digest, and decides no reopen. A `done` spec holding an unticked criterion or an unchecked box reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows, `--fix` reverts it, and the gate blocks `done` over an unchecked box (owner, 2026-11-06).
 
 ### The measurement
 
@@ -81,11 +79,11 @@ A run whose last write still carries `fix-rounds-open` counts as leaving a gatin
 Four edits, net-negative together, since it held 49,936 of 50,000 bytes by `wc -c` at `7b49fc80` (the spec's Motivation):
 
 - §runtime-boundary's host integration and eligibility criterion 3: the binary is the source of a primitive's rules, and the server is required, so a command stops without it (AC21; owner, 2026-11-06).
-- §spec-lifecycle's third back-edge and its shared test: a correction reopens nothing (AC15).
+- §spec-lifecycle's third back-edge and its shared test: a correction reopens nothing (AC15). Spec 084 replaced both with the owed-work state rule.
 - §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17); 067's AC6 later added an analysis's operator-confirmed design edit to what reaches the operator (2026-11-21).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
 
-The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description. §cross-spec-impact also follows AC15: a signpost on a `done` spec is a correction, and `check-review-gate`'s guidance says so.
+The bytes come from the sentences these replace, the two-paths text, and sentences stating one primitive's behavior, which move to its compiled description. §cross-spec-impact also followed AC15: a signpost on a `done` spec reopens nothing, and `check-review-gate`'s guidance says so; under spec 084 it leaves the spec `done` because it owes no code.
 
 `framework/bootstrap/ductus.md`'s shell text stays this bootstrap's own contract, since it runs before the binary exists: it carries the steps before acquisition and 029's per-step fallback when a primitive call errors, and everything else runs through the tool or `{pointer-path}` (owner, 2026-11-05). `framework/bootstrap/govern.md` stays byte-identical to it.
 
@@ -110,7 +108,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 `BE-COMPAT-001` asks a plan to classify a change to a primitive's interface or result. This spec's narrowings and removals are **breaking**, and what it only adds is additive:
 
 - Breaking: `diff-cross-spec`'s `window-base` replaces `first-commit`, and its `cross-spec-paths` narrows to the spec's own commits; `compute-review-scope`'s `scope` narrows, another spec's paths moving to `excluded`; `brief-re-read`'s `paths` narrows to a round's non-exempt paths; `check-review-gate`'s `blocked-by` gains `fix-round-loop-open`, `review-owed` and `unchecked-task`, in a closed set (`ReviewGateBlock` in `runtime/src/schema/primitives.rs`); and `write-review` and `write-analysis` refuse while `tasks.md` holds an unchecked box.
-- Additive: the result fields and arguments `data-model.md` adds, and the two new primitives, `measure-reopenings` and `classify-spec-edit`.
+- Additive: the result fields and arguments `data-model.md` adds, and the two new primitives, `measure-reopenings` and `classify-spec-edit`, the second retired by spec 084.
 
 The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that release already owes (071's plan), with their consumers in the same release (§runtime-boundary).
 
@@ -136,7 +134,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/src/primitives/decisions.rs` | Modify | `decided-by: rule`; a person's stored decision wins |
 | `runtime/src/primitives/diff_cross_spec.rs` | Modify | Window and own commits |
 | `runtime/src/primitives/derive_boundary.rs` | Modify | Doc comment no longer claims a shared window |
-| `runtime/src/primitives/classify_spec_edit.rs` | Create | Correction or reopen, from the diff |
+| `runtime/src/primitives/classify_spec_edit.rs` | Create | Correction or reopen, from the diff; removed by spec 084 |
 | `runtime/src/primitives/measure_reopenings.rs` | Create | The outcome, from history |
 | `runtime/src/primitives/dashboard.rs` | Modify | The counts `/{project}:status` renders |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule |
@@ -157,7 +155,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/CHANGELOG.md` | Modify | Each change |
 | `scripts/audit/marker-list-parity.sh` | Modify | A comment names the reference |
 | `scripts/mutation/scope-attribution.py` | Create | Mutation list for attribution, window and scope |
-| `scripts/mutation/reopen-measure.py` | Create | Mutation list for the measurement and the classifier |
+| `scripts/mutation/reopen-measure.py` | Create | Mutation list for the measurement |
 | `scripts/mutation/one-description.py` | Create | Mutation list for a description's summary |
 | `scripts/mutation/run.py` | Modify | Ids that select no mutation fail |
 | `scripts/mutation/fix-round-record.py` | Modify | An anchor follows `passing_notices` |
@@ -166,16 +164,16 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/tests/common/mod.rs` | Modify | One path to the release binary, following its build |
 | `runtime/tests/{parity,exec_subprocess,manifest_cli_args,concurrent_sessions}.rs` | Modify | Use it |
 | `runtime/tests/golden/implement-basic.jsonl` | Modify | Its fixture's commit shas move with `implement.md` |
-| `framework/runtime-tools.txt` | Modify | Two new tools |
+| `framework/runtime-tools.txt` | Modify | Two new tools, `classify-spec-edit` since removed (spec 084) |
 | `framework/constitution.md` | Modify | The four edits |
 | `framework/commands/review.md` | Modify | Window, scope, rule-decided dispositions, open mark |
 | `framework/commands/analyze.md` | Modify | Rule-decided dispositions |
 | `framework/commands/implement.md` | Modify | `diff-cross-spec`, `review-owed` |
-| `framework/commands/amend.md` | Modify | Reconcile calls `classify-spec-edit` |
+| `framework/commands/amend.md` | Modify | Reconcile called `classify-spec-edit`; it reads `check-owed-work` since spec 084 |
 | `framework/commands/status.md` | Modify | The counts |
 | `framework/commands/help.md` | Modify | A corrected fact stays `done` |
 | `framework/commands/*.md` | Modify | The host-integration pointer |
-| `framework/migrations/{audit-record-relocate,criterion-label-backfill}.md` | Modify | A label's assignment is a correction |
+| `framework/migrations/{audit-record-relocate,criterion-label-backfill}.md` | Modify | A label's assignment reopens nothing |
 | `framework/migrations/session-file-consolidate.md` | Modify | Runs through the CLI, with no hand-walk |
 | `framework/bootstrap/{ductus,govern}.md` | Modify | The shell text is the bootstrap's own contract |
 | `framework/bootstrap/configure/claude.md` | Modify | No hand-walk |
@@ -215,7 +213,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 - **A new gate tier for contract breaks** was rejected: it falsifies the gating definitions across four specs. A break left open reuses `review-owed` instead, which `/{project}:review` clears.
 - **A gate notice for a contract break**, chosen on 2026-11-05, was replaced (owner, 2026-11-06): it let a known broken contract reach `done` with no decision recorded. The spec's entry holds the options and their numbers.
 - **Sweeping restatements** was the 2026-11-12 sweep's (`6d45c66b`), as the spec resolves (owner, 2026-11-12): a false statement is corrected under AC12, including one that a data model is canonical, and a true copy of a primitive's behavior becomes a pointer to its compiled description, each `done` spec so edited taking its back-edge.
-- **Known limitations.** `measure-reopenings` reads a slug changed mid-reopening as starting there, undercounting that reopening's earlier runs; 0 of the 5 spec renames in history at `c19f160c` fell inside one (`cfae8eb0`'s message), and it reports nothing as over the bound it was not. A consolidated spec's commits touching its directory stay excluded, named by number, so a spec consolidated below `done` leaves that code unread, as `/{project}:consolidate` claims no review; a commit that only named a spec gone from disk reads as no spec's, so a spec overlapping it owes a review of that path. Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. Code committed between a run and its record is read by nothing (spec's Resolved Questions). A record restored from before the one the transition holds still reads as a finish. A claim carried only in a reference's label reads `mechanical`, since the scrub removes label and target by its stated design. A person running `write-review` by hand writes what they give it, since the CLI cannot pass findings. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
+- **Known limitations.** `measure-reopenings` reads a slug changed mid-reopening as starting there, undercounting that reopening's earlier runs; 0 of the 5 spec renames in history at `c19f160c` fell inside one (`cfae8eb0`'s message), and it reports nothing as over the bound it was not. A consolidated spec's commits touching its directory stay excluded, named by number, so a spec consolidated below `done` leaves that code unread, as `/{project}:consolidate` claims no review; a commit that only named a spec gone from disk reads as no spec's, so a spec overlapping it owes a review of that path. Another session's uncommitted edits stay in scope and in a round. A change of meaning written only as prose does not reopen. A wrong correction waits for the next analysis. Code committed between a run and its record is read by nothing (spec's Resolved Questions). A record restored from before the one the transition holds still reads as a finish. A person running `write-review` by hand writes what they give it, since the CLI cannot pass findings. An agent's call that a fix is mechanical, or a waiver right, stands until someone reads the record. `research.md`'s claim counts are a floor.
 
 ## Open Questions Resolved
 
@@ -234,7 +232,7 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `050-constitution` | The constitution's four edits, under its size ceiling |
 | `051-branch-scoped-spec-numbering` | What the review after a fold reads, which its AC24 requires |
 | `058-findings-route-at-discovery` | Dispositions; its task 5 waits for this |
-| `063-oversized-artifacts-warn-with-a-fix` | Which trims `check-artifact-size`'s warning says reopen a `done` spec, read as `classify-spec-edit` reads the result |
+| `063-oversized-artifacts-warn-with-a-fix` | Which trims `check-artifact-size`'s warning says reopen a `done` spec, read as `classify-spec-edit` read the result until spec 084 retired it |
 | `067-analyze-and-audit-checks` | A condition added to review-state drift |
 | `066-audit-records-and-the-completion-gate` | Records, gate, scope; its tasks 17–21 rebase on this |
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | Dispositions; its data model held a false canonicality claim |

@@ -877,7 +877,7 @@ Request payload:
 }
 ```
 
-`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (every feature directory, sequential or branch-scoped, in corpus order, with each spec's frontmatter `status` — status drives the done → in-progress reopen consent on a scenario route; empty status means the spec file was unreadable, or is a link leaving the project, which is never read). The request is bounded as §Request bodies past the read size states: it carries no body, and past the bound `available-specs`, `candidates` and `unclaimed-paths` move to the lists file. A spec root that is, or runs through, a link leaving the project halts the walk with `path-outside-project`, as `scenarios` does for `routeFold`.
+`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (every feature directory, sequential or branch-scoped, in corpus order, with each spec's frontmatter `status` — status tells the router whether a scenario route may reopen a `done` target (it does only when the route leaves owed work, spec 084); empty status means the spec file was unreadable, or is a link leaving the project, which is never read). The request is bounded as §Request bodies past the read size states: it carries no body, and past the bound `available-specs`, `candidates` and `unclaimed-paths` move to the lists file. A spec root that is, or runs through, a link leaving the project halts the walk with `path-outside-project`, as `scenarios` does for `routeFold`.
 
 Response payload:
 
@@ -914,7 +914,7 @@ Request payload:
 
 `spec-content` and `target-content` are bounded (§Request bodies past the read size). In the path form `spec-path` (`{specs-root}/{feature}/spec.md`) and `target-path` (the upstream's `spec.md`) name the files the host reads, and `scenarios` and `target-sections` can move to the lists file; `target-status` stays inline. A body not read stays `""`, with no path: a spec whose `folds-into` names no readable upstream sends `target-content: ""` in both forms. The `scenarios` directory is listed only when it stays in the project (one that does not halts the walk with `path-outside-project`), and a scenario file that is a link leaving it is a detail-less entry, its `section` never read.
 
-`target-content` and `target-sections` are both present inline because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs. `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
+`target-content` and `target-sections` are both present inline because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs, which it makes only when the fold leaves the upstream spec owed work (spec 084). `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
 
 Response payload:
 

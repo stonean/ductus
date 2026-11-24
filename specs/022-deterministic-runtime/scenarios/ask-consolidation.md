@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-Spec [023 — `ductus` Refinement](../../023-govern-refinement/spec.md) consolidates `/elaborate` into `/amend`. The merged `/amend` classifies its input as a question or a scenario; the scenario branch creates a `scenarios/{slug}.md` file under the targeted feature, appends a linked task to that feature's `tasks.md`, and on a `done` spec flips status via the existing `set-status` primitive.
+Spec [023 — `ductus` Refinement](../../023-govern-refinement/spec.md) consolidates `/elaborate` into `/amend`. The merged `/amend` classifies its input as a question or a scenario; the scenario branch creates a `scenarios/{slug}.md` file under the targeted feature, appends a linked task to that feature's `tasks.md`, and on a `done` spec, once `check-owed-work` reports the appended task as owed work, flips status via the existing `set-status` primitive.
 
 Two of those operations have no primitive today:
 
@@ -29,7 +29,7 @@ Two new primitives. Each is independently testable, atomic via tempfile + rename
    - Behavior: read `{feature-path}/tasks.md`, number the new task one past the highest number present, or at the file's `next-task:` counter when that is larger (spec 041's data model, *The `next-task:` counter*), append a new section block. If `tasks.md` does not exist, create it with the heading `# {NNN} — {Feature Name} Tasks` derived from the feature's spec title (or a minimal heading when the title can't be read). Atomic via tempfile-in-parent + `persist` rename.
    - Result: `{ "appended": { "task-number": "N", "path": "{feature-path}/tasks.md" } }`, the task number a string since 041 task 24 admits a suffixed number (`11a`). Operational error on write failure or unparseable existing tasks file.
 
-Both primitives compose with existing primitives at the procedure level — `/amend`'s scenario branch in 023's `framework/commands/amend.md` rewrite will call `create-scenario` then `append-task` then (on a `done` spec) `set-status` to reopen, then `write-session` targets the new scenario — in the process's own file under `.ductus/sessions/` when it has a session identity, and in the shared default `.ductus/session.toml` on every target write (062).
+Both primitives compose with existing primitives at the procedure level — `/amend`'s scenario branch in 023's `framework/commands/amend.md` rewrite will call `create-scenario` then `append-task` then (on a `done` spec, once `check-owed-work` reports owed work) `set-status` to reopen, then `write-session` targets the new scenario — in the process's own file under `.ductus/sessions/` when it has a session identity, and in the shared default `.ductus/session.toml` on every target write (062).
 
 The CLI surfaces follow the same shape as existing write primitives:
 

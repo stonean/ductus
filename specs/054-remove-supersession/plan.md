@@ -20,7 +20,7 @@ One consequence worth naming: this spec's body linked to `../053-supersession-re
 
 ### 052 is edited down, not annotated
 
-052 reopens `done → in-progress` (meaningful body edit, §spec-lifecycle), loses its supersession sections and the acceptance criteria whose deliverables no longer exist, keeps its consolidation content, and returns to `done` when this spec lands.
+052 reopens `done → in-progress` (§spec-lifecycle's rule when this landed was a meaningful body edit; spec 084 now reopens on owed work only), loses its supersession sections and the acceptance criteria whose deliverables no longer exist, keeps its consolidation content, and returns to `done` when this spec lands.
 
 Deleting ticked criteria is safe rather than destructive because `next-criterion` is monotonically non-decreasing and never reissues a retired label (§spec-requirements) — the counter exists for exactly this. That mechanism survives this change and is what replaces the criterion-level annotation rule being removed.
 
@@ -46,7 +46,7 @@ The revised AC16 is a negative requirement and the plan honors it as one: no `fr
 
 ### The sweep is one uniform commit
 
-§drift-prevention makes the name sweep a mechanical edit — `done` specs stay `done` — but only while the diff stays uniform. The `` `/specify --supersedes` `` worked example appears in three places (`scripts/audit/readme-command-parity.sh` (its comment on the bare token), `scripts/audit/README.md` (its Family 33 entry), and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md` (its "Family 33 recognizes a documented command" bullet)) and is replaced by a surviving flag in a single substitution across all three, landing on its own rather than bundled into the broader rewrite. `/specify --fold-into` is the replacement: it is a flag on the same command, inside a wider code span, so it exercises the exact matching property the example exists to illustrate.
+§drift-prevention makes the name sweep one uniform substitution, and `done` specs stay `done` because it leaves them no owed work (spec 084). The `` `/specify --supersedes` `` worked example appears in three places (`scripts/audit/readme-command-parity.sh` (its comment on the bare token), `scripts/audit/README.md` (its Family 33 entry), and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md` (its "Family 33 recognizes a documented command" bullet)) and is replaced by a surviving flag in a single substitution across all three, landing on its own rather than bundled into the broader rewrite. `/specify --fold-into` is the replacement: it is a flag on the same command, inside a wider code span, so it exercises the exact matching property the example exists to illustrate.
 
 Ordinary-English uses of the verb were left alone — the pre-commit hooks, `framework/rules/security-backend.md`'s CSP note (since removed, by `1598b87a`), and `review.md`'s report-regeneration line (since moved to `framework/reference/review.md`) named no capability, and rewriting them would have been the non-uniform diff the rule warns about.
 

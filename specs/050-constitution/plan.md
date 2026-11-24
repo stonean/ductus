@@ -7,7 +7,7 @@ Implements [050 — Constitution](spec.md).
 Three pieces of work over two files. Classify every rule-bearing `AGENTS.md`
 entry, move the universal ones into `framework/constitution.md` leaving pointers
 behind, and add two rules that were learned here but belong to every adopter —
-criterion verification and the mechanical-edit test.
+criterion verification and the mechanical-edit test (since replaced by spec 084's owed-code rule).
 
 The work is almost entirely prose, and the risk is not that it breaks but that
 it drifts: two copies of a rule, a promoted rule that still names this
@@ -88,14 +88,14 @@ claim about their contents is false is invisible to it. Both halves were
 observed here on 2026-08-17. Adopters run the same pipeline and inherit the same
 blind spot.
 
-**The mechanical-edit test** (AC13) settles what §spec-lifecycle's
-enumerated cases leave open: whether an edit that changes no claim is mechanical.
-The list read as closed, so a pure typo repair in a `done` spec's body was
-argued to reopen it — the disproportion a `045` chore held in
-`specs/inbox.md` waited on until task 7 resolved it against AC13's test. The section states a default, that any other edit reopens, rather than a
-fourth enumerated case, so the next new case is decidable without another
-constitution change. For a scenario or data model the test is `classify-spec-edit`'s,
-under which a typo fixed in one file reopens (spec 079).
+**The mechanical-edit test** (AC13) settled whether an edit that changes no
+claim reopens a `done` spec; the `045` chore held in `specs/inbox.md` waited on
+it until task 7. Spec 084 replaced it: §spec-lifecycle reopens a `done` spec
+only while code is owed (its `tasks.md` holds an unchecked box or its
+`spec.md` an unticked criterion), so no edit's diff decides a reopen. The
+mechanical-sweep rule that remains, two cases read by the analysis record's
+freshness and the review record's digest, is in §drift-prevention's *No dead
+references in live artifacts* bullet.
 
 ### The version pin does not move
 
@@ -400,10 +400,11 @@ The one entry the promotion-coverage notice reported unclassified on 2026-10-17,
 The row for the one entry since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges`, to `docs/developing-ductus.md`, was this table's only row, so the table went with it.
 
 Two entries were reclassified after checking the constitution rather than the
-survey: **W14 and W15 are already promoted.** W14 is case (b) of
-§spec-lifecycle's mechanical-edit rule and W15 a correction under that section, and both `AGENTS.md` entries already
-cite the section by anchor — they were in the target shape before this spec
-started. The survey counted them as pending because it read `AGENTS.md` alone.
+survey: **W14 and W15 were already promoted, and are gone.** They stated
+§spec-lifecycle's old reopen rule (W14 the cross-service-reference case of its
+mechanical-edit rule, W15 criterion-label assignment as a correction), and both
+`AGENTS.md` entries cited the section by anchor. Spec 084 retired that rule
+(task 4, `1b3bb4ac`) and deleted both entries, so no table row holds either.
 
 That check also surfaced a defect this promotion fixes rather than causes.
 §spec-lifecycle's back-edge paragraph cites "the **Design Principles** rule:
@@ -507,17 +508,17 @@ The cut to one read moved these universal rules' canonical text out of the const
 
 ### A citation names no line number
 
-§grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, and bars a line number in a spec, plan, data model, research file, scenario or task list, so `path:line` no longer reads as allowed there (AC24). A chat report or a review finding's line range is outside that list (owner decision, 2026-11-18). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and `066-audit-records-and-the-completion-gate` makes removing a line suffix a mechanical edit. The plan command and the plan and clarify references point at the bullet instead of restating it.
+§grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, and bars a line number in a spec, plan, data model, research file, scenario or task list, so `path:line` no longer reads as allowed there (AC24). A chat report or a review finding's line range is outside that list (owner decision, 2026-11-18). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and removing a line suffix is a mechanical sweep, which §drift-prevention's *No dead references in live artifacts* bullet names (spec 084; `066-audit-records-and-the-completion-gate` first classified it). The plan command and the plan and clarify references point at the bullet instead of restating it.
 
 - **This repository's sweep splits by what a citation's line already names** (owner decisions, 2026-11-17). Where it names the symbol, heading or phrase, the suffix is stripped, in a commit holding nothing else. Otherwise the citation is rewritten by hand to name what it pointed at in the commit that wrote it, read with `git blame` and `git show`, and so is each prose line reference.
-- **Each `done` spec a rewrite reopens**, as `classify-spec-edit` judges it, moves to `in-progress` with `set-status` and closes again after its own analysis.
+- **Each `done` spec a rewrite reopens**, as `classify-spec-edit` judged it, moved to `in-progress` with `set-status` and closed again after its own analysis. Superseded in part (spec 084): `classify-spec-edit` is retired, and a rewrite reopens a `done` spec only when it leaves an unchecked box or an unticked criterion.
 - **An adopter's citations are not edited** (owner decision, 2026-11-17). The check reports one when its spec's analysis next runs, which neither the shipped CI template nor the hook does on its own, so no migration and no strip primitive ships.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, the mechanical-edit test in §spec-lifecycle, and a §drift-prevention canonical-sources row naming this spec |
+| `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, the mechanical-edit test in §spec-lifecycle (since replaced, spec 084), and a §drift-prevention canonical-sources row naming this spec |
 | `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
 | `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §cost-levers' example cut to fit the ceiling (task 53) |
 | `AGENTS.md` | Modify | 40dea24c's restatement of the filter removed, and the bullet it displaced restored (task 53) |
@@ -537,7 +538,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/migrations/claude-md-import-syntax.md` | Modify | Converts the `@import .ductus/constitution.md` line instead of removing it |
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
 | `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
-| `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
+| `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matched the text then; spec 084 replaced that back-edge with owed code |
 | `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Point at §grounding's *Cite what you consulted* in place of restating it (task 48); clarify points at §recommendations' attribution rule (task 51) |
 | `framework/reference/review.md` | Modify | §Run review passes checks a claim against the tree before recording it; Observations fixes design rationale as a comment |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |

@@ -6,7 +6,7 @@ Implements [049 — Rename govern to ductus](spec.md).
 
 The rename is one substitution applied to four distinct token families, plus one genuine
 behavior change and one registry entry. The bulk is mechanical and lands as a uniform sweep
-across live artifacts (§spec-lifecycle case (a), so `done` specs stay `done`). The
+across live artifacts (§drift-prevention's mechanical-sweep rule, which leaves no owed work, so `done` specs stay `done`). The
 non-mechanical parts are small and enumerated here:
 
 1. **Path resolution gains a third tier.** The runtime today resolves the project config and
@@ -74,8 +74,8 @@ to the primary for a fresh project. The same shape applies to the session file. 
 bootstrap is never broken, on either of the two prior layouts.
 
 This is the one **behavior** change in the spec, so per `AGENTS.md` it lands as a scenario
-under 022 with `specs/022-deterministic-runtime/data-model.md` updated, and 022 takes the
-`done → in-progress` back-edge. The sweep of `runtime/src/` prose is mechanical and rides
+under 022 with `specs/022-deterministic-runtime/data-model.md` updated, and 022 reopens
+`done → in-progress` through the task that scenario appends. The sweep of `runtime/src/` prose is mechanical and rides
 along without reopening anything.
 
 ### `govern-dir-consolidate` keeps writing `.govern/`; the new migration completes the second hop

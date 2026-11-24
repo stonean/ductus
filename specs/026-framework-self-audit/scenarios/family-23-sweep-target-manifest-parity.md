@@ -32,11 +32,12 @@ Three live pointers now dangle:
 - The `AGENTS.md` entry still says to grep "the live-artifact paths above" and
   describes a substitution "applied uniformly across the artifact set above".
   Nothing above it lists paths.
-- [§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle) case (a)
-  defines a mechanical edit as a substitution applied uniformly "per the
+- The mechanical-sweep rule, then case (a) of §spec-lifecycle and now in
+  [§drift-prevention](../../../framework/constitution.md#drift-prevention),
+  defined a mechanical edit as a substitution applied uniformly "per the
   `AGENTS.md` rename rule's scope" — which is now a pointer back to the
   constitution's categorical list. The mechanical-edit rule's scope is
-  circular, and that rule is what decides whether a `done` spec reopens.
+  circular.
 - The only surviving copies of the enumeration sit in
   [023](../../023-govern-refinement/spec.md)'s `living-specs` scenario and
   [043](../../043-workflows-sunset/spec.md)'s plan, both citing "AGENTS.md line
@@ -57,7 +58,7 @@ so the family has something stable to extract. The constitution stays
 categorical: literal repo paths would be meaningless in a document adopters
 install, and 050's decision there was right.
 
-§spec-lifecycle case (a) is repaired the other way — by removing the deferral
+The mechanical-sweep rule's case (a) is repaired the other way — by removing the deferral
 rather than making it resolve. It pointed at "the `AGENTS.md` rename rule's
 scope", and `framework/templates/project/agents.md` ships adopters an
 `AGENTS.md` with no rename rule in it, so the pointer dangled for every adopter

@@ -31,7 +31,7 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md). 
 - No rule files and a single-spec corpus: no candidates, the gate reports that, and specify runs unchanged — a fresh adopter sees no new friction.
 - The work genuinely is a new surface (a new rule *file*, a new capability): candidates may still be offered; "new spec anyway" is one keystroke and is the correct answer.
 - `/{project}:groom` routing an item to `/{project}:specify`: the tree already ran, so the routing gate is skipped rather than asked twice.
-- A candidate spec at `done`: naming it must also name the back-edge it implies, exactly as groom's confirmation does, so the operator consents to the reopen before it happens.
+- A candidate spec at `done`: naming it must also name the reopen its scenario's task implies (spec 084), exactly as groom's confirmation does, so the operator consents to the reopen before it happens.
 - Derivation failing (unreadable rule dir, unparseable spec): reported as *could not derive candidates* and distinguished from *no candidates found* — the two are not the same answer (`QUAL-CLAIM-001`).
 
 ## Open Questions

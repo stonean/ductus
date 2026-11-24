@@ -19,7 +19,7 @@ The spec-side parsers match the hardening standard the tasks-side parsers alread
 
 - `validate-frontmatter` reports a hard-fail finding when `status` or `dependencies` is absent from spec frontmatter (field presence, not just value validity, per constitution §text-first-artifacts).
 - `read-spec`'s acceptance-criteria walk and `mark-criterion`'s checkbox addressing skip content inside HTML comments and fenced code blocks (`SkipScanner` semantics), so a template-state spec reports zero acceptance criteria on both paths and comment-embedded checkboxes are never flipped.
-- `read-spec`'s acceptance-criteria walk folds a line that directly follows a criterion, with no blank line between, into that criterion when it starts no other block (a heading, list item, block quote, table row or thematic break), indented or not, so an edit to a wrapped criterion's second line changes its text and `classify-spec-edit` reopens a `done` spec for it. The criteria's indexes stay keyed to checkbox lines alone.
+- `read-spec`'s acceptance-criteria walk folds a line that directly follows a criterion, with no blank line between, into that criterion when it starts no other block (a heading, list item, block quote, table row or thematic break), indented or not, so an edit to a wrapped criterion's second line changes its text. The criteria's indexes stay keyed to checkbox lines alone.
 - `set-status` derives the frontmatter start offset from the actual opener the splitter matched, so CRLF spec files splice at the correct byte.
 - `check-rule-ids`' deprecation scan only slices on `char` boundaries and cannot panic on multibyte content.
 

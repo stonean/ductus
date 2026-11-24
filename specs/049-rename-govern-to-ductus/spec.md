@@ -17,7 +17,7 @@ The project takes the name **ductus**. This spec covers what that means across e
 
 ## Motivation
 
-The name was spread across every layer of the project and had no single source of truth. A measured count at rename time: **934 `gvrn` references across 137 files**, **794 `.govern/` path references**, and **1322 `/gov:` namespace references**. In-repo that is a mechanical sweep, and [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle)'s case (a) already covers it — a uniform token substitution across live artifacts, which does not reopen `done` specs.
+The name was spread across every layer of the project and had no single source of truth. A measured count at rename time: **934 `gvrn` references across 137 files**, **794 `.govern/` path references**, and **1322 `/gov:` namespace references**. In-repo that is a mechanical sweep, which [§drift-prevention](../../framework/constitution.md#drift-prevention) reads as no change — a uniform token substitution across live artifacts, which leaves a `done` spec no owed work, so none reopens.
 
 What made this more than a find-and-replace is that parts of the name were **already published and cannot be recalled**:
 
@@ -140,7 +140,7 @@ The relationship ran the other way too: 048's remaining migration entry and this
 ## Acceptance Criteria
 
 - [x] AC1: No live artifact under `framework/`, `scripts/`, `runtime/src/`, `.github/`, `README.md`, or `AGENTS.md` references the old project name, except where it is recording history
-- [x] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` per §spec-lifecycle case (a), and `/ductus:analyze` reports no spec drifted by it
+- [x] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` (§drift-prevention's mechanical-sweep rule; it leaves no owed work), and `/ductus:analyze` reports no spec drifted by it
 - [x] AC3: A registry migration converges an adopter's MCP registration, permission entries, per-project directory, and installed command files in one bootstrap run
 - [x] AC4: Re-running that migration against an already-converged project is a no-op
 - [x] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
@@ -167,7 +167,7 @@ The exception is what makes this mechanical rather than a judgment call, and it 
 
 Everything else in a spec body describes the project as it *is*, and specs are living documents representing current state. Leaving them would have 50 specs describing a project by a name it no longer has.
 
-The rule is therefore: sweep every occurrence except those naming a published version, tag, or asset. Because the exception is a determinable class rather than a per-occurrence decision, every change in the resulting diff is still the same substitution — which is what [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) case (a) requires, so the `done` specs the sweep touches stay `done`.
+The rule is therefore: sweep every occurrence except those naming a published version, tag, or asset. Because the exception is a determinable class rather than a per-occurrence decision, every change in the resulting diff is still the same substitution — which is what [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) case (a) requires, so the `done` specs the sweep touches stay `done`. Superseded in part (spec 084): the mechanical-sweep rule now lives in §drift-prevention, and a `done` spec stays `done` because the substitution leaves no owed work.
 
 **What happens to the crates.io crate, and does the version series continue?**
 

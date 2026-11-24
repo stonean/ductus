@@ -6,7 +6,7 @@ section: "Command Set"
 
 ## Context
 
-`/{project}:amend`'s scenario route is the sanctioned way to add a scenario: it writes `scenarios/{slug}.md`, appends a linked task to `tasks.md`, and takes the `done → in-progress` back-edge. A scenario added by hand — by an agent writing the file directly, or by a contributor — skips all three, and two separate mechanisms then fail to notice.
+`/{project}:amend`'s scenario route is the sanctioned way to add a scenario: it writes `scenarios/{slug}.md`, appends a linked task to `tasks.md`, and takes the `done → in-progress` back-edge, which the new task owes (spec 084). A scenario added by hand — by an agent writing the file directly, or by a contributor — skips all three, and two separate mechanisms then fail to notice.
 
 `/{project}:amend`'s re-open precondition detects only *uncommitted* deltas (`git status --porcelain`, untracked `??` scenario files — step 1 of `framework/commands/amend.md`'s Re-open precondition and reconcile pass) and flips status only on `done` specs (the same section). Once the hand-added scenario is committed, that signal is gone permanently.
 

@@ -28,7 +28,7 @@ The `check-artifacts` staleness arm this scenario first specified was not built;
 
 ## Edge Cases
 
-- A mechanical sweep (a rename, a criterion-label backfill) that touches a durable contract without changing its meaning: a uniform substitution must not report every `done` spec stale. `review-freshness.sh` has always carried this exemption; the shared Rust path did **not** inherit it, which is the defect the measurement found and the second Resolved Question records. It does now, via `primitives::mechanical_sweep`.
+- A mechanical sweep (a rename, a citation's line number removed) that touches a durable contract without changing its meaning: a uniform substitution must not report every `done` spec stale. `review-freshness.sh` has always carried this exemption; the shared Rust path did **not** inherit it, which is the defect the measurement found and the second Resolved Question records. It does now, via `primitives::mechanical_sweep`.
 - `reviewed-against` names a commit absent from a shallow clone: the rename exemption cannot run, so its candidates are reported rather than dropped. A CI checkout needs `fetch-depth: 0`, the same requirement Family 19 already carries and was already bitten by.
 
 ## Open Questions

@@ -36,7 +36,7 @@ This is a strictly additive change to a closed enum and its message set — no n
 
 ### Detection mirrors review-state drift exactly
 
-`check-artifacts` gains a `scenario-open-questions` family alongside its existing four (`check_artifacts.rs`'s `artifact-completeness`, `task-consistency`, `scenario-consistency` and `review-state-drift` families). It is blocking on a `done` spec and advisory otherwise, and `--fix` reverts `done → in-progress` through `set-status` with the same non-silent notice the review-state-drift revert emits.
+`check-artifacts` gains a `scenario-open-questions` family alongside its existing four (`check_artifacts.rs`'s `artifact-completeness`, `task-consistency`, `scenario-consistency` and `review-state-drift` families). It is blocking on a `done` spec and advisory otherwise, and `--fix` does not revert the spec for it (spec 084; it reverted `done → in-progress` through `set-status` before): a scenario's open question reopens nothing and still holds the spec short of `done` at the gate.
 
 No grandfather clause, unlike review-state drift. An absent `review:` block genuinely marks a spec as predating its feature; an unresolved scenario question is a present-tense defect whenever it arrived.
 

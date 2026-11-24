@@ -75,10 +75,10 @@ Task 4 deleted three `AGENTS.md` bullets that stated the retired rule and re-key
 
 Add 000 to the sweep: its scenario `criterion-route-after-draft` says a `done` spec's criterion route "either takes the documented back-edge or refuses", where task 2 gave `/ductus:amend`'s criterion route a third case, the owner-confirmed correction of a ticked criterion, which reopens nothing; and its Resolved Questions derive the reopen from the third back-edge.
 
-- [ ] Ask the owner once whether this sweep may decide each ticked criterion's correction (AC3), and record the answer in the commit
-- [ ] Correct the sites in 008, 011, 013, 022, 023, 026, 030, 035, 041, 047, 049, 050, 051, 054 and 063, each read whole
-- [ ] And those the plan's review found by a search for `classify-spec-edit`: 014, 016, 066, 067, 073 and 080
-- [ ] 079: AC5, AC6, AC15 and AC25, with AC27's reader list corrected, and its other sites; 081: AC10, AC13 and AC14; 066: AC6's reader list corrected; 051: AC24 and AC25; 046: AC23 and AC30; each criterion's note reads "Superseded in part (spec 084)"
+- [x] Ask the owner once whether this sweep may decide each ticked criterion's correction (AC3), and record the answer in the commit
+- [x] Correct the sites in 008, 011, 013, 022, 023, 026, 030, 035, 041, 047, 049, 050, 051, 054 and 063, each read whole
+- [x] And those the plan's review found by a search for `classify-spec-edit`: 014, 016, 066, 067, 073 and 080
+- [x] 079: AC5, AC6, AC15 and AC25, with AC27's reader list corrected, and its other sites; 081: AC10, AC13 and AC14; 066: AC6's reader list corrected; 051: AC24 and AC25; 046: AC23 and AC30; each criterion's note reads "Superseded in part (spec 084)"
 
 - **Done when**: AC11 holds, `grep -rn classify.spec.edit` over the live-artifact set finds only historical records and `check_artifact_size.rs`, which task 17 clears, every swept spec's status is unchanged, and `check-artifacts` reports no new finding on any of them.
 

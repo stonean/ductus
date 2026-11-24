@@ -107,7 +107,7 @@ All other `tasks.md` readers are line scanners that match headings and
 checkboxes, so the block needs no change in them. Read at its source, that is
 `read_tasks.rs`' `parse_tasks` and `unchecked_lines`, `owed_work.rs`' `describe_unchecked`
 (behind `read-tasks`, `check-artifacts`, `decisions`, the review gate, the
-review and analysis records, `classify-spec-edit` and `measure-reopenings`),
+review and analysis records, `check-owed-work` and `measure-reopenings`),
 `mark_task.rs`, and `check_stuck.rs`' `first_incomplete_subtask_index`, each
 matching ATX headings and checkbox lines through `SkipScanner`; `dashboard`'s
 `has_tasks` reads only whether the file exists (`is_file`), and `validate-frontmatter`'s `artifact_kind`
@@ -221,7 +221,7 @@ before it proposes the section.
 `done` spec, and omits it otherwise — absent is not computed, never `false`.
 It is true when `tasks.md` adds an unchecked checkbox — holds an unchecked
 checkbox line, trimmed, more times than it does at HEAD, so a box moved or
-re-indented adds nothing — the diff-visible trigger the scenario fixes. An
+re-indented adds nothing — the preview's prediction of whether the moves add owed work. An
 edit to `plan.md` never sets it, whatever it changes: §spec-lifecycle gives a
 `plan.md` or `tasks.md` edit adding no unchecked task no back-edge
 (`scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`). A preview computes
@@ -233,10 +233,9 @@ nothing. Both read HEAD through one shared reader, promoted from the private
 `read_blob_at_head` in `runtime/src/primitives/check_stuck.rs` into `mod.rs`
 and built on `ProjectRepository`, so a project in a repository subdirectory
 resolves correctly (the 059 convention). A `tasks.md` absent at HEAD holds no
-box, so each one written since is new, as `classify-spec-edit` reads it
-(spec 079). The command, not the primitive, performs the reopen with
-`set-status` (`from: done`), so status mutation stays in the one primitive
-that guards it.
+box, so each one written since is new. The command, not the primitive,
+performs the reopen with `set-status` (`from: done`), so status mutation stays
+in the one primitive that guards it.
 
 ### `--all` repeats a one-spec reduction per spec
 
@@ -310,11 +309,11 @@ before the run already require it — is named in the preview, before
 anything is written. On confirmation the host writes the moves and calls
 `prune-plan` apply with that section's heading and digest. The reopen is
 decided on a fresh reading: once the run has finished writing to a `done`
-spec, the command previews that feature again and calls `set-status` only
-when that result reports `reopen-required`. A reopen named earlier is then
+spec, the command invokes `check-owed-work` for that feature and calls
+`set-status` only when that result reports `owes: true`. A reopen named earlier is then
 performed; one nothing named — a move whose effect the host misjudged — is
 asked about before the flip, never performed silently; and one the preview
-named that the fresh reading no longer requires, such as a `--reset` that
+named that `check-owed-work` no longer reports owed, such as a `--reset` that
 removed the unchecked boxes it came from, is not performed. A spec the run
 wrote nothing to keeps its status. A declined section is skipped
 for that run, and the prompt names a fold under a design-record heading as the lasting keep.
@@ -468,7 +467,7 @@ the host re-runs the command against the file as it now is.
 - **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs each as the file itself: `framework/bootstrap/ductus.md` §Project-specific shared files (strategy: create) maps `framework/templates/project/system.md`, `errors.md` and `events.md` to `specs/system.md`, `errors.md` and `events.md`, and only the spec templates land under `specs/templates/`. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
 - **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
 - **Every open is contained** (BE-INPUT-004; 075's analysis deferred it here). Each open goes through `validate_contained` against the project root: a project file that is, or lies under, a symbolic link leaving the project reads `outside-project` and is neither read nor written; a tracked file the search would read through one is left unread and named in the search's `outside-project`; every `create` home is checked before an apply writes anything and a refused one fails the whole call, so no half an apply is left; a rewrite re-checks its path under the write guard's re-read (*An apply refuses a file that changed since it read it*).
-- **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit to a `done` spec that `classify-spec-edit` reads as reopening is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
+- **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit that leaves a `done` spec owed work, as `check-owed-work` reads it, is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
 
 ### Title and slug
 

@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-An adopter on 0.61.0 reported no stated way to see what a primitive answers about an artifact that does not exist yet, such as how `classify-spec-edit` classes an edit before it is made. A probe in the project's tree is an edit the pipeline reads: under a `done` spec it can reopen it, a probe left behind rides the next commit, and restoring the directory from git silently reverts uncommitted pipeline state (§spec-lifecycle). Verified 2026-11-22 (UTC) in this repository: with a line added to a `done` spec in a `git clone --local` copy, `classify-spec-edit` run from the clone by the project's binary answered for the clone (`correction`) and the project's `git status` stayed empty.
+An adopter on 0.61.0 reported no stated way to see what a primitive answers about an artifact that does not exist yet, such as how `classify-spec-edit` classed an edit before it was made (the primitive is since retired, spec 084). A probe in the project's tree is an edit the pipeline reads: under a `done` spec it can leave work owed and reopen it, a probe left behind rides the next commit, and restoring the directory from git silently reverts uncommitted pipeline state (§spec-lifecycle). Verified 2026-11-22 (UTC) in this repository: with a line added to a `done` spec in a `git clone --local` copy, `classify-spec-edit` run from the clone by the project's binary answered for the clone (`correction`) and the project's `git status` stayed empty.
 
 ## Behavior
 

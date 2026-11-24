@@ -8,7 +8,7 @@ section: "Behavior"
 
 An adopter on 0.59.11 hand-inserted a task between two others rather than renumber: `### 11. Spent task` and `### 11a. Spent task with a suffixed number` under `## Phase 1`, each fully ticked. `split_numbered_heading` (`runtime/src/primitives/mod.rs`) takes only digits before the dot, so `prune-tasks` returned `removed-count: 1` and `kept-count: 0`, and its `apply` removed `## Phase 1` and task 11, leaving `### 11a.` directly under the `#` title, which fails MD001. With an unticked box under `11a`, `read-tasks` lists no such task, so `/{project}:implement`'s tally misses it. Reproduced at `35a2ed11` (079's task 17).
 
-Since 079's AC27 a box under that heading already holds the gate, drift, `classify-spec-edit`, `prune-plan` and `waiting`, so nothing reaches `done` past it. What remains is `read-tasks`, `mark-task` and `prune-tasks`. No primitive writes the form, so it comes only from a person; this repository held it only in 023 (at `64d0be93`), as `### 1b.`, `### 7b.` and `### 12b.`, all ticked, and holds it nowhere now.
+Since 079's AC27 a box under that heading already holds the gate, drift, `check-owed-work`, `prune-plan` and `waiting`, so nothing reaches `done` past it. What remains is `read-tasks`, `mark-task` and `prune-tasks`. No primitive writes the form, so it comes only from a person; this repository held it only in 023 (at `64d0be93`), as `### 1b.`, `### 7b.` and `### 12b.`, all ticked, and holds it nowhere now.
 
 ## Behavior
 

@@ -62,10 +62,6 @@ Arguments: `since` (an RFC 3339 UTC timestamp, `2026-10-01T00:00:00Z`, or a date
 
 The lists are bounded as `compute-review-scope`'s are. `dashboard` carries the same counts and `since` in a `reopenings` block, whose `state` may also be `not-measured`, with a `reason`, when the measurement failed, so `/{project}:status` still renders.
 
-## `classify-spec-edit` (new primitive)
-
-Arguments, `kind`, `reasons` and how a criterion compares are `ductus classify-spec-edit --help`'s.
-
 ## Constants
 
 | Constant | Value | Home |

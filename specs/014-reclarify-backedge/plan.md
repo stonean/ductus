@@ -76,7 +76,7 @@ In `framework/constitution.md` §spec-lifecycle, the second back-edge bullet is 
 - Before: "`planned` or `in-progress` → `clarified` when `/amend` records a new open question. The next `/clarify` resolves it and the spec advances forward again."
 - After: "`clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question; the next `/clarify` resolves the question and the spec advances forward again."
 
-The first back-edge bullet (`/elaborate` for `done → in-progress`) is left untouched.
+The first back-edge bullet (`/elaborate` for `done → in-progress`) is left untouched by this spec; spec 084 has since replaced it with *Backward via owed code*.
 
 ### Spec 000 signpost
 

@@ -23,13 +23,13 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
 - A command route exists for adding an acceptance criterion to a spec past `draft`, without reverting the spec to `draft` to reach it.
 - The route does not require the spec to carry an open question, and does not manufacture one to unlock a back-edge.
 - A criterion added this way lands unchecked. Marking it is `/{project}:review`'s criteria step's job, at verification time — a route that wrote it pre-checked would assert a verification that never ran.
-- On a `done` spec the route either takes the documented back-edge or refuses and names the command that does; it does not silently edit a `done` spec's body.
+- On a `done` spec the route takes the owed-code back-edge, reopening the spec once `check-owed-work` reports the new criterion; or, when the input corrects a ticked criterion the owner confirms the code bears out, it corrects that criterion's text in place and reopens nothing (spec 084). It does not silently edit a `done` spec's body.
 
 ## Edge Cases
 
 - **The criterion duplicates an existing one** — a normalized-whitespace, case-insensitive comparison is the same dedup shape `append-question` applies to `## Open Questions`; a match reports the existing entry rather than appending a near-twin.
 - **The spec is `draft`** — `/{project}:clarify` already owns this and the route should not compete with it.
-- **The spec is `done`** — the route takes the `done → in-progress` back-edge; the second Resolved Question below settled that, and this bullet said "part of the open question" while the question was still open.
+- **The spec is `done`** — the route takes the `done → in-progress` back-edge for a new criterion, which spec 084 states as owed code; the second Resolved Question below settled that, and this bullet said "part of the open question" while the question was still open.
 - **A missing `## Acceptance Criteria` section** — created in template order, the way `append-question` creates a missing `## Open Questions` section, rather than refusing.
 - **The criterion describes behavior with no implementation yet** — that is the normal case on a reopened spec, and is exactly why it lands unchecked.
 
@@ -87,3 +87,5 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
   every criterion and `check-artifacts` reports a `done` spec holding an
   unticked criterion as drifted, so the reopen still routes the criterion to
   its judge.
+
+  Superseded in part (spec 084): §spec-lifecycle now has two back-edges, to `draft` on a new open question and to `in-progress` while code is owed. The derivation above from a third back-edge, *Backward via meaningful body edit*, no longer holds; a new criterion still reopens a `done` spec, because it is an unticked criterion, and the criterion route reopens it once `check-owed-work` reports it.

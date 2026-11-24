@@ -10,7 +10,7 @@ Cross-service references are informative links from a spec to a spec in another 
 2. **Harvest** — the runtime's `derive-references` primitive extracts cross-service URL links from a spec body into a derived `references:` frontmatter index, kept strictly distinct from `dependencies:`.
 3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome.
 4. **Commands** — `/{project}:status` surfaces the resolved status; `/{project}:analyze` reports a provably-broken reference as a finding.
-5. **Constitution** — a §spec-lifecycle carve-out so reference edits don't reopen a `done` spec, plus a `references:` row in the §text-first-artifacts frontmatter schema.
+5. **Constitution** — a `references:` row in the §text-first-artifacts frontmatter schema.
 
 Comprehensive tests are a first-class deliverable (per the planning decision): Rust unit tests per outcome, harvest tests, and golden output.
 
@@ -20,7 +20,7 @@ Comprehensive tests are a first-class deliverable (per the planning decision): R
 
 A `[services.<alias>]` table with two string fields: `repo` (canonical URL, the identity matched against body-link hrefs) and `path` (local checkout, relative to repo root or absolute). The table is optional — absent means no cross-service resolution, and a single-service adopter writes nothing.
 
-`.ductus/config.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `ductus` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs. A key in an entry other than these three is named in a warning and never fails the run, as in every `ductus`-owned section (019's scenario `an-unknown-config-key-is-named`; `runtime/src/schema/config_keys.rs`, which the registry's one reader calls), since teammates can run different `ductus` versions against one committed file. Every reader of the registry, `resolve-references`, `derive-references`, `classify-spec-edit`'s reference scrub and `dashboard`, reads it through `resolve_references::load_services`, which halts naming the file on a config that does not parse (`PrimitiveError::Toml`) and on an entry whose `repo` or `path` is absent or empty (`PrimitiveError::InvalidServiceEntry`, naming the alias and field too), as `[constitutions.*]` does.
+`.ductus/config.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `ductus` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs. A key in an entry other than these three is named in a warning and never fails the run, as in every `ductus`-owned section (019's scenario `an-unknown-config-key-is-named`; `runtime/src/schema/config_keys.rs`, which the registry's one reader calls), since teammates can run different `ductus` versions against one committed file. Every reader of the registry, `resolve-references`, `derive-references` and `dashboard`, reads it through `resolve_references::load_services`, which halts naming the file on a config that does not parse (`PrimitiveError::Toml`) and on an entry whose `repo` or `path` is absent or empty (`PrimitiveError::InvalidServiceEntry`, naming the alias and field too), as `[constitutions.*]` does.
 
 ### D2 — Reference syntax and harvesting
 
@@ -54,9 +54,9 @@ It reuses the `validate-frontmatter` machinery (`read_text`, `split_frontmatter`
 ### D5 — Constitution and frontmatter schema
 
 - **§text-first-artifacts (Frontmatter Schema)** — add a `references:` row to the spec-file schema: generator-managed, derived from body links, distinct from `dependencies:`, not hand-authored.
-- **§spec-lifecycle** — add an explicit carve-out: an edit whose entire diff adds/removes/changes cross-service reference links is mechanical-class (non-reopening); a `done` spec stays `done`. Worded so the exemption is determinable from the diff alone (the changed link's target resolves to a registered cross-service reference), consistent with the existing mechanical-vs-meaningful test.
+- **§spec-lifecycle** — no carve-out: a reference edit leaves no unchecked box or unticked criterion, so a `done` spec stays `done`.
 - **§drift-prevention (Canonical sources)** — add a row naming this spec's `data-model.md` as the canonical source for the `[services]` registry schema.
-- `AGENTS.md` mirrors the §spec-lifecycle interaction and the new generator in the contributor-side notes.
+- `AGENTS.md` mirrors the new generator in the contributor-side notes.
 
 Template-rule alignment holds without a template change: a freshly scaffolded spec has no references, so the new `/{project}:analyze` broken-reference check passes by default.
 
@@ -87,7 +87,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `framework/commands/status.md` | Modify | Surface reference status |
 | `framework/commands/analyze.md` | Modify | Broken-reference Advisory finding |
 | `framework/bootstrap/configure/*.md` | Modify | Per-agent permission entries for `/{project}:link` |
-| `framework/constitution.md` | Modify | §text-first-artifacts schema row, §spec-lifecycle carve-out, §drift-prevention canonical-source row |
+| `framework/constitution.md` | Modify | §text-first-artifacts schema row, §drift-prevention canonical-source row |
 | `framework/runtime-tools.txt` | Modify | Register the new tool name, which the per-agent allow blocks and the host-integration pointer lint read |
 | `.github/workflows/generators.yml` | Modify | Run the `references:` derivation |
 | `.githooks/pre-commit` | Modify | Run the `references:` derivation on every commit |
@@ -95,7 +95,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `runtime/tests/parity/cross-service/*` | Create | A recorded capture of the golden's records |
 | `runtime/tests/golden/cross-service-*.jsonl` | Create | Golden resolution records |
 | `README.md` | Modify | Document `[services]`, the `/{project}:link` command (Orient section), and cross-service references |
-| `AGENTS.md` | Modify | Contributor-side notes (generator, §spec-lifecycle interaction) |
+| `AGENTS.md` | Modify | Contributor-side notes (generator) |
 
 ## Trade-offs
 

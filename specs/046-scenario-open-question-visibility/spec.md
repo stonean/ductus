@@ -89,11 +89,11 @@ The primitive-level changes land as **scenarios under 022-deterministic-runtime*
 
 - the distinct scenario-open-question field on the spec reader;
 - the third pre-done gate check, ordered after markdown lint and before the `review:` block;
-- the `scenario-open-questions` finding family and its `--fix` revert;
+- the `scenario-open-questions` finding family (and, until spec 084, its `--fix` revert);
 - the dashboard's Scenarios-column suffix, Next Action override, and callout;
 - both parser fixes — comment- and fence-awareness, and the widened placeholder guard.
 
-Each of those scenarios back-links here per §cross-spec-impact. Recording them on a `done` 022 takes the scenario back-edge to `in-progress` — the same edge this spec's first resolved question affirms.
+Each of those scenarios back-links here per §cross-spec-impact. Recording them on a `done` 022 reopens it through the task each scenario appends — the reopen this spec's first resolved question affirms.
 
 What stays with this spec: the constitution amendments to §spec-lifecycle's `done` definition and §readiness-check, and the acceptance criteria below. Those criteria are verified against shipped behavior regardless of which spec's tasks produced it, so this spec cannot reach `done` before the 022 scenarios do.
 
@@ -105,7 +105,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - **Non-`.md` files, and case-varying filenames, under `scenarios/`** — the shared scenario-file listing defines the set, so this feature inherits its behavior rather than defining a second rule.
 - **Many scenarios carrying questions** — all are listed, with no cap and no truncation: past the read size a primitive's result moves the list whole to the file its `lists-file` names, the bound [080](../080-deterministic-runtime-efficiency/spec.md) gives every result that grows with the corpus (`BE-PAYLOAD-001`). Only the pipeline view cuts: past the read size it counts the question lines it does not show and, on the model path, names the file holding them all. A bounded readout that silently dropped scenarios would read as "these are the ones that need attention" while hiding others; the view's count says what it left out, and its file holds it.
 - **A question resolved between the gate check and the status write** — the gate re-reads the scenarios at check time, and `set-status` guards only the `from` status. A resolution landing inside that window is accepted: it can only turn a block into a pass, and the next gate run agrees.
-- **A `done` spec that already carries unresolved scenario questions when this feature ships** — reported as a blocking finding and reverted to `in-progress` by `--fix`, with no grandfather exemption. Unlike an absent `review:` block, which genuinely marks a spec as predating its feature, unresolved scenario questions are a real present-tense defect regardless of when they arrived. Exempting them would preserve exactly the state this spec exists to prevent.
+- **A `done` spec that already carries unresolved scenario questions when this feature ships** — reported as a blocking finding, with no grandfather exemption (`--fix` reverted it to `in-progress` until spec 084, which reopens nothing for a scenario's question). Unlike an absent `review:` block, which genuinely marks a spec as predating its feature, unresolved scenario questions are a real present-tense defect regardless of when they arrived. Exempting them would preserve exactly the state this spec exists to prevent.
 
 ## Acceptance Criteria
 
@@ -129,18 +129,18 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - [x] AC16: Scenario open questions are parsed by the same parser the spec body uses, with `## Resolved Questions` entries excluded
 - [x] AC17: Questions inside HTML comments or fenced code blocks are not counted, in a scenario or in a spec body — a spec scaffolded from the shipped template reports zero open questions, not the template's commented-out examples
 - [x] AC18: Both the spec placeholder (`*None — all resolved.*`) and the scenario placeholder (`*None — captured during scenario authoring.*`) are skipped, including when authored as a list bullet
-- [x] AC19: Recording a scenario that carries open questions on a `done` spec takes the scenario back-edge to `in-progress`, not the question back-edge to `draft`; the spec body's `## Open Questions` section is not written to
+- [x] AC19: Recording a scenario that carries open questions on a `done` spec takes the scenario back-edge to `in-progress`, not the question back-edge to `draft`; the spec body's `## Open Questions` section is not written to. **Superseded in part (spec 084).** The spec still goes to `in-progress`, not `draft`, and the body's section is still not written to; the reopen is now the unchecked task the scenario appends, not a "scenario back-edge", and a scenario's open question alone reopens nothing
 - [x] AC20: The pre-done review gate evaluates scenario open questions as a third check, ordered after markdown lint and before the `review:` block, and the first failing check still wins
 - [x] AC21: The gate's blocked message names the scenarios carrying unresolved questions
 - [x] AC22: An unreadable or malformed scenario file never blocks the `done` gate and never produces a blocking finding. **Half superseded.** The gate half still holds exactly — `check-review-gate` yields no block for an unreadable scenario, and the fail-open posture is deliberate (a gate that failed closed on its own inability to read is one people route around). The finding half was reversed by 022's `artifact-unreadable at done` work: `check-artifacts` now emits a **blocking** finding when a `done` spec's own artifact cannot be read, with `scenario-open-questions` named as the motivating family — an unreadable scenario contributed no questions and, as a skip, no finding, so a scenario carrying unresolved questions that would not parse passed the gate this spec built to catch exactly that
-- [x] AC23: A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption
+- [x] AC23: A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption. **Superseded in part (spec 084).** The report, its blocking severity at `done` and the absence of a grandfather exemption still hold; `/{project}:analyze --fix` no longer reverts the spec, and the question still holds it short of `done` at the gate
 - [x] AC24: All scenarios carrying questions are listed with no cap or truncation, except by the pipeline view past the read size, which counts the question lines it does not show and, on the model path, names the file holding them all
 - [x] AC25: The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
 - [x] AC26: A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
 - [x] AC27: No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
 - [x] AC28: The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field; the finding family and the gate's block are recorded in the data-models of `067-analyze-and-audit-checks` and `066-audit-records-and-the-completion-gate`, where `d852b627` moved them from 022's
 - [x] AC29: The constitution amendments to §spec-lifecycle and §readiness-check land with this spec, not with 022
-- [x] AC30: `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec
+- [x] AC30: `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec. **Superseded in part (spec 084).** The finding, its blocking severity at `done` and the gate's block still hold; `/{project}:analyze --fix` no longer reverts a `done` spec for a scenario's open question (spec 084, landed in `ac21c388`), which reopens nothing and is reopened only by the task or criterion its answer adds
 
 ## Open Questions
 
@@ -150,7 +150,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 
 **Does adding a scenario that carries open questions take the question back-edge (`clarified | planned | in-progress → draft`) rather than the scenario back-edge (`done → in-progress`)?**
 
-No — the scenario back-edge is unchanged. Adding a question-carrying scenario moves a `done` spec to `in-progress`, exactly as adding any other scenario does.
+No — the scenario back-edge is unchanged. Adding a question-carrying scenario moves a `done` spec to `in-progress`, exactly as adding any other scenario does. Superseded in part (spec 084): a scenario reopens a `done` spec through the unchecked task it appends, not through a scenario back-edge, and a scenario's open question alone reopens nothing.
 
 The question back-edge exists because, per §spec-lifecycle, `draft` is the only status that tolerates open questions — but that reasoning is about **spec-body** questions. Scenario questions are a separate concern under this spec's independent-resolution decision, and the spec body's count is unchanged in meaning and value. Taking the question edge would therefore park the spec at `draft` (the "has unresolved questions" state) while its `## Open Questions` section is empty — a status contradicting its own artifact — and would route the contributor to feature-targeted `/{project}:clarify`, which resolves no scenario question (since 2026-08-16 it reports them, AC31, and leaves them to the scenario-targeted branch), so the spec would sit at `draft` with nothing that run could settle.
 
@@ -161,7 +161,7 @@ The routing pressure comes from the scenario-question signal and the `done` gate
 Both the review gate and the analyze finding, mirroring how review-state drift already works. These are not competing options: §spec-lifecycle states the review gate *"composes with `/{project}:analyze` (which flags drifted `done` specs) and the shipped CI template … per the Design Principles rule: never depend on human diligence."*
 
 - **Prevention** — the pre-done review gate gains scenario open questions as a third check. It is structurally identical to the two already there: a deterministic pre-done condition returning a canonical `blocked: …` message as a domain outcome, evaluated before the completion confirmation and the status write.
-- **Detection** — the `check-artifacts` scenario-open-questions family catches a spec that reached `done` anyway (a bypassed gate, a hand-edited frontmatter, a spec predating this feature), and `--fix` reverts it `done → in-progress` exactly as it does for review drift (the *Review state drift (blocking)* section of `framework/reference/analyze.md`).
+- **Detection** — the `check-artifacts` scenario-open-questions family catches a spec that reached `done` anyway (a bypassed gate, a hand-edited frontmatter, a spec predating this feature), and `--fix` reverts it `done → in-progress` exactly as it does for review drift (the *Review state drift (blocking)* section of `framework/reference/analyze.md`). Superseded in part (spec 084): the finding stays and `--fix` no longer reverts for a scenario's open question.
 
 Check order within the gate is markdown lint → scenario open questions → review block, first failing check wins. An unresolved design question is more upstream than a missing review, so surfacing it first avoids sending a contributor to run `/{project}:review` against a design that is about to change.
 

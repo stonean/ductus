@@ -423,15 +423,15 @@ Result (a **compact summary — never a section's text**):
   whatever it changes, since §spec-lifecycle gives a plan edit no back-edge
   on a `done` spec (scenario
   `a-plan-edit-does-not-reopen-a-done-spec`). A `tasks.md` absent at HEAD
-  holds no box, so each one written since is new, as `classify-spec-edit`
-  reads it (spec 079). When it is computed, and for which tree, is as
+  holds no box, so each one written since is new. When it is computed, and for which tree, is as
   `ductus prune-plan --help` states, so a reopen from edits made before the
   run is known before the host writes anything, and an apply that cannot read
   HEAD writes nothing. HEAD is read through `ProjectRepository::read_at_head`, so
   a project in a subdirectory of its repository resolves. The command, not
-  the primitive, performs the reopen with `set-status`, and decides it on a
-  fresh preview taken once the run has finished writing to the spec, so the
-  reopen follows the tree the run leaves.
+  the primitive, performs the reopen with `set-status`, and decides it with
+  `check-owed-work` once the run has finished writing to the spec, so the
+  reopen follows the tree the run leaves and `reopen-required` stays the
+  preview's prediction.
 
 - `unexamined-tail` — as `prune-tasks`': present only when `plan.md` ends
   inside an open fenced block or HTML comment, `from-line` is a line of the
