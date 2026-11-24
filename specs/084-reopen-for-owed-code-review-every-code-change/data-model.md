@@ -10,7 +10,7 @@ The review record's schema, in one file beside `inbox.md` and `system.md`, holdi
 | --- | --- |
 | `spec` | `project`, a name no feature directory can take, since every feature directory carries a number |
 | `last-run` | the run's time; `null` in the seed, which no review wrote |
-| `reviewed-against` | how far unclaimed code has been read: the window for code no spec claims starts here; in the seed, `HEAD` at the update |
+| `reviewed-against` | how far unclaimed code has been read: the window for code no spec claims starts here; in the seed, `HEAD` at the update, and a seed's window starts after the commit that added the record |
 | `diff-base` | the previous record's `reviewed-against`; absent in the seed |
 | `must-violations`, `should-violations`, `low-confidence`, `blocking` | as in a feature's record; `blocking` holds no gate here |
 | criteria fields (`criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts`) | absent: the record has no criteria to judge |
@@ -45,9 +45,9 @@ Called with no `feature`, the result is the corpus form:
 | `at` | sha | The commit the check read |
 | `mode` | `block` or `warn` | `[review] unreviewed-push`, `block` when absent |
 | `state` | `none`, `found` or `not-examined` | `not-examined` when any subject below could not be read, whatever else was found |
-| `done-specs` | list of `{feature, window-start, paths, commits}` | Each `done` spec with code changed after its window start by commits that claim it |
-| `unclaimed` | `{window-start, paths, commits}` or absent | Code changed after the project record's `reviewed-against` by commits no spec claims; absent when there is none |
-| `not-examined` | list of `{subject, reason}` | Each `done` spec, or `project`, whose window could not be placed, with why (a shallow history, a record that does not parse) |
+| `done-specs` | list of `{feature, window-start, paths, commits}` | Each `done` spec with code changed after its window start by commits that claim it, and code a staging spec folded into it below `done` brought |
+| `unclaimed` | `{window-start, paths, commits}` or absent | Code changed after the project record's window start (its `reviewed-against`, or for a seed the commit that added it) by commits no spec claims; absent when there is none |
+| `not-examined` | list of `{subject, reason}` | Each `done` spec, or `project`, whose window could not be placed, with why (a shallow history, a record that does not parse, a tree holding no project record) |
 | `examined-count`, `reported-path-count` | integer | How many subjects were read, and how many paths reported |
 | `commits-reporting` | integer, `since` only | First-parent commits from `at` back to `since` at which the check reports code |
 
