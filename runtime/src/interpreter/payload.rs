@@ -1095,7 +1095,7 @@ fn build_route_inbox_item_request(
         repo,
         "routeInboxItem",
         typed_only(&typed),
-        &["available-specs", "candidates"],
+        &["available-specs", "candidates", "unclaimed-paths"],
         None,
     )
 }
@@ -5250,6 +5250,23 @@ mod tests {
         assert!(value.get("request-lists-file").is_none(), "{value}");
         assert_eq!(value["available-specs"].as_array().unwrap().len(), 40);
         assert_eq!(value["candidates"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn route_inbox_item_past_the_bound_moves_its_unclaimed_paths() {
+        let tmp = tempdir().unwrap();
+        stage_available_specs(tmp.path(), 40);
+        set_read_size(tmp.path(), "600");
+        let mut ctx = route_inbox_context();
+        let unclaimed: Vec<String> = (0..30)
+            .map(|n| format!("src/unclaimed/file-{n}.rs"))
+            .collect();
+        ctx.insert("unclaimed-paths".into(), serde_json::json!(unclaimed));
+        let value = build_route_inbox_item_request(&ctx, tmp.path()).unwrap();
+        assert!(value.get("unclaimed-paths").is_none(), "{value}");
+        assert_eq!(value["unclaimed-paths-count"], 30);
+        let moved = request_lists(tmp.path(), &value);
+        assert_eq!(moved["unclaimed-paths"].as_array().unwrap().len(), 30);
     }
 
     #[test]

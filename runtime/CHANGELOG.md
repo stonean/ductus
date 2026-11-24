@@ -75,7 +75,8 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   `unclaimed-paths`, each absent when empty, so a path no plan claims is
   reported rather than read as an empty list; a plan that cannot be read is a
   `path-claim` skip, and no path is reported unclaimed while one is.
-  `routeInboxItem`'s request carries `unclaimed-paths`, and groom's decision
+  `routeInboxItem`'s request carries `unclaimed-paths`, which moves to its
+  lists file past the read size with its other lists, and groom's decision
   tree holds that a spec's name, or a task filed in it, is no evidence that it
   owns the code. Breaking for a consumer matching `sources-examined` or a
   candidate's `source` against the three earlier values.

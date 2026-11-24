@@ -41,6 +41,6 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 64. routeInboxItem moves unclaimed-paths past the read size
 
-- [ ] `build_route_inbox_item_request` in `runtime/src/interpreter/payload.rs` passes `unclaimed-paths` to `bound_lists` with `available-specs` and `candidates`, and a test past the bound asserts that `unclaimed-paths` moved to the lists file and is absent inline (found by 022's analysis of 2026-11-24, BE-PAYLOAD-001)
+- [x] `build_route_inbox_item_request` in `runtime/src/interpreter/payload.rs` passes `unclaimed-paths` to `bound_lists` with `available-specs` and `candidates`, and a test past the bound asserts that `unclaimed-paths` moved to the lists file and is absent inline (found by 022's analysis of 2026-11-24, BE-PAYLOAD-001)
 
 - **Done when**: the data model's `routeInboxItem` row holds for all three lists, and the test fails without the change
