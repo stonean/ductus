@@ -604,6 +604,8 @@ The deterministic half of `/{project}:specify`'s routing gate, run **before** `c
 
 Advisory matching, the candidate fields, the examined-or-skipped invariant and `routed-by` are `ductus derive-routing-candidates --help`'s. Tokens are lowercased alphanumerics of four or more characters, minus a short stopword list; `route` is drawn from the `routeInboxItem` vocabulary and `spec` is never a candidate; the runtime-work signal with no derivable home is a skip. `description` carries a `title` alias and is echoed in the result, and only an empty one is an operational error.
 
+Under `BE-COMPAT-001` task 62's change is breaking: `path-claim` is a new value of a candidate's `source` and of `sources-examined`, response values the data model does not document as open, so it ships at the next minor version (§Versioning of these schemas; `runtime/CHANGELOG.md`, `[Unreleased]`); `named-paths` and `unclaimed-paths`, and `routeInboxItem`'s `unclaimed-paths`, are additive.
+
 ### `routeInboxItem` — `candidates` request field (addendum)
 
 The request gains an optional `candidates` array carrying `derive-routing-candidates`' output, and an optional `unclaimed-paths` array carrying its paths no plan claims, each `skip_serializing_if` empty so the `/{project}:groom` payload is byte-unchanged. This keeps **one** routing point: `/{project}:specify` sends the proposed feature description as `item-text` with its derived candidates, so work arriving through conversation is routed by the same tree as work arriving through the inbox. Two routing rules that could disagree is the drift the scenario was written against. `item-text` falls back to the `description` key on the specify path, so neither entry point needs a second context key for the same value. The router treats candidates as evidence to weigh, never as a decision already made.
@@ -647,7 +649,7 @@ The marker names are `content-form` and `request-lists-file`, never `form` or `l
 | `askClarifyQuestion` | `spec-content` | none |
 | `routeFold` | `spec-content`, `target-content` | `scenarios`, `target-sections` |
 | `verifyCriteria` | `spec-content` | `criteria` |
-| `routeInboxItem` | none | `available-specs`, `candidates` |
+| `routeInboxItem` | none | `available-specs`, `candidates`, `unclaimed-paths` |
 
 ### `assessSpecQuality`
 
@@ -875,7 +877,7 @@ Request payload:
 }
 ```
 
-`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (every feature directory, sequential or branch-scoped, in corpus order, with each spec's frontmatter `status` — status drives the done → in-progress reopen consent on a scenario route; empty status means the spec file was unreadable, or is a link leaving the project, which is never read). The request is bounded as §Request bodies past the read size states: it carries no body, and past the bound `available-specs` and `candidates` move to the lists file. A spec root that is, or runs through, a link leaving the project halts the walk with `path-outside-project`, as `scenarios` does for `routeFold`.
+`item-text` comes from the `item-text` walker-context key (seeded per inbox item by the groom walk); `available-specs` is scanned from the spec root (every feature directory, sequential or branch-scoped, in corpus order, with each spec's frontmatter `status` — status drives the done → in-progress reopen consent on a scenario route; empty status means the spec file was unreadable, or is a link leaving the project, which is never read). The request is bounded as §Request bodies past the read size states: it carries no body, and past the bound `available-specs`, `candidates` and `unclaimed-paths` move to the lists file. A spec root that is, or runs through, a link leaving the project halts the walk with `path-outside-project`, as `scenarios` does for `routeFold`.
 
 Response payload:
 
