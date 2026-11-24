@@ -588,6 +588,7 @@ mod tests {
         };
         let result = run(&args, tmp.path()).unwrap();
         assert_eq!(result.form, ListsForm::File);
+        let shown = serde_json::to_value(&result).unwrap();
         let spec = result.spec.unwrap();
         assert!(spec.owes);
         assert!(spec.unchecked_boxes.is_none() && spec.unticked_criteria.is_none());
@@ -600,6 +601,14 @@ mod tests {
             serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
         assert_eq!(lists["unchecked-boxes"][0]["line"], "- [ ] b");
         assert_eq!(lists["unticked-criteria"][0]["label"], "AC2");
+        // `examined-count`, the irregular count, is the corpus form's alone, so the
+        // named form is held to the lists its counts name.
+        let counted =
+            super::super::bounded_lists::counted_lists(PRIMITIVE, shown.as_object().unwrap());
+        assert_eq!(counted.len(), 2, "{counted:?}");
+        for list in counted {
+            assert!(lists[&list].is_array(), "no `{list}` list");
+        }
 
         let args = CheckOwedWorkArgs {
             feature: None,
@@ -607,6 +616,7 @@ mod tests {
         };
         let result = run(&args, tmp.path()).unwrap();
         assert_eq!(result.form, ListsForm::File);
+        let shown = serde_json::to_value(&result).unwrap();
         let corpus = result.corpus.unwrap();
         assert!(corpus.specs.is_none() && corpus.skipped.is_none());
         assert_eq!((corpus.specs_count, corpus.examined_count), (1, 1));
@@ -614,5 +624,6 @@ mod tests {
         let lists: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
         assert_eq!(lists["specs"][0]["feature"], "001-owing");
+        super::super::bounded_lists::assert_counts_name_the_file(PRIMITIVE, &shown, &lists);
     }
 }

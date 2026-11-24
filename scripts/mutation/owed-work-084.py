@@ -165,4 +165,11 @@ MUTATIONS = [
         '    if !spec_path.is_file() {\n        return Ok((owed_spec(feature, &OwedWork::default()), false));\n    }\n    if !spec_path.is_file() {\n        return Err(PrimitiveError::MissingSpecFile {',
         'check_owed_work::tests::a_missing_spec_file_is_an_error_never_owing_nothing',
     ),
+    (
+        'M22 the corpus form owes the exec walker an examined list',
+        'src/primitives/bounded_lists.rs',
+        '    ("check-owed-work", "examined-count", None),\n',
+        '',
+        'check_owed_work::tests::past_the_read_size_the_lists_move_to_a_file',
+    ),
 ]
