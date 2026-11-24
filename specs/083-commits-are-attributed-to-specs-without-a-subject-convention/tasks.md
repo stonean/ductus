@@ -42,10 +42,10 @@ Blocked on task 1: the line reads the counts `compute` returns.
 
 Blocked on tasks 1 and 3: the fields must exist, and the Size figures are measured on the release binary that has them.
 
-- [ ] Document `commits-examined` and `commits-unclaimed` in `specs/066-audit-records-and-the-completion-gate/data-model.md` §`compute-review-scope`
-- [ ] Re-measure the Size paragraph's file-form bytes with the release binary, by the method it states, and update them
-- [ ] Add a blockquoted signpost to `specs/066-audit-records-and-the-completion-gate/spec.md` linking back to 083
-- [ ] Reopen 066 with `set-status` (`done` → `in-progress`) in the same commit, since its data model changed
+- [x] Document `commits-examined` and `commits-unclaimed` in `specs/066-audit-records-and-the-completion-gate/data-model.md` §`compute-review-scope`
+- [x] Re-measure the Size paragraph's file-form bytes with the release binary, by the method it states, and update them
+- [x] Add a blockquoted signpost to `specs/066-audit-records-and-the-completion-gate/spec.md` linking back to 083
+- [x] Reopen 066 with `set-status` (`done` → `in-progress`) in the same commit, since its data model changed
 
 - **Done when**: `check-review-gate` on 083 reports its cross-spec impact on 066 discharged, and 066 is `in-progress` with the edits committed. 066 then owes an analysis and no review (081), on its own walk.
 

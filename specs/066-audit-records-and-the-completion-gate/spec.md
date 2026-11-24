@@ -34,6 +34,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [050 — Constitution](../050-constitution/spec.md)'s AC24 forbids a line-number citation in a spec artifact; AC6 here makes removing a citation's line suffix a mechanical edit, so the strips of 050's sweep reopened no spec on their own.
 >
 > **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md)'s AC6 added two refusals to `write-analysis`: a gating finding at a design subject of the spec recorded deferred to its own `tasks.md`, and one recorded undispositioned at a subject a fixed finding of the run cites. [data-model.md](data-model.md) states them.
+>
+> **Signpost:** [083 — Commits are attributed to specs without a subject convention](../083-commits-are-attributed-to-specs-without-a-subject-convention/spec.md) added `commits-examined` and `commits-unclaimed` to `compute-review-scope`'s result, inline in both forms, and a line stating them to the `## Summary` `write-review` renders. [data-model.md](data-model.md) states the fields and the file form's size with them.
 
 ## Motivation
 
