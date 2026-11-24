@@ -27,8 +27,22 @@ fn claude_printing(version: &str) -> tempfile::TempDir {
     .unwrap();
     fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
     // Run it once with no deadline, so macOS's scan of a new executable is
-    // spent before the probe's 10 s timeout starts (task 52's flake).
-    std::process::Command::new(&claude).output().unwrap();
+    // spent before the probe's 10 s timeout starts (task 52's flake). On
+    // Linux this exec fails `ExecutableFileBusy` while a child another test
+    // thread forked during `fs::write` still holds the write handle, until
+    // that child execs; retry until it has (084 task 20). Once one exec
+    // succeeds no writer is left, so the probe's own exec cannot hit it.
+    let mut busy = 0;
+    loop {
+        match std::process::Command::new(&claude).output() {
+            Ok(_) => break,
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy && busy < 200 => {
+                busy += 1;
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            Err(e) => panic!("running {}: {e}", claude.display()),
+        }
+    }
     dir
 }
 
