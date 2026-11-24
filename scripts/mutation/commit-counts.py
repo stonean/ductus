@@ -1,9 +1,10 @@
 """Mutation list for 083's window commit counts and tick attribution:
 `compute-review-scope` counts the commits its window walked and those no spec
-claimed although they changed a path, before any credit, and reports neither
-without a window; a commit holding a task's tick is its spec's to review
-whatever its subject, while one holding none stays in every window; and
-`write-review`'s Summary states both counts, or that the scope had no window
+claimed although they changed a path, before any credit, reports neither
+without a window and keeps both inline in the file form; a commit holding a
+task's tick is its spec's to review whatever its subject, while one holding
+none stays in every window; and `write-review`'s Summary states both counts,
+or that the scope had no window
 (`runtime/src/primitives/compute_review_scope.rs`,
 `runtime/src/primitives/commit_attribution.rs`,
 `runtime/src/primitives/write_review.rs`).
@@ -136,5 +137,12 @@ MUTATIONS = [
         'commits.unclaimed, commits.examined',
         'commits.examined, commits.unclaimed',
         'write_review::tests::the_summary_counts_the_windows_unclaimed_commits',
+    ),
+    (
+        'M16 the file form drops the commit counts',
+        'src/primitives/compute_review_scope.rs',
+        '        result.form = ListsForm::File;\n',
+        '        result.form = ListsForm::File;\n        result.commits_examined = None;\n        result.commits_unclaimed = None;\n',
+        '--test mcp a_scope_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp',
     ),
 ]

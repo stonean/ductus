@@ -1926,11 +1926,13 @@ fn render_report(
 /// generated count line. Either is followed by the loop's account when the run
 /// passed its rounds, so the record names each exempt and each waived round
 /// whoever wrote the Summary (spec 078 AC2; 066's scenario
-/// `a-supplied-summary-carries-the-loops-account`): after a space on the
-/// generated line, and as a paragraph of its own after a supplied Summary,
-/// whose last line may be a code fence, a table row or a list item that text
-/// joined to it would break. A supplied Summary is otherwise rendered exactly
-/// as given.
+/// `a-supplied-summary-carries-the-loops-account`), then by the window's
+/// commit counts (spec 083), and by the criteria sentence when the run judged
+/// criteria (066 task 27); the generated line also names its excluded paths
+/// before the counts. Each follows a space on the generated line, and is a
+/// paragraph of its own after a supplied Summary, whose last line may be a
+/// code fence, a table row or a list item that text joined to it would break.
+/// A supplied Summary's own text is rendered exactly as given.
 fn report_summary(
     args: &WriteReviewArgs,
     buckets: &Buckets<'_>,

@@ -37,13 +37,13 @@ next-criterion: 17
 
 ## Acceptance Criteria
 
-- [ ] AC10: `framework/commands/implement.md` and `framework/reference/implement.md` §Walk through tasks (per task, in order) have the commit after a task's tick hold the task's code and that tick together, with `--auto` and without it.
-- [ ] AC15: Without `--auto`, the walk makes that commit itself once the operator confirms it, showing the proposed subject, which the operator may change. It stages only the paths the task edited and `tasks.md`, and pushes nothing. A declined commit commits nothing and the walk goes on to the next-step offer; a refused commit halts the walk, reporting the refusal, before the next task.
-- [ ] AC11: A commit whose subject is `123 - 022: x`, holding a code change and a tick in spec 022's `tasks.md`, puts every changed path in 022's review scope and none in another open spec's. A fixture proves both directions.
-- [ ] AC12: A commit holding the same code change and no tick, under the same subject, stays in every open spec's review scope. A fixture proves it.
-- [ ] AC13: `compute-review-scope`'s result reports how many of the window's commits it examined and how many of them no spec claimed, whether or not a committed review credited their paths, and its compiled description states both. A fixture proves a window holding unclaimed commits reports them, one whose unclaimed commits a committed review credited still reports them, one holding none reports zero beside the count examined, a clean merge is examined and not unclaimed, and a spec with an empty diff base reports neither count.
-- [ ] AC16: `write-review` renders, in the `## Summary` of the `review.md` it writes, how many of the window's commits the scope examined and how many of them no spec claimed, or that the scope had no window, and the review record's frontmatter gains no field. A test proves the line.
-- [ ] AC14: Commit attribution reads no project setting, and no framework command asks a person or an agent for a commit-subject form.
+- [x] AC10: `framework/commands/implement.md` and `framework/reference/implement.md` §Walk through tasks (per task, in order) have the commit after a task's tick hold the task's code and that tick together, with `--auto` and without it.
+- [x] AC15: Without `--auto`, the walk makes that commit itself once the operator confirms it, showing the proposed subject, which the operator may change. It stages only the paths the task edited and `tasks.md`, and pushes nothing. A declined commit commits nothing and the walk goes on to the next-step offer; a refused commit halts the walk, reporting the refusal, before the next task.
+- [x] AC11: A commit whose subject is `123 - 022: x`, holding a code change and a tick in spec 022's `tasks.md`, puts every changed path in 022's review scope and none in another open spec's. A fixture proves both directions.
+- [x] AC12: A commit holding the same code change and no tick, under the same subject, stays in every open spec's review scope. A fixture proves it.
+- [x] AC13: `compute-review-scope`'s result reports how many of the window's commits it examined and how many of them no spec claimed, whether or not a committed review credited their paths, and its compiled description states both. A fixture proves a window holding unclaimed commits reports them, one whose unclaimed commits a committed review credited still reports them, one holding none reports zero beside the count examined, a clean merge is examined and not unclaimed, and a spec with an empty diff base reports neither count.
+- [x] AC16: `write-review` renders, in the `## Summary` of the `review.md` it writes, how many of the window's commits the scope examined and how many of them no spec claimed, or that the scope had no window, and the review record's frontmatter gains no field. A test proves the line.
+- [x] AC14: Commit attribution reads no project setting, and no framework command asks a person or an agent for a commit-subject form.
 
 ## Applicable Rules
 

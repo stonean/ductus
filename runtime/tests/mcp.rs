@@ -1514,8 +1514,9 @@ fn lists_in_file(
 }
 
 /// On the MCP path a scope past the read size reaches the host whole: the
-/// result is within the bound, and the file it names holds every in-scope
-/// path (066 scenario `scope-results-have-a-bounded-size`).
+/// result is within the bound, its window's commit counts stay inline (spec
+/// 083), and the file it names holds every in-scope path (066 scenario
+/// `scope-results-have-a-bounded-size`).
 #[tokio::test]
 async fn a_scope_past_the_read_size_reaches_the_host_through_its_list_file_via_mcp() {
     let tmp = over_the_read_size(12);
@@ -1528,6 +1529,9 @@ async fn a_scope_past_the_read_size_reaches_the_host_through_its_list_file_via_m
         SMALL_READ_SIZE,
         &["scope", "modified-since", "plan-affected"],
     );
+    // `begin` touches 001-x's directory and `feat(001): work` names it.
+    assert_eq!(obj["commits-examined"], 2, "{obj:?}");
+    assert_eq!(obj["commits-unclaimed"], 0, "{obj:?}");
     let scope = lists["scope"].as_array().unwrap();
     assert_eq!(obj["scope-count"], scope.len());
     assert_eq!(
