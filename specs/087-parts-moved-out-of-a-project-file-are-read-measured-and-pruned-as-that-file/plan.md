@@ -56,14 +56,14 @@ With `project-files`:
 
 - In `framework/reference/plan.md` §Cross-spec context checklist, *Always read* becomes `system.md` plus every part listed under it by `check-artifact-size` invoked with `project-files` and no feature. `events.md` and `errors.md` are read with their parts under their existing conditions. The run names the parts it read.
 - `framework/commands/plan.md`'s Scope Boundaries names the parts beside `specs/system.md`.
-- §Create the plan step 3 and §Validation gate's *Plan does not conflict with `system.md`* cover the file and its parts. An `unreadable` part is reported in the gate prompt as unexamined, never as no conflict.
+- In `framework/reference/plan.md`, §Create the plan step 3 and §Validation gate's *Plan does not conflict with `system.md`* cover the file and its parts. An `unreadable` part is reported in the gate prompt as unexamined, never as no conflict.
 - The call is host prose, not a numbered step. The judgment it feeds is host work, which the exec walker no-ops (Exec-path scope), so a backticked dispatch would buy nothing.
 
 **`/analyze`.**
 
 - Step 15 judges *the plan does not contradict `system.md`*. Before that judgment it invokes `check-artifact-size` with `project-files` and no feature, and reads every part the result lists. Step 17's call is unchanged.
-- Step 15 already carries `audit:ignore-promotion`. Under `ductus exec` it records `integrity-not-checked` as before (`framework/reference/analyze.md` §Unexamined targets).
-- An `unreadable` part is not judged against. §Plan consistency's *How each runs* records the judgment unexamined for that part, under `artifact-unreadable`. Step 17's skip of the same part already records that reason, so the part is counted once and no reason joins the closed set.
+- Step 15 already carries `audit:ignore-promotion`. Under `ductus exec` it records `integrity-not-checked` as before (`framework/reference/analyze.md` §Unexamined targets (informational)).
+- An `unreadable` part is not judged against. In `framework/reference/analyze.md`, §Plan consistency (blocking if plan exists), *How each runs*, records the judgment unexamined for that part, under `artifact-unreadable`. Step 17's skip of the same part already records that reason, so the part is counted once and no reason joins the closed set.
 - `framework/commands/analyze.md`'s Scope Boundaries names the parts beside the three files.
 
 ### `/implement` and `/review` read by pointer (AC3)
@@ -79,10 +79,12 @@ With `project-files`:
 
 ### `prune-project` walks parts and moves a pointer's target (AC7, AC13, AC14)
 
-- **Subjects.** The four project files come first, then each `measured` part from `project_parts`. Each part is segmented by its project file's grammar (041's data model, §`prune-project`, Segmentation), so a part of `events.md` carries catalog identifiers and joins the literal search. `files` gains each part, with `part-of` naming its project file. `check_args` accepts a part's path for `remove` and `replace`. The result carries `part-findings` for the preview to show.
+- **Subjects.** The four project files come first, then each `measured` part from `project_parts`. Each part is segmented by its project file's grammar (041's data model, §`prune-project`, Segmentation), so a part of `events.md` carries catalog identifiers and joins the literal search. `files` stays the four project files. Each part gets the same record, with `part-of` naming its project file, in a new list, `part-files`. `check_args` accepts a part's path for `remove` and `replace`. The result carries `part-findings` for the preview to show.
+- **Bound.** `part-files`, `part-findings`, `move-candidates` and a move's referrers each grow with the project. They join `entries` among the lists moved to `lists-file` past the read size, each with its count inline (041's data model §`prune-project`, `form`; `BE-PAYLOAD-001`).
 - **Routing** (host; `framework/commands/prune.md`, *Project files*). An architecture entry goes to `system.md` or to the part it belongs in. A procedure leaving `AGENTS.md` goes to a part under `.ductus/docs/agents/`, a README beside the code, or a named skill. The host writes a new part before the apply, as it writes any home.
 - **Candidates.** A preview lists `move-candidates`: each distinct markdown target inside the project that a project file or part links to, outside every parts directory, the spec root and `.ductus/`, with the files linking it. The host judges which target is a part (spec, Resolved Questions, *How do existing pointers move*).
-- **Search.** A preview passing `move: [{from, to}]` runs the literal search for `from`'s project-relative path. The search covers the files the catalog search reads, plus the four project files and their parts. A match needs a boundary before the path, so a longer path ending in it does not match. The result lists each referrer with its occurrence count. `to` must be a new `*.md` path directly under a parts directory.
+- **Walk order.** The move proposals come before the entry walk, and the operator may end the run after them. The report then names each entry left unjudged as not examined, never as kept.
+- **Search.** A preview passing `move: [{from, to}]` runs the literal search for `from`'s project-relative path. The search covers every file the project's repository tracks, the spec root included, except `from` itself (`tracked_project_paths`). That scope differs from the catalog search's, which leaves out the spec root (`search` in `prune_project.rs`); here the spec root holds 69 of the 81 referrers. A file that is, or lies under, a link leaving the project is named and not read, as the catalog search names one. A match needs a boundary before the path, so a longer path ending in it does not match. The result lists each referrer with its occurrence count. `to` must be a new `*.md` path directly under a parts directory.
 - **Apply.** An apply passes the same `move` with the referrers the operator confirmed. A referrer the search did not find is refused. A found one left out is kept, so a decision record keeps the old name (§drift-prevention, the sweep rule). The apply then:
   - writes `to` create-only (`write_new_atomic`);
   - rewrites each confirmed referrer's occurrences to `to`'s path, keeping the prefix before each, so `../../docs/x.md` becomes `../../.ductus/docs/agents/x.md`;
@@ -95,9 +97,9 @@ With `project-files`:
 ### The migration entry announces the move (AC15)
 
 - **Entry.** The procedure is `framework/migrations/project-file-links-into-docs.md`, registered in `framework/migrations.toml`. Its `introduced_in` is read from `version` at implement time, as the release that carries this spec.
-- **Procedure.** It invokes `prune-project` as a preview, the way `framework/migrations/criterion-label-backfill.md` invokes its primitive. It reports each `move-candidates` target under `docs/`, with the project file linking it and `/{project}:prune --project`, and writes nothing. With no such target it reports nothing.
+- **Procedure.** It runs `prune-project` as a preview, through the CLI at the pointer path that Pre-flight brought to the pinned version. It does not use the session's MCP server, which in an upgrade can be an older binary (`framework/bootstrap/ductus.md`, the agent-runtimes note: MCP when registered, otherwise the CLI). It reports each `move-candidates` target under `docs/`, with the project file linking it and `/{project}:prune --project`, and writes nothing. With no such target it reports nothing. A result without `move-candidates` is reported as not checked, naming the command, never as no link.
 - **One list.** The same list serves AC14 and AC15.
-- **Installer change.** Its task therefore includes a scratch-adopter bootstrap run (`AGENTS.md`'s rule; the developer procedure §Exercising an installer change without a push).
+- **Installer change.** Its task therefore includes a scratch-adopter bootstrap run (`AGENTS.md`'s rule; **§Exercising an installer change without a push** in `docs/developing-ductus.md`).
 - **Not an impact on 027.** The entry changes none of 027's contract, and no spec has declared 027 for adding one (`git grep '^cross-spec-impact:.*027' -- 'specs/*/spec.md'` finds none).
 
 ### A shared constitution's parts (AC16, AC17)
@@ -122,11 +124,14 @@ With `project-files`:
 
 ### This repository's procedure file moves
 
-`docs/developing-ductus.md` moves to `.ductus/docs/agents/developing-ductus.md` in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
+`docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`, in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
 
 - **Why in 087.** A real tree proves AC14's move before `done`, so a defect it finds lands in this spec. The tree holds 98 occurrences in 81 tracked files (`git grep -l` and `-c`, 2026-11-24): 69 specs, 7 scripts, 2 `runtime/src`, 1 workflow, `README.md` and `AGENTS.md`.
-- **What stays.** This spec's and this plan's decision records keep the old name, as referrers the operator does not confirm.
+- **The run is the move.** The walk stops after the move proposal (*Walk order*, above). Judging the rest of `AGENTS.md`'s entries is not part of this task.
+- **Records.** Every referrer is confirmed, this spec's own files included, so the citations of the procedure's headings follow the file. The substitution turns a line recording the move into `X → X`, and a recorded measurement into a claim about the new path. The next commit restores each such line to the old path in the `` ` → ` `` form, or rewords it into non-path form. Body path existence exempts that form, so it does not read such a line as a dead path (`framework/reference/analyze.md`).
+- **Commit shape.** The rename and the referrer substitution land in one commit, apart from every other edit, so that each spec it touches reads it as a mechanical sweep (§drift-prevention). The sweep-targets edit and the record restoration follow in a commit of their own.
 - **Sweep targets.** `AGENTS.md`'s sweep-targets list gains `.ductus/docs/` (spec, *Sweeping*).
+- **`AGENTS.md` size.** The file names the path 4 times (`git grep -c`, 2026-11-24). Each rewrite adds 15 bytes and the sweep-targets entry adds 17, so the file grows by 77 bytes against its 50,000-byte ceiling (`scripts/lint-governing-size.sh`). It measured 49,427 bytes, a figure that includes another session's uncommitted edits. The task re-measures before committing.
 
 ### Every registry layout (AC18)
 
@@ -145,7 +150,7 @@ A fixture of four project files with no `.ductus/docs/` asserts each.
 
 ### Tests fail without their behavior (AC10)
 
-Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; the developer procedure §Proving a test fails). The task that adds a test records the proof in its commit.
+Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Proving a test fails** in `docs/developing-ductus.md`). The task that adds a test records the proof in its commit.
 
 ## Affected Files
 
@@ -178,8 +183,7 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; the deve
 | `framework/migrations.toml` | Modify | Register the entry |
 | `framework/migrations/project-file-links-into-docs.md` | Create | Report project-file links into `docs/` |
 | `README.md` | Modify | `[artifacts]` limits parts; the moved file's path |
-| `docs/developing-ductus.md` | Move | To `.ductus/docs/agents/developing-ductus.md` |
-| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part |
+| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
 | `AGENTS.md` | Modify | Pointer to the part; sweep targets |
 | `.github/workflows/framework-checks.yml` | Modify | The moved file's path |
 | `runtime/src/parser/mod.rs` | Modify | The moved file's path |
@@ -201,8 +205,10 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; the deve
 | `specs/050-constitution/spec.md` | Modify | Signpost |
 | `specs/075-agents-md-holds-what-every-session-needs/spec.md` | Modify | Routing row; signpost |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Signpost |
+| `specs/067-analyze-and-audit-checks/data-model.md` | Modify | `plan-consistency` judges the parts too |
+| `specs/067-analyze-and-audit-checks/spec.md` | Modify | Signpost |
 
-The 69 spec files that name `docs/developing-ductus.md` are re-pointed by the move too, except the decision records the operator keeps.
+The 69 spec files that name the procedure file's old path are re-pointed by the move too.
 
 ## Data Model
 
@@ -214,7 +220,7 @@ This spec adds no `data-model.md`, because each shape belongs to its primitive's
 
 ## Trade-offs
 
-- **Rejected: a new primitive listing parts.** It needs seven registration sites (the developer procedure §Adding or removing a runtime primitive), an allow entry per registry layout, and an entry in two commands' `ToolSearch` lines. It would be a second tool serving a list `check-artifact-size` must produce anyway, for AC4–AC6.
+- **Rejected: a new primitive listing parts.** It needs seven registration sites (**§Adding or removing a runtime primitive** in `docs/developing-ductus.md`), an allow entry per registry layout, and an entry in two commands' `ToolSearch` lines. It would be a second tool serving a list `check-artifact-size` must produce anyway, for AC4–AC6.
 - **Rejected: renumbering `/analyze` so step 17's call precedes step 15.** Up to 54 files cite those step numbers (`git grep -l -E 'step 1[5-9]|step 2[0-2]|steps? 1[5-9]'` over `framework/`, `runtime/`, `scripts/`, `docs/` and `specs/`, 2026-11-24; an upper bound, since the pattern also matches other commands' steps). Reading step 17's result in step 15 would reverse the walk's order. The chosen route costs one more call per interactive `/analyze`, whose result with no parts is 591 bytes (063's data model, **Size**).
 - **Rejected: nesting parts inside each `project-files` record.** It makes the four-record list unbounded, and the staged CLI reads that list inline.
 - **Rejected: the host moving the file and editing each referrer.** Here that is 98 occurrences in 81 files, and a mechanical rewrite is runtime-eligible (§runtime-boundary, *Eligibility criteria*).
@@ -234,8 +240,10 @@ This spec adds no `data-model.md`, because each shape belongs to its primitive's
 | 050 | Constitution tree, routing, live artifacts, canonical sources | Signpost |
 | 055 | `resolve-constitutions` parts; `/target` step 4; departure reason | Signpost; data model; departure reason |
 | 063 | `check-artifact-size` parts and findings; `/analyze` steps 15 and 17 | Signpost; data model; scenario sentence |
+| 067 | `plan-consistency`'s judgment of `system.md` covers its parts | Signpost; data-model sentence |
 | 075 | Routing-table row; memory-routing line | Row edit; signpost |
 
 - **Signposts.** Each is a blockquote. A blockquote line induces no `dependencies:` edge (`derive-dependencies`), so no cycle forms. It adds no criterion or task, so each owner stays `done` (§spec-lifecycle).
 - **Read scopes.** No spec's criterion or scenario states the read scopes 087 widens. A `git grep` of `specs/*/spec.md` and `specs/*/scenarios/*.md` for *Cross-spec context checklist*, *Always read* and *Plan does not contradict* finds only 071's kept-section marker, and that section stays.
-- **Not impacted.** 027 (see the migration decision); 067, since `check-artifacts` is unchanged; 071; and 081, since `.ductus/` is already among the artifacts.
+- **067.** Its data model's `plan-consistency` entry states the judgment as "a contradiction of `system.md`", which this spec widens to the file and its parts. 067's AC7, the step that judges against `specs/system.md`, still holds.
+- **Not impacted.** 027 (see the migration decision); 071; and 081, since `.ductus/` is already among the artifacts.

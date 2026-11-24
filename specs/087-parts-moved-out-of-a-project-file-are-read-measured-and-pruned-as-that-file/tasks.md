@@ -34,6 +34,7 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 - [ ] Add `parts`, `part-findings` and their counts to the project half's result in the bounded set, the `project-part` kind and its split fix, and `examined` counting parts (`runtime/src/primitives/check_artifact_size.rs`, `runtime/src/schema/primitives.rs`)
 - [ ] Update `CHECK_ARTIFACT_SIZE` in `runtime/src/schema/descriptions.rs`
+- [ ] Unit tests for AC1 and AC2's runtime half: over a fixture index `system.md` and one part, the result lists the part under its project file with state `measured`, and with the part unreadable, with state `unreadable` and in `skipped`
 - [ ] Unit tests for AC4 (a part one byte over is reported with its path, size, threshold and fix; one at the threshold is not), AC6 and AC12 and AC20 (each integrity kind listed), AC11 (any markdown file directly under a parts directory is measured), and a stored waiver covering a part by the decided rule
 - [ ] AC8 fixture: four project files and no `.ductus/docs/`; a feature-only call is byte-identical to before, and a `project-files` call keeps every earlier key and value with `parts` and `part-findings` empty
 - [ ] Update `runtime/tests/result_sizes.rs` for the new lists
@@ -53,9 +54,10 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 ## 4. `/analyze` reads parts and records the findings
 
 - [ ] `framework/commands/analyze.md`: Scope Boundaries name the parts; step 15 invokes `check-artifact-size` with `project-files` and no feature before judging the plan against `system.md`, reads every part listed and names them; step 17 records each `part-findings` entry as Advisory, family `project-parts`
-- [ ] `framework/reference/analyze.md`: in §Plan consistency's *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
+- [ ] `framework/reference/analyze.md`: in §Plan consistency (blocking if plan exists), *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
 - [ ] `runtime/src/interpreter/analyze_tally.rs`: the `check-artifact-size` arm adds `part-findings-count` to advisory; an interpreter test shows an exec `/analyze` counting an unlinked part
 - [ ] Add the signpost in `specs/022-deterministic-runtime/spec.md`, a blockquote linking this spec, for the tally and the scanner's visibility
+- [ ] In `specs/067-analyze-and-audit-checks/data-model.md`, make the `plan-consistency` entry's "a contradiction of `system.md`" cover its parts, and add a signpost in `specs/067-analyze-and-audit-checks/spec.md`
 
 - **Done when**: the interpreter test passes and is proven to fail without the arm (AC10); a fixture `/analyze` run over a project with an unlinked part and a stray directory records each as an Advisory `project-parts` finding, and with the part unreadable records the plan-against-`system.md` judgment unexamined (AC1, AC2, AC6, AC12, AC20); the commit records each registry layout's impact (AC18).
 
@@ -78,8 +80,9 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 
 ## 7. `prune-project` walks parts
 
-- [ ] Add each `measured` part as a subject after the four files, segmented by its project file's grammar; add `part-of` to `files`; have `check_args` accept a part's path; add `part-findings` to the result (`runtime/src/primitives/prune_project.rs`, `runtime/src/schema/primitives.rs`, `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs`)
-- [ ] Unit tests: a fixture index and part yield the part's entries, and an apply removes a part's entry; a part of `events.md` joins the literal search; the AC8 fixture keeps every earlier key and value
+- [ ] Add each `measured` part as a subject after the four files, segmented by its project file's grammar, with its record in the new `part-files` list (`files` stays the four project files); have `check_args` accept a part's path; add `part-findings`; bound `part-files` and `part-findings` with `entries` (`runtime/src/primitives/prune_project.rs`, `runtime/src/schema/primitives.rs`, `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs`)
+- [ ] Unit tests: a fixture index and part yield the part's entries, and an apply removes a part's entry; a part of `events.md` joins the literal search; past the read size the new lists are in the lists file with their counts inline; the AC8 fixture keeps every earlier key and value
+- [ ] Update `prune-project`'s case in `runtime/tests/result_sizes.rs`
 - [ ] `framework/commands/prune.md` *Project files*: walk the parts, show `part-findings` in the preview, and route an architecture entry to `system.md` or the part it belongs in (AC7)
 - [ ] Update `specs/041-task-pruning/data-model.md` §`prune-project`
 
@@ -87,11 +90,12 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 
 ## 8. `prune-project` moves a pointer's target
 
-- [ ] Preview: `move-candidates`, and with `move` the literal, boundary-bounded referrer search with occurrence counts
+- [ ] Preview: `move-candidates`, and with `move` the literal, boundary-bounded referrer search with occurrence counts over every tracked file, the spec root included and `from` excepted; both lists bounded with `entries`
 - [ ] Apply with `move` and the confirmed referrers: write `to` create-only, rewrite each confirmed referrer keeping its prefix, rewrite the moved file's own relative links, remove `from`, each under the write guard; refuse an unfound referrer and keep an unconfirmed one
 - [ ] The CLI's `move` argument (`runtime/src/main.rs`), as `--replace-json` carries a list, through a file in the system temp directory
-- [ ] Unit tests: AC14's fixture (an `AGENTS.md` pointer to a markdown file under `docs/` that a second file also links) moves and re-points both links; a declined move writes nothing; a referrer changed since the read is refused; a longer path ending in `from` is not matched
-- [ ] `framework/commands/prune.md`: the procedure route to `.ductus/docs/agents/`, a README or a named skill (AC13); the move, showing the search and confirming each referrer; Scope Boundaries naming the referrer writes
+- [ ] Unit tests: AC14's fixture (an `AGENTS.md` pointer to a markdown file under `docs/` that a second file, under the spec root, also links) moves and re-points both links, and rewrites the moved file's own relative links; a declined move writes nothing; a referrer changed since the read is refused; a longer path ending in `from` is not matched
+- [ ] Update the `result_sizes.rs` case for the move's lists
+- [ ] `framework/commands/prune.md`: the procedure route to `.ductus/docs/agents/`, a README or a named skill (AC13); the move proposals before the entry walk, showing the search and confirming each referrer, after which the operator may end the run with each unjudged entry reported as not examined; Scope Boundaries naming the referrer writes
 - [ ] Update `specs/041-task-pruning/data-model.md` and add the signpost in `specs/041-task-pruning/spec.md`
 
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over AC14's fixture shows the search, moves the file and re-points both links on confirmation, and writes nothing when declined (AC14); the commit records each registry layout's impact (AC18).
@@ -117,18 +121,19 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 
 ## 11. The migration entry
 
-- [ ] `framework/migrations/project-file-links-into-docs.md`: invoke `prune-project` as a preview, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing
+- [ ] `framework/migrations/project-file-links-into-docs.md`: run `prune-project` as a preview through the CLI at the pointer path Pre-flight acquired, never the session's MCP server, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing; a result without `move-candidates` is reported as not checked, naming the command
 - [ ] Register it in `framework/migrations.toml`, with `introduced_in` read from `version` when this task runs
-- [ ] Two scratch-adopter bootstrap runs, per the developer procedure §Exercising an installer change without a push: one adopter whose `AGENTS.md` links a markdown file under `docs/`, and one with no such link
+- [ ] Three scratch-adopter bootstrap runs, per **§Exercising an installer change without a push** in `docs/developing-ductus.md`: one adopter whose `AGENTS.md` links a markdown file under `docs/`, one with no such link, and one whose pointer binary predates `move-candidates`
 
-- **Done when**: the first run reports the link and names `/{project}:prune --project`, moving and rewriting nothing, and the second reports nothing (AC15); the commit records each registry layout's impact (AC18).
+- **Done when**: the first run reports the link and names `/{project}:prune --project`, moving and rewriting nothing, the second reports nothing, and the third reports not checked (AC15); the commit records each registry layout's impact (AC18).
 
 ## 12. This repository's procedure file moves
 
 Runs after every other task, from a session started after task 8's build is installed: `mcp__ductus__*` serves the binary the session started with, so an earlier session's server lacks `move`.
 
-- [ ] Run `/ductus:prune --project` here and move `docs/developing-ductus.md` to `.ductus/docs/agents/developing-ductus.md`, confirming every referrer the search finds except this spec's own `spec.md`, `plan.md` and `tasks.md`, which record the decision
-- [ ] Add `.ductus/docs/` to `AGENTS.md`'s sweep-targets list
-- [ ] Run `scripts/audit/run-all.sh` after the commit
+- [ ] Run `/ductus:prune --project` here, confirm the move `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` with every referrer the search finds, this spec's own files included, and end the run after the move, before the entry walk
+- [ ] Commit the rename and substitution alone, as a mechanical sweep
+- [ ] In a commit of its own: add `.ductus/docs/` to `AGENTS.md`'s sweep-targets list; re-measure `AGENTS.md` against its 50,000-byte ceiling; restore each line of this spec's `spec.md` and `plan.md` that the substitution made `X → X`, or that records a measurement of the old path, to the old path in the `` ` → ` `` form or to non-path form
+- [ ] Run `scripts/audit/run-all.sh` after the commits
 
-- **Done when**: the file is at its new path; `git grep -l 'docs/developing-ductus.md'` lists only this spec's own three files; `check-corpus-links` and the audit run pass; the commit names each file the move wrote.
+- **Done when**: the file is at its new path; every line `git grep -n 'docs/developing-ductus.md'` lists records the move in the `` ` → ` `` form; the two commits' diffs hold no `X → X`; `check-corpus-links`, `scripts/lint-governing-size.sh` and the audit run pass; the sweep commit names each file the move wrote.
