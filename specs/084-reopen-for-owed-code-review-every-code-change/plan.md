@@ -93,7 +93,7 @@ A seed's window starts after the commit that added the record to history, not at
 
 `fix_rounds::RoundSubject` takes an optional feature. `round_paths` leaves out `{specs-root}/review.md` for the project subject (AC14). `validate_feature`, `feature_rounds_dir` (a project subject uses `.ductus/review-rounds/project`, a name no feature directory can take) and the callers `start_fix_rounds::run`, `brief_re_read::run`, `read_re_read::run` (with `round_dir_to_read`) and `check_prescriptions` accept it.
 
-`/ductus:review --project` reviews under the project record, and `--all` includes it. The record's shape is in [data-model.md](data-model.md).
+`/ductus:review --project` reviews under the project record, and `--all` includes it. The command reads its window start and its paths from `check-unreviewed-code`'s `unclaimed`, so its text lands with that primitive and no second primitive reads the record (the agent's recommendation, adopted by the operator, 2026-11-24). Rejected: `compute-review-scope` answering for the project when called with no feature, which gives the record a second reader and one more primitive an optional feature. The record's shape is in [data-model.md](data-model.md).
 
 ### `check-unreviewed-code`
 

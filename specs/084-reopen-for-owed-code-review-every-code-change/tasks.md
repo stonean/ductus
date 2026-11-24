@@ -111,7 +111,6 @@ Model: fable (owner, 2026-11-24).
 - [ ] `write-review` with no `feature` writes `{specs-root}/review.md` as `data-model.md` states, and `--seed` writes the seed
 - [ ] The function that finds the code no spec claims after the project record's window start, a seed's starting after the commit that added it; the project review's scope reads it, and task 9 exposes it
 - [ ] `fix_rounds::RoundSubject` takes an optional feature, `round_paths` leaves out `{specs-root}/review.md`, and its callers, `read_re_read::run` among them, accept a project subject (AC14)
-- [ ] `framework/commands/review.md` gains `--project`, and `--all` includes it
 - [ ] Seed this repository's `specs/review.md`
 
 - **Done when**: AC6 and AC14 hold, a project review over a fixture's unclaimed commit records it, and its fix rounds leave its own record out.
@@ -125,6 +124,7 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 - [ ] The primitive at `at`, reading spec directories, statuses, plans and review records from that commit's tree and never the disk, with `done-specs`, `unclaimed`, `not-examined` and `mode`, and its seven registration sites
 - [ ] `[review] unreviewed-push`'s reader, its `PrimitiveError` variant, `runtime/src/schema/config_keys.rs` and `framework/bootstrap/ductus.md` §Project Configuration
 - [ ] The `since` count over first-parent commits (AC17)
+- [ ] `framework/commands/review.md` gains `--project`, and `--all` includes it: a project review reads its window start and paths from this primitive's `unclaimed` (moved here from task 8, which builds what it writes; owner, 2026-11-24)
 - [ ] Fixtures for AC4's directions, among them a shallow history, a tree holding no project record, a staging spec folded below `done`, an `at` that is not `HEAD`, and a seed whose adding commit holds code
 
 - **Done when**: AC4 and AC17 hold, an invalid key value fails naming the key and the file, and each fixture fails with its behavior removed.
