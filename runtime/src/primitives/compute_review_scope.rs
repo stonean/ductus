@@ -3637,8 +3637,6 @@ mod tests {
         }
     }
 
-    /// A subject naming no spec keeps 079's plan rule: a path one claimant's plan lists
-    /// is that claimant's, and the other claimant's scope leaves it out.
     /// How many commits `base..HEAD` holds, counted by a walk of the test's own.
     fn commits_since(repo: &Repository, base: &str) -> usize {
         let mut walk = repo.revwalk().unwrap();
@@ -3821,6 +3819,8 @@ mod tests {
         }
     }
 
+    /// A subject naming no spec keeps 079's plan rule: a path one claimant's plan lists
+    /// is that claimant's, and the other claimant's scope leaves it out.
     #[test]
     fn a_planned_path_of_an_unnamed_multi_spec_commit_goes_to_the_plan_naming_it() {
         let (tmp, repo, _) = two_specs(&["src/x.rs"], &[]);
