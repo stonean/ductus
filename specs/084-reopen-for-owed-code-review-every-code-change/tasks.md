@@ -130,11 +130,11 @@ Handed on from task 8, which built `check_unreviewed_code.rs`'s `project_window`
 - Under `ductus exec` the walker seeds the session's `feature` into every primitive, so `--project` has to drop it, or each review primitive reviews the targeted feature.
 - `framework/commands/review.md`'s Scope Boundaries names `specs/NNN/review.md` and `.ductus/review-rounds/{feature}/` as what a run writes: a `--project` run writes `{specs-root}/review.md` and `.ductus/review-rounds/project/`.
 
-- [ ] The primitive at `at`, reading spec directories, statuses, plans and review records from that commit's tree and never the disk, with `done-specs`, `unclaimed`, `not-examined` and `mode`, and its seven registration sites
-- [ ] `[review] unreviewed-push`'s reader, its `PrimitiveError` variant, `runtime/src/schema/config_keys.rs` and `framework/bootstrap/ductus.md` §Project Configuration
-- [ ] The `since` count over first-parent commits (AC17)
-- [ ] `framework/commands/review.md` gains `--project`, and `--all` includes it: a project review reads its window start and paths from this primitive's `unclaimed` (moved here from task 8, which builds what it writes; owner, 2026-11-24)
-- [ ] Fixtures for AC4's directions, among them a shallow history, a tree holding no project record, a staging spec folded below `done`, an `at` that is not `HEAD`, and a seed whose adding commit holds code
+- [x] The primitive at `at`, reading spec directories, statuses, plans and review records from that commit's tree and never the disk, with `done-specs`, `unclaimed`, `not-examined` and `mode`, and its seven registration sites
+- [x] `[review] unreviewed-push`'s reader, its `PrimitiveError` variant, `runtime/src/schema/config_keys.rs` and `framework/bootstrap/ductus.md` §Project Configuration
+- [x] The `since` count over first-parent commits (AC17)
+- [x] `framework/commands/review.md` gains `--project`, and `--all` includes it: a project review reads its window start and paths from this primitive's `unclaimed` (moved here from task 8, which builds what it writes; owner, 2026-11-24)
+- [x] Fixtures for AC4's directions, among them a shallow history, a tree holding no project record, a staging spec folded below `done`, an `at` that is not `HEAD`, and a seed whose adding commit holds code
 
 - **Done when**: AC4 and AC17 hold, an invalid key value fails naming the key and the file, and each fixture fails with its behavior removed.
 
@@ -151,6 +151,8 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 ### 11. The pre-push hook
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
+
+Handed on from task 9: the CLI's exit status is the hook's (`unreviewed_code_blocks` in `runtime/src/main.rs`), and it prints the report on stderr, one line per subject, path and subject not examined, before the result is bounded. `runtime/tests/check_unreviewed_code_cli.rs` proves each AC8 case on the binary but the shallow clone and the missing runtime, which are the hook fixtures' to prove.
 
 - [ ] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
 - [ ] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed, mirrored in `framework/bootstrap/govern.md` and `install.sh`; `framework/bootstrap/ductus-procedure.md` §Hook Installation
@@ -175,6 +177,8 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Both call `check-owed-work --all`, which names each spec it cannot judge in `skipped`. Family 27 fails today on a spec it cannot read or that resolves outside the repository, and counts an untracked one, so the step and the script fail on every skip reason but `untracked` (`QUAL-CLAIM-001`).
 
+Handed on from task 9: under `warn` the CLI exits 0 with the same stderr report, a path line being `check-unreviewed-code:   {path}`, so the step's per-path annotation reads those lines or the result's `done-specs` and `unclaimed`.
+
 - [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
 - [ ] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
 
@@ -183,6 +187,8 @@ Both call `check-owed-work --all`, which names each spec it cannot judge in `ski
 ### 14. The status count
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
+
+Handed on from task 9: the check took 2.0 s here at `3caa8357` (5,071 commits, 75 `done` specs, release build, one run), and `dashboard` runs on every `/ductus:status`, so measure the view's time with the block added. `check_unreviewed_code::compute` returns every list whole.
 
 - [ ] `dashboard`'s `unreviewed-code` block, `pipeline_view`'s line, `framework/commands/status.md` and `docs/slash-commands.md`
 
@@ -200,9 +206,24 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
+Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012, 021, 025, 049, 060, 062, 069 and 081) with 81 paths, the nine the plan measured, and 023 and 048 as not examined, which task 23 owns. A subject not examined blocks as reported code does, so `block` (task 19) waits on task 23 too.
+
 - [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
 
 - **Done when**: a push from this checkout runs the check and warns on the backlog, and the commit records the `done` specs and commit count it reports.
+
+### 24. `check-unreviewed-code --since` over the bar's window
+
+- [ ] `runtime/src/primitives/check_unreviewed_code.rs`, `runtime/src/primitives/check_stuck.rs` — `--since HEAD~30` at `3caa8357` took 41.7 s and 297 MB peak (`/usr/bin/time -l`, release build, one run): 1.4 s a commit, so bar (c)'s two weeks, about 1,300 commits by the spec's baseline, would take about 30 minutes, and `TreeListings` keeps each tip's walk and parents until the scope closes, so memory grows with every commit walked. Bound what a `since` walk keeps between commits, and measure again over a window of at least 300 commits
+- [ ] Decide whether a commit whose only unexamined subject is one `at` also fails to examine counts apart: all 30 of those commits read `not-examined`, for 023's and 048's records (task 23), so `commits-reporting` was 0
+
+- **Done when**: a `since` walk's peak memory does not grow with the commits walked, its time and memory over at least 300 commits are recorded in the commit, and AC17's fixture still passes.
+
+### 25. A removed spec's named-only commits and the project's scope
+
+- [ ] `runtime/src/primitives/commit_attribution.rs` — inferred from `Attributor::claims`, not yet run: a subject's spec claims a commit only while the attributor's source holds that spec's directory or the commit touches it, so once a staging spec is folded, or a spec consolidated away, a commit that only names it reads as claimed by no spec at any later tree. `check-unreviewed-code` would then report its code under `unclaimed` when it lies after the project record's window start, beside the upstream spec's entry for a fold below `done`, and for a fold from `done` too. Task 9's fold fixture seeds the record after the staging spec's commits, so it does not show this. Build the fixture with the seed first, and decide from what it shows whether the project's scope leaves such a commit to the spec that took the removed one's place
+
+- **Done when**: a fixture with the seed before a staging spec's named-only commit states what the check reports after the fold, and the check either leaves that code to the upstream spec or the plan says why the project reviews it too.
 
 ## Phase D — Delivery
 
@@ -249,5 +270,11 @@ This is the last task. The about 9 `done` specs measured as owing a review are r
 ### 22. Disposition out-of-spec finding: six mutants in two lists do not die on unchanged `HEAD`
 
 - [ ] `scripts/mutation/departure-waivers.py`, `scripts/mutation/site-anchors-020.py` — at `a6cba0be`, before task 8's change, `scripts/mutation/run.py` from a worktree of that commit reports `departure-waivers` M5, M8 and M11 and `site-anchors-020` M19 and M39 as SURVIVED, and `departure-waivers` M14 as a compile error (2026-11-24). Neither list names an expected survivor, so five tests pass with the behavior they name removed and one mutant proves nothing. Found by task 8's run of every mutant reaching the files it changed; `run.py --check`, the only run CI makes, validates anchors and runs none
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+### 23. Disposition out-of-spec finding: 023's and 048's review records are not valid YAML
+
+- [ ] `specs/023-govern-refinement/review.md`, `specs/048-govern-acquired-runtime/review.md` — the waiver `reason:` that `ec41a6c2` rewrote by hand in each record's `decisions:` list is an unquoted scalar holding a colon and a space ("… 2026-11-21: that prompt …"), so the frontmatter fails to parse (`serde_norway`: "mapping values are not allowed in this context", at the 140th line of 023's block and the 467th of 048's). Both specs are `done`, so `check-review-gate` answers already-done before it reads the record, and `check-artifacts --feature 023-govern-refinement` lists no finding on it. Found by task 9's first run of `check-unreviewed-code` here, which reports both specs as not examined (2026-11-24)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.

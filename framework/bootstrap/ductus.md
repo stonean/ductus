@@ -730,6 +730,17 @@ last_applied = "substitute-seed-placeholders"
 #
 # re-reads-off = "Reviews here run on a host without subagents, and no one runs the briefs."
 
+# Consumed by `check-unreviewed-code`, which the pre-push hook, the CI template
+# and /{project}:status run (not /ductus itself). `unreviewed-push` says what
+# code no review is going to read does to a push (spec 084): `"block"` stops the
+# push and fails the CI step, and `"warn"` prints the same report and lets both
+# pass. A subject the check cannot examine is treated as reported code is.
+# Absent means `"block"`. Any other value halts the check, naming the setting,
+# the value and the config file. It belongs to the `[review]` table above:
+# uncomment that header with it to use.
+#
+# unreviewed-push = "warn"
+
 # Consumed by /{project}:review (not /ductus itself). Excludes rule files from
 # /{project}:review's selection regardless of stack detection. The `reason`
 # field is mandatory (trimmed length ≥ 16 Unicode codepoints) and is the audit

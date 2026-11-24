@@ -90,6 +90,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "check-artifacts",
     "check-artifact-size",
     "check-owed-work",
+    "check-unreviewed-code",
     "derive-routing-candidates",
     "check-corpus-links",
     "check-orphaned-references",

@@ -35,8 +35,8 @@ MUTATIONS = [
     (
         'M4 a merge is attributed like any commit',
         'src/primitives/commit_attribution.rs',
-        'if commit.parent_count() > 1 {',
-        'if commit.parent_count() > 99 {',
+        'let paths = self.own_paths(commit)?;\n        if commit.parent_count() > 1 {',
+        'let paths = self.own_paths(commit)?;\n        if commit.parent_count() > 99 {',
         'commit_attribution::tests::a_clean_merge_claims_nothing_and_contributes_no_path',
     ),
     (
@@ -1113,15 +1113,15 @@ MUTATIONS = [
     (
         "M169 a fold brings another spec's text",
         'src/primitives/compute_review_scope.rs',
-        '                            !path.starts_with(&specs_prefix)\n                                && repo.join(path).symlink_metadata().is_ok()',
-        '                            repo.join(path).symlink_metadata().is_ok()',
+        '                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),',
+        '                        .filter(|path| holds(path)),',
         'compute_review_scope::tests::a_fold_brings_no_path_gone_from_disk_or_in_a_spec',
     ),
     (
         'M170 a fold brings a path gone from disk',
         'src/primitives/compute_review_scope.rs',
-        '                            !path.starts_with(&specs_prefix)\n                                && repo.join(path).symlink_metadata().is_ok()',
-        '                            !path.starts_with(&specs_prefix)',
+        '                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),',
+        '                        .filter(|path| !path.starts_with(&specs_prefix)),',
         'compute_review_scope::tests::a_fold_brings_no_path_gone_from_disk_or_in_a_spec',
     ),
     (
@@ -1169,8 +1169,8 @@ MUTATIONS = [
     (
         "M177 a gone spec's directory is read by its project path",
         'src/primitives/commit_attribution.rs',
-        '        let root = self.project.to_git(self.specs_root);\n',
-        '        let root = self.specs_root.to_string();\n',
+        '        let root = self.project.to_git(self.specs_root);\n        // By its number',
+        '        let root = self.specs_root.to_string();\n        // By its number',
         'compute_review_scope::tests::a_fold_in_a_repository_subdirectory_brings_its_code',
     ),
     (
@@ -1843,8 +1843,8 @@ MUTATIONS = [
     (
         'M329 a passed-over run reads as a plain reopen',
         'src/primitives/compute_review_scope.rs',
-        '            if passed_over {\n                BaseSource::ReopenPastPartialReview',
-        '            if passed_over && sha.is_empty() {\n                BaseSource::ReopenPastPartialReview',
+        '                if passed_over {\n                    BaseSource::ReopenPastPartialReview',
+        '                if passed_over && sha.is_empty() {\n                    BaseSource::ReopenPastPartialReview',
         'compute_review_scope::tests::a_run_that_stopped_early_or_does_not_parse_does_not_move_the_start',
     ),
     (
@@ -1906,15 +1906,15 @@ MUTATIONS = [
     (
         'M338 the walk for the last review stops at the reopen (spec 084, AC7)',
         'src/primitives/compute_review_scope.rs',
-        '    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
-        '    if let Some(spec) = spec_git_path\n        && let Some(sha) = find_in_progress_commit(repository, spec)?\n    {\n        walk.hide(Oid::from_str(&sha)?)?;\n    }\n    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
+        '    let commits = history_of(repository, at.id())?;\n    let shallow = repository.is_shallow();',
+        '    let mut walk = repository.revwalk()?;\n    walk.push(at.id())?;\n    walk.set_sorting(git2::Sort::TOPOLOGICAL)?;\n    if let Some(spec) = spec_git_path\n        && let Some(sha) = find_in_progress_commit_at(repository, spec, at.id())?\n    {\n        walk.hide(Oid::from_str(&sha)?)?;\n    }\n    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;\n    let shallow = repository.is_shallow();',
         'compute_review_scope::tests::a_reopen_keeps_the_code_committed_while_done_in_the_window compute_review_scope::tests::a_done_specs_window_starts_where_its_last_review_ended',
     ),
     (
         'M339 an uncommitted reopen starts at HEAD whatever was reviewed',
         'src/primitives/compute_review_scope.rs',
         '    Ok(match last.end {\n        Some(ReviewEnd::Finished { commit, unread }) => (',
-        '    let uncommitted = transition_is_uncommitted(project, specs_root, &args.feature, feature_dir)?;\n    Ok(match last.end.filter(|_| !uncommitted) {\n        Some(ReviewEnd::Finished { commit, unread }) => (',
+        '    let uncommitted = match on_disk {\n        Some(feature_dir) => transition_is_uncommitted(project, specs_root, feature, feature_dir)?,\n        None => false,\n    };\n    Ok(match last.end.filter(|_| !uncommitted) {\n        Some(ReviewEnd::Finished { commit, unread }) => (',
         'compute_review_scope::tests::an_uncommitted_reopen_keeps_the_code_committed_while_done_in_the_window',
     ),
     (

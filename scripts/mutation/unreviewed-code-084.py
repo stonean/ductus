@@ -1,0 +1,279 @@
+"""Mutation list for 084's `check-unreviewed-code` (AC4, AC17): the check at a
+commit (`runtime/src/primitives/check_unreviewed_code.rs`), the `[review]
+unreviewed-push` reader, the `since` count, the sources it reads at that commit
+(`commit_attribution.rs`'s plans and `may_claim`, `check_stuck.rs`'s reopening
+walk and listings scope, `compute_review_scope.rs`'s `base_at`), the CLI's exit
+status and the exec walk's project stop (`src/main.rs`, `src/interpreter/mod.rs`).
+
+Run with `python3 scripts/mutation/run.py scripts/mutation/unreviewed-code-084.py
+[ID ...]`; see run.py for the format. This file is data, read with
+ast.literal_eval: keep every value a literal. An id is never reused: a
+mutation that no longer applies is removed, and the next one takes the next
+free number. When the code a mutation anchors on changes, update the anchor
+in the same change; `run.py --check` names every anchor that no longer
+matches exactly once.
+"""
+
+EXPECTED_SURVIVORS = {}
+
+MUTATIONS = [
+    (
+        'M1 a spec at any status is checked as a done one',
+        'src/primitives/check_unreviewed_code.rs',
+        '            Some("done") => {}\n            Some(_) => continue,',
+        '            Some(_) => {}',
+        'check_unreviewed_code::tests::a_done_specs_code_and_unclaimed_code_are_reported_and_an_open_specs_is_not',
+    ),
+    (
+        'M2 a status that does not read is taken for draft',
+        'src/primitives/check_unreviewed_code.rs',
+        '            .and_then(|text| frontmatter_status(&text, Path::new(&spec)));',
+        '            .and_then(|text| frontmatter_status(&text, Path::new(&spec)))\n            .or(Some("draft".to_string()));',
+        'check_unreviewed_code::tests::an_unreadable_status_or_record_is_not_examined',
+    ),
+    (
+        'M3 a spec record that does not parse reads as no review',
+        'src/primitives/check_unreviewed_code.rs',
+        '        if tree_entry_id(self.tree, &record).is_some()\n            && record_at',
+        '        if false\n            && record_at',
+        'check_unreviewed_code::tests::an_unreadable_status_or_record_is_not_examined',
+    ),
+    (
+        'M4 a project record that does not parse reads as a seed',
+        'src/primitives/check_unreviewed_code.rs',
+        '    let unparsed =\n        tree_entry_id(&tree, &record).is_some() && record_at(repository, &tree, &record)?.is_none();',
+        '    let unparsed =\n        false && record_at(repository, &tree, &record)?.is_none();',
+        'check_unreviewed_code::tests::an_unreadable_status_or_record_is_not_examined',
+    ),
+    (
+        'M5 a shallow history fails the check for a spec',
+        'src/primitives/check_unreviewed_code.rs',
+        '            Ok((start, _, _)) => start,\n            Err(PrimitiveError::ShallowHistory { .. }) => return Ok(Err(SHALLOW.into())),\n',
+        '            Ok((start, _, _)) => start,\n',
+        'check_unreviewed_code::tests::a_shallow_history_names_each_subject_it_cannot_place',
+    ),
+    (
+        'M6 a path an in-progress spec shares is reported',
+        'src/primitives/check_unreviewed_code.rs',
+        '                    && candidate.status.as_deref() == Some("in-progress")',
+        '                    && candidate.status.as_deref() == Some("never")',
+        'check_unreviewed_code::tests::a_path_an_in_progress_spec_also_claims_passes',
+    ),
+    (
+        'M7 a path a spec at any other status shares passes',
+        'src/primitives/check_unreviewed_code.rs',
+        '                    && candidate.status.as_deref() == Some("in-progress")',
+        '                    && candidate.status.as_deref() != Some("done")',
+        'check_unreviewed_code::tests::a_path_an_in_progress_spec_also_claims_passes',
+    ),
+    (
+        "M8 a done spec's artifacts are reported as code",
+        'src/primitives/check_unreviewed_code.rs',
+        '                .filter(|path| !is_project_artifact(path, self.specs_root))\n                .filter(|path| !in_hand.contains(path))',
+        '                .filter(|path| !in_hand.contains(path))',
+        'check_unreviewed_code::tests::a_done_specs_code_and_unclaimed_code_are_reported_and_an_open_specs_is_not',
+    ),
+    (
+        "M9 a done spec's deletion is listed as a path to read",
+        'src/primitives/check_unreviewed_code.rs',
+        '        let (paths, deleted) = changed.into_iter().partition(|path| in_tree(path));',
+        '        let (paths, deleted) = changed.into_iter().partition(|path| in_tree(path) || true);',
+        'check_unreviewed_code::tests::a_done_specs_share_reads_the_plans_the_commit_holds_and_sets_a_deletion_apart',
+    ),
+    (
+        "M10 a fold's commit brings nothing",
+        'src/primitives/check_unreviewed_code.rs',
+        '                folded.extend(fold.committed(&commit, &claims.paths)?);',
+        '                let _ = fold.committed(&commit, &claims.paths)?;',
+        'check_unreviewed_code::tests::code_a_staging_spec_folded_below_done_brought_is_reported_under_its_upstream',
+    ),
+    (
+        'M11 a commit that may have folded is skipped with the rest',
+        'src/primitives/check_unreviewed_code.rs',
+        '            let may_fold = fold.may_have_folded(&commit)?;',
+        '            let may_fold = fold.may_have_folded(&commit)? && false;',
+        'check_unreviewed_code::tests::code_a_staging_spec_folded_below_done_brought_is_reported_under_its_upstream',
+    ),
+    (
+        'M12 an unclaimed deletion is dropped',
+        'src/primitives/check_unreviewed_code.rs',
+        '            } else {\n                code.deleted.insert(path);\n            }',
+        '            }',
+        'check_unreviewed_code::tests::a_committed_review_of_what_is_reported_clears_it',
+    ),
+    (
+        'M13 a subject not examined does not decide the state',
+        'src/primitives/check_unreviewed_code.rs',
+        '        if !self.not_examined.is_empty() {\n            UnreviewedState::NotExamined',
+        '        if false {\n            UnreviewedState::NotExamined',
+        'check_unreviewed_code::tests::a_tree_holding_no_project_record_is_not_examined_for_unclaimed_code',
+    ),
+    (
+        "M14 the project's code is read at HEAD, not at the commit asked",
+        'src/primitives/check_unreviewed_code.rs',
+        '        project_scope_at(project, repo, specs_root, at, None)?',
+        '        project_scope_at(project, repo, specs_root, &project.repository.head()?.peel_to_commit()?, None)?',
+        'check_unreviewed_code::tests::the_check_at_a_commit_reads_nothing_from_head_or_the_disk',
+    ),
+    (
+        'M15 since walks every parent',
+        'src/primitives/check_unreviewed_code.rs',
+        '            walk.simplify_first_parent()?;\n',
+        '',
+        'check_unreviewed_code::tests::since_counts_the_first_parent_commits_reporting_code',
+    ),
+    (
+        'M16 since counts a commit not examined as reporting code',
+        'src/primitives/check_unreviewed_code.rs',
+        '                count.reporting += usize::from(state == UnreviewedState::Found);',
+        '                count.reporting += usize::from(state != UnreviewedState::None);',
+        'check_unreviewed_code::tests::since_counts_the_first_parent_commits_reporting_code',
+    ),
+    (
+        'M17 since counts the commit it names',
+        'src/primitives/check_unreviewed_code.rs',
+        '            walk.hide(since.id())?;\n            walk.simplify_first_parent()?;',
+        '            for parent in since.parent_ids() {\n                walk.hide(parent)?;\n            }\n            walk.simplify_first_parent()?;',
+        'check_unreviewed_code::tests::since_counts_the_first_parent_commits_reporting_code',
+    ),
+    (
+        'M18 any string value of the key warns',
+        'src/primitives/check_unreviewed_code.rs',
+        '        Some(toml::Value::String(mode)) if mode == "warn" => Ok(UnreviewedPushMode::Warn),',
+        '        Some(toml::Value::String(mode)) if mode != "block" => Ok(UnreviewedPushMode::Warn),',
+        'check_unreviewed_code::tests::the_mode_is_block_unless_the_key_says_warn_and_any_other_value_is_an_error',
+    ),
+    (
+        'M19 an invalid value of the key falls back to block',
+        'src/primitives/check_unreviewed_code.rs',
+        '        Some(other) => Err(invalid(format!("the value is {}", one_line(other)))),',
+        '        Some(_) => Ok(UnreviewedPushMode::Block),',
+        'check_unreviewed_code::tests::the_mode_is_block_unless_the_key_says_warn_and_any_other_value_is_an_error',
+    ),
+    (
+        'M20 a review that is no table reads as absent',
+        'src/primitives/check_unreviewed_code.rs',
+        '        Some(other) => {\n            return Err(invalid(format!(\n                "`review` is {}, not a table",\n                other.type_str()\n            )));\n        }',
+        '        Some(_) => return Ok(UnreviewedPushMode::Block),',
+        'check_unreviewed_code::tests::the_mode_is_block_unless_the_key_says_warn_and_any_other_value_is_an_error',
+    ),
+    (
+        'M21 a configuration that does not parse is read as holding no key',
+        'src/primitives/check_unreviewed_code.rs',
+        '    let config: toml::Table = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {\n        path: path.clone(),\n        source,\n    })?;\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
+        '    let config: toml::Table = toml::from_str(&content).unwrap_or_default();\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
+        'check_unreviewed_code::tests::the_mode_is_block_unless_the_key_says_warn_and_any_other_value_is_an_error',
+    ),
+    (
+        'M22 past the read size the lists stay inline',
+        'src/primitives/check_unreviewed_code.rs',
+        '        result.done_specs = None;\n        result.unclaimed = None;\n        result.not_examined = None;\n',
+        '',
+        'check_unreviewed_code::tests::past_the_read_size_the_lists_move_to_a_file',
+    ),
+    (
+        "M23 a tree's attributor reads plans from the disk",
+        'src/primitives/commit_attribution.rs',
+        '        if let Some(tree) = &self.tree {\n            let plan',
+        '        if let Some(tree) = self.tree.as_ref().filter(|_| false) {\n            let plan',
+        'check_unreviewed_code::tests::the_check_at_a_commit_reads_nothing_from_head_or_the_disk',
+    ),
+    (
+        'M24 may_claim leaves out a spec whose directory the commit touched',
+        'src/primitives/commit_attribution.rs',
+        '        for (one, other) in [(own, before), (before, own)] {',
+        '        for (one, other) in [(own, own), (before, before)] {',
+        'commit_attribution::tests::may_claim_names_every_claimant_without_a_diff',
+    ),
+    (
+        'M25 may_claim leaves out a spec a commit removed',
+        'src/primitives/commit_attribution.rs',
+        '        for (one, other) in [(own, before), (before, own)] {',
+        '        for (one, other) in [(own, before)] {',
+        'commit_attribution::tests::may_claim_names_every_claimant_without_a_diff',
+    ),
+    (
+        'M26 may_claim leaves out the specs a subject names',
+        'src/primitives/commit_attribution.rs',
+        '        let mut forms = subject_scope_forms(subject);\n        let repository',
+        '        let mut forms: Vec<FeatureForm> = Vec::new();\n        let _ = subject;\n        let repository',
+        'commit_attribution::tests::may_claim_names_every_claimant_without_a_diff',
+    ),
+    (
+        "M27 may_claim names a merge's subject",
+        'src/primitives/commit_attribution.rs',
+        '        if commit.parent_count() > 1 {\n            return Ok(Vec::new());',
+        '        if commit.parent_count() > 99 {\n            return Ok(Vec::new());',
+        'commit_attribution::tests::may_claim_names_nothing_for_a_merge',
+    ),
+    (
+        "M28 a reopening's start is read at HEAD whatever commit is asked",
+        'src/primitives/check_stuck.rs',
+        'fn walk_reopenings(repo: &Repository, spec_rel: &str, at: git2::Oid) -> Result<ReopeningWalk> {\n    let mut walk = repo.revwalk()?;\n    walk.push(at)?;',
+        'fn walk_reopenings(repo: &Repository, spec_rel: &str, at: git2::Oid) -> Result<ReopeningWalk> {\n    let mut walk = repo.revwalk()?;\n    walk.push_head()?;',
+        'check_stuck::tests::a_reopenings_start_is_read_at_the_commit_asked',
+    ),
+    (
+        "M29 a passed-over done spec's window is HEAD's reopening",
+        'src/primitives/compute_review_scope.rs',
+        '        match find_in_progress_commit_at(repository, &spec_rel, head)? {',
+        '        match crate::primitives::check_stuck::find_in_progress_commit(repository, &spec_rel)? {',
+        'check_unreviewed_code::tests::a_done_spec_whose_only_run_stopped_early_reports_from_its_reopenings_start',
+    ),
+    (
+        'M30 a listings scope finds no spec under an earlier slug',
+        'src/primitives/check_stuck.rs',
+        '            .find(|(known, _, _)| *known == form)\n            .and_then(|(_, name, _)| in_directory(name))',
+        '            .find(|(known, _, _)| *known != form)\n            .and_then(|(_, name, _)| in_directory(name))',
+        'check_stuck::tests::a_listings_scope_answers_as_the_trees_do',
+    ),
+    (
+        'M31 a nested listings scope ends the outer one',
+        'src/primitives/check_stuck.rs',
+        '        if self.opened {\n            LISTINGS.with_borrow_mut(|listings| *listings = None);',
+        '        if true {\n            LISTINGS.with_borrow_mut(|listings| *listings = None);',
+        'check_stuck::tests::a_listings_scope_answers_as_the_trees_do',
+    ),
+    (
+        'M32 a listings scope outlives its value',
+        'src/primitives/check_stuck.rs',
+        '        if self.opened {\n            LISTINGS.with_borrow_mut(|listings| *listings = None);',
+        '        if false {\n            LISTINGS.with_borrow_mut(|listings| *listings = None);',
+        'check_stuck::tests::a_listings_scope_answers_as_the_trees_do',
+    ),
+    (
+        "M33 a scope's window hides the named commit alone",
+        'src/primitives/check_stuck.rs',
+        '        .filter(|oid| !reached.contains(oid))',
+        '        .filter(|oid| **oid != hidden)',
+        'check_stuck::tests::a_listings_scope_answers_as_the_trees_do',
+    ),
+    (
+        'M34 the check exits 1 under warn',
+        'src/main.rs',
+        '    r.mode == UnreviewedPushMode::Block && r.state != UnreviewedState::None',
+        '    r.state != UnreviewedState::None',
+        '--bin ductus unreviewed_code_blocks_under_block_alone_and_a_subject_not_examined_is_no_pass',
+    ),
+    (
+        'M35 a subject not examined passes the check',
+        'src/main.rs',
+        '    r.mode == UnreviewedPushMode::Block && r.state != UnreviewedState::None',
+        '    r.mode == UnreviewedPushMode::Block && r.state == UnreviewedState::Found',
+        '--bin ductus unreviewed_code_blocks_under_block_alone_and_a_subject_not_examined_is_no_pass',
+    ),
+    (
+        "M36 a project walk keeps the session's target",
+        'src/main.rs',
+        '    if ductus::interpreter::reviews_the_project(context) {',
+        '    if ductus::interpreter::reviews_the_project(context) && false {',
+        '--bin ductus a_project_review_drops_the_sessions_target_from_the_walk',
+    ),
+    (
+        'M37 a project walk reaches the scope step',
+        'src/interpreter/mod.rs',
+        '    if name == "compute-review-scope" && reviews_the_project(&bindings) {',
+        '    if name == "compute-review-scope" && reviews_the_project(&bindings) && false {',
+        'interpreter::tests::a_project_review_stops_at_the_scope_step',
+    ),
+]

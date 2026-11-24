@@ -177,7 +177,22 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
 /// holding the spec below `done` and no later commit leaves `done`, so the start may lie
 /// before the cut; and any libgit2 failure.
 pub(crate) fn find_in_progress_commit(repo: &Repository, spec_rel: &str) -> Result<Option<String>> {
-    let walk = walk_reopenings(repo, spec_rel)?;
+    let head = repo.head()?.peel_to_commit()?.id();
+    find_in_progress_commit_at(repo, spec_rel, head)
+}
+
+/// [`find_in_progress_commit`] as the commit `at` and its history hold the spec,
+/// for a caller that reads a commit and never `HEAD` (spec 084).
+///
+/// # Errors
+///
+/// As [`find_in_progress_commit`].
+pub(crate) fn find_in_progress_commit_at(
+    repo: &Repository,
+    spec_rel: &str,
+    at: git2::Oid,
+) -> Result<Option<String>> {
+    let walk = walk_reopenings(repo, spec_rel, at)?;
     if walk.cut && walk.newest.is_some() {
         return Err(PrimitiveError::ShallowHistory {
             spec: spec_rel.to_string(),
@@ -189,7 +204,8 @@ pub(crate) fn find_in_progress_commit(repo: &Repository, spec_rel: &str) -> Resu
 /// Whether `HEAD` lies inside a reopening, so an uncommitted return to `in-progress` is
 /// that reopening's and starts nothing.
 pub(crate) fn reopening_is_open(repo: &Repository, spec_rel: &str) -> Result<bool> {
-    Ok(walk_reopenings(repo, spec_rel)?.open_at_head)
+    let head = repo.head()?.peel_to_commit()?.id();
+    Ok(walk_reopenings(repo, spec_rel, head)?.open_at_tip)
 }
 
 /// The commit that started the `done` pass `at` lies in, or `None` when the spec is
@@ -263,15 +279,16 @@ pub(crate) fn leaves_done(repo: &Repository, spec_rel: &str, oid: git2::Oid) -> 
 /// What one walk of a spec's status history says about its reopenings.
 struct ReopeningWalk {
     newest: Option<git2::Oid>,
-    open_at_head: bool,
+    /// The commit the walk started from lies inside a reopening.
+    open_at_tip: bool,
     /// A shallow clone's history stops inside the newest reopening or a pass before
     /// it, with no later commit leaving `done` to start one afresh.
     cut: bool,
 }
 
-fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
+fn walk_reopenings(repo: &Repository, spec_rel: &str, at: git2::Oid) -> Result<ReopeningWalk> {
     let mut walk = repo.revwalk()?;
-    walk.push_head()?;
+    walk.push(at)?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
 
     let shallow = repo.is_shallow();
@@ -309,10 +326,9 @@ fn walk_reopenings(repo: &Repository, spec_rel: &str) -> Result<ReopeningWalk> {
             newest = Some(oid);
         }
     }
-    let head = repo.head()?.peel_to_commit()?.id();
     Ok(ReopeningWalk {
         newest,
-        open_at_head: inside.contains(&head),
+        open_at_tip: inside.contains(&at),
         cut,
     })
 }
@@ -332,9 +348,7 @@ fn status_of_commit(
     spec_rel: &str,
 ) -> Result<Option<String>> {
     let tree = repo.find_commit(oid)?.tree()?;
-    let Some(blob_id) =
-        feature_file_in_tree(repo, &tree, spec_rel).and_then(|path| tree_entry_id(&tree, &path))
-    else {
+    let Some((_, blob_id)) = feature_entry_in_tree(repo, &tree, spec_rel) else {
         return Ok(None);
     };
     if let Some(cached) = cache.get(&blob_id) {
@@ -360,8 +374,24 @@ pub(crate) fn feature_file_in_tree(
     tree: &git2::Tree<'_>,
     git_path: &str,
 ) -> Option<String> {
-    if tree_entry_id(tree, git_path).is_some() {
-        return Some(git_path.to_string());
+    feature_entry_in_tree(repo, tree, git_path).map(|(path, _)| path)
+}
+
+/// [`feature_file_in_tree`] with the object id found there, read through
+/// [`TreeListings`] while a caller holds one open.
+pub(crate) fn feature_entry_in_tree(
+    repo: &Repository,
+    tree: &git2::Tree<'_>,
+    git_path: &str,
+) -> Option<(String, git2::Oid)> {
+    if TreeListings::is_open()
+        && let Some((directory_path, file)) = git_path.rsplit_once('/')
+        && let Some((root, directory)) = directory_path.rsplit_once('/')
+    {
+        return TreeListings::feature_entry(repo, tree, (root, directory, file));
+    }
+    if let Some(id) = tree_entry_id(tree, git_path) {
+        return Some((git_path.to_string(), id));
     }
     let (directory_path, file) = git_path.rsplit_once('/')?;
     let (root, directory) = directory_path.rsplit_once('/')?;
@@ -378,7 +408,236 @@ pub(crate) fn feature_file_in_tree(
         .filter_map(|entry| entry.name().ok().map(str::to_string))
         .find(|name| parse_feature_dir(name).as_ref() == Some(&form))?;
     let renamed = format!("{root}/{name}/{file}");
-    tree_entry_id(tree, &renamed).map(|_| renamed)
+    tree_entry_id(tree, &renamed).map(|id| (renamed, id))
+}
+
+/// One tree's entries by name, and those whose name is a feature directory's, in
+/// the tree's order, each parsed once.
+pub(crate) struct Listing {
+    /// The tree's own id.
+    pub(crate) id: git2::Oid,
+    entries: HashMap<String, git2::Oid>,
+    /// Each entry named as a feature directory is: its form, its name and its id.
+    pub(crate) features: Vec<(crate::primitives::FeatureForm, String, git2::Oid)>,
+}
+
+impl Listing {
+    fn read(tree: &git2::Tree<'_>) -> Self {
+        let mut listing = Self {
+            id: tree.id(),
+            entries: HashMap::new(),
+            features: Vec::new(),
+        };
+        for entry in tree {
+            let Ok(name) = entry.name() else { continue };
+            listing.entries.insert(name.to_string(), entry.id());
+            if let Some(form) = parse_feature_dir(name) {
+                listing.features.push((form, name.to_string(), entry.id()));
+            }
+        }
+        listing
+    }
+}
+
+/// The listing of the spec root `root`, a path from the git work tree, as `tree`
+/// holds it: `None` when the tree holds no such directory. Read once per
+/// [`TreeListings`] scope, and from the tree outside one.
+pub(crate) fn spec_root_listing(
+    repo: &Repository,
+    tree: &git2::Tree<'_>,
+    root: &str,
+) -> Option<std::rc::Rc<Listing>> {
+    let id = tree.get_path(Path::new(root)).ok()?.id();
+    TreeListings::of(repo, id)
+        .or_else(|| Some(std::rc::Rc::new(Listing::read(&repo.find_tree(id).ok()?))))
+}
+
+thread_local! {
+    /// The listings a [`TreeListings`] scope holds on this thread, by tree id.
+    static LISTINGS: std::cell::RefCell<Option<HashMap<git2::Oid, std::rc::Rc<Listing>>>> =
+        const { std::cell::RefCell::new(None) };
+    /// The walks a [`TreeListings`] scope holds on this thread, by the commit
+    /// each started from.
+    static WALKS: std::cell::RefCell<HashMap<git2::Oid, std::rc::Rc<Walked>>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+/// One walk of a commit's history: its commits newest first, each after every
+/// commit descended from it, and each one's parents.
+struct Walked {
+    order: std::rc::Rc<Vec<git2::Oid>>,
+    parents: HashMap<git2::Oid, Vec<git2::Oid>>,
+}
+
+/// Every commit `tip` reaches, itself first, each after every commit descended
+/// from it. Walked once per [`TreeListings`] scope and tip, and afresh outside one.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when the walk cannot be made.
+pub(crate) fn history_of(repo: &Repository, tip: git2::Oid) -> Result<std::rc::Rc<Vec<git2::Oid>>> {
+    if let Some(walked) = TreeListings::walked(repo, tip)? {
+        return Ok(std::rc::Rc::clone(&walked.order));
+    }
+    let mut walk = repo.revwalk()?;
+    walk.push(tip)?;
+    walk.set_sorting(Sort::TOPOLOGICAL)?;
+    Ok(std::rc::Rc::new(
+        walk.collect::<std::result::Result<_, _>>()?,
+    ))
+}
+
+/// The commits `tip` reaches and `hidden` does not, as a revwalk pushing one and
+/// hiding the other yields them, in no stated order. Read from the scope's walk
+/// of `tip` when a [`TreeListings`] scope is open.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when a walk cannot be made.
+pub(crate) fn commits_between(
+    repo: &Repository,
+    tip: git2::Oid,
+    hidden: git2::Oid,
+) -> Result<Vec<git2::Oid>> {
+    let Some(walked) = TreeListings::walked(repo, tip)? else {
+        let mut walk = repo.revwalk()?;
+        walk.push(tip)?;
+        walk.hide(hidden)?;
+        return Ok(walk.collect::<std::result::Result<_, _>>()?);
+    };
+    // What `hidden` reaches, by the parents the walk already read. A `hidden`
+    // the tip does not reach hides only itself and what the walk holds of its
+    // history, which is all of it that the tip reaches.
+    let mut reached: HashSet<git2::Oid> = HashSet::new();
+    let mut pending = vec![hidden];
+    while let Some(oid) = pending.pop() {
+        if !reached.insert(oid) {
+            continue;
+        }
+        match walked.parents.get(&oid) {
+            Some(parents) => pending.extend(parents),
+            None => pending.extend(repo.find_commit(oid)?.parent_ids()),
+        }
+    }
+    Ok(walked
+        .order
+        .iter()
+        .filter(|oid| !reached.contains(oid))
+        .copied()
+        .collect())
+}
+
+/// A scope in which [`feature_entry_in_tree`] reads each tree below a commit's
+/// root once, whatever the number of lookups, and [`history_of`] and
+/// [`commits_between`] walk a commit's history once.
+///
+/// A walk asking for one spec's file at every commit of history reads the spec
+/// root's tree each time, and libgit2 keeps no tree of that size in its cache, so
+/// `check-unreviewed-code`, which makes that walk for every `done` spec, spent its
+/// time opening and inflating the same objects (22.6 s here at `3caa8357`, 5,071
+/// commits and 75 `done` specs), and a revwalk parses every commit it yields from
+/// the object store again. A tree and a commit are named by their content, so a
+/// listing or a walk kept by id cannot go stale. The scope ends with the value, on
+/// the thread that opened it; outside one, every lookup reads as it always has.
+pub(crate) struct TreeListings {
+    /// Whether this value opened the scope, and so closes it.
+    opened: bool,
+}
+
+impl TreeListings {
+    /// Open a scope on this thread, unless one is open already.
+    pub(crate) fn open() -> Self {
+        let opened = LISTINGS.with_borrow_mut(|listings| {
+            if listings.is_some() {
+                return false;
+            }
+            *listings = Some(HashMap::new());
+            true
+        });
+        Self { opened }
+    }
+
+    /// The listing of the tree `id`, read once per scope; `None` outside a scope,
+    /// or when `id` names no tree `repo` can read.
+    fn of(repo: &Repository, id: git2::Oid) -> Option<std::rc::Rc<Listing>> {
+        let kept = LISTINGS
+            .with_borrow(|listings| listings.as_ref().map(|listings| listings.get(&id).cloned()))?;
+        if let Some(listing) = kept {
+            return Some(listing);
+        }
+        let listing = std::rc::Rc::new(Listing::read(&repo.find_tree(id).ok()?));
+        LISTINGS.with_borrow_mut(|listings| {
+            if let Some(listings) = listings.as_mut() {
+                listings.insert(id, std::rc::Rc::clone(&listing));
+            }
+        });
+        Some(listing)
+    }
+
+    /// The scope's walk of `tip`'s history, made on first use; `None` outside a
+    /// scope.
+    fn walked(repo: &Repository, tip: git2::Oid) -> Result<Option<std::rc::Rc<Walked>>> {
+        if !Self::is_open() {
+            return Ok(None);
+        }
+        if let Some(walked) = WALKS.with_borrow(|walks| walks.get(&tip).cloned()) {
+            return Ok(Some(walked));
+        }
+        let mut walk = repo.revwalk()?;
+        walk.push(tip)?;
+        walk.set_sorting(Sort::TOPOLOGICAL)?;
+        let mut order = Vec::new();
+        let mut parents = HashMap::new();
+        for oid in walk {
+            let oid = oid?;
+            parents.insert(oid, repo.find_commit(oid)?.parent_ids().collect());
+            order.push(oid);
+        }
+        let walked = std::rc::Rc::new(Walked {
+            order: std::rc::Rc::new(order),
+            parents,
+        });
+        WALKS.with_borrow_mut(|walks| walks.insert(tip, std::rc::Rc::clone(&walked)));
+        Ok(Some(walked))
+    }
+
+    /// Whether a scope is open on this thread.
+    fn is_open() -> bool {
+        LISTINGS.with_borrow(Option::is_some)
+    }
+
+    /// [`feature_entry_in_tree`]'s answer for `{root}/{directory}/{file}` from the
+    /// scope's listings.
+    fn feature_entry(
+        repo: &Repository,
+        tree: &git2::Tree<'_>,
+        (root, directory, file): (&str, &str, &str),
+    ) -> Option<(String, git2::Oid)> {
+        let specs = Self::of(repo, tree.get_path(Path::new(root)).ok()?.id())?;
+        let in_directory = |name: &str| {
+            let listing = Self::of(repo, *specs.entries.get(name)?)?;
+            let id = *listing.entries.get(file)?;
+            Some((format!("{root}/{name}/{file}"), id))
+        };
+        if let Some(found) = in_directory(directory) {
+            return Some(found);
+        }
+        let form = parse_feature_dir(directory)?;
+        specs
+            .features
+            .iter()
+            .find(|(known, _, _)| *known == form)
+            .and_then(|(_, name, _)| in_directory(name))
+    }
+}
+
+impl Drop for TreeListings {
+    fn drop(&mut self) {
+        if self.opened {
+            LISTINGS.with_borrow_mut(|listings| *listings = None);
+            WALKS.with_borrow_mut(HashMap::clear);
+        }
+    }
 }
 
 /// Count commits touching `path_rel` in the `since..HEAD` reachability
@@ -1037,6 +1296,123 @@ mod tests {
         assert!(!reopening_is_open(&repo, spec_rel).unwrap());
         let (_tmp, repo, _) = walk_statuses(&["draft", "clarified", "planned"]);
         assert!(!reopening_is_open(&repo, spec_rel).unwrap());
+    }
+
+    /// Spec 084: the reopening's start is read as a commit holds it, whatever
+    /// `HEAD` reached since, and at `HEAD` it is `find_in_progress_commit`'s.
+    #[test]
+    fn a_reopenings_start_is_read_at_the_commit_asked() {
+        let spec_rel = "specs/010-demo/spec.md";
+        let (_tmp, repo, commits) =
+            walk_statuses(&["in-progress", "done", "in-progress", "done", "in-progress"]);
+        let at =
+            |index: usize| find_in_progress_commit_at(&repo, spec_rel, commits[index]).unwrap();
+        assert_eq!(at(0), Some(commits[0].to_string()));
+        assert_eq!(at(1), Some(commits[0].to_string()));
+        assert_eq!(at(3), Some(commits[2].to_string()), "not HEAD's, the fifth");
+        assert_eq!(at(4), Some(commits[4].to_string()));
+        assert_eq!(at(4), find_in_progress_commit(&repo, spec_rel).unwrap());
+    }
+
+    /// Inside a [`TreeListings`] scope each lookup answers as it does outside one:
+    /// a file under the spec's own name, under an earlier slug, in a tree holding
+    /// no such spec, and a path that is no feature file; and the walks hold the
+    /// commits a revwalk yields.
+    #[test]
+    fn a_listings_scope_answers_as_the_trees_do() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let mut commits = Vec::new();
+        let mut commit = |files: &[(&str, &str)], remove: &[&str], message: &str| {
+            for (file, body) in files {
+                let path = tmp.path().join(file);
+                std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+                std::fs::write(path, body).unwrap();
+            }
+            for directory in remove {
+                std::fs::remove_dir_all(tmp.path().join(directory)).unwrap();
+            }
+            commits.push(commit_all(&repo, message));
+        };
+        commit(&[("src/a.rs", "a\n")], &[], "no spec root");
+        commit(
+            &[
+                ("specs/010-old/spec.md", "old\n"),
+                ("specs/notes.md", "n\n"),
+            ],
+            &[],
+            "under an old slug",
+        );
+        commit(
+            &[
+                ("specs/010-demo/spec.md", "old\n"),
+                ("specs/011-b/review.md", "r\n"),
+            ],
+            &["specs/010-old"],
+            "renamed, beside another spec",
+        );
+        commit(&[("specs/010-demo/spec.md", "new\n")], &[], "edited");
+        let paths = [
+            "specs/010-demo/spec.md",
+            "specs/010-demo/review.md",
+            "specs/011-b/review.md",
+            "specs/012-none/spec.md",
+            "specs/notes.md",
+            "spec.md",
+        ];
+        let answers = |repo: &Repository| -> Vec<Option<(String, git2::Oid)>> {
+            let mut found = Vec::new();
+            for oid in &commits {
+                let tree = repo.find_commit(*oid).unwrap().tree().unwrap();
+                for path in paths {
+                    found.push(feature_entry_in_tree(repo, &tree, path));
+                }
+            }
+            found
+        };
+        let outside = answers(&repo);
+        assert!(outside.iter().any(Option::is_some) && outside.iter().any(Option::is_none));
+        assert_eq!(
+            outside[paths.len()].as_ref().map(|(path, _)| path.as_str()),
+            Some("specs/010-old/spec.md"),
+            "the earlier slug answers for the spec's number"
+        );
+        let tip = *commits.last().unwrap();
+        let walk = |hide: Option<git2::Oid>| {
+            let mut walk = repo.revwalk().unwrap();
+            walk.push(tip).unwrap();
+            if let Some(hide) = hide {
+                walk.hide(hide).unwrap();
+            }
+            walk.set_sorting(Sort::TOPOLOGICAL).unwrap();
+            walk.map(|oid| oid.unwrap()).collect::<Vec<_>>()
+        };
+        {
+            let _scope = TreeListings::open();
+            let nested = TreeListings::open();
+            assert_eq!(answers(&repo), outside);
+            assert_eq!(answers(&repo), outside, "and again, from the listings kept");
+            assert_eq!(*history_of(&repo, tip).unwrap(), walk(None));
+            for hidden in &commits {
+                let mut between = commits_between(&repo, tip, *hidden).unwrap();
+                let mut walked = walk(Some(*hidden));
+                between.sort();
+                walked.sort();
+                assert_eq!(between, walked, "hiding {hidden}");
+            }
+            drop(nested);
+            assert!(
+                LISTINGS.with_borrow(Option::is_some),
+                "the scope outlives a nested one"
+            );
+        }
+        assert!(
+            LISTINGS.with_borrow(Option::is_none),
+            "and ends with its own value"
+        );
+        assert!(WALKS.with_borrow(HashMap::is_empty));
+        assert_eq!(*history_of(&repo, tip).unwrap(), walk(None));
+        assert_eq!(commits_between(&repo, tip, commits[1]).unwrap().len(), 2);
     }
 
     #[test]

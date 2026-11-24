@@ -6762,6 +6762,147 @@ pub struct CheckOwedWorkResult {
     pub lists_file: Option<String>,
 }
 
+// -- check-unreviewed-code (spec 084) ----------------------------------------
+
+/// Args for `check-unreviewed-code`: the code no review is going to read, as one
+/// commit holds it. Read-only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckUnreviewedCodeArgs {
+    /// The commit to read, a sha or a ref. `HEAD` when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub at: Option<String>,
+    /// A sha or a ref: also run the check at each first-parent commit from `at`
+    /// back to this one, which is left out, and count those reporting code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub since: Option<String>,
+}
+
+/// What unreviewed code does to a push: `[review] unreviewed-push`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum UnreviewedPushMode {
+    /// The CLI exits 1 when code is reported or a subject was not examined. The
+    /// mode when the key is absent.
+    #[default]
+    Block,
+    /// The CLI prints the same report and exits 0.
+    Warn,
+}
+
+/// What `check-unreviewed-code` could say at a commit.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum UnreviewedState {
+    /// Every subject was examined and none holds unreviewed code.
+    #[default]
+    None,
+    /// Every subject was examined and at least one holds unreviewed code.
+    Found,
+    /// At least one subject could not be examined, whatever else was found.
+    NotExamined,
+}
+
+/// A `done` spec's code no committed review covers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreviewedDoneSpec {
+    /// The spec's feature directory name, as the commit holds it.
+    pub feature: String,
+    /// The commit its review window starts after.
+    pub window_start: String,
+    /// Each code path the commit's tree holds that a commit in the window gave
+    /// this spec and no `in-progress` spec, or that a staging spec folded into
+    /// it below `done` brought. Sorted.
+    pub paths: Vec<String>,
+    /// Each such path the commit's tree no longer holds: a deletion is a
+    /// change, with nothing left to read. Sorted.
+    pub deleted: Vec<String>,
+    /// The commits in the window that gave the spec a path listed here.
+    pub commits: usize,
+}
+
+/// The code no spec claims that no committed project review covers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreviewedUnclaimed {
+    /// The commit the project record's window starts after.
+    pub window_start: String,
+    /// What a project review reads: each code path the commit's tree holds that
+    /// a commit no spec claims changed in the window, and each path the project
+    /// record leaves open or left unread. Sorted.
+    pub paths: Vec<String>,
+    /// Each code path such a commit changed that the commit's tree no longer
+    /// holds. Sorted.
+    pub deleted: Vec<String>,
+    /// The commits no spec claims that changed code in the window.
+    pub commits: usize,
+}
+
+/// A subject `check-unreviewed-code` could not examine, and why.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreviewedNotExamined {
+    /// A spec's feature directory name, or `project` for the code no spec claims.
+    pub subject: String,
+    /// Why its window could not be placed or its record read.
+    pub reason: String,
+}
+
+/// Result of `check-unreviewed-code`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckUnreviewedCodeResult {
+    /// The commit the check read.
+    pub at: String,
+    /// `[review] unreviewed-push`, read from the working tree's configuration.
+    pub mode: UnreviewedPushMode,
+    /// Whether code was found, none was, or a subject could not be examined.
+    pub state: UnreviewedState,
+    /// Each `done` spec holding unreviewed code, in corpus order. Absent in the
+    /// file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub done_specs: Option<Vec<UnreviewedDoneSpec>>,
+    /// Entries in `done-specs`, in either form.
+    pub done_specs_count: usize,
+    /// The code no spec claims; absent when there is none, when the project
+    /// subject was not examined, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unclaimed: Option<UnreviewedUnclaimed>,
+    /// Entries in `unclaimed`'s `paths` and `deleted`, in either form.
+    pub unclaimed_path_count: usize,
+    /// Each subject that could not be examined. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_examined: Option<Vec<UnreviewedNotExamined>>,
+    /// Entries in `not-examined`, in either form.
+    pub not_examined_count: usize,
+    /// The subjects examined: each `done` spec whose window was placed, and the
+    /// project when its window was.
+    pub examined_count: usize,
+    /// Every path reported, `deleted` ones among them, over all subjects.
+    pub reported_path_count: usize,
+    /// With `since`: the first-parent commits walked, from `at` back to it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commits_walked: Option<usize>,
+    /// With `since`: those of them at which the check's state is `found`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commits_reporting: Option<usize>,
+    /// With `since`: those at which its state is `not-examined`, which
+    /// `commits-reporting` does not count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commits_not_examined: Option<usize>,
+    /// Where `done-specs`, `unclaimed` and `not-examined` are: in this result,
+    /// or past `[artifacts] read-size-bytes` in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding them whole, from the project root: a
+    /// JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
 // -- measure-reopenings (spec 079) -------------------------------------------
 
 /// Args for `measure-reopenings`: whether reopenings stayed within the bound on

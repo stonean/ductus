@@ -8,6 +8,8 @@ The numbered Instructions in the command file, `review.md`, are the procedure: t
 
 1. Resolve the working feature from `--all` or the current `/ductus:target`.
    If neither yields a target, halt with `no target — run /ductus:target first`.
+   `--project` needs no target: its subject is the code no spec claims, and
+   **A project review** in the command file says what replaces items 2 and 3.
 2. Read the spec frontmatter. If `status` is not in `{in-progress, done}`,
    halt with `review only runs against in-progress or done specs`.
 3. Build the file scope per **Inputs** (in the command file). An empty scope

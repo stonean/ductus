@@ -72,6 +72,13 @@ pub(crate) fn path_key(path: &str) -> &str {
 /// writes.
 const IRREGULAR_COUNTS: &[(&str, &str, Option<&str>)] = &[
     ("check-owed-work", "examined-count", None),
+    ("check-unreviewed-code", "examined-count", None),
+    ("check-unreviewed-code", "reported-path-count", None),
+    (
+        "check-unreviewed-code",
+        "unclaimed-path-count",
+        Some("unclaimed"),
+    ),
     (
         "diff-cross-spec",
         "cross-spec-count",

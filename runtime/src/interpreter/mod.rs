@@ -77,20 +77,20 @@ use crate::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
     CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs, CheckPrescriptionsArgs,
     CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
-    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
-    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, FindingTier,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
-    PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs,
-    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
-    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
-    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, CheckUnreviewedCodeArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
+    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
+    FetchArchiveArgs, FindingTier, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
+    MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
+    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs,
+    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
+    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
+    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
+    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs,
+    SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -1122,6 +1122,16 @@ enum DispatchError {
     Primitive(#[from] primitives::PrimitiveError),
 }
 
+/// The context key `ductus exec review project=true` sets for a review of the
+/// code no spec claims (spec 084).
+pub const PROJECT_REVIEW: &str = "project";
+
+/// Whether the walk was asked for a project review: [`PROJECT_REVIEW`] is `true`.
+#[must_use]
+pub fn reviews_the_project(context: &Map<String, Value>) -> bool {
+    context.get(PROJECT_REVIEW).and_then(Value::as_str) == Some("true")
+}
+
 /// Dispatch a primitive by name. Args are deserialized from `context`
 /// — any keys it doesn't need are ignored, so callers can pass a single
 /// merged binding map. Returns the primitive's result as a JSON value.
@@ -1167,6 +1177,24 @@ fn dispatch_primitive(
     if name == "write-analysis" {
         bindings.remove("findings");
         bindings.remove("unexamined");
+    }
+    // A project review's scope is `check-unreviewed-code`'s `unclaimed`, which
+    // this linear walk cannot put in the scope step's place, and its criteria
+    // steps have no spec to read. So a walk told `project=true`, whose target
+    // `ductus exec` dropped, stops here, before any step reviews anything, and
+    // never reviews the session's feature in the project's name (spec 084; the
+    // agent's recommendation, adopted by the operator, 2026-11-24).
+    if name == "compute-review-scope" && reviews_the_project(&bindings) {
+        return Err(DispatchError::Primitive(
+            primitives::PrimitiveError::InvalidArgument {
+                primitive: name.into(),
+                argument: PROJECT_REVIEW.into(),
+                reason: "`ductus exec` walks no project review: its scope is \
+                         check-unreviewed-code's `unclaimed`, not this step's, so run the \
+                         review command with --project through the host"
+                    .into(),
+            },
+        ));
     }
     // Exec-path binding for the spec-reading primitives `/analyze` dispatches
     // against "the spec path": a session target's `path` is the spec
@@ -1319,6 +1347,7 @@ fn dispatch_primitive(
         "check-artifacts" => call!(CheckArtifactsArgs, check_artifacts),
         "check-artifact-size" => call!(CheckArtifactSizeArgs, check_artifact_size),
         "check-owed-work" => call!(CheckOwedWorkArgs, check_owed_work),
+        "check-unreviewed-code" => call!(CheckUnreviewedCodeArgs, check_unreviewed_code),
         "prune-tasks" => call!(PruneTasksArgs, prune_tasks),
         "prune-plan" => call!(PrunePlanArgs, prune_plan),
         "prune-project" => call!(PruneProjectArgs, prune_project),
@@ -3881,6 +3910,34 @@ mod tests {
                 "`{later}` is invoked after the scope is resolved"
             );
         }
+    }
+
+    /// Spec 084: a walk told `project=true` stops at the scope step, whatever
+    /// feature its context still holds, and any other value walks as before.
+    #[test]
+    fn a_project_review_stops_at_the_scope_step() {
+        let mut context = Map::new();
+        context.insert("feature".into(), Value::String("001-x".into()));
+        context.insert(PROJECT_REVIEW.into(), Value::String("true".into()));
+        let stopped = dispatch_primitive("compute-review-scope", &context, &fixture_repo());
+        assert!(
+            matches!(
+                &stopped,
+                Err(DispatchError::Primitive(primitives::PrimitiveError::InvalidArgument { argument, reason, .. }))
+                    if argument == PROJECT_REVIEW && reason.contains("--project through the host")
+            ),
+            "{stopped:?}"
+        );
+        context.insert(PROJECT_REVIEW.into(), Value::String("false".into()));
+        let walked = dispatch_primitive("compute-review-scope", &context, &fixture_repo());
+        assert!(
+            !matches!(
+                &walked,
+                Err(DispatchError::Primitive(primitives::PrimitiveError::InvalidArgument { argument, .. }))
+                    if argument == PROJECT_REVIEW
+            ),
+            "{walked:?}"
+        );
     }
 
     /// A context `path` that leaves the project is not probed for being a

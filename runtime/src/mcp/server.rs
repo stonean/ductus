@@ -49,7 +49,8 @@ use crate::schema::primitives::{
     CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
     CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
     CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckUnreviewedCodeArgs,
+    CheckUnreviewedCodeResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
     DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
@@ -1116,6 +1117,20 @@ impl GovRuntimeServer {
         primitives::check_owed_work::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-unreviewed-code",
+        description = descriptions::CHECK_UNREVIEWED_CODE
+    )]
+    async fn check_unreviewed_code(
+        &self,
+        params: Parameters<CheckUnreviewedCodeArgs>,
+    ) -> Result<Json<CheckUnreviewedCodeResult>, String> {
+        // Full-history revwalks, one per `done` spec — blocking pool.
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::check_unreviewed_code::run(&params.0, repo.as_path()))
+            .await
     }
 
     #[tool(

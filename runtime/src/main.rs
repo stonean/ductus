@@ -16,21 +16,21 @@ use ductus::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
     CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs,
     CheckPrescriptionsArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
-    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs,
-    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs,
-    DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState,
-    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
-    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
-    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, CheckUnreviewedCodeArgs,
+    CheckUnreviewedCodeResult, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
+    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
+    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
+    MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState, PrunePlanArgs, PruneProjectArgs,
+    PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs,
+    ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
+    UnreviewedState, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -230,6 +230,8 @@ enum Command {
     CheckArtifactSize(CheckArtifactSizeArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_OWED_WORK), long_about = descriptions::CHECK_OWED_WORK)]
     CheckOwedWork(CheckOwedWorkArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_UNREVIEWED_CODE), long_about = descriptions::CHECK_UNREVIEWED_CODE)]
+    CheckUnreviewedCode(CheckUnreviewedCodeArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_TASKS), long_about = descriptions::PRUNE_TASKS)]
     PruneTasks(PruneTasksArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_PLAN), long_about = descriptions::PRUNE_PLAN)]
@@ -481,6 +483,75 @@ fn derive_dependencies_blocks(r: &DeriveDependenciesResult) -> bool {
     r.cycles_count > 0 || r.unwritable_count > 0 || r.refused_count > 0 || (!r.wrote && r.drift)
 }
 
+/// Whether `check-unreviewed-code` exits non-zero: under `block`, when code is
+/// reported or a subject could not be examined, which is no pass
+/// (`QUAL-CLAIM-001`); never under `warn`, which prints the same report. It
+/// reads `mode` and `state`, which both forms carry.
+fn unreviewed_code_blocks(r: &CheckUnreviewedCodeResult) -> bool {
+    r.mode == UnreviewedPushMode::Block && r.state != UnreviewedState::None
+}
+
+/// The stderr report of `check-unreviewed-code`: one line per subject with its
+/// counts, one per path, and one per subject not examined with its reason. No
+/// line when nothing is reported.
+fn unreviewed_code_lines(found: &primitives::check_unreviewed_code::Unreviewed) -> Vec<String> {
+    let name = "check-unreviewed-code";
+    let checked = &found.checked;
+    let mut lines = Vec::new();
+    let mut subject = |label: String,
+                       start: &str,
+                       commits: usize,
+                       paths: &[String],
+                       deleted: &[String]| {
+        lines.push(format!(
+            "{name}: {label}: {} path(s) changed by {commits} commit(s) after {} with no committed review",
+            paths.len() + deleted.len(),
+            start.get(..8).unwrap_or(start)
+        ));
+        lines.extend(paths.iter().map(|path| format!("{name}:   {path}")));
+        lines.extend(
+            deleted
+                .iter()
+                .map(|path| format!("{name}:   {path} (deleted)")),
+        );
+    };
+    for spec in &checked.done_specs {
+        subject(
+            format!("`done` spec {}", spec.feature),
+            &spec.window_start,
+            spec.commits,
+            &spec.paths,
+            &spec.deleted,
+        );
+    }
+    if let Some(code) = &checked.unclaimed {
+        subject(
+            "code no spec claims".to_string(),
+            &code.window_start,
+            code.commits,
+            &code.paths,
+            &code.deleted,
+        );
+    }
+    lines.extend(
+        checked
+            .not_examined
+            .iter()
+            .map(|skip| format!("{name}: {} was not examined: {}", skip.subject, skip.reason)),
+    );
+    if !lines.is_empty() {
+        lines.push(match found.mode {
+            UnreviewedPushMode::Block => format!(
+                "{name}: review it (`/{{project}}:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead"
+            ),
+            UnreviewedPushMode::Warn => {
+                format!("{name}: `[review] unreviewed-push = \"warn\"`: reported, not blocked")
+            }
+        });
+    }
+    lines
+}
+
 /// Whether `derive-references` exits non-zero: a rewrite that could not be
 /// written, a spec another writer changed before the rewrite landed
 /// (`refused`, `BE-TXN-002`), or drift on a report-only run. It reads
@@ -719,6 +790,18 @@ fn exec_overrides(args: &[String]) -> Result<Vec<(&str, &str)>, String> {
             )),
         })
         .collect()
+}
+
+/// A walk told `project=true` reviews the code no spec claims, so the session's
+/// target leaves its context: every review primitive takes `feature` from there,
+/// and would otherwise review the targeted feature in the project's name (spec
+/// 084). The walk then stops at its scope step, which says why.
+fn drop_target_for_a_project_review(context: &mut serde_json::Map<String, serde_json::Value>) {
+    if ductus::interpreter::reviews_the_project(context) {
+        for key in ["feature", "path", "scenario", "scenario-path", "set-at"] {
+            context.remove(key);
+        }
+    }
 }
 
 /// Terminal `error` envelope for a command-file parse failure under
@@ -1016,6 +1099,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
     for (key, value) in overrides {
         context.insert(key.to_string(), Value::String(value.to_string()));
     }
+    drop_target_for_a_project_review(&mut context);
 
     let stdin = io::stdin();
     let stdout = io::stdout();
@@ -1366,6 +1450,20 @@ fn main() -> ExitCode {
             emit_result(primitives::check_artifacts::run(&args, &repo))
         }
         Command::CheckOwedWork(args) => emit_result(primitives::check_owed_work::run(&args, &repo)),
+        Command::CheckUnreviewedCode(args) => {
+            // The whole answer is reported before the result is bounded, so a
+            // path the bound moves to a file is still named on stderr, where a
+            // hook's reader sees it (spec 084, AC8).
+            let found = primitives::check_unreviewed_code::compute(&args, &repo);
+            if let Ok(found) = &found {
+                for line in unreviewed_code_lines(found) {
+                    warn(format_args!("{line}"));
+                }
+            }
+            let outcome =
+                found.and_then(|found| primitives::check_unreviewed_code::bound(&repo, found));
+            emit_result_gated(outcome, unreviewed_code_blocks)
+        }
         Command::CheckArtifactSize(args) => {
             let outcome = primitives::check_artifact_size::run(&args, &repo);
             if args.staged {
@@ -1427,8 +1525,9 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{
-        Cli, cli_command, derive_dependencies_blocks, derive_references_blocks, refused_lines,
-        seed_context, unwritable_lines,
+        Cli, cli_command, derive_dependencies_blocks, derive_references_blocks,
+        drop_target_for_a_project_review, refused_lines, seed_context, unreviewed_code_blocks,
+        unreviewed_code_lines, unwritable_lines,
     };
     use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
 
@@ -1518,6 +1617,159 @@ mod tests {
             refs.unwritable = Some(vec!["specs/001-a/spec.md".into()]);
             refs.unwritable_count = 1;
             assert!(derive_references_blocks(&refs), "unwritable, wrote {wrote}");
+        }
+    }
+
+    fn unreviewed(
+        mode: ductus::schema::primitives::UnreviewedPushMode,
+        checked: ductus::primitives::check_unreviewed_code::Checked,
+    ) -> ductus::primitives::check_unreviewed_code::Unreviewed {
+        ductus::primitives::check_unreviewed_code::Unreviewed {
+            at: "a".repeat(40),
+            mode,
+            checked,
+            since: None,
+        }
+    }
+
+    /// `check-unreviewed-code` exits 1 under `block` on reported code and on a
+    /// subject not examined, in either form, and never under `warn` or with
+    /// nothing reported (spec 084, AC8).
+    #[test]
+    fn unreviewed_code_blocks_under_block_alone_and_a_subject_not_examined_is_no_pass() {
+        use ductus::primitives::check_unreviewed_code::{Checked, bound};
+        use ductus::schema::primitives::{
+            ListsForm, UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode,
+        };
+        let tmp = tempfile::tempdir().unwrap();
+        let found = || Checked {
+            done_specs: vec![UnreviewedDoneSpec {
+                feature: "002-b".into(),
+                window_start: "b".repeat(40),
+                paths: vec!["src/b.rs".into()],
+                deleted: vec!["src/gone.rs".into()],
+                commits: 2,
+            }],
+            examined: 2,
+            ..Checked::default()
+        };
+        let not_examined = || Checked {
+            not_examined: vec![UnreviewedNotExamined {
+                subject: "project".into(),
+                reason: "no record".into(),
+            }],
+            ..Checked::default()
+        };
+        for (checked, blocks_under_block) in [
+            (Checked::default(), false),
+            (found(), true),
+            (not_examined(), true),
+        ] {
+            for (mode, blocks) in [
+                (UnreviewedPushMode::Block, blocks_under_block),
+                (UnreviewedPushMode::Warn, false),
+            ] {
+                let mut result = bound(tmp.path(), unreviewed(mode, checked.clone())).unwrap();
+                assert_eq!(
+                    unreviewed_code_blocks(&result),
+                    blocks,
+                    "{mode:?} {checked:?}"
+                );
+                result.form = ListsForm::File;
+                result.done_specs = None;
+                result.not_examined = None;
+                assert_eq!(unreviewed_code_blocks(&result), blocks, "file form");
+            }
+        }
+    }
+
+    /// The stderr report names each subject with its counts, each path, each
+    /// subject not examined with its reason, and what the mode does; nothing
+    /// reported prints nothing.
+    #[test]
+    fn the_unreviewed_code_report_names_each_subject_and_path() {
+        use ductus::primitives::check_unreviewed_code::Checked;
+        use ductus::schema::primitives::{
+            UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode, UnreviewedUnclaimed,
+        };
+        assert_eq!(
+            unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Block, Checked::default())),
+            [] as [String; 0]
+        );
+        let checked = Checked {
+            done_specs: vec![UnreviewedDoneSpec {
+                feature: "002-b".into(),
+                window_start: "b".repeat(40),
+                paths: vec!["src/b.rs".into()],
+                deleted: vec!["src/gone.rs".into()],
+                commits: 2,
+            }],
+            unclaimed: Some(UnreviewedUnclaimed {
+                window_start: "c".repeat(40),
+                paths: vec!["src/u.rs".into()],
+                deleted: Vec::new(),
+                commits: 1,
+            }),
+            not_examined: vec![UnreviewedNotExamined {
+                subject: "003-c".into(),
+                reason: "its record does not parse".into(),
+            }],
+            examined: 2,
+        };
+        let lines = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Block, checked.clone()));
+        assert_eq!(
+            lines[..7],
+            [
+                "check-unreviewed-code: `done` spec 002-b: 2 path(s) changed by 2 commit(s) after bbbbbbbb with no committed review",
+                "check-unreviewed-code:   src/b.rs",
+                "check-unreviewed-code:   src/gone.rs (deleted)",
+                "check-unreviewed-code: code no spec claims: 1 path(s) changed by 1 commit(s) after cccccccc with no committed review",
+                "check-unreviewed-code:   src/u.rs",
+                "check-unreviewed-code: 003-c was not examined: its record does not parse",
+                "check-unreviewed-code: review it (`/{project}:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead",
+            ]
+        );
+        assert_eq!(lines.len(), 7);
+        let warned = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Warn, checked));
+        assert_eq!(warned[..6], lines[..6], "the same report");
+        assert_eq!(
+            warned[6],
+            "check-unreviewed-code: `[review] unreviewed-push = \"warn\"`: reported, not blocked"
+        );
+    }
+
+    /// A walk told `project=true` loses the session's target, and any other
+    /// walk keeps it (spec 084).
+    #[test]
+    fn a_project_review_drops_the_sessions_target_from_the_walk() {
+        let seeded = || {
+            let mut context = serde_json::Map::new();
+            for key in [
+                "feature",
+                "path",
+                "scenario",
+                "scenario-path",
+                "set-at",
+                "cli-config-dir",
+            ] {
+                context.insert(key.into(), serde_json::Value::String("x".into()));
+            }
+            context
+        };
+        let mut project = seeded();
+        project.insert("project".into(), serde_json::Value::String("true".into()));
+        drop_target_for_a_project_review(&mut project);
+        let mut kept: Vec<&str> = project.keys().map(String::as_str).collect();
+        kept.sort_unstable();
+        assert_eq!(kept, ["cli-config-dir", "project"]);
+        for other in [None, Some("false")] {
+            let mut context = seeded();
+            if let Some(value) = other {
+                context.insert("project".into(), serde_json::Value::String(value.into()));
+            }
+            let before = context.clone();
+            drop_target_for_a_project_review(&mut context);
+            assert_eq!(context, before, "{other:?}");
         }
     }
 

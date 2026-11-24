@@ -33,8 +33,8 @@ MUTATIONS = [
     (
         'M3 a tree\'s attributor lists the specs on disk',
         'src/primitives/check_unreviewed_code.rs',
-        'let attributor = Attributor::at_tree(project, repo, specs_root, &tree)?;',
-        'let attributor = Attributor::new(project, repo, specs_root)?;',
+        'let attributor = Attributor::at_tree(project, repo, specs_root, &tree)?;\n    let mut walk',
+        'let attributor = Attributor::new(project, repo, specs_root)?;\n    let mut walk',
         'check_unreviewed_code::tests::an_uncommitted_spec_directory_claims_no_commit',
     ),
     (
@@ -124,8 +124,8 @@ MUTATIONS = [
     (
         'M16 a path gone from the tree stays in the scope',
         'src/primitives/check_unreviewed_code.rs',
-        '        .filter(|path| holds(project, &tree, path))\n        .collect();',
-        '        .collect();',
+        '            if holds(project, &tree, &path) {\n                code.paths.insert(path);',
+        '            if true {\n                code.paths.insert(path);',
         'check_unreviewed_code::tests::the_scope_holds_only_committed_code_no_spec_claims',
     ),
     (

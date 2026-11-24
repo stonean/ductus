@@ -47,11 +47,14 @@ Past the read size each form's lists move to the file `lists-file` names, each w
 | `at` | sha | The commit the check read |
 | `mode` | `block` or `warn` | `[review] unreviewed-push`, `block` when absent |
 | `state` | `none`, `found` or `not-examined` | `not-examined` when any subject below could not be read, whatever else was found |
-| `done-specs` | list of `{feature, window-start, paths, commits}` | Each `done` spec with code changed after its window start by commits that claim it, and code a staging spec folded into it below `done` brought |
-| `unclaimed` | `{window-start, paths, commits}` or absent | Code changed after the project record's window start (its `reviewed-against`, or for a seed the commit that added it) by commits no spec claims; absent when there is none |
-| `not-examined` | list of `{subject, reason}` | Each `done` spec, or `project`, whose window could not be placed, with why (a shallow history, a record that does not parse, a tree holding no project record) |
-| `examined-count`, `reported-path-count` | integer | How many subjects were read, and how many paths reported |
-| `commits-reporting` | integer, `since` only | First-parent commits from `at` back to `since` at which the check reports code |
+| `done-specs` | list of `{feature, window-start, paths, deleted, commits}` | Each `done` spec with code changed after its window start by commits that claim it, and code a staging spec folded into it below `done` brought; `deleted` holds the changed paths the commit's tree no longer holds, and `commits` counts the commits that gave it a path |
+| `unclaimed` | `{window-start, paths, deleted, commits}` or absent | Code changed after the project record's window start by commits no spec claims, with each path that record leaves open or left unread, so `paths` is a project review's scope; absent when there is none |
+| `not-examined` | list of `{subject, reason}` | Each spec, or `project`, that could not be examined, with why (a shallow history, a record that does not parse, a `spec.md` missing or stating no status, a tree holding no project record) |
+| `done-specs-count`, `unclaimed-path-count`, `not-examined-count` | integer | Entries in each list, in both forms |
+| `examined-count`, `reported-path-count` | integer | How many subjects were read, and how many paths reported, `deleted` ones among them |
+| `commits-walked`, `commits-reporting`, `commits-not-examined` | integer, `since` only | First-parent commits from `at` back to `since`, which is left out; those at which the check's state is `found`; and those at which it is `not-examined`, which `commits-reporting` does not count |
+
+Past the read size `done-specs`, `unclaimed` and `not-examined` move to the file `lists-file` names.
 
 Under `block` the CLI exits 1 when `state` is `found` or `not-examined`, and 0 otherwise; under `warn` it exits 0 and prints the same report.
 

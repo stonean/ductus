@@ -28,12 +28,13 @@ use std::path::Path;
 
 use git2::{Commit, Tree};
 
+use crate::primitives::check_stuck::spec_root_listing;
 use crate::primitives::compute_review_scope::{
     PlanEntries, project_diff_options, project_paths, read_plan_affected,
 };
 use crate::primitives::{
-    FeatureForm, ProjectRepository, Result, leaves_project, list_feature_dirs, parse_feature_dir,
-    spec_feature_slug,
+    FeatureForm, ProjectRepository, Result, blob_text, leaves_project, list_feature_dirs,
+    parse_affected_files, parse_feature_dir, spec_feature_slug,
 };
 
 /// What one commit contributes to a window, and who it belongs to.
@@ -85,9 +86,12 @@ pub(crate) struct Attributor<'a> {
     /// The project root, which the spec directories and their plans are read from.
     repo: &'a Path,
     specs_root: &'a str,
-    /// The specs on disk with their directories, the only ones a subject alone
-    /// can claim for.
+    /// The specs its source holds with their directories, the only ones a
+    /// subject alone can claim for.
     known: Vec<(FeatureForm, String)>,
+    /// The commit's tree the specs and their plans are read from, or `None` for
+    /// the working tree.
+    tree: Option<Tree<'a>>,
 }
 
 impl<'a> Attributor<'a> {
@@ -112,15 +116,15 @@ impl<'a> Attributor<'a> {
             repo,
             specs_root,
             known,
+            tree: None,
         })
     }
 
     /// An attributor whose specs are the directories `tree` holds under the spec
     /// root, for a walk that reads a commit and never the disk: an uncommitted
     /// spec directory can claim nothing there, and one deleted from disk and
-    /// not yet committed still claims (spec 084). Only the spec list comes from
-    /// the tree; [`Self::plan_of`] reads the disk, and [`project_share`], which
-    /// such a walk divides by, reads no plan.
+    /// not yet committed still claims (spec 084). [`Self::plan_of`] reads each
+    /// plan from the same tree.
     ///
     /// # Errors
     ///
@@ -130,7 +134,7 @@ impl<'a> Attributor<'a> {
         project: &'a ProjectRepository,
         repo: &'a Path,
         specs_root: &'a str,
-        tree: &Tree<'_>,
+        tree: &Tree<'a>,
     ) -> Result<Self> {
         let root = project.to_git(specs_root);
         let known = match tree.get_path(Path::new(&root)) {
@@ -150,26 +154,42 @@ impl<'a> Attributor<'a> {
             repo,
             specs_root,
             known,
+            tree: Some(tree.clone()),
         })
     }
 
-    /// The Affected Files entries of the plan the spec directory `directory` holds.
-    /// A plan that is, or lies under, a link leaving the project is unread, and
-    /// names no path (`BE-INPUT-004`).
+    /// Each spec the attributor's source holds, with its directory.
+    pub(crate) fn specs(&self) -> &[(FeatureForm, String)] {
+        &self.known
+    }
+
+    /// The Affected Files entries of the plan the spec directory `directory` holds,
+    /// in the attributor's source: the commit's tree for [`Self::at_tree`], where a
+    /// plan the tree does not hold, or holds as no UTF-8 text, names no path, and
+    /// otherwise the disk. A plan on disk that is, or lies under, a link leaving
+    /// the project is unread, and names no path (`BE-INPUT-004`).
     ///
     /// # Errors
     ///
-    /// [`crate::primitives::PrimitiveError::Io`] when `plan.md` exists and cannot
-    /// be read.
+    /// [`crate::primitives::PrimitiveError::Io`] when `plan.md` exists on disk and
+    /// cannot be read, and [`crate::primitives::PrimitiveError::Git`] when the
+    /// tree cannot be searched.
     pub(crate) fn plan_of(&self, directory: &str) -> Result<PlanEntries> {
         let dir = format!("{}/{directory}", self.specs_root);
+        if let Some(tree) = &self.tree {
+            let plan = self.project.to_git(&format!("{dir}/plan.md"));
+            let text = blob_text(&self.project.repository, tree, &plan)?;
+            return Ok(PlanEntries::new(&parse_affected_files(
+                &text.unwrap_or_default(),
+            )));
+        }
         if leaves_project(self.repo, &format!("{dir}/plan.md")) {
             return Ok(PlanEntries::new(&[]));
         }
         Ok(PlanEntries::new(&read_plan_affected(&self.repo.join(dir))?))
     }
 
-    /// The directory of the spec `form`, when it is on disk.
+    /// The directory of the spec `form`, when the attributor's source holds it.
     pub(crate) fn directory_of(&self, form: &FeatureForm) -> Option<&str> {
         self.known
             .iter()
@@ -215,6 +235,44 @@ impl<'a> Attributor<'a> {
             named,
             paths,
         })
+    }
+
+    /// Every spec [`Self::claims`] could name a claimant of `commit`, and possibly
+    /// more, found without a diff: each its subject's scope names, and each of
+    /// whose directories the commit's tree and its parent's hold differently. A
+    /// walk asking after one spec skips the diff of a commit this leaves it out
+    /// of; a merge claims nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::primitives::PrimitiveError::Git`] when a tree cannot be read.
+    pub(crate) fn may_claim(&self, commit: &Commit<'_>) -> Result<Vec<FeatureForm>> {
+        if commit.parent_count() > 1 {
+            return Ok(Vec::new());
+        }
+        let subject = commit.summary().ok().flatten().unwrap_or_default();
+        let mut forms = subject_scope_forms(subject);
+        let repository = &self.project.repository;
+        let root = self.project.to_git(self.specs_root);
+        let own = spec_root_listing(repository, &commit.tree()?, &root);
+        let before = match commit.parent(0) {
+            Ok(parent) => spec_root_listing(repository, &parent.tree()?, &root),
+            Err(_) => None,
+        };
+        let (own, before) = (
+            own.as_deref().map_or(&[][..], |listing| &listing.features),
+            before
+                .as_deref()
+                .map_or(&[][..], |listing| &listing.features),
+        );
+        for (one, other) in [(own, before), (before, own)] {
+            for (form, _, _) in one.iter().filter(|entry| !other.contains(entry)) {
+                if !forms.contains(form) {
+                    forms.push(form.clone());
+                }
+            }
+        }
+        Ok(forms)
     }
 
     /// Whether `commit` belongs to the spec `form`, whose directory may be gone from
@@ -463,6 +521,67 @@ mod tests {
         let empty = CommitClaims::default();
         assert!(!empty.is_unclaimed());
         assert_eq!(project_share(empty), (Vec::new(), Vec::new()));
+    }
+
+    /// `may_claim` names every claimant `claims` does, so a walk that skips the
+    /// diff of a commit it leaves a spec out of loses none of that spec's: by a
+    /// subject, by a directory touched, added or removed, and for a root commit;
+    /// a merge and a commit touching no spec directory name none.
+    #[test]
+    fn may_claim_names_every_claimant_without_a_diff() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = project_with_two_specs(tmp.path());
+        let project = ProjectRepository::discover(tmp.path()).unwrap();
+        let root = repository.head().unwrap().target().unwrap();
+        let mut oids = vec![root];
+        for (file, subject) in [
+            ("src/lib.rs", "chore: tidy"),
+            ("src/lib.rs", "fix(012): named alone"),
+            ("specs/034-b/plan.md", "touched alone"),
+            ("specs/056-c/spec.md", "feat(012): adds a spec"),
+            ("src/lib.rs", "fix(999): names no spec on disk"),
+        ] {
+            write(&tmp.path().join(file), &format!("{subject}\n"));
+            oids.push(commit_all(&repository, subject));
+        }
+        std::fs::remove_dir_all(tmp.path().join("specs/056-c")).unwrap();
+        oids.push(commit_all(&repository, "removes a spec"));
+        let attributor = Attributor::new(&project, tmp.path(), "specs").unwrap();
+        let mut named: Vec<Vec<FeatureForm>> = Vec::new();
+        for oid in &oids {
+            let commit = project.repository.find_commit(*oid).unwrap();
+            let may = attributor.may_claim(&commit).unwrap();
+            let claims = attributor.claims(&commit).unwrap();
+            for claimant in &claims.claimants {
+                assert!(may.contains(claimant), "{oid}: {claimant:?} of {may:?}");
+            }
+            named.push(may);
+        }
+        assert_eq!(named[0], [seq(12), seq(34)], "the root commit adds both");
+        assert!(named[1].is_empty(), "no subject scope, no spec directory");
+        assert_eq!(named[2], [seq(12)]);
+        assert_eq!(named[3], [seq(34)]);
+        assert_eq!(named[4], [seq(12), seq(56)]);
+        assert_eq!(
+            named[5],
+            [seq(999)],
+            "more than `claims` names, never fewer"
+        );
+        assert_eq!(named[6], [seq(56)]);
+    }
+
+    /// A merge claims nothing, so `may_claim` names nothing for one.
+    #[test]
+    fn may_claim_names_nothing_for_a_merge() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = project_with_two_specs(tmp.path());
+        let branch = diverged_branch(tmp.path(), &repository);
+        let merge = merge_commit(&repository, branch, "merge(012): the branch");
+        let project = ProjectRepository::discover(tmp.path()).unwrap();
+        let attributor = Attributor::new(&project, tmp.path(), "specs").unwrap();
+        let commit = project.repository.find_commit(merge).unwrap();
+        assert_eq!(attributor.may_claim(&commit).unwrap(), []);
+        assert_eq!(attributor.claims(&commit).unwrap().claimants, []);
     }
 
     /// A tree's attributor knows the specs the tree holds and no other: a spec

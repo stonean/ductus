@@ -34,7 +34,7 @@ pub mod check_rule_ids;
 pub mod check_step_references;
 pub mod check_stuck;
 pub mod check_unfolded_specs;
-pub(crate) mod check_unreviewed_code;
+pub mod check_unreviewed_code;
 pub(crate) mod commit_attribution;
 pub mod compute_review_scope;
 pub mod create_feature;
@@ -765,6 +765,20 @@ pub enum PrimitiveError {
         min = discover_rule_files::MIN_REASON_LEN
     )]
     InvalidReReadsOff {
+        /// Path of the config file carrying the value.
+        path: PathBuf,
+        /// What failed, with the offending value.
+        problem: String,
+    },
+    /// `[review] unreviewed-push` is neither `"block"` nor `"warn"`, or `review`
+    /// is not a table (spec 084; `CFG-ENV-008`). Halts `check-unreviewed-code`
+    /// rather than falling back to either mode on a guess; `problem` names the
+    /// offending value on one line.
+    #[error(
+        "invalid `[review] {key}` in {path}: {problem} — the key says what unreviewed code does to a push, \"block\" or \"warn\"; remove it for \"block\"",
+        key = check_unreviewed_code::UNREVIEWED_PUSH
+    )]
+    InvalidUnreviewedPush {
         /// Path of the config file carrying the value.
         path: PathBuf,
         /// What failed, with the offending value.

@@ -134,6 +134,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "check-orphaned-references"
         | "check-step-references"
         | "check-unfolded-specs"
+        | "check-unreviewed-code"
         | "dashboard"
         | "derive-dependencies"
         | "derive-references"

@@ -88,9 +88,10 @@ const SECTIONS: &[Section] = &[
     // `tech-stack-verified`: `/{project}:review` by hand (spec 020).
     // `re-reads-off`: each caller of `fix_rounds::re_reads_off` (spec 078).
     // `disabled-rule-files`: `discover-rule-files` and `dashboard` (spec 025).
+    // `unreviewed-push`: `check-unreviewed-code` (spec 084).
     Section {
         name: "review",
-        keys: &["tech-stack-verified", "re-reads-off"],
+        keys: &["tech-stack-verified", "re-reads-off", "unreviewed-push"],
         entries: false,
         tables: &[("disabled-rule-files", &["file", "reason"])],
     },

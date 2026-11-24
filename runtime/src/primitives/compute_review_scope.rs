@@ -28,14 +28,14 @@
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
-use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
+use git2::{Commit, DiffOptions, Oid, Repository, Tree};
 use regex::Regex;
 
 use crate::primitives::analyze_subjects::review_freshness;
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::{
-    feature_file_in_tree, find_done_commit, find_in_progress_commit, leaves_done,
-    reopening_is_open, tree_entry_id,
+    feature_entry_in_tree, feature_file_in_tree, find_done_commit, find_in_progress_commit_at,
+    history_of, leaves_done, reopening_is_open, spec_root_listing,
 };
 use crate::primitives::commit_attribution::{Attributor, CommitClaims, SpecShare};
 use crate::primitives::{
@@ -381,16 +381,15 @@ fn add_new(list: &mut Vec<String>, more: Vec<String>) {
 /// record at `HEAD` hands it: what it leaves open, which owes a review (spec 079, AC5),
 /// and what its passes left unread, which only joins one (AC30).
 #[derive(Default)]
-struct Carried {
-    open_findings: Vec<String>,
-    unread: Vec<String>,
+pub(crate) struct Carried {
+    pub(crate) open_findings: Vec<String>,
+    pub(crate) unread: Vec<String>,
 }
 
 /// Where the review's window starts, why, and what the record the start comes from
-/// hands on: a `--since` override used verbatim, where the spec's last review that
-/// read its scope ended, whatever reopened the spec since, the parent of the commit
-/// finishing it when that commit is also the reopen, or, with no such review, where
-/// [`unreviewed_base`] puts it.
+/// hands on: a `--since` override used verbatim, and otherwise where
+/// [`base_at`] puts it at `HEAD`, with the disk read for a move into `in-progress`
+/// not yet committed.
 fn resolve_base(
     args: &ComputeReviewScopeArgs,
     project: &ProjectRepository,
@@ -398,8 +397,6 @@ fn resolve_base(
     feature_dir: &Path,
 ) -> Result<(String, BaseSource, Carried)> {
     let repository = &project.repository;
-    let spec_rel = project.to_git(&format!("{specs_root}/{}/spec.md", args.feature));
-    let record_rel = format!("{specs_root}/{}/{REVIEW_RECORD_FILE}", args.feature);
     // An explicit base is used verbatim. No parent walk: an operator naming
     // a commit means that commit, and quietly reviewing one more than they
     // asked for would be its own scope surprise.
@@ -415,7 +412,35 @@ fn resolve_base(
         ));
     }
     let tip = repository.head()?.peel_to_commit()?;
-    let last = last_review_commit(project, &tip, &record_rel, Some(&spec_rel))?;
+    base_at(project, specs_root, &args.feature, &tip, Some(feature_dir))
+}
+
+/// Where the window of the spec `feature` starts as the commit `at` and its history
+/// hold it, why, and what the record the start comes from hands on: where the spec's
+/// last review that read its scope ended, whatever reopened the spec since, the parent
+/// of the commit finishing it when that commit is also the reopen, or, with no such
+/// review, where [`unreviewed_base`] puts it.
+///
+/// `on_disk` is the spec's directory for a caller reviewing the working tree, whose
+/// move into `in-progress` may not be committed yet, and `None` for one that reads
+/// the commit alone (`check-unreviewed-code`, spec 084): nothing is then read from
+/// the disk or from `HEAD`.
+///
+/// # Errors
+///
+/// [`PrimitiveError::ShallowHistory`] when a shallow clone cannot place the start,
+/// and any libgit2 failure.
+pub(crate) fn base_at(
+    project: &ProjectRepository,
+    specs_root: &str,
+    feature: &str,
+    at: &Commit<'_>,
+    on_disk: Option<&Path>,
+) -> Result<(String, BaseSource, Carried)> {
+    let repository = &project.repository;
+    let spec_rel = project.to_git(&format!("{specs_root}/{feature}/spec.md"));
+    let record_rel = format!("{specs_root}/{feature}/{REVIEW_RECORD_FILE}");
+    let last = last_review_commit(project, at, &record_rel, Some(&spec_rel))?;
     Ok(match last.end {
         Some(ReviewEnd::Finished { commit, unread }) => (
             // A record committed with the reopen is of a run from before it, and the
@@ -442,25 +467,22 @@ fn resolve_base(
             },
         ),
         None => {
-            let (base, source) = unreviewed_base(
-                project,
-                specs_root,
-                &args.feature,
-                feature_dir,
-                last.passed_over,
-            )?;
+            let (base, source) =
+                unreviewed_base(project, specs_root, feature, at, on_disk, last.passed_over)?;
             (base, source, Carried::default())
         }
     })
 }
 
-/// Where the window of a spec with no review that read its scope starts.
+/// Where the window of a spec with no review that read its scope starts, as the
+/// commit `at` holds it.
 ///
-/// `HEAD` while the spec's move into `in-progress` is uncommitted: the transition
-/// that opened this window is not in history yet, and history's newest is an earlier
-/// window's — on a reopened spec, its first, months back.
+/// `at` itself while the spec's move into `in-progress` is uncommitted, which only a
+/// caller reading the working tree (`on_disk`) can find: the transition that opened
+/// this window is not in history yet, and history's newest is an earlier window's —
+/// on a reopened spec, its first, months back.
 ///
-/// For a spec `done` at `HEAD`, the commit that set it `done` or added it as `done`
+/// For a spec `done` at `at`, the commit that set it `done` or added it as `done`
 /// (spec 084, AC7), unless a run was passed over for not reading its scope, which
 /// keeps the reopening's start below so that what it left unread stays in the window.
 ///
@@ -478,33 +500,38 @@ fn unreviewed_base(
     project: &ProjectRepository,
     specs_root: &str,
     feature: &str,
-    feature_dir: &Path,
+    at: &Commit<'_>,
+    on_disk: Option<&Path>,
     passed_over: bool,
 ) -> Result<(String, BaseSource)> {
     let repository = &project.repository;
     let spec_rel = project.to_git(&format!("{specs_root}/{feature}/spec.md"));
-    let head = repository.head()?.peel_to_commit()?.id();
-    if transition_is_uncommitted(project, specs_root, feature, feature_dir)? {
+    let head = at.id();
+    if let Some(feature_dir) = on_disk
+        && transition_is_uncommitted(project, specs_root, feature, feature_dir)?
+    {
         return Ok((head.to_string(), BaseSource::UncommittedTransition));
     }
     let done = find_done_commit(repository, &spec_rel, head)?;
     if let Some(done) = done.as_ref().filter(|_| !passed_over) {
         return Ok((done.clone(), BaseSource::ReachedDone));
     }
-    Ok(match find_in_progress_commit(repository, &spec_rel)? {
-        Some(sha) => (
-            transition_parent(repository, &sha)?,
-            if passed_over {
-                BaseSource::ReopenPastPartialReview
-            } else {
-                BaseSource::Reopen
+    Ok(
+        match find_in_progress_commit_at(repository, &spec_rel, head)? {
+            Some(sha) => (
+                transition_parent(repository, &sha)?,
+                if passed_over {
+                    BaseSource::ReopenPastPartialReview
+                } else {
+                    BaseSource::Reopen
+                },
+            ),
+            None => match done {
+                Some(done) => (done, BaseSource::ReachedDone),
+                None => (String::new(), BaseSource::None),
             },
-        ),
-        None => match done {
-            Some(done) => (done, BaseSource::ReachedDone),
-            None => (String::new(), BaseSource::None),
         },
-    })
+    )
 }
 
 /// Divide the paths changed since the base between the scope and `excluded`.
@@ -800,9 +827,7 @@ struct RecordedRuns<'a> {
 impl RecordedRuns<'_> {
     /// [`recorded_run`] for the record in `tree`.
     fn at(&mut self, tree: &Tree<'_>) -> Result<Option<RecordedRun>> {
-        let Some(blob) = feature_file_in_tree(self.repository, tree, self.git_path)
-            .and_then(|path| tree_entry_id(tree, &path))
-        else {
+        let Some((_, blob)) = feature_entry_in_tree(self.repository, tree, self.git_path) else {
             return Ok(None);
         };
         if let Some(run) = self.by_blob.get(&blob) {
@@ -853,10 +878,7 @@ pub(crate) fn last_review_commit(
     if feature_file_in_tree(repository, &at.tree()?, &git_path).is_none() {
         return Ok(none(false));
     }
-    let mut walk = repository.revwalk()?;
-    walk.push(at.id())?;
-    walk.set_sorting(Sort::TOPOLOGICAL)?;
-    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
+    let commits = history_of(repository, at.id())?;
     let shallow = repository.is_shallow();
     let mut runs = RecordedRuns {
         repository,
@@ -893,12 +915,15 @@ pub(crate) fn last_review_commit(
             let holds_it = runs
                 .at(&tree)?
                 .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
-            let moved_from_spec = match spec_git_path {
-                Some(spec) => {
-                    run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)
-                }
-                None => false,
-            };
+            // Read only when the record does not already answer: it parses the
+            // parent's whole `spec.md`, at every commit a run stands in.
+            let moved_from_spec = !holds_it
+                && match spec_git_path {
+                    Some(spec) => {
+                        run_in_spec_block(repository, &tree, spec)?.as_ref() == Some(&run.last_run)
+                    }
+                    None => false,
+                };
             if holds_it || moved_from_spec {
                 finishes_a_run = false;
                 break;
@@ -998,7 +1023,9 @@ fn attribute_window(
         window.own.extend(own);
         window.others.extend(others);
     }
-    window.folded_in = fold.brought(repo, &folded)?;
+    let head = repository.head()?.peel_to_commit()?.id();
+    let on_disk = |path: &str| repo.join(path).symlink_metadata().is_ok();
+    window.folded_in = fold.brought(head, &on_disk, &folded)?;
     Ok(window)
 }
 
@@ -1008,16 +1035,18 @@ fn attribute_window(
 /// fold from below it does, and a target reopened by the fold starts its window
 /// after them, so no claim on a commit in the window could reach them (spec 051's
 /// AC24, spec 079's AC6). A spec whose frontmatter does not parse declares no target.
-struct FoldTest<'a> {
-    project: &'a ProjectRepository,
-    specs_root: &'a str,
-    attributor: &'a Attributor<'a>,
-    target: &'a FeatureForm,
+pub(crate) struct FoldTest<'a> {
+    pub(crate) project: &'a ProjectRepository,
+    pub(crate) specs_root: &'a str,
+    /// Lists the specs still there: on disk for a review, in a commit's tree for
+    /// `check-unreviewed-code`.
+    pub(crate) attributor: &'a Attributor<'a>,
+    pub(crate) target: &'a FeatureForm,
 }
 
 impl FoldTest<'_> {
     /// Each spec `commit` removed, read at its parent, that this target received.
-    fn committed(&self, commit: &Commit<'_>, paths: &[String]) -> Result<Vec<String>> {
+    pub(crate) fn committed(&self, commit: &Commit<'_>, paths: &[String]) -> Result<Vec<String>> {
         let mut folded = Vec::new();
         for path in paths {
             let Some(directory) = path
@@ -1039,6 +1068,30 @@ impl FoldTest<'_> {
             }
         }
         Ok(folded)
+    }
+
+    /// Whether `commit` removed a branch-scoped spec its first parent held, which
+    /// [`Self::committed`] can only then call a fold: a caller walking many
+    /// commits skips the diff of one that did not.
+    pub(crate) fn may_have_folded(&self, commit: &Commit<'_>) -> Result<bool> {
+        let repository = &self.project.repository;
+        let root = self.project.to_git(self.specs_root);
+        let Ok(parent) = commit.parent(0) else {
+            return Ok(false);
+        };
+        let Some(before) = spec_root_listing(repository, &parent.tree()?, &root) else {
+            return Ok(false);
+        };
+        let own = spec_root_listing(repository, &commit.tree()?, &root);
+        if own.as_ref().is_some_and(|own| own.id == before.id) {
+            return Ok(false);
+        }
+        Ok(before.features.iter().any(|(form, _, _)| {
+            matches!(form, FeatureForm::BranchScoped { .. })
+                && !own
+                    .as_ref()
+                    .is_some_and(|own| own.features.iter().any(|(held, _, _)| held == form))
+        }))
     }
 
     /// Each spec `HEAD` holds and the disk does not, a fold not yet committed. A run
@@ -1096,11 +1149,17 @@ impl FoldTest<'_> {
     }
 
     /// The paths of every commit each spec in `folded` claimed, by touching its
-    /// directory or naming it, from all of history: outside any spec's directory,
-    /// which is that spec's text, and still on disk, since a review reads a file. A
-    /// path a commit several specs claimed comes whole, the safe side of a rule that
-    /// reads plans a retired spec no longer has.
-    fn brought(&self, repo: &Path, folded: &[String]) -> Result<BTreeSet<String>> {
+    /// directory or naming it, from all of `tip`'s history: outside any spec's
+    /// directory, which is that spec's text, and still there by `holds`, the disk for
+    /// a review, since it reads a file, and a commit's tree for a caller reading the
+    /// commit alone. A path a commit several specs claimed comes whole, the safe side
+    /// of a rule that reads plans a retired spec no longer has.
+    pub(crate) fn brought(
+        &self,
+        tip: Oid,
+        holds: &dyn Fn(&str) -> bool,
+        folded: &[String],
+    ) -> Result<BTreeSet<String>> {
         let mut brought = BTreeSet::new();
         let staging: Vec<FeatureForm> = folded
             .iter()
@@ -1117,7 +1176,7 @@ impl FoldTest<'_> {
         }
         let specs_prefix = format!("{}/", self.specs_root);
         let mut walk = repository.revwalk()?;
-        walk.push_head()?;
+        walk.push(tip)?;
         for oid in walk {
             let commit = repository.find_commit(oid?)?;
             let mut belongs = false;
@@ -1130,10 +1189,7 @@ impl FoldTest<'_> {
                         .claims(&commit)?
                         .paths
                         .into_iter()
-                        .filter(|path| {
-                            !path.starts_with(&specs_prefix)
-                                && repo.join(path).symlink_metadata().is_ok()
-                        }),
+                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),
                 );
             }
         }
