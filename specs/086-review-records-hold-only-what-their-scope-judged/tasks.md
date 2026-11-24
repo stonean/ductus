@@ -24,20 +24,20 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has every other open spec's implementation follow it (owner, 2026-11-24), and its tasks 8 to 10 rewrite `write_review.rs`, `compute_review_scope.rs` and `process_decisions.rs`' arguments. Start once `check-review-gate` on 084 has passed and its status reads `done`, and re-read the symbols the plan cites at the signatures 084 left.
 
-- [ ] Create `runtime/src/primitives/spec_ownership.rs`: for a set of features, one walk of every commit reachable from `HEAD`, each attributed once by `Attributor::claims` and divided by `SpecShare::split` for each asked spec that claims it, plus each spec's plan entries by `PlanEntries::names`; `examined` or `not-examined` with a reason, as the plan's *One definition of "belongs"* states
-- [ ] Unit tests: a file a plan entry names belongs; a file a commit attributed to the spec changed belongs; a file only an unclaimed commit, or only another spec's share, changed does not; a shallow repository (`shallow_at`'s fixture shape) and an unrecognized directory name are not examined; one walk over two specs gives each the answer a walk over it alone gives
+- [ ] Create `runtime/src/primitives/spec_ownership.rs`: for a set of features, one walk of every commit reachable from `HEAD`, each attributed once by `Attributor::claims` and divided by `SpecShare::split` for each asked spec that claims it, plus each spec's plan entries by `PlanEntries::names`; for one spec, each commit tested first by `Attributor::belongs_to` and only an admitted one diffed; `examined` or `not-examined` with a reason, as the plan's *One definition of "belongs"* states
+- [ ] Unit tests: a file a plan entry names belongs; a file a commit attributed to the spec changed belongs; a file only an unclaimed commit, or only another spec's share, changed does not; a merge touching the spec's directory gives it nothing; a shallow repository (`shallow_at`'s fixture shape) and an unrecognized directory name are not examined; one walk over two specs gives each the answer a walk over it alone gives
 
-- **Done when**: the tests pass and each is proven to fail with its behavior removed (`QUAL-TEST-001`).
+- **Done when**: the tests pass and each is proven to fail with its behavior removed (`QUAL-TEST-001`), and the commit records the single-spec walk's time on 022 and on a spec of fewer than 50 commits, and the two-spec walk's on all of this repository's specs, release build.
 
 ## 2. `write-review` refuses an outcome outside the scope
 
 - [ ] `RunScope` gains a constructor from a resolved scope, which `RunScope::resolve` calls; `resolve_scope` builds one from the scope it resolved
 - [ ] Refuse, before any write, each `findings[].file` and each `observations[].path` without its `:line` suffix that the scope does not hold, an empty `path` exempt, naming the argument and the file; with an empty `diff-base` the reason says to pass the diff base `compute-review-scope` returned
-- [ ] `Departures` reads that `RunScope`; remove its two `in_scope` filters over a finding's file and `departure_waiver_entries`' "stays counted" sentence
-- [ ] Tests: a finding and an observation on a file outside the scope are refused and nothing is written; an observation at `file:line` inside the scope, one with no path and a finding on a file a first review's plan pattern names are accepted; the project record's write refuses the same way
+- [ ] Tests: a finding and an observation on a file outside the scope are refused and nothing is written; an observation at `file:line` inside the scope, one with no path and a finding on a file a first review's plan pattern names are accepted; a re-read's finding on a file a fix round touched is accepted at the run's last write; the project record's write refuses the same way
 - [ ] `WRITE_REVIEW` in `runtime/src/schema/descriptions.rs`, and `specs/066-audit-records-and-the-completion-gate/data-model.md`'s `write-review` section
+- [ ] `framework/commands/review.md` step 10 and §Passes in a subagent in `framework/reference/review.md`: an outcome on a file outside the scope is marked by the passes and taken out before step 11, a gating one fixed when mechanical or deferred to the home §Groom decision tree in `.ductus/reference/groom.md` chooses, one at a time, any other named in the report and recorded nowhere
 
-- **Done when**: AC1 holds, its tests are proven to fail with the refusal removed, and `cargo test` passes.
+- **Done when**: AC1 holds, its tests are proven to fail with the refusal removed, `cargo test` passes, the two command files state the spec's Edge Case on an outcome outside the scope, and the commit records each registry layout's impact (`claude-style`, `pi`).
 
 ## 3. Review drops what does not belong
 
@@ -59,9 +59,9 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 5. `prune-review`
 
-- [ ] Create `runtime/src/primitives/prune_review.rs`, with `feature` or `all`, preview and `apply` with the previewed digest, as the plan's `prune-review` decision states: `drops`, `rewrites`, `kept`, skips and refusals, the text splice and its re-parse check, `ReadSnapshot::write_if_unchanged`
+- [ ] Create `runtime/src/primitives/prune_review.rs`, with `feature` or `all`, preview and `apply` with the previewed digest, as the plan's `prune-review` decision states: `drops`, `rewrites`, skips and refusals, the text splice and its re-parse check, `ReadSnapshot::write_if_unchanged`
 - [ ] Register it at the seven sites **§Adding or removing a runtime primitive** in `docs/developing-ductus.md` names, with its argument type, `PRUNE_REVIEW`, `framework/runtime-tools.txt`'s line, and `scripts/gen-configure-mcp.sh` re-run
-- [ ] Tests: a record's entries on files that do not belong are dropped and claimant lines rewritten, every other byte unchanged; a record with nothing to drop or rewrite is not written; a fix-round line is not rewritten; an entry on a file with uncommitted changes is kept; `fix-rounds-open: true` is skipped; an unparseable record or `decisions:` list is refused naming the file, and skipped in the `all` walk; a record changed since the read is refused; `all` makes one ownership walk; `{specs-root}/review.md` is not walked
+- [ ] Tests: a record's entries on files that do not belong are dropped and claimant lines rewritten, every other byte unchanged; a record with nothing to drop or rewrite is not written; a fix-round line is not rewritten; `fix-rounds-open: true` is skipped; an unparseable record or `decisions:` list is refused naming the file, and skipped in the `all` walk; a record changed since the read is refused; `all` makes one ownership walk; `{specs-root}/review.md` is not walked
 - [ ] `specs/041-task-pruning/data-model.md`: a `prune-review` section, and its write guard naming four primitives
 
 - **Done when**: AC5 and the prune half of AC3 hold, each test proven to fail with its behavior removed, and the commit records each registry layout's impact (`claude-style`, `pi`).
@@ -69,7 +69,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 ## 6. `/prune` runs it
 
 - [ ] `framework/commands/prune.md`: `prune-review` in the preview, render, its own confirm and apply step after the plan sections, "nothing to prune" needing no drop or rewrite, the `review.md` row, Scope Boundaries, description and `ToolSearch` line; `--project` does not run it
-- [ ] `scripts/gen-claude-commands.sh` re-run, and any golden the edit moves re-blessed alone and read
+- [ ] `scripts/gen-help-tables.sh`'s prune entry if its description changes, then `scripts/gen-help-tables.sh` and `scripts/gen-claude-commands.sh` re-run, and any golden the edit moves re-blessed alone and read
+- [ ] Read `docs/slash-commands.md`'s prune entry whole and correct any sentence saying prune never writes `review.md`
 
 - **Done when**: a `/ductus:prune` run over a fixture spec whose record holds an entry on a file that does not belong shows the drop, writes it on confirmation and nothing when declined, and the commit records each registry layout's impact (`claude-style`, `pi`).
 

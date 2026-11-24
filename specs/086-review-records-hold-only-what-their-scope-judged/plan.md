@@ -45,6 +45,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
   - Each commit is attributed once by `Attributor::claims` and divided by `SpecShare::split` (`commit_attribution.rs`). That is the per-path rule a review's window applies (`attribute_window` in `compute_review_scope.rs`).
   - A path a commit gave the spec is the spec's. So a commit claimed by several specs gives each only its share, as it does in a review's scope.
   - 086's Resolved Questions counted whole commits instead, and call that an approximation of the runtime's attribution.
+- **One spec, cheaply.** Asked about one spec, the walk tests each commit with `Attributor::belongs_to` first. That reads a tree entry and the subject, with no diff. Only a commit it admits is diffed by `Attributor::claims`, which also leaves out a merge, and is then split. `belongs_to` admits every commit `claims` would attribute to a spec on disk, so the answer is the full walk's. Its cost is not measured yet. Task 1's commit records it on 022 and on a young spec.
 - **One walk for many specs.** The walk computes each commit's claims once and splits them for each asked spec that claims it.
   - The cost was measured at `a6cba0be` on 2026-11-24 with the release build. `compute-review-scope --feature 022-deterministic-runtime --since d3980837`, 022's first commit, walked 4,911 commits in 8.73 s real (`/usr/bin/time -p`).
   - Walking each spec's life separately would cover 301,702 commits over 81 specs, against 5,066 for the whole history. Each life was counted with `git rev-list --count` from the spec directory's first commit to `HEAD`, plus that commit.
@@ -68,9 +69,11 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 - **Error.** `InvalidArgument` naming `findings[{idx}].file` or `observations[{idx}].path`, the file, and that the run's scope does not hold it. `an_open_break_names_its_file` names `observations[{idx}].path` the same way.
 - **Empty diff base.** `resolve_scope` gives an empty `diff-base` no entries, so every anchored outcome is refused there. The reason says to pass the diff base `compute-review-scope` returned, as the `unread` refusal does.
 - **The project record.** 084's project review writes through the same path, so the refusal holds there too.
-- **The departure filter goes.** `Departures::in_scope` resolved its own scope, `compute` with `--since` the diff base. That scope leaves out what the run's own window carries in (open findings, unread entries; spec 079). It now reads the `RunScope` `resolve_scope` built.
-  - Every finding is then held, so its two filters over a finding's file exclude nothing and are removed. So is `departure_waiver_entries`' sentence that a finding outside the scope "stays counted" (`AGENTS.md`'s no-dead-code rule).
-  - A departure entry now decides each finding of its rule anywhere in the scope the run counts, as 073's AC5 states it.
+- **An outcome outside the scope** (spec, Edge Cases). `framework/commands/review.md` step 10 takes each hand-back outcome on a file the scope does not hold out of the run before step 11's write.
+  - A gating one (a MUST or SHOULD violation, or a broken contract) is fixed in the run when the fix is mechanical. Otherwise it is deferred to the home **§Groom decision tree** in `.ductus/reference/groom.md` chooses, put to the operator one at a time. `spec_ownership` names the specs whose files they are.
+  - Any other outcome is named in the run's report and recorded nowhere.
+  - **§Passes in a subagent** in `framework/reference/review.md` tells the passes to mark each outcome on a file outside the scope as such, so the host sorts the hand-back before step 11 rather than meeting the refusal there.
+- **Departures are unchanged.** `Departures::in_scope` resolves `compute` with `--since` the diff base. That scope is the one AC1 tests, less what the run's own window carries in (open findings, unread entries; spec 079), so its filter still excludes a finding on a carried path. 073 is not impacted.
 
 ### Review drops what does not belong (AC2, AC3, AC4)
 
@@ -104,7 +107,6 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 - **Preview.** `feature`, or `all` for every feature's `review.md`, with `{specs-root}/review.md` excluded since it has no spec. With `all` there is one ownership walk. For each record it lists:
   - `drops`: each `decisions:` entry, by `key_anchor`, and each waiver anchor, by its `file`, on a file that does not belong. A deleted file's entry is not dropped here, and it expires at the next unrestricted review (AC4).
   - `rewrites`: each `## Excluded from scope` line of the form ``- `{path}` — {claimants}`` whose tail is a comma-separated list every token of which `parse_feature_dir` reads, as written before `64946fe7`. A line ending `— left out of fix round {n}` is not rewritten.
-  - `kept`: each entry on a file with uncommitted changes (git status), which carries until a commit attributes it. A decision a review recorded on uncommitted code is not dropped before that code is committed, and nothing depends on the operator committing first.
   - The record's digest, and `ownership`.
 - **Skips and refusals.**
   - A record carrying `fix-rounds-open: true` is skipped with reason `fix-rounds-open`.
@@ -122,7 +124,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 `framework/commands/prune.md`:
 
 - Its preview step calls `prune-review` beside `prune-tasks` and `prune-plan`.
-- The render step shows its drops, rewrites, kept entries and skips.
+- The render step shows its drops, rewrites and skips.
 - Its own `gate-confirm` and apply step follow the plan-section step.
 - The artifact table's `review.md` row, the Scope Boundaries' writes, its description and its `ToolSearch` line say so.
 - `--project` does not run it.
@@ -136,7 +138,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/primitives/spec_ownership.rs` | Create | The files a spec owns; one walk for many specs |
 | `runtime/src/primitives/mod.rs` | Modify | Declare the two modules |
 | `runtime/src/primitives/compute_review_scope.rs` | Modify | `RunScope` from a resolved scope; owned files on a first review; `ownership` |
-| `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope; one `RunScope` for departures |
+| `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope |
 | `runtime/src/primitives/process_decisions.rs` | Modify | `dropped`, `ownership`, the new retained class |
 | `runtime/src/primitives/process_waivers.rs` | Modify | `dropped`, `ownership` |
 | `runtime/src/primitives/prune_review.rs` | Create | The record reduction |
@@ -150,8 +152,8 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `framework/runtime-tools.txt` | Modify | List `prune-review` |
 | `framework/bootstrap/configure/claude.md` | Modify | Regenerated allow entry |
 | `framework/bootstrap/configure/pi.md` | Modify | Regenerated allow entry |
-| `framework/commands/review.md` | Modify | Steps 8 and 9 pass and show `dropped` |
-| `framework/reference/review.md` | Modify | Window and coverage; per-run waiver processing |
+| `framework/commands/review.md` | Modify | Steps 8 and 9 pass and show `dropped`; step 10 sorts out outcomes outside the scope |
+| `framework/reference/review.md` | Modify | Window and coverage; per-run waiver processing; the passes' brief |
 | `framework/commands/prune.md` | Modify | The review-record step, table row, scope, description |
 | `runtime/CHANGELOG.md` | Modify | `[Unreleased]` entries |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | Refusal, `dropped`, `ownership`, first-review scope |
@@ -181,8 +183,11 @@ This spec adds no `data-model.md`: each shape belongs to its primitive's owner, 
 - **Rejected: extending `prune-plan` or `prune-tasks`.** It saves seven registration sites, and gives a primitive named for one file a write to another.
 - **Rejected: re-serializing the frontmatter after a drop.** That is simpler, but it changes quoting and order in fields the spec requires byte-identical (AC5).
 - **Rejected: membership by literal scope entry in the refusal.** It refuses a finding on a file a first review's plan pattern names.
+- **Rejected: `prune-review` keeping an entry on a file with uncommitted changes.** It saves at most one question, for a prune run between a review and the commit of the code it read, at the cost of a status read and a narrower AC5 than the spec states.
+- **Rejected: one `RunScope` for departures.** No criterion here needs it, and it would widen which findings a departure entry decides, which is 073's behavior.
 - **Limitations.**
-  - The ownership walk costs up to about 9 s per call in this repository, and a review makes at most two such calls. A record whose every unfired entry is on a file the scope holds walks nothing.
+  - The ownership walk runs only when an answer is needed. A first review's `compute` needs it on every call: the primitive, each `write-review` write, each `RunScope::resolve` and `check-review-gate`'s `review-owed`. A classifier needs it only for an unfired entry outside the scope. Each single-spec call diffs only the spec's own commits, and `prune-review --all` diffs every commit once, about 9 s in this repository (measured above).
+  - A decision a review recorded on code not yet committed does not belong until that commit. A `/prune` run in between drops it, and the next review that reads its file asks again.
   - A decision on code a staging spec folded below `done` belongs to the staging spec's commits, not the target's. It is dropped at the target's next unrestricted review that does not read its file, and asked again if a later review does.
   - A shallow clone drops nothing until it is unshallowed.
 
