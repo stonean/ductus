@@ -1787,7 +1787,7 @@ MUTATIONS = [
     (
         'M266 an empty base is derived, and refuses',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeSet::new()));\n    }\n',
+        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeSet::new(), None));\n    }\n',
         '',
         'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
