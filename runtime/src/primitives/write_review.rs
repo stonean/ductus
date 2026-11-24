@@ -2577,9 +2577,10 @@ fn read_departures(repo: &Path, root: &str, feature: &str, content: &str) -> Dep
 }
 
 /// Each place a scoped entry's coverage is lost, as a notice naming the entry's `spec.md`
-/// line and its covered sites in the file (spec 073 AC12): a covered file not in the tree,
-/// and a finding of the entry's rule, in a covered file the run's scope holds, at a site
-/// the entry does not list or naming none, which counts. A covered site where nothing
+/// line and its covered sites in the file (spec 073 AC12): a covered file leaving the
+/// project, never probed, a covered file not in the tree, and a finding of the entry's
+/// rule, in a covered file the run's scope holds, at a site the entry does not list or
+/// naming none, which the entry does not waive. A covered site where nothing
 /// fires adds none, since no finding is hidden; a notice repeated for a second finding at
 /// the same site is given once.
 fn lost_coverage(args: &WriteReviewArgs, departures: &Departures) -> Vec<String> {
@@ -2602,6 +2603,15 @@ fn lost_coverage(args: &WriteReviewArgs, departures: &Departures) -> Vec<String>
                 .collect::<Vec<_>>()
                 .join(", ");
             let line = entry.line;
+            // A covered file is text the spec commits, so it is contained before it is
+            // probed (`BE-INPUT-004`; spec 073's Edge Cases): one leaving the project,
+            // through a symbolic link included, is named and never probed.
+            if crate::primitives::leaves_project(&departures.project, file) {
+                notices.push(format!(
+                    "spec.md line {line} covers {file} in {sites}, but {file} leaves the project, so it is never probed; edit its `covers:`"
+                ));
+                continue;
+            }
             if !departures.project.join(file).exists() {
                 notices.push(format!(
                     "spec.md line {line} covers {file} in {sites}, but {file} is not in the tree, so the entry waives nothing there; edit its `covers:`"
@@ -2617,7 +2627,7 @@ fn lost_coverage(args: &WriteReviewArgs, departures: &Departures) -> Vec<String>
                 let at = finding_site(finding)
                     .map_or_else(|| "no site".into(), |site| format!("`{site}`"));
                 let notice = format!(
-                    "spec.md line {line} covers {file} in {sites}; `{}` fires there at {at}, which it does not cover, so the finding counts",
+                    "spec.md line {line} covers {file} in {sites}; `{}` fires there at {at}, which it does not cover, so the entry does not waive the finding there",
                     entry.rule
                 );
                 if !notices.contains(&notice) {

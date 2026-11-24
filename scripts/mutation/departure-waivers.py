@@ -291,4 +291,18 @@ MUTATIONS = [
         '',
         'departure_waivers::a_covered_file_not_in_the_tree departure_waivers::the_rule_firing_at_an_uncovered_site',
     ),
+    (
+        'M40 a covered file leaving the project is probed',
+        'src/primitives/write_review.rs',
+        '            if crate::primitives::leaves_project(&departures.project, file) {',
+        '            if false {',
+        'departure_waivers::a_covered_file_leaving_the_project',
+    ),
+    (
+        'M41 the rule firing in a covered file outside the scope is a notice',
+        'src/primitives/write_review.rs',
+        '                    && !entry_decides(entry, finding)\n                    && departures.in_scope(args, file)',
+        '                    && !entry_decides(entry, finding)',
+        'departure_waivers::the_rule_firing_in_a_covered_file_outside_the_scope',
+    ),
 ]

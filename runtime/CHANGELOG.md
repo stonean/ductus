@@ -13,11 +13,12 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   holds `anchors:` with no count, a finding of the rule at another site or
   naming none counts, a deferral there stands, and `process-waivers` expires an
   anchor the entry no longer lists. The result's new `departure-notices` names
-  each covered file not in the tree and each finding of the rule in a covered
-  file at a site the entry does not list, bounded with the other departure
-  lists. `check-departures` reports a malformed `covers:` as Blocking. An entry
-  with no `covers:` is unchanged, and analyze waives a scoped entry's rule as
-  an unscoped one's. A scoped waiver reads as malformed to a runtime that
+  each covered file not in the tree or leaving the project, which is never
+  probed, and each finding of the rule in a covered file at a site the entry
+  does not list or at none, bounded with the other departure lists.
+  `check-departures` reports a malformed `covers:` as Blocking. An entry with
+  no `covers:` is unchanged, and analyze waives a scoped entry's rule as an
+  unscoped one's. A scoped waiver reads as malformed to a runtime that
   predates it, which then waives nothing there.
 - **A review's window says how many of its commits no spec claimed (spec 083,
   AC13 and AC16; the agent's recommendations, adopted by the operator,
@@ -78,6 +79,15 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   tree holds that a spec's name, or a task filed in it, is no evidence that it
   owns the code. Breaking for a consumer matching `sources-examined` or a
   candidate's `source` against the three earlier values.
+
+### Fixed
+
+- **A `departs:` item's rule ID is a code span as `CommonMark` reads one
+  (spec 073, review of 2026-11-24).** The reader split the line on backticks,
+  so a lone unclosed backtick named a rule and the entry waived it, and a rule
+  ID in a double-backtick span named none; it now finds the spans as a
+  `covers:` item's are found, so the first is a malformed entry naming no rule
+  ID and the second a well-formed one.
 
 ## [0.64.0] — 2026-11-23
 

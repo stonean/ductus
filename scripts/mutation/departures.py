@@ -447,4 +447,11 @@ MUTATIONS = [
         '    let well_formed = entry.problems.is_empty() && entry.covers.is_none();',
         'write_analysis::tests::a_scoped_entry_waives_its_rule_as_an_unscoped_one_does',
     ),
+    (
+        'M63 a departs item\'s rule ID is split on backticks, not read as a code span',
+        'src/primitives/departures.rs',
+        '    let ids: Vec<&str> = inline_code_spans(rest)\n        .into_iter()\n        .map(|span| rest[span].trim())',
+        "    let ids: Vec<&str> = rest\n        .split('`')\n        .skip(1)\n        .step_by(2)\n        .map(str::trim)",
+        'an_unclosed_backtick_opens_no_rule_id a_rule_id_in_a_longer_delimiter_is_read_as_one_span',
+    ),
 ]

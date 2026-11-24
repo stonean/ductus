@@ -2119,15 +2119,15 @@ pub struct WriteReviewResult {
     /// its state is `stale`.
     #[serde(default)]
     pub analyze_stale_paths_count: usize,
-    /// Where `analyze-freshness`' `paths`, `malformed-departures` and
-    /// `superseded-deferrals` are: in this result, or past `[artifacts]
-    /// read-size-bytes` in the file `lists-file` names.
+    /// Where `analyze-freshness`' `paths`, `malformed-departures`,
+    /// `superseded-deferrals` and `departure-notices` are: in this result, or
+    /// past `[artifacts] read-size-bytes` in the file `lists-file` names.
     #[serde(default)]
     pub form: ListsForm,
     /// In the file form, the file holding the lists whole, from the project
-    /// root: a JSON object whose `analyze-stale-paths`, `malformed-departures`
-    /// and `superseded-deferrals` keys are the lists, each present even when
-    /// empty.
+    /// root: a JSON object whose `analyze-stale-paths`, `malformed-departures`,
+    /// `superseded-deferrals` and `departure-notices` keys are the lists, each
+    /// present even when empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// Each departure entry in the spec's `## Applicable Rules` that derived no

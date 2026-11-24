@@ -2130,8 +2130,8 @@ async fn write_review_reports_examined_against_a_derived_scope_via_mcp() {
 }
 
 /// The read size the `write-review` bounded test sets: past it twelve
-/// malformed entries pass inline, and the file form's fixed fields (about 550
-/// bytes) fit.
+/// malformed entries pass inline, and the file form's fixed fields fit (608
+/// bytes as the CLI prints that file form, measured 2026-11-24).
 const REVIEW_READ_SIZE: usize = 700;
 
 /// `write-review` past the read size over MCP: `malformed-departures` reaches

@@ -282,11 +282,12 @@ fn list_item(line: &str) -> Option<&str> {
 }
 
 fn start_entry(indent: usize, line: usize, rest: &str) -> Open {
-    let ids: Vec<&str> = rest
-        .split('`')
-        .skip(1)
-        .step_by(2)
-        .map(str::trim)
+    // The rule IDs are the item's code spans, found as `CommonMark` finds them
+    // ([`inline_code_spans`]), as a `covers:` item's are: a backtick with no matching run
+    // is literal text, and a span in a longer delimiter is one span.
+    let ids: Vec<&str> = inline_code_spans(rest)
+        .into_iter()
+        .map(|span| rest[span].trim())
         .filter(|id| !id.is_empty())
         .collect();
     let mut problems = Vec::new();
@@ -984,6 +985,46 @@ mod tests {
                 line: 5,
                 kind: ProblemKind::SecondRule
             }]
+        );
+    }
+
+    /// The rule ID is a code span as `CommonMark` reads one: a lone backtick opens none,
+    /// so the entry names no rule ID, and one after a closed span is literal text.
+    #[test]
+    fn an_unclosed_backtick_opens_no_rule_id() {
+        let parsed = parse(&spec_with("- departs: `A-1\n  - reason: r\n"));
+        assert_eq!(parsed.entries, vec![]);
+        assert_eq!(
+            parsed.problems,
+            vec![Problem {
+                line: 5,
+                kind: ProblemKind::MissingRule
+            }]
+        );
+        let parsed = parse(&spec_with("- departs: `A-1` `B-1\n  - reason: r\n"));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(
+            parsed
+                .entries
+                .iter()
+                .map(|entry| entry.rule.as_str())
+                .collect::<Vec<_>>(),
+            vec!["A-1"]
+        );
+    }
+
+    /// A rule ID in a longer delimiter is one code span, as a `covers:` site is.
+    #[test]
+    fn a_rule_id_in_a_longer_delimiter_is_read_as_one_span() {
+        let parsed = parse(&spec_with("- departs: ``A-1``\n  - reason: r\n"));
+        assert_eq!(parsed.problems, vec![]);
+        assert_eq!(
+            parsed
+                .entries
+                .iter()
+                .map(|entry| entry.rule.as_str())
+                .collect::<Vec<_>>(),
+            vec!["A-1"]
         );
     }
 

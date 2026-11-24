@@ -549,9 +549,9 @@ those sites where the rule fires, each with no count, so its findings at any
 other site count as any other, and `process-waivers` expires an anchor once the
 entry no longer lists it. The review step reads the result's
 `malformed-departures`, which names each entry that derives nothing, and its
-`departure-notices`, which name each covered file not in the tree and each
-finding of a scoped entry's rule in a covered file at a site the entry does not
-list. The entry decides over a deferral of its violations at the sites it
+`departure-notices`, which name each covered file not in the tree or leaving the
+project, which is never probed, and each finding of a scoped entry's rule in a
+covered file at a site the entry does not list or at none. The entry decides over a deferral of its violations at the sites it
 covers: `write-review` refuses a new `--defer` of one, naming the entry's
 `spec.md` line, and a stored deferral is superseded, named in
 `superseded-deferrals`. Past the read size the three lists are absent from the

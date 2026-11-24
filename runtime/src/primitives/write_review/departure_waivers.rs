@@ -1093,28 +1093,65 @@ fn a_scoped_entry_supersedes_a_stored_deferral_only_at_a_site_it_covers() {
     assert!(report.contains(&key_at("other")), "stands: {report}");
 }
 
-/// AC13: a malformed `covers:` derives no waiver, and the run names the entry.
+/// AC13: a malformed `covers:`, in each form AC13 names, derives no waiver, and the run
+/// names the entry.
 #[test]
 fn a_malformed_covers_waives_nothing_and_the_run_names_it() {
-    let tmp = tempfile::tempdir().unwrap();
-    fixture(
-        tmp.path(),
-        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n",
-    );
-    let (_, written) = run_review(
-        tmp.path(),
-        &[at_site("src/a.rs", Some("walk"))],
-        T1,
-        &json!({}),
-    );
-    assert_eq!(
-        (written.waived, written.must_violations),
-        (0, 1),
-        "{written:?}"
-    );
-    assert_eq!(written.malformed_departures.len(), 1, "{written:?}");
-    assert!(written.malformed_departures[0].contains("lists no site"));
-    assert!(waivers(tmp.path()).is_empty(), "no waiver stored");
+    // Not a list, empty, a blank file, a blank site, a repeated item, an absolute file,
+    // and a file holding `..`.
+    let forms = [
+        ("  - covers: `src/a.rs` in `walk`\n", "is not a list"),
+        ("  - covers:\n", "lists no site"),
+        (
+            "  - covers:\n    - ` ` in `walk`\n",
+            "not two non-blank code spans",
+        ),
+        (
+            "  - covers:\n    - `src/a.rs` in ` `\n",
+            "not two non-blank code spans",
+        ),
+        (
+            "  - covers:\n    - `src/a.rs` in `walk`\n    - `src/a.rs` in `walk`\n",
+            "twice",
+        ),
+        (
+            "  - covers:\n    - `/src/a.rs` in `walk`\n",
+            "absolute or holds",
+        ),
+        (
+            "  - covers:\n    - `src/../src/a.rs` in `walk`\n",
+            "absolute or holds",
+        ),
+    ];
+    for (covers, phrase) in forms {
+        let tmp = tempfile::tempdir().unwrap();
+        fixture(
+            tmp.path(),
+            &format!("- departs: `BE-COMPAT-001`\n  - reason: r\n{covers}"),
+        );
+        let (_, written) = run_review(
+            tmp.path(),
+            &[at_site("src/a.rs", Some("walk"))],
+            T1,
+            &json!({}),
+        );
+        assert_eq!(
+            (written.waived, written.must_violations),
+            (0, 1),
+            "{covers}: {written:?}"
+        );
+        assert_eq!(
+            written.malformed_departures.len(),
+            1,
+            "{covers}: {written:?}"
+        );
+        assert!(
+            written.malformed_departures[0].contains(phrase),
+            "{covers}: {:?} lacks {phrase}",
+            written.malformed_departures
+        );
+        assert!(waivers(tmp.path()).is_empty(), "{covers}: no waiver stored");
+    }
 }
 
 /// An item dropped from `covers:` stops waiving its site at once, with the expiry notice,
@@ -1300,6 +1337,56 @@ fn a_covered_site_where_the_rule_does_not_fire_is_no_notice() {
     );
     assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
     assert_eq!(written.departure_notices_count, 0);
+}
+
+/// Spec 073's Edge Cases: the rule firing in a covered file the tree holds but the run's
+/// scope does not is no notice, since the run did not read that file; the finding there
+/// still counts, unwaived.
+#[test]
+fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/out.rs` in `walk`\n",
+    );
+    let (_, written) = run_review(
+        tmp.path(),
+        &[at_site("src/out.rs", Some("other"))],
+        T1,
+        &json!({}),
+    );
+    assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (0, 1),
+        "{written:?}"
+    );
+}
+
+/// Spec 073's Edge Cases and `BE-INPUT-004`: a covered file reached through a symbolic
+/// link leaving the project is named and never probed, so the notice is the same whether
+/// or not the link's target holds the file.
+#[cfg(unix)]
+#[test]
+fn a_covered_file_leaving_the_project_is_a_notice_and_never_probed() {
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(outside.path().join("present.rs"), "fn f() {}\n").unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/link/present.rs` in `walk`\n    - `src/link/absent.rs` in `walk`\n",
+    );
+    std::os::unix::fs::symlink(outside.path(), tmp.path().join("src/link")).unwrap();
+    let (_, written) = run_review(tmp.path(), &[], T1, &json!({}));
+    let notices = &written.departure_notices;
+    assert_eq!(notices.len(), 2, "{notices:?}");
+    for notice in notices {
+        assert!(notice.contains("spec.md line 10"), "{notice}");
+        assert!(
+            notice.contains("leaves the project, so it is never probed"),
+            "{notice}"
+        );
+    }
 }
 
 /// BE-PAYLOAD-001: `departure-notices` alone is enough to move the lists past the read
