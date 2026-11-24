@@ -2,7 +2,7 @@
 status: planned
 dependencies: [041-task-pruning, 050-constitution, 055-shared-constitution, 063-oversized-artifacts-warn-with-a-fix, 075-agents-md-holds-what-every-session-needs, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [022-deterministic-runtime, 041-task-pruning, 050-constitution, 055-shared-constitution, 063-oversized-artifacts-warn-with-a-fix, 067-analyze-and-audit-checks, 075-agents-md-holds-what-every-session-needs]
-next-criterion: 21
+next-criterion: 22
 ---
 
 # 087 — Parts moved out of a project file are read, measured and pruned as that file
@@ -86,6 +86,7 @@ A **part** is a markdown file directly under a project file's parts directory, a
 - [ ] AC16: `/target`'s report of a loaded shared constitution gives each part under its checkout's `.ductus/docs/constitution/` with its bytes, names a fixture part one byte over the limit with its owning repository as the fix, reports the parts of one not checked out as not measured, and the run continues.
 - [ ] AC17: `/analyze` records no finding for a shared constitution's part.
 - [ ] AC18: The change that ships the command and runtime surfaces records each registry layout's impact (`claude-style`, `pi`).
+- [ ] AC21: `/prune --project` makes its move proposals before the entry walk, and a run the operator ends after them reports each entry it did not judge as not examined, never as kept.
 
 ## Applicable Rules
 
