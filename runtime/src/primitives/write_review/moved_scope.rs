@@ -2,10 +2,7 @@
 //! `a-commit-after-the-scope-was-resolved-refuses-the-write`).
 //!
 //! `write-review` re-derives the scope at write time, so a commit that lands
-//! after the run's `compute-review-scope` joins a scope no pass read. Since
-//! spec 081 another spec's window takes each path of a commit naming no spec
-//! as read once a committed record whose window, `diff-base` to
-//! `reviewed-against`, holds it leaves the path out of `unread`. The review
+//! after the run's `compute-review-scope` joins a scope no pass read. The review
 //! therefore records as `reviewed-against` the `head` its scope was resolved
 //! against, and this guard refuses the write while a commit after that sha
 //! changed a path the write-time scope holds.
@@ -363,7 +360,7 @@ mod tests {
         assert!(reason(&err).contains("names no commit"), "{err:?}");
     }
 
-    /// Through `write-review` itself: a commit naming no spec lands after the
+    /// Through `write-review` itself: a commit of the spec's own lands after the
     /// review resolved its scope, so the write refuses and writes no record,
     /// and the same write passing the new head goes through.
     #[test]
@@ -384,9 +381,9 @@ mod tests {
         let base = commit_all(&repository, "status(001): planned -> in-progress").to_string();
         write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
         let head = commit_all(&repository, "feat(001): a").to_string();
-        // A commit naming no spec lands mid-review.
+        // Another session's commit for this spec lands mid-review.
         write(&tmp.path().join("src/c.rs"), "fn c() {}\n");
-        let landed = commit_all(&repository, "chore: c").to_string();
+        let landed = commit_all(&repository, "feat(001): c").to_string();
         let args = |against: &str| WriteReviewArgs {
             feature: "001-x".into(),
             reviewed_at: "2026-11-22T00:00:00Z".into(),

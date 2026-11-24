@@ -25,7 +25,7 @@
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
@@ -37,7 +37,7 @@ use crate::primitives::check_stuck::{
     feature_file_in_tree, find_done_commit, find_in_progress_commit, leaves_done,
     reopening_is_open, tree_entry_id,
 };
-use crate::primitives::commit_attribution::{Attributor, CommitClaims};
+use crate::primitives::commit_attribution::{Attributor, CommitClaims, SpecShare};
 use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
     frontmatter_status, is_project_artifact, load_review_record, parse_affected_files,
@@ -138,9 +138,9 @@ pub(crate) struct ReviewScope {
 }
 
 /// How many commits a window's walk examined, and how many of them no spec
-/// claimed although they changed a path in the project (spec 083). The count is
-/// taken before credit, so a review crediting a commit's paths leaves it counted:
-/// it measures attribution, while what still owes a review is in the scope.
+/// claimed although they changed a path in the project (spec 083). The count
+/// measures attribution: such a commit's paths leave the scope, for the project
+/// record's review (spec 084, AC6).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct WindowCommits {
     /// See [`ComputeReviewScopeResult::commits_examined`].
@@ -923,7 +923,8 @@ fn last_review_commit(
 struct WindowClaims {
     /// Paths a commit gave this spec.
     own: BTreeSet<String>,
-    /// Paths a commit left to other specs.
+    /// Paths a commit left to other specs, or, when no spec claims the commit, to
+    /// the project record's review (spec 084, AC6).
     others: BTreeSet<String>,
     /// Paths a staging spec folded into this one below `done` brought, wherever
     /// the window starts, since no review has read them.
@@ -932,34 +933,8 @@ struct WindowClaims {
     commits: Option<WindowCommits>,
 }
 
-impl WindowClaims {
-    /// Give each path of a commit no spec claims to this spec, unless a committed
-    /// record read it, which makes it the reading spec's, read once (spec 081):
-    /// `split_changes` then lists it in `excluded`, and it owes no review.
-    fn take_unclaimed(&mut self, records: &[ReadRecord], commit: Oid, paths: Vec<String>) {
-        for path in paths {
-            if records.iter().any(|record| record.read(commit, &path)) {
-                self.others.insert(path);
-            } else {
-                self.own.insert(path);
-            }
-        }
-    }
-}
-
-/// The Affected Files entries of the plan `directory` holds. A claimant whose
-/// `plan.md` is, or lies under, a link leaving the project has it unread, and
-/// names no path (`BE-INPUT-004`).
-fn claimant_plan(repo: &Path, specs_root: &str, directory: &str) -> Result<PlanEntries> {
-    if super::leaves_project(repo, &format!("{specs_root}/{directory}/plan.md")) {
-        return Ok(PlanEntries::new(&[]));
-    }
-    Ok(PlanEntries::new(&read_plan_affected(
-        &repo.join(specs_root).join(directory),
-    )?))
-}
-
-/// Walk `base..HEAD` and apply AC6's rule to each commit. A feature directory
+/// Walk `base..HEAD` and give each commit's paths to this spec or to the others, as
+/// [`SpecShare`] divides them. A feature directory
 /// [`parse_feature_dir`] does not recognize can be claimed by no commit, so
 /// nothing is left to another spec and every changed path stays in scope.
 fn attribute_window(
@@ -988,9 +963,8 @@ fn attribute_window(
     let Some(form) = parse_feature_dir(feature) else {
         return Ok(window);
     };
-    let own_prefix = format!("{specs_root}/{feature}/");
     let own_plan = PlanEntries::new(plan_affected);
-    let mut plans: BTreeMap<String, PlanEntries> = BTreeMap::new();
+    let mut share = SpecShare::new(&attributor, &form, feature, &own_plan);
     let fold = FoldTest {
         project,
         specs_root,
@@ -999,162 +973,15 @@ fn attribute_window(
     };
     let mut folded = fold.uncommitted()?;
 
-    let records = read_records(project, specs_root, &commits)?;
     for (oid, claims) in commits {
         let commit = repository.find_commit(oid)?;
         folded.extend(fold.committed(&commit, &claims.paths)?);
-        if claims.claimants.is_empty() {
-            // A commit naming no spec and touching no spec directory is in every open
-            // spec's window, so a review whose window held it had its paths in scope.
-            window.take_unclaimed(&records, oid, claims.paths);
-            continue;
-        }
-        if !claims.is_claimed_by(&form) {
-            window.others.extend(claims.paths);
-            continue;
-        }
-
-        // This spec claims the commit, alone or with others. A path in another
-        // claimant's directory is that claimant's, whose own review reads it: a
-        // groom commit routing scenarios to many specs would otherwise put every
-        // one of them in each claimant's scope (owner, 2026-11-08).
-        let others_directories: Vec<String> = claims
-            .claimants
-            .iter()
-            .filter(|claimant| **claimant != form)
-            .filter_map(|claimant| attributor.directory_of(claimant))
-            .map(|directory| format!("{specs_root}/{directory}/"))
-            .collect();
-        // A subject naming specs gives its code to the specs it names, and a spec
-        // that claims the commit only by touching its directory takes that
-        // directory's files and nothing else (spec 081). A subject naming none
-        // keeps 079's rule, since an adopter's subjects usually name no spec and
-        // a plan need not list every file: alone, every path is this spec's, and
-        // with other claimants each takes its own plan's paths and the unplanned
-        // ones.
-        let named_here = claims.named.contains(&form);
-        if claims.named.is_empty() {
-            for claimant in &claims.claimants {
-                if let Some(directory) = attributor.directory_of(claimant)
-                    && !plans.contains_key(directory)
-                {
-                    plans.insert(
-                        directory.to_string(),
-                        claimant_plan(repo, specs_root, directory)?,
-                    );
-                }
-            }
-        }
-        for path in claims.paths {
-            let anothers = others_directories
-                .iter()
-                .any(|prefix| path.starts_with(prefix.as_str()));
-            let by_subject = if claims.named.is_empty() {
-                let unplanned = !claims
-                    .claimants
-                    .iter()
-                    .filter_map(|claimant| attributor.directory_of(claimant))
-                    .filter_map(|directory| plans.get(directory))
-                    .any(|plan| plan.names(&path));
-                own_plan.names(&path) || (unplanned && !anothers)
-            } else {
-                named_here && !anothers
-            };
-            if path.starts_with(&own_prefix) || by_subject {
-                window.own.insert(path);
-            } else {
-                window.others.insert(path);
-            }
-        }
+        let (own, others) = share.split(claims)?;
+        window.own.extend(own);
+        window.others.extend(others);
     }
     window.folded_in = fold.brought(repo, &folded)?;
     Ok(window)
-}
-
-/// A committed review record that states what its run read: the commits its window
-/// held and the scope entries its passes did not read (spec 081).
-struct ReadRecord {
-    /// The commits in `diff-base..reviewed-against`.
-    window: HashSet<Oid>,
-    /// The record's `unread` entries as the paths they are, since a scope entry may be
-    /// a changed path holding `{`, which as a pattern would not name itself.
-    literal: BTreeSet<String>,
-    /// The record's `unread`, matched as plan entries are, so an entry that is a
-    /// pattern covers every path it matches, never fewer.
-    unread: PlanEntries,
-}
-
-impl ReadRecord {
-    /// Whether the record read `path` as `commit` changed it: its window holds the
-    /// commit and its `unread` does not name the path, as itself or as a pattern.
-    fn read(&self, commit: Oid, path: &str) -> bool {
-        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)
-    }
-}
-
-/// The review records committed in the window that can credit a read, one per commit
-/// changing a spec's `review.md` (spec 081). Each names a run, states `unread`, and
-/// recorded no skipped pass, no budget stop and no open fix-round loop, since each of
-/// those leaves part of its scope unread. A record with no `unread`, every one from
-/// before the field among them, credits nothing: an unstated claim is not *read
-/// everything*. A window that cannot be walked, a sha that is no commit here among
-/// them, credits nothing either. A record committed before the window was written
-/// before its first commit, so its window holds none of them.
-fn read_records(
-    project: &ProjectRepository,
-    specs_root: &str,
-    commits: &[(Oid, CommitClaims)],
-) -> Result<Vec<ReadRecord>> {
-    let repository = &project.repository;
-    let prefix = format!("{specs_root}/");
-    let suffix = format!("/{REVIEW_RECORD_FILE}");
-    let mut records = Vec::new();
-    for (oid, claims) in commits {
-        for path in &claims.paths {
-            if path
-                .strip_prefix(&prefix)
-                .and_then(|rest| rest.strip_suffix(&suffix))
-                .is_none_or(|directory| directory.contains('/'))
-            {
-                continue;
-            }
-            let tree = repository.find_commit(*oid)?.tree()?;
-            let Some(record) = record_at(repository, &tree, &project.to_git(path))? else {
-                continue;
-            };
-            let complete = record.last_run.is_some()
-                && record.skipped_passes.is_empty()
-                && record.budget_stop != Some(true)
-                && record.fix_rounds_open != Some(true);
-            let Some(unread) = record.unread.filter(|_| complete) else {
-                continue;
-            };
-            let oid_of = |sha: Option<&str>| sha.and_then(|sha| Oid::from_str(sha).ok());
-            let (Some(base), Some(against)) = (
-                oid_of(record.diff_base.as_deref()),
-                oid_of(record.reviewed_against.as_deref()),
-            ) else {
-                continue;
-            };
-            let Some(window) = commits_between(repository, base, against) else {
-                continue;
-            };
-            records.push(ReadRecord {
-                window,
-                literal: unread.iter().cloned().collect(),
-                unread: PlanEntries::new(&unread),
-            });
-        }
-    }
-    Ok(records)
-}
-
-/// The commits in `base..against`, or `None` when either is no commit here.
-fn commits_between(repository: &Repository, base: Oid, against: Oid) -> Option<HashSet<Oid>> {
-    let mut walk = repository.revwalk().ok()?;
-    walk.push(against).ok()?;
-    walk.hide(base).ok()?;
-    walk.collect::<std::result::Result<_, _>>().ok()
 }
 
 /// Whether a spec was folded into one target below `done`, and what that brought.
@@ -1307,7 +1134,7 @@ pub(crate) struct PlanEntries {
 }
 
 impl PlanEntries {
-    fn new(entries: &[String]) -> Self {
+    pub(crate) fn new(entries: &[String]) -> Self {
         let mut literal = BTreeSet::new();
         let mut patterns = Vec::new();
         for entry in entries {
@@ -1321,7 +1148,7 @@ impl PlanEntries {
         Self { literal, patterns }
     }
 
-    fn names(&self, path: &str) -> bool {
+    pub(crate) fn names(&self, path: &str) -> bool {
         self.literal.contains(path) || self.patterns.iter().any(|pattern| pattern.is_match(path))
     }
 }
@@ -1554,7 +1381,7 @@ mod tests {
         let sha = commit_all(&repo, "chore: begin");
         write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
         write(&tmp.path().join("src/b.rs"), "fn b() {}\n");
-        commit_all(&repo, "feat: implement");
+        commit_all(&repo, "feat(001): implement");
         (tmp, sha)
     }
 
@@ -3663,7 +3490,8 @@ mod tests {
 
     /// The flip to `done` lies in this window and changed the staging spec's
     /// `spec.md` from below `done`, so only the commit removing it may count as a fold.
-    /// `src/t.rs` names a spec gone from disk, so it reads as no spec's.
+    /// `src/t.rs` names a spec gone from disk, so it reads as no spec's, and leaves the
+    /// scope too (spec 084, AC6).
     #[test]
     fn a_fold_from_done_leaves_a_window_spanning_its_commits_excluding_them() {
         let (tmp, repo, _) = two_specs(&[], &[]);
@@ -3673,7 +3501,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert!(scope.excluded.contains("src/s.rs"));
-        assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
+        assert!(scope.excluded.contains("src/t.rs"), "{:?}", scope.scope);
     }
 
     /// A fold names one target, so another spec's window keeps leaving the commit
@@ -3914,24 +3742,25 @@ mod tests {
         assert!(!scope.excluded.contains("src/shared.rs"));
     }
 
+    /// A commit no spec claims, one naming a number no spec has among them, leaves
+    /// every open spec's scope for the project record's review (spec 084, AC6).
     #[test]
-    fn an_unclaimed_commit_counts_whole_in_every_window() {
+    fn an_unclaimed_commit_leaves_every_window() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/unclaimed.rs", "chore: lint cleanup");
         change(&tmp, &repo, "src/nine.rs", "fix(999): a number no spec has");
 
         for scope in [x(&tmp), y(&tmp)] {
-            assert!(has(&scope, "src/unclaimed.rs"), "{:?}", scope.scope);
-            assert!(has(&scope, "src/nine.rs"), "{:?}", scope.scope);
+            for path in ["src/unclaimed.rs", "src/nine.rs"] {
+                assert!(!has(&scope, path), "{path}: {:?}", scope.scope);
+                assert!(
+                    scope.excluded.contains(path),
+                    "{path}: {:?}",
+                    scope.excluded
+                );
+            }
+            assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
         }
-    }
-
-    /// How many commits `base..HEAD` holds, counted by a walk of the test's own.
-    fn commits_since(repo: &Repository, base: &str) -> usize {
-        let mut walk = repo.revwalk().unwrap();
-        walk.push_head().unwrap();
-        walk.hide(Oid::from_str(base).unwrap()).unwrap();
-        walk.count()
     }
 
     /// The window counts every commit it walked and those no spec claimed, and the
@@ -3948,7 +3777,10 @@ mod tests {
             examined: 4,
             unclaimed: 1,
         };
-        assert_eq!(x(&tmp).commits, Some(counts));
+        let scope = x(&tmp);
+        assert_eq!(scope.commits, Some(counts));
+        // The chore's path left the scope and its commit is still counted (spec 084).
+        assert!(scope.excluded.contains("src/unclaimed.rs"));
         let result = serde_json::to_value(run(&args("001-x", None), tmp.path()).unwrap()).unwrap();
         assert_eq!(result["commits-examined"], 4);
         assert_eq!(result["commits-unclaimed"], 1);
@@ -3966,21 +3798,6 @@ mod tests {
             unclaimed: 0,
         };
         assert_eq!(x(&tmp).commits, Some(counts));
-    }
-
-    /// A review crediting an unclaimed commit's paths takes them out of the scope and
-    /// leaves the commit counted, since the count measures attribution (spec 083).
-    #[test]
-    fn a_credited_unclaimed_commit_is_still_counted() {
-        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", holding_the_chore);
-        let repo = Repository::open(tmp.path()).unwrap();
-        let scope = x(&tmp);
-        assert!(scope.excluded.contains("src/x.rs"), "{:?}", scope.scope);
-        let counts = WindowCommits {
-            examined: commits_since(&repo, &scope.diff_base),
-            unclaimed: 1,
-        };
-        assert_eq!(scope.commits, Some(counts));
     }
 
     /// A clean merge changed no path itself, so it is examined and never unclaimed
@@ -4094,17 +3911,18 @@ mod tests {
     }
 
     /// The same code change committed with no tick names no spec by its subject and
-    /// touches no spec directory, so it stays in every open spec's scope (spec 083,
-    /// AC12).
+    /// touches no spec directory, so no spec claims it (spec 083, AC12) and it leaves
+    /// every open spec's scope (spec 084, AC6).
     #[test]
-    fn an_unticked_commit_under_the_same_subject_stays_in_every_window() {
+    fn an_unticked_commit_under_the_same_subject_leaves_every_window() {
         let (tmp, repo) = two_open_specs();
         write(&tmp.path().join("src/lib.rs"), "fn new() {}\n");
         commit_all(&repo, "123 - 022: x");
 
         for feature in ["022-a", "034-b"] {
             let scope = compute(&args(feature, None), tmp.path()).unwrap();
-            assert!(has(&scope, "src/lib.rs"), "{feature}: {:?}", scope.scope);
+            assert!(!has(&scope, "src/lib.rs"), "{feature}: {:?}", scope.scope);
+            assert!(scope.excluded.contains("src/lib.rs"), "{feature}");
         }
     }
 
@@ -4979,10 +4797,11 @@ mod tests {
         assert!(reopened("src/code.rs").review_owed);
     }
 
-    /// A code commit naming no spec and touching no spec directory stays in the window
-    /// of every spec holding it, as under 079, and owes its review (spec 081).
+    /// A code commit naming no spec and touching no spec directory leaves an open
+    /// spec's scope and owes it no review: it is reviewed under the project record
+    /// (spec 084, AC6, in place of 081's AC10). The window still counts it.
     #[test]
-    fn a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it() {
+    fn a_code_commit_naming_no_spec_leaves_an_open_specs_scope() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
@@ -5000,145 +4819,48 @@ mod tests {
         write(&tmp.path().join("src/unnamed.rs"), "fn u() {}\n");
         commit_all(&repo, "feat: implement");
         let scope = x(&tmp);
-        assert!(has(&scope, "src/unnamed.rs"), "{:?}", scope.scope);
-        assert!(scope.review_owed);
-    }
-
-    /// 001-x with a clean record; then an unnamed chore changing `files`; then 002-y's
-    /// review, its record written with `extra` over `diff-base..reviewed-against`, which
-    /// `window` picks from (the chore's parent, the chore). Returns the fixture.
-    fn read_by_y(
-        files: &[&str],
-        extra: &str,
-        window: fn(&str, &str) -> (String, String),
-    ) -> tempfile::TempDir {
-        read_by_y_at(files, extra, window, "2026-11-02T00:00:00Z")
-    }
-
-    /// [`read_by_y`], its record's `last-run` being `last_run`.
-    fn read_by_y_at(
-        files: &[&str],
-        extra: &str,
-        window: fn(&str, &str) -> (String, String),
-        last_run: &str,
-    ) -> tempfile::TempDir {
-        let (tmp, repo, _) = two_specs(&[], &[]);
-        let before = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
-        for file in files {
-            write(&tmp.path().join(file), "pinned\n");
-        }
-        let chore = commit_all(&repo, "chore: pin a tool");
-        let (base, against) = window(&before, &chore);
-        write(
-            &tmp.path().join("specs/002-y/review.md"),
-            &format!(
-                "---\nspec: 002-y\nlast-run: {last_run}\nreviewed-against: {against}\n\
-                 diff-base: {base}\nmust-violations: 0\nblocking: false\n{DISPOSITIONS}{extra}---\n\n# Review\n"
-            ),
-        );
-        commit_all(&repo, "review(002)");
-        tmp
-    }
-
-    fn holding_the_chore(before: &str, chore: &str) -> (String, String) {
-        (before.to_string(), chore.to_string())
-    }
-
-    /// A path a committed review states it read is read once: it leaves every other
-    /// window, and owes no review (spec 081, AC13).
-    #[test]
-    fn a_path_a_complete_record_read_is_credited_and_owes_no_review() {
-        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", holding_the_chore);
-        let scope = x(&tmp);
-        assert!(!has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert!(scope.excluded.contains("src/x.rs"));
+        assert!(!has(&scope, "src/unnamed.rs"), "{:?}", scope.scope);
+        assert!(scope.excluded.contains("src/unnamed.rs"));
         assert!(!scope.review_owed, "{:?}", scope.owed_by);
+        assert_eq!(scope.commits.map(|commits| commits.unclaimed), Some(1));
     }
 
-    /// Each record that does not state a whole read of the path credits nothing: the
-    /// path named unread, no `unread` at all, a skipped pass, a budget stop, an open
-    /// loop (spec 081, AC14).
+    /// No other spec's review record changes that, whatever it states it read or left
+    /// unread: 081's crediting (its AC13 and AC14) is gone with the rule it served.
     #[test]
-    fn a_path_no_complete_record_read_stays_and_owes_the_review() {
+    fn another_specs_record_neither_keeps_nor_credits_an_unclaimed_path() {
         for extra in [
+            "unread: []\n",
             "unread:\n  - src/x.rs\n",
             "",
             "unread: []\nskipped-passes: [security]\n",
-            "unread: []\nbudget-stop: true\n",
-            "unread: []\nfix-rounds-open: true\n",
         ] {
-            let scope = x(&read_by_y(&["src/x.rs"], extra, holding_the_chore));
-            assert!(has(&scope, "src/x.rs"), "{extra:?}: {:?}", scope.scope);
-            assert!(scope.review_owed, "{extra:?}");
+            let (tmp, repo, _) = two_specs(&[], &[]);
+            let before = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+            let chore = change(&tmp, &repo, "src/x.rs", "chore: pin a tool");
+            write(
+                &tmp.path().join("specs/002-y/review.md"),
+                &format!(
+                    "---\nspec: 002-y\nlast-run: 2026-11-02T00:00:00Z\nreviewed-against: {chore}\n\
+                     diff-base: {before}\nmust-violations: 0\nblocking: false\n{DISPOSITIONS}{extra}---\n\n# Review\n"
+                ),
+            );
+            commit_all(&repo, "review(002)");
+            let scope = x(&tmp);
+            assert!(!has(&scope, "src/x.rs"), "{extra:?}: {:?}", scope.scope);
+            assert!(scope.excluded.contains("src/x.rs"), "{extra:?}");
+            assert!(!scope.review_owed, "{extra:?}: {:?}", scope.owed_by);
         }
     }
 
-    /// A record that names one of a commit's paths unread credits the others.
+    /// A path an unclaimed commit changed comes back once a commit of the spec's own
+    /// changes it: what a commit gave the spec outweighs what one left to others.
     #[test]
-    fn a_record_credits_each_path_it_did_not_name_unread() {
-        let tmp = read_by_y(
-            &["src/x.rs", "src/y.rs"],
-            "unread:\n  - src/x.rs\n",
-            holding_the_chore,
-        );
-        let scope = x(&tmp);
-        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert!(!has(&scope, "src/y.rs"), "{:?}", scope.scope);
-    }
-
-    /// A record whose window does not hold the commit never read it.
-    #[test]
-    fn a_record_whose_window_does_not_hold_the_commit_credits_nothing() {
-        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", |before, _| {
-            (before.to_string(), before.to_string())
-        });
-        let scope = x(&tmp);
-        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert!(scope.review_owed);
-    }
-
-    /// A record's window starts after its `diff-base`, so a commit that is its base
-    /// was read by the review before it, never by this one (spec 081, AC13).
-    #[test]
-    fn a_record_whose_diff_base_is_the_commit_credits_nothing() {
-        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", |_, chore| {
-            (chore.to_string(), chore.to_string())
-        });
-        let scope = x(&tmp);
-        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert!(scope.review_owed);
-    }
-
-    /// A record whose `last-run` is null names no run, so it read nothing.
-    #[test]
-    fn a_record_that_names_no_run_credits_nothing() {
-        let tmp = read_by_y_at(&["src/x.rs"], "unread: []\n", holding_the_chore, "null");
-        let scope = x(&tmp);
-        assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
-        assert!(scope.review_owed);
-    }
-
-    /// An `unread` entry is the path it names even when it holds a pattern character:
-    /// `src/{a}.rs` named unread stays in scope (spec 081, AC14).
-    #[test]
-    fn a_path_named_unread_that_holds_a_brace_stays_in_scope() {
-        let tmp = read_by_y(
-            &["src/{a}.rs"],
-            "unread:\n  - src/{a}.rs\n",
-            holding_the_chore,
-        );
-        let scope = x(&tmp);
-        assert!(has(&scope, "src/{a}.rs"), "{:?}", scope.scope);
-        assert!(scope.review_owed);
-    }
-
-    /// The credit covers one commit's change, so a later commit no record read keeps
-    /// the path in scope.
-    #[test]
-    fn a_later_change_no_record_read_keeps_the_path() {
-        let tmp = read_by_y(&["src/x.rs"], "unread: []\n", holding_the_chore);
-        let repo = Repository::open(tmp.path()).unwrap();
-        change(&tmp, &repo, "src/x.rs", "chore: pin it again");
+    fn a_later_change_of_the_specs_own_brings_an_unclaimed_path_back() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/x.rs", "chore: pin a tool");
+        change(&tmp, &repo, "src/x.rs", "fix(001): pin it again");
         let scope = x(&tmp);
         assert!(has(&scope, "src/x.rs"), "{:?}", scope.scope);
         assert!(scope.review_owed);

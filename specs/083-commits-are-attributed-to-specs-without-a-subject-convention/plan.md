@@ -18,7 +18,7 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 ### Counting in the window walk
 
-`attribute_window` counts each commit its walk visits as examined. It counts one as unclaimed when `CommitClaims::claimants` is empty and `CommitClaims::paths` is not, before `WindowClaims::take_unclaimed` decides any credit, so a credited commit stays counted. A clean merge has no paths, since `Attributor::own_paths` keeps only what a merge changed itself, so it is examined and never unclaimed. The counts travel on `WindowClaims` into `ReviewScope` as an `Option`. It is `None` on the branch of `compute` that skips `attribute_window` because `diff_base` is empty, and `Some` with zeros for a window that walks no commit, such as a `HEAD` base.
+`attribute_window` counts each commit its walk visits as examined. It counts one as unclaimed when `CommitClaims::claimants` is empty and `CommitClaims::paths` is not, before its paths are placed. When this was built `WindowClaims::take_unclaimed` then decided a credit, which spec 084 removed: an unclaimed commit's paths go to `excluded`. A clean merge has no paths, since `Attributor::own_paths` keeps only what a merge changed itself, so it is examined and never unclaimed. The counts travel on `WindowClaims` into `ReviewScope` as an `Option`. It is `None` on the branch of `compute` that skips `attribute_window` because `diff_base` is empty, and `Some` with zeros for a window that walks no commit, such as a `HEAD` base.
 
 ### Result fields
 
@@ -52,7 +52,7 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 - **A data model of 083's own** was rejected. 066's data model would still need its Size figures re-measured, so 066 reopens either way, and the result's contract would sit in two specs.
 - **Counting after credit** was rejected (Resolved Questions): the count would fall to zero after one crediting review.
-- **Limitation:** a task's code committed before its tick, by hand, through `ductus exec`, or outside `/{project}:implement`, is still unclaimed. The count reports it, and 081's credit rule decides what it owes.
+- **Limitation:** a task's code committed before its tick, by hand, through `ductus exec`, or outside `/{project}:implement`, is still unclaimed. The count reports it, and since spec 084 it owes the project record's review.
 - **Limitation:** staging only the task's paths cannot keep another session's hunks out of a file both sessions edited. Isolating edits stays `git worktree`'s job (§concurrent-features).
 
 ## Cross-spec impact

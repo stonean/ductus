@@ -11,7 +11,7 @@ use std::time::SystemTime;
 
 use git2::{IndexAddOption, Oid, Signature};
 
-use crate::primitives::commit_attribution::Attributor;
+use crate::primitives::commit_attribution::{Attributor, SpecShare};
 use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
 use crate::primitives::discover_rule_files::{MIN_REASON_LEN, rendered, toml_type_name};
 use crate::primitives::{PrimitiveError, ProjectRepository, Result, parse_feature_dir};
@@ -671,8 +671,9 @@ pub(crate) fn round_paths(
 /// spec, with nothing else behind the change.
 ///
 /// Each snapshot's parent is `HEAD` at its time, so those commits are knowable
-/// with nothing reported by the agent. A path qualifies when a commit only other
-/// specs claim changed it, no commit this spec or no spec claims did, and its
+/// with nothing reported by the agent. A path qualifies when a commit left it to
+/// another spec, or to the project's review when no spec claims the commit, by the
+/// rule the review's scope applies ([`SpecShare`]), no commit gave it to this spec, and its
 /// entry at each snapshot, blob and mode, equals its entry in the tree `HEAD`
 /// held then (no tree, for a snapshot taken on an unborn branch), so no
 /// uncommitted edit sits on top. Another session's uncommitted edits cannot be
@@ -695,18 +696,18 @@ fn changed_only_by_other_specs(
     }
 
     let attributor = Attributor::new(project, subject.repo, subject.specs_root)?;
+    let own_plan = attributor.plan_of(subject.feature)?;
+    let mut share = SpecShare::new(&attributor, &form, subject.feature, &own_plan);
     let mut walk = repository.revwalk()?;
     walk.push(snapshot_head.id())?;
     walk.hide(base_head.id())?;
-    let mut others = BTreeSet::new();
-    let mut own = BTreeSet::new();
+    let mut others: BTreeSet<String> = BTreeSet::new();
+    let mut own: BTreeSet<String> = BTreeSet::new();
     for oid in walk {
         let claims = attributor.claims(&repository.find_commit(oid?)?)?;
-        if claims.claimants.is_empty() || claims.is_claimed_by(&form) {
-            own.extend(claims.paths);
-        } else {
-            others.extend(claims.paths);
-        }
+        let (mine, left) = share.split(claims)?;
+        own.extend(mine);
+        others.extend(left);
     }
 
     let (base_tree, base_head_tree) = (base.tree()?, head_tree(&base, &base_head)?);

@@ -278,7 +278,8 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
     write_file(&spec_path, &spec("in-progress"));
     commit_all(&repo, "chore: begin");
     write_file(&tmp.path().join("src/a.rs"), "fn a() {}\n");
-    commit_all(&repo, "feat: implement");
+    // Named for the spec: code no spec claims is in no spec's scope (spec 084).
+    commit_all(&repo, "feat(001): implement");
 
     let procedure = Procedure {
         command: "review".into(),

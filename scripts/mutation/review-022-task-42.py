@@ -157,8 +157,8 @@ MUTATIONS = [
     ),
     (
         'M20 another claimants plan is read through a link outside the project',
-        'src/primitives/compute_review_scope.rs',
-        '    if super::leaves_project(repo, &format!("{specs_root}/{directory}/plan.md")) {\n        return Ok(PlanEntries::new(&[]));\n    }\n',
+        'src/primitives/commit_attribution.rs',
+        '        if leaves_project(self.repo, &format!("{dir}/plan.md")) {\n            return Ok(PlanEntries::new(&[]));\n        }\n',
         '',
         'compute_review_scope::tests::another_claimants_plan_linked_outside_the_project_is_not_read',
     ),

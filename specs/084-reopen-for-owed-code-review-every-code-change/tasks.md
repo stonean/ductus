@@ -98,9 +98,9 @@ Model: fable (owner, 2026-11-24).
 
 Model: fable (owner, 2026-11-24).
 
-- [ ] `attribute_window`'s no-claimant branch records its paths in `window.others`, so they leave the scope; `take_unclaimed`, `ReadRecord`, `read_records` and `commits_between` go, with `scripts/mutation/review-read-credit.py`, `reviews-follow-what-changed.py` and `commit-counts.py`
-- [ ] Move the per-path claim rule into `commit_attribution`, taking its source (the working tree or a commit's tree) and its walk's start, for `fix_rounds::changed_only_by_other_specs` and task 9 to share
-- [ ] Rewrite 081's AC13 and AC14 fixtures to the new rule
+- [x] `attribute_window`'s no-claimant branch records its paths in `window.others`, so they leave the scope; `take_unclaimed`, `ReadRecord`, `read_records` and `commits_between` go, with `scripts/mutation/review-read-credit.py`, `reviews-follow-what-changed.py` and `commit-counts.py`
+- [x] Move the per-path claim rule into `commit_attribution`, taking its source (the working tree or a commit's tree) and its walk's start, for `fix_rounds::changed_only_by_other_specs` and task 9 to share
+- [x] Rewrite 081's AC13 and AC14 fixtures to the new rule
 
 - **Done when**: a fixture with a code commit naming no spec leaves it out of an `in-progress` spec's scope, `commits-unclaimed` still counts it, and AC6's second half holds.
 

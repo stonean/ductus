@@ -6,7 +6,7 @@ section: "The review record"
 
 ## Context
 
-An adopter on 0.61.0 reported that the review scope moves under a running review. `write-review` re-derives the scope at write time (`resolve_scope` runs `compute-review-scope` against the run's `diff-base` and the current tree), so a commit landing between the run's `compute-review-scope` and its `write-review` joins a scope the passes never saw. Since spec 081 a commit naming no spec is credited as read in every other window once a committed record whose window, `diff-base` to `reviewed-against`, holds it leaves its path out of `unread`: a host that passes the write-time HEAD as `reviewed-against` credits a path nobody read.
+An adopter on 0.61.0 reported that the review scope moves under a running review. `write-review` re-derives the scope at write time (`resolve_scope` runs `compute-review-scope` against the run's `diff-base` and the current tree), so a commit landing between the run's `compute-review-scope` and its `write-review` joins a scope the passes never saw. Since spec 081 a commit naming no spec is credited as read in every other window once a committed record whose window, `diff-base` to `reviewed-against`, holds it leaves its path out of `unread`: a host that passes the write-time HEAD as `reviewed-against` credits a path nobody read. Spec 084 removed that credit; the guard stays, since the spec's own next window may start where the record's ends.
 
 ## Behavior
 

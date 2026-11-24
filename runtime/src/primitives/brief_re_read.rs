@@ -469,11 +469,24 @@ mod tests {
         assert_eq!(result.excluded.as_deref().unwrap(), ["src/other.rs"]);
     }
 
-    /// A commit this spec claims, or no spec does, stays in the round, as does
-    /// a multi-spec commit naming this spec.
+    /// A commit no spec claims is the project review's to read, as in the review's
+    /// scope (spec 084, AC6), so it leaves the round as another spec's does.
     #[test]
-    fn a_commit_this_spec_or_no_spec_claims_stays_in_the_round() {
-        for subject in ["fix(001): a fix", "chore: a fix", "fix(002, 001): a fix"] {
+    fn a_commit_no_spec_claims_leaves_the_round() {
+        let tmp = fixture_with_a_sibling();
+        let base = start(&tmp);
+        commit_file(&tmp, "src/a.rs", "chore: a fix");
+
+        let result = brief(&tmp, &base).unwrap();
+        assert_eq!(result.paths.as_deref().unwrap(), [] as [&str; 0]);
+        assert_eq!(result.excluded.as_deref().unwrap(), ["src/a.rs"]);
+    }
+
+    /// A commit this spec claims stays in the round, as does a multi-spec commit
+    /// naming this spec.
+    #[test]
+    fn a_commit_this_spec_claims_stays_in_the_round() {
+        for subject in ["fix(001): a fix", "fix(002, 001): a fix"] {
             let tmp = fixture_with_a_sibling();
             let base = start(&tmp);
             commit_file(&tmp, "src/a.rs", subject);

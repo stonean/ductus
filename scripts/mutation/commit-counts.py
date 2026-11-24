@@ -1,9 +1,9 @@
 """Mutation list for 083's window commit counts and tick attribution:
 `compute-review-scope` counts the commits its window walked and those no spec
-claimed although they changed a path, before any credit, reports neither
+claimed although they changed a path, reports neither
 without a window and keeps both inline in the file form; a commit holding a
 task's tick is its spec's to review whatever its subject, while one holding
-none stays in every window; and `write-review`'s Summary states both counts,
+none leaves every window (spec 084); and `write-review`'s Summary states both counts,
 or that the scope had no window
 (`runtime/src/primitives/compute_review_scope.rs`,
 `runtime/src/primitives/commit_attribution.rs`,
@@ -71,37 +71,11 @@ MUTATIONS = [
         'compute_review_scope::tests::a_spec_with_no_window_reports_neither_commit_count',
     ),
     (
-        'M8 the count leaves out a commit a review credited',
-        'src/primitives/compute_review_scope.rs',
-        'let records = read_records(project, specs_root, &commits)?;',
-        'let records = read_records(project, specs_root, &commits)?;\n'
-        '    if let Some(counts) = window.commits.as_mut() {\n'
-        '        counts.unclaimed = commits\n'
-        '            .iter()\n'
-        '            .filter(|(oid, claims)| {\n'
-        '                claims.claimants.is_empty()\n'
-        '                    && claims\n'
-        '                        .paths\n'
-        '                        .iter()\n'
-        '                        .any(|path| !records.iter().any(|record| record.read(*oid, path)))\n'
-        '            })\n'
-        '            .count();\n'
-        '    }',
-        'compute_review_scope::tests::a_credited_unclaimed_commit_is_still_counted',
-    ),
-    (
         'M9 touching a spec directory claims no commit',
         'src/primitives/commit_attribution.rs',
         '.filter_map(|slug| parse_feature_dir(&slug))',
         '.filter_map(|_slug| None::<FeatureForm>)',
         'compute_review_scope::tests::a_ticked_commit_is_its_specs_whatever_its_subject',
-    ),
-    (
-        'M10 a commit no spec claims leaves every window',
-        'src/primitives/compute_review_scope.rs',
-        '                self.own.insert(path);',
-        '                self.others.insert(path);',
-        'compute_review_scope::tests::an_unticked_commit_under_the_same_subject_stays_in_every_window',
     ),
     (
         'M11 a supplied Summary leaves out the commit line',

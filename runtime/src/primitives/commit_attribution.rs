@@ -12,8 +12,8 @@
 //! A merge commit claims nothing, since its branch's commits are in the walk,
 //! and its [`CommitClaims::paths`] are only what it changed itself: the paths
 //! differing from every parent. So the branch's work does not arrive a second
-//! time through the merge, as work no spec claims, which counts whole in every
-//! window.
+//! time through the merge, as work no spec claims, which the project record's
+//! review reads (spec 084).
 //!
 //! Each caller gains the same three facts from one diff, and gives up nothing
 //! it enforced: none had an attribution rule of its own before this one.
@@ -23,13 +23,17 @@
 //! spec on disk claims nothing unless the commit touches that spec's directory,
 //! which is how a retired spec's commits stay its own.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use git2::{Commit, Tree};
 
-use crate::primitives::compute_review_scope::{project_diff_options, project_paths};
+use crate::primitives::compute_review_scope::{
+    PlanEntries, project_diff_options, project_paths, read_plan_affected,
+};
 use crate::primitives::{
-    FeatureForm, ProjectRepository, Result, list_feature_dirs, parse_feature_dir, spec_feature_slug,
+    FeatureForm, ProjectRepository, Result, leaves_project, list_feature_dirs, parse_feature_dir,
+    spec_feature_slug,
 };
 
 /// What one commit contributes to a window, and who it belongs to.
@@ -59,6 +63,8 @@ impl CommitClaims {
 /// spec root, and [`Self::claims`] then runs once per commit.
 pub(crate) struct Attributor<'a> {
     project: &'a ProjectRepository,
+    /// The project root, which the spec directories and their plans are read from.
+    repo: &'a Path,
     specs_root: &'a str,
     /// The specs on disk with their directories, the only ones a subject alone
     /// can claim for.
@@ -75,7 +81,7 @@ impl<'a> Attributor<'a> {
     /// refused, never followed (`BE-INPUT-004`).
     pub(crate) fn new(
         project: &'a ProjectRepository,
-        repo: &Path,
+        repo: &'a Path,
         specs_root: &'a str,
     ) -> Result<Self> {
         let known = list_feature_dirs(repo, specs_root)?
@@ -84,9 +90,26 @@ impl<'a> Attributor<'a> {
             .collect();
         Ok(Self {
             project,
+            repo,
             specs_root,
             known,
         })
+    }
+
+    /// The Affected Files entries of the plan the spec directory `directory` holds.
+    /// A plan that is, or lies under, a link leaving the project is unread, and
+    /// names no path (`BE-INPUT-004`).
+    ///
+    /// # Errors
+    ///
+    /// [`crate::primitives::PrimitiveError::Io`] when `plan.md` exists and cannot
+    /// be read.
+    pub(crate) fn plan_of(&self, directory: &str) -> Result<PlanEntries> {
+        let dir = format!("{}/{directory}", self.specs_root);
+        if leaves_project(self.repo, &format!("{dir}/plan.md")) {
+            return Ok(PlanEntries::new(&[]));
+        }
+        Ok(PlanEntries::new(&read_plan_affected(&self.repo.join(dir))?))
     }
 
     /// The directory of the spec `form`, when it is on disk.
@@ -192,6 +215,103 @@ impl<'a> Attributor<'a> {
             .repository
             .diff_tree_to_tree(old, Some(new), Some(&mut options))?;
         project_paths(self.project, &diff)
+    }
+}
+
+/// One spec's share of each commit in a walk: the per-path rule a review's scope
+/// and its fix rounds share, so the two cannot disagree (spec 079, AC6; spec 081;
+/// spec 084).
+///
+/// A commit no spec claims gives the spec nothing: its code is reviewed under the
+/// project record, never in an open spec's window (spec 084, AC6). Neither does a
+/// commit only other specs claim. Of a commit the spec claims, alone or with others,
+/// a path in another claimant's directory is that claimant's, whose own review reads
+/// it: a groom commit routing scenarios to many specs would otherwise put every one
+/// of them in each claimant's scope (owner, 2026-11-08). A subject naming specs gives
+/// its code to the specs it names, and a spec that claims the commit only by touching
+/// its directory takes that directory's files and nothing else (spec 081). A subject
+/// naming none keeps 079's rule, since an adopter's subjects usually name no spec and
+/// a plan need not list every file: alone, every path is this spec's, and with other
+/// claimants each takes its own plan's paths and the unplanned ones.
+pub(crate) struct SpecShare<'a> {
+    attributor: &'a Attributor<'a>,
+    form: &'a FeatureForm,
+    own_prefix: String,
+    own_plan: &'a PlanEntries,
+    /// Each other claimant's plan, read once from the attributor's source.
+    plans: BTreeMap<String, PlanEntries>,
+}
+
+impl<'a> SpecShare<'a> {
+    /// The share of the spec `form`, whose directory is `feature` and whose plan's
+    /// Affected Files are `own_plan`.
+    pub(crate) fn new(
+        attributor: &'a Attributor<'a>,
+        form: &'a FeatureForm,
+        feature: &str,
+        own_plan: &'a PlanEntries,
+    ) -> Self {
+        Self {
+            attributor,
+            form,
+            own_prefix: format!("{}/{feature}/", attributor.specs_root),
+            own_plan,
+            plans: BTreeMap::new(),
+        }
+    }
+
+    /// Divide a commit's paths: those the spec's review reads, and those it leaves
+    /// to another spec's review or the project's.
+    ///
+    /// # Errors
+    ///
+    /// As [`Attributor::plan_of`], for another claimant's plan.
+    pub(crate) fn split(&mut self, claims: CommitClaims) -> Result<(Vec<String>, Vec<String>)> {
+        if !claims.is_claimed_by(self.form) {
+            return Ok((Vec::new(), claims.paths));
+        }
+        let specs_root = self.attributor.specs_root;
+        let others_directories: Vec<String> = claims
+            .claimants
+            .iter()
+            .filter(|claimant| *claimant != self.form)
+            .filter_map(|claimant| self.attributor.directory_of(claimant))
+            .map(|directory| format!("{specs_root}/{directory}/"))
+            .collect();
+        let named_here = claims.named.contains(self.form);
+        if claims.named.is_empty() {
+            for claimant in &claims.claimants {
+                if let Some(directory) = self.attributor.directory_of(claimant)
+                    && !self.plans.contains_key(directory)
+                {
+                    self.plans
+                        .insert(directory.to_string(), self.attributor.plan_of(directory)?);
+                }
+            }
+        }
+        let (mut own, mut others) = (Vec::new(), Vec::new());
+        for path in claims.paths {
+            let anothers = others_directories
+                .iter()
+                .any(|prefix| path.starts_with(prefix.as_str()));
+            let by_subject = if claims.named.is_empty() {
+                let unplanned = !claims
+                    .claimants
+                    .iter()
+                    .filter_map(|claimant| self.attributor.directory_of(claimant))
+                    .filter_map(|directory| self.plans.get(directory))
+                    .any(|plan| plan.names(&path));
+                self.own_plan.names(&path) || (unplanned && !anothers)
+            } else {
+                named_here && !anothers
+            };
+            if path.starts_with(&self.own_prefix) || by_subject {
+                own.push(path);
+            } else {
+                others.push(path);
+            }
+        }
+        Ok((own, others))
     }
 }
 

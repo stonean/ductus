@@ -1,10 +1,8 @@
 """Mutation list for 081's task 8: a review states what it read (`unread`,
 written by `write-review` whenever the run states it, an entry outside the
-run's scope refused), and `compute-review-scope` credits a path of a commit
-naming no spec and touching no spec directory once a committed record whose
-window holds the commit states it read the path, with no skipped pass, no
-budget stop and no open fix-round loop (`runtime/src/primitives/compute_review_scope.rs`,
-`runtime/src/primitives/write_review.rs`).
+run's scope refused; `runtime/src/primitives/write_review.rs`). The mutants on
+the credit `compute-review-scope` gave a commit naming no spec went with that
+credit, which spec 084 removed.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/review-read-credit.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -18,55 +16,6 @@ matches exactly once.
 EXPECTED_SURVIVORS = {}
 
 MUTATIONS = [
-    (
-        'M1 no path is ever credited',
-        'src/primitives/compute_review_scope.rs',
-        '            if records.iter().any(|record| record.read(commit, &path)) {\n',
-        '            if false {\n',
-        'compute_review_scope::tests::a_path_a_complete_record_read_is_credited_and_owes_no_review',
-    ),
-    (
-        'M2 a path the record names unread is credited',
-        'src/primitives/compute_review_scope.rs',
-        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
-        '        self.window.contains(&commit)\n',
-        'compute_review_scope::tests::a_record_credits_each_path_it_did_not_name_unread',
-    ),
-    (
-        'M3 a record credits a commit its window does not hold',
-        'src/primitives/compute_review_scope.rs',
-        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
-        '        !self.literal.contains(path) && !self.unread.names(path)\n',
-        'compute_review_scope::tests::a_record_whose_window_does_not_hold_the_commit_credits_nothing',
-    ),
-    (
-        'M4 a record with a skipped pass credits',
-        'src/primitives/compute_review_scope.rs',
-        '                && record.skipped_passes.is_empty()\n',
-        '',
-        'compute_review_scope::tests::a_path_no_complete_record_read_stays_and_owes_the_review',
-    ),
-    (
-        'M5 a record with a budget stop credits',
-        'src/primitives/compute_review_scope.rs',
-        '                && record.budget_stop != Some(true)\n',
-        '',
-        'compute_review_scope::tests::a_path_no_complete_record_read_stays_and_owes_the_review',
-    ),
-    (
-        'M6 a record with an open fix-round loop credits',
-        'src/primitives/compute_review_scope.rs',
-        '                && record.fix_rounds_open != Some(true);\n',
-        '                ;\n',
-        'compute_review_scope::tests::a_path_no_complete_record_read_stays_and_owes_the_review',
-    ),
-    (
-        'M7 a record with no unread credits as a whole read',
-        'src/primitives/compute_review_scope.rs',
-        '            let Some(unread) = record.unread.filter(|_| complete) else {\n',
-        '            let Some(unread) = record.unread.or_else(|| Some(Vec::new())).filter(|_| complete) else {\n',
-        'compute_review_scope::tests::a_path_no_complete_record_read_stays_and_owes_the_review',
-    ),
     (
         'M8 write-review takes an unread entry outside the scope',
         'src/primitives/write_review.rs',
@@ -87,27 +36,6 @@ MUTATIONS = [
         '    render_unread(&mut fm, args.unread.as_ref());\n',
         '',
         'write_review::tests::unread_is_written_whenever_the_run_states_it',
-    ),
-    (
-        'M11 an unread entry holding a pattern character is matched only as a pattern',
-        'src/primitives/compute_review_scope.rs',
-        '        self.window.contains(&commit) && !self.literal.contains(path) && !self.unread.names(path)\n',
-        '        self.window.contains(&commit) && !self.unread.names(path)\n',
-        'compute_review_scope::tests::a_path_named_unread_that_holds_a_brace_stays_in_scope',
-    ),
-    (
-        "M12 a record's window takes in its diff-base",
-        'src/primitives/compute_review_scope.rs',
-        '    walk.hide(base).ok()?;\n',
-        '    let _ = base;\n',
-        'compute_review_scope::tests::a_record_whose_diff_base_is_the_commit_credits_nothing',
-    ),
-    (
-        'M13 a record that names no run credits',
-        'src/primitives/compute_review_scope.rs',
-        '            let complete = record.last_run.is_some()\n                && record.skipped_passes.is_empty()\n',
-        '            let complete = record.skipped_passes.is_empty()\n',
-        'compute_review_scope::tests::a_record_that_names_no_run_credits_nothing',
     ),
     (
         'M14 a refused unread entry is echoed raw',

@@ -3,7 +3,8 @@
 `compute_review_scope.rs`'s owed rule), and a commit whose subject names a spec
 has its code reviewed by the specs it names (`CommitClaims::named` in
 `commit_attribution.rs`, `attribute_window` in `compute_review_scope.rs`),
-while a commit naming no spec keeps 079's attribution.
+while a commit naming no spec that touches spec directories keeps 079's
+attribution.
 
 Each mutation removes the behavior one new or rewritten unit test names, and
 its filter selects that test. The owed-rule and attribution mutations 079's
@@ -89,39 +90,31 @@ MUTATIONS = [
     ),
     (
         'M10 a named commit is attributed as one naming none',
-        'src/primitives/compute_review_scope.rs',
+        'src/primitives/commit_attribution.rs',
         'let by_subject = if claims.named.is_empty() {',
         'let by_subject = if true {',
         'compute_review_scope::tests::a_named_commits_code_goes_to_every_named_spec_whatever_the_plans_list compute_review_scope::tests::a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory',
     ),
     (
         'M11 a spec claiming a named commit by its directory takes its code',
-        'src/primitives/compute_review_scope.rs',
+        'src/primitives/commit_attribution.rs',
         '                named_here && !anothers\n',
         '                !anothers\n',
         'compute_review_scope::tests::a_spec_claiming_a_named_commit_only_by_its_directory_reviews_only_that_directory',
     ),
     (
         "M12 a named spec takes another claimant's directory",
-        'src/primitives/compute_review_scope.rs',
+        'src/primitives/commit_attribution.rs',
         '                named_here && !anothers\n',
         '                named_here\n',
         'compute_review_scope::tests::a_subject_naming_none_leaves_each_claimants_directory_to_it compute_review_scope::tests::a_path_in_another_specs_directory_owes_no_review',
     ),
     (
         'M13 only the first named spec takes the code',
-        'src/primitives/compute_review_scope.rs',
-        'let named_here = claims.named.contains(&form);',
-        'let named_here = claims.named.first() == Some(&form);',
+        'src/primitives/commit_attribution.rs',
+        'let named_here = claims.named.contains(self.form);',
+        'let named_here = claims.named.first() == Some(self.form);',
         'compute_review_scope::tests::a_named_commits_code_goes_to_every_spec_it_names compute_review_scope::tests::a_named_commits_code_goes_to_every_named_spec_whatever_the_plans_list',
-    ),
-    # -- a commit naming no spec keeps 079's rule ---------------------------
-    (
-        'M14 a commit naming no spec and touching none is no one\'s',
-        'src/primitives/compute_review_scope.rs',
-        '            window.take_unclaimed(&records, oid, claims.paths);\n            continue;',
-        '            window.others.extend(claims.paths);\n            continue;',
-        'compute_review_scope::tests::a_code_commit_naming_no_spec_owes_the_review_of_each_window_holding_it',
     ),
     # -- the gate reads the owed rule ------------------------------------------
     (

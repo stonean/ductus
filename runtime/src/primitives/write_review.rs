@@ -923,9 +923,9 @@ fn resolve_scope(
     ))
 }
 
-/// Refuse an `unread` entry the run's scope does not hold: another spec's review
-/// takes every entry the list does not name as read (spec 081), so a mistyped
-/// entry would leave the path it meant unnamed, and credited.
+/// Refuse an `unread` entry the run's scope does not hold: the next review reads
+/// only the entries the list names (spec 079, AC30), so a mistyped entry would
+/// leave the path it meant unnamed, and unread.
 fn refuse_unread_outside_the_scope(
     args: &WriteReviewArgs,
     entries: &BTreeSet<String>,
@@ -3673,8 +3673,8 @@ mod tests {
     }
 
     /// What the run states it did not read lands in the record: `[]` for a whole
-    /// read, each entry otherwise, and nothing when it states nothing, which credits
-    /// no other spec's window (spec 081, AC12).
+    /// read, each entry otherwise, and nothing when it states nothing, which is no
+    /// claim of a whole read (spec 081, AC12).
     #[test]
     fn unread_is_written_whenever_the_run_states_it() {
         for unread in [None, Some(vec![]), Some(vec!["src/mine.rs".to_string()])] {

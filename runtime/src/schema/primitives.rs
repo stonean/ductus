@@ -45,9 +45,9 @@ pub struct ReviewBlock {
     /// — **provenance, not the staleness basis**, exactly as
     /// [`AnalyzeBlock::analyzed_against`] is. Read for two things: the
     /// mechanical-sweep rename exemption, which needs two trees, and the end of
-    /// the record's window, `diff-base` to `reviewed-against`, which
-    /// `compute-review-scope` reads to credit what the record states it read
-    /// (spec 081).
+    /// the record's window, `diff-base` to `reviewed-against`, where
+    /// `compute-review-scope` starts the next window of a record the gate holds
+    /// (spec 079).
     #[serde(default)]
     pub reviewed_against: Option<String>,
     /// Per-path sha256 of the review's **durable contracts** — `scenarios/*.md`
@@ -119,8 +119,8 @@ pub struct ReviewBlock {
     pub scope: Option<u32>,
     /// The scope entries the recorded run's passes did not read (spec 081),
     /// empty when they read every entry. `None` on a record whose run stated
-    /// nothing, every record from before the field among them: it credits no
-    /// other window with a read, since an unstated claim is not *read
+    /// nothing, every record from before the field among them: a held record
+    /// without it moves no window's start, since an unstated claim is not *read
     /// everything*.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unread: Option<Vec<String>>,
@@ -1306,10 +1306,10 @@ pub struct ComputeReviewScopeResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commits_examined: Option<usize>,
     /// How many of those commits no spec claimed although they changed a path in
-    /// the project, whether or not a committed review credited their paths, so a
-    /// clean merge is examined and never unclaimed (spec 083). What still owes a
-    /// review is in `scope`, and what a review credited in `excluded`. Absent
-    /// with `commits-examined`.
+    /// the project, so a clean merge is examined and never unclaimed (spec 083).
+    /// Their paths are in `excluded`: code no spec claims is reviewed under the
+    /// project record, not in a spec's scope (spec 084). Absent with
+    /// `commits-examined`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commits_unclaimed: Option<usize>,
     /// Entries in `criteria-owing`, in either form; absent when zero.
