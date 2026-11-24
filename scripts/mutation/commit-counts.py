@@ -1,10 +1,12 @@
 """Mutation list for 083's window commit counts and tick attribution:
 `compute-review-scope` counts the commits its window walked and those no spec
 claimed although they changed a path, before any credit, and reports neither
-without a window; and a commit holding a task's tick is its spec's to review
-whatever its subject, while one holding none stays in every window
+without a window; a commit holding a task's tick is its spec's to review
+whatever its subject, while one holding none stays in every window; and
+`write-review`'s Summary states both counts, or that the scope had no window
 (`runtime/src/primitives/compute_review_scope.rs`,
-`runtime/src/primitives/commit_attribution.rs`).
+`runtime/src/primitives/commit_attribution.rs`,
+`runtime/src/primitives/write_review.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/commit-counts.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -99,5 +101,40 @@ MUTATIONS = [
         '                self.own.insert(path);',
         '                self.others.insert(path);',
         'compute_review_scope::tests::an_unticked_commit_under_the_same_subject_stays_in_every_window',
+    ),
+    (
+        'M11 a supplied Summary leaves out the commit line',
+        'src/primitives/write_review.rs',
+        '        let _ = write!(summary, "\\n\\n{}", commits_summary(record.commits));\n',
+        '',
+        'write_review::tests::a_supplied_summary_carries_the_loops_account',
+    ),
+    (
+        'M12 a generated Summary leaves out the commit line',
+        'src/primitives/write_review.rs',
+        "    summary.push(' ');\n    summary.push_str(&commits_summary(record.commits));\n",
+        '',
+        'write_review::tests::the_summary_counts_the_windows_unclaimed_commits',
+    ),
+    (
+        'M13 write-review drops the window counts',
+        'src/primitives/write_review.rs',
+        '        result.excluded,\n        result.commits,\n    ))',
+        '        result.excluded,\n        None,\n    ))',
+        'write_review::tests::the_summary_counts_the_windows_unclaimed_commits',
+    ),
+    (
+        'M14 a scope with no window reads as one fully attributed',
+        'src/primitives/write_review.rs',
+        'None => "The scope had no window, so no commit was examined.".to_string(),',
+        'None => "0 of 0 commits in the window no spec claimed.".to_string(),',
+        'write_review::tests::the_summary_counts_the_windows_unclaimed_commits',
+    ),
+    (
+        'M15 the Summary swaps the two counts',
+        'src/primitives/write_review.rs',
+        'commits.unclaimed, commits.examined',
+        'commits.examined, commits.unclaimed',
+        'write_review::tests::the_summary_counts_the_windows_unclaimed_commits',
     ),
 ]

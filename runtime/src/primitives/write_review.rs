@@ -19,7 +19,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::primitives::compute_review_scope::RunScope;
+use crate::primitives::compute_review_scope::{RunScope, WindowCommits};
 use crate::primitives::criterion_verdicts;
 use crate::primitives::decisions::{self, RawDecision};
 use crate::primitives::departures::Attribution;
@@ -548,7 +548,7 @@ fn run_between(
     let record = record_snapshot(repo, &root, &args.feature).inspect(|_| after_snapshot())?;
     refuse_while_implementation_is_open(args, &root, &feature_dir)?;
     // The denominator `examined` is a claim against — see `resolve_scope`.
-    let (scope, excluded) = resolve_scope(args, repo)?;
+    let (scope, excluded, commits) = resolve_scope(args, repo)?;
     refuse_an_empty_scope_over_a_finding(args, &feature_dir, scope)?;
     // Read once: the departure entries and the frontmatter check below both use it.
     let spec_content = read_text(&spec_path)?;
@@ -630,6 +630,7 @@ fn run_between(
             excluded: &excluded,
             open_findings: &open_findings,
             criteria: criteria.as_ref(),
+            commits,
         },
         &contracts,
     );
@@ -872,10 +873,13 @@ fn own_record_path(args: &WriteReviewArgs, repo: &Path) -> Result<String> {
 /// The paths the scope left out come with it, so the record names what it did
 /// not read. An `unread` entry the scope does not hold is refused here, where
 /// the entries are.
-fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<String>)> {
+fn resolve_scope(
+    args: &WriteReviewArgs,
+    repo: &Path,
+) -> Result<(u32, BTreeSet<String>, Option<WindowCommits>)> {
     if args.diff_base.is_empty() {
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
-        return Ok((0, BTreeSet::new()));
+        return Ok((0, BTreeSet::new(), None));
     }
     // The window's default start, when it is the run's own diff-base, also hands the
     // scope what the record it starts at leaves open or left unread (spec 079), which
@@ -915,6 +919,7 @@ fn resolve_scope(args: &WriteReviewArgs, repo: &Path) -> Result<(u32, BTreeSet<S
     Ok((
         u32::try_from(entries.len()).unwrap_or(u32::MAX),
         result.excluded,
+        result.commits,
     ))
 }
 
@@ -1544,6 +1549,9 @@ struct Record<'a> {
     /// The criteria step's verdicts; `None` when the run passed none, which
     /// writes no criteria field.
     criteria: Option<&'a CriteriaRecord>,
+    /// The window's commit counts, which the Summary states; `None` when the scope
+    /// had no window (spec 083).
+    commits: Option<WindowCommits>,
 }
 
 /// The criteria step's verdicts as the record keeps them (066 task 27).
@@ -1934,6 +1942,7 @@ fn report_summary(
             Some(loop_record) => format!("{}\n\n{}", summary.trim_end(), loop_summary(loop_record)),
             None => summary.to_string(),
         };
+        let _ = write!(summary, "\n\n{}", commits_summary(record.commits));
         if let Some(criteria) = record.criteria {
             let _ = write!(summary, "\n\n{}", criteria_summary(criteria));
         }
@@ -1959,11 +1968,26 @@ fn report_summary(
             record.excluded.len()
         );
     }
+    summary.push(' ');
+    summary.push_str(&commits_summary(record.commits));
     if let Some(criteria) = record.criteria {
         summary.push(' ');
         summary.push_str(&criteria_summary(criteria));
     }
     summary
+}
+
+/// The window's commit counts as the Summary states them (spec 083): how many of the
+/// commits the scope examined no spec claimed, or that the scope had no window, so a
+/// project whose commits are never attributed sees it on every review.
+fn commits_summary(commits: Option<WindowCommits>) -> String {
+    match commits {
+        Some(commits) => format!(
+            "{} of {} commits in the window no spec claimed.",
+            commits.unclaimed, commits.examined
+        ),
+        None => "The scope had no window, so no commit was examined.".to_string(),
+    }
 }
 
 /// A deterministic one-line Summary derived from the counts.
@@ -3590,6 +3614,39 @@ mod tests {
             report.contains("1 path(s) only another spec's commits changed"),
             "{report}"
         );
+    }
+
+    /// The Summary states how many of the window's commits no spec claimed beside how
+    /// many the scope examined, or that it had no window, and the record's frontmatter
+    /// gains no field for either (spec 083, AC16).
+    #[test]
+    fn the_summary_counts_the_windows_unclaimed_commits() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let repository = git2::Repository::open(tmp.path()).unwrap();
+        write(&tmp.path().join("src/chore.rs"), "fn c() {}\n");
+        commit_all(&repository, "chore: lint cleanup");
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        // The transition, 002-y's commit, this spec's and the unnamed chore.
+        assert!(
+            report.contains("1 of 4 commits in the window no spec claimed."),
+            "{report}"
+        );
+        let frontmatter = &report[..report.find("\n---\n").unwrap()];
+        assert!(!frontmatter.contains("commits"), "{frontmatter}");
+
+        args.diff_base = String::new();
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains("The scope had no window, so no commit was examined."),
+            "{report}"
+        );
+        assert!(!report.contains("commits in the window"), "{report}");
     }
 
     /// The record's `unread`, as a reader parses it.
@@ -6920,7 +6977,10 @@ mod tests {
         run(&args, tmp.path()).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(
-            report.contains("## Summary\n\nRead the scope whole\n\n## MUST"),
+            report.contains(
+                "## Summary\n\nRead the scope whole\n\nThe scope had no window, so no commit \
+                 was examined.\n\n## MUST"
+            ),
             "{report}"
         );
 
@@ -6934,7 +6994,8 @@ mod tests {
         assert!(
             report.contains(
                 "## Summary\n\nRead the scope whole\n\n2 fix round(s): 1 re-read, 0 diff-checked, \
-                 1 exempt, 0 not re-read. Exempt: round 1.\n\n## MUST"
+                 1 exempt, 0 not re-read. Exempt: round 1.\n\nThe scope had no window, so no commit \
+                 was examined.\n\n## MUST"
             ),
             "{report}"
         );
@@ -8023,9 +8084,13 @@ mod tests {
         args.summary = Some("Reviewed by hand.".into());
         args.criteria = Some(vec![verdict(Some("AC1"), None, true)]);
         run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
         assert!(
-            review_md(&tmp, "001-x")
-                .contains("Reviewed by hand.\n\n1 of 1 acceptance criteria judged met."),
+            report.contains(
+                "Reviewed by hand.\n\nThe scope had no window, so no commit was examined.\n\n\
+                 1 of 1 acceptance criteria judged met."
+            ),
+            "{report}"
         );
     }
 

@@ -23,10 +23,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on task 1: the line reads the counts `compute` returns.
 
-- [ ] `resolve_scope` returns the counts, `Record` carries them, and `report_summary` appends the line on both its branches, as the plan's §The Summary line says
-- [ ] Tests for both forms of the line, including a run with an empty diff base; update the tests that assert the Summary's exact text
-- [ ] State the line in `WRITE_REVIEW`
-- [ ] Add the unreleased entry for tasks 1 and 3 to `runtime/CHANGELOG.md`
+- [x] `resolve_scope` returns the counts, `Record` carries them, and `report_summary` appends the line on both its branches, as the plan's §The Summary line says
+- [x] Tests for both forms of the line, including a run with an empty diff base; update the tests that assert the Summary's exact text
+- [x] State the line in `WRITE_REVIEW`
+- [x] Add the unreleased entry for tasks 1 and 3 to `runtime/CHANGELOG.md`
 
 - **Done when**: the tests pass, each new one fails with its line removed, the record's frontmatter gains no field, and the whole `cargo test` passes.
 

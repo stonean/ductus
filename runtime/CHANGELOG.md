@@ -19,6 +19,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   with no `covers:` is unchanged, and analyze waives a scoped entry's rule as
   an unscoped one's. A scoped waiver reads as malformed to a runtime that
   predates it, which then waives nothing there.
+- **A review's window says how many of its commits no spec claimed (spec 083,
+  AC13 and AC16; the agent's recommendations, adopted by the operator,
+  2026-11-23).** `compute-review-scope` gains `commits-examined` and
+  `commits-unclaimed`, inline in both forms: every commit its window's walk
+  visited, and those no spec claimed although they changed a path in the
+  project, counted before any credit, so a clean merge is examined and never
+  unclaimed and a crediting review leaves the count as it was. Both are absent
+  when there is no window, an empty diff-base. `write-review` states them in
+  `review.md`'s `## Summary`, or that the scope had no window, and the record
+  gains no field. A project whose commit subjects never name a spec now sees
+  how much of its code no spec claimed.
 
 ### Changed
 
