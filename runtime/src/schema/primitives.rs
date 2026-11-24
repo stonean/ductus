@@ -1260,10 +1260,7 @@ pub struct ComputeReviewScopeArgs {
     pub feature: String,
     /// Optional diff-base override (a git ref or sha), used verbatim. It moves
     /// only the window's start, and the scope rule still applies. When omitted,
-    /// the base is the later of the parent of the commit the spec's reopening
-    /// started at and the last review commit since it that recorded no
-    /// skipped pass or budget stop and whose record the gate does not hold until
-    /// a review runs, or `HEAD` when that transition is not committed yet.
+    /// the base is the default `compute-review-scope`'s description states.
     #[serde(default)]
     #[arg(long)]
     pub since: Option<String>,
@@ -1286,11 +1283,8 @@ pub struct ComputeReviewScopeResult {
     /// `a-commit-after-the-scope-was-resolved-refuses-the-write`).
     #[serde(default)]
     pub head: String,
-    /// False when a review record names a run and holds nothing only a review
-    /// clears, a finding it leaves open among that, and the scope and the deletions it
-    /// attributes to the spec hold no
-    /// path outside a spec's directory and no edit to this spec's scenarios or
-    /// data model; true otherwise, since the gate holds `done` while it is.
+    /// Whether a review is owed, by the rule `compute-review-scope`'s description
+    /// states; the gate holds `done` while it is true.
     pub review_owed: bool,
     /// Where the lists are: in this result, or, past the read size, in
     /// the file `lists-file` names (066 scenario
@@ -1327,14 +1321,8 @@ pub struct ComputeReviewScopeResult {
     /// order. Absent when none, and in the file form.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub criteria_owing: Vec<String>,
-    /// The review scope: the paths of a commit that belongs to the spec alone
-    /// or to no spec; of a commit several specs claim, those in the spec's
-    /// directory or its plan's Affected Files, and a path in none of their plans
-    /// when its subject names this spec first or, outside the other specs'
-    /// directories, names none of them;
-    /// uncommitted work; each path the record at `HEAD` leaves open; and what a
-    /// spec folded into this one below `done` brought. A plan entry unchanged in
-    /// the window stays only on the spec's first review. Absent in the file form.
+    /// The review scope, by the rule `compute-review-scope`'s description states
+    /// (`ductus compute-review-scope --help`). Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<Vec<String>>,
     /// Files changed between `diff-base` and the working tree inside the
@@ -1355,9 +1343,9 @@ pub struct ComputeReviewScopeResult {
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted: Option<Vec<String>>,
-    /// The `modified-since` paths the scope left out: changed only by commits
-    /// other specs claim (spec 079, AC3). `write-review`'s record lists each path
-    /// alone. Absent in the file form.
+    /// The `modified-since` paths the scope left out, by the rule
+    /// `compute-review-scope`'s description states. `write-review`'s record lists
+    /// each path alone. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub excluded: Option<Vec<String>>,
     /// In the file form, the file holding the lists whole, from the project

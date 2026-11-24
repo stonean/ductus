@@ -596,8 +596,9 @@ fn hold_in_scope<'a>(
 
 /// Hold in scope each entry a review left unread, wherever the window starts: it joins
 /// the scope of the next review that runs and owes no review of its own, as a changed
-/// contract does (spec 079, AC30). A path joins as [`hold_in_scope`] holds one, and a
-/// plan entry as the entry it is, since a pattern names no path on disk.
+/// contract does (spec 079, AC30). A path joins as [`hold_in_scope`] holds one, so one
+/// gone from disk does not, a directory's `dir/` entry among them, and a plan entry
+/// that is a glob as the entry it is, since a glob names no path on disk.
 fn join_unread(
     unread: &[String],
     plan_affected: &[String],
@@ -605,10 +606,9 @@ fn join_unread(
     (scope, excluded): (&mut BTreeSet<String>, &mut BTreeSet<String>),
 ) {
     hold_in_scope(unread.iter(), repo, scope, excluded);
-    for entry in unread
-        .iter()
-        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))
-    {
+    for entry in unread.iter().filter(|entry| {
+        plan_affected.contains(*entry) && is_glob(entry) && !super::leaves_project(repo, entry)
+    }) {
         excluded.remove(entry);
         scope.insert(entry.clone());
     }
@@ -1266,13 +1266,18 @@ impl PlanEntries {
     }
 }
 
+/// Whether a plan entry is a glob, naming files by `*`, `?` or `{`, rather than a path.
+fn is_glob(entry: &str) -> bool {
+    entry.contains(['*', '?', '{'])
+}
+
 /// The regular expression an entry stands for: `None` for a literal path, and
 /// for a pattern too malformed to compile, such as an unclosed `{`, which is
 /// then matched only as the text it is. `derive-routing-candidates`' path-claim
 /// source reads a plan's claims through it too, so both agree on what a plan's
 /// entry names.
 pub(crate) fn entry_pattern(entry: &str) -> Option<Regex> {
-    if !entry.ends_with('/') && !entry.contains(['*', '?', '{']) {
+    if !entry.ends_with('/') && !is_glob(entry) {
         return None;
     }
     let mut pattern = String::from("^");
@@ -2610,13 +2615,16 @@ mod tests {
         assert!(!scope.owed_by.iter().any(|path| path == "src/read.rs"));
     }
 
-    /// An unread entry gone from disk, or leaving the project, has nothing to read, and a
-    /// plan entry joins as the entry it is, since a pattern is no path.
+    /// An unread entry gone from disk, or leaving the project, has nothing to read, a
+    /// plan entry naming a plain path among them, and a plan entry that is a pattern
+    /// joins as the entry it is, since a pattern is no path.
     #[test]
     fn an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does() {
-        let (tmp, repo, _) = two_specs(&["src/*.rs", "../outside/*.rs"], &[]);
-        let unread =
-            "unread:\n  - src/gone.rs\n  - src/../src/old.rs\n  - src/*.rs\n  - ../outside/*.rs\n";
+        let (tmp, repo, _) = two_specs(
+            &["src/*.rs", "../outside/*.rs", "src/planned.rs", "src/gone/"],
+            &[],
+        );
+        let unread = "unread:\n  - src/gone.rs\n  - src/../src/old.rs\n  - src/*.rs\n  - ../outside/*.rs\n  - src/planned.rs\n  - src/gone/\n";
         write(
             &tmp.path().join("specs/001-x/review.md"),
             &record_against(&head_sha(&repo), unread),
@@ -2627,6 +2635,9 @@ mod tests {
         assert!(!has(&scope, "src/../src/old.rs"), "{:?}", scope.scope);
         assert!(has(&scope, "src/*.rs"), "{:?}", scope.scope);
         assert!(!has(&scope, "../outside/*.rs"), "{:?}", scope.scope);
+        // A plan entry naming a plain path or a directory never created is gone too.
+        assert!(!has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/gone/"), "{:?}", scope.scope);
     }
 
     /// A record leaving `src/old.rs` open, the file committed before the window opens,

@@ -1039,7 +1039,7 @@ MUTATIONS = [
         'src/primitives/check_review_gate.rs',
         '        || !review.open_findings.is_empty()\n}\n',
         '}\n',
-        'compute_review_scope::tests::a_record_the_gate_holds_does_not_move_the_start',
+        'compute_review_scope::tests::a_record_the_gate_holds_that_states_no_empty_unread_does_not_move_the_start',
     ),
     (
         'M155 a done spec with a break left open is no drift',
@@ -1928,15 +1928,15 @@ MUTATIONS = [
     (
         'M334 a plan entry left unread does not join',
         'src/primitives/compute_review_scope.rs',
-        '        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))\n',
-        '        .filter(|entry| plan_affected.contains(*entry) && entry.is_empty())\n',
+        '        plan_affected.contains(*entry) && is_glob(entry) && !super::leaves_project(repo, entry)\n',
+        '        plan_affected.is_empty() && is_glob(entry) && !super::leaves_project(repo, entry)\n',
         'compute_review_scope::tests::an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does',
     ),
     (
         'M335 a plan entry left unread joins though it leaves the project',
         'src/primitives/compute_review_scope.rs',
-        '        .filter(|entry| plan_affected.contains(*entry) && !super::leaves_project(repo, entry))\n',
-        '        .filter(|entry| plan_affected.contains(*entry))\n',
+        '        plan_affected.contains(*entry) && is_glob(entry) && !super::leaves_project(repo, entry)\n',
+        '        plan_affected.contains(*entry) && is_glob(entry)\n',
         'compute_review_scope::tests::an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does',
     ),
     (
@@ -1945,5 +1945,12 @@ MUTATIONS = [
         '        Ok(scope) if scope.diff_base == args.diff_base => scope,\n',
         '        Ok(scope) if scope.diff_base.is_empty() && scope.diff_base == args.diff_base => scope,\n',
         'write_review::tests::the_derived_scope_carries_what_the_start_record_hands_on',
+    ),
+    (
+        'M337 a plain plan path left unread joins though it is gone',
+        'src/primitives/compute_review_scope.rs',
+        '        plan_affected.contains(*entry) && is_glob(entry) && !super::leaves_project(repo, entry)\n',
+        '        plan_affected.contains(*entry) && !super::leaves_project(repo, entry)\n',
+        'compute_review_scope::tests::an_unread_entry_gone_or_leaving_the_project_does_not_join_and_a_plan_entry_does',
     ),
 ]
