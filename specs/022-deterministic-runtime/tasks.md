@@ -35,6 +35,6 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 63. Disposition out-of-spec finding: 080's groom-derives-routing-candidates scenario lists three routing sources
 
-- [ ] specs/080-deterministic-runtime-efficiency/scenarios/groom-derives-routing-candidates.md — its Context says derive-routing-candidates derives homes from "a runtime-owning spec, a rule file, a spec sharing vocabulary", and task 62 added a fourth source, path-claim, ranked first; 080 is done, so editing the scenario reopens it
+- [x] specs/080-deterministic-runtime-efficiency/scenarios/groom-derives-routing-candidates.md — its Context says derive-routing-candidates derives homes from "a runtime-owning spec, a rule file, a spec sharing vocabulary", and task 62 added a fourth source, path-claim, ranked first; 080 is done, so editing the scenario reopens it — fixed: the Context now names the sources by pointer to `ductus derive-routing-candidates --help`, and 080 reopens `done → in-progress` for it (the agent's recommendation, adopted by the operator, 2026-11-24)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
