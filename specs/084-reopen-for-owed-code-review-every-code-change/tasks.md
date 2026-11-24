@@ -19,6 +19,8 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
+`check-owed-work` refuses a call naming both `feature` and `all`, and `ductus exec` dispatches a backticked name with the walker's context, which holds the session target's `feature`: read what else the context carries before backticking a step. A step asking about a spec other than the target, as fold's upstream spec or a deferral's target, leaves the name unbackticked behind `<!-- audit:ignore-promotion -->`.
+
 - [ ] `framework/commands/amend.md` step 5, its intro, its criterion route's wording, its Scope Boundaries line and its status-table row call `check-owed-work` in place of `classify-spec-edit`; its scenario and criterion routes call it before they write `in-progress`
 - [ ] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same; its step 6 calls it before it writes `in-progress`
 - [ ] A ticked criterion amend would change on a `done` spec, disagreeing with the code, is asked of the owner first (AC3)
@@ -153,6 +155,8 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 ### 13. The CI template and the audit backstop
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
+
+Both call `check-owed-work --all`, which names each spec it cannot judge in `skipped`. Family 27 fails today on a spec it cannot read or that resolves outside the repository, and counts an untracked one, so the step and the script fail on every skip reason but `untracked` (`QUAL-CLAIM-001`).
 
 - [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
 - [ ] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
