@@ -58,10 +58,10 @@ Blocked on task 3: the sweep corrects what states the old rule only once the new
 
 Task 3 moved the mechanical-sweep rule from §spec-lifecycle to §drift-prevention, without the cross-service-reference case. Two sites here still point at it in §spec-lifecycle: `AGENTS.md`'s live-artifact-set bullet ("the scope of §spec-lifecycle case (a)") and `specs/README.md`'s "mechanical-vs-meaningful boundary". Re-point both by meaning.
 
-- [ ] Read each whole and correct it: `AGENTS.md` (held to its ceiling), `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`
-- [ ] `framework/commands/prune.md`, `consolidate.md`, `help.md`, `fold.md`; `framework/reference/implement.md`, `review.md`, `fold.md`
-- [ ] `scripts/audit/ssot-invariants.sh`, `rename-sweep-residue.sh`, `scripts/audit/README.md`
-- [ ] `framework/migrations/audit-record-relocate.md` and `criterion-label-backfill.md`, whose third steps call their edit a correction under §spec-lifecycle
+- [x] Read each whole and correct it: `AGENTS.md` (held to its ceiling), `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`
+- [x] `framework/commands/prune.md`, `consolidate.md`, `help.md`, `fold.md`; `framework/reference/implement.md`, `review.md`, `fold.md`
+- [x] `scripts/audit/ssot-invariants.sh`, `rename-sweep-residue.sh`, `scripts/audit/README.md`
+- [x] `framework/migrations/audit-record-relocate.md` and `criterion-label-backfill.md`, whose third steps call their edit a correction under §spec-lifecycle
 
 - **Done when**: no site outside the spec corpus states that an edit's diff reopens a `done` spec, `scripts/stale-literals.sh` finds none, and the census's sites in the spec's Resolved Questions are each read whole.
 
@@ -70,6 +70,8 @@ Task 3 moved the mechanical-sweep rule from §spec-lifecycle to §drift-preventi
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Blocked on task 3: under the old rule each edit here to a `done` spec's scenario or criterion would reopen it.
+
+Task 4 deleted three `AGENTS.md` bullets that stated the retired rule and re-keyed 050's `plan.md` classification table to match (W21 re-keyed; W14, W15 and W24 removed). 050's plan prose introducing that table still calls W14 and W15 "already promoted" as case (b) and a correction.
 
 Add 000 to the sweep: its scenario `criterion-route-after-draft` says a `done` spec's criterion route "either takes the documented back-edge or refuses", where task 2 gave `/ductus:amend`'s criterion route a third case, the owner-confirmed correction of a ticked criterion, which reopens nothing; and its Resolved Questions derive the reopen from the third back-edge.
 

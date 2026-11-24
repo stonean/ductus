@@ -52,7 +52,7 @@ Unlike `/review`, it audits artifacts against *each other* rather than against c
 
 **Reach for it when a question or a new behavior surfaces against a spec that has already moved on.**
 
-It takes the back-edge for you: a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress`. A spec's status never quietly disagrees with its content. One spec.
+It takes the back-edge for you: a new question reopens the spec to `draft`, a new scenario or criterion reopens a `done` spec to `in-progress` through the unchecked task or unticked criterion it leaves. A spec's status never quietly disagrees with its content. One spec.
 
 ## Destructive — these remove content
 
@@ -62,7 +62,7 @@ Three commands remove content. All three confirm before they act, and none write
 
 **Reach for it when `tasks.md` has turned into a changelog of finished work, or `plan.md` has grown journal, evidence or handoff sections beside its design.** It drops fully-checked task sections, or `--reset` takes `tasks.md` back to template state. For each `plan.md` section outside the design record — the plan template's own sections — it proposes where each durable piece goes (a changed decision into the entry it amends, contributor knowledge where the constitution's *Shared knowledge stays in git* routes it — `AGENTS.md` only when every session needs it before acting, otherwise `system.md`, `events.md` or `errors.md`, a spec, `docs/`, or a comment or test at the site — and owed work onto a pending task), and removes the section once you confirm the moves and the removal together.
 
-What it drops is recoverable only from git history, which already holds it: `tasks.md` is ephemeral work-tracking, and a plan's sections outside its record carry no claims once their durable pieces have moved. A section whose `/analyze` advisory you have waived as part of the design is kept and never proposed. On a `done` spec, prune reopens it only when the diff adds owed work, and says so before it writes; a plan edit alone never reopens one. The spec body, scenarios and data model are never touched. One spec — or, with `--all`, the same reduction repeated for every spec in the corpus: one table for the whole preview, one confirmation for every `tasks.md` reduction, and each plan's sections still judged spec by spec. With `--project` it reduces the four project files instead (`AGENTS.md`, `system.md`, `events.md` and `errors.md`), proposing a home for each entry and moving it only once you confirm; the size check names it as the fix for a project file over `[artifacts] read-size-bytes`.
+What it drops is recoverable only from git history, which already holds it: `tasks.md` is ephemeral work-tracking, and a plan's sections outside its record carry no claims once their durable pieces have moved. A section whose `/analyze` advisory you have waived as part of the design is kept and never proposed. On a `done` spec, prune reopens it only when its write leaves owed work, and says so before it writes; a plan edit alone never reopens one. The spec body, scenarios and data model are never touched. One spec — or, with `--all`, the same reduction repeated for every spec in the corpus: one table for the whole preview, one confirmation for every `tasks.md` reduction, and each plan's sections still judged spec by spec. With `--project` it reduces the four project files instead (`AGENTS.md`, `system.md`, `events.md` and `errors.md`), proposing a home for each entry and moving it only once you confirm; the size check names it as the fix for a project file over `[artifacts] read-size-bytes`.
 
 ### `/fold` — the branch-scoped staging directory, after migrating its content
 
@@ -87,7 +87,7 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Move what you are keeping into the target first, then run it, and commit the two together: a move alone leaves links dangling, and the pre-commit hook refuses it. To commit the merge before the removal, copy instead of moving. Recovery is git history. Two specs.
 
-Reach for it only when the source spec no longer describes anything true. A spec that still describes live behavior is edited in place instead, taking the `done → in-progress` back-edge when the edit changes a requirement.
+Reach for it only when the source spec no longer describes anything true. A spec that still describes live behavior is edited in place instead; it goes back to `in-progress` only while the edit leaves an unchecked task or unticked criterion ([§spec-lifecycle](../framework/constitution.md#spec-lifecycle)).
 
 > **This is the only one of the three that removes a durable artifact.** The other two remove nothing durable: `/prune` drops spent `tasks.md` sections, which are ephemeral work-tracking, and `plan.md` sections outside the design record only once their durable pieces have moved home; a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory.
 
@@ -101,7 +101,7 @@ Reach for it only when the source spec no longer describes anything true. A spec
 
 **Reach for it when the inbox has accumulated and you are ready to decide where each item belongs.**
 
-It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore done in the same pass, or a discard. Each route is confirmed before anything is written. A `done` spec is reopened when a scenario lands under it, and, once you approve, when a spec edit there changes what it requires.
+It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore done in the same pass, or a discard. Each route is confirmed before anything is written. A `done` spec is reopened when a route leaves it an unchecked task or an unticked criterion, such as a scenario landing under it.
 
 ## Orient
 

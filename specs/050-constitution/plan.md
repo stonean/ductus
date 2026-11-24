@@ -439,9 +439,8 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | A behavior change needs a prose-claim sweep, not just an identifier sweep (survey W12) | Identifier greps miss stale claims in any project; the failure mode is the wording, not the paths |
 | Never hand-write an `AC{n}:` label — add the criterion unlabelled and run `label-criteria` (survey W16) | The counter is adopter frontmatter and the collision risk is identical |
 | Use the `Write` tool, not Bash redirects, for `.ductus/session.toml` (survey W18) | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants (`Edit(.ductus/session.toml)` in `framework/bootstrap/configure/claude.md`) |
-| Re-open a `done` spec via `set-status` when the only intent is to reflect on-disk edits, not via `/{project}:amend` (survey W21) | The back-edge and the refinement loop are both adopter-facing |
+| Re-open a `done` spec via `set-status` when edits already on disk left it owing work, not via `/{project}:amend` (survey W21) | The back-edge and the refinement loop are both adopter-facing |
 | Add a rule to its surface's home spec via the back-edge — do not spawn a new spec for it (survey W22) | Adopters own rule files and hit the same spec-proliferation pressure |
-| A canonical table living on a `done` spec syncs with no back-edge only from its `spec.md` outside the criteria, `plan.md` or `tasks.md` — one in its data model or a scenario reopens it (survey W24) | Follows from the canonical-sources map, which adopters receive |
 | A CI check that reads git history needs `fetch-depth: 0` (survey W27) | **R** — any adopter CI that reads history meets a shallow checkout; the shipped template (`framework/templates/ci/adopter-generators.yml`) reads none, so the rule is stated for the project's own checks |
 | A new test that reads git history or shells out to a repo script is a change to the workflow that runs it, not just to the suite (survey W28) | **R** — same family as W27; stated as history/inputs rather than this repo's workflow filenames |
 | When an item routes to a chore, fix it — do not park it (survey W29) | The groom command and its five routes ship unchanged |
@@ -459,8 +458,6 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | Entry | Reason |
 | --- | --- |
 | Work a recommendation out to its result *before* presenting it (survey W5) | Promoted 2026-08-17 as §recommendations; the entry is already the pointer-shaped mirror this spec generalises |
-| Criterion-label assignment is a correction (non-reopening) (survey W15) | Adopters receive the labelling pass and the same back-edge question |
-| Cross-service reference edits are mechanical-class (non-reopening) (survey W14) | Cross-service references ship to adopters; the non-reopening rule is part of that contract |
 
 ### Project-only
 

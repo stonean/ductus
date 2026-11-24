@@ -13,7 +13,7 @@ Remove a spec directory whose content belongs with another, after re-pointing th
 
 It exists because the alternative is worse. A corpus of small overlapping specs accumulates ones whose content was never a separate concern, and an operator's only current recourse is `rm -rf` — no pointer rewriting, no anti-stranding refusal, no confirmation naming what is lost. Safety comes from the guards, not from withholding the command.
 
-The question this command answers is whether the source spec still describes something true. A spec whose content was never a separate concern from a sibling, or that a later spec absorbed outright, is consolidated. A spec that still describes live behavior is not — it is edited in place instead, taking the `done → in-progress` back-edge when `classify-spec-edit` says the edit reopens it, which leaves one true description where consolidation would leave none.
+The question this command answers is whether the source spec still describes something true. A spec whose content was never a separate concern from a sibling, or that a later spec absorbed outright, is consolidated. A spec that still describes live behavior is not — it is edited in place instead, reopening a `done` spec only when the edit leaves it owing work (§spec-lifecycle), which leaves one true description where consolidation would leave none.
 
 It is a **cleanup command**, in the family of [041 — Spec directory pruning](https://github.com/stonean/ductus/blob/main/specs/041-task-pruning/spec.md): operator-initiated, confirmed, and never a way to advance a spec — this command changes no status, and prune changes one only to reopen a `done` spec.
 

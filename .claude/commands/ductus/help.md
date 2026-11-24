@@ -31,11 +31,10 @@ ductus is a set of slash commands that guide features from idea to implementatio
 draft → clarified → planned → in-progress → done
 ```
 
-Three back-edges keep the lifecycle honest:
+Two back-edges keep the lifecycle honest:
 
 - `/ductus:amend` reverts a `clarified`, `planned`, or `in-progress` spec to `draft` when a new open question surfaces — `draft` is the only status that tolerates open questions. The next `/ductus:clarify` resolves the question and the spec advances forward again.
-- `/ductus:amend` reverts a `done` spec to `in-progress` when a new scenario or criterion is added (the scenario and criterion routes) — the addition captures the change, the spec evolves with it.
-- A **meaningful body edit** to any artifact under a `done` spec's directory takes the same edge: a changed criterion or open question, an added unchecked task, or an edit to a scenario or the data model reopens the spec. A correction to `spec.md` or `plan.md` that changes none of those does not, decided from the diff, and neither does a uniform rename sweep, a cross-service reference change, criterion-label assignment, or a plan or task-list edit that adds no unchecked task.
+- A `done` spec is `in-progress` exactly while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion. The command whose write leaves that work owed reopens it: a new criterion, or a scenario through the task it appends. An edit to a scenario's text, a data model or prose leaves it `done`.
 
 Each feature lives in `specs/NNN-feature-name/` and progresses through these states by running the corresponding command.
 
@@ -121,7 +120,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 - **Dependencies** — Features declare dependencies in their spec. A feature is blocked until its dependencies reach `clarified` or later.
 - **Artifacts** — Each feature directory can contain `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `research.md`, and a `scenarios/` subdirectory, plus the `review.md` and `analysis.md` records that `/ductus:review` and `/ductus:analyze` write.
 - **Scenarios** — A scenario is a spec at a lower level of abstraction. Scenarios live in `specs/NNN-feature/scenarios/slug.md` and capture bugs, edge cases, and detailed behavior. Each scenario gets a linked task in `tasks.md`.
-- **Bug decision tree** — When a bug is reported, the first matching condition decides the route: (1) no rule covers the cross-cutting concern → promote it to a rule, (2) no spec exists → write the spec first, (3) spec is ambiguous → fix the spec, (4) spec is clear → add a scenario.
+- **Bug decision tree** — When a bug is reported, the first matching condition decides the route: (1) no rule covers the cross-cutting concern → promote it to a rule, (2) no spec exists → write the spec first, (3) spec is ambiguous → fix the spec, (4) spec is clear → fix the code, adding a scenario only when the requirement needs more precision.
 - **Inbox** — `specs/inbox.md` is the place for todos you capture by hand. Items are recorded with `/ductus:log` and groomed with `/ductus:groom` into a rule, a spec, a scenario, a chore done in the pass, or a discard. Nothing a pipeline run finds lands there: `/ductus:review`, `/ductus:analyze`, and `/ductus:implement` fix, defer, or waive their own findings. `/ductus:status` shows how many items are outstanding.
 - **Finish before moving on** — Prefer completing a feature through the full pipeline before starting the next. Depth-first keeps context focused.
 

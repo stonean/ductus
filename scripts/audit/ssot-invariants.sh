@@ -17,8 +17,9 @@
 #      *textual rule* (full sentence describing the state machine) lives
 #      in one canonical home with references elsewhere, not restated.
 #
-#   2. Back-edge ownership: the rule that /amend owns both back-edges
-#      (clarified/planned/in-progress → draft; done → in-progress).
+#   2. Back-edge ownership: the rule that /amend owns clarified/planned/
+#      in-progress → draft, and that whichever command leaves work owed
+#      writes done → in-progress.
 #      Canonical: framework/constitution.md §spec-lifecycle
 #      Family 1c already checks that amend.md and target.md reference each
 #      back-edge (presence, not wording); this check is the SSOT companion.

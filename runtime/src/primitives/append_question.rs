@@ -52,8 +52,9 @@ const RESOLVED_HEADING: &str = "## Resolved Questions";
 /// (`validate-frontmatter` owns flagging corrupt statuses). `done` is
 /// deliberately **excluded**: per the constitution §spec-lifecycle and
 /// spec 014, a new question is not a sanctioned back-edge out of `done` —
-/// a `done` spec reopens via the scenario route or a body edit (`done → in-progress`,
-/// owned by `/ductus:amend`). Appending a question to a `done` spec leaves the
+/// a `done` spec reopens only while it owes work, an unchecked task or an
+/// unticked criterion (`done → in-progress`, §spec-lifecycle's Backward via
+/// owed code). Appending a question to a `done` spec leaves the
 /// status at `done` (the command layer never routes a question there).
 const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 

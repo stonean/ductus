@@ -6,7 +6,7 @@ Cross-cutting decisions, conventions, and deferred work that span multiple featu
 
 - **Templates live under `framework/`** — all templates live in `framework/templates/`, split by purpose: `framework/templates/spec/` (spec, plan, tasks, data-model, research, scenario) and `framework/templates/project/` (system, errors, events, inbox, README, AGENTS, CLAUDE, gitignore). This is the source. The **Shared Files** manifest copies spec templates to `{project}/specs/templates/` and the system specs to `{project}/specs/` during bootstrap, so the adopter-side destinations are unchanged. `ductus` is the source, not an adopting project.
 
-Historical renames (e.g., `/validate` → `/analyze`, `/capture` → `/specify`, `/elaborate` → `/amend`, `/ask` → `/amend`, `configuration.md` → `configuration-cross.md`) are recorded in git history. Spec bodies are kept current via the mechanical-sweep rule in [`AGENTS.md`](../AGENTS.md) (the "no dead references in live artifacts" entry); the sweep updates every live artifact in a single uniform-substitution commit and does not reopen done specs. See [§spec-lifecycle](../framework/constitution.md#spec-lifecycle) for the mechanical-vs-meaningful boundary.
+Historical renames (e.g., `/validate` → `/analyze`, `/capture` → `/specify`, `/elaborate` → `/amend`, `/ask` → `/amend`, `configuration.md` → `configuration-cross.md`) are recorded in git history. Spec bodies are kept current via the no-dead-references rule in [§drift-prevention](../framework/constitution.md#drift-prevention); the sweep updates every live artifact in a single commit. A `done` spec reopens only while it owes code ([§spec-lifecycle](../framework/constitution.md#spec-lifecycle)).
 
 ## Future Considerations
 
