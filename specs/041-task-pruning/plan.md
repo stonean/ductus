@@ -105,7 +105,7 @@ choices the scenario left open:
 
 All other `tasks.md` readers are line scanners that match headings and
 checkboxes, so the block needs no change in them. Read at its source, that is
-`read_tasks.rs`' `parse_tasks`, `unchecked_lines` and `describe_unchecked`
+`read_tasks.rs`' `parse_tasks` and `unchecked_lines`, `owed_work.rs`' `describe_unchecked`
 (behind `read-tasks`, `check-artifacts`, `decisions`, the review gate, the
 review and analysis records, `classify-spec-edit` and `measure-reopenings`),
 `mark_task.rs`, and `check_stuck.rs`' `first_incomplete_subtask_index`, each
