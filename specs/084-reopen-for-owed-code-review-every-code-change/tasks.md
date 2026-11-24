@@ -1,0 +1,173 @@
+# 084 — Reopen for owed code, review every code change Tasks
+
+Tasks derived from the [plan](plan.md). Complete in order.
+
+## Phase A — The rule
+
+### 1. The owed-work helper and `check-owed-work`
+
+- [ ] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it
+- [ ] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
+- [ ] Test both directions and add a mutant per condition, each killed
+
+- **Done when**: `check-owed-work` reports a `done` fixture's unchecked box and unticked criterion, reports `owes: false` for one with neither, every former reader passes its own tests through the helper, and the mutants are killed.
+
+### 2. Amend and groom reopen from state
+
+- [ ] `framework/commands/amend.md` step 5, its intro, its criterion route's wording, its Scope Boundaries line and its two status-table rows call `check-owed-work` in place of `classify-spec-edit`
+- [ ] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same
+- [ ] A ticked criterion amend would change on a `done` spec, disagreeing with the code, is asked of the owner first (AC3)
+- [ ] `scripts/gen-claude-commands.sh` re-run, and any golden the edits move re-blessed alone and read
+
+- **Done when**: neither command names `classify-spec-edit`, each reopens a `done` spec only when `check-owed-work` reports owed work, and a walk of each command's steps on a `done` fixture with a scenario-text edit leaves it `done`.
+
+### 3. The constitution states the rule
+
+- [ ] §spec-lifecycle: one `- **Backward via owed code**` bullet in place of the second and third back-edges, the "Any other edit there reopens" paragraph and the canonical-record bullet, naming `/review`'s one status write
+- [ ] §implement-phase, §drift-prevention, §cross-spec-impact and §bug-handling's fourth route (AC10)
+- [ ] `scripts/audit/cross-doc-consistency.sh` family 1c's header, `sub_1c` comment and `BACK_EDGES` text
+
+- **Done when**: `scripts/lint-governing-size.sh` passes on the staged constitution, family 1c derives the same edge set, `run-all.sh` exits 0 after the commit, and no sentence of the constitution says an edit's diff reopens a `done` spec.
+
+## Phase B — The sweep
+
+### 4. Sites outside the spec corpus
+
+Blocked on task 3: the sweep corrects what states the old rule only once the new one stands.
+
+- [ ] Read each whole and correct it: `AGENTS.md` (held to its ceiling), `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`
+- [ ] `framework/commands/prune.md`, `consolidate.md`, `help.md`, `fold.md`; `framework/reference/implement.md`, `review.md`, `fold.md`
+- [ ] `scripts/audit/ssot-invariants.sh`, `rename-sweep-residue.sh`, `scripts/audit/README.md`
+
+- **Done when**: no site outside the spec corpus states that an edit's diff reopens a `done` spec, `scripts/stale-literals.sh` finds none, and the census's sites in the spec's Resolved Questions are each read whole.
+
+### 5. Sites in the spec corpus
+
+Blocked on task 3: under the old rule each edit here to a `done` spec's scenario or criterion would reopen it.
+
+- [ ] Ask the owner once whether this sweep may decide each ticked criterion's correction (AC3), and record the answer in the commit
+- [ ] Correct the sites in 008, 011, 013, 022, 023, 026, 030, 035, 041, 047, 049, 050, 051, 054 and 063, each read whole
+- [ ] 079: AC5, AC15 and AC25 and its other sites; 081: AC10 and AC13; each criterion's note reads "Superseded in part (spec 084)"
+
+- **Done when**: AC11 holds, every swept spec's status is unchanged, and `check-artifacts` reports no new finding on any of them.
+
+## Phase C — Reviews owed wherever code changed
+
+### 6. The review window starts where the last review ended
+
+- [ ] `compute_review_scope::resolve_base` and `last_review_commit` stop hiding the reopen; `held_base`'s clamp, the carried-in branch and the `UncommittedTransition` shortcut go
+- [ ] A `check_stuck` lookup for the commit that set a spec `done` or added it as `done`, for a `done` spec no review recorded
+- [ ] Invert the tests asserting the old start; update the module doc, `COMPUTE_REVIEW_SCOPE`, `BaseSource`'s docs, `framework/reference/review.md` §Window and coverage and `runtime/tests/golden/review-basic.jsonl`
+
+- **Done when**: AC7's two fixtures pass and fail with the change reverted.
+
+### 7. Code no spec claims leaves open specs' scopes
+
+- [ ] `attribute_window`'s no-claimant branch adds nothing to the scope; `take_unclaimed`, `ReadRecord`, `read_records` and `commits_between` go
+- [ ] Move the per-path claim rule into `commit_attribution` for task 9 to share
+- [ ] Rewrite 081's AC13 and AC14 fixtures to the new rule
+
+- **Done when**: a fixture with a code commit naming no spec leaves it out of an `in-progress` spec's scope, `commits-unclaimed` still counts it, and AC6's second half holds.
+
+### 8. The project record
+
+- [ ] `write-review` with no `feature` writes `{specs-root}/review.md` as `data-model.md` states, and `--seed` writes the seed
+- [ ] `fix_rounds::RoundSubject` takes an optional feature, `round_paths` leaves out `{specs-root}/review.md`, and its callers accept a project subject (AC14)
+- [ ] `framework/commands/review.md` gains `--project`, and `--all` includes it
+- [ ] Seed this repository's `specs/review.md`
+
+- **Done when**: AC6 and AC14 hold, a project review over a fixture's unclaimed commit records it, and its fix rounds leave its own record out.
+
+### 9. `check-unreviewed-code`
+
+Blocked on tasks 6 to 8: it reads their window, their claim rule and the project record.
+
+- [ ] The primitive at `at`, over the committed tree, with `done-specs`, `unclaimed`, `not-examined` and `mode`, and its seven registration sites
+- [ ] `[review] unreviewed-push`'s reader, its `PrimitiveError` variant, `runtime/src/schema/config_keys.rs` and `framework/bootstrap/ductus.md` §Project Configuration
+- [ ] The `since` count over first-parent commits (AC17)
+- [ ] Fixtures for AC4's directions, a shallow history among them
+
+- **Done when**: AC4 and AC17 hold, an invalid key value fails naming the key and the file, and each fixture fails with its behavior removed.
+
+### 10. `/ductus:review` on a `done` spec
+
+- [ ] Step 7.3 asks the owner before a `done` spec's ticked criterion judged not met changes, corrects or unticks it, and writes `in-progress` on an untick
+- [ ] Step 10 writes `in-progress` on a deferral to the spec's own work, and records no gating finding without a disposition
+- [ ] Scope Boundaries, `framework/reference/review.md` §Criteria step and §Deferrals, and goldens re-blessed and read
+
+- **Done when**: AC3 and AC5 hold in the command and reference text, and the goldens match.
+
+### 11. The pre-push hook
+
+- [ ] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
+- [ ] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed; `framework/bootstrap/ductus-procedure.md` §Hook Installation
+- [ ] `.github/workflows/runtime.yml`'s path triggers, and a `scripts/audit/adopter-shell-behavior.sh` fixture for each AC8 case
+- [ ] A scratch-adopter bootstrap, per `docs/developing-ductus.md`'s installer section
+
+- **Done when**: AC8 holds on an adopter-shaped tree, each case proven, a shallow clone and a missing runtime among them.
+
+### 12. The seed migration
+
+- [ ] `framework/migrations/project-review-record.md` and its `framework/migrations.toml` entry, ordered after every existing one
+- [ ] `framework/bootstrap/ductus-procedure.md` seeds the record on a fresh install
+
+- **Done when**: a scratch adopter behind the release gains a seeded `{specs-root}/review.md` on update and on a fresh bootstrap, and a second run writes nothing.
+
+### 13. The CI template and the audit backstop
+
+- [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step and the `done`-spec owed-work step
+- [ ] `scripts/audit/done-spec-criteria.sh` reads `tasks.md` boxes; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
+
+- **Done when**: AC9's CI half and AC15 hold, each step run by `scripts/run-workflow-steps.py` on a fixture fails with its condition present and passes without it.
+
+### 14. The status count
+
+- [ ] `dashboard`'s `unreviewed-code` block, `pipeline_view`'s line, `framework/commands/status.md` and `docs/slash-commands.md`
+
+- **Done when**: `/ductus:status` shows the count in each of its states on every run.
+
+### 15. Measuring the bar
+
+- [ ] `measure_reopenings`' `held-owed-work` and `never-owed-count`, with a fixture for each direction
+
+- **Done when**: AC16 holds, and `measure-reopenings --since 2026-11-11 --at 47cae941` reproduces the estimate's 74 never-owed reopenings or the commit names why it differs.
+
+### 16. This repository's hook
+
+- [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
+
+- **Done when**: a push from this checkout runs the check and warns on the backlog.
+
+## Phase D — Retirement and delivery
+
+### 17. Retire `classify-spec-edit`
+
+Blocked on tasks 2 and 10: nothing may call it.
+
+- [ ] Remove the module and its seven registration sites, its schema types, `framework/runtime-tools.txt`'s line, and regenerate `framework/bootstrap/configure/*.md`
+- [ ] `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools no longer served
+- [ ] Its mutants and the comment-only mentions; `mechanical_sweep.rs`'s module doc, `runtime/tests/mechanical_sweep_parity.rs` and the review reference's sentence on the sweep exemption
+
+- **Done when**: AC12 holds and `grep -rn classify.spec.edit` over the live-artifact set finds only historical records.
+
+### 18. `check-artifact-size` names no per-fix reopen
+
+- [ ] `on_done` and `OnDone` go; a `done` spec's warning states the state rule once; the table's tests rewritten
+
+- **Done when**: AC18 holds and no result or description names a per-fix reopen.
+
+### 19. Back-links and the changelog
+
+- [ ] Each of 018, 020, 022, 050, 057, 066, 067, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
+- [ ] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
+- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entries for every change adopters see (AC13)
+
+- **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 084 and no new finding on the ten, and the changelog names each primitive added and retired.
+
+### 20. This repository blocks
+
+This is the last task. The about 9 `done` specs measured as owing a review are reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079); this task waits on them.
+
+- [ ] Remove `[review] unreviewed-push = "warn"` from `.ductus/config.toml` once `check-unreviewed-code` reports nothing here
+
+- **Done when**: the key is gone and a push from this checkout passes the hook at `block`.
