@@ -154,10 +154,10 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Handed on from task 9: the CLI's exit status is the hook's (`unreviewed_code_blocks` in `runtime/src/main.rs`), and it prints the report on stderr, one line per subject, path and subject not examined, before the result is bounded. `runtime/tests/check_unreviewed_code_cli.rs` proves each AC8 case on the binary but the shallow clone and the missing runtime, which are the hook fixtures' to prove.
 
-- [ ] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
-- [ ] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed, mirrored in `framework/bootstrap/govern.md` and `install.sh`; `framework/bootstrap/ductus-procedure.md` §Hook Installation
-- [ ] `.github/workflows/runtime.yml`'s path triggers, and a `scripts/audit/adopter-shell-behavior.sh` fixture for each AC8 case
-- [ ] A scratch-adopter bootstrap, per `docs/developing-ductus.md`'s installer section
+- [x] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
+- [x] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed, mirrored in `framework/bootstrap/govern.md` and `install.sh`; `framework/bootstrap/ductus-procedure.md` §Hook Installation
+- [x] A `scripts/audit/adopter-shell-behavior.sh` fixture for each AC8 case; `.github/workflows/runtime.yml`'s path triggers stay as they are, since no runtime test reads the hook (the agent's recommendation, adopted by the operator, 2026-11-24)
+- [x] A scratch-adopter bootstrap, per `docs/developing-ductus.md`'s installer section
 
 - **Done when**: AC8 holds on an adopter-shaped tree, each case proven, a shallow clone and a missing runtime among them.
 
@@ -231,6 +231,12 @@ Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012,
 - [ ] `framework/commands/review.md` step 7.3 and `framework/reference/review.md` §Criteria step say what the exec walk does, and `scripts/gen-claude-commands.sh` is re-run
 
 - **Done when**: a unit test proves the exec walk keeps a `done` spec's ticked criterion judged not met ticked and still unticks an `in-progress` spec's, each failing with its behavior removed, the interpreter's mutants pass `scripts/mutation/run.py`, and `runtime/tests/golden/review-basic.jsonl` matches.
+
+### 27. `check-unreviewed-code`'s guidance names the review command unsubstituted
+
+- [ ] `runtime/src/main.rs` — the CLI's last stderr line prints `` `/{project}:review` `` literally (found by task 11, 2026-11-24), where `pipeline_view` substitutes the project's namespace; batch with task 26's runtime change
+
+- **Done when**: the line names the project's own review command, and a test fails with the substitution removed.
 
 ## Phase D — Delivery
 

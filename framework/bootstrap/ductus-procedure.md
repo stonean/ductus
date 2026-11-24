@@ -242,12 +242,14 @@ Collect the findings by spec. **Post-Scaffolding Output** reports them; when the
 
 ## Hook Installation
 
-After **Per-Agent Scaffolding** completes, manage the project's git pre-commit hook so generated artifacts (currently spec `dependencies:` and `references:` frontmatter, future generators if added) stay in sync on every commit.
+After **Per-Agent Scaffolding** completes, manage the project's git pre-commit hook so generated artifacts (currently spec `dependencies:` and `references:` frontmatter, future generators if added) stay in sync on every commit, and its pre-push hook, which reports the code a push carries that no committed review covers (spec 084).
 
-Two files participate, with different ownership models:
+Four files participate, an inner and an outer file per hook, with different ownership models:
 
 - **`.githooks/ductus-pre-commit`** is ductus-owned. Placed by the **Shared Files** manifest with `update` strategy; carries the `# managed-by: ductus` sentinel on line 2; rewritten on every `/ductus` run unless pinned in `.ductus/config.toml`. Holds the derivation orchestration (currently `ductus derive-dependencies --write --staged` and `ductus derive-references --write --staged` plus output staging). Both run with `--staged` so a commit only rewrites the specs it touches, never unrelated ones. An unreachable runtime **halts** the commit rather than skipping the pass: these primitives produce derived frontmatter the commit captures, so a silent skip would land values they had already superseded. That is safe to make blocking because the hook cannot outrun the binary — `/ductus` wires `core.hooksPath` and acquires the runtime in the same run, and `core.hooksPath` is local git config a clone never carries, so a fresh clone has no hook until `/ductus` has run. `git commit --no-verify` is the deliberate bypass. It runs from its project root, the directory above its own, whatever directory git starts it in, and lists staged specs from there, so a project that is a subdirectory of its repository behaves as one at the repository root (spec 059). After the writes it runs two read-only checks, either of which refuses the commit: `ductus check-corpus-links`, on a relative link under the spec root that resolves to nothing, and `ductus check-artifact-size --project-files --staged`, on a commit that grows a project file past `[artifacts] read-size-bytes`. It additionally runs `ductus label-criteria` once per staged spec — the acceptance-criterion labelling pass (spec 013), the backstop for a criterion typed by hand in an editor. That step keeps a *swallowed* failure, and the reason is blast radius rather than optionality: a missing `AC{n}` label is caught by `/ductus:analyze` and assigned on the next pass, so nothing wrong is committed, while a stale derived index is committed wrong data.
 - **`.githooks/pre-commit`** is adopter-owned. Placed by the manifest with `create` strategy on first install; never overwritten thereafter. Initial content invokes the inner hook beside it, found from the stub's own location rather than from the repository root; adopters add their own pre-commit checks above or below that invocation.
+- **`.githooks/ductus-pre-push`** is ductus-owned, placed and pinned as `ductus-pre-commit` is. For each ref a push updates it runs `ductus check-unreviewed-code --at` the pushed commit, skipping a ref the push deletes, and the primitive's exit status is the hook's: it reads `[review] unreviewed-push`, blocking by default. An unreachable or too-old runtime halts it, naming `--no-verify`, whatever the key says.
+- **`.githooks/pre-push`** is adopter-owned, placed as `pre-commit` is, and invokes `ductus-pre-push` beside it with git's stdin.
 
 This section's job is to wire git up to actually run the outer hook without clobbering whatever hook system the project already uses. Git runs a hook from the root of the work tree and reads a relative `core.hooksPath` from there (githooks(5)), which is not the project root when the project is a subdirectory of its repository (spec 059). So the value written names the hooks directory from the work tree. Compute two values before the ladder, from the project root:
 
@@ -257,17 +259,19 @@ This section's job is to wire git up to actually run the outer hook without clob
 
 Detection runs in this order — first match wins:
 
-1. **`core.hooksPath` is `H`** — already wired up. The manifest passes have already written `.githooks/ductus-pre-commit` (`update`) and, on first run, `.githooks/pre-commit` (`create`). Run `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit` to ensure both files are executable. Report `pre-commit hook already wired up`.
+1. **`core.hooksPath` is `H`** — already wired up. The manifest passes have already written `.githooks/ductus-pre-commit` (`update`) and, on first run, `.githooks/pre-commit` (`create`). Run `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit .githooks/pre-push .githooks/ductus-pre-push` to ensure both files are executable. Report `pre-commit hook already wired up`.
 2. **`P` is non-empty, `core.hooksPath` is `.githooks`, and the work tree's root has no `.githooks` directory** — the value a `/ductus` run before spec 059 wrote from this subdirectory, naming a directory that does not exist, so no hook has ever run. Rewire it as case 5 does, under the same precondition, and report `pre-commit hook rewired: .githooks → {H}`. When the work tree's root does have a `.githooks` directory, the value is someone else's and case 3 applies.
 3. **`core.hooksPath` points at any other path** — the project uses a custom hooks dir. Skip wiring; report a warning with the manual integration snippet below. This includes another ductus project's hooks directory in the same repository: a repository has one `core.hooksPath`, so the second project is warned rather than wired.
 4. **A third-party hook system is detected** — any of `.husky/`, `.pre-commit-config.yaml`, `lefthook.yml`, or `lefthook-local.yml` exists at the project root **or** at the work tree's root (`git rev-parse --show-toplevel`). Skip wiring; report a warning with the manual integration snippet below. The work tree's root counts because a subdirectory project cannot see a marker there from where it stands, and `pre-commit` installs into `.git/hooks` without setting `core.hooksPath`, so no earlier case would notice it before this one set the value over it.
-5. **No conflicts** — run `git config core.hooksPath {H}` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit`. Report `pre-commit hook installed`.
+5. **No conflicts** — run `git config core.hooksPath {H}` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit .githooks/pre-push .githooks/ductus-pre-push`. Report `pre-commit hook installed`.
 
 **Precondition for a wired outcome (cases 1, 2 and 5).** When no non-comment line of `.githooks/pre-commit` names `ductus-pre-commit`, the file does not invoke the inner hook: it is a hook of the project's own, which the manifest's `create` pass left in place because the file already existed. Wiring it would run that hook and never ductus's passes, and in case 5 would activate a hook the project had not activated. So do not wire and do not report the hook wired: leave `core.hooksPath` as found, and report `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above` with the manual integration snippet below. The shipped stub and the one before spec 059 both name `ductus-pre-commit` on their invocation line, and the `ductus-rename` migration re-points an older stub's `govern-pre-commit` line before this ladder runs, so a project whose outer hook is ductus's walks the ladder as before.
 
 **Precondition for wiring (cases 2 and 5).** When `P` is non-empty and `.githooks/pre-commit` still invokes the inner hook with the line the stub shipped before spec 059, `./.githooks/ductus-pre-commit`, do not wire. That line runs from the work tree's root, where this project's inner hook is not, so every commit would fail on it; and the file is adopter-owned, so `/ductus` does not edit it. Report `pre-commit hook not wired: .githooks/pre-commit runs ./.githooks/ductus-pre-commit from the repository root — replace that line with "$(dirname "${BASH_SOURCE[0]}")/ductus-pre-commit" and re-run /ductus`. At the work tree's root the line works as it always has, and the precondition does not apply.
 
 The detection ladder does not treat `.githooks/pre-commit` itself as a ductus-managed file: the outer file is adopter-owned, so its presence is not a signal that ductus installed it.
+
+**The pre-push pair is wired with the pre-commit pair**, since git reads both from `core.hooksPath`, and the ladder's report covers both. On a wired outcome, when no non-comment line of `.githooks/pre-push` names `ductus-pre-push`, the file is a pre-push hook of the project's own: report `pre-push hook skipped — .githooks/pre-push does not invoke ductus-pre-push; see manual integration snippet above` beside the ladder's report.
 
 The two frontmatter derivations are **runtime primitives**, not shipped scripts: `ductus derive-dependencies` and `ductus derive-references` (spec 067, `adopter-generator-promotion`). They arrive with the runtime `/ductus` acquires, so there is nothing to scaffold, refresh, or pin — a generator fix reaches adopters through the version bump that ships the binary. The pre-existing `.ductus/scripts/` entries were removed by the `generator-primitives` migration.
 
@@ -281,14 +285,20 @@ When detection skips installation (cases 3 and 4 above, or an outer hook that do
 > ./{P}.githooks/ductus-pre-commit
 > ```
 >
+> and this line to your pre-push chain, with git's stdin, to have each push checked for code no committed review covers:
+>
+> ```bash
+> ./{P}.githooks/ductus-pre-push
+> ```
+>
 > Hook runners run from the repository root, so the path names the hook from there. The shipped hook script finds its project from its own location, and is idempotent and safe to call from another hook runner.
 
 ### Pinning
 
 Both hook files are subject to `.ductus/config.toml` `pinned.files`, but the meaning differs by ownership:
 
-- **`.githooks/ductus-pre-commit`** is the only file pinning is meaningful for. A pinned inner file uses `skip` strategy instead of `update` — `/ductus` does not overwrite it across releases. Useful when an adopter has customized ductus's generator orchestration and does not want it reset.
-- **`.githooks/pre-commit`** is `create`-strategy and never overwritten after first run regardless of pinning. Listing it in `pinned.files` is harmless but has no effect.
+- **`.githooks/ductus-pre-commit`** and **`.githooks/ductus-pre-push`** are the only files pinning is meaningful for. A pinned inner file uses `skip` strategy instead of `update` — `/ductus` does not overwrite it across releases. Useful when an adopter has customized ductus's generator orchestration and does not want it reset.
+- **`.githooks/pre-commit`** and **`.githooks/pre-push`** are `create`-strategy and never overwritten after first run regardless of pinning. Listing it in `pinned.files` is harmless but has no effect.
 
 The Hook Installation section above still runs and may set `core.hooksPath` regardless of pinning.
 
@@ -330,7 +340,7 @@ After scaffolding, display:
 - Each destination `apply-manifest` names in `modes-kept`, one line apiece: `mode kept: {path} — this run could not set it to the source's mode` (another user's file, or one flagged immutable)
 - Placeholder substitutions applied, as `apply-manifest` reports them: the total alongside the number of entries that ran substitution (`N substitutions across M files`). Both numbers, never just the total — zero across twenty substituted files is a malformed or incomplete map, while zero across zero is a manifest of pinned and skipped files behaving correctly, and one number cannot tell an operator which they are looking at.
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
-- Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`.
+- Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`, and beside it, when it applies, `pre-push hook skipped — .githooks/pre-push does not invoke ductus-pre-push; see manual integration snippet above`.
 - Each other selected agent whose stale `ductus.md` the self-update check overwrote and continued past, one line apiece: `{agent}: ductus.md updated from {source-label}; takes effect in its next session` (`ductus.md` §Self-update check)
 - Any fetch failures encountered, and each language whose `.gitignore` patterns were not appended, with its reason (`ductus.md` §Shared Files **.gitignore** step 5)
 - The temp directory this run fetched and extracted into, one line: `temp directory: {tempdir} — left for the OS to sweep` (**File Fetching → Cleanup** in `ductus.md`)

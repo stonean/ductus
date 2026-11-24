@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# managed-by: ductus
+#
+# Adopter pre-push hook installed by /ductus (spec 084).
+#
+# For each ref this push updates, runs `ductus check-unreviewed-code --at` the
+# commit it pushes, and nothing for a ref it deletes. The check reports the code
+# no review is going to read: code a `done` spec claims, or that no spec claims,
+# changed by a commit no committed review covers. Its exit status is this
+# hook's. Under `[review] unreviewed-push = "block"`, the default, it exits 1
+# when it reports code or cannot examine a subject (a shallow clone, a commit
+# holding no project record); under "warn" it prints the same report and exits
+# 0; any other value, or a `.ductus/config.toml` that does not parse, stops the
+# push naming the key or the file. The runtime reads the key: this file parses
+# nothing (§runtime-boundary, principle 3).
+#
+# This file is overwritten by /ductus unless listed in .ductus/config.toml
+# `pinned.files`.
+
+set -euo pipefail
+# The project root is the directory above this file, as ductus-pre-commit
+# finds it (spec 059).
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+ductus_bin=""
+if [ -x .ductus/bin/ductus ]; then
+  ductus_bin=".ductus/bin/ductus"
+elif command -v ductus > /dev/null; then
+  ductus_bin="ductus"
+fi
+
+# A missing runtime halts whatever the key says: the runtime is required, and
+# only it can read the key.
+if [ -z "$ductus_bin" ]; then
+  echo "ductus: pre-push halted — the ductus runtime is not reachable." >&2
+  echo "  Looked for .ductus/bin/ductus, then \`ductus\` on PATH." >&2
+  echo "  It reports the code this push carries that no committed review covers." >&2
+  echo "  Run /ductus to acquire the runtime, or push with --no-verify to" >&2
+  echo "  bypass this hook deliberately." >&2
+  exit 1
+fi
+
+# The bounded probe and the version echo are ductus-pre-commit's, for the
+# reasons given there (BE-TIMEOUT-001, BE-INPUT-011). The check itself stays
+# unbounded: a large history is slow, not hung.
+probe_timeout=10
+probe_kill_grace=1
+probe() {
+  local pid watcher rc=0 out
+  out="$(mktemp "${TMPDIR:-/tmp}/ductus-probe.XXXXXX")" || return 1
+  "$@" > "$out" &
+  pid=$!
+  ( sleep "$probe_timeout"; kill -TERM "$pid" 2> /dev/null; sleep "$probe_kill_grace"; kill -KILL "$pid" 2> /dev/null ) > /dev/null 2>&1 &
+  watcher=$!
+  wait "$pid" || rc=$?
+  kill "$watcher" 2> /dev/null || true
+  wait "$watcher" 2> /dev/null || true
+  cat "$out"
+  rm -f "$out"
+  if [ "$rc" -eq 143 ] || [ "$rc" -eq 137 ]; then rc=124; fi
+  return "$rc"
+}
+
+installed_version() {
+  local out
+  out="$(probe "$ductus_bin" --version 2> /dev/null)" || out="version unknown"
+  out="${out%%$'\n'*}"
+  printf '%s' "$out" | LC_ALL=C tr -cd '[:print:]' | cut -c1-80
+}
+
+if ! probe "$ductus_bin" check-unreviewed-code --help > /dev/null 2>&1; then
+  installed="$(installed_version)"
+  echo "ductus: pre-push halted — the installed runtime is too old." >&2
+  echo "  $ductus_bin reports: $installed" >&2
+  echo "  It has no \`check-unreviewed-code\` subcommand, which this hook calls." >&2
+  echo "  Run /ductus to acquire the pinned runtime, or push with" >&2
+  echo "  --no-verify to bypass this hook deliberately." >&2
+  exit 1
+fi
+
+# git gives one line per ref on stdin: local ref, local sha, remote ref, remote
+# sha. A local sha of zeros alone is a ref the push deletes, carrying no commit.
+rc=0
+while read -r _ local_sha _ _; do
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+  "$ductus_bin" check-unreviewed-code --at "$local_sha" > /dev/null || rc=$?
+done
+exit "$rc"

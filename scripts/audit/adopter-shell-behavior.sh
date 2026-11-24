@@ -57,8 +57,10 @@ audit_family adopter-shell-behavior
 
 HOOK="$ROOT/framework/bootstrap/hooks/ductus-pre-commit"
 OUTER="$ROOT/framework/bootstrap/hooks/pre-commit"
+PUSH_HOOK="$ROOT/framework/bootstrap/hooks/ductus-pre-push"
+PUSH_OUTER="$ROOT/framework/bootstrap/hooks/pre-push"
 
-for shipped in "$HOOK" "$OUTER"; do
+for shipped in "$HOOK" "$OUTER" "$PUSH_HOOK" "$PUSH_OUTER"; do
   if [ ! -f "$shipped" ]; then
     emit "${shipped#"$ROOT"/}" "shipped adopter hook is missing — the fixture cannot be built" \
       "restore it; this family cannot verify adopter behavior without it"
@@ -571,7 +573,105 @@ check_refuses_project_file_growth() {
     'git rm -q AGENTS.md' passes
 }
 
+# --- Case 6: the pre-push hook reports unreviewed code (spec 084, AC8) -------
+#
+# The hook runs `check-unreviewed-code --at` each pushed commit and its exit
+# status is the primitive's, so these cases drive the real runtime: a stub
+# would assert only itself. The fixture seeds the project record, then commits
+# code no spec claims, which the check reports. Each case writes the
+# configuration it names to the working tree, where the primitive reads it, and
+# feeds the hook the stdin line git gives.
+ZERO_SHA=0000000000000000000000000000000000000000
+
+# push_fixture — print the fixture's directory, or fail when it cannot be built.
+push_fixture() {
+  local fixture bin
+  bin="$(ductus_bin)"
+  fixture="$(mktemp -d 2>/dev/null)" || fixture=""
+  if [ -z "$bin" ] || [ -z "$fixture" ] || ! (
+    cd "$fixture" || exit 1
+    mkdir -p .ductus/bin .githooks specs src \
+      && cp "$PUSH_HOOK" .githooks/ductus-pre-push \
+      && cp "$PUSH_OUTER" .githooks/pre-push \
+      && ln -s "$ROOT/$bin" .ductus/bin/ductus \
+      && printf '.ductus/bin/\n' > .gitignore \
+      && printf '[paths]\nspecs-root = "specs"\n' > .ductus/config.toml \
+      && git init -q . && git config user.email audit@example.invalid \
+      && git config user.name audit \
+      && .ductus/bin/ductus write-review --seed \
+      && git add -A && fixture_git commit -qm "seed the project record" \
+      && echo 'fn a() {}' > src/a.rs && git add src/a.rs \
+      && fixture_git commit -qm "code naming no spec"
+  ) > /dev/null 2>&1; then
+    rm -rf "$fixture"
+    return 1
+  fi
+  echo "$fixture"
+}
+
+# push_case NAME DIR HOOK CONFIG LINE WANT TEXT — write CONFIG as DIR's
+# `.ductus/config.toml`, run HOOK (relative to DIR) with LINE on stdin, and
+# expect WANT (`zero` or `nonzero`) as its exit, with TEXT in its stderr.
+push_case() {
+  local name="$1" dir="$2" hook="$3" config="$4" line="$5" want="$6" text="$7" out code
+  printf '%s' "$config" > "$dir/.ductus/config.toml"
+  out="$(cd "$dir" && PATH=/usr/bin:/bin bash "$hook" origin url <<< "$line" 2>&1 > /dev/null)"
+  code=$?
+  if [ "$want" = nonzero ] && [ "$code" -eq 0 ]; then
+    emit "framework/bootstrap/hooks/ductus-pre-push" "$name: the hook exited 0" \
+      "let check-unreviewed-code's exit status be the hook's"
+  elif [ "$want" = zero ] && [ "$code" -ne 0 ]; then
+    emit "framework/bootstrap/hooks/ductus-pre-push" \
+      "$name: the hook exited $code: ${out:-<no output>}" \
+      "exit 0 here, as the primitive does"
+  fi
+  case "$out" in
+    *"$text"*) ;;
+    *) emit "framework/bootstrap/hooks/ductus-pre-push" \
+         "$name: stderr did not name $text: ${out:-<no output>}" \
+         "let the primitive's stderr through" ;;
+  esac
+}
+
+check_pre_push() {
+  local fixture clone head bin pushed
+  local block=$'[paths]\nspecs-root = "specs"\n'
+  local warn=$'[paths]\nspecs-root = "specs"\n[review]\nunreviewed-push = "warn"\n'
+  if ! fixture="$(push_fixture)"; then
+    fixture_failed "the pre-push fixture (no runtime reachable, or git failed)" ""
+    return
+  fi
+  head="$(cd "$fixture" && git rev-parse HEAD)"
+  pushed="refs/heads/main $head refs/heads/main $ZERO_SHA"
+  push_case "reported code, key absent" "$fixture" .githooks/ductus-pre-push "$block" "$pushed" nonzero src/a.rs
+  push_case "reported code, through the outer stub" "$fixture" .githooks/pre-push "$block" "$pushed" nonzero src/a.rs
+  push_case "reported code under warn" "$fixture" .githooks/ductus-pre-push "$warn" "$pushed" zero src/a.rs
+  push_case "a value other than block or warn" "$fixture" .githooks/ductus-pre-push \
+    $'[review]\nunreviewed-push = "loud"\n' "$pushed" nonzero unreviewed-push
+  push_case "a configuration that does not parse" "$fixture" .githooks/ductus-pre-push \
+    $'[review\n' "$pushed" nonzero .ductus/config.toml
+  push_case "a ref the push deletes" "$fixture" .githooks/ductus-pre-push "$block" \
+    "(delete) $ZERO_SHA refs/heads/gone $head" zero ""
+  # A shallow clone stops before the commit that added the seed, so the project
+  # subject's window cannot be placed: not examined, never clean.
+  bin="$(ductus_bin)"
+  clone="$(mktemp -d 2>/dev/null)/clone"
+  if ! fixture_git clone -q --depth 1 "file://$fixture" "$clone" > /dev/null 2>&1 \
+    || ! mkdir -p "$clone/.ductus/bin" || ! ln -s "$ROOT/$bin" "$clone/.ductus/bin/ductus"; then
+    fixture_failed "the shallow clone of the pre-push fixture" "$(dirname "$clone")"
+  else
+    push_case "a shallow clone under block" "$clone" .githooks/ductus-pre-push "$block" "$pushed" nonzero "not examined"
+    push_case "a shallow clone under warn" "$clone" .githooks/ductus-pre-push "$warn" "$pushed" zero "not examined"
+    rm -rf "$(dirname "$clone")"
+  fi
+  rm -f "$fixture/.ductus/bin/ductus"
+  push_case "no runtime, under warn" "$fixture" .githooks/ductus-pre-push "$warn" "$pushed" nonzero \
+    "runtime is not reachable"
+  rm -rf "$fixture"
+}
+
 check_halts_without_runtime
+check_pre_push
 check_too_old_runtime_echo_is_printable
 check_hung_runtime_is_bounded "it hangs" 'exec sleep 60'
 check_hung_runtime_is_bounded "a child keeps its output open" 'sleep 60'

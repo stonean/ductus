@@ -139,8 +139,9 @@ For each line git gives on stdin, it runs `check-unreviewed-code --at <local sha
 - `framework/bootstrap/ductus-procedure.md` §Hook Installation's file list, `chmod` line, report lines, manual-integration snippet and `pinned.files` paragraph;
 - the `chmod` seed entries in the `claude` Agent Registry row, and `install.sh`'s copy of that row's seed, which `scripts/audit/installer-registry-parity.sh` compares with it;
 - the same edits in `framework/bootstrap/govern.md`, held byte-identical to `ductus.md` by Family 21 (`scripts/audit/transitional-bootstrap-parity.sh`);
-- `.github/workflows/runtime.yml`'s two path triggers that name the pre-commit hook;
 - a `scripts/audit/adopter-shell-behavior.sh` fixture for each AC8 case, a shallow clone among them.
+
+`.github/workflows/runtime.yml`'s path triggers do not name it: no runtime test reads it, and Family 22 runs in framework-checks, which has no path filter, on every push (the agent's recommendation, adopted by the operator, 2026-11-24).
 
 No migration is needed to install it: the `update` row and the `create` stub land on the next `/ductus` run.
 
@@ -239,7 +240,7 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 | `scripts/tests/test-done-spec-owed-work.sh` | Create | AC15's test |
 | `scripts/mutation/reopen-measure.py`, `review-022-task-46.py`, `line-citation-strip-066.py`, `review-read-credit.py`, `reviews-follow-what-changed.py`, `commit-counts.py`, `scope-attribution.py`, `plan-edit-takes-no-back-edge.py`, `loop-inputs-screened.py`, `process-decisions-results-bounded.py`, `waiver-notices-flatten.py`, `waivers-bounded.py`, `project-record-084.py`, `unreviewed-code-084.py` | Modify, Create | Retired and re-anchored mutants; the project record's |
 | `framework/migrations/audit-record-relocate.md`, `criterion-label-backfill.md` | Modify | The sweep: each calls its edit a correction under §spec-lifecycle |
-| `.github/workflows/runtime.yml`, `framework-checks.yml` | Modify | Hook path triggers, the new test |
+| `.github/workflows/framework-checks.yml` | Modify | The new test |
 | `.githooks/pre-push`, `.ductus/config.toml`, `specs/review.md` | Create, Modify, Create | This repository's hook, its `warn`, its seed |
 | `AGENTS.md`, `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`, `docs/developing-ductus.md` | Modify | The sweep |
 | `specs/008-*`, `011-*`, `013-*`, `014-*`, `016-*`, `022-*`, `023-*`, `026-*`, `030-*`, `035-*`, `041-*`, `047-*`, `049-*`, `050-*`, `051-*`, `054-*`, `063-*`, `066-*`, `067-*`, `073-*`, `079-*`, `080-*`, `081-*` | Modify | The sweep and AC11's notes |

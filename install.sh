@@ -222,7 +222,7 @@ case "$agent" in
       "Bash(git ls-files *)",
       "Bash(chmod +x ~/.ductus/bin/ductus)",
       "Bash(chmod +x ~/.ductus/bin/ductus.exe)",
-      "Bash(chmod +x .githooks/pre-commit .githooks/ductus-pre-commit)",
+      "Bash(chmod +x .githooks/pre-commit .githooks/ductus-pre-commit .githooks/pre-push .githooks/ductus-pre-push)",
       "Bash(awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }')",
       "Bash(command -v *)",
       "Bash(mkdir -p ~/.ductus/bin/)",
