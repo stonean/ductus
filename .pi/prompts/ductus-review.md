@@ -96,7 +96,7 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
 | `--simplicity` | Run only the reuse / quality / efficiency / simplicity passes |
 | `--quality` | Run only the correctness / bug-detection pass |
 | `--fix` | Apply auto-fixable findings (see **§Auto-fix scope** in `.ductus/reference/review.md`) |
-| `--since=<ref>` | Override where the window starts; the scope rule still applies (default: the later of the spec's last reopen and its last finished review, or `HEAD` while the reopen is uncommitted) |
+| `--since=<ref>` | Override where the window starts; the scope rule still applies (default: where the spec's last review ended, whether or not it reopened since; with no review, the spec's last reopen, `HEAD` while that reopen is uncommitted, or for a `done` spec the commit that set it `done`) |
 | `--waive <rule-id> --reason "<text>"` | Record a waiver for a MUST or SHOULD violation, anchored at each site its rule fires (see **§Waivers** in `.ductus/reference/review.md`) |
 | `--defer <rule-id>` `--target <path>` `--task <n>` `--work-item <id>` | Defer a MUST or SHOULD violation, at each site its rule fires, to the work that will address it (see **§Deferrals** in `.ductus/reference/review.md`) |
 

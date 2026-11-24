@@ -205,11 +205,12 @@ pub enum PrimitiveError {
         /// Requested feature name.
         feature: String,
     },
-    /// A shallow clone's history stops where a spec's reopening may have started, so a
+    /// A shallow clone's history stops where a spec's window may have started (its
+    /// reopening, the commit that set it `done`, or the end of its last review), so a
     /// window read from it could leave work unread. Distinct from a window that
     /// resolved, whatever it held.
     #[error(
-        "history is too shallow to place the start of {spec}'s reopening: run `git fetch \
+        "history is too shallow to place where the window of {spec} starts: run `git fetch \
          --unshallow`, since a window read from here could leave its work unread"
     )]
     ShallowHistory {

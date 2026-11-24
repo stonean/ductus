@@ -88,9 +88,9 @@ Add 000 to the sweep: its scenario `criterion-route-after-draft` says a `done` s
 
 Model: fable (owner, 2026-11-24).
 
-- [ ] `compute_review_scope::resolve_base` and `last_review_commit` stop hiding the reopen; `held_base`'s clamp and the carried-in branch go, and `UncommittedTransition` stays only for a spec with no counted review
-- [ ] A `check_stuck` lookup for the commit that set a spec `done` or added it as `done`, for a `done` spec no review recorded
-- [ ] Invert the tests asserting the old start; update the module doc, `COMPUTE_REVIEW_SCOPE`, `BaseSource`'s docs, `framework/reference/review.md` §Window and coverage, `framework/commands/review.md`'s `--since` row, `runtime/tests/golden/review-basic.jsonl` and `scripts/mutation/scope-attribution.py`
+- [x] `compute_review_scope::resolve_base` and `last_review_commit` stop hiding the reopen; `held_base`'s clamp and the carried-in branch go, and `UncommittedTransition` stays only for a spec with no counted review
+- [x] A `check_stuck` lookup for the commit that set a spec `done` or added it as `done`, for a `done` spec no review recorded
+- [x] Invert the tests asserting the old start; update the module doc, `COMPUTE_REVIEW_SCOPE`, `BaseSource`'s docs, `framework/reference/review.md` §Window and coverage, `framework/commands/review.md`'s `--since` row, `runtime/tests/golden/review-basic.jsonl` and `scripts/mutation/scope-attribution.py`
 
 - **Done when**: AC7's two fixtures pass and fail with the change reverted.
 

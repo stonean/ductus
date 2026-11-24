@@ -1355,27 +1355,34 @@ pub struct ComputeReviewScopeResult {
     pub lists_file: Option<String>,
 }
 
-/// Where a review's window starts (spec 079, AC5).
+/// Where a review's window starts (spec 079, AC5; spec 084, AC7).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum BaseSource {
-    /// The parent of the commit the spec's reopening started at: where it last left
-    /// `done` or, never `done`, first entered `in-progress`.
+    /// The parent of the commit the spec's reopening started at, where it last left
+    /// `done` or, never `done`, first entered `in-progress`: no review run is recorded.
     Reopen,
-    /// That start, because every review run since it was passed over for not reading
+    /// That start, because every review run recorded was passed over for not reading
     /// its scope: a skipped pass, a budget stop, or a record the gate holds that states
     /// no empty `unread` or no `reviewed-against` (spec 079, AC5).
     ReopenPastPartialReview,
-    /// The last review commit since that start.
+    /// The commit finishing the spec's last review, whether or not the spec reopened
+    /// since, or that commit's parent when it is also the commit that took the spec
+    /// out of `done`.
     LastReview,
-    /// The `reviewed-against` of the last review since that start, when the gate holds
-    /// its record until a review runs and its passes read their scope (spec 079, AC5).
+    /// The `reviewed-against` of the spec's last review, when the gate holds its record
+    /// until a review runs and its passes read their scope (spec 079, AC5).
     HeldReview,
     /// A `--since` override, used verbatim.
     Since,
-    /// `HEAD`, because the move into `in-progress` is not committed yet.
+    /// `HEAD`, because the move into `in-progress` is not committed yet and no review
+    /// run is recorded.
     UncommittedTransition,
-    /// Nowhere: the spec never reached `in-progress` and no `--since` was given.
+    /// The commit that set the spec `done`, or added it as `done`: it is `done` and no
+    /// review run is recorded.
+    ReachedDone,
+    /// Nowhere: the spec never reached `in-progress` or `done`, no review run is
+    /// recorded and no `--since` was given.
     #[default]
     None,
 }

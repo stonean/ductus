@@ -164,8 +164,9 @@ fn first_incomplete_subtask_index(content: &str) -> Option<usize> {
 /// rather than one per commit — turning tens of thousands of redundant
 /// frontmatter parses on a big-history repo into a handful.
 ///
-/// Shared with `compute-review-scope` and `diff-cross-spec`, whose windows start
-/// no earlier than that commit's parent. `spec_rel` is looked up in commit trees, so it names
+/// Shared with `diff-cross-spec`, whose window starts at that commit's parent, and
+/// with `compute-review-scope`, whose window starts there only while no review that
+/// read its scope is recorded. `spec_rel` is looked up in commit trees, so it names
 /// the spec from the work tree's root ([`super::ProjectRepository::to_git`]),
 /// not from the project root; a project-relative name finds no history in a
 /// project that is a subdirectory of its repository (spec 059).
@@ -189,6 +190,74 @@ pub(crate) fn find_in_progress_commit(repo: &Repository, spec_rel: &str) -> Resu
 /// that reopening's and starts nothing.
 pub(crate) fn reopening_is_open(repo: &Repository, spec_rel: &str) -> Result<bool> {
     Ok(walk_reopenings(repo, spec_rel)?.open_at_head)
+}
+
+/// The commit that started the `done` pass `at` lies in, or `None` when the spec is
+/// not `done` at `at`: the commit that set it `done`, or that added it as `done`.
+/// A review window for a `done` spec no review has recorded starts there (spec 084).
+///
+/// A commit is judged against its own parents, as [`walk_reopenings`] judges one: a
+/// `done` commit with a parent in a pass carries that pass's start, a merge taking
+/// its first such parent's, and a commit with no readable status stays in the pass
+/// it came from.
+///
+/// # Errors
+///
+/// [`PrimitiveError::ShallowHistory`] when a shallow clone's history stops at the
+/// commit the pass starts at, so the start may lie before the cut; and any libgit2
+/// failure.
+pub(crate) fn find_done_commit(
+    repo: &Repository,
+    spec_rel: &str,
+    at: git2::Oid,
+) -> Result<Option<String>> {
+    let mut walk = repo.revwalk()?;
+    walk.push(at)?;
+    walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
+
+    let mut starts: HashMap<git2::Oid, git2::Oid> = HashMap::new();
+    let mut status_by_blob: HashMap<git2::Oid, Option<String>> = HashMap::new();
+    for oid in walk {
+        let oid = oid?;
+        let carried = repo
+            .find_commit(oid)?
+            .parent_ids()
+            .find_map(|parent| starts.get(&parent).copied());
+        let start = match status_of_commit(repo, &mut status_by_blob, oid, spec_rel)?.as_deref() {
+            Some("done") => Some(carried.unwrap_or(oid)),
+            Some(_) => None,
+            None => carried,
+        };
+        if let Some(start) = start {
+            starts.insert(oid, start);
+        }
+    }
+    let Some(start) = starts.get(&at) else {
+        return Ok(None);
+    };
+    if repo.is_shallow() && repo.find_commit(*start)?.parent_count() == 0 {
+        return Err(PrimitiveError::ShallowHistory {
+            spec: spec_rel.to_string(),
+        });
+    }
+    Ok(Some(start.to_string()))
+}
+
+/// Whether the commit `oid` took the spec out of `done`: its own status reads
+/// something else, and a parent's reads `done`.
+pub(crate) fn leaves_done(repo: &Repository, spec_rel: &str, oid: git2::Oid) -> Result<bool> {
+    let mut status_by_blob = HashMap::new();
+    let own = status_of_commit(repo, &mut status_by_blob, oid, spec_rel)?;
+    if own.is_none_or(|status| status == "done") {
+        return Ok(false);
+    }
+    for parent in repo.find_commit(oid)?.parent_ids() {
+        if status_of_commit(repo, &mut status_by_blob, parent, spec_rel)?.as_deref() == Some("done")
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// What one walk of a spec's status history says about its reopenings.
@@ -842,6 +911,80 @@ mod tests {
 
     fn start_of(repo: &Repository) -> Option<String> {
         find_in_progress_commit(repo, "specs/010-demo/spec.md").unwrap()
+    }
+
+    fn done_since(repo: &Repository) -> Option<String> {
+        let head = repo.head().unwrap().peel_to_commit().unwrap().id();
+        find_done_commit(repo, "specs/010-demo/spec.md", head).unwrap()
+    }
+
+    /// The pass `HEAD` lies in starts at the commit that set the spec `done`, not at
+    /// an earlier pass's, and a later commit leaving the status alone moves nothing.
+    #[test]
+    fn a_done_pass_starts_at_the_commit_that_set_it_done() {
+        let (_tmp, repo, commits) =
+            walk_statuses(&["in-progress", "done", "in-progress", "done", "done"]);
+        assert_eq!(done_since(&repo), Some(commits[3].to_string()));
+    }
+
+    /// A spec added as `done` starts its pass at the commit that added it.
+    #[test]
+    fn a_spec_added_as_done_starts_its_pass_there() {
+        let (_tmp, repo, commits) = walk_statuses(&["done", "done"]);
+        assert_eq!(done_since(&repo), Some(commits[0].to_string()));
+    }
+
+    /// A spec that is not `done` at the commit asked about lies in no `done` pass.
+    #[test]
+    fn a_spec_below_done_lies_in_no_done_pass() {
+        let (_tmp, repo, commits) = walk_statuses(&["in-progress", "done", "in-progress"]);
+        assert_eq!(done_since(&repo), None);
+        let found = find_done_commit(&repo, "specs/010-demo/spec.md", commits[1]).unwrap();
+        assert_eq!(
+            found,
+            Some(commits[1].to_string()),
+            "asked at the done commit"
+        );
+    }
+
+    /// A commit with no readable status stays in the pass it came from.
+    #[test]
+    fn a_done_pass_runs_through_a_commit_with_no_readable_status() {
+        let (tmp, repo, commits) = walk_statuses(&["done"]);
+        let spec_path = tmp.path().join("specs/010-demo/spec.md");
+        write(&spec_path, "no frontmatter\n");
+        commit_all(&repo, "damage");
+        write(&spec_path, &spec("done"));
+        commit_all(&repo, "repair");
+        assert_eq!(done_since(&repo), Some(commits[0].to_string()));
+    }
+
+    /// The commit that set it `done` may lie before the cut.
+    #[test]
+    fn a_shallow_history_stopping_inside_a_done_pass_cannot_place_it() {
+        let (tmp, _repo, commits) = walk_statuses(&["in-progress", "done", "done"]);
+        let shallow = shallow_at(&tmp, commits[2]);
+        let found = find_done_commit(&shallow, "specs/010-demo/spec.md", commits[2]);
+        assert!(
+            matches!(found, Err(PrimitiveError::ShallowHistory { .. })),
+            "{found:?}"
+        );
+        // The commit setting it `done` is in view, so the depth does not matter.
+        let shallow = shallow_at(&tmp, commits[0]);
+        let found = find_done_commit(&shallow, "specs/010-demo/spec.md", commits[2]).unwrap();
+        assert_eq!(found, Some(commits[1].to_string()));
+    }
+
+    /// Only a commit whose parent holds the spec `done`, and which does not, leaves it.
+    #[test]
+    fn only_the_commit_after_done_leaves_done() {
+        let (_tmp, repo, commits) =
+            walk_statuses(&["in-progress", "done", "done", "draft", "planned"]);
+        let leaves: Vec<bool> = commits
+            .iter()
+            .map(|oid| leaves_done(&repo, "specs/010-demo/spec.md", *oid).unwrap())
+            .collect();
+        assert_eq!(leaves, [false, false, false, true, false]);
     }
 
     /// A trip through `draft` never reaches `done`, so it is one reopening, starting

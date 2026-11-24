@@ -1,17 +1,19 @@
 //! `compute-review-scope` — deterministic scope resolution for `/ductus:review`. What
 //! it resolves is `schema::descriptions::COMPUTE_REVIEW_SCOPE`.
 //!
-//! A first run's base is the **parent** of the commit the spec moved to `in-progress` at, found
-//! by the lookup shared with `check-stuck`, because the reopen flow commits the
-//! back-edge flip together with the work it authorises — see
+//! The window starts where the spec's last review ended, whether or not the spec reopened
+//! since (spec 084, AC7): a finished review ends at the commit finishing it, one the gate
+//! holds whose passes read their scope at the `reviewed-against` they read up to, and one
+//! that stopped early ends nowhere, so stopping early leaves nothing permanently unread
+//! (spec 079, AC5). With no such review, a `done` spec starts at the commit that set it
+//! `done` or added it as `done`, and any other at the **parent** of the commit the spec
+//! moved to `in-progress` at, found by the lookup shared with `check-stuck`, because the
+//! reopen flow commits the back-edge flip together with the work it authorises — see
 //! `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
-//! A finished review moves it to the commit finishing it, one the gate holds whose passes read
-//! their scope moves it to the `reviewed-against` they read up to, and one that stopped early
-//! does not move it, so stopping early leaves nothing permanently unread (spec 079, AC5).
 //!
 //! The review reads the working tree, so the files modified since the base are the
-//! diff from the base to the working tree, and an uncommitted transition starts the
-//! window at `HEAD`. Answered from commits alone, a review run before its work was
+//! diff from the base to the working tree, and with no review to start from an
+//! uncommitted transition starts the window at `HEAD`. Answered from commits alone, a review run before its work was
 //! committed — the pipeline's natural order — was scoped away from every file the work
 //! touched
 //! (`specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-includes-uncommitted-work.md`).
@@ -23,7 +25,7 @@
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
 use git2::{Commit, DiffOptions, Oid, Repository, Sort, Tree};
@@ -32,7 +34,8 @@ use regex::Regex;
 use crate::primitives::analyze_subjects::review_freshness;
 use crate::primitives::check_review_gate::holds_done_until_reviewed;
 use crate::primitives::check_stuck::{
-    feature_file_in_tree, find_in_progress_commit, reopening_is_open,
+    feature_file_in_tree, find_done_commit, find_in_progress_commit, leaves_done,
+    reopening_is_open, tree_entry_id,
 };
 use crate::primitives::commit_attribution::{Attributor, CommitClaims};
 use crate::primitives::{
@@ -384,9 +387,10 @@ struct Carried {
 }
 
 /// Where the review's window starts, why, and what the record the start comes from
-/// hands on: a `--since` override used verbatim, `HEAD` while the spec's move into
-/// `in-progress` is uncommitted, where the last review run since its reopening
-/// started ended, or that start's parent.
+/// hands on: a `--since` override used verbatim, where the spec's last review that
+/// read its scope ended, whatever reopened the spec since, the parent of the commit
+/// finishing it when that commit is also the reopen, or, with no such review, where
+/// [`unreviewed_base`] puts it.
 fn resolve_base(
     args: &ComputeReviewScopeArgs,
     project: &ProjectRepository,
@@ -396,11 +400,11 @@ fn resolve_base(
     let repository = &project.repository;
     let spec_rel = project.to_git(&format!("{specs_root}/{}/spec.md", args.feature));
     let record_rel = format!("{specs_root}/{}/{REVIEW_RECORD_FILE}", args.feature);
-    Ok(match &args.since {
-        // An explicit base is used verbatim. No parent walk: an operator naming
-        // a commit means that commit, and quietly reviewing one more than they
-        // asked for would be its own scope surprise.
-        Some(reference) => (
+    // An explicit base is used verbatim. No parent walk: an operator naming
+    // a commit means that commit, and quietly reviewing one more than they
+    // asked for would be its own scope surprise.
+    if let Some(reference) = &args.since {
+        return Ok((
             repository
                 .revparse_single(reference)?
                 .peel_to_commit()?
@@ -408,80 +412,97 @@ fn resolve_base(
                 .to_string(),
             BaseSource::Since,
             Carried::default(),
+        ));
+    }
+    let last = last_review_commit(project, &record_rel, &spec_rel)?;
+    Ok(match last.end {
+        Some(ReviewEnd::Finished { commit, unread }) => (
+            // A record committed with the reopen is of a run from before it, and the
+            // reopen flow commits the back-edge flip together with the work it
+            // authorises, which that run did not read: the commit stays in the window
+            // (owner, 2026-11-24).
+            if leaves_done(repository, &spec_rel, Oid::from_str(&commit)?)? {
+                transition_parent(repository, &commit)?
+            } else {
+                commit
+            },
+            BaseSource::LastReview,
+            Carried {
+                open_findings: Vec::new(),
+                unread,
+            },
         ),
-        // The transition commit is the *boundary* of the work window, and a
-        // boundary belongs inside the window it bounds — so a first run's base is
-        // its parent. `base..HEAD` excludes the base's own changes, which is
-        // harmless when `/ductus:implement` flips `planned -> in-progress` in a
-        // commit holding only the status line, and silently fatal in the reopen
-        // flow: `/ductus:amend`'s `done -> in-progress` back-edge is naturally
-        // committed together with the work it authorises, so the window started
-        // after the work and contained none of it. Two specs recorded 0 MUST /
-        // 0 SHOULD over an empty subject that way on 2026-08-27 before the
-        // operator caught it (scenario
-        // `review-base-includes-the-transition-commit`).
-        None if transition_is_uncommitted(project, specs_root, &args.feature, feature_dir)? => {
-            // The transition that opened this window is not in history yet, so
-            // the window starts at `HEAD`. History's newest transition is an
-            // earlier window's — on a reopened spec, its first, months back.
-            (
-                repository.head()?.peel_to_commit()?.id().to_string(),
-                BaseSource::UncommittedTransition,
-                Carried::default(),
-            )
+        Some(ReviewEnd::Held(held)) => (
+            held.against.to_string(),
+            BaseSource::HeldReview,
+            Carried {
+                open_findings: held.open_findings,
+                unread: Vec::new(),
+            },
+        ),
+        None => {
+            let (base, source) = unreviewed_base(
+                project,
+                specs_root,
+                &args.feature,
+                feature_dir,
+                last.passed_over,
+            )?;
+            (base, source, Carried::default())
         }
-        None => match find_in_progress_commit(repository, &spec_rel)? {
-            Some(sha) => {
-                let last = last_review_commit(project, &record_rel, &spec_rel, &sha)?;
-                match last.end {
-                    Some(ReviewEnd::Finished { commit, unread }) => (
-                        commit,
-                        BaseSource::LastReview,
-                        Carried {
-                            open_findings: Vec::new(),
-                            unread,
-                        },
-                    ),
-                    Some(ReviewEnd::Held(held)) => held_base(repository, &sha, held)?,
-                    None if last.passed_over => (
-                        transition_parent(repository, &sha)?,
-                        BaseSource::ReopenPastPartialReview,
-                        Carried::default(),
-                    ),
-                    None => (
-                        transition_parent(repository, &sha)?,
-                        BaseSource::Reopen,
-                        Carried::default(),
-                    ),
-                }
-            }
-            None => (String::new(), BaseSource::None, Carried::default()),
-        },
     })
 }
 
-/// Where a held run's window ends: the `reviewed-against` its passes read up to, with
-/// what its record leaves open, no earlier than the reopen's base, since a review run
-/// while its reopening was uncommitted read from a commit before it.
-fn held_base(
-    repository: &Repository,
-    transition_sha: &str,
-    held: HeldRun,
-) -> Result<(String, BaseSource, Carried)> {
-    let reopen = transition_parent(repository, transition_sha)?;
-    let reopen_oid = Oid::from_str(&reopen)?;
-    let after_the_reopen = held.against == reopen_oid
-        || repository
-            .graph_descendant_of(held.against, reopen_oid)
-            .unwrap_or(false);
-    let carried = Carried {
-        open_findings: held.open_findings,
-        unread: Vec::new(),
-    };
-    Ok(if after_the_reopen {
-        (held.against.to_string(), BaseSource::HeldReview, carried)
-    } else {
-        (reopen, BaseSource::Reopen, carried)
+/// Where the window of a spec with no review that read its scope starts.
+///
+/// `HEAD` while the spec's move into `in-progress` is uncommitted: the transition
+/// that opened this window is not in history yet, and history's newest is an earlier
+/// window's — on a reopened spec, its first, months back.
+///
+/// For a spec `done` at `HEAD`, the commit that set it `done` or added it as `done`
+/// (spec 084, AC7), unless a run was passed over for not reading its scope, which
+/// keeps the reopening's start below so that what it left unread stays in the window.
+///
+/// Otherwise the **parent** of the commit its reopening started at. The transition
+/// commit is the *boundary* of the work window, and a boundary belongs inside the
+/// window it bounds. `base..HEAD` excludes the base's own changes, which is harmless
+/// when `/ductus:implement` flips `planned -> in-progress` in a commit holding only
+/// the status line, and silently fatal in the reopen flow: `/ductus:amend`'s
+/// `done -> in-progress` back-edge is naturally committed together with the work it
+/// authorises, so the window started after the work and contained none of it. Two
+/// specs recorded 0 MUST / 0 SHOULD over an empty subject that way on 2026-08-27
+/// before the operator caught it (scenario
+/// `review-base-includes-the-transition-commit`).
+fn unreviewed_base(
+    project: &ProjectRepository,
+    specs_root: &str,
+    feature: &str,
+    feature_dir: &Path,
+    passed_over: bool,
+) -> Result<(String, BaseSource)> {
+    let repository = &project.repository;
+    let spec_rel = project.to_git(&format!("{specs_root}/{feature}/spec.md"));
+    let head = repository.head()?.peel_to_commit()?.id();
+    if transition_is_uncommitted(project, specs_root, feature, feature_dir)? {
+        return Ok((head.to_string(), BaseSource::UncommittedTransition));
+    }
+    let done = find_done_commit(repository, &spec_rel, head)?;
+    if let Some(done) = done.as_ref().filter(|_| !passed_over) {
+        return Ok((done.clone(), BaseSource::ReachedDone));
+    }
+    Ok(match find_in_progress_commit(repository, &spec_rel)? {
+        Some(sha) => (
+            transition_parent(repository, &sha)?,
+            if passed_over {
+                BaseSource::ReopenPastPartialReview
+            } else {
+                BaseSource::Reopen
+            },
+        ),
+        None => match done {
+            Some(done) => (done, BaseSource::ReachedDone),
+            None => (String::new(), BaseSource::None),
+        },
     })
 }
 
@@ -512,12 +533,14 @@ fn split_changes(
 }
 
 /// A review run as a committed record states it.
+#[derive(Clone)]
 struct RecordedRun {
     last_run: String,
     /// The run did not read its scope, or does not say it did: it recorded a skipped
     /// pass or a budget stop, or the gate holds its record until a review runs and it
-    /// states no empty `unread` or no `reviewed-against`. What it did not read stays in
-    /// the next window, which then starts no later than an earlier run that did.
+    /// states no empty `unread`, or no `reviewed-against` naming a commit this
+    /// repository holds. What it did not read stays in the next window, which then
+    /// starts no later than an earlier run that did.
     stopped_early: bool,
     /// The gate holds the record until a review runs, and its passes read their scope.
     held: Option<HeldRun>,
@@ -531,6 +554,7 @@ struct RecordedRun {
 /// scope: the next window starts where they read up to, so the fixes its open loop or
 /// an unwaived round left unread stay in it, and what it leaves open joins the scope
 /// wherever that is (spec 079, AC5).
+#[derive(Clone)]
 struct HeldRun {
     /// The record's `reviewed-against`.
     against: Oid,
@@ -552,10 +576,13 @@ fn recorded_run(
     let Some(last_run) = record.last_run else {
         return Ok(None);
     };
+    // A `reviewed-against` naming no commit here, as after a rebase, says nothing
+    // of where the passes read up to, and a window cannot start at it.
     let against = record
         .reviewed_against
         .as_deref()
-        .and_then(|sha| Oid::from_str(sha).ok());
+        .and_then(|sha| Oid::from_str(sha).ok())
+        .filter(|oid| repository.find_commit(*oid).is_ok());
     let read_its_scope = record.unread.as_ref().is_some_and(Vec::is_empty);
     let unread = record.unread.unwrap_or_default();
     let held = match against {
@@ -733,7 +760,7 @@ fn run_in_spec_block(
         .map(str::to_string))
 }
 
-/// Where a review run since the reopening ended, as [`last_review_commit`] finds it.
+/// Where a review run ended, as [`last_review_commit`] finds it.
 enum ReviewEnd {
     /// The commit finishing a run whose record the gate does not hold, which also holds
     /// that run's fixes, already re-read by its fix rounds, with its record's `unread`.
@@ -750,10 +777,35 @@ struct LastReview {
     passed_over: bool,
 }
 
-/// Where the newest review run since the transition `transition_sha` ended, a run
-/// that did not stop early: the commit finishing it, or, when the gate holds its
-/// record, the `reviewed-against` its passes read up to. The transition itself is
-/// left out, since work committed with a reopen belongs to the window it opens.
+/// The review runs the records in a walk's trees state, each record parsed once: the
+/// record's blob is the same in nearly every commit, and the walk reads all of history.
+struct RecordedRuns<'a> {
+    repository: &'a Repository,
+    git_path: &'a str,
+    by_blob: HashMap<Oid, Option<RecordedRun>>,
+}
+
+impl RecordedRuns<'_> {
+    /// [`recorded_run`] for the record in `tree`.
+    fn at(&mut self, tree: &Tree<'_>) -> Result<Option<RecordedRun>> {
+        let Some(blob) = feature_file_in_tree(self.repository, tree, self.git_path)
+            .and_then(|path| tree_entry_id(tree, &path))
+        else {
+            return Ok(None);
+        };
+        if let Some(run) = self.by_blob.get(&blob) {
+            return Ok(run.clone());
+        }
+        let run = recorded_run(self.repository, tree, self.git_path)?;
+        self.by_blob.insert(blob, run.clone());
+        Ok(run)
+    }
+}
+
+/// Where the spec's newest review run ended, a run that did not stop early: the
+/// commit finishing it, or, when the gate holds its record, the `reviewed-against`
+/// its passes read up to. All of history is walked, so a run from before the spec's
+/// last reopen counts as one since it does (spec 084, AC7).
 ///
 /// A commit finishes a run when no parent's record already holds that run with its
 /// loop closed: a run's two writes share one `last-run`, and the fixes committed
@@ -762,11 +814,16 @@ struct LastReview {
 /// that branch would leave the window unread. A commit that only moves a run's record
 /// out of `spec.md`'s frontmatter finishes nothing either, or an adopter's upgrade
 /// would leave what was committed before it unread.
+///
+/// # Errors
+///
+/// [`PrimitiveError::ShallowHistory`] when a shallow clone's history stops at a commit
+/// already holding a run and no later commit ends one, so the run's end may lie
+/// before the cut; and any libgit2 failure.
 fn last_review_commit(
     project: &ProjectRepository,
     record_rel: &str,
     spec_git_path: &str,
-    transition_sha: &str,
 ) -> Result<LastReview> {
     let none = |passed_over| LastReview {
         end: None,
@@ -774,11 +831,6 @@ fn last_review_commit(
     };
     let repository = &project.repository;
     let git_path = project.to_git(record_rel);
-    let mut walk = repository.revwalk()?;
-    walk.push_head()?;
-    walk.hide(Oid::from_str(transition_sha)?)?;
-    walk.set_sorting(Sort::TOPOLOGICAL)?;
-    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
     // A record reverted away leaves no earlier review, whatever history once held. One
     // whose `last-run` a fold's invalidation nulled still stands: its window keeps its
     // start, and what the fold brought joins by its own rule.
@@ -786,18 +838,30 @@ fn last_review_commit(
     if feature_file_in_tree(repository, &head_tree, &git_path).is_none() {
         return Ok(none(false));
     }
-    let reopened_with = repository
-        .find_commit(Oid::from_str(transition_sha)?)?
-        .tree()?;
+    let mut walk = repository.revwalk()?;
+    walk.push_head()?;
+    walk.set_sorting(Sort::TOPOLOGICAL)?;
+    let commits: Vec<Oid> = walk.collect::<std::result::Result<_, _>>()?;
+    let shallow = repository.is_shallow();
+    let mut runs = RecordedRuns {
+        repository,
+        git_path: &git_path,
+        by_blob: HashMap::new(),
+    };
     // A record restored by a revert or a checkout carries a run an older commit already
     // finished, and what lay between has no standing: the window starts at that run.
     let mut restored: Option<String> = None;
     let mut passed_over = false;
     for (index, oid) in commits.iter().enumerate() {
         let commit = repository.find_commit(*oid)?;
-        let Some(run) = recorded_run(repository, &commit.tree()?, &git_path)? else {
+        let Some(run) = runs.at(&commit.tree()?)? else {
             continue;
         };
+        if shallow && commit.parent_count() == 0 {
+            return Err(PrimitiveError::ShallowHistory {
+                spec: spec_git_path.to_string(),
+            });
+        }
         if run.stopped_early {
             passed_over = true;
             continue;
@@ -811,11 +875,13 @@ fn last_review_commit(
         let mut finishes_a_run = true;
         for parent in commit.parents() {
             let tree = parent.tree()?;
-            let holds_it = recorded_run(repository, &tree, &git_path)?
+            let holds_it = runs
+                .at(&tree)?
                 .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
-            let relocated = run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
-                == Some(&run.last_run);
-            if holds_it || relocated {
+            if holds_it
+                || run_in_spec_block(repository, &tree, spec_git_path)?.as_ref()
+                    == Some(&run.last_run)
+            {
                 finishes_a_run = false;
                 break;
             }
@@ -826,7 +892,8 @@ fn last_review_commit(
         let mut finished_earlier = false;
         for older in &commits[index + 1..] {
             let tree = repository.find_commit(*older)?.tree()?;
-            if recorded_run(repository, &tree, &git_path)?
+            if runs
+                .at(&tree)?
                 .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open)
             {
                 finished_earlier = true;
@@ -834,13 +901,6 @@ fn last_review_commit(
             }
         }
         if !finished_earlier {
-            // A run the reopening carried in, restored: it is from before the window, so
-            // this commit finished nothing and the window stays at the reopen.
-            let carried = recorded_run(repository, &reopened_with, &git_path)?
-                .is_some_and(|prior| prior.last_run == run.last_run && !prior.loop_open);
-            if carried {
-                return Ok(none(passed_over));
-            }
             let end = match run.held {
                 Some(held) => ReviewEnd::Held(held),
                 None => ReviewEnd::Finished {
@@ -2224,8 +2284,9 @@ mod tests {
         assert_eq!(json["excluded-count"], 0);
     }
 
-    #[test]
-    fn a_review_older_than_the_reopen_leaves_the_start_at_the_reopen() {
+    /// 001-x reviewed, set `done`, and its code changed while `done` by a commit
+    /// naming it. Returns the commit finishing the review.
+    fn changed_while_done() -> (tempfile::TempDir, Repository, String) {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(
@@ -2233,9 +2294,20 @@ mod tests {
             &spec("in-progress"),
         );
         commit_all(&repo, "status(001): start");
-        commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-01T00:00:00Z");
+        change(&tmp, &repo, "src/read.rs", "feat(001): before the review");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-10-01T00:00:00Z");
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
-        let parent = commit_all(&repo, "status(001): done");
+        commit_all(&repo, "status(001): done");
+        change(&tmp, &repo, "src/while_done.rs", "fix(001): while done");
+        (tmp, repo, review)
+    }
+
+    /// AC7 (spec 084): a reopen does not move the window past code committed while
+    /// the spec was `done`, which no review read. The window starts where the last
+    /// review ended, so the next review's scope holds that code and owes a review.
+    #[test]
+    fn a_reopen_keeps_the_code_committed_while_done_in_the_window() {
+        let (tmp, repo, review) = changed_while_done();
         write(
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
@@ -2244,15 +2316,128 @@ mod tests {
         change(&tmp, &repo, "src/new.rs", "feat(001): after the reopen");
 
         let scope = x(&tmp);
-        assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
-        assert!(has(&scope, "src/new.rs"));
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(has(&scope, "src/while_done.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/new.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/read.rs"), "{:?}", scope.scope);
+        assert!(scope.owed_by.iter().any(|path| path == "src/while_done.rs"));
+    }
+
+    /// The same before the reopen is committed: `HEAD` is where the window starts
+    /// only for a spec with no review to start from.
+    #[test]
+    fn an_uncommitted_reopen_keeps_the_code_committed_while_done_in_the_window() {
+        let (tmp, _repo, review) = changed_while_done();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert!(has(&scope, "src/while_done.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/read.rs"), "{:?}", scope.scope);
+    }
+
+    /// And with no reopen at all: a `done` spec's window starts where its last review
+    /// ended, so the code changed since owes its review.
+    #[test]
+    fn a_done_specs_window_starts_where_its_last_review_ended() {
+        let (tmp, _repo, review) = changed_while_done();
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, review);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
+        assert_eq!(scope.owed_by, ["src/while_done.rs"]);
+    }
+
+    /// AC7 (spec 084): a `done` spec no review has recorded starts its window at the
+    /// commit that set it `done`, so the code changed after it is in scope and the
+    /// code before it, the commit's own included, is not.
+    #[test]
+    fn an_unreviewed_done_spec_starts_at_the_commit_that_set_it_done() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "status(001): start");
+        change(&tmp, &repo, "src/before.rs", "feat(001): before done");
+        write(&spec_path, &spec("done"));
+        write(&tmp.path().join("src/with.rs"), "fn with() {}\n");
+        let done = commit_all(&repo, "feat(001): done, with its last code");
+        change(&tmp, &repo, "docs/note.md", "docs(001): still done");
+        change(&tmp, &repo, "src/after.rs", "fix(001): after done");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, done);
+        assert_eq!(scope.base_source, BaseSource::ReachedDone);
+        assert_eq!(scope.modified_since, ["docs/note.md", "src/after.rs"]);
+        assert!(scope.owed_by.iter().any(|path| path == "src/after.rs"));
+    }
+
+    /// The same for a spec added as `done`, which never was `in-progress`: its base
+    /// was empty, so its code changed and no review was owed.
+    #[test]
+    fn an_unreviewed_spec_added_as_done_starts_at_the_commit_that_added_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("src/before.rs"), "fn before() {}\n");
+        commit_all(&repo, "chore: seed");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        write(&tmp.path().join("src/with.rs"), "fn with() {}\n");
+        let added = commit_all(&repo, "spec(001): imported as done");
+        change(&tmp, &repo, "src/after.rs", "fix(001): after it was added");
+
+        let scope = x(&tmp);
+        assert_eq!(scope.diff_base, added);
+        assert_eq!(scope.base_source, BaseSource::ReachedDone);
+        assert_eq!(scope.modified_since, ["src/after.rs"]);
+        assert!(scope.review_owed);
+    }
+
+    /// Added as `done` with a run that stopped early: there is no reopening to fall
+    /// back to, so the window starts at the commit that added it.
+    #[test]
+    fn a_spec_added_as_done_whose_only_run_stopped_early_starts_where_it_was_added() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        let added = commit_all(&repo, "spec(001): imported as done");
+        let stopped = format!("{DISPOSITIONS}budget-stop: true\n");
+        commit_record(&tmp, &repo, &stopped, "2026-11-01T00:00:00Z");
+
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base, scope.base_source),
+            (added, BaseSource::ReachedDone)
+        );
+    }
+
+    /// A `done` spec whose only run was passed over keeps the reopening's start, so
+    /// what that run left unread stays in the window (spec 079, AC5).
+    #[test]
+    fn a_done_spec_whose_only_run_stopped_early_keeps_the_reopenings_start() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/a.rs", "feat(001): the code");
+        let stopped = format!("{DISPOSITIONS}budget-stop: true\n");
+        commit_record(&tmp, &repo, &stopped, "2026-11-01T00:00:00Z");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        commit_all(&repo, "status(001): done");
+
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base.as_str(), scope.base_source),
+            (parent.as_str(), BaseSource::ReopenPastPartialReview)
+        );
+        assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
     }
 
     /// A review recorded in the same commit as the reopen ran before it, so
     /// the work committed with that reopen stays in the window.
     #[test]
-    fn a_record_in_the_transition_commit_leaves_the_start_at_the_reopen() {
+    fn a_record_in_the_reopen_commit_starts_the_window_at_its_parent() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
@@ -2270,7 +2455,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
         assert!(has(&scope, "src/fix.rs"));
     }
 
@@ -2505,16 +2690,17 @@ mod tests {
         assert!(scope.owed_by.iter().any(|path| path == "src/finding.rs"));
     }
 
-    /// A held run whose passes read from before the reopen, as one run while its
-    /// reopening was uncommitted does, starts the window no earlier than the reopen.
+    /// A held run whose passes read from before the reopen, as one run while the spec
+    /// was `done` does, starts the window where they read up to, whatever reopened the
+    /// spec since (spec 084, AC7).
     #[test]
-    fn a_held_start_is_no_earlier_than_the_reopen() {
+    fn a_held_start_may_lie_before_the_reopen() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
         let before = commit_all(&repo, "chore: before");
         write(&tmp.path().join("src/finding.rs"), "fn f() {}\n");
-        let parent = commit_all(&repo, "chore: seed");
+        commit_all(&repo, "chore: seed");
         write(
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
@@ -2531,9 +2717,31 @@ mod tests {
         let scope = x(&tmp);
         assert_eq!(
             (scope.diff_base.as_str(), scope.base_source),
-            (parent.as_str(), BaseSource::Reopen)
+            (before.as_str(), BaseSource::HeldReview)
         );
         assert!(has(&scope, "src/finding.rs"), "{:?}", scope.scope);
+    }
+
+    /// A held record whose `reviewed-against` names no commit this repository holds,
+    /// as after a rebase, cannot say where its passes read up to: it is passed over.
+    #[test]
+    fn a_held_record_read_up_to_a_commit_that_is_gone_moves_no_start() {
+        let (tmp, repo, parent) = two_specs(&[], &[]);
+        change(&tmp, &repo, "src/read.rs", "feat(001): read cleanly");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(
+                "1111111111111111111111111111111111111111",
+                &format!("should-violations: 1\nunread: []\n{LEFT_OPEN}"),
+            ),
+        );
+        commit_all(&repo, "review(001)");
+        let scope = x(&tmp);
+        assert_eq!(
+            (scope.diff_base.as_str(), scope.base_source),
+            (parent.as_str(), BaseSource::ReopenPastPartialReview)
+        );
+        assert!(has(&scope, "src/read.rs"), "{:?}", scope.scope);
     }
 
     /// A clean record keeps the commit finishing it, `reviewed-against` or not, since
@@ -2790,13 +2998,16 @@ mod tests {
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
     }
 
-    /// A spec reopened with code, then taken back through `draft`.
-    fn back_through_draft(tmp: &tempfile::TempDir, repo: &Repository) -> String {
+    /// A spec reopened with code, then taken back through `draft`, with a review
+    /// recorded before the reopen when `reviewed`.
+    fn back_through_draft(tmp: &tempfile::TempDir, repo: &Repository, reviewed: bool) -> String {
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
-        write(
-            &tmp.path().join("specs/001-x/review.md"),
-            &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
-        );
+        if reviewed {
+            write(
+                &tmp.path().join("specs/001-x/review.md"),
+                &record(DISPOSITIONS, "2026-10-01T00:00:00Z"),
+            );
+        }
         let reopen_parent = commit_all(repo, "chore: seed");
         write(
             &tmp.path().join("specs/001-x/spec.md"),
@@ -2811,13 +3022,13 @@ mod tests {
         reopen_parent
     }
 
-    /// A trip through `draft` never reaches `done`, so its earlier code stays in the
-    /// window and a review stays owed.
+    /// A trip through `draft` never reaches `done` and holds no review, so its earlier
+    /// code stays in the window, which starts at the last review, and a review stays owed.
     #[test]
     fn a_trip_through_draft_keeps_its_earlier_code_in_the_window() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
-        let reopen_parent = back_through_draft(&tmp, &repo);
+        let reopen_parent = back_through_draft(&tmp, &repo, true);
         write(
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
@@ -2825,17 +3036,18 @@ mod tests {
         commit_all(&repo, "status(001): back in progress");
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, reopen_parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
         assert!(scope.review_owed);
     }
 
-    /// The return not yet committed is the same reopening, not a new transition.
+    /// The return not yet committed is the same reopening, not a new transition: with
+    /// no review to start from, the window stays at the reopen and not at `HEAD`.
     #[test]
     fn an_uncommitted_return_from_draft_keeps_the_window() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
-        let reopen_parent = back_through_draft(&tmp, &repo);
+        let reopen_parent = back_through_draft(&tmp, &repo, false);
         write(
             &tmp.path().join("specs/001-x/spec.md"),
             &spec("in-progress"),
@@ -3070,14 +3282,26 @@ mod tests {
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
     }
 
-    /// The record it moved was finished by a commit before, not by the rename.
+    /// The record it moved was finished by a commit before, not by the rename, which
+    /// here edits the record too, so the record under the old slug is a blob the walk
+    /// has not read and must find by the spec's number.
     #[test]
     fn a_rename_after_a_review_does_not_move_the_start() {
         let (tmp, repo, _) = two_specs(&[], &[]);
         change(&tmp, &repo, "src/a.rs", "feat(001): reviewed");
-        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        let run_at = "2026-11-01T00:00:00Z";
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, run_at);
         change(&tmp, &repo, "src/b.rs", "feat(001): after the review");
-        rename_x(&tmp, &repo);
+        fs::rename(
+            tmp.path().join("specs/001-x"),
+            tmp.path().join("specs/001-renamed"),
+        )
+        .unwrap();
+        write(
+            &tmp.path().join("specs/001-renamed/review.md"),
+            &record(&format!("{DISPOSITIONS}low-confidence: 1\n"), run_at),
+        );
+        commit_all(&repo, "spec(001): a new slug");
 
         let scope = compute(&args("001-renamed", None), tmp.path()).unwrap();
         assert_eq!(scope.diff_base, review);
@@ -3131,8 +3355,8 @@ mod tests {
         (tmp, repo, parent)
     }
 
-    /// The commit carrying a finished run across the reopening sits outside the window,
-    /// so only its parent can say the run was finished before it.
+    /// A later commit of a run finished before the reopening finishes nothing: the
+    /// window starts at the commit that finished it, before the reopen.
     #[test]
     fn a_run_carried_across_the_reopening_does_not_move_the_start() {
         let run = "2026-11-01T00:00:00Z";
@@ -3142,7 +3366,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
     }
 
     /// Editing a held count away by hand is no run, whichever side of the reopening the
@@ -3156,13 +3380,13 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::ReopenPastPartialReview);
     }
 
     /// A branch left at a record from before the reopening and merged back after it,
     /// while the reopening's own record had moved on to a later run: the merge carries
-    /// the branch's run in, and neither the window nor the reopening's tree holds that
-    /// run, so only the merge's branch parent can say it was finished before.
+    /// the branch's run in, and only the merge's branch parent can say it was finished
+    /// before. Returns the commit finishing the later run, the last one on `HEAD`'s line.
     fn merged_from_before_the_reopening(
         branch: &str,
         merged: &str,
@@ -3212,14 +3436,15 @@ mod tests {
         (tmp, repo, parent)
     }
 
-    /// A merge carrying in a run finished before the reopening is no review.
+    /// A merge carrying in a run finished before the reopening is no review: the
+    /// window stays at the last run finished before it.
     #[test]
     fn a_merge_carrying_in_a_run_from_before_the_reopening_does_not_move_the_start() {
         let (tmp, _repo, parent) = merged_from_before_the_reopening(DISPOSITIONS, DISPOSITIONS);
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
     }
 
     /// A merge that clears by hand the held count of a run from before the reopening
@@ -3231,7 +3456,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
     }
 
     /// A later run after the restore finishes as any run does.
@@ -3260,6 +3485,59 @@ mod tests {
             matches!(result, Err(PrimitiveError::ShallowHistory { .. })),
             "{:?}",
             result.map(|scope| scope.scope)
+        );
+    }
+
+    /// A record a shallow history's first commit already holds was finished before
+    /// the cut, by a commit that may lie well before it: no window can be placed.
+    /// Taking the cut as the finish would leave what lay between unread.
+    #[test]
+    fn a_shallow_history_cutting_off_the_last_review_is_an_error() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/unread.rs", "feat(001): after the review");
+        let cut = change(&tmp, &repo, "src/a.rs", "feat(001): the work");
+        change(&tmp, &repo, "src/b.rs", "feat(001): more work");
+        fs::write(tmp.path().join(".git/shallow"), format!("{cut}\n")).unwrap();
+
+        let result = compute(&args("001-x", None), tmp.path());
+        assert!(
+            matches!(result, Err(PrimitiveError::ShallowHistory { .. })),
+            "{:?}",
+            result.map(|scope| (scope.diff_base, scope.base_source))
+        );
+    }
+
+    /// A review finished after the cut is in view, so the depth does not matter.
+    #[test]
+    fn a_shallow_history_holding_the_last_review_places_the_window() {
+        let (tmp, repo, _) = two_specs(&[], &[]);
+        let cut = change(&tmp, &repo, "src/a.rs", "feat(001): the work");
+        let review = commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/b.rs", "feat(001): more work");
+        fs::write(tmp.path().join(".git/shallow"), format!("{cut}\n")).unwrap();
+
+        let scope = compute(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(
+            (scope.diff_base, scope.base_source),
+            (review, BaseSource::LastReview)
+        );
+    }
+
+    /// A `done` spec no review recorded, in a history cut after the commit that set
+    /// it `done`, cannot place its window either.
+    #[test]
+    fn a_shallow_history_cutting_off_the_done_commit_is_an_error() {
+        let (tmp, repo) = done_upstream();
+        let cut = change(&tmp, &repo, "src/a.rs", "fix(001): while done");
+        change(&tmp, &repo, "src/b.rs", "fix(001): more");
+        fs::write(tmp.path().join(".git/shallow"), format!("{cut}\n")).unwrap();
+
+        let result = compute(&args("001-x", None), tmp.path());
+        assert!(
+            matches!(result, Err(PrimitiveError::ShallowHistory { .. })),
+            "{:?}",
+            result.map(|scope| (scope.diff_base, scope.base_source))
         );
     }
 
@@ -4232,8 +4510,9 @@ mod tests {
         x(&tmp)
     }
 
-    /// A contract edited while `done`, then a reopen: the window starts after the edit,
-    /// so without this the run refreshes the digest with the contract unread. The record
+    /// A contract edited after a run digested it and committed with that run's record:
+    /// the window starts after the edit, so without this the next run refreshes the
+    /// digest with the contract unread. The record
     /// at `HEAD` decides, so a run's two writes agree, and its commit clears it
     /// (spec 079).
     #[test]
@@ -4262,15 +4541,14 @@ mod tests {
             &dir.join("review.md"),
             &digest("2026-10-01T00:00:00Z", &sha),
         );
-        commit_all(&repo, "review(001): the run");
         write(&dir.join("scenarios/s.md"), "# S, changed\n");
-        commit_all(&repo, "docs(001): edited while done");
+        commit_all(&repo, "review(001): the run, and an edit after it read");
         write(&dir.join("spec.md"), &spec("in-progress"));
         let reopen = commit_all(&repo, "status(001): reopen");
 
         let contract = "specs/001-x/scenarios/s.md";
         let scope = x(&tmp);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
         assert!(has(&scope, contract), "{:?}", scope.scope);
         // It joins the scope of a review that runs, and owes none (spec 081).
         assert!(!scope.review_owed);
@@ -4352,9 +4630,9 @@ mod tests {
     }
 
     /// Reverting the run that replaced the one the reopening carried restores a run from
-    /// before the window, so nothing finished here and the window stays at the reopen.
+    /// before the reopen, so the window starts where that run ended.
     #[test]
-    fn restoring_a_run_from_before_the_reopening_starts_at_the_reopen() {
+    fn restoring_a_run_from_before_the_reopening_starts_where_it_ended() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         let dir = tmp.path().join("specs/001-x");
@@ -4375,7 +4653,7 @@ mod tests {
 
         let scope = x(&tmp);
         assert_eq!(scope.diff_base, parent);
-        assert_eq!(scope.base_source, BaseSource::Reopen);
+        assert_eq!(scope.base_source, BaseSource::LastReview);
         assert!(has(&scope, "src/a.rs"), "{:?}", scope.scope);
         assert!(scope.review_owed);
     }

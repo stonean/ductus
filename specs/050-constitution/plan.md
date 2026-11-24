@@ -296,7 +296,7 @@ Four rows have since left this table: *`unexamined` cannot be measured while the
 | A `§` reference resolves by *line*, against a heading its text begins with — a line wrap alone breaks it | Adopters cite constitution anchors and run the anchor resolver |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | **R** — stated by capability rather than by version; adopters upgrade through the same boundary and hold the same records |
 | An acceptance criterion's parenthetical enumeration is a claim of its own, and it drifts from what the artifact does | Adopters write criteria carrying enumerations, and the enumeration goes stale while the requirement holds |
-| A spec with no recorded `in-progress` transition derives an *empty* diff base, and `write-review` then resolves `scope: 0` | Both primitives ship; the incoherent `examined`-over-zero record is reachable in any corpus |
+| A spec with no review recorded, never `in-progress` or `done`, derives an *empty* diff base, and `write-review` then resolves `scope: 0` | Both primitives ship; the incoherent `examined`-over-zero record is reachable in any corpus |
 | A sweep can make a quoted instruction point at itself, and the identical sentence may be correct one file over — classify by *who emits it*, never by the string | **R** — classify a swept user-facing string by *who emits it*; adopters rename things too |
 | A spec body must not carry a point-in-time status section | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
@@ -500,7 +500,7 @@ The cut to one read moved these universal rules' canonical text out of the const
 | --- | --- |
 | `examined` counts the in-scope files the passes *read* | `framework/reference/review.md` §Window and coverage |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | `framework/reference/review.md` §Window and coverage |
-| A spec with no recorded `in-progress` transition derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
+| A spec with no review recorded, never `in-progress` or `done`, derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
 | `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |
 | `remove-inbox-item` takes the bullet text | `framework/reference/groom.md` §Inbox upkeep |
 | When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |
