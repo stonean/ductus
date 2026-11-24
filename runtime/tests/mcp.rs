@@ -353,7 +353,6 @@ fn descriptions_hold_the_detail_specs_point_at() {
         ),
         (descriptions::CHECK_ARTIFACT_SIZE, "named on stderr"),
         (descriptions::READ_DEPRECATION_LABELS, "labels both rules"),
-        (descriptions::CLASSIFY_SPEC_EDIT, "absent on either side"),
         (descriptions::APPEND_TASK, "keyed on that whole pointer"),
         (descriptions::APPEND_TASK, "`dedup-title`, which is opt-in"),
         (descriptions::WRITE_SESSION, "cannot be proven idle"),

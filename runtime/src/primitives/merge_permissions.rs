@@ -240,6 +240,7 @@ pub(crate) const RETIRED_ALLOW: &[&str] = &[
     "mcp__ductus__read-supersession-pair",
     "mcp__ductus__write-supersession-annotation",
     "mcp__ductus__check-review-freshness",
+    "mcp__ductus__classify-spec-edit",
     "Bash(make *)",
     "Bash(./.githooks/pre-commit)",
     "Bash(scripts/install-hooks.sh)",
@@ -1618,15 +1619,15 @@ mod tests {
     }
 
     /// The canonical non-MCP set holds twelve entries and the retired set
-    /// thirty-one, the four retired from the canonical set by spec 022 task 43
+    /// thirty-two, the four retired from the canonical set by spec 022 task 43
     /// last in step 4's order: a regrown set, or a retirement dropped from
     /// either, changes a count.
     #[test]
     fn the_sets_hold_the_counts_task_43_left() {
         assert_eq!(CANONICAL_ALLOW_STATIC.len(), 12);
-        assert_eq!(RETIRED_ALLOW.len(), 31);
+        assert_eq!(RETIRED_ALLOW.len(), 32);
         assert_eq!(
-            &RETIRED_ALLOW[27..],
+            &RETIRED_ALLOW[28..],
             [
                 "Bash(git commit *)",
                 "Bash(git push *)",

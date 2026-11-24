@@ -21,23 +21,25 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 `check-owed-work` refuses a call naming both `feature` and `all`, and `ductus exec` dispatches a backticked name with the walker's context, which holds the session target's `feature`: read what else the context carries before backticking a step. A step asking about a spec other than the target, as fold's upstream spec or a deferral's target, leaves the name unbackticked behind `<!-- audit:ignore-promotion -->`.
 
-- [ ] `framework/commands/amend.md` step 5, its intro, its criterion route's wording, its Scope Boundaries line and its status-table row call `check-owed-work` in place of `classify-spec-edit`; its scenario and criterion routes call it before they write `in-progress`
-- [ ] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same; its step 6 calls it before it writes `in-progress`
-- [ ] A ticked criterion amend would change on a `done` spec, disagreeing with the code, is asked of the owner first (AC3)
-- [ ] `framework/commands/fold.md` step 9 reopens a `done` upstream spec only when `check-owed-work` reports owed work, step 10 resets its review only when it is `in-progress` after step 9, step 5's consent names the reopen as conditional, and `framework/reference/fold.md` §Reopening a `done` upstream spec says so
-- [ ] `framework/commands/prune.md` step 9 decides on `check-owed-work` for the tree the run left; `prune-plan`'s `reopen-required` stays the preview's prediction
-- [ ] A deferral to a `done` spec reopens it only when `check-owed-work` reports owed work: `framework/commands/analyze.md` step 19, `framework/commands/review.md` step 10, `framework/reference/implement.md`'s disposition task, and `framework/reference/analyze.md` §Finding dispositions
-- [ ] `/ductus:analyze --fix` no longer reverts a `done` spec for a scenario's open question: `framework/commands/analyze.md`'s description and report step, `framework/reference/analyze.md` §Scenario open questions and `docs/analyze.md`; the finding and the gate's block stay
-- [ ] Remove `classify_spec_edit.rs` and its seven registration sites, its schema types, `framework/runtime-tools.txt`'s line, and regenerate `framework/bootstrap/configure/*.md`
-- [ ] `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools no longer served
-- [ ] Its mutants, its comment-only mentions, `PRUNE_PLAN`'s text, the `runtime/tests/mcp.rs` case and the `feature_argument_cases` row; `RELOCATE_AUDIT_RECORDS` and the gate's cross-spec-impact message reworded; `mechanical_sweep.rs`'s module doc and `runtime/tests/mechanical_sweep_parity.rs` name the rule's two remaining readers
-- [ ] `scripts/gen-claude-commands.sh` re-run, and any golden the edits move re-blessed alone and read
+- [x] `framework/commands/amend.md` step 5, its intro, its criterion route's wording, its Scope Boundaries line and its status-table row call `check-owed-work` in place of `classify-spec-edit`; its scenario and criterion routes call it before they write `in-progress`
+- [x] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same; its step 6 calls it before it writes `in-progress`
+- [x] A ticked criterion amend would change on a `done` spec, disagreeing with the code, is asked of the owner first (AC3)
+- [x] `framework/commands/fold.md` step 9 reopens a `done` upstream spec only when `check-owed-work` reports owed work, step 10 resets its review only when it is `in-progress` after step 9, step 5's consent names the reopen as conditional, and `framework/reference/fold.md` §Reopening a `done` upstream spec says so
+- [x] `framework/commands/prune.md` step 9 decides on `check-owed-work` for the tree the run left; `prune-plan`'s `reopen-required` stays the preview's prediction
+- [x] A deferral to a `done` spec reopens it only when `check-owed-work` reports owed work: `framework/commands/analyze.md` step 19, `framework/commands/review.md` step 10, `framework/reference/implement.md`'s disposition task, and `framework/reference/analyze.md` §Finding dispositions
+- [x] `/ductus:analyze --fix` no longer reverts a `done` spec for a scenario's open question: `framework/commands/analyze.md`'s description and report step, `framework/reference/analyze.md` §Scenario open questions and `docs/analyze.md`; the finding and the gate's block stay
+- [x] Remove `classify_spec_edit.rs` and its seven registration sites, its schema types, `framework/runtime-tools.txt`'s line, and regenerate `framework/bootstrap/configure/*.md`
+- [x] `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools no longer served
+- [x] Its mutants, its comment-only mentions, `PRUNE_PLAN`'s text, the `runtime/tests/mcp.rs` case and the `feature_argument_cases` row; `RELOCATE_AUDIT_RECORDS` and the gate's cross-spec-impact message reworded; `mechanical_sweep.rs`'s module doc and `runtime/tests/mechanical_sweep_parity.rs` name the rule's two remaining readers
+- [x] `scripts/gen-claude-commands.sh` re-run, and any golden the edits move re-blessed alone and read
 
 - **Done when**: no command calls `classify-spec-edit`, the runtime serves none on the CLI or MCP and `framework/runtime-tools.txt` lists none, amend, groom, fold, prune and the three deferral paths reopen a `done` spec only when `check-owed-work` reports owed work, a walk of amend's and groom's steps on a `done` fixture with a scenario-text edit leaves it `done`, a body-edit fold into a `done` fixture leaves it `done` with its review record unchanged, a `done` fixture with a scenario's open question keeps its status under `--fix` and is still reported, and `cargo test` passes with the module gone.
 
 ### 3. The constitution states the rule
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
+
+Task 2 found that only the retired classifier applied the mechanical rule's cross-service-reference case (b): `derive_references::ReferenceScrub` went dead with it, and neither remaining reader, the analysis record's freshness nor the review record's digest (`mechanical_sweep.rs`, `analyze_subjects.rs`), reads a reference. So the statement moved into §drift-prevention carries the sweep (a) and the line-number strip (c) alone. Four live sites cite the rule as `§spec-lifecycle case (a)` or `case (c)` and are re-pointed in the same commit: `runtime/src/primitives/mechanical_sweep.rs` (twice), `runtime/src/primitives/analyze_subjects.rs`, `scripts/audit/sweep-target-manifest-parity.sh`.
 
 - [ ] §spec-lifecycle: one `- **Backward via owed code**` bullet in place of the second and third back-edges, the "Any other edit there reopens" paragraph and the canonical-record bullet, naming `/review`'s one status write
 - [ ] §implement-phase, §drift-prevention, §cross-spec-impact and §bug-handling's fourth route (AC10)
@@ -66,6 +68,8 @@ Blocked on task 3: the sweep corrects what states the old rule only once the new
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Blocked on task 3: under the old rule each edit here to a `done` spec's scenario or criterion would reopen it.
+
+Add 000 to the sweep: its scenario `criterion-route-after-draft` says a `done` spec's criterion route "either takes the documented back-edge or refuses", where task 2 gave `/ductus:amend`'s criterion route a third case, the owner-confirmed correction of a ticked criterion, which reopens nothing; and its Resolved Questions derive the reopen from the third back-edge.
 
 - [ ] Ask the owner once whether this sweep may decide each ticked criterion's correction (AC3), and record the answer in the commit
 - [ ] Correct the sites in 008, 011, 013, 022, 023, 026, 030, 035, 041, 047, 049, 050, 051, 054 and 063, each read whole

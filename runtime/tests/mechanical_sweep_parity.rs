@@ -1,12 +1,15 @@
 //! Conformance: the rename-sweep exemption holds in both directions.
 //!
-//! The exemption (`runtime/src/primitives/mechanical_sweep.rs`) decides two
-//! things: whether a uniform rename sweep leaves a record's digest current, as
-//! the analysis record's freshness reads it at the gate, and whether an edit
-//! under a `done` spec is mechanical, as `classify-spec-edit` reads it. The
-//! review record's freshness check, and Family 19 with `check-review-freshness`
-//! that asked it at release, were retired by spec 081, since a review is owed
-//! for code alone.
+//! The exemption (`runtime/src/primitives/mechanical_sweep.rs`) decides whether a
+//! uniform rename sweep leaves a record's digest current. Two readers keep it, both
+//! through `analyze_subjects::exempt_renames`: the analysis record's freshness
+//! (`analyze_subjects::freshness_of`, at the gate) and the review record's digest
+//! (`analyze_subjects::review_freshness`, called from
+//! `compute_review_scope::contracts_against_digest`, whose changed contracts join the
+//! scope of a review that runs). The review record's staleness check, and Family 19
+//! with `check-review-freshness` that asked it at release, were retired by spec 081,
+//! since a review is owed for code alone. Spec 084 retired the edit classifier,
+//! the third reader.
 //!
 //! What this holds is the exemption itself, on repositories each test builds
 //! with a known sweep and a known structural edit, asserted in both directions.

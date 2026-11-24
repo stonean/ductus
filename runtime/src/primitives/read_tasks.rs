@@ -221,7 +221,7 @@ fn opens_list_item(text: &str) -> bool {
 }
 
 /// The tasks in a `tasks.md`'s text, in file order: one grammar for the working
-/// tree and for a blob at a commit, which `classify-spec-edit` compares.
+/// tree and for a blob at a commit, which `adds_unchecked_box` compares.
 pub(crate) fn parse_tasks(content: &str) -> Vec<Task> {
     let task_level = match detect_tasks_structure(content) {
         TasksStructure::Flat => 2,
@@ -344,6 +344,19 @@ mod tests {
 
     use super::*;
     use std::path::PathBuf;
+
+    /// A box repeated is a box added: the test counts a line's occurrences, not
+    /// whether the line was there (the mutant that judged by presence survived
+    /// once the edit classifier's tests left).
+    #[test]
+    fn a_repeated_unchecked_item_adds_a_box() {
+        let pending = "# Tasks\n\n## 1. Build\n\n- [ ] The thing\n";
+        assert!(adds_unchecked_box(
+            &format!("{pending}- [ ] The thing\n"),
+            pending
+        ));
+        assert!(!adds_unchecked_box(pending, pending));
+    }
 
     fn fixture_repo() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")

@@ -175,8 +175,8 @@ fn plan(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<Plan> {
     );
 
     // The body must survive byte-identical. A relocation that rewrote prose
-    // could change a criterion, which `classify-spec-edit` reads as reopening, and
-    // a `done` spec would owe a back-edge it is not taking.
+    // could untick a criterion, and a `done` spec holding an unticked criterion
+    // owes a back-edge this call does not take.
     let (_, new_body) = split_frontmatter(&rewritten, &spec_path)?;
     if new_body != body {
         return Err(PrimitiveError::Io {

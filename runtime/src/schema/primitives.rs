@@ -6566,68 +6566,6 @@ pub struct CreatePlanArtifactsResult {
     pub artifacts: Vec<PlanArtifact>,
 }
 
-// -- classify-spec-edit (spec 079) -------------------------------------------
-
-/// Args for `classify-spec-edit`: whether the edit under one feature's directory
-/// reopens it.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
-#[serde(rename_all = "kebab-case")]
-pub struct ClassifySpecEditArgs {
-    /// Feature directory name under the configured spec root.
-    #[arg(long)]
-    pub feature: String,
-    /// The ref the working tree is compared with. `HEAD` when absent.
-    #[serde(default)]
-    #[arg(long)]
-    pub base: Option<String>,
-}
-
-/// What an edit under a spec is.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum SpecEditKind {
-    /// Nothing but a run's records differs from the base.
-    None,
-    /// An edit that leaves a `done` spec `done`.
-    Correction,
-    /// A contract edit that is a sweep's, or only a cross-service reference's, which
-    /// leaves a `done` spec `done` too.
-    Mechanical,
-    /// An edit that reopens a `done` spec, for the result's `reasons`.
-    Reopens,
-}
-
-/// Why an edit reopens a spec.
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(rename_all = "kebab-case")]
-pub enum SpecEditReason {
-    /// A criterion's text was added, changed or removed.
-    Criterion,
-    /// An open question was added, changed or removed.
-    OpenQuestion,
-    /// An unchecked task item was added, reworded or unticked.
-    UncheckedTask,
-    /// A scenario was added, changed or removed.
-    Scenario,
-    /// The data model changed.
-    DataModel,
-    /// Any other file changed, or `spec.md`, `plan.md` or `tasks.md` is missing
-    /// where a correction would need it.
-    OtherFile,
-}
-
-/// Result for `classify-spec-edit`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct ClassifySpecEditResult {
-    /// What the edit is.
-    pub kind: SpecEditKind,
-    /// Why it reopens, in one fixed order. Empty unless `kind` is `reopens`.
-    pub reasons: Vec<SpecEditReason>,
-}
-
 // -- check-owed-work (spec 084) ----------------------------------------------
 
 /// Args for `check-owed-work`: one spec's owed work, or every `done` spec's. A call

@@ -148,7 +148,6 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "check-departures"
         | "check-owed-work"
         | "check-review-gate"
-        | "classify-spec-edit"
         | "compute-review-scope"
         | "create-plan-artifacts"
         | "derive-boundary"

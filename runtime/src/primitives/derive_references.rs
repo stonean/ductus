@@ -520,76 +520,6 @@ fn harvest(content: &str, registry: &BTreeMap<String, RegisteredService>) -> Vec
     records
 }
 
-/// What an edit that only adds, removes or rewrites a cross-service reference leaves
-/// unchanged (§spec-lifecycle): text with every link [`harvest`] would record taken out,
-/// whole, label and target.
-pub(crate) struct ReferenceScrub {
-    registry: BTreeMap<String, RegisteredService>,
-}
-
-impl ReferenceScrub {
-    /// A scrub reading the project's `[services]` registry.
-    ///
-    /// # Errors
-    ///
-    /// Each error [`load_registry`] returns: without the registry no link can be
-    /// told to be a reference.
-    pub(crate) fn new(repo: &Path) -> Result<Self> {
-        Ok(Self {
-            registry: load_registry(repo)?,
-        })
-    }
-
-    /// `content` without its references, line for line.
-    pub(crate) fn without_references(&self, content: &str) -> String {
-        let eligible: BTreeSet<usize> = harvestable_lines(content)
-            .iter()
-            .map(|line| line.line)
-            .collect();
-        let mut out = String::with_capacity(content.len());
-        for (index, line) in content.lines().enumerate() {
-            if eligible.contains(&(index + 1)) {
-                out.push_str(&self.line_without_references(line));
-            } else {
-                out.push_str(line);
-            }
-            out.push('\n');
-        }
-        out
-    }
-
-    /// `line` with each `[label](target)` naming a reference removed.
-    fn line_without_references(&self, line: &str) -> String {
-        let scrubbed = strip_inline_code(line);
-        let mut kept = String::new();
-        let mut copied = 0;
-        let mut cursor = 0;
-        while let Some(found) = scrubbed[cursor..].find("](") {
-            let close = cursor + found;
-            cursor = close + 2;
-            // The link this `](` closes, not the next one along: a sibling link or an
-            // anchor here would borrow a later reference's target, and cut what is between.
-            let Some(url) = absolute_link_urls(&scrubbed[close..])
-                .first()
-                .copied()
-                .filter(|url| scrubbed[close + 2..].starts_with(url))
-            else {
-                continue;
-            };
-            let Some(open) = scrubbed[copied..close].rfind('[') else {
-                continue;
-            };
-            if reference_of(url, &self.registry).is_some() {
-                kept.push_str(&line[copied..copied + open]);
-                copied = close + 2 + url.len() + 1;
-                cursor = copied;
-            }
-        }
-        kept.push_str(&line[copied..]);
-        kept
-    }
-}
-
 /// Blank out inline-code spans so a backticked link cannot be harvested,
 /// preserving byte offsets so nothing else shifts.
 ///
@@ -762,39 +692,6 @@ mod tests {
 
     const REFERENCE: &str =
         "[api](https://example.invalid/acme/api/blob/main/specs/003-user/spec.md)";
-
-    fn scrubbed(content: &str) -> String {
-        ReferenceScrub {
-            registry: BTreeMap::new(),
-        }
-        .without_references(content)
-    }
-
-    #[test]
-    fn the_scrub_takes_a_reference_out_whole() {
-        assert_eq!(
-            scrubbed(&format!("See {REFERENCE} and {REFERENCE}, then more.\n")),
-            "See  and , then more.\n"
-        );
-    }
-
-    #[test]
-    fn a_link_to_no_spec_stays_in_the_scrubbed_text() {
-        let line = "See [site](https://example.invalid/about) here.\n";
-        assert_eq!(scrubbed(line), line);
-    }
-
-    #[test]
-    fn a_backticked_link_stays_in_the_scrubbed_text() {
-        let line = format!("See `{REFERENCE}` here.\n");
-        assert_eq!(scrubbed(&line), line);
-    }
-
-    #[test]
-    fn a_fenced_link_stays_in_the_scrubbed_text() {
-        let content = format!("```text\n{REFERENCE}\n```\n");
-        assert_eq!(scrubbed(&content), content);
-    }
 
     fn registry(entries: &[(&str, &str, Option<&str>)]) -> BTreeMap<String, RegisteredService> {
         entries

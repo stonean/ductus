@@ -63,13 +63,6 @@ MUTATIONS = [
         'interpreter::tests::every_feature_argument_site_refuses_an_outward_feature_link',
     ),
     (
-        'M8 classify-spec-edit skips the feature check',
-        'src/primitives/classify_spec_edit.rs',
-        '    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;\n',
-        '',
-        'interpreter::tests::every_feature_argument_site_refuses_an_outward_feature_link',
-    ),
-    (
         'M9 discover-rule-files skips the feature check of its verdicts',
         'src/primitives/discover_rule_files.rs',
         '    super::validate_feature_argument(repo, &root, feature)?;\n    let feature_dir = repo.join(&root).join(feature);',

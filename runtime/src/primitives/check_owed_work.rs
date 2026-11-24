@@ -371,6 +371,86 @@ mod tests {
         assert_eq!(criterion.unchecked_boxes_count, 0);
     }
 
+    /// A `done` spec reopens from its state, not from an edit's diff (spec 084,
+    /// AC2): an edit to its scenario's text, its data model, its prose or another
+    /// file owes nothing, so every command deciding on this answer leaves it
+    /// `done`, even when the edited text quotes an unchecked box; an added
+    /// criterion or an appended unchecked task owes work, so it reopens.
+    #[test]
+    fn only_an_added_criterion_or_an_appended_task_makes_a_done_spec_owe_work() {
+        let tmp = project();
+        let feature = "003-done";
+        let dir = tmp.path().join("specs").join(feature);
+        std::fs::create_dir_all(dir.join("scenarios")).unwrap();
+        write(tmp.path(), feature, "spec.md", TICKED_SPEC);
+        write(tmp.path(), feature, "tasks.md", SPENT_TASKS);
+        let scenario = "---\nsection: Behavior\n---\n\n# S\n\n## Context\n\nc\n";
+        write(tmp.path(), feature, "scenarios/s.md", scenario);
+        assert!(!one(tmp.path(), feature).owes);
+
+        write(
+            tmp.path(),
+            feature,
+            "scenarios/s.md",
+            &format!("{scenario}\n## Behavior\n\n- [ ] a box the scenario quotes\n"),
+        );
+        write(
+            tmp.path(),
+            feature,
+            "data-model.md",
+            "# DM\n\n- [ ] a box the data model quotes\n",
+        );
+        write(
+            tmp.path(),
+            feature,
+            "spec.md",
+            &format!("{TICKED_SPEC}\n## Resolved Questions\n\n- Prose, edited.\n"),
+        );
+        write(
+            tmp.path(),
+            feature,
+            "notes.md",
+            "- [ ] another file's box\n",
+        );
+        let edited = one(tmp.path(), feature);
+        assert!(
+            !edited.owes,
+            "no edit but a criterion or a task owes work: {edited:?}"
+        );
+
+        write(
+            tmp.path(),
+            feature,
+            "spec.md",
+            &format!("{TICKED_SPEC}- [ ] AC2: added\n"),
+        );
+        let criterion = one(tmp.path(), feature);
+        assert!(criterion.owes);
+        assert_eq!(
+            (
+                criterion.unchecked_boxes_count,
+                criterion.unticked_criteria_count
+            ),
+            (0, 1)
+        );
+
+        write(tmp.path(), feature, "spec.md", TICKED_SPEC);
+        write(
+            tmp.path(),
+            feature,
+            "tasks.md",
+            &format!(
+                "{SPENT_TASKS}\n## 2. Scenario s\n\n- [ ] Implement the behavior described in scenarios/s.md\n"
+            ),
+        );
+        let task = one(tmp.path(), feature);
+        assert!(task.owes);
+        assert_eq!(
+            (task.unchecked_boxes_count, task.unticked_criteria_count),
+            (1, 0)
+        );
+    }
+
     #[test]
     fn a_missing_spec_file_is_an_error_never_owing_nothing() {
         let tmp = project();

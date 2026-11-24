@@ -1,7 +1,6 @@
 //! A review's verdicts on a spec's acceptance criteria (066 task 27): the one
 //! definition of a criterion's text, its digest and its name, which
-//! `write-review` records and `compute-review-scope` compares, and which
-//! `classify-spec-edit` reads to compare criteria across an edit.
+//! `write-review` records and `compute-review-scope` compares.
 
 use std::collections::BTreeSet;
 use std::path::Path;

@@ -1293,8 +1293,9 @@ fn check_unticked_criteria(
 /// (e) Scenario open questions — a scenario is an organizational split of
 /// the spec, so its unresolved questions are the spec's questions for the
 /// purpose of completeness. **Blocking at `done`**: that state directly
-/// contradicts the completion rule, and `--fix` reverts it the way it
-/// reverts review-state drift. **Advisory otherwise**: the questions are
+/// contradicts the completion rule, though `--fix` does not revert it, since
+/// an open question is no owed work and reopens no `done` spec (spec 084).
+/// **Advisory otherwise**: the questions are
 /// real remaining work, but a spec still in flight is allowed to carry
 /// them.
 ///

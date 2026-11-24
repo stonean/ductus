@@ -109,7 +109,6 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__create-feature`
    - `mcp__ductus__create-plan-artifacts`
    - `mcp__ductus__check-review-gate`
-   - `mcp__ductus__classify-spec-edit`
    - `mcp__ductus__measure-reopenings`
    - `mcp__ductus__append-question`
    - `mcp__ductus__diff-cross-spec`
@@ -179,12 +178,13 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Write(.ductus/session.toml)`
    - `Write(.ductus/config.toml)`
 
-   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made run-generator, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, spec 054 `read-supersession-pair` and `write-supersession-annotation`, and spec 081 `check-review-freshness`):
+   **Tools the server no longer serves** (each entry names no tool, and is retired so it cannot approve one that takes the name later: spec 022 task 14 made run-generator, which runs any project file with `bash`, a `ductus run-generator` subcommand and not an MCP tool; spec 057 retired `check-review-agreement`, spec 054 `read-supersession-pair` and `write-supersession-annotation`, spec 081 `check-review-freshness`, and spec 084 `classify-spec-edit`):
    - `mcp__ductus__run-generator`
    - `mcp__ductus__check-review-agreement`
    - `mcp__ductus__read-supersession-pair`
    - `mcp__ductus__write-supersession-annotation`
    - `mcp__ductus__check-review-freshness`
+   - `mcp__ductus__classify-spec-edit`
 
    **Entries that can run or write anything, which no step needs in this form** (dropped from the canonical set by spec 022 task 18, question 3, the owner's answer (a), 2026-11-12). Each can, through its own options, run another command or write a path outside the project: `make`, the hook and the two install scripts run project-written code; `git diff`, `git log` and `git show` write a file with `--output`; the bare lint entries run the project's JavaScript configuration; and the broad `mkdir -p`, `chmod +x` and `git config core.hooksPath` forms re-granted what the seed grants in the exact forms a step runs; and `curl` writes anywhere with `-o`, so it left with the seed's (question 2). A step that reads a diff, as a review's re-read does, runs a read-only `git diff` form the host prompts for or approves itself:
    - `Bash(make *)`

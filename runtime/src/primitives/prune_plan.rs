@@ -481,7 +481,7 @@ fn check_removals(args: &PrunePlanArgs) -> Result<()> {
 /// adds an unchecked checkbox to HEAD's, leaving the spec with work owed. An
 /// edit confined to `plan.md` never does, whatever it corrects
 /// (§spec-lifecycle). A `tasks.md` absent at HEAD holds no box, as
-/// `classify-spec-edit` reads it, so each one written since is new.
+/// `read_tasks::adds_unchecked_box` reads it, so each one written since is new.
 fn reopen_required(repo: &Path, tasks_rel: &str) -> Result<bool> {
     let head = ProjectRepository::discover(repo)?
         .read_at_head(tasks_rel)?
@@ -1200,7 +1200,7 @@ mod tests {
     }
 
     /// HEAD holds no task list, so each box in one written since is new, as
-    /// `classify-spec-edit` reads it, and one holding none adds nothing.
+    /// `read_tasks::adds_unchecked_box` reads it, and one holding none adds nothing.
     #[test]
     fn a_task_list_absent_at_head_counts_every_box() {
         let tmp = tempdir().unwrap();

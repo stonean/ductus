@@ -42,10 +42,12 @@
 //! flag would make correctness depend on an author remembering to set it,
 //! which `framework/constitution.md` §design-principles rules out.
 //!
-//! The rule has one implementation, read by `classify-spec-edit`, by the
-//! analysis record's freshness at `check-review-gate`, and by the review
-//! record's digest, whose changed contracts join the scope of a review that
-//! runs. Until spec 081 it also decided the review's own staleness, at the
+//! The rule has one implementation, read by two callers, both through
+//! `analyze_subjects::exempt_renames`: the analysis record's freshness
+//! (`analyze_subjects::freshness_of`, at `check-review-gate`) and the review
+//! record's digest (`analyze_subjects::review_freshness`, called from
+//! `compute_review_scope::contracts_against_digest`), whose changed contracts
+//! join the scope of a review that runs. Until spec 081 it also decided the review's own staleness, at the
 //! gate and at release through Family 19 and `check-review-freshness`; until
 //! 2026-11-04 Family 19 carried a Python copy of this rule.
 //!

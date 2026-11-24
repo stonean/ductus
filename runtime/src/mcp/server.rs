@@ -49,11 +49,11 @@ use crate::schema::primitives::{
     CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
     CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
     CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs,
-    ClassifySpecEditResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
-    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
-    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
-    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
+    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
+    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
+    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -287,8 +287,7 @@ fn strip_numeric_formats(value: &mut Value) {
 /// reads history for its rename exemption, `dashboard` and `render-status`,
 /// which blame the inbox for its oldest item and measure reopenings,
 /// `merge-status-hook`, which waits on `claude --version` under its probe
-/// timeout, and `classify-spec-edit`,
-/// which diffs a tree against the working tree. `write-session`, `resolve-session` and
+/// timeout. `write-session`, `resolve-session` and
 /// `retarget-sessions` wait on the sessions lock for up to ten seconds, so
 /// they take the seam as well. The CLI surfaces
 /// (`main.rs` subcommands and the subprocess interpreter) call the
@@ -1035,21 +1034,6 @@ impl GovRuntimeServer {
         primitives::append_question::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
-    }
-
-    #[tool(
-        name = "classify-spec-edit",
-        description = descriptions::CLASSIFY_SPEC_EDIT
-    )]
-    async fn classify_spec_edit(
-        &self,
-        params: Parameters<ClassifySpecEditArgs>,
-    ) -> Result<Json<ClassifySpecEditResult>, String> {
-        // Diffs a tree against the working tree — blocking pool, like the other
-        // history readers.
-        let repo = Arc::clone(&self.repo);
-        dispatch_blocking(move || primitives::classify_spec_edit::run(&params.0, repo.as_path()))
-            .await
     }
 
     #[tool(

@@ -662,8 +662,10 @@ For a violation:
   renders under **Deferred findings**. A `--defer` to a `done` spec's work
   names the `done → in-progress` reopen in a confirmation and performs it
   through the set-status primitive with `from: done` before `write-review`
-  runs. Left closed, a `done` spec's work, its tasks included, is complete and
-  releases nothing.
+  runs, once `check-owed-work` on that spec reports owed work: a `done` spec
+  reopens only while its `tasks.md` holds an unchecked box or its `spec.md` an
+  unticked criterion. Left closed, a `done` spec's work, its tasks included, is
+  complete and releases nothing.
 - **Not released**, it stays in its section with a `**Deferred**` line and
   still holds `done`. Its decision carries the derived `gating: true`, and
   `check-review-gate` names it with its work where it blocks.

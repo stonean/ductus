@@ -16,21 +16,21 @@ use ductus::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
     CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs,
     CheckPrescriptionsArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
-    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs,
-    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult,
-    DeriveReferencesArgs, DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
-    ProjectSizeState, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs,
-    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
-    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
-    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
-    WriteReviewArgs, WriteSessionArgs,
+    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs,
+    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
+    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs,
+    DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
+    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState,
+    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
+    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -184,8 +184,6 @@ enum Command {
     CreatePlanArtifacts(CreatePlanArtifactsArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_REVIEW_GATE), long_about = descriptions::CHECK_REVIEW_GATE)]
     CheckReviewGate(CheckReviewGateArgs),
-    #[command(about = descriptions::summary(descriptions::CLASSIFY_SPEC_EDIT), long_about = descriptions::CLASSIFY_SPEC_EDIT)]
-    ClassifySpecEdit(ClassifySpecEditArgs),
     #[command(about = descriptions::summary(descriptions::MEASURE_REOPENINGS), long_about = descriptions::MEASURE_REOPENINGS)]
     MeasureReopenings(MeasureReopeningsArgs),
     #[command(about = descriptions::summary(descriptions::APPEND_QUESTION), long_about = descriptions::APPEND_QUESTION)]
@@ -1265,9 +1263,6 @@ fn main() -> ExitCode {
         Command::CreateFeature(args) => emit_result(primitives::create_feature::run(&args, &repo)),
         Command::CreatePlanArtifacts(args) => {
             emit_result(primitives::create_plan_artifacts::run(&args, &repo))
-        }
-        Command::ClassifySpecEdit(args) => {
-            emit_result(primitives::classify_spec_edit::run(&args, &repo))
         }
         Command::MeasureReopenings(args) => {
             emit_result(primitives::measure_reopenings::run(&args, &repo))

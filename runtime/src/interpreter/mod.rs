@@ -77,20 +77,20 @@ use crate::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
     CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs, CheckPrescriptionsArgs,
     CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
-    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
-    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
-    FetchArchiveArgs, FindingTier, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs,
-    MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
-    ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs,
-    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
-    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
-    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
-    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs,
-    SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, FindingTier,
+    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
+    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs,
+    PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs,
+    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
+    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
+    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -1282,7 +1282,6 @@ fn dispatch_primitive(
         "create-feature" => call!(CreateFeatureArgs, create_feature),
         "create-plan-artifacts" => call!(CreatePlanArtifactsArgs, create_plan_artifacts),
         "check-review-gate" => call!(CheckReviewGateArgs, check_review_gate),
-        "classify-spec-edit" => call!(ClassifySpecEditArgs, classify_spec_edit),
         "measure-reopenings" => call!(MeasureReopeningsArgs, measure_reopenings),
         "append-question" => call!(AppendQuestionArgs, append_question),
         "append-task" => call!(AppendTaskArgs, append_task),
@@ -4219,10 +4218,6 @@ mod tests {
                 "check-prescriptions",
                 serde_json::json!({"feature": feature, "base": sha}),
             ),
-            (
-                "classify-spec-edit",
-                serde_json::json!({"feature": feature}),
-            ),
             ("create-feature", serde_json::json!({"title": feature})),
             ("dashboard", serde_json::json!({})),
             // The rules' verdicts are read from the feature's analysis record,
@@ -4355,7 +4350,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 43);
+        assert_eq!(cases.len(), 42);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(

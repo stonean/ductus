@@ -14,8 +14,10 @@ Captures additions to a spec that arise at any point in the pipeline. `/amend` i
 The back-edges that keep the spec lifecycle honest (§spec-lifecycle) are owned by `/amend`:
 
 - **Question route — `clarified` / `planned` / `in-progress` → `draft`**, in the same write as the new open question. The user's acceptance of the refined question at the approval gate is the consent; no separate prompt fires.
-- **Scenario route — `done` → `in-progress`.** The scenario's task is implemented, and the spec returns to `done`.
-- **Criterion route — `done` → `in-progress`.** A new acceptance criterion on a `done` spec is new scope, so it takes the *meaningful body edit* back-edge. The criterion is appended unlabelled and the label assigned by `label-criteria`, never by hand. On a spec below `done` the criterion is recorded with no status change. Its behavior and edge cases are [000's `criterion-route-after-draft`](https://github.com/stonean/ductus/blob/main/specs/000-slash-commands/scenarios/criterion-route-after-draft.md).
+- **Scenario route — `done` → `in-progress`.** The task the scenario appends is owed work, so the spec reopens; the task is implemented, and the spec returns to `done`.
+- **Criterion route — `done` → `in-progress`.** A new acceptance criterion lands unticked, which is owed work, so a `done` spec reopens. The criterion is appended unlabelled and the label assigned by `label-criteria`, never by hand. On a spec below `done` the criterion is recorded with no status change. Its behavior and edge cases are [000's `criterion-route-after-draft`](https://github.com/stonean/ductus/blob/main/specs/000-slash-commands/scenarios/criterion-route-after-draft.md).
+
+A `done` spec reopens exactly when its `tasks.md` holds an unchecked box or its `spec.md` an unticked acceptance criterion (§spec-lifecycle), so every reopen this command writes is read first from `check-owed-work`, and an edit that leaves neither, to a scenario's text, the data model or prose, leaves the spec `done`.
 
 ## Context
 
@@ -27,17 +29,17 @@ Resolve the session target as above. If it includes a `scenario` and `scenario-p
 
 ## Scope Boundaries
 
-- This command reads the target artifact, appends to its `## Open Questions` section, appends an unchecked item to its `## Acceptance Criteria` section (the criterion route, with the host's file-editing tool and no other change to the spec body) or writes a new `scenarios/{slug}.md` file and appends a linked task to `tasks.md`, and — when a back-edge applies — updates the spec's frontmatter `status` field. No other artifact contents are modified. Plan files and source code are never read or written — except the files a confirmed chore fix names (see **Refine the input (scenario route)**), the one case in which this command writes outside the spec directory, and it records nothing on the spec.
-- Spec `status` is mutated by this command only on a back-edge (clarified+ → draft or done → in-progress).
+- This command reads the target artifact, appends to its `## Open Questions` section, appends an unchecked item to its `## Acceptance Criteria` section (the criterion route, with the host's file-editing tool and no other change to the spec body), corrects a ticked criterion's text in place once the owner says the code is correct (the criterion route's step 3), or writes a new `scenarios/{slug}.md` file and appends a linked task to `tasks.md`, and — when a back-edge applies — updates the spec's frontmatter `status` field. No other artifact contents are modified. Plan files and source code are never read or written — except the files a confirmed chore fix names (see **Refine the input (scenario route)**), the one case in which this command writes outside the spec directory, and it records nothing on the spec.
+- Spec `status` is mutated by this command only on a back-edge (clarified+ → draft, or done → in-progress once `check-owed-work` reports owed work).
 - For the impact display, this command may read sibling specs' frontmatter (only) under `specs/` to detect dependents. It does not read sibling spec bodies.
-- For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits, and no other git command; `classify-spec-edit` reads the diff. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
+- For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits, and no other git command; whether the delta reopens the spec is `check-owed-work`'s answer, read from the spec's state, never the diff. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
 - Reference: §spec-requirements, §spec-lifecycle, §scenarios, §text-first-artifacts, §bug-handling, §brownfield-inbox (Finding dispositions), §spec-phase (spec-root resolution) (constitution loaded by `/ductus:target` — do not re-read).
 
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 >
-> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__append-question,mcp__ductus__append-task,mcp__ductus__classify-spec-edit,mcp__ductus__create-scenario,mcp__ductus__label-criteria,mcp__ductus__lint-markdown,mcp__ductus__set-status`
+> **Claude Code:** load this command's `ductus` tools in one `ToolSearch` call, and send the command's first `ductus` call in that same message, since a tool can be called beside the search that loads it: `select:mcp__ductus__append-question,mcp__ductus__append-task,mcp__ductus__check-owed-work,mcp__ductus__create-scenario,mcp__ductus__label-criteria,mcp__ductus__lint-markdown,mcp__ductus__set-status`
 
 ### Confirm target
 
@@ -89,15 +91,15 @@ Which half runs depends on status and input:
    reconcile: examined {N} scenario(s) in the delta; each already has a pending task
    ```
 
-4. When the reconcile pass appended at least one task to a `done` spec, invoke `set-status` with `from: done`, `to: in-progress` as part of that same action — the prompt in step 3 named the reopen, so it is already consented (§spec-lifecycle). Skip step 5's prompt in that case. On a `planned` or `in-progress` spec no status mutation occurs.
-5. If no task was appended and the status is `done`, invoke `classify-spec-edit` against the feature. On `correction`, `mechanical` or `none`, report that the spec stays `done` because the delta changes no criterion, open question or unchecked task, and is at most a sweep's or a cross-service reference's in a contract, and continue to **Gather the input**, changing nothing. On `reopens`, or an error, which means the classification did not run and is said so, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
+4. When the reconcile pass appended at least one task to a `done` spec, invoke `check-owed-work` against the feature, which reports the task appended, and on `owes: true` invoke `set-status` with `from: done`, `to: in-progress` as part of that same action — the prompt in step 3 named the reopen, so it is already consented (§spec-lifecycle). Skip step 5's prompt in that case. On a `planned` or `in-progress` spec no status mutation occurs.
+5. If no task was appended and the status is `done`, invoke `check-owed-work` against the feature. On `owes: false`, report that the spec stays `done` because the delta leaves no unchecked box in `tasks.md` and no unticked criterion in `spec.md` — an edit to a scenario's text, the data model or prose owes nothing while the spec is `done` — and continue to **Gather the input**, changing nothing. On an error, the check did not run: report it, change nothing, and continue to **Gather the input**, since without the spec's state no reopen is decided. On `owes: true`, display the prior status (`done`), each delta path with its filesystem mtime, and each unchecked box and unticked criterion the result names, then prompt:
 
    ```text
    Spec is `done` for what it specifies, but the feature directory has un-tracked scenario or task edits:
      {path-1}  ({untracked|modified}, mtime {ts})
      {path-2}  ({untracked|modified}, mtime {ts})
      ...
-   They reopen it for: {reasons}     ← omitted when the classification did not run
+   They leave it owing: {each unchecked box and unticked criterion}
    Revert status to `in-progress` to reflect the on-disk delta?
    ```
 
@@ -148,6 +150,16 @@ The goal is one testable condition `/ductus:review`'s criteria step can judge, s
 
 1. **Draft** the criterion as one sentence a check could pass or fail, with a backticked repo-relative path where it names a file (§spec-requirements). Do not write an `AC{n}:` label.
 2. **Check for duplicates** — compare against the entries under the target's `## Acceptance Criteria` with the normalized-whitespace, case-insensitive comparison the question route uses, ignoring each entry's checkbox and `AC{n}:` label. On a match, report: "An equivalent criterion is already recorded: '{existing entry}'. Skip or refine further?" On skip, exit without recording.
+3. **A ticked criterion the input would change** — when the input corrects an existing ticked criterion of a `done` spec, because the criterion and the code disagree, ask the owner which is correct before changing either, unless the invocation explicitly told this command to decide, in which case decide and name the decision in the report, for the commit that lands it to say so (§spec-lifecycle):
+
+   ```text
+   {label} is ticked, and the input says the code does otherwise:
+     criterion: {its current text}
+     input:     {what the input says the code does}
+   Which is correct — the code (correct the criterion's text, keep it ticked, the spec stays `done`) or the criterion (the code is a bug)?
+   ```
+
+   **The code is correct**: the draft is that criterion's corrected text, which **Record the input** writes in place of its text. It stays ticked, the spec owes nothing and stays `done`, and the review the spec next owes judges the corrected text. **The criterion is correct**: the code is a bug (§bug-handling): leave the criterion as it reads, and `flip` to the scenario route, whose task reopens the spec.
 
 ### Refine the input (scenario route)
 
@@ -155,7 +167,7 @@ The goal is a scenario that captures a specific situation and the concrete behav
 
 1. **Walk the bug decision tree** (§bug-handling):
    - **Does a spec exist for the behavior?** If no, stop. Tell the user to create the spec first via `/ductus:specify`, then come back. (`/amend` requires a session target with a real spec file.)
-   - **Is the spec ambiguous or incomplete?** If yes — the right fix is to update the spec directly, not record a scenario. Offer to help edit the spec; exit without recording.
+   - **Is the spec ambiguous or incomplete?** If yes — the right fix is to update the spec directly, not record a scenario. Offer to help edit the spec; exit without recording. An edit that would change a ticked criterion of a `done` spec asks the owner first, as step 3 of **Refine the input (criterion route)** does.
    - **Is this a chore rather than a spec addition?** If the input is project maintenance (lint or formatting cleanup, dependency cleanup, repo hygiene, a standalone refactor) that adds no durable requirement and is not really about this spec (§bug-handling, durability test), do not write a scenario or touch the spec: **fix it in this run** (§brownfield-inbox, Finding dispositions). Name the files the fix touches and make it once the user confirms, then verify it with the check that covers it (the project's lint, formatter, or tests). A fix that proves blocked or not mechanical is not a chore: revert it and walk this tree again from the top, since an input that is not mechanical carries a requirement. If the user declines the fix, nothing is written. Exit without recording anything on the spec.
    - **Is the spec clear but the behavior needs lower-level elaboration?** Proceed to draft the scenario.
 2. **Derive a slug** — lowercase, hyphenated, no whitespace, no punctuation beyond hyphens. Check `specs/{feature}/scenarios/` for slug conflicts; if a file with that slug exists, ask the user for a different name.
@@ -193,7 +205,7 @@ This display is informational only — the user's prior acceptance is the consen
 
 ### Impact display (spec target, criterion route, status = done)
 
-Display the same reopen impact as the scenario route, with the criterion in place of the scenario: the prior status qualified as §spec-lifecycle's *A `done` stop never says the request is built* says, preceded by "Not built yet: {request}."; the criterion's text; and a note that the criterion lands unchecked and the spec returns to `done` only once `/ductus:implement` verifies it.
+Display the same reopen impact as the scenario route, with the criterion in place of the scenario: the prior status qualified as §spec-lifecycle's *A `done` stop never says the request is built* says, preceded by "Not built yet: {request}."; the criterion's text; and a note that the criterion lands unchecked and the spec returns to `done` only once `/ductus:implement` verifies it. A ticked criterion corrected under step 3 of **Refine the input (criterion route)** reopens nothing, so it shows no reopen impact: display the criterion's text before and after, and that it stays ticked and the spec stays `done`.
 
 ### Impact display (spec target, scenario route, status = done)
 
@@ -216,7 +228,7 @@ Informational; no separate confirmation prompt.
 
 1. Invoke `create-scenario` to write `specs/{feature}/scenarios/{slug}.md` with the accepted `section` and the assembled `body` — the `## Context` … `## Edge Cases` markdown passed as one payload. It refuses on slug conflict.
 2. Invoke `append-task` with the new scenario's `slug`, omitting `body`, to append a numbered task block to `specs/{feature}/tasks.md`, with the done-when condition "the scenario's described behavior is correctly implemented and tested."
-3. If the spec's `status` is `done`, invoke `set-status` to flip `done → in-progress`. (For other spec statuses, no status mutation occurs.)
+3. If the spec's `status` is `done`, invoke `check-owed-work` against the feature, which reports the task step 2 appended, and on `owes: true` invoke `set-status` to flip `done → in-progress`. On `owes: false`, `append-task` matched a task already complete and appended nothing: report that, and leave the status. (For other spec statuses, no status mutation occurs.)
 4. Invoke `write-session` to set the new scenario as the session target: pass the feature slug as the feature argument, the repo-relative spec directory as the path argument, the new scenario slug as the scenario argument, and `specs/{feature}/scenarios/{slug}.md` as the scenario-path argument. Display what the write reports: any `notices` it delivered, the `peers` — each other session on this feature, with its scenario when it has one and when it last used its target (§concurrent-features) — and any `expired` or `unreadable` session.
 5. Invoke `lint-markdown` on every modified file.
 
@@ -224,8 +236,10 @@ Informational; no separate confirmation prompt.
 
 1. With the host's file-editing tool, append `- [ ] {criterion}` — unchecked and with no label — as the last item of the spec's `## Acceptance Criteria` list. When the section is missing, add it in template order, before `## Applicable Rules`, else before `## Open Questions`. Change nothing else in `spec.md`.
 2. Invoke `label-criteria` against the feature, which assigns the new item its `AC{n}:` label and advances `next-criterion`. Never write the label by hand.
-3. If the spec's `status` is `done`, invoke `set-status` to flip `done → in-progress`. (For other statuses, no status mutation occurs.)
+3. If the spec's `status` is `done`, invoke `check-owed-work` against the feature, which reports the new criterion unticked, and on `owes: true` invoke `set-status` to flip `done → in-progress`. (For other statuses, no status mutation occurs.)
 4. Invoke `lint-markdown` on `spec.md`.
+
+A ticked criterion the owner said the code bears out (step 3 of **Refine the input (criterion route)**) is corrected instead: with the host's file-editing tool, replace that item's text, after its `AC{n}:` label when it carries one, with the accepted draft, keeping its checkbox ticked and its label, and change nothing else; invoke `lint-markdown` on `spec.md`. No status mutation occurs: the spec owes nothing.
 
 ### Status mutation summary
 
@@ -236,13 +250,14 @@ Informational; no separate confirmation prompt.
 | Spec | `done` | question | Not reachable: the tiebreaker routes a `done` spec to scenario, and `flip` toward the question route is rejected. |
 | Spec | `draft` / `clarified` / `planned` / `in-progress` | scenario | Create scenario, append task, update session target. No status mutation. |
 | Spec | `clarified` / `planned` / `in-progress` | criterion | Append the unchecked criterion, label it. No status mutation. |
-| Spec | `done` | criterion | Show reopen impact, append the unchecked criterion, label it, revert `status` to `in-progress`. |
+| Spec | `done` | criterion | Show reopen impact, append the unchecked criterion, label it, revert `status` to `in-progress` once `check-owed-work` reports it. |
+| Spec | `done` | criterion, correcting a ticked one the owner says the code bears out | Correct its text in place, keep it ticked. No status mutation: the spec owes nothing. |
 | Spec | `draft` | criterion | Not reachable: `/ductus:clarify` owns criteria on a `draft` spec. |
-| Spec | `done` | scenario | Show reopen impact, create scenario, append task, revert `status` to `in-progress` in the same write, update session target. |
+| Spec | `done` | scenario | Show reopen impact, create scenario, append task, revert `status` to `in-progress` once `check-owed-work` reports the task, update session target. |
 | Spec | any | chore (scenario-route guard) | Fix it in this run once the user confirms, and exit. No question, scenario, task, or status mutation. |
-| Spec | `done` (on-disk delta `classify-spec-edit` reads as `correction`, `mechanical` or `none`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
-| Spec | `done` (on-disk delta that reopens, user confirms re-open precondition) | (precondition) | Flip `status` to `in-progress` via `set-status`. No question, no scenario, no task. |
-| Spec | `done` (no input, delta scenario with no pending task, user confirms the offer) | (reconcile) | Append a task via `append-task` and flip `status` to `in-progress` in the same action. No new scenario file, no question. |
+| Spec | `done` (on-disk delta leaving no unchecked box and no unticked criterion: `check-owed-work` reports `owes: false`) | (precondition) | No prompt and no status mutation: the spec stays `done`. |
+| Spec | `done` (on-disk delta `check-owed-work` reports as owed work, user confirms re-open precondition) | (precondition) | Flip `status` to `in-progress` via `set-status`. No question, no scenario, no task. |
+| Spec | `done` (no input, delta scenario with no pending task, user confirms the offer) | (reconcile) | Append a task via `append-task` and flip `status` to `in-progress` once `check-owed-work` reports it, in the same action. No new scenario file, no question. |
 | Spec | `planned` / `in-progress` (same offer confirmed) | (reconcile) | Append the task only. No status mutation — the spec already accepts work. |
 | Spec | `draft` / `clarified` | (reconcile) | Not reached: `/ductus:plan` regenerates `tasks.md` from the plan. |
 | Scenario | (no status field) | (forced question) | Append question to the scenario's Open Questions section. The parent spec's status is not read or mutated. |
@@ -256,6 +271,7 @@ When the user is done, display the next step:
 - If a question was recorded on a spec: "Question recorded. Run `/ductus:clarify` to resolve it." On a spec, the status is now `draft` regardless of where it started.
 - If a question was recorded on a scenario: "Question recorded. Run `/ductus:clarify` to resolve it." The parent spec's status is unchanged.
 - If a criterion was recorded: "Criterion recorded unchecked as {label}." On a reopened spec add "The spec is `in-progress`; run `/ductus:implement` to build it and `/ductus:review` to verify it."
+- If a ticked criterion was corrected: "Criterion {label} corrected; it stays ticked, and the spec stays `done`."
 - If a scenario was recorded: "Scenario recorded at `specs/{feature}/scenarios/{slug}.md` and set as the session target. Run `/ductus:implement` to work on the new task."
 - If the input was a chore: "That's general maintenance, not a spec addition — fixed in {files}." Nothing was recorded on the spec. If the user declined the fix, say that nothing was written.
 - If the user aborted before accepting any input, exit silently — no input was recorded and no status mutation occurred.

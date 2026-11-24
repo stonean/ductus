@@ -15,12 +15,12 @@ This vocabulary is deliberately separate from the inbox router's five routes (`r
 
 ## Reopening a `done` upstream spec
 
-Folding into a `done` spec sets it to `in-progress` — the back-edge §spec-lifecycle already defines ("Backward via new scenario" / "Backward via meaningful body edit"), so the fold adds no new transition (AC25).
+Folding into a `done` spec sets it to `in-progress` only when the fold leaves it owing work — an unchecked box in its `tasks.md` or an unticked criterion in its `spec.md` — which `check-owed-work` reports after the fold's writes (§spec-lifecycle), so the fold adds no new transition (AC25, superseded in part by spec 084). A scenario route always leaves its task; a body-edit fold leaves owed work only when the folded text adds a criterion, and one that adds none leaves the upstream spec `done`.
 
 - **Only from `done`.** Any other status is left unchanged; the fold never advances a status.
 - **Guarded.** `set-status`'s `from: done` argument surfaces a discrepancy rather than overwriting it.
-- **Named in the one confirmation**, not prompted separately, so the operator consents to the status change before it happens.
-- **The upstream spec cannot return to `done` on the old review.** A fold brings requirements, and the pre-`done` gate owes a review for code alone (spec 081), so neither a folded-in *scenario* nor a **body-edit** fold, which writes only `spec.md`, would make one owed. Step 10 therefore invalidates the upstream spec's recorded review on **either** route and at **any** status (AC24), and the gate then blocks on *not reviewed*, the accurate reason. That review's scope holds the code of a staging spec folded below `done`, wherever its window starts, since no review has read it; one that reached `done` had its code read by its own review (`compute-review-scope`).
+- **Named in the one confirmation, as conditional**, not prompted separately, so the operator consents to the status change before it happens. Step 5 comes before any write, when a body-edit route cannot yet say whether the folded text adds a criterion, so its prompt names the reopen as happening if the fold leaves a task or an unticked criterion, and step 14 reports which happened.
+- **The review record is reset with the reopen, and only then.** A fold brings requirements, and the pre-`done` gate owes a review for code alone (spec 081), so neither a folded-in *scenario* nor a **body-edit** fold, which writes only `spec.md`, would make one owed. Step 10 therefore invalidates the upstream spec's recorded review on **either** route when it is `in-progress` after step 9 (AC24, superseded in part by spec 084), and the gate then blocks on *not reviewed*, the accurate reason. That review's scope holds the code of a staging spec folded below `done`, wherever its window starts, since no review has read it; one that reached `done` had its code read by its own review (`compute-review-scope`). An upstream spec left `done` keeps its record as it stood: a reset record on a `done` spec would be review-state drift, which the adopter CI template's audit-record gate fails on.
 
 ## Re-pointing inbound pointers
 

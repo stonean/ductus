@@ -1336,7 +1336,7 @@ fn cross_spec_impact_block(
     let mut guidance = Vec::new();
     if !undischarged.is_empty() {
         guidance.push(format!(
-            "Record the change in each affected spec with a signpost linking back to {feature}, then re-run this gate — discharge is the reciprocal link, not the key's removal. A signpost on a done spec is a correction and leaves it done; a criterion or scenario there reopens it through /{project}:amend."
+            "Record the change in each affected spec with a signpost linking back to {feature}, then re-run this gate — discharge is the reciprocal link, not the key's removal. A signpost leaves a done spec done; a criterion, or a scenario's task, there reopens it, since it leaves owed work, through /{project}:amend."
         ));
     }
     if !missing.is_empty() {

@@ -172,4 +172,20 @@ MUTATIONS = [
         '',
         'check_owed_work::tests::past_the_read_size_the_lists_move_to_a_file',
     ),
+    # Task 2 (AC2): a done spec owes work from its state, not from what an edit
+    # touched, so an edit to another file of the spec reopens nothing.
+    (
+        'M23 a named spec owes the boxes its data model quotes',
+        'src/primitives/check_owed_work.rs',
+        '    let tasks_path = dir.join("tasks.md");\n    let tasks = if tasks_path.is_file() {\n        Some(read_text(&tasks_path)?)',
+        '    let tasks_path = dir.join("data-model.md");\n    let tasks = if tasks_path.is_file() {\n        Some(read_text(&tasks_path)?)',
+        'check_owed_work::tests::only_an_added_criterion_or_an_appended_task_makes_a_done_spec_owe_work',
+    ),
+    (
+        'M24 an added criterion owes nothing',
+        'src/primitives/owed_work.rs',
+        'const ACCEPTANCE_CRITERIA: &str = "Acceptance Criteria";',
+        'const ACCEPTANCE_CRITERIA: &str = "Resolved Questions";',
+        'check_owed_work::tests::only_an_added_criterion_or_an_appended_task_makes_a_done_spec_owe_work',
+    ),
 ]
