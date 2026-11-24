@@ -30,6 +30,14 @@ The seed's Summary says no review ran and that code no spec claimed before its `
 
 A missing `tasks.md` holds no box; a missing `spec.md` is an error, never `owes: false`.
 
+Called with no `feature`, the result is the corpus form:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `specs` | list of `{feature, unchecked-boxes, unticked-criteria}` | Each `done` spec that owes work |
+| `examined-count` | integer | `done` specs read |
+| `skipped` | list of `{feature, reason}` | Each `done` spec whose `spec.md` or `tasks.md` could not be read, never counted as owing nothing |
+
 ## `check-unreviewed-code` result
 
 | Field | Type | Meaning |

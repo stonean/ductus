@@ -13,11 +13,11 @@ The work lands in the order the spec's Resolved Questions fix: the reopen rule f
 
 ## Technical Decisions
 
-### One owed-work test, three readers
+### One owed-work test, read everywhere
 
 `runtime/src/primitives/owed_work.rs` holds one function: given a spec's text and its `tasks.md` text, it returns the unchecked boxes and the unticked criteria. It calls the two parsers every current reader already uses: `read_tasks::unchecked_lines` (any heading, outside fences and HTML comments, 079's AC27 test) and `read_spec::parse_checkboxes` over "Acceptance Criteria". Those readers are `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features`. Because every caller already reads those two functions, no reader loses a property it enforced by construction (`QUAL-DELEG-001`).
 
-`check-owed-work` (feature in; `owes`, `unchecked-boxes`, `unticked-criteria` out) exposes it, reading the working tree. `measure-reopenings` (AC16) calls the same helper on blobs at each commit, and the CI template calls `check-owed-work` per `done` spec (AC15).
+`check-owed-work` (feature in; `owes`, `unchecked-boxes`, `unticked-criteria` out) exposes it, reading the working tree. Called with no feature, it reports every `done` spec with what each owes, and how many it examined. So the CI template's step and Family 27 each call it once, and neither parses the corpus itself (§runtime-boundary, principle 3; the agent's recommendation, adopted by the operator, 2026-11-24). `measure-reopenings` (AC16) calls the same helper on blobs at each commit.
 
 ### The reopen decision reads state, not a diff
 
@@ -120,11 +120,11 @@ A migration (`framework/migrations/project-review-record.md`, with its `framewor
 `framework/templates/ci/adopter-generators.yml`'s checkout gains `fetch-depth: 0`, with the comment §design-principles requires of a history reader, and two steps:
 
 - one runs `check-unreviewed-code` with its exit status, printing a `::warning` annotation per reported path under `warn` (AC9);
-- one runs `check-owed-work` for each `done` spec and fails naming each box and criterion (AC15).
+- one runs `check-owed-work`'s corpus form once and fails naming each `done` spec's boxes and criteria (AC15).
 
 Both honour the job's commented `working-directory`. The pinned `DUCTUS_VERSION` predates both primitives, so the pin and its sha move in the release commit that ships them (AC13).
 
-`scripts/audit/done-spec-criteria.sh` (Family 27) reads each `done` spec's `tasks.md` beside its criteria, with the AC27 test (any heading, outside fences and HTML comments). A new `scripts/tests/test-done-spec-owed-work.sh`, modelled on `test-audit-path-containment.sh`'s `new_tree` and `run_family`, proves each condition fails present and passes absent. It is run from `.github/workflows/framework-checks.yml`.
+`scripts/audit/done-spec-criteria.sh` (Family 27) calls `check-owed-work`'s corpus form in place of its inline python parse of frontmatter and criteria. It then reports a `done` spec's unchecked box as it reports its criterion, through the runtime's one test. A new `scripts/tests/test-done-spec-owed-work.sh`, modelled on `test-audit-path-containment.sh`'s `new_tree` and `run_family`, proves each condition fails present and passes absent. It is run from `.github/workflows/framework-checks.yml`.
 
 ### The status count
 
@@ -215,7 +215,7 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 ## Trade-offs
 
 - **Rejected: keeping `classify-spec-edit` to decide a reopen.** That kept the diff rule the spec replaces.
-- **Rejected: a new parse for owed work.** It would be a second copy of the two parsers four readers share.
+- **Rejected: a new parse for owed work.** It would be a second copy of the two parsers four readers share. That includes extending Family 27's inline python scan to `tasks.md`, or listing `done` specs in the CI template by parsing frontmatter, either of which §runtime-boundary principle 3 rules out.
 - **Rejected: reviewing unclaimed code inside open specs.** 081's crediting survives only as long as that does. The spec moves it to one record.
 - **Rejected: a hook that parses `.ductus/config.toml` itself.** §runtime-boundary principle 3 rules out a shell parse, and the runtime is required.
 - **Rejected: bar (c) from a hook log or the remote's push history.** See the spec's Resolved Questions.

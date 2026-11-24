@@ -8,9 +8,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [ ] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it
 - [ ] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
+- [ ] Its corpus form: with no feature, every `done` spec that owes work, `examined-count` and `skipped`
 - [ ] Test both directions and add a mutant per condition, each killed
 
-- **Done when**: `check-owed-work` reports a `done` fixture's unchecked box and unticked criterion, reports `owes: false` for one with neither, every former reader passes its own tests through the helper, and the mutants are killed.
+- **Done when**: `check-owed-work` reports a `done` fixture's unchecked box and unticked criterion, reports `owes: false` for one with neither, its corpus form names only the owing `done` specs and counts every one examined, every former reader passes its own tests through the helper, and the mutants are killed.
 
 ### 2. Amend and groom reopen from state
 
@@ -115,8 +116,8 @@ Blocked on tasks 6 to 8: it reads their window, their claim rule and the project
 
 ### 13. The CI template and the audit backstop
 
-- [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step and the `done`-spec owed-work step
-- [ ] `scripts/audit/done-spec-criteria.sh` reads `tasks.md` boxes; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
+- [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
+- [ ] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
 
 - **Done when**: AC9's CI half and AC15 hold, each step run by `scripts/run-workflow-steps.py` on a fixture fails with its condition present and passes without it.
 
