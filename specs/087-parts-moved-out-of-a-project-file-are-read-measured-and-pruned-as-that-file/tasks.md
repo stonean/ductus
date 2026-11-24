@@ -98,7 +98,7 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 - [ ] `framework/commands/prune.md`: the procedure route to `.ductus/docs/agents/`, a README or a named skill (AC13); the move proposals before the entry walk, showing the search and confirming each referrer, after which the operator may end the run with each unjudged entry reported as not examined; Scope Boundaries naming the referrer writes
 - [ ] Update `specs/041-task-pruning/data-model.md` and add the signpost in `specs/041-task-pruning/spec.md`
 
-- **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over AC14's fixture shows the search, moves the file and re-points both links on confirmation, and writes nothing when declined (AC14); the commit records each registry layout's impact (AC18).
+- **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over AC14's fixture shows the search, moves the file and re-points both links on confirmation, and writes nothing when declined (AC14); the same run ended after the move proposals reports each entry it did not judge as not examined, never as kept (AC21); the commit records each registry layout's impact (AC18).
 
 ## 9. The routing text and the constitution
 
