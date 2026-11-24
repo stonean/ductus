@@ -303,7 +303,7 @@ State management is the spec's already-resolved decision: in-memory within a run
 
 ### Error semantics and exit codes
 
-Already resolved in the spec; concrete mapping:
+Already resolved in the spec; concrete mapping. A value of its own goes only to a case a caller branches on: `2` lets `scripts/lint-procedure-parseability.sh` gate a legacy-prose command file on its allowlist while failing an invalid one (`run_parse` in `runtime/src/main.rs`), and a `sysexits.h` value gives an I/O failure the meaning a shell caller already reads (`74`, `EX_IOERR`, from `ductus exec`'s walk); every other failure is `1`, and `3` stays reserved, as below:
 
 - Exit code `0` — `complete` JSON message written; clean run.
 - Exit codes `1-127` — `error` JSON message written; primitive- or interpreter-level failure. Specific codes:
