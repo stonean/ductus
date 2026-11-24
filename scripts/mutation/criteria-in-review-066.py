@@ -131,8 +131,8 @@ MUTATIONS = [
     (
         'M17 the gate counts a ticked criterion as unticked',
         'src/primitives/check_review_gate.rs',
-        '            .filter(|(_, criterion)| !criterion.checked)\n',
-        '            .filter(|_| true)\n',
+        '    let unticked: Vec<String> = unticked_criteria_in(body)\n',
+        '    let unticked: Vec<String> = crate::primitives::read_spec::parse_checkboxes(body, "Acceptance Criteria").into_iter().enumerate().collect::<Vec<_>>()\n',
         'primitives::check_review_gate::tests::an_unticked_criterion_holds_done_after_an_unchecked_task',
     ),
     (

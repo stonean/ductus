@@ -71,6 +71,7 @@ pub(crate) fn path_key(path: &str) -> &str {
 /// Each primitive's past-the-read-size test holds its entries to the file it
 /// writes.
 const IRREGULAR_COUNTS: &[(&str, &str, Option<&str>)] = &[
+    ("check-owed-work", "examined-count", None),
     (
         "diff-cross-spec",
         "cross-spec-count",

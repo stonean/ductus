@@ -528,7 +528,7 @@ MUTATIONS = [
     (
         "M76 a comment's example box is a task",
         'src/primitives/measure_reopenings.rs',
-        'String::from_utf8(bytes).is_ok_and(|text| unchecked_lines(&text).is_empty())',
+        'String::from_utf8(bytes).is_ok_and(|text| unchecked_boxes(&text).is_empty())',
         'String::from_utf8(bytes).is_ok_and(|text| !text.contains("- [ ]"))',
         'measure_reopenings::tests::waiting_is_the_in_progress_specs_with_no_unchecked_task',
     ),
@@ -801,15 +801,15 @@ MUTATIONS = [
     (
         'M118 an unticked criterion below done is drift',
         'src/primitives/check_artifacts.rs',
-        '    if status != "done" {\n        return;\n    }\n    let unticked: Vec<&str> = criteria',
-        '    let _ = status;\n    let unticked: Vec<&str> = criteria',
+        '    if status != "done" {\n        return;\n    }\n    let unticked: Vec<&str> = unticked_criteria(criteria)',
+        '    let _ = status;\n    let unticked: Vec<&str> = unticked_criteria(criteria)',
         'check_artifacts::tests::an_unticked_criterion_below_done_is_work_in_hand',
     ),
     (
         'M119 a ticked criterion reads as unticked',
         'src/primitives/check_artifacts.rs',
-        '.filter(|criterion| !criterion.checked)\n        .map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))',
-        '.map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))',
+        'let unticked: Vec<&str> = unticked_criteria(criteria)\n',
+        'let unticked: Vec<&str> = criteria.iter().enumerate()\n',
         'check_artifacts::tests::a_done_spec_with_every_criterion_ticked_has_not',
     ),
     (
@@ -878,7 +878,7 @@ MUTATIONS = [
     (
         'M129 waiting ignores a box no numbered task holds',
         'src/primitives/measure_reopenings.rs',
-        'String::from_utf8(bytes).is_ok_and(|text| unchecked_lines(&text).is_empty())',
+        'String::from_utf8(bytes).is_ok_and(|text| unchecked_boxes(&text).is_empty())',
         'String::from_utf8(bytes).is_ok_and(|text| crate::primitives::read_tasks::parse_tasks(&text).iter().all(|task| task.subtasks.iter().all(|subtask| subtask.checked)))',
         'measure_reopenings::tests::waiting_is_the_in_progress_specs_with_no_unchecked_task',
     ),

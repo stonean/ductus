@@ -18,6 +18,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use crate::primitives::owed_work::describe_unchecked;
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, TasksStructure, checkbox, detect_tasks_structure,
     heading_is_numeric, parse_atx_heading, parse_done_when, read_text, rel_path,
@@ -195,25 +196,6 @@ fn without_tasks(content: &str, numbers: &BTreeSet<String>) -> String {
         }
     }
     kept
-}
-
-/// The unchecked boxes `content` holds, for a message: the count, and the first few.
-pub(crate) fn describe_unchecked(content: &str) -> Option<String> {
-    let lines = unchecked_lines(content);
-    let count: usize = lines.values().sum();
-    if count == 0 {
-        return None;
-    }
-    let named: Vec<&str> = lines.keys().take(3).copied().collect();
-    let more = if lines.len() > named.len() {
-        ", and more"
-    } else {
-        ""
-    };
-    Some(format!(
-        "{count} unchecked box(es): {}{more}",
-        named.join("; ")
-    ))
 }
 
 /// The count of leading whitespace characters on `line`.

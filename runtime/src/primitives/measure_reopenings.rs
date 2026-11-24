@@ -26,7 +26,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 use crate::primitives::decisions::{RULE_DECIDER, RawDecision, rendered_outcome, same_key};
-use crate::primitives::read_tasks::unchecked_lines;
+use crate::primitives::owed_work::unchecked_boxes;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, ProjectRepository, REVIEW_RECORD_FILE, Result, flatten_line,
     frontmatter_status, parse_feature_dir, split_frontmatter,
@@ -676,7 +676,7 @@ fn waiting_features(history: &mut History<'_>, at: &Commit<'_>) -> Result<Vec<St
         let no_unchecked_task = match history.file_in(*directory, TASKS_FILE)? {
             None => true,
             Some(bytes) => {
-                String::from_utf8(bytes).is_ok_and(|text| unchecked_lines(&text).is_empty())
+                String::from_utf8(bytes).is_ok_and(|text| unchecked_boxes(&text).is_empty())
             }
         };
         if no_unchecked_task {

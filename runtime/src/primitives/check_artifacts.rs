@@ -141,7 +141,7 @@ use std::path::{Component, Path, PathBuf};
 use crate::primitives::check_review_gate::cross_spec_impact_states;
 use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::line_citations;
-use crate::primitives::read_tasks::describe_unchecked;
+use crate::primitives::owed_work::{describe_unchecked, unticked_criteria};
 use crate::primitives::{
     BlockReading, MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans,
     label_criteria, list_scenario_files, parse_atx_heading, read_spec, read_tasks, read_text,
@@ -1272,10 +1272,8 @@ fn check_unticked_criteria(
     if status != "done" {
         return;
     }
-    let unticked: Vec<&str> = criteria
-        .iter()
-        .filter(|criterion| !criterion.checked)
-        .map(|criterion| criterion.label.as_deref().unwrap_or(&criterion.text))
+    let unticked: Vec<&str> = unticked_criteria(criteria)
+        .map(|(_, criterion)| criterion.label.as_deref().unwrap_or(&criterion.text))
         .collect();
     if unticked.is_empty() {
         return;

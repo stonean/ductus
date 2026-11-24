@@ -146,6 +146,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         "check-artifact-size"
         | "check-artifacts"
         | "check-departures"
+        | "check-owed-work"
         | "check-review-gate"
         | "classify-spec-edit"
         | "compute-review-scope"
@@ -239,7 +240,9 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             json!({"feature": f, "include-body": true}),
             Prep::None,
         )],
-        "prune-tasks" | "prune-plan" => vec![("`all`", json!({"all": true}), Prep::None)],
+        "prune-tasks" | "prune-plan" | "check-owed-work" => {
+            vec![("`all`", json!({"all": true}), Prep::None)]
+        }
         "check-corpus-links" => vec![(
             "`scope: repository`",
             json!({"scope": "repository"}),

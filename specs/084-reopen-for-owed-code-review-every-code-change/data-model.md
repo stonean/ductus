@@ -30,13 +30,15 @@ The seed's Summary says no review ran and that code no spec claimed before its `
 
 A missing `tasks.md` holds no box; a missing `spec.md` is an error, never `owes: false`.
 
-Called with no `feature`, the result is the corpus form:
+Called with `all` in place of `feature`, the result is the corpus form. A call names one, never both and never neither, so a call that lost its feature is refused rather than answered for the corpus (the agent's recommendation, adopted by the operator, 2026-11-24):
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `specs` | list of `{feature, unchecked-boxes, unticked-criteria}` | Each `done` spec that owes work |
 | `examined-count` | integer | `done` specs read |
-| `skipped` | list of `{feature, reason}` | Each `done` spec whose `spec.md` or `tasks.md` could not be read, never counted as owing nothing |
+| `skipped` | list of `{feature, reason}` | Each spec, at any status, the walk could not judge: untracked, linked out of the project, holding no `spec.md`, with a status that will not read, or with a file that is not UTF-8 text; never counted as owing nothing |
+
+Past the read size each form's lists move to the file `lists-file` names, each with its `-count` inline.
 
 ## `check-unreviewed-code` result
 

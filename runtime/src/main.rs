@@ -14,23 +14,23 @@ use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
-    CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
-    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
-    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs,
-    DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs,
-    MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState,
-    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
-    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
-    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs,
+    CheckPrescriptionsArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
+    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs,
+    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult,
+    DeriveReferencesArgs, DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
+    ProjectSizeState, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs,
+    ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs,
+    RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs,
+    ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
+    RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
+    StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs,
+    WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -230,6 +230,8 @@ enum Command {
     CheckArtifacts(CheckArtifactsArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_ARTIFACT_SIZE), long_about = descriptions::CHECK_ARTIFACT_SIZE)]
     CheckArtifactSize(CheckArtifactSizeArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_OWED_WORK), long_about = descriptions::CHECK_OWED_WORK)]
+    CheckOwedWork(CheckOwedWorkArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_TASKS), long_about = descriptions::PRUNE_TASKS)]
     PruneTasks(PruneTasksArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_PLAN), long_about = descriptions::PRUNE_PLAN)]
@@ -1368,6 +1370,7 @@ fn main() -> ExitCode {
         Command::CheckArtifacts(args) => {
             emit_result(primitives::check_artifacts::run(&args, &repo))
         }
+        Command::CheckOwedWork(args) => emit_result(primitives::check_owed_work::run(&args, &repo)),
         Command::CheckArtifactSize(args) => {
             let outcome = primitives::check_artifact_size::run(&args, &repo);
             if args.staged {

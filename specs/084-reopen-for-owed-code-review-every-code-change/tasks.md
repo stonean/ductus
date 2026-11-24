@@ -8,10 +8,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unchecked_task_block`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it, each keeping the half it read: `waiting_features` the boxes alone
-- [ ] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
-- [ ] Its corpus form: with no feature, every `done` spec that owes work, `examined-count` and `skipped`
-- [ ] Test both directions and add a mutant per condition, each killed
+- [x] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unchecked_task_block`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it, each keeping the half it read: `waiting_features` the boxes alone
+- [x] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
+- [x] Its corpus form: with `all`, every `done` spec that owes work, `examined-count` and `skipped`
+- [x] Test both directions and add a mutant per condition, each killed
 
 - **Done when**: `check-owed-work` reports a `done` fixture's unchecked box and unticked criterion, reports `owes: false` for one with neither, its corpus form names only the owing `done` specs and counts every one examined, every former reader passes its own tests through the helper, and the mutants are killed.
 

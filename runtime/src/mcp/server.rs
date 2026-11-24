@@ -45,14 +45,14 @@ use crate::schema::primitives::{
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
     CheckDeparturesArgs, CheckDeparturesResult, CheckOrphanedReferencesArgs,
-    CheckOrphanedReferencesResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
-    CheckPromotionCoverageArgs, CheckPromotionCoverageResult, CheckReviewGateArgs,
-    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
-    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
-    CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs, ClassifySpecEditResult,
-    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
-    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    CheckOrphanedReferencesResult, CheckOwedWorkArgs, CheckOwedWorkResult, CheckPrescriptionsArgs,
+    CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
+    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
+    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ClassifySpecEditArgs,
+    ClassifySpecEditResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
+    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
+    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
     DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
@@ -1117,6 +1117,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckArtifactsArgs>,
     ) -> Result<Json<CheckArtifactsResult>, String> {
         primitives::check_artifacts::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-owed-work",
+        description = descriptions::CHECK_OWED_WORK
+    )]
+    async fn check_owed_work(
+        &self,
+        params: Parameters<CheckOwedWorkArgs>,
+    ) -> Result<Json<CheckOwedWorkResult>, String> {
+        primitives::check_owed_work::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

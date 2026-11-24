@@ -6628,6 +6628,150 @@ pub struct ClassifySpecEditResult {
     pub reasons: Vec<SpecEditReason>,
 }
 
+// -- check-owed-work (spec 084) ----------------------------------------------
+
+/// Args for `check-owed-work`: one spec's owed work, or every `done` spec's. A call
+/// names `feature` or sets `all`, never both and never neither, so a call that lost
+/// its feature is refused rather than answered for the corpus. Read-only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckOwedWorkArgs {
+    /// Feature directory name under the configured spec root, whatever its status.
+    /// Excludes `all`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub feature: Option<String>,
+    /// Every `done` spec under the spec root, in place of one. Excludes `feature`.
+    #[serde(default)]
+    #[arg(long)]
+    pub all: bool,
+}
+
+/// One unchecked box in a spec's `tasks.md`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UncheckedBox {
+    /// The box's line, trimmed.
+    pub line: String,
+    /// How many times the line occurs.
+    pub count: usize,
+}
+
+/// One unticked acceptance criterion in a spec's `spec.md`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UntickedCriterion {
+    /// Its `AC<n>` label; absent when the criterion carries none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// Its text, continuation lines folded in.
+    pub text: String,
+}
+
+/// What one named spec owes: `check-owed-work`'s result for `feature`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OwedWorkOfSpec {
+    /// The spec read.
+    pub feature: String,
+    /// Whether it owes work: `unchecked-boxes-count` or `unticked-criteria-count`
+    /// is not zero.
+    pub owes: bool,
+    /// Each unchecked box in `tasks.md`, under any heading, outside fenced blocks
+    /// and HTML comments, in line order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unchecked_boxes: Option<Vec<UncheckedBox>>,
+    /// Entries in `unchecked-boxes`, in either form.
+    pub unchecked_boxes_count: usize,
+    /// Each unticked acceptance criterion in `spec.md`, in document order. Absent
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unticked_criteria: Option<Vec<UntickedCriterion>>,
+    /// Entries in `unticked-criteria`, in either form.
+    pub unticked_criteria_count: usize,
+}
+
+/// One `done` spec that owes work, in the corpus form.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OwedSpec {
+    /// The spec's feature directory name.
+    pub feature: String,
+    /// Its unchecked boxes, as [`OwedWorkOfSpec`] lists them.
+    pub unchecked_boxes: Vec<UncheckedBox>,
+    /// Its unticked criteria, as [`OwedWorkOfSpec`] lists them.
+    pub unticked_criteria: Vec<UntickedCriterion>,
+}
+
+/// Why the corpus form could not judge a spec.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum OwedWorkSkipReason {
+    /// Its `spec.md` is not tracked by git, as `derive-dependencies` skips one.
+    Untracked,
+    /// Its directory holds a link that leaves the project, so nothing under it
+    /// was read.
+    OutsideProject,
+    /// Its directory holds no `spec.md`.
+    NoSpecFile,
+    /// Its `spec.md` frontmatter does not parse or carries no `status`, so whether
+    /// it is `done` is unknown.
+    StatusUnreadable,
+    /// Its `spec.md` or `tasks.md` could not be read as UTF-8 text.
+    Unreadable,
+}
+
+/// A spec the corpus form could not judge, and why.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OwedWorkSkip {
+    /// The spec's feature directory name.
+    pub feature: String,
+    /// Why it was not judged.
+    pub reason: OwedWorkSkipReason,
+}
+
+/// Every `done` spec's owed work: `check-owed-work`'s result under `all`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OwedWorkOfCorpus {
+    /// Each `done` spec that owes work, in corpus order. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub specs: Option<Vec<OwedSpec>>,
+    /// Entries in `specs`, in either form.
+    pub specs_count: usize,
+    /// The `done` specs read whole, owing or not: a clean corpus reads as this
+    /// many examined, never as silence.
+    pub examined_count: usize,
+    /// Each spec not judged, at any status, with why: never counted as owing
+    /// nothing. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<OwedWorkSkip>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
+}
+
+/// Result of `check-owed-work`: one half, by the call's argument.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckOwedWorkResult {
+    /// The named spec's owed work; absent under `all`.
+    #[serde(flatten)]
+    pub spec: Option<OwedWorkOfSpec>,
+    /// Every `done` spec's; absent when a feature was named.
+    #[serde(flatten)]
+    pub corpus: Option<OwedWorkOfCorpus>,
+    /// Where the half's lists are (`unchecked-boxes` and `unticked-criteria`; under
+    /// `all`, `specs` and `skipped`): in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project root:
+    /// a JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
 // -- measure-reopenings (spec 079) -------------------------------------------
 
 /// Args for `measure-reopenings`: whether reopenings stayed within the bound on

@@ -15,7 +15,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
-use crate::primitives::read_tasks::describe_unchecked;
+use crate::primitives::owed_work::{describe_unchecked, unticked_criteria_in};
 use crate::primitives::spec_links;
 use crate::primitives::{
     PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
@@ -1404,13 +1404,10 @@ fn unchecked_task_block(feature_dir: &Path, rel_dir: &str) -> Result<Option<Verd
 /// Gate check 2's third part: `spec.md`'s body holds an unticked acceptance
 /// criterion (066 task 27), named by label or `#{index}`.
 fn unticked_criterion_block(body: &str, rel_dir: &str, project: &str) -> Option<Verdict> {
-    let unticked: Vec<String> =
-        crate::primitives::read_spec::parse_checkboxes(body, "Acceptance Criteria")
-            .iter()
-            .enumerate()
-            .filter(|(_, criterion)| !criterion.checked)
-            .map(|(index, criterion)| crate::primitives::criterion_verdicts::name(criterion, index))
-            .collect();
+    let unticked: Vec<String> = unticked_criteria_in(body)
+        .iter()
+        .map(|(index, criterion)| crate::primitives::criterion_verdicts::name(criterion, *index))
+        .collect();
     if unticked.is_empty() {
         return None;
     }

@@ -75,7 +75,7 @@ use crate::schema::extensions::{
 use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
     CheckArtifactSizeArgs, CheckArtifactsArgs, CheckCommandFlagsArgs, CheckCorpusLinksArgs,
-    CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckPrescriptionsArgs,
+    CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs, CheckPrescriptionsArgs,
     CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
     CheckStuckArgs, CheckUnfoldedSpecsArgs, ClassifySpecEditArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
@@ -1319,6 +1319,7 @@ fn dispatch_primitive(
         }
         "check-artifacts" => call!(CheckArtifactsArgs, check_artifacts),
         "check-artifact-size" => call!(CheckArtifactSizeArgs, check_artifact_size),
+        "check-owed-work" => call!(CheckOwedWorkArgs, check_owed_work),
         "prune-tasks" => call!(PruneTasksArgs, prune_tasks),
         "prune-plan" => call!(PrunePlanArgs, prune_plan),
         "prune-project" => call!(PruneProjectArgs, prune_project),
@@ -4209,6 +4210,7 @@ mod tests {
                 serde_json::json!({"feature": feature}),
             ),
             ("check-artifacts", serde_json::json!({"feature": feature})),
+            ("check-owed-work", serde_json::json!({"feature": feature})),
             (
                 "brief-re-read",
                 serde_json::json!({"feature": feature, "base": sha}),
@@ -4353,7 +4355,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 42);
+        assert_eq!(cases.len(), 43);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(
