@@ -30,7 +30,7 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 ### Where the shape is documented
 
-066's data model, section `compute-review-scope`, is the result's documented host contract, so the two fields are documented there, not in a data model of 083's own. Its **Size** paragraph's measured file-form bytes grow with the two inline counts, so they are re-measured with the release binary by the method the paragraph states. A blockquoted signpost in 066's `spec.md` links back to 083, which is the link `check-review-gate`'s cross-spec-impact check reads (`spec.md` body or a scenario). As a blockquote it induces no `dependencies:` edge, since `derive-dependencies` reads no link on a blockquote-prefixed line.
+066's data model, section `compute-review-scope`, is the result's documented host contract, so the two fields are documented there, not in a data model of 083's own. Its **Size** paragraph's measured file-form bytes grow with the two inline counts, so they are re-measured with the release binary by the method the paragraph states. A blockquoted signpost in 066's `spec.md` links back to 083, which is the link `check-review-gate`'s cross-spec-impact check reads (`spec.md` body or a scenario: `links_back` in `runtime/src/primitives/check_review_gate.rs`, and its test `a_blockquoted_signpost_discharges_the_obligation`). As a blockquote it induces no `dependencies:` edge, since `derive-dependencies` reads no link on a blockquote-prefixed line (`DERIVE_DEPENDENCIES` in `runtime/src/schema/descriptions.rs`).
 
 ## Affected Files
 
