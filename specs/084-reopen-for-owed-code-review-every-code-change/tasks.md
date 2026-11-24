@@ -142,9 +142,9 @@ Handed on from task 8, which built `check_unreviewed_code.rs`'s `project_window`
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] Step 7.3 asks the owner before a `done` spec's ticked criterion judged not met changes, corrects or unticks it, and writes `in-progress` on an untick
-- [ ] Step 10 writes `in-progress` on a deferral to the spec's own work, and records no gating finding without a disposition
-- [ ] Scope Boundaries, `framework/reference/review.md` §Criteria step and §Deferrals, and goldens re-blessed and read
+- [x] Step 7.3 asks the owner before a `done` spec's ticked criterion judged not met changes, corrects or unticks it, and writes `in-progress` on an untick
+- [x] Step 10 writes `in-progress` on a deferral to the spec's own work, and records no gating finding without a disposition
+- [x] Scope Boundaries, `framework/reference/review.md` §Criteria step and §Deferrals, and goldens re-blessed and read
 
 - **Done when**: AC3 and AC5 hold in the command and reference text, and the goldens match.
 
@@ -224,6 +224,13 @@ Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012,
 - [ ] `runtime/src/primitives/commit_attribution.rs` — inferred from `Attributor::claims`, not yet run: a subject's spec claims a commit only while the attributor's source holds that spec's directory or the commit touches it, so once a staging spec is folded, or a spec consolidated away, a commit that only names it reads as claimed by no spec at any later tree. `check-unreviewed-code` would then report its code under `unclaimed` when it lies after the project record's window start, beside the upstream spec's entry for a fold below `done`, and for a fold from `done` too. Task 9's fold fixture seeds the record after the staging spec's commits, so it does not show this. Build the fixture with the seed first, and decide from what it shows whether the project's scope leaves such a commit to the spec that took the removed one's place
 
 - **Done when**: a fixture with the seed before a staging spec's named-only commit states what the check reports after the fold, and the check either leaves that code to the upstream spec or the plan says why the project reviews it too.
+
+### 26. The exec walk leaves a `done` spec's ticked criterion judged not met
+
+- [ ] `runtime/src/interpreter/mod.rs` — `mark_each_verdict` sets every criterion to its `verifyCriteria` verdict, so under `ductus exec` a `done` spec's ticked criterion judged not met is unticked with nobody asked and no status written, against AC3 and AC5 (found by task 10, 2026-11-24). On a `done` spec, read from step 7.1's `read-spec` result in the walk's bindings, it leaves such a criterion as it is, and `write-review` still records it not met, so the record's `blocking: true` is the review-state drift `/ductus:analyze --fix` reverts: the host path's rule when nobody can be asked (the agent's recommendation, adopted by the operator, 2026-11-24)
+- [ ] `framework/commands/review.md` step 7.3 and `framework/reference/review.md` §Criteria step say what the exec walk does, and `scripts/gen-claude-commands.sh` is re-run
+
+- **Done when**: a unit test proves the exec walk keeps a `done` spec's ticked criterion judged not met ticked and still unticks an `in-progress` spec's, each failing with its behavior removed, the interpreter's mutants pass `scripts/mutation/run.py`, and `runtime/tests/golden/review-basic.jsonl` matches.
 
 ## Phase D — Delivery
 

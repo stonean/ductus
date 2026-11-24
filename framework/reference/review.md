@@ -202,6 +202,7 @@ mark the finding `auto-fixable`.
 Steps 7.1 to 7.3 judge every acceptance criterion of the spec, whatever the window holds (066's scenario `criteria-are-verified-in-review`): the criteria are the spec's contract, and the window only says what changed, so a criterion whose code no reopening touched is judged too.
 
 - **A verdict per criterion, read against the code.** Read the code a criterion's claim names, in scope or not, and drive it where it can be driven: a test's name proves only that the test exists. A met verdict's `note` is its evidence, the path and symbol and the test that proves it; a not-met verdict's says what fails. A note is one line: `write-review` refuses one that spans lines, before it writes anything. A criterion that cannot be judged, for want of code, a test or a fetched source, gets no verdict and is named in the Summary: it is never ticked, and a review stays owed while it is not judged met.
+- **On a `done` spec the owner decides first** (spec 084). A ticked criterion judged not met changes only once the owner, or an invocation told to decide, says which side is correct: when the code is, its text is corrected, it stays ticked and is recorded judged met with its new text, and the spec stays `done`; when the criterion is, it is unticked and the run reopens the spec. With nobody to ask, neither changes and the record blocks.
 - **The verdict writes the tick.** Step 7.3 ticks a met criterion and unticks a not-met one, and `write-review` records the counts, each not-met criterion and each met one's digest (`criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts`; 066's data model). A not-met verdict sets `blocking`.
 - **A not-met criterion is fixed or corrected, never waived or deferred.** It clears when the code is fixed and a review judges it met, or when the criterion is corrected or moved to the spec that owns the work (§implement-phase). The gate holds `done` while it stands unticked, so a waiver or a deferral would release nothing.
 - **A review is owed while a criterion is unjudged.** `compute-review-scope` reads `review-owed: true` while `spec.md` holds an unticked criterion, or a ticked one the last review did not judge met with its current text, and names each in `criteria-owing`; the completion gate judges none.
@@ -669,7 +670,9 @@ For a violation:
   unticked criterion. Left closed, a `done` spec's work, its tasks included, is
   complete and releases nothing.
 - **Not released**, it stays in its section with a `**Deferred**` line and
-  still holds `done`. Its decision carries the derived `gating: true`, and
+  still holds `done`. One to the spec's own work on a `done` spec reopens it,
+  as a released one does, once its task is on disk: the one status a review
+  writes on its own spec (§spec-lifecycle). Its decision carries the derived `gating: true`, and
   `check-review-gate` names it with its work where it blocks.
 
 A deferral retires when its finding stops firing. When its named work is
