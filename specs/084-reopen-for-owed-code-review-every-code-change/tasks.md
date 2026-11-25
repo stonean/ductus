@@ -206,8 +206,6 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-Waits on task 29, which runs first (owner, 2026-11-25).
-
 Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012, 021, 025, 049, 060, 062, 069 and 081) with 81 paths, the nine the plan measured, and 023 and 048 as not examined, which task 23 owns. A subject not examined blocks as reported code does, so `block` (task 19) waits on task 23 too.
 
 - [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
