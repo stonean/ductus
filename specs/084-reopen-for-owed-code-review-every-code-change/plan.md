@@ -295,7 +295,8 @@ Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md
 - **051:** fold's reopen and review reset on a `done` upstream spec, its AC24 and AC25.
 - **057:** the CI template's new steps.
 - **066:** the project record in the review record's schema, and its scenario `criteria-are-verified-in-review`'s `done`-spec exception.
-- **067:** `review-state-drift` read through the shared helper.
+- **041:** its scenario `a-suffixed-task-number-is-a-task`, whose numbering edge case no longer reports an order.
+- **067:** `review-state-drift` read through the shared helper, and task consistency blocking a repeated number, not an order.
 - **078:** its four loop primitives and its round directory take the project subject.
 - **079:** AC5, AC15, AC25 and the retirement.
 - **081:** AC10 and AC13.
