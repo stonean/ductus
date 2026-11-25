@@ -276,4 +276,18 @@ MUTATIONS = [
         '    if name == "compute-review-scope" && reviews_the_project(&bindings) && false {',
         'interpreter::tests::a_project_review_stops_at_the_scope_step',
     ),
+    (
+        'M38 a listings scope keeps no walk it made',
+        'src/primitives/check_stuck.rs',
+        '        WALK.with_borrow_mut(|walk| *walk = Some((tip, std::rc::Rc::clone(&walked))));\n',
+        '',
+        'check_stuck::tests::a_scope_keeps_the_walk_of_the_tip_last_asked_for',
+    ),
+    (
+        'M39 a listings scope answers any tip with the walk it holds',
+        'src/primitives/check_stuck.rs',
+        '                .filter(|(kept, _)| *kept == tip)\n',
+        '',
+        'check_stuck::tests::a_scope_keeps_the_walk_of_the_tip_last_asked_for',
+    ),
 ]

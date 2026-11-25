@@ -214,8 +214,10 @@ Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012,
 
 ### 24. `check-unreviewed-code --since` over the bar's window
 
-- [ ] `runtime/src/primitives/check_unreviewed_code.rs`, `runtime/src/primitives/check_stuck.rs` — `--since HEAD~30` at `3caa8357` took 41.7 s and 297 MB peak (`/usr/bin/time -l`, release build, one run): 1.4 s a commit, so bar (c)'s two weeks, about 1,300 commits by the spec's baseline, would take about 30 minutes, and `TreeListings` keeps each tip's walk and parents until the scope closes, so memory grows with every commit walked. Bound what a `since` walk keeps between commits, and measure again over a window of at least 300 commits
-- [ ] Decide whether a commit whose only unexamined subject is one `at` also fails to examine counts apart: all 30 of those commits read `not-examined`, for 023's and 048's records (task 23), so `commits-reporting` was 0
+Model: opus, with fable as advisor (owner, 2026-11-25).
+
+- [x] `runtime/src/primitives/check_unreviewed_code.rs`, `runtime/src/primitives/check_stuck.rs` — `--since HEAD~30` at `3caa8357` took 41.7 s and 297 MB peak (`/usr/bin/time -l`, release build, one run): 1.4 s a commit, so bar (c)'s two weeks, about 1,300 commits by the spec's baseline, would take about 30 minutes, and `TreeListings` keeps each tip's walk and parents until the scope closes, so memory grows with every commit walked. Bound what a `since` walk keeps between commits, and measure again over a window of at least 300 commits
+- [x] Decide whether a commit whose only unexamined subject is one `at` also fails to examine counts apart: all 30 of those commits read `not-examined`, for 023's and 048's records (task 23), so `commits-reporting` was 0
 
 - **Done when**: a `since` walk's peak memory does not grow with the commits walked, its time and memory over at least 300 commits are recorded in the commit, and AC17's fixture still passes.
 

@@ -456,10 +456,12 @@ thread_local! {
     /// The listings a [`TreeListings`] scope holds on this thread, by tree id.
     static LISTINGS: std::cell::RefCell<Option<HashMap<git2::Oid, std::rc::Rc<Listing>>>> =
         const { std::cell::RefCell::new(None) };
-    /// The walks a [`TreeListings`] scope holds on this thread, by the commit
-    /// each started from.
-    static WALKS: std::cell::RefCell<HashMap<git2::Oid, std::rc::Rc<Walked>>> =
-        std::cell::RefCell::new(HashMap::new());
+    /// The walk a [`TreeListings`] scope holds on this thread, of the tip last
+    /// asked for: each holds the whole of that tip's history, so keeping one per
+    /// tip grew `check-unreviewed-code --since`, which checks a new tip at every
+    /// commit it walks, with every commit walked.
+    static WALK: std::cell::RefCell<Option<(git2::Oid, std::rc::Rc<Walked>)>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// One walk of a commit's history: its commits newest first, each after every
@@ -470,7 +472,8 @@ struct Walked {
 }
 
 /// Every commit `tip` reaches, itself first, each after every commit descended
-/// from it. Walked once per [`TreeListings`] scope and tip, and afresh outside one.
+/// from it. Walked once while `tip` is a [`TreeListings`] scope's tip, and afresh
+/// outside one.
 ///
 /// # Errors
 ///
@@ -529,7 +532,9 @@ pub(crate) fn commits_between(
 
 /// A scope in which [`feature_entry_in_tree`] reads each tree below a commit's
 /// root once, whatever the number of lookups, and [`history_of`] and
-/// [`commits_between`] walk a commit's history once.
+/// [`commits_between`] walk a commit's history once while it is the tip they are
+/// asked for. One tip's walk is kept at a time, and asking for another replaces
+/// it, so a caller alternating tips walks again at each change.
 ///
 /// A walk asking for one spec's file at every commit of history reads the spec
 /// root's tree each time, and libgit2 keeps no tree of that size in its cache, so
@@ -574,13 +579,18 @@ impl TreeListings {
         Some(listing)
     }
 
-    /// The scope's walk of `tip`'s history, made on first use; `None` outside a
-    /// scope.
+    /// The scope's walk of `tip`'s history, made when `tip` is not the tip whose
+    /// walk the scope holds, which it then replaces; `None` outside a scope.
     fn walked(repo: &Repository, tip: git2::Oid) -> Result<Option<std::rc::Rc<Walked>>> {
         if !Self::is_open() {
             return Ok(None);
         }
-        if let Some(walked) = WALKS.with_borrow(|walks| walks.get(&tip).cloned()) {
+        let kept = WALK.with_borrow(|walk| {
+            walk.as_ref()
+                .filter(|(kept, _)| *kept == tip)
+                .map(|(_, walked)| std::rc::Rc::clone(walked))
+        });
+        if let Some(walked) = kept {
             return Ok(Some(walked));
         }
         let mut walk = repo.revwalk()?;
@@ -597,7 +607,7 @@ impl TreeListings {
             order: std::rc::Rc::new(order),
             parents,
         });
-        WALKS.with_borrow_mut(|walks| walks.insert(tip, std::rc::Rc::clone(&walked)));
+        WALK.with_borrow_mut(|walk| *walk = Some((tip, std::rc::Rc::clone(&walked))));
         Ok(Some(walked))
     }
 
@@ -635,7 +645,7 @@ impl Drop for TreeListings {
     fn drop(&mut self) {
         if self.opened {
             LISTINGS.with_borrow_mut(|listings| *listings = None);
-            WALKS.with_borrow_mut(HashMap::clear);
+            WALK.with_borrow_mut(|walk| *walk = None);
         }
     }
 }
@@ -1410,9 +1420,59 @@ mod tests {
             LISTINGS.with_borrow(Option::is_none),
             "and ends with its own value"
         );
-        assert!(WALKS.with_borrow(HashMap::is_empty));
+        assert!(WALK.with_borrow(Option::is_none));
         assert_eq!(*history_of(&repo, tip).unwrap(), walk(None));
         assert_eq!(commits_between(&repo, tip, commits[1]).unwrap().len(), 2);
+    }
+
+    /// A scope keeps the walk of the tip last asked for, and no other: a tip
+    /// asked again is not walked again, an ancestor asked next is walked as
+    /// itself and takes the tip's place, and each answer is a plain walk's.
+    #[test]
+    fn a_scope_keeps_the_walk_of_the_tip_last_asked_for() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let mut commits = Vec::new();
+        for n in 0..4 {
+            write(&tmp.path().join("f.txt"), &format!("{n}\n"));
+            commits.push(commit_all(&repo, &format!("commit {n}")));
+        }
+        let plain = |tip: git2::Oid, hide: Option<git2::Oid>| {
+            let mut walk = repo.revwalk().unwrap();
+            walk.push(tip).unwrap();
+            if let Some(hide) = hide {
+                walk.hide(hide).unwrap();
+            }
+            walk.set_sorting(Sort::TOPOLOGICAL).unwrap();
+            walk.map(|oid| oid.unwrap()).collect::<Vec<_>>()
+        };
+        let kept = || WALK.with_borrow(|walk| walk.as_ref().map(|(tip, _)| *tip));
+        let (tip, ancestor) = (commits[3], commits[2]);
+        let _scope = TreeListings::open();
+        let first = history_of(&repo, tip).unwrap();
+        assert_eq!(*first, plain(tip, None));
+        assert!(
+            std::rc::Rc::ptr_eq(&first, &history_of(&repo, tip).unwrap()),
+            "a tip asked again is not walked again"
+        );
+        assert_eq!(*history_of(&repo, ancestor).unwrap(), plain(ancestor, None));
+        assert_eq!(
+            kept(),
+            Some(ancestor),
+            "the ancestor's walk takes the tip's place"
+        );
+        let mut between = commits_between(&repo, ancestor, commits[0]).unwrap();
+        between.sort();
+        let mut walked = plain(ancestor, Some(commits[0]));
+        walked.sort();
+        assert_eq!(between, walked);
+        let again = history_of(&repo, tip).unwrap();
+        assert_eq!(*again, plain(tip, None));
+        assert!(
+            !std::rc::Rc::ptr_eq(&first, &again),
+            "the tip's walk was not kept beside the ancestor's"
+        );
+        assert_eq!(kept(), Some(tip));
     }
 
     #[test]
