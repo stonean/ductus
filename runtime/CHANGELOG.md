@@ -31,6 +31,89 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   `review.md`'s `## Summary`, or that the scope had no window, and the record
   gains no field. A project whose commit subjects never name a spec now sees
   how much of its code no spec claimed.
+- **Whether a spec owes work is one primitive, `check-owed-work` (spec 084,
+  AC2 and AC15; the agent's recommendations, adopted by the operator,
+  2026-11-24).** It reports `owes`, each unchecked box in a spec's
+  `tasks.md`, under any heading and outside fences and HTML comments, and each
+  unticked acceptance criterion in its `spec.md`. With `all` in place of
+  `feature` it lists every `done` spec that owes work, how many it examined,
+  and each spec it could not judge with why; a call naming neither, or both,
+  is refused. `check-artifacts`' review-state drift, `check-review-gate`, the
+  refusal `write-review` and `write-analysis` share while a task is open, and
+  `measure-reopenings` read the same test.
+- **`check-unreviewed-code` reports the code no review is going to read
+  (spec 084, AC4, AC8 and AC17; the agent's recommendations, adopted by the
+  operator, 2026-11-24).** At a commit, `HEAD` by default, and from that
+  commit's tree and history alone, it lists the code each `done` spec's
+  commits changed after its review window starts, and the code commits no
+  spec claims changed after the project record's window starts; code an
+  `in-progress` spec claims is left to that spec's gate. A subject it cannot
+  read, for a shallow history, a record that does not parse, a `spec.md`
+  missing or stating no status, or a commit holding no project record, is
+  `not-examined` with its reason, never clean. `[review] unreviewed-push` in
+  `.ductus/config.toml`, `"block"` or `"warn"` and `block` when absent, sets
+  the CLI's exit status: under `block` it exits 1 when it finds code or
+  cannot examine a subject, and under `warn` it prints the same report and
+  exits 0; any other value fails naming the key and the file. With `since`
+  it walks the first-parent commits back to that ref and counts those at
+  which it finds code, and apart those at which it cannot examine a subject.
+- **A pre-push hook ships beside the pre-commit hook (spec 084, AC8).**
+  `/ductus` installs `.githooks/ductus-pre-push`, which it updates on every
+  run unless the file is pinned, and a `.githooks/pre-push` stub it never
+  overwrites, which calls it. For each ref a push updates the hook runs
+  `check-unreviewed-code --at` the commit it pushes, and nothing for a ref the
+  push deletes, and exits as the check does. A missing runtime halts the push,
+  naming `--no-verify`, whatever the key says. Claude's seed grants the
+  `chmod` that makes both files executable.
+- **Code no spec claims is reviewed under one project record (spec 084, AC6
+  and AC14; the agent's recommendations, adopted by the operator,
+  2026-11-24).** `write-review` called with no `feature` writes
+  `{specs-root}/review.md`, in the review record's schema with
+  `spec: project`, no criteria fields and no `reviewed-digest`. Its scope is
+  the code that commits no spec claims changed after the record's window
+  starts, read from `HEAD`'s committed tree. `seed` writes the record's seed
+  alone, `last-run: null` with `reviewed-against` at `HEAD`, and leaves an
+  existing record as it is. `process-waivers`, `process-decisions`,
+  `start-fix-rounds`, `brief-re-read`, `read-re-read` and
+  `check-prescriptions` take the same absent `feature`, with the fix rounds
+  under `.ductus/review-rounds/project/` and the record left out of them.
+  `/ductus:review --project` runs that review, reading its window from
+  `check-unreviewed-code`'s `unclaimed`, and `--all` ends with it; under
+  `ductus exec` the walk stops at its scope step and says to run it through
+  the host.
+- **An update seeds the project record and reports the backlog (spec 084,
+  AC20; the agent's recommendations, adopted by the operator, 2026-11-24).**
+  Migration `project-review-record` writes the seed once, and a fresh install
+  writes it too, so the window for code no spec claims starts after the
+  commit carrying the install or update. The migration then runs
+  `check-unreviewed-code` once and reports each `done` spec it names with its
+  path count, and `[review] unreviewed-push` with its two values. It writes no
+  configuration, so a project with a backlog updates to `block`, and its
+  first push after the update stops until that code is reviewed or the key
+  reads `"warn"`.
+- **The adopter CI template fails on owed work and on unreviewed code (spec
+  084, AC9 and AC15).** `framework/templates/ci/adopter-generators.yml`
+  checks out full history and gains two steps. `Done specs owe no work` runs
+  `check-owed-work`'s corpus form and fails naming each `done` spec whose
+  `tasks.md` holds an unchecked box or whose `spec.md` an unticked criterion.
+  `No code is left unreviewed` runs `check-unreviewed-code` under
+  `[review] unreviewed-push`, failing under `block` and passing under `warn`
+  with a warning for each reported path and each subject not examined. The
+  template's pinned runtime predates both primitives, so the pin moves in
+  the release that ships them.
+- **`/ductus:status` shows the code left unreviewed (spec 084, AC9).**
+  `dashboard` gains an `unreviewed-code` block, `check-unreviewed-code`'s
+  `state`, `done-spec-count`, `path-count` and `unclaimed-path-count` at
+  `HEAD`, with a `reason` on `not-examined`, and the pipeline view renders it
+  as an `Unreviewed code:` line before the `Reopenings:` line on every run.
+- **`measure-reopenings` says whether each reopening ever owed work (spec
+  084, AC16; the agent's recommendation, adopted by the operator,
+  2026-11-25).** Each closed reopening with a start gains `held-owed-work`:
+  whether a commit inside it that touched the spec's directory left its
+  `tasks.md` holding an unchecked box or its `spec.md` an unticked criterion,
+  by `check-owed-work`'s test. A `no-in-progress-commit` entry carries none.
+  `never-owed-count` counts the closed reopenings, counted or not, whose
+  `held-owed-work` is false, and `dashboard`'s `reopenings` block carries it.
 
 ### Changed
 
@@ -80,6 +163,76 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   tree holds that a spec's name, or a task filed in it, is no evidence that it
   owns the code. Breaking for a consumer matching `sources-examined` or a
   candidate's `source` against the three earlier values.
+- **A `done` spec reopens only while it owes work (spec 084, AC1, AC2, AC10,
+  AC19 and AC21; the owner's decisions of 2026-11-23, and the agent's
+  recommendations, adopted by the operator, 2026-11-24).** §spec-lifecycle's
+  *Backward via owed code* replaces the third back-edge and the correction
+  and mechanical classes: a `done` spec is `in-progress` exactly while its
+  `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion.
+  `/ductus:amend`, `/ductus:groom`, `/ductus:fold` and `/ductus:prune`, and a
+  deferral to a `done` spec from `/ductus:analyze`, `/ductus:review` or
+  `/ductus:implement`, reopen it only when `check-owed-work` reports owed
+  work, so an edit to a scenario's text, a data model or prose leaves it
+  `done`. A fold resets the upstream spec's review record only when it
+  reopens it. `/ductus:analyze --fix` no longer sets a `done` spec back for a
+  scenario's open question, which stays a blocking finding and still holds
+  `done` at the gate. §bug-handling's fourth route adds a scenario only when
+  the requirement needs more precision, and §drift-prevention states the
+  mechanical-sweep rule, which the analysis record's freshness and the review
+  record's digest still read.
+- **BREAKING: a review's window starts where the spec's last review ended,
+  whether or not the spec reopened since (spec 084, AC7; the agent's
+  recommendations, adopted by the operator, 2026-11-24).**
+  `compute-review-scope` no longer starts the window at the reopen when the
+  last review that read its scope ended before it, so code committed while
+  the spec was `done` stays in the next review's scope; when the commit finishing that review
+  also took the spec out of `done`, the window starts at its parent. A `done`
+  spec no review has recorded starts after the commit that set it `done` or
+  added it as `done`, and `base-source` reads the new `reached-done` there,
+  where it read `reopen`, or `none` for a spec never `in-progress`. A held
+  record whose `reviewed-against` names no commit the repository holds moves
+  no start, and a shallow clone that cannot place the new start is an error.
+  Breaking for a consumer matching `base-source` against its earlier values,
+  and for a window that now reaches back past the reopen.
+- **BREAKING: code no spec claims leaves every open spec's scope (spec 084,
+  AC6; the agent's recommendations, adopted by the operator, 2026-11-24).**
+  `compute-review-scope` lists the paths a commit no spec claims changed in
+  `excluded`, unless a commit of the spec's own also changed them, and they
+  owe that spec no review, since the project record's review reads them. The
+  credit 0.60.0 added, through which a committed review's `unread` released
+  such a path, is gone, and `commits-unclaimed` still counts those commits. A
+  fix round no longer counts an unclaimed commit's paths as the reviewed
+  spec's own, so its rounds and its scope agree. Breaking for a consumer
+  reading an open spec's scope or `review-owed` for code naming no spec.
+- **`/ductus:review` of a `done` spec asks before a ticked criterion changes,
+  and reopens the spec for owed work (spec 084, AC3 and AC5; the agent's
+  recommendations, adopted by the operator, 2026-11-24).** Step 7.3 puts a
+  ticked criterion judged not met to the owner, or decides and says so in the
+  commit when told to: when the code is correct the criterion's text is
+  corrected, stays ticked and is recorded judged met with its new text, and
+  when the code is wrong it is unticked and the review writes `in-progress`.
+  Step 10 puts each MUST or SHOULD violation no flag or stored decision
+  disposes of to the owner, to be fixed, waived or deferred, and a deferral
+  to the spec's own work appends a task and writes `in-progress`. Where
+  nobody can be asked, as under `ductus exec`, such a criterion stays ticked
+  and such a finding is recorded undispositioned, so the record blocks,
+  review-state drift that `/ductus:analyze --fix` reverts.
+
+### Removed
+
+- **BREAKING: `classify-spec-edit` is retired (spec 084, AC12; the agent's
+  recommendation, adopted by the operator, 2026-11-24).** Its diff classes
+  decided a reopen, which `check-owed-work` now decides from the spec's
+  state, so no command calls it. The runtime serves it on neither the CLI nor
+  MCP, `framework/runtime-tools.txt` lists none, and its allow entry joins
+  `RETIRED_ALLOW`, which now holds 32, so `/ductus:configure` revokes it from
+  an existing settings file. The mechanical-sweep rule it read stays.
+  Breaking for a caller of the tool.
+- **BREAKING: `check-artifact-size` names no per-fix reopen (spec 084,
+  AC18).** Each fix's `on-done` is gone, with its values: no size fix leaves
+  an unchecked box or an unticked criterion, so a `done` spec's warning
+  states once that a fix reopens the spec only if it leaves one. Breaking for
+  a consumer reading `fixes[].on-done`.
 
 ### Fixed
 

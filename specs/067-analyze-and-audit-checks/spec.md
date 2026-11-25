@@ -17,6 +17,8 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added the `check-departures` primitive and its `Departure entries (blocking)` family to the analyze checks, and the report's `## Waived rules` section.
 >
 > **Signpost:** [050 — Constitution](../050-constitution/spec.md)'s AC24 forbids a line-number citation in a spec artifact and removes this repository's existing ones. AC5's `line-number-citations` family is the check that enforces it, and reports an adopter's when that spec's analysis next runs.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) moved `review-state-drift`'s unchecked-box and unticked-criterion conditions onto the owed-work test `check-owed-work` exposes, the one test every command reads to decide a reopen.
 
 ## Motivation
 

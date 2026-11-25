@@ -14,6 +14,14 @@ next-criterion: 15
 > the `.githooks` value an earlier `/ductus` wrote from a subdirectory. At the
 > repository root `{P}` is empty and every path in this spec is unchanged.
 > AC2, AC5, AC6, AC9 and AC12 carry the narrowing.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md)
+> shipped a pre-push hook pair beside this spec's pre-commit pair, split the
+> same way: `.githooks/ductus-pre-push`, which `/ductus` overwrites unless it
+> is pinned, and the `.githooks/pre-push` stub it installs once, which calls
+> it. For each ref a push updates, the hook runs `check-unreviewed-code` at
+> the commit it pushes and exits as the check does: blocking by default, and
+> warning under `[review] unreviewed-push = "warn"`.
 
 Split the adopter pre-commit hook into two files so `/ductus` can keep its generators in sync without ever overwriting code the adopter added to their own pre-commit hook.
 

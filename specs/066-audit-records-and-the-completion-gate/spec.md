@@ -36,6 +36,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md)'s AC6 added two refusals to `write-analysis`: a gating finding at a design subject of the spec recorded deferred to its own `tasks.md`, and one recorded undispositioned at a subject a fixed finding of the run cites. [data-model.md](data-model.md) states them.
 >
 > **Signpost:** [083 — Commits are attributed to specs without a subject convention](../083-commits-are-attributed-to-specs-without-a-subject-convention/spec.md) added `commits-examined` and `commits-unclaimed` to `compute-review-scope`'s result, inline in both forms, and a line stating them to the `## Summary` `write-review` renders. [data-model.md](data-model.md) states the fields and the file form's size with them.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) added a project record in the review record's schema: `{specs-root}/review.md`, the latest review of the code no spec claims, with `spec: project`, no criteria fields, no `reviewed-digest`, no status and no gate. `write-review` writes it when called with no feature, and its seed with `seed`. On a `done` spec, scenario `criteria-are-verified-in-review`'s untick waits on the owner saying which side is correct, as that scenario's Behavior states.
 
 ## Motivation
 

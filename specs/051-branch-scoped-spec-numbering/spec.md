@@ -14,6 +14,8 @@ next-criterion: 38
 A second numbering form for feature directories, scoped to the branch that creates them: a spec created on a story branch is numbered from a branch identifier (`1234.1-slug`, `1234.2-slug`, …) instead of the sequential three-digit scheme, and the specs so numbered are folded back into their upstream home when the branch merges.
 
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) settled what AC24's review reads: its scope holds the code of a spec folded below `done`, wherever the window starts, since no review has read it, and one that reached `done` had its code read by its own review.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) changed fold's reopen. A fold sets a `done` upstream spec `in-progress`, and resets its review record, only when `check-owed-work` reports that the fold left an unchecked box or an unticked criterion, and `check-unreviewed-code` reports under the upstream spec the code a staging spec folded below `done` brought. AC24 and AC25 carry the narrowing.
 
 ## Motivation
 

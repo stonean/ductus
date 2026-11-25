@@ -18,6 +18,8 @@ it, how it is structured, and what reaches adopters through it.
 > **Signpost:** [082](../082-rule-assessments-converge-across-runs/spec.md) added four fields to the analyze record row of §text-first-artifacts, `rule-verdicts`, `unjudged-rules`, `rule-digest` and `section-digest`, which hold a run's stored rule verdicts, the rules it left unjudged and what the verdicts were judged over.
 >
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) added a bullet to §brownfield-inbox's Finding dispositions (a departure entry waives its rule before any finding exists) and cut two restated sentences from its Three dispositions bullet (the inbox is not a disposition; a question is deferred with its trigger), each stated in §design-principles and §spec-requirements.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) amended the constitution. §spec-lifecycle's *Backward via owed code* replaced the third back-edge and the correction and mechanical classes: a `done` spec is `in-progress` exactly while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, read from that state and never from an edit's diff. §drift-prevention now states the mechanical-sweep rule, and §bug-handling's fourth route adds a scenario only when the requirement needs more precision.
 
 ## Ownership
 

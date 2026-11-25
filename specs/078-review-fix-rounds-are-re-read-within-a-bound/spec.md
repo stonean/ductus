@@ -12,6 +12,8 @@ cross-spec-impact: [020-code-review, 066-audit-records-and-the-completion-gate]
 > **Signpost:** `079-review-and-analysis-work-converges` changed this loop: a round drops a path only another spec's commits changed, its brief leaves out exempt paths even in a mixed round, and a first `write-review` marks the loop open until the last clears it. See [079](../079-review-and-analysis-work-converges/spec.md).
 >
 > **Signpost:** [067 — Analyze and Audit Checks](../067-analyze-and-audit-checks/spec.md)'s AC6 has an analysis fix a gating finding at a design subject of the spec in hand in the run, so analyze's re-check reads that design edit beside its chores, and the loop still covers review's fixes only.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) gave the loop a project subject. With no feature, `start-fix-rounds`, `brief-re-read`, `read-re-read` and `check-prescriptions` run the rounds of the review of code no spec claims, under `.ductus/review-rounds/project/`, and those rounds leave `{specs-root}/review.md` out as a feature's rounds leave out its own record.
 
 ## Motivation
 

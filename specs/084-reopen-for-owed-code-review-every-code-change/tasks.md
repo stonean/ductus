@@ -283,10 +283,10 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 078, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
-- [ ] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
-- [ ] 079's `data-model.md` §`measure-reopenings`: its `reopenings` and `not-counted` rows name `held-owed-work`, and its counts row and its sentence on what `dashboard` carries name `never-owed-count`, as tasks 15 and 29 leave them (the agent's recommendation, adopted by the operator, 2026-11-25)
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]` entries for every change adopters see (AC13)
+- [x] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 078, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
+- [x] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
+- [x] 079's `data-model.md` §`measure-reopenings`: its `reopenings` and `not-counted` rows name `held-owed-work`, and its counts row and its sentence on what `dashboard` carries name `never-owed-count`, as tasks 15 and 29 leave them (the agent's recommendation, adopted by the operator, 2026-11-25)
+- [x] `runtime/CHANGELOG.md` `[Unreleased]` entries for every change adopters see (AC13)
 
 - **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 084 and no new finding on the thirteen, and the changelog names each primitive added and retired.
 

@@ -25,6 +25,14 @@ instead of two.
 > still not a triage surface: AC13 holds, and the deciding happens in the run.
 > AC12, AC14, the Motivation's routing claim, and the first Resolved Question
 > are annotated in place.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md)
+> added two steps to the shipped CI template after its audit-record gate
+> (AC17), and gave its checkout full history for them. One, named
+> `Done specs owe no work`, fails on a `done` spec whose `tasks.md` holds an
+> unchecked box or whose `spec.md` holds an unticked criterion. The other,
+> `No code is left unreviewed`, runs `check-unreviewed-code` and follows
+> `[review] unreviewed-push` as the pre-push hook does.
 
 ## Motivation
 

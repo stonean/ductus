@@ -9,6 +9,8 @@ next-criterion: 17
 
 `/{project}:implement` commits a task's code together with that task's tick in `tasks.md`, so the commit touches the spec's directory and is attributed to the spec by the rule that already reads directories, whatever its subject says. `compute-review-scope` reports how many of a window's commits no spec claimed, so code that nothing attributed is visible rather than silent.
 
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) moved the code of a commit no spec claims out of every open spec's scope, to the review of a project record. AC13's `commits-examined` and `commits-unclaimed` are unchanged, and an unclaimed commit's paths are listed in `excluded`.
+
 ## Motivation
 
 - **An adopter's subjects could never name a spec.** An adopter reported on 2026-11-23 that its git host rejects any subject not matching `^\d+ - \S`, a pre-receive hook enforcing a work-item id. At `0db66fcc`, `subject_scope_forms` in `runtime/src/primitives/commit_attribution.rs` read a spec only from a subject's leading `kind(scope)` and named none when the text before the first `(` held whitespace, so `123 - fix(022): x` named no spec. The adopter measured its four repositories with `git log --since=2026-10-01 --format=%s` and `grep -cE`: of 2,152 subjects, none matched `^[^ (]+\(`, the form the parser read, and 1,483 named a spec as `^[0-9]+ - [0-9]{3}(\.[0-9]+)?[:,( ]`. Those repositories are outside this one, so the figures are the adopter's and were not re-derived here.
