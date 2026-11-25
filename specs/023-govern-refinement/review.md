@@ -138,7 +138,7 @@ decisions:
     decided-by: rule
   - key: "convention: Permission Setup's closing rationale against a prompt on every bootstrap stands beside the Windows configured binary's per-run digest prompt — `framework/bootstrap/ductus.md`"
     outcome: waived
-    reason: the agent's recommendation, adopted by the operator, 2026-11-21: that prompt over a trailing wildcard or no entry, and the same paragraph states it
+    reason: "the agent's recommendation, adopted by the operator, 2026-11-21: that prompt over a trailing wildcard or no entry, and the same paragraph states it"
     decided-at: 2026-11-22T04:14:13Z
     decided-by: rule
   - key: "other: the pinned certutil -hashfile .ductus/bin/ductus.exe SHA256, a Git Bash relative path, is unmeasured on Windows, where the measurement harness passes a cygpath -w path — `framework/bootstrap/ductus.md`"
