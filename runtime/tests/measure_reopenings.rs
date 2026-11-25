@@ -127,6 +127,8 @@ fn seed_every_kind(dir: &Path, repository: &Repository) {
         &[
             ("spec.md", &spec("planned")),
             ("spec.md", &in_progress),
+            ("tasks.md", "# Tasks\n\n## 1. A\n\n- [ ] a\n"),
+            ("tasks.md", "# Tasks\n\n## 1. A\n\n- [x] a\n"),
             ("review.md", &record(first, "")),
             ("analysis.md", &record(first, "")),
             ("spec.md", &done),
@@ -213,11 +215,14 @@ fn every_kind_of_reopening_is_reported_and_status_shows_the_counts() {
     assert_eq!(result["closed-count"], 6);
     assert_eq!(result["over-bound-count"], 1);
     assert_eq!(result["not-counted-count"], 2);
+    assert_eq!(result["never-owed-count"], 3);
     assert_eq!(result["waiting-count"], 1);
     assert_eq!(result["runs"], 7);
     assert_eq!(result["form"], "inline");
     let reopenings = &result["reopenings"];
     assert_eq!(entry(reopenings, "001-within")["over-bound"], false);
+    assert_eq!(entry(reopenings, "001-within")["held-owed-work"], true);
+    assert_eq!(entry(reopenings, "002-over")["held-owed-work"], false);
     assert_eq!(entry(reopenings, "002-over")["over-bound"], true);
     assert_eq!(
         entry(reopenings, "003-after-a-gating-finding")["over-bound"],

@@ -198,7 +198,7 @@ Handed on from task 9: the check took 2.0 s here at `3caa8357` (5,071 commits, 7
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] `measure_reopenings`' `held-owed-work` and `never-owed-count`, with a fixture for each direction
+- [x] `measure_reopenings`' `held-owed-work` and `never-owed-count`, with a fixture for each direction
 
 - **Done when**: AC16 holds, and `measure-reopenings --since 2026-11-11 --at 47cae941` reproduces the estimate's 74 never-owed reopenings or the commit names why it differs.
 

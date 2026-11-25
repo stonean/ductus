@@ -86,6 +86,7 @@ const IRREGULAR_COUNTS: &[(&str, &str, Option<&str>)] = &[
     ),
     ("measure-reopenings", "closed-count", None),
     ("measure-reopenings", "over-bound-count", None),
+    ("measure-reopenings", "never-owed-count", None),
     ("prune-tasks", "kept-count", None),
     ("prune-tasks", "removed-count", None),
 ];

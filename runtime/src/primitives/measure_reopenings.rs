@@ -15,6 +15,12 @@
 //! spec's history starts at the rename. A reopening squashed into one commit shows no
 //! pass: when its status moves to `done` from another status it is reported as not
 //! counted, and from `done` to `done` nothing can show it.
+//!
+//! Each counted reopening also says whether it held owed work (spec 084, AC16): whether a
+//! version of the spec's directory the walk observes inside it, at each commit that
+//! touched the directory from its start to its closing commit, held an unchecked box in
+//! `tasks.md` or an unticked criterion in `spec.md`, by the owed-work test. A box added
+//! and ticked in one commit shows none.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -26,7 +32,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 use crate::primitives::decisions::{RULE_DECIDER, RawDecision, rendered_outcome, same_key};
-use crate::primitives::owed_work::unchecked_boxes;
+use crate::primitives::owed_work::{unchecked_boxes, unticked_criteria_in};
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, ProjectRepository, REVIEW_RECORD_FILE, Result, flatten_line,
     frontmatter_status, parse_feature_dir, split_frontmatter,
@@ -76,6 +82,7 @@ pub fn run(args: &MeasureReopeningsArgs, repo: &Path) -> Result<MeasureReopening
         closed_count: counts.closed_count,
         over_bound_count: counts.over_bound_count,
         not_counted_count: counts.not_counted_count,
+        never_owed_count: counts.never_owed_count,
         waiting_count: counts.waiting_count,
         runs: counts.runs,
         form: ListsForm::Inline,
@@ -143,6 +150,7 @@ impl Measurement {
             closed_count: self.reopenings.len() + self.not_counted.len(),
             over_bound_count: self.reopenings.iter().filter(|r| r.over_bound).count(),
             not_counted_count: self.not_counted.len(),
+            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count(),
             waiting_count: self.waiting.len(),
             runs: self.reopenings.iter().map(|r| r.reviews + r.analyses).sum(),
             reason: None,
@@ -483,6 +491,10 @@ struct History<'a> {
     reviews: HashMap<Oid, RecordState>,
     analyses: HashMap<Oid, RecordState>,
     held: HashMap<Oid, Rc<Held>>,
+    /// Whether a `tasks.md` blob holds an unchecked box.
+    boxes_owed: HashMap<Oid, bool>,
+    /// Whether a `spec.md` blob holds an unticked criterion.
+    criteria_owed: HashMap<Oid, bool>,
 }
 
 impl<'a> History<'a> {
@@ -495,7 +507,35 @@ impl<'a> History<'a> {
             reviews: HashMap::new(),
             analyses: HashMap::new(),
             held: HashMap::new(),
+            boxes_owed: HashMap::new(),
+            criteria_owed: HashMap::new(),
         }
+    }
+
+    /// Whether one version of a feature directory owes work by the owed-work test
+    /// (spec 084): its `tasks.md` holds an unchecked box or its `spec.md` an unticked
+    /// criterion, each half read once per blob. A file that cannot be read, not UTF-8
+    /// or a `spec.md` whose frontmatter does not split, shows no work, so a reopening no
+    /// readable version showed owing work counts as never owed, the bar's defect, and
+    /// never as one that held work.
+    fn owes_work(&mut self, directory: Oid) -> Result<bool> {
+        let tree = self.repository.find_tree(directory)?;
+        Ok(blob_holds(
+            self.repository,
+            &tree,
+            TASKS_FILE,
+            &mut self.boxes_owed,
+            |text| !unchecked_boxes(text).is_empty(),
+        )? || blob_holds(
+            self.repository,
+            &tree,
+            SPEC_FILE,
+            &mut self.criteria_owed,
+            |text| {
+                split_frontmatter(text, Path::new(SPEC_FILE))
+                    .is_ok_and(|(_, body)| !unticked_criteria_in(body).is_empty())
+            },
+        )?)
     }
 
     /// The key and outcome of every decision either record of a feature directory
@@ -662,6 +702,30 @@ fn record_in<T: DeserializeOwned>(
     Ok(state)
 }
 
+/// Whether the file named `name` in a feature directory's `tree` passes `test`,
+/// through `cache`: `false` when the file is absent or not UTF-8.
+fn blob_holds(
+    repository: &Repository,
+    tree: &Tree<'_>,
+    name: &str,
+    cache: &mut HashMap<Oid, bool>,
+    test: fn(&str) -> bool,
+) -> Result<bool> {
+    let Some(entry) = tree.get_name(name) else {
+        return Ok(false);
+    };
+    if entry.kind() != Some(ObjectType::Blob) {
+        return Ok(false);
+    }
+    if let Some(cached) = cache.get(&entry.id()) {
+        return Ok(*cached);
+    }
+    let blob = repository.find_blob(entry.id())?;
+    let holds = std::str::from_utf8(blob.content()).is_ok_and(test);
+    cache.insert(entry.id(), holds);
+    Ok(holds)
+}
+
 /// The `in-progress` specs at `at` with no unchecked task, by the grammar every
 /// tasks reader shares, so a template's example box inside a comment is no task. A
 /// spec with no `tasks.md` has none. One that is not UTF-8 cannot be read, so it is
@@ -692,6 +756,8 @@ struct OpenPass {
     reviews: Vec<Run>,
     analyses: Vec<Run>,
     unreadable: bool,
+    /// A version of the directory the walk observed for it owed work.
+    held_owed: bool,
 }
 
 impl OpenPass {
@@ -701,6 +767,7 @@ impl OpenPass {
             reviews: Vec::new(),
             analyses: Vec::new(),
             unreadable: false,
+            held_owed: false,
         }
     }
 
@@ -797,6 +864,7 @@ impl OpenPass {
             reviews: reviews.len(),
             analyses: analyses.len(),
             over_bound: over_bound(&reviews) || over_bound(&analyses),
+            held_owed_work: self.held_owed,
             decisions_by_person: reviews
                 .iter()
                 .chain(&analyses)
@@ -897,6 +965,7 @@ fn walk(
                 continue;
             };
             pass.observe(&history.records_of(*directory)?, commit.id());
+            pass.held_owed = pass.held_owed || history.owes_work(*directory)?;
             let entered = status.as_deref() == Some(IN_PROGRESS) && !any_parent(IN_PROGRESS);
             let left_done =
                 status.as_deref() != Some(DONE) && any_parent(DONE) && !any_parent(IN_PROGRESS);
@@ -1089,6 +1158,7 @@ mod tests {
                 reviews: 1,
                 analyses: 1,
                 over_bound: false,
+                held_owed_work: false,
                 decisions_by_person: 0,
                 run_decisions: vec![
                     RunDecisions {
@@ -2250,6 +2320,91 @@ mod tests {
     }
 
     /// Past the read size the lists move to a file and their counts stay inline.
+    /// A spec at `status` whose one criterion is ticked or not.
+    fn spec_with_criterion(status: &str, ticked: bool) -> String {
+        let mark = if ticked { 'x' } else { ' ' };
+        format!(
+            "{}\n## Acceptance Criteria\n\n- [{mark}] AC1: one\n",
+            spec(status)
+        )
+    }
+
+    /// Write `bytes` as `file` under the spec and commit it.
+    fn commit_bytes(fixture: &Fixture, file: &str, bytes: &[u8]) {
+        std::fs::write(fixture.root.join("specs").join(FEATURE).join(file), bytes).unwrap();
+        commit_all(&fixture.repository, "work(012): bytes");
+    }
+
+    #[test]
+    fn a_box_open_at_a_middle_commit_is_owed_work_though_ticked_by_the_end() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        fixture.commit("tasks.md", "## 1. One\n\n- [ ] a\n");
+        fixture.commit("tasks.md", "## 1. One\n\n- [x] a\n");
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.status("done");
+        assert!(fixture.only_reopening().held_owed_work);
+        assert_eq!(fixture.measure().counts().never_owed_count, 0);
+    }
+
+    #[test]
+    fn a_criterion_unticked_at_a_middle_commit_is_owed_work_though_ticked_by_the_end() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        fixture.commit("spec.md", &spec_with_criterion("in-progress", false));
+        fixture.commit("spec.md", &spec_with_criterion("in-progress", true));
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.commit("spec.md", &spec_with_criterion("done", true));
+        assert!(fixture.only_reopening().held_owed_work);
+    }
+
+    /// The box inside a comment is the tasks template's example, which a reset
+    /// `tasks.md` holds and the owed-work test does not read.
+    #[test]
+    fn a_reopening_never_owing_work_is_counted_and_one_not_counted_is_not() {
+        let fixture = Fixture::new();
+        fixture.status("in-progress");
+        fixture.commit(
+            "tasks.md",
+            "## 1. One\n\n- [x] a\n\n<!--\n- [ ] an example\n-->\n",
+        );
+        fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        fixture.status("done");
+        fixture.status("in-progress");
+        fixture.status("done");
+        let measurement = fixture.measure();
+        assert_eq!(measurement.reopenings.len(), 1, "{measurement:?}");
+        assert!(!measurement.reopenings[0].held_owed_work);
+        assert_eq!(measurement.not_counted.len(), 1, "{measurement:?}");
+        assert_eq!(measurement.counts().never_owed_count, 1);
+    }
+
+    #[test]
+    fn a_file_that_cannot_be_read_shows_no_work() {
+        let unreadable_tasks = Fixture::new();
+        unreadable_tasks.status("in-progress");
+        commit_bytes(
+            &unreadable_tasks,
+            "tasks.md",
+            b"## 1. One\n\n- [ ] a \xff\n",
+        );
+        unreadable_tasks.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        unreadable_tasks.status("done");
+        assert!(!unreadable_tasks.only_reopening().held_owed_work);
+
+        let unsplit_spec = Fixture::new();
+        unsplit_spec.status("in-progress");
+        commit_bytes(
+            &unsplit_spec,
+            "spec.md",
+            b"---\nstatus: in-progress\n\n## Acceptance Criteria\n\n- [ ] AC1: one\n",
+        );
+        unsplit_spec.status("in-progress");
+        unsplit_spec.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
+        unsplit_spec.status("done");
+        assert!(!unsplit_spec.only_reopening().held_owed_work);
+    }
+
     #[test]
     fn a_result_past_the_read_size_moves_its_lists_to_a_file() {
         let fixture = Fixture::new();
@@ -2298,5 +2453,6 @@ mod tests {
         assert_eq!(result.form, ListsForm::Inline);
         assert_eq!(result.reopenings.map(|list| list.len()), Some(1));
         assert_eq!(result.runs, 1);
+        assert_eq!(result.never_owed_count, 1);
     }
 }

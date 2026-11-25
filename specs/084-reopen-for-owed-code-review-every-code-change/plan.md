@@ -168,7 +168,7 @@ Both honour the job's commented `working-directory`. The pinned `DUCTUS_VERSION`
 
 ### Measuring the bar
 
-`measure_reopenings::OpenPass` gains `held_owed`, ORed at every commit the walk observes for the open pass. It reads `spec.md` and `tasks.md` at that directory version through `file_in` and the owed-work helper, memoized per blob as `statuses` is. `Reopening` carries `held-owed-work`, and `ReopeningCounts` carries `never-owed-count` over closed reopenings, `not-counted` ones outside it (AC16). Bar (c) is `check-unreviewed-code --since` (above).
+`measure_reopenings::OpenPass` gains `held_owed`, ORed at every commit the walk observes for the open pass. It reads `spec.md` and `tasks.md` at that directory version through `blob_holds` and the owed-work helper, memoized per blob as `statuses` is. A file that is not UTF-8, or a `spec.md` whose frontmatter does not split, shows no work, so an unread version counts toward never owed, the bar's defect, never toward held work. `Reopening` carries `held-owed-work`, and `ReopeningCounts` carries `never-owed-count` over closed reopenings, `not-counted` ones outside it (AC16). Bar (c) is `check-unreviewed-code --since` (above).
 
 ### Retiring `classify-spec-edit`
 

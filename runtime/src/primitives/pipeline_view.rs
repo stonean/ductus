@@ -1797,6 +1797,7 @@ mod tests {
             closed_count: 12,
             over_bound_count: 1,
             not_counted_count: 2,
+            never_owed_count: 4,
             waiting_count: 3,
             runs: 20,
             reason: reason.map(str::to_string),

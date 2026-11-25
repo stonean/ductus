@@ -6970,6 +6970,11 @@ pub struct Reopening {
     pub analyses: usize,
     /// A second or later run of a kind followed a run that left no gating finding.
     pub over_bound: bool,
+    /// A commit inside it that touched the spec's directory, its start and closing
+    /// commit among them, left `tasks.md` holding an unchecked box or `spec.md` an
+    /// unticked criterion (spec 084, AC16). A box added and ticked in one commit
+    /// shows none, and so does a file that cannot be read.
+    pub held_owed_work: bool,
     /// Stored decisions and waivers stamped with one of its runs' times that a person
     /// recorded; a decline with no reason stores nothing, so it counts as none, and a
     /// decision another spec's record already held counts in that record alone.
@@ -7037,6 +7042,9 @@ pub struct MeasureReopeningsResult {
     pub over_bound_count: usize,
     /// Entries in `not-counted`, in either form.
     pub not_counted_count: usize,
+    /// Entries in `reopenings` that never held owed work, in either form; a
+    /// `not-counted` reopening is outside it.
+    pub never_owed_count: usize,
     /// Entries in `waiting`, in either form.
     pub waiting_count: usize,
     /// Review and analysis runs in `reopenings`, in either form.
@@ -7066,6 +7074,8 @@ pub struct ReopeningCounts {
     pub over_bound_count: usize,
     /// See [`MeasureReopeningsResult::not_counted_count`].
     pub not_counted_count: usize,
+    /// See [`MeasureReopeningsResult::never_owed_count`].
+    pub never_owed_count: usize,
     /// See [`MeasureReopeningsResult::waiting_count`].
     pub waiting_count: usize,
     /// See [`MeasureReopeningsResult::runs`].
