@@ -97,15 +97,21 @@ fn step_prose(command: &str, step: &str) -> String {
         .to_string()
 }
 
-/// Spec 079, AC17: in each command's fix-and-route step, the one sentence that
-/// reaches `gate-confirm` is about a gating finding's deferral. The step is
-/// prose the host walks, so its text is what there is to hold. It stays prose,
-/// which `ductus exec` no-ops, so an exec run writes no disposition.
+/// Spec 079, AC17: in each command's fix-and-route step, each sentence that
+/// reaches `gate-confirm` is about a gating finding's deferral: review's a
+/// broken contract, or on a `done` spec a MUST or SHOULD violation (spec 084).
+/// The step is prose the host walks, so its text is what there is to hold. It
+/// stays prose, which `ductus exec` no-ops, so an exec run writes no
+/// disposition.
 #[test]
 fn a_fix_and_route_step_asks_a_person_only_about_a_gating_deferral() {
     for (command, step, gating) in [
-        ("review", "10", "contract"),
-        ("analyze", "19", "`blocking`"),
+        (
+            "review",
+            "10",
+            &["contract", "MUST or SHOULD violation"][..],
+        ),
+        ("analyze", "19", &["`blocking`"][..]),
     ] {
         let prose = step_prose(command, step);
         assert!(prose.contains("`by-rule`"), "{command}: {prose}");
@@ -119,7 +125,7 @@ fn a_fix_and_route_step_asks_a_person_only_about_a_gating_deferral() {
         );
         for sentence in &confirming {
             assert!(
-                sentence.contains("deferr") && sentence.contains(gating),
+                sentence.contains("deferr") && gating.iter().any(|g| sentence.contains(g)),
                 "{command}: {sentence}"
             );
         }
