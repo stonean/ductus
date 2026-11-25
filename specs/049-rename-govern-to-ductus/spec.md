@@ -145,7 +145,7 @@ The relationship ran the other way too: 048's remaining migration entry and this
 - [x] AC4: Re-running that migration against an already-converged project is a no-op
 - [x] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
 - [x] AC5: An adopter who has not yet re-run the bootstrap is not silently broken: either their existing installation keeps working, or they are told what to run, with the message naming the command
-- [x] AC6: Published release tags, their attached assets, and CHANGELOG entries describing past releases are left exactly as written
+- [x] AC6: Published release tags and their attached assets are left exactly as written, and CHANGELOG entries describing past releases keep their wording, except where `AGENTS.md`'s rule never to record another project's name replaced one with a description of its shape
 - [x] AC12: The retired crate is left installable rather than yanked, and its final published release describes the new name
 - [x] AC13: The first release under the new name continues the existing version series rather than restarting it, and the version-agreement audit family passes across the `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading
 - [x] AC7: The self-audit families that assert installer, registry, namespace, and host-namespace parity pass under the new name with no family disabled or exempted
