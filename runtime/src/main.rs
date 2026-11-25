@@ -10,6 +10,7 @@ use std::io::{self, Write as _};
 use ductus::io::warn;
 use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
+use ductus::schema::config_keys::display_text;
 use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
@@ -507,16 +508,21 @@ fn unreviewed_code_lines(
                        commits: usize,
                        paths: &[String],
                        deleted: &[String]| {
+        let label = display_text(&label);
         lines.push(format!(
             "{name}: {label}: {} path(s) changed by {commits} commit(s) after {} with no committed review",
             paths.len() + deleted.len(),
             start.get(..8).unwrap_or(start)
         ));
-        lines.extend(paths.iter().map(|path| format!("{name}:   {path}")));
+        lines.extend(
+            paths
+                .iter()
+                .map(|path| format!("{name}:   {}", display_text(path))),
+        );
         lines.extend(
             deleted
                 .iter()
-                .map(|path| format!("{name}:   {path} (deleted)")),
+                .map(|path| format!("{name}:   {} (deleted)", display_text(path))),
         );
     };
     for spec in &checked.done_specs {
@@ -537,12 +543,13 @@ fn unreviewed_code_lines(
             &code.deleted,
         );
     }
-    lines.extend(
-        checked
-            .not_examined
-            .iter()
-            .map(|skip| format!("{name}: {} was not examined: {}", skip.subject, skip.reason)),
-    );
+    lines.extend(checked.not_examined.iter().map(|skip| {
+        format!(
+            "{name}: {} was not examined: {}",
+            display_text(&skip.subject),
+            display_text(&skip.reason)
+        )
+    }));
     if !lines.is_empty() {
         lines.push(match found.mode {
             UnreviewedPushMode::Block => format!(
@@ -1749,6 +1756,42 @@ mod tests {
         assert_eq!(
             warned[6],
             "check-unreviewed-code: `[review] unreviewed-push = \"warn\"`: reported, not blocked"
+        );
+    }
+
+    /// A committed path or subject holding a newline, a carriage return, a
+    /// tab or a terminal escape is shown escaped, never raw (`BE-INPUT-011`).
+    #[test]
+    fn the_unreviewed_code_report_escapes_a_hostile_path_and_subject() {
+        use ductus::primitives::check_unreviewed_code::Checked;
+        use ductus::schema::primitives::{
+            UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode,
+        };
+        let checked = Checked {
+            done_specs: vec![UnreviewedDoneSpec {
+                feature: "002-b".into(),
+                window_start: "b".repeat(40),
+                paths: vec!["src/a\nforged\r\u{1b}[31m\tx.rs".into()],
+                deleted: vec!["src/g\none.rs".into()],
+                commits: 1,
+            }],
+            not_examined: vec![UnreviewedNotExamined {
+                subject: "00\n3-c".into(),
+                reason: "no\u{1b}[0m record".into(),
+            }],
+            ..Checked::default()
+        };
+        let lines = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Block, checked), "acme");
+        assert_eq!(lines.len(), 5, "no line was forged: {lines:?}");
+        for line in &lines {
+            assert!(
+                !line.chars().any(char::is_control),
+                "raw control character in {line:?}"
+            );
+        }
+        assert_eq!(
+            lines[1],
+            "check-unreviewed-code:   src/a\\u000Aforged\\u000D\\u001B[31m\\u0009x.rs"
         );
     }
 

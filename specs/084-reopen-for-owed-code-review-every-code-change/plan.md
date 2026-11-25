@@ -271,17 +271,18 @@ Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'
 
 ## Cross-spec impact
 
-Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md`, read by `check-artifacts`' cross-spec-impact drift as discharging. For 079 and 081 it sits under `## See also`, where `derive-dependencies` induces no edge, since this spec's body links both and an edge back would close a cycle. The owed back-links:
+Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md`, which `check-artifacts` reads as discharging it. For 079 and 081 it sits under `## See also`, where `derive-dependencies` induces no edge, since this spec's body links both and an edge back would close a cycle. The owed back-links:
 
 - **018:** the pre-push hook beside its pre-commit hook.
 - **020:** the review command's `--project` flag and its status write.
 - **022:** the `dashboard` count and the configuration key.
+- **026:** its AC20 and Family 27 scenario name the file and label, not a line.
 - **046:** `--fix`'s revert on a scenario's open question, its AC23 and AC30.
 - **050:** the constitution's new rule.
 - **051:** fold's reopen and review reset on a `done` upstream spec, its AC24 and AC25.
 - **057:** the CI template's new steps.
 - **066:** the project record in the review record's schema, and its scenario `criteria-are-verified-in-review`'s `done`-spec exception.
-- **041:** its scenario `a-suffixed-task-number-is-a-task`, whose numbering edge case no longer reports an order.
+- **041:** its scenario `a-suffixed-task-number-is-a-task`, whose edge case no longer reports an order.
 - **067:** `review-state-drift` read through the shared helper, and task consistency blocking a repeated number, not an order.
 - **078:** its four loop primitives and its round directory take the project subject.
 - **079:** AC5, AC15, AC25 and the retirement.

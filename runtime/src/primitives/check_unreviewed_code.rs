@@ -37,12 +37,12 @@ use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
     frontmatter_status, is_project_artifact, read_text,
 };
-use crate::schema::paths;
 use crate::schema::primitives::{
     CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult, ListsForm, UnreviewedCodeCounts,
     UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode, UnreviewedState,
     UnreviewedUnclaimed,
 };
+use crate::schema::{config_keys, paths};
 
 const PRIMITIVE: &str = "check-unreviewed-code";
 
@@ -362,6 +362,7 @@ pub(crate) fn unreviewed_push(repo: &Path) -> Result<UnreviewedPushMode> {
         path: path.clone(),
         source,
     })?;
+    config_keys::warn_unknown_keys(&path, &content, &["review"]);
     let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {
         path: path.clone(),
         problem,
@@ -840,7 +841,7 @@ impl DoneSubject<'_> {
         let window = commits_between(repository, self.at.id(), Oid::from_str(&start)?)?;
         let mut changed: BTreeSet<String> = BTreeSet::new();
         let mut folded = Vec::new();
-        let mut commits = 0;
+        let mut giving: BTreeSet<Oid> = BTreeSet::new();
         for oid in window {
             let commit = repository.find_commit(oid)?;
             // The diff is read only for a commit that may be this spec's, or
@@ -877,20 +878,23 @@ impl DoneSubject<'_> {
                 .filter(|path| !is_project_artifact(path, self.specs_root))
                 .filter(|path| !in_hand.contains(path))
                 .collect();
-            commits += usize::from(!own.is_empty());
+            if !own.is_empty() {
+                giving.insert(oid);
+            }
             changed.extend(own);
         }
         let in_tree = |path: &str| holds(self.project, self.tree, path);
-        let brought = match fold.brought(self.at.id(), &in_tree, &folded) {
+        // Code alone, so a staging commit that brought only artifacts gives
+        // the spec no path and is not counted among the commits that did.
+        let code_in_tree =
+            |path: &str| !is_project_artifact(path, self.specs_root) && in_tree(path);
+        let (brought, bringing) = match fold.brought(self.at.id(), &code_in_tree, &folded) {
             Ok(brought) => brought,
             Err(PrimitiveError::ShallowHistory { .. }) => return Ok(Err(SHALLOW.into())),
             Err(error) => return Err(error),
         };
-        changed.extend(
-            brought
-                .into_iter()
-                .filter(|path| !is_project_artifact(path, self.specs_root)),
-        );
+        changed.extend(brought);
+        giving.extend(bringing);
         if changed.is_empty() {
             return Ok(Ok(None));
         }
@@ -900,7 +904,7 @@ impl DoneSubject<'_> {
             window_start: start,
             paths,
             deleted,
-            commits,
+            commits: giving.len(),
         })))
     }
 }
@@ -1784,6 +1788,9 @@ mod tests {
                 "src/t.rs",
                 "feat(1234.1): its code",
             );
+            // A staging commit that brought only a project artifact gives the
+            // upstream spec no path, so it is not among the commits counted.
+            change(tmp.path(), &repository, "AGENTS.md", "docs(1234.1): a note");
             if status != "in-progress" {
                 put(
                     tmp.path(),
@@ -1807,6 +1814,10 @@ mod tests {
             if brought {
                 assert_eq!(paths, [&strings(&["src/t.rs"])[..]], "{status}");
                 assert_eq!(found.done_specs[0].feature, "002-b");
+                // One staging commit brought `src/t.rs` and one only `AGENTS.md`:
+                // `commits` counts the commits that gave the spec a path, these
+                // included, and not one that gave it none.
+                assert_eq!(found.done_specs[0].commits, 1, "{status}");
             } else {
                 assert!(paths.is_empty(), "{status}: {paths:?}");
             }

@@ -83,7 +83,7 @@ run_check "Family 23 — sweep-target manifest parity" "scripts/audit/sweep-targ
 run_check "Family 24 — rename-sweep residue" "scripts/audit/rename-sweep-residue.sh"
 run_check "Family 25 — unbalanced inline markup" "scripts/audit/unbalanced-inline-markup.sh"
 run_check "Family 26 — broken relative links" "scripts/audit/broken-relative-links.sh"
-run_check "Family 27 — done-spec unchecked criteria" "scripts/audit/done-spec-criteria.sh"
+run_check "Family 27 — done-spec owed work" "scripts/audit/done-spec-criteria.sh"
 run_check "Family 28 — audit family registry parity" "scripts/audit/audit-family-parity.sh"
 run_check "Family 29 — permission wildcard position" "scripts/audit/permission-wildcard-position.sh"
 run_check "Family 30 — command flag/hint parity" "scripts/audit/command-flag-hint-parity.sh"

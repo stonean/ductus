@@ -198,7 +198,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
     };
     let mut seen: Vec<(String, String, Option<String>)> = Vec::new();
     // Read only when a waiver carries the marker, so a record with none depends on nothing
-    // else. The first marked waiver reads the spec, which this function has found to exist.
+    // else. The first marked waiver reads a feature's `spec.md`; the project record has none.
     let mut entries: Option<Vec<departures::Entry>> = None;
 
     for (index, waiver) in waivers.iter().enumerate() {

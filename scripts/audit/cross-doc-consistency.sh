@@ -40,8 +40,8 @@
 #       from `BACK_EDGES`, a bullet with no such form, or no bullets at all,
 #       is a finding.
 #
-#       Comparison: framework/commands/amend.md (which owns the back-edges per
-#       spec 014) and framework/commands/target.md (which surfaces their
+#       Comparison: framework/commands/amend.md (which takes both back-edges,
+#       the edge into `draft` its alone, per spec 014) and framework/commands/target.md (which surfaces their
 #       next-action implications) must each match a loose presence regex for
 #       the edge into `draft` and for the edge into `in-progress`. The regexes
 #       are phrasing heuristics — they accept several wordings and do not
@@ -233,8 +233,8 @@ sub_1c() {
   #   * done → in-progress                      (owed code: an unchecked task
   #                                              or an unticked criterion, set
   #                                              by the command that writes it)
-  # Both should be referenced from framework/commands/amend.md (which owns
-  # the back-edges) and framework/commands/target.md (which surfaces the
+  # Both should be referenced from framework/commands/amend.md (which takes
+  # both, the edge into draft its alone) and framework/commands/target.md (which surfaces the
   # next-action implications).
   local consumers=("framework/commands/amend.md" "framework/commands/target.md")
   for c in "${consumers[@]}"; do

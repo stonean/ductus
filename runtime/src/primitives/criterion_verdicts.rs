@@ -11,7 +11,7 @@ use crate::primitives::Result;
 use crate::schema::primitives::{AcceptanceCriterion, ReviewBlock};
 
 /// A criterion's text without its `AC{n}:` label, so assigning a label leaves
-/// both an edit's classification (079 AC15) and a verdict where they were.
+/// a verdict where it was.
 pub(crate) fn text(criterion: &AcceptanceCriterion) -> String {
     let unlabelled = criterion
         .label

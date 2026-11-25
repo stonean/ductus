@@ -15,7 +15,7 @@ This vocabulary is deliberately separate from the inbox router's five routes (`r
 
 ## Reopening a `done` upstream spec
 
-Folding into a `done` spec sets it to `in-progress` only when the fold leaves it owing work — an unchecked box in its `tasks.md` or an unticked criterion in its `spec.md` — which `check-owed-work` reports after the fold's writes (§spec-lifecycle), so the fold adds no new transition (AC25, superseded in part by spec 084). A scenario route always leaves its task; a body-edit fold leaves owed work only when the folded text adds a criterion, and one that adds none leaves the upstream spec `done`.
+Folding into a `done` spec sets it to `in-progress` only when the fold leaves it owing work — an unchecked box in its `tasks.md` or an unticked criterion in its `spec.md` — which `check-owed-work` reports after the fold's writes (§spec-lifecycle), so the fold adds no new transition (AC25, superseded in part by spec 084). A scenario route always leaves its task; a body-edit fold leaves owed work when the folded text adds a criterion or the branch-scoped spec carries a scenario, whose task step 8 appends, and one that leaves neither leaves the upstream spec `done`.
 
 - **Only from `done`.** Any other status is left unchanged; the fold never advances a status.
 - **Guarded.** `set-status`'s `from: done` argument surfaces a discrepancy rather than overwriting it.

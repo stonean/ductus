@@ -17,6 +17,8 @@
 #   F. the owed-work step fails on an unticked criterion, naming it
 #   G. the unreviewed-code step fails on code no spec claims under "block"
 #   H. the same passes under "warn", with a warning naming the path
+#   I. the template's checkout fetches full history, read from the template,
+#      since the runner skips `uses` steps and so no case above runs it
 #
 # The template's steps run through scripts/run-workflow-steps.py from a copy
 # in each fixture, so the fixture is the repository it runs in, with this
@@ -156,6 +158,13 @@ printf '[paths]\nspecs-root = "specs"\n\n[review]\nunreviewed-push = "warn"\n' >
 run_template "$dir"
 step "H: the same passes under warn" PASS "No code is left unreviewed"
 logged "H: with a warning naming the path" '^::warning::no committed review covers src/a\.rs$'
+
+# The checkout step's own `with:` block, so a `fetch-depth: 0` elsewhere cannot pass it.
+if grep -A3 -E 'uses: actions/checkout@' "$REPO_ROOT/framework/templates/ci/adopter-generators.yml" | grep -qE '^ +fetch-depth: 0$'; then
+  pass "I: the template's checkout fetches full history"
+else
+  fail "I: the template's checkout fetches full history: no fetch-depth: 0 in the checkout step of framework/templates/ci/adopter-generators.yml"
+fi
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures done-spec owed-work case(s) failed." >&2

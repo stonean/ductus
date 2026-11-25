@@ -20,8 +20,10 @@
 //!   reverts to `draft` in the same atomic write as the append — never a
 //!   window where the body holds an unresolved question but the status
 //!   still claims otherwise. `done` is excluded (§spec-lifecycle, spec
-//!   014): a `done` spec reopens via the scenario route, not a question,
-//!   so a question appended to a `done` spec leaves its status untouched.
+//!   014): a `done` spec reopens only while it owes work, from a
+//!   scenario's task or an added criterion (spec 084), never from a
+//!   question, so a question appended to a `done` spec leaves its status
+//!   untouched.
 //!   Scenario targets have no status field and never back-edge.
 //! - **Section creation**: a missing `## Open Questions` section is
 //!   created per the template order — immediately before
@@ -358,8 +360,9 @@ mod tests {
     #[test]
     fn done_spec_appends_question_without_back_edge() {
         // §spec-lifecycle / spec 014: a question is not a back-edge out of
-        // `done` (that route is the scenario reopen). The question is
-        // recorded but the status stays `done`.
+        // `done`, which reopens only while the spec owes work (a scenario's
+        // task or an added criterion, spec 084). The question is recorded
+        // but the status stays `done`.
         let tmp = tempdir().unwrap();
         seed_spec(
             tmp.path(),

@@ -32,7 +32,7 @@ whether a *checked* criterion's paths exist, which is the opposite direction.
 ## Behavior
 
 A new `/audit` family reports every spec at `status: done` that carries at
-least one unchecked acceptance criterion, anchored to `file:line` with the
+least one unchecked acceptance criterion, anchored to its file with the
 criterion's label so the reader can go straight to it.
 
 The check is exact rather than heuristic: the subject is a checkbox in a known

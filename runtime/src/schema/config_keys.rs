@@ -289,15 +289,24 @@ fn key_text(key: &str) -> String {
 /// newline or a terminal escape in it must not forge a line (`BE-INPUT-011`).
 /// A backslash is left alone: on Windows it is the path separator.
 fn path_text(path: &Path) -> String {
-    let mut text = String::new();
-    for c in path.display().to_string().chars() {
+    display_text(&path.display().to_string())
+}
+
+/// `text` with every display hazard escaped as [`path_text`] does: a newline,
+/// a carriage return, a tab, a terminal escape or a bidirectional control in a
+/// committed path or name must not forge a report line or restyle the terminal
+/// (`BE-INPUT-011`). A backslash is left alone.
+#[must_use]
+pub fn display_text(text: &str) -> String {
+    let mut shown = String::new();
+    for c in text.chars() {
         if is_display_hazard(c) {
-            push_escaped(&mut text, c);
+            push_escaped(&mut shown, c);
         } else {
-            text.push(c);
+            shown.push(c);
         }
     }
-    text
+    shown
 }
 
 /// A character shown escaped rather than raw: a line hazard, a tab, or a

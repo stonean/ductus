@@ -282,11 +282,13 @@ fn strip_numeric_formats(value: &mut Value) {
 /// `extract-archive` decompresses entire archives — the same
 /// worker-pinning hazard, so they take the same seam. The git-walk tools
 /// (`check-stuck`, `compute-review-scope`, `derive-boundary`,
-/// `diff-cross-spec`, `measure-reopenings`) run a full-history `libgit2` revwalk that is likewise
+/// `diff-cross-spec`, `measure-reopenings`, `check-unreviewed-code`) run a
+/// full-history `libgit2` revwalk that is likewise
 /// CPU-bound and unbounded in a large adopter repo, so they route here too,
 /// as do `check-review-gate`, which shells out to the markdown linter and
 /// reads history for its rename exemption, `dashboard` and `render-status`,
-/// which blame the inbox for its oldest item and measure reopenings,
+/// which blame the inbox for its oldest item, measure reopenings and walk the
+/// history for unreviewed code,
 /// `merge-status-hook`, which waits on `claude --version` under its probe
 /// timeout. `write-session`, `resolve-session` and
 /// `retarget-sessions` wait on the sessions lock for up to ten seconds, so

@@ -57,4 +57,4 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 ## Cross-spec impact
 
-- **066 — Audit Records and the Completion Gate** owes the data-model sync above. The data-model edit reopens it (`done → in-progress`), and because the change is confined to artifacts it owes an analysis and no review (081). Its signpost discharges 083's `cross-spec-impact:` entry.
+- **066 — Audit Records and the Completion Gate** owes the data-model sync above. The rule then in force counted the data-model edit as a reopen (`done → in-progress`), a rule spec 084 has since replaced, and because the change is confined to artifacts it owed an analysis and no review (081). Its signpost discharges 083's `cross-spec-impact:` entry.

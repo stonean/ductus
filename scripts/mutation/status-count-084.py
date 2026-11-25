@@ -39,7 +39,7 @@ MUTATIONS = [
     (
         'M4 the view leaves the line out',
         'src/primitives/pipeline_view.rs',
-        '    items.push(whole(unreviewed_line(data.unreviewed, project)));\n',
+        '    let unreviewed = unreviewed_line(data.unreviewed, project);\n    items.push(match data.unreviewed.state {\n        UnreviewedState::NotExamined => cut(\n            unreviewed,\n            Cut::UnreviewedCode,\n            format!(\n                "Unreviewed code: ? not examined · {} path(s) found in what was examined",\n                data.unreviewed.path_count\n            ),\n        ),\n        UnreviewedState::None | UnreviewedState::Found => whole(unreviewed),\n    });\n',
         '',
         'dashboard::tests::the_unreviewed_code_block_is_the_check_at_head_in_each_state pipeline_view::tests::the_summary_is_one_item_per_line_and_ends_with_the_one_target_hint',
     ),

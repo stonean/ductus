@@ -13,7 +13,7 @@ Your AI coding agent works from the feature in front of it — its spec, plan, a
 - **A reviewer that already knows security, accessibility, and performance.** `/review` audits every feature against the [rules](#rules) your project loads, and every finding quotes the rule it came from by a permanent ID, so a finding can be argued with rather than taken on faith.
 - **Your standards are enforced, not suggested.** A rule written into a prompt is one the agent may follow. A `ductus` MUST violation holds the feature out of `done` until it is fixed, waived with a recorded reason, or deferred where its deferral releases it ([§Deferrals](framework/reference/review.md#deferrals)), and the waiver expires when the code it excused changes.
 - **"Done" means done.** A feature reaches `done` only after its review and analysis have run and every finding has been fixed, deferred to where the work belongs, or waived with its reason. Both records state what they did not examine, so a check that could not run never passes for a clean one.
-- **Every bug makes the project sharper.** A bug that exposes a missing rule becomes one, so every later review checks for it; a bug in specified behavior becomes a scenario recording what correct looks like.
+- **Every bug makes the project sharper.** A bug that exposes a missing rule becomes one, so every later review checks for it; a bug in specified behavior is fixed against the criterion that describes it, and adds a scenario recording what correct looks like only where the requirement needs more precision.
 - **Your business rules stay written down.** The spec records what each feature does and why it was built that way, and it stays accurate after the code ships — reasoning that otherwise ends up scattered across chat threads, wiki pages, and closed tickets.
 
 ## Quick start
@@ -98,7 +98,7 @@ Each entry below says what the command **does**; the section it links to says wh
   - [`/review`](docs/slash-commands.md#review--reviewmd-and-a-hold-on-done-while-violations-stand) — analyze the code against the applicable rules, and block `done` on violations
   - [`/analyze`](docs/slash-commands.md#analyze--a-report-of-where-a-features-own-artifacts-disagree) — audit a feature's artifacts against each other: drifted checkboxes, stale reviews, dead links
 - **Refine — adjust a spec's artifacts**
-  - [`/amend`](docs/slash-commands.md#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — add a question or scenario to a spec, reopening it if its status requires
+  - [`/amend`](docs/slash-commands.md#amend--a-question-scenario-or-criterion-recorded-with-the-lifecycle-back-edge-taken) — add a question, scenario or criterion to a spec, reopening it if it then owes work
 - **Destructive — these remove content**
   - [`/prune`](docs/slash-commands.md#prune--spent-tasks-and-plan-sections-outside-the-design-record) — drop completed task sections from `tasks.md`, or with `--reset` reset it to template state, pending tasks included; move the durable pieces of each plan section outside the design record home, then remove the section; `--all` repeats it for every spec; `--project` moves each entry of the four project files to its home
   - [`/fold`](docs/slash-commands.md#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory

@@ -160,8 +160,8 @@ MUTATIONS = [
     (
         'M21 a configuration that does not parse is read as holding no key',
         'src/primitives/check_unreviewed_code.rs',
-        '    let config: toml::Table = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {\n        path: path.clone(),\n        source,\n    })?;\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
-        '    let config: toml::Table = toml::from_str(&content).unwrap_or_default();\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
+        '    let config: toml::Table = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {\n        path: path.clone(),\n        source,\n    })?;\n    config_keys::warn_unknown_keys(&path, &content, &["review"]);\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
+        '    let config: toml::Table = toml::from_str(&content).unwrap_or_default();\n    config_keys::warn_unknown_keys(&path, &content, &["review"]);\n    let invalid = |problem: String| PrimitiveError::InvalidUnreviewedPush {',
         'check_unreviewed_code::tests::the_mode_is_block_unless_the_key_says_warn_and_any_other_value_is_an_error',
     ),
     (
@@ -331,5 +331,53 @@ MUTATIONS = [
         '.map_or_else(|_| "{project}".to_string(), |host| host.project);',
         '.map_or_else(|_| "ductus".to_string(), |host| host.project);',
         '--test check_unreviewed_code_cli the_block_report_keeps_the_placeholder_when_the_namespace_cannot_be_read',
+    ),
+    (
+        'M46 a path in the report is written raw',
+        'src/main.rs',
+        '.map(|path| format!("{name}:   {}", display_text(path))),',
+        '.map(|path| format!("{name}:   {path}")),',
+        '--bin ductus tests::the_unreviewed_code_report_escapes_a_hostile_path_and_subject',
+    ),
+    (
+        'M47 a subject not examined is written raw',
+        'src/main.rs',
+        'display_text(&skip.subject),',
+        '&skip.subject,',
+        '--bin ductus tests::the_unreviewed_code_report_escapes_a_hostile_path_and_subject',
+    ),
+    (
+        'M48 a mistyped review key is dropped without a word',
+        'src/primitives/check_unreviewed_code.rs',
+        '    config_keys::warn_unknown_keys(&path, &content, &["review"]);\n',
+        '',
+        '--test check_unreviewed_code_cli a_mistyped_review_key_is_named_on_stderr',
+    ),
+    (
+        'M49 the commits a fold brought are not counted',
+        'src/primitives/check_unreviewed_code.rs',
+        '        giving.extend(bringing);\n',
+        '        let _ = bringing;\n',
+        'check_unreviewed_code::tests::code_a_staging_spec_folded_below_done_brought_is_reported_under_its_upstream',
+    ),
+    (
+        'M50 the not-examined row is cut to its whole self',
+        'src/primitives/pipeline_view.rs',
+        [
+            '        UnreviewedState::NotExamined => cut(\n            unreviewed,\n',
+            '            format!(\n                "Unreviewed code: ? not examined · {} path(s) found in what was examined",\n                data.unreviewed.path_count\n            ),\n        ),\n        UnreviewedState::None',
+        ],
+        [
+            '        UnreviewedState::NotExamined => cut(\n            unreviewed.clone(),\n',
+            '            unreviewed,\n        ),\n        UnreviewedState::None',
+        ],
+        'pipeline_view::tests::a_long_not_examined_row_is_cut_to_the_bound_and_the_whole_view_holds_it',
+    ),
+    (
+        'M51 a fold commit that brought only an artifact is counted',
+        'src/primitives/check_unreviewed_code.rs',
+        'fold.brought(self.at.id(), &code_in_tree, &folded)',
+        'fold.brought(self.at.id(), &in_tree, &folded)',
+        'check_unreviewed_code::tests::code_a_staging_spec_folded_below_done_brought_is_reported_under_its_upstream',
     ),
 ]

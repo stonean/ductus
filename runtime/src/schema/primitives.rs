@@ -6671,7 +6671,7 @@ pub struct OwedWorkOfSpec {
     /// is not zero.
     pub owes: bool,
     /// Each unchecked box in `tasks.md`, under any heading, outside fenced blocks
-    /// and HTML comments, in line order. Absent in the file form.
+    /// and HTML comments, sorted by the line's text. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unchecked_boxes: Option<Vec<UncheckedBox>>,
     /// Entries in `unchecked-boxes`, in either form.

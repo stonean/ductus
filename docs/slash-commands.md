@@ -48,7 +48,7 @@ Unlike `/review`, it audits artifacts against *each other* rather than against c
 
 **Commands split on how many specs one operation writes, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each operate on **one** spec, and each declares that single-spec scope. A batch flag that repeats the same one-spec operation for every spec in the corpus — `/analyze --all`, `/prune --all` — leaves that scope intact: each write it makes is still one spec's, and each spec is judged as itself. `/fold` and `/consolidate` differ in kind: **one** operation writes **two** specs, moving content from one into the other, so neither fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `/fold` gains no `--into`.
 
-### `/amend` — a question or scenario recorded, with the lifecycle back-edge taken
+### `/amend` — a question, scenario or criterion recorded, with the lifecycle back-edge taken
 
 **Reach for it when a question or a new behavior surfaces against a spec that has already moved on.**
 
@@ -111,7 +111,7 @@ It walks the list one item at a time and routes each: a rule for a cross-cutting
 
 ### `/status` — the pipeline view of every feature
 
-**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold — and, on every run, how many items stand in the inbox and how old the oldest is, how many paths of code no committed review covers, in `done` specs and in code no spec claims, as the pre-push hook reports them, how many reopenings closed over the bound on review and analysis runs, and how many `in-progress` specs have no unchecked task.
+**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold — and, on every run, how many items stand in the inbox and how old the oldest is, how many paths of code no committed review covers, with how many `done` specs they fall under and how many paths no spec claims, as the pre-push hook reports them, or that the check could not examine them, how many reopenings closed over the bound on review and analysis runs, and how many `in-progress` specs have no unchecked task.
 
 ### `/link` — a registered sibling service, so cross-service references resolve
 

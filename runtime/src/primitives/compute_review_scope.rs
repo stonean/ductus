@@ -1105,7 +1105,7 @@ fn attribute_window(
     }
     let head = repository.head()?.peel_to_commit()?.id();
     let on_disk = |path: &str| repo.join(path).symlink_metadata().is_ok();
-    window.folded_in = fold.brought(head, &on_disk, &folded)?;
+    window.folded_in = fold.brought(head, &on_disk, &folded)?.0;
     Ok(window)
 }
 
@@ -1233,20 +1233,22 @@ impl FoldTest<'_> {
     /// directory, which is that spec's text, and still there by `holds`, the disk for
     /// a review, since it reads a file, and a commit's tree for a caller reading the
     /// commit alone. A path a commit several specs claimed comes whole, the safe side
-    /// of a rule that reads plans a retired spec no longer has.
+    /// of a rule that reads plans a retired spec no longer has. The commits come
+    /// with them: those holding at least one path returned.
     pub(crate) fn brought(
         &self,
         tip: Oid,
         holds: &dyn Fn(&str) -> bool,
         folded: &[String],
-    ) -> Result<BTreeSet<String>> {
+    ) -> Result<(BTreeSet<String>, BTreeSet<Oid>)> {
         let mut brought = BTreeSet::new();
+        let mut commits = BTreeSet::new();
         let staging: Vec<FeatureForm> = folded
             .iter()
             .filter_map(|directory| parse_feature_dir(directory))
             .collect();
         if staging.is_empty() {
-            return Ok(brought);
+            return Ok((brought, commits));
         }
         let repository = &self.project.repository;
         if repository.is_shallow() {
@@ -1264,16 +1266,20 @@ impl FoldTest<'_> {
                 belongs = belongs || self.attributor.belongs_to(&commit, form)?;
             }
             if belongs {
-                brought.extend(
-                    self.attributor
-                        .claims(&commit)?
-                        .paths
-                        .into_iter()
-                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),
-                );
+                let paths: Vec<String> = self
+                    .attributor
+                    .claims(&commit)?
+                    .paths
+                    .into_iter()
+                    .filter(|path| !path.starts_with(&specs_prefix) && holds(path))
+                    .collect();
+                if !paths.is_empty() {
+                    commits.insert(commit.id());
+                }
+                brought.extend(paths);
             }
         }
-        Ok(brought)
+        Ok((brought, commits))
     }
 }
 

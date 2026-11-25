@@ -2,7 +2,7 @@
 run writes anything: `start-fix-rounds`, `brief-re-read`, `read-re-read` and
 `check-prescriptions` refuse a `feature` outside the runtime's feature-name
 allowlist (`BE-INPUT-002`; `runtime/src/primitives/fix_rounds.rs`,
-`validate_feature`), so `.` cannot empty every feature's rounds, and
+`validate_subject`), so `.` cannot empty every feature's rounds, and
 `start-fix-rounds` reads the `[review] re-reads-off` switch, so a malformed
 one halts the run before its first fix (AC14).
 

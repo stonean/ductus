@@ -240,6 +240,30 @@ fn an_invalid_key_or_an_unparsed_file_exits_1_naming_it_and_reports_nothing() {
     }
 }
 
+/// A mistyped `[review]` key is not silently dropped: stderr names the key and
+/// the file, and the mode stays the default (`CFG-ENV-012`).
+#[test]
+fn a_mistyped_review_key_is_named_on_stderr() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), true);
+    write(
+        tmp.path(),
+        ".ductus/config.toml",
+        "[review]\nunreviewed_push = \"warn\"\n",
+    );
+    let output = check(tmp.path(), &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "typo keeps block: {output:?}"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unreviewed_push") && stderr.contains(".ductus/config.toml"),
+        "{stderr}"
+    );
+}
+
 #[test]
 fn since_counts_on_the_cli() {
     let tmp = tempfile::tempdir().unwrap();

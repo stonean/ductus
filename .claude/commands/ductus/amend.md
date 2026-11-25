@@ -11,7 +11,7 @@ Add input to the targeted spec or scenario. `/amend` classifies the input as a *
 
 Captures additions to a spec that arise at any point in the pipeline. `/amend` is the single verb for "I have a thing to add to this spec": the framework classifies the input and routes it, and the user approves the classification (or flips it) at the same approval gate as the refined wording.
 
-The back-edges that keep the spec lifecycle honest (§spec-lifecycle) are owned by `/amend`:
+The back-edges that keep the spec lifecycle honest (§spec-lifecycle), as `/amend` takes them: the edge into `draft` is its alone, and `done` → `in-progress` it takes as every command whose write leaves work owed does:
 
 - **Question route — `clarified` / `planned` / `in-progress` → `draft`**, in the same write as the new open question. The user's acceptance of the refined question at the approval gate is the consent; no separate prompt fires.
 - **Scenario route — `done` → `in-progress`.** The task the scenario appends is owed work, so the spec reopens; the task is implemented, and the spec returns to `done`.

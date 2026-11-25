@@ -69,9 +69,9 @@ impl<'a> ReviewSubject<'a> {
     ///
     /// [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute, or
     /// carries a parent-directory component, when the feature directory or a
-    /// link inside it resolves outside the project, or when the spec root
-    /// does; [`PrimitiveError::FeatureNotFound`] when the feature has no
-    /// `spec.md`.
+    /// link inside it resolves outside the project, or when the spec root or
+    /// the project's record in it does; [`PrimitiveError::FeatureNotFound`]
+    /// when the feature has no `spec.md`.
     pub(crate) fn resolve(
         feature: Option<&'a str>,
         repo: &Path,
@@ -82,7 +82,10 @@ impl<'a> ReviewSubject<'a> {
             Self::Feature(feature) => {
                 super::validate_feature_argument(repo, specs_root, feature)?;
             }
-            Self::Project => super::validate_contained(repo, specs_root)?,
+            Self::Project => {
+                super::validate_contained(repo, specs_root)?;
+                super::validate_contained(repo, &subject.record_rel(specs_root))?;
+            }
         }
         let dir = subject.record_dir(repo, specs_root);
         if let Self::Feature(feature) = subject
@@ -104,6 +107,8 @@ impl<'a> ReviewSubject<'a> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -129,5 +134,25 @@ mod tests {
         assert_eq!(ReviewSubject::Project.name(), "project");
         assert_eq!(ReviewSubject::Feature("001-x").name(), "001-x");
         assert!(crate::primitives::parse_feature_dir(PROJECT_SUBJECT).is_none());
+    }
+
+    /// The project's record is contained like a feature's: a committed link
+    /// at `{specs-root}/review.md` leaving the project is refused, and an
+    /// absent record resolves, since the seed creates it (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn the_project_record_is_contained_and_an_absent_one_resolves() {
+        let project = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::create_dir(project.path().join("specs")).unwrap();
+        let (subject, dir) = ReviewSubject::resolve(None, project.path(), "specs").unwrap();
+        assert_eq!(subject, ReviewSubject::Project);
+        assert_eq!(dir, project.path().join("specs"));
+
+        let target = outside.path().join("elsewhere.md");
+        std::fs::write(&target, "---\nspec: project\n---\n").unwrap();
+        std::os::unix::fs::symlink(&target, project.path().join("specs/review.md")).unwrap();
+        let err = ReviewSubject::resolve(None, project.path(), "specs").unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
     }
 }

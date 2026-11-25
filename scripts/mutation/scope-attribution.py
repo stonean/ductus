@@ -1113,15 +1113,15 @@ MUTATIONS = [
     (
         "M169 a fold brings another spec's text",
         'src/primitives/compute_review_scope.rs',
-        '                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),',
-        '                        .filter(|path| holds(path)),',
+        '                    .filter(|path| !path.starts_with(&specs_prefix) && holds(path))\n',
+        '                    .filter(|path| holds(path))\n',
         'compute_review_scope::tests::a_fold_brings_no_path_gone_from_disk_or_in_a_spec',
     ),
     (
         'M170 a fold brings a path gone from disk',
         'src/primitives/compute_review_scope.rs',
-        '                        .filter(|path| !path.starts_with(&specs_prefix) && holds(path)),',
-        '                        .filter(|path| !path.starts_with(&specs_prefix)),',
+        '                    .filter(|path| !path.starts_with(&specs_prefix) && holds(path))\n',
+        '                    .filter(|path| !path.starts_with(&specs_prefix))\n',
         'compute_review_scope::tests::a_fold_brings_no_path_gone_from_disk_or_in_a_spec',
     ),
     (

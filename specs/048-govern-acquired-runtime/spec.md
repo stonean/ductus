@@ -96,7 +96,7 @@ Every live artifact that names `ductus` as an **executable** is updated to the d
 
 References to `ductus` as a *name* — the crate, the MCP server key, the `ductus-v*` release tag scheme, the `mcp__ductus__*` tool prefix — are unaffected. Prose describing runtime behavior (`ductus exec` resolution, primitive contracts) is likewise unaffected: those name the runtime, not a path to invoke.
 
-Historical specs whose bodies record the pre-048 shape are covered by the [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) mechanical-edit rule when the change is the uniform token substitution; anything requiring more than that substitution takes the normal back-edge per [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact).
+Historical specs whose bodies record the pre-048 shape are swept as [§drift-prevention](../../framework/constitution.md#drift-prevention)'s mechanical sweep when the change is the uniform token substitution; an edit beyond that substitution is recorded per [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact), and reopens a `done` spec only when it leaves owed work (§spec-lifecycle, spec 084).
 
 ## Adopter migration
 

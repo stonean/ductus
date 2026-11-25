@@ -896,7 +896,7 @@ fn refuse_an_empty_scope_over_a_finding(
 /// base resolves to at some later moment: the default window when it starts
 /// there, with what the record it starts at hands on, and that base verbatim
 /// otherwise. An empty base, what `compute-review-scope`
-/// returns for a spec that never entered `in-progress`, records a scope of zero, though that
+/// returns for a spec that never entered `in-progress` or `done`, records a scope of zero, though that
 /// scope still holds a first review's plan entries. Any other base the derivation fails on refuses the write: a
 /// mistyped sha once recorded `scope: 0` beside `examined: 8`, a window no
 /// check could tell from an empty one, while the caller still holds its

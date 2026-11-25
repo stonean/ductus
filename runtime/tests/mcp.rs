@@ -64,18 +64,31 @@ fn vendor_markdownlint(root: &Path, unix_body: &str, windows_body: &str) {
         )
         .unwrap();
     }
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     {
         let _ = windows_body;
-        let stub = bin.join("markdownlint-cli2");
-        fs::write(&stub, format!("#!/bin/sh\n{unix_body}\n")).unwrap();
-        #[cfg(unix)]
-        {
-            let mut perms = fs::metadata(&stub).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&stub, perms).unwrap();
-        }
+        write_script(
+            &bin.join("markdownlint-cli2"),
+            &format!("#!/bin/sh\n{unix_body}\n"),
+        );
     }
+}
+
+/// Write `contents` to `path` as an executable script from a child process, so
+/// this test process never holds a write handle on it. On Linux a child another
+/// test thread forks while this process holds one inherits it until that child
+/// execs, and an exec of the script inside that window fails
+/// `ExecutableFileBusy` (084 tasks 20 and 21).
+#[cfg(unix)]
+fn write_script(path: &Path, contents: &str) {
+    let status = std::process::Command::new("/bin/sh")
+        .args(["-c", "printf %s \"$2\" > \"$1\"", "sh"])
+        .arg(path)
+        .arg(contents)
+        .status()
+        .unwrap();
+    assert!(status.success(), "writing {}: {status}", path.display());
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
 async fn start_pair(repo: PathBuf) -> rmcp::service::RunningService<rmcp::service::RoleClient, ()> {
@@ -1788,7 +1801,7 @@ fn vendor_a_violating_markdownlint(root: &Path) {
         )
         .unwrap();
     }
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     {
         let mut body = String::new();
         for line in &lines {
@@ -1796,14 +1809,10 @@ fn vendor_a_violating_markdownlint(root: &Path) {
             body.push_str(line);
             body.push_str("'\n");
         }
-        let stub = bin.join("markdownlint-cli2");
-        fs::write(&stub, format!("#!/bin/sh\n{body}exit 1\n")).unwrap();
-        #[cfg(unix)]
-        {
-            let mut perms = fs::metadata(&stub).unwrap().permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&stub, perms).unwrap();
-        }
+        write_script(
+            &bin.join("markdownlint-cli2"),
+            &format!("#!/bin/sh\n{body}exit 1\n"),
+        );
     }
 }
 

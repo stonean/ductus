@@ -15,7 +15,8 @@
 //! `done (spec is complete)` rows collapse to a count line; then the rows past
 //! the bound are cut and counted; then, with no row left, the `Next actions:`
 //! block keeps the leading names that fit; then each other list collapses to
-//! its count, in [`CUT_ORDER`]. So a partial view never reads as complete, and
+//! its count, in [`CUT_ORDER`], the not-examined `Unreviewed code:` row last.
+//! So a partial view never reads as complete, and
 //! each line standing for what was cut can name the file holding the whole
 //! view, which `render-status` writes for the model path. The hook path shows
 //! one message, so it cannot page and writes no file.
@@ -131,11 +132,16 @@ enum Cut {
     NextActionGroups,
     /// The `Notice:` and `Unreadable:` lines.
     SessionLines,
+    /// The `Unreviewed code:` row in its not-examined state, which names every
+    /// subject not examined with its reason.
+    UnreviewedCode,
 }
 
 /// The order the lists collapse in (spec 080's plan, *Bound (AC24)*). The
-/// session lines go last, since they explain the target the view opens with.
-const CUT_ORDER: [Cut; 11] = [
+/// session lines go late, since they explain the target the view opens with,
+/// and the not-examined `Unreviewed code:` row last: it is the one row whose
+/// length the view's data sets, not its shape (spec 084, AC9).
+const CUT_ORDER: [Cut; 12] = [
     Cut::References,
     Cut::DisabledRuleFiles,
     Cut::UnknownConfigKeys,
@@ -147,6 +153,7 @@ const CUT_ORDER: [Cut; 11] = [
     Cut::OtherStatuses,
     Cut::NextActionGroups,
     Cut::SessionLines,
+    Cut::UnreviewedCode,
 ];
 
 /// How much of the model a rendering shows.
@@ -478,8 +485,8 @@ fn target_lines(data: &ViewData<'_>) -> (Vec<String>, Vec<String>, Vec<String>) 
 }
 
 /// The summary items, one fact each, in a fixed order. `Counts:` renders
-/// when a spec exists, and `Reopenings` and `Inbox:` on every run; the rest
-/// when they apply.
+/// when a spec exists, and `Unreviewed code:`, `Reopenings` and `Inbox:` on
+/// every run; the rest when they apply.
 fn summary(data: &ViewData<'_>) -> Vec<Item> {
     let (specs, project) = (data.specs, data.project);
     let whole = |line: String| Item {
@@ -545,7 +552,18 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
         ));
     }
     items.extend(config_items(data));
-    items.push(whole(unreviewed_line(data.unreviewed, project)));
+    let unreviewed = unreviewed_line(data.unreviewed, project);
+    items.push(match data.unreviewed.state {
+        UnreviewedState::NotExamined => cut(
+            unreviewed,
+            Cut::UnreviewedCode,
+            format!(
+                "Unreviewed code: ? not examined · {} path(s) found in what was examined",
+                data.unreviewed.path_count
+            ),
+        ),
+        UnreviewedState::None | UnreviewedState::Found => whole(unreviewed),
+    });
     items.push(whole(reopenings_line(data.reopenings)));
     items.push(whole(inbox_line(data.inbox, project)));
     items
@@ -699,7 +717,7 @@ fn unreviewed_line(counts: &UnreviewedCodeCounts, project: &str) -> String {
             counts.path_count, counts.done_spec_count, counts.unclaimed_path_count,
         ),
         UnreviewedState::NotExamined => {
-            let reason = counts.reason.as_deref().unwrap_or("no reason given");
+            let reason = view_text(counts.reason.as_deref().unwrap_or("no reason given"));
             if counts.path_count == 0 {
                 format!("Unreviewed code: ? not examined — {reason}")
             } else {
@@ -1466,7 +1484,8 @@ mod tests {
         }
     }
 
-    /// A view carrying every list [`CUT_ORDER`] names, and done rows.
+    /// A view carrying every list [`CUT_ORDER`] names, a not-examined `Unreviewed
+    /// code:` row among them, and done rows.
     fn every_list() -> Model {
         let mut specs: Vec<DashboardSpec> = (1..=40)
             .map(|i| {
@@ -1515,7 +1534,11 @@ mod tests {
             config_name: ".ductus/config.toml",
             inbox: &fixture.inbox,
             reopenings: &fixture.reopenings,
-            unreviewed: &fixture.unreviewed,
+            unreviewed: &UnreviewedCodeCounts {
+                state: UnreviewedState::NotExamined,
+                reason: Some(["003-listed-003 has no record"; 20].join("; ")),
+                ..UnreviewedCodeCounts::default()
+            },
             session_target: fixture.target.as_ref(),
             session_label: Some("fx"),
             notices: &[SessionNotice {
@@ -1551,6 +1574,7 @@ mod tests {
                 Cut::OtherStatuses => cut("Counts: "),
                 Cut::NextActionGroups => cut("Next actions: "),
                 Cut::SessionLines => cut("Notice: ") && cut("Unreadable: "),
+                Cut::UnreviewedCode => cut("Unreviewed code: "),
             })
             .collect()
     }
@@ -1588,6 +1612,54 @@ mod tests {
                 last.len() >= CUT_ORDER.len() - 1,
                 "the sweep reached the floor's lists"
             );
+        }
+    }
+
+    /// The `Unreviewed code:` row names every subject not examined with its
+    /// reason, so it is the last thing the bound cuts: to a count and where the
+    /// whole row is, while the whole view still holds it (spec 084, AC9).
+    #[test]
+    fn a_long_not_examined_row_is_cut_to_the_bound_and_the_whole_view_holds_it() {
+        let reason: String = (1..=40)
+            .map(|i| format!("{i:03}-subject-{i:03} cannot be placed: no record of it"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        let not_examined = |reason: &str| UnreviewedCodeCounts {
+            state: UnreviewedState::NotExamined,
+            path_count: 3,
+            reason: Some(reason.to_string()),
+            ..UnreviewedCodeCounts::default()
+        };
+        let file = ".ductus/results/render-status/all-specs/0a.json";
+        for format in [Format::Markdown, Format::Text] {
+            let mut fixture = Fixture::new(Some("002-beta"));
+            fixture.unreviewed = not_examined("short");
+            let floor = render(&fixture.model(), format, &|_| false, Some(file));
+            fixture.unreviewed = not_examined(&reason);
+            let model = fixture.model();
+            // The floor with a short row, and room for the cut row's marker.
+            let bound = size(&floor) + 250;
+            assert!(
+                size(&whole(&model, format)) > bound,
+                "the row alone is over the bound"
+            );
+            let view = render(&model, format, &|view| size(view) <= bound, Some(file));
+            assert!(
+                size(&view) <= bound,
+                "{} over {bound}:\n{view}",
+                size(&view)
+            );
+            let row = view
+                .lines()
+                .find(|line| line.starts_with("Unreviewed code: "))
+                .unwrap_or_else(|| panic!("{view}"));
+            assert!(
+                row.contains("3 path(s) found in what was examined")
+                    && row.ends_with(&format!("the whole view is in {file}")),
+                "{row}"
+            );
+            assert!(!view.contains("subject-001"), "{view}");
+            assert!(whole(&model, format).contains(&reason), "the whole view");
         }
     }
 

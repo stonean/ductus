@@ -226,4 +226,11 @@ MUTATIONS = [
         'DecisionRecord::Analysis if false => Err(PrimitiveError::InvalidArgument {',
         'process_decisions::tests::the_project_records_decisions_are_classified_with_no_feature',
     ),
+    (
+        'M31 the project record is not contained',
+        'src/primitives/review_subject.rs',
+        '                super::validate_contained(repo, &subject.record_rel(specs_root))?;\n',
+        '',
+        'review_subject::tests::the_project_record_is_contained_and_an_absent_one_resolves',
+    ),
 ]

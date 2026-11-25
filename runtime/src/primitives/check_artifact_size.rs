@@ -1425,6 +1425,14 @@ mod tests {
             let warning = &artifact.warning;
             assert!(warning.ends_with(&format!(". {DONE_RULE}")), "{warning}");
             assert_eq!(warning.matches("reopen").count(), 1, "{warning}");
+            // The rule's own words: only an unchecked box or an unticked
+            // criterion reopens, so reversing its meaning fails here.
+            assert!(
+                warning.contains(
+                    "reopens this done spec only if it leaves an unchecked box in its tasks.md"
+                ) && warning.contains("or an unticked criterion in its spec.md"),
+                "{warning}"
+            );
             assert!(
                 artifact.fixes.iter().all(|f| !f.text.contains("reopen")),
                 "{warning}"

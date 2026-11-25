@@ -845,9 +845,6 @@ mod tests {
         }
     }
 
-    /// The elapsed time is the clock less the recorded start, whole seconds;
-    /// a missing or unreadable start, or a clock before it, is absent with a
-    /// reason, never zero (AC17, `QUAL-CLAIM-001`).
     /// Only an absent `feature` names the project: an empty one is refused, so a
     /// loop primitive that clears a round directory never clears the project's on a
     /// name that failed to arrive (spec 084).
@@ -874,6 +871,9 @@ mod tests {
         );
     }
 
+    /// The elapsed time is the clock less the recorded start, whole seconds;
+    /// a missing or unreadable start, or a clock before it, is absent with a
+    /// reason, never zero (AC17, `QUAL-CLAIM-001`).
     #[test]
     fn elapsed_is_the_clock_less_the_recorded_start() {
         let tmp = tempfile::tempdir().unwrap();
