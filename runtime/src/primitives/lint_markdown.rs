@@ -407,18 +407,34 @@ mod tests {
     // The first version of this comment claimed a directory is "reliably
     // unspawnable on every platform". That was an unverified cross-platform
     // assertion, and CI disproved it.
+    /// Write `contents` to `path` as an executable script from a child
+    /// process, so this test process never holds a write handle on it. On
+    /// Linux a child another test thread forks while this process holds one
+    /// inherits it until that child execs, and an exec of the script inside
+    /// that window fails `ExecutableFileBusy` (084 tasks 20 and 21).
+    #[cfg(unix)]
+    fn write_script(path: &std::path::Path, contents: &str) {
+        use std::os::unix::fs::PermissionsExt;
+        let status = std::process::Command::new("/bin/sh")
+            .args(["-c", "printf %s \"$2\" > \"$1\"", "sh"])
+            .arg(path)
+            .arg(contents)
+            .status()
+            .unwrap();
+        assert!(status.success(), "writing {}: {status}", path.display());
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
     // Unix-only: the stub is a shell script that sleeps, which needs the
     // exec bit; the timeout itself is platform-independent.
     #[cfg(unix)]
     #[test]
     fn a_linter_that_outlives_its_timeout_is_stopped() {
-        use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         let bin = tmp.path().join("node_modules").join(".bin");
         std::fs::create_dir_all(&bin).unwrap();
         let stub = bin.join("markdownlint-cli2");
-        std::fs::write(&stub, "#!/bin/sh\nsleep 5\n").unwrap();
-        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+        write_script(&stub, "#!/bin/sh\nsleep 5\n");
         let started = std::time::Instant::now();
         let err = run_within(
             &LintMarkdownArgs {

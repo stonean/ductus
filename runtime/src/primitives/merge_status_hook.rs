@@ -684,17 +684,33 @@ mod tests {
         }
     }
 
+    /// Write `contents` to `path` as an executable script from a child
+    /// process, so this test process never holds a write handle on it. On
+    /// Linux a child another test thread forks while this process holds one
+    /// inherits it until that child execs, and an exec of the script inside
+    /// that window fails `ExecutableFileBusy` (084 tasks 20 and 21).
+    #[cfg(unix)]
+    fn write_script(path: &std::path::Path, contents: &str) {
+        use std::os::unix::fs::PermissionsExt;
+        let status = std::process::Command::new("/bin/sh")
+            .args(["-c", "printf %s \"$2\" > \"$1\"", "sh"])
+            .arg(path)
+            .arg(contents)
+            .status()
+            .unwrap();
+        assert!(status.success(), "writing {}: {status}", path.display());
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
     /// The real probe: a program that prints a version, one that fails, one
     /// that hangs past the timeout, and one that does not exist.
     #[cfg(unix)]
     #[test]
     fn the_probe_reads_a_version_and_names_each_failure() {
-        use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         let script = |name: &str, body: &str| {
             let path = tmp.path().join(name);
-            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
-            fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+            write_script(&path, &format!("#!/bin/sh\n{body}\n"));
             path
         };
         // A probe that must answer gets a deadline the first run of a freshly
