@@ -165,9 +165,9 @@ Handed on from task 9: the CLI's exit status is the hook's (`unreviewed_code_blo
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] `framework/migrations/project-review-record.md` and its `framework/migrations.toml` entry, ordered after every existing one
-- [ ] `framework/bootstrap/ductus-procedure.md` seeds the record on a fresh install
-- [ ] After the seed, the migration runs `check-unreviewed-code` once and reports the backlog with `[review] unreviewed-push` and its two values, writing no configuration
+- [x] `framework/migrations/project-review-record.md` and its `framework/migrations.toml` entry, ordered after every existing one
+- [x] `framework/bootstrap/ductus-procedure.md` seeds the record on a fresh install
+- [x] After the seed, the migration runs `check-unreviewed-code` once and reports the backlog with `[review] unreviewed-push` and its two values, writing no configuration
 
 - **Done when**: a scratch adopter behind the release gains a seeded `{specs-root}/review.md` on update and on a fresh bootstrap, a second run writes nothing, and one with a `done` spec's code changed since its review is shown that spec and the key with its configuration unchanged, and the check at the commit carrying the update reports none of that commit's files.
 

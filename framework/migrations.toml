@@ -301,3 +301,20 @@ target_paths = [
   "CLAUDE.md",
 ]
 procedure_file = "framework/migrations/substitute-seed-placeholders.md"
+
+[[migrations]]
+id = "project-review-record"
+introduced_in = "0.65.0"
+# No sunset_after. The record is written once and never by the manifest, so an
+# adopter who skips this window has no project record, and every push the
+# pre-push hook checks reports code no spec claims as not examined until one
+# is seeded by hand with `ductus write-review --seed`.
+# Independent of the other entries: it writes only the record, which none of
+# them reads or writes, and reads only through two primitives.
+summary = "Seed specs/review.md, the project review record code no spec claims is reviewed under, and report each done spec the pre-push hook will report (spec 084)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "specs/review.md",
+]
+procedure_file = "framework/migrations/project-review-record.md"
