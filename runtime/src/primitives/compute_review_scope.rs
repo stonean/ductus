@@ -217,9 +217,10 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // other; a path under a parent that became a file cannot exist, so it is gone.
     let deleted = deleted_paths(repo, &modified_since);
 
-    // Uncommitted work cannot be attributed, so it joins whole, even on a path
-    // another spec's commit also changed. An untracked or staged file is part
-    // of it, as `modified_since` takes them.
+    // Uncommitted work has no commit to attribute, so it joins whole, even on a path
+    // another spec's commit also changed, but for one another open spec's plan holds
+    // (spec 084, AC23). An untracked or staged file is part of it, as `modified_since`
+    // takes them.
     let window = if diff_base.is_empty() {
         WindowClaims::default()
     } else {
@@ -232,14 +233,11 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
             &plan_affected,
         )?
     };
-    let uncommitted: BTreeSet<String> = if diff_base.is_empty() {
-        BTreeSet::new()
-    } else {
-        let head = repository.head()?.peel_to_commit()?.id().to_string();
-        diff_since(&project, &head)?.into_iter().collect()
-    };
+    let (uncommitted, elsewhere) =
+        uncommitted_work(&project, repo, &layout, &diff_base, &plan_affected, &window)?;
 
-    let (mut scope, mut excluded) = split_changes(&modified_since, &deleted, &window, &uncommitted);
+    let (mut scope, mut excluded) =
+        split_changes(&modified_since, &deleted, &window, &uncommitted, &elsewhere);
 
     for path in &window.folded_in {
         excluded.remove(path);
@@ -279,7 +277,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
 
     let owed_by = paths_owing_a_review(
         &layout.specs_root,
-        (&scope, &deleted),
+        (&scope, &deleted, &elsewhere),
         &window,
         &uncommitted,
         left_open,
@@ -344,11 +342,13 @@ fn owes_a_review(run: Option<&ReviewBlock>, owed_by: &[String], criteria_owing: 
 /// data model, or to another spec's directory, owes this spec no review.
 fn paths_owing_a_review(
     specs_root: &str,
-    (scope, deleted): (&BTreeSet<String>, &BTreeSet<String>),
+    (scope, deleted, elsewhere): (&BTreeSet<String>, &BTreeSet<String>, &BTreeSet<String>),
     window: &WindowClaims,
     uncommitted: &BTreeSet<String>,
     left_open: Vec<String>,
 ) -> Vec<String> {
+    // A deletion another open spec's plan holds is that spec's, as in the scope (AC23).
+    let deleted: BTreeSet<String> = deleted.difference(elsewhere).cloned().collect();
     // A deletion left the scope because it cannot be read, and is still a change:
     // this spec's unless only another spec's commit made it, as the scope's own rule.
     let its_own_deletions = deleted.iter().filter(|path| {
@@ -537,12 +537,14 @@ fn unreviewed_base(
 /// Divide the paths changed since the base between the scope and `excluded`.
 /// Only a path a commit in the walk left to another spec leaves the scope. A
 /// path the walk never met, as when `--since` names a commit off to the side of
-/// `HEAD`, was left to no other spec, so it stays and no path goes unread.
+/// `HEAD`, was left to no other spec, so it stays and no path goes unread. An uncommitted
+/// path another open spec's plan holds, `elsewhere`, leaves too (spec 084, AC23).
 fn split_changes(
     modified_since: &[String],
     deleted: &BTreeSet<String>,
     window: &WindowClaims,
     uncommitted: &BTreeSet<String>,
+    elsewhere: &BTreeSet<String>,
 ) -> (BTreeSet<String>, BTreeSet<String>) {
     let mut scope = BTreeSet::new();
     let mut excluded = BTreeSet::new();
@@ -557,7 +559,85 @@ fn split_changes(
             scope.insert(path.clone());
         }
     }
+    for path in elsewhere {
+        if scope.remove(path) {
+            excluded.insert(path.clone());
+        }
+    }
     (scope, excluded)
+}
+
+/// The paths changed from `HEAD` to the working tree, none when there is no window, and
+/// of them those another open spec's plan holds ([`held_elsewhere`]).
+fn uncommitted_work(
+    project: &ProjectRepository,
+    repo: &Path,
+    layout: &paths::Paths,
+    diff_base: &str,
+    plan_affected: &[String],
+    window: &WindowClaims,
+) -> Result<(BTreeSet<String>, BTreeSet<String>)> {
+    if diff_base.is_empty() {
+        return Ok(Default::default());
+    }
+    let head = project
+        .repository
+        .head()?
+        .peel_to_commit()?
+        .id()
+        .to_string();
+    let uncommitted: BTreeSet<String> = diff_since(project, &head)?.into_iter().collect();
+    let elsewhere = held_elsewhere(project, repo, layout, plan_affected, &uncommitted, window)?;
+    Ok((uncommitted, elsewhere))
+}
+
+/// The uncommitted paths another open spec's plan holds, which leave this spec's scope and
+/// owe it no review (spec 084, AC23): another session's work on its own spec, in the same
+/// tree. Another spec is open at `planned` or `in-progress`, read from disk as the work is,
+/// and holds a path by name or by a pattern of its plan's Affected Files. A path this spec's
+/// own plan holds, or its own commits in the window changed, stays this spec's, so its own
+/// change is never left unread, and its plan, read among the others, holds none of what is
+/// left. Doubt keeps a path: a
+/// spec whose status does not read, or whose `spec.md` or plan cannot be read or leaves the
+/// project, holds nothing (`BE-INPUT-004`).
+fn held_elsewhere(
+    project: &ProjectRepository,
+    repo: &Path,
+    layout: &paths::Paths,
+    plan_affected: &[String],
+    uncommitted: &BTreeSet<String>,
+    window: &WindowClaims,
+) -> Result<BTreeSet<String>> {
+    let specs_root = layout.specs_root.as_str();
+    let own_plan = PlanEntries::new(plan_affected);
+    let candidates: Vec<&String> = uncommitted
+        .iter()
+        .filter(|path| !window.own.contains(*path) && !own_plan.names(path))
+        .collect();
+    if candidates.is_empty() {
+        return Ok(BTreeSet::new());
+    }
+    let attributor = Attributor::new(project, repo, specs_root)?;
+    let mut plans = Vec::new();
+    for (_, directory) in attributor.specs() {
+        let spec = format!("{specs_root}/{directory}/spec.md");
+        if super::leaves_project(repo, &spec) {
+            continue;
+        }
+        let status = std::fs::read_to_string(repo.join(&spec))
+            .ok()
+            .and_then(|content| frontmatter_status(&content, Path::new(&spec)));
+        if matches!(status.as_deref(), Some("planned" | "in-progress"))
+            && let Ok(plan) = attributor.plan_of(directory)
+        {
+            plans.push(plan);
+        }
+    }
+    Ok(candidates
+        .into_iter()
+        .filter(|path| plans.iter().any(|plan| plan.names(path)))
+        .cloned()
+        .collect())
 }
 
 /// A review run as a committed record states it.
@@ -4183,6 +4263,142 @@ mod tests {
         assert!(has(&scope, "src/other.rs"), "{:?}", scope.scope);
         assert!(!scope.excluded.contains("src/other.rs"));
         assert!(has(&scope, "src/untracked.rs"), "{:?}", scope.scope);
+    }
+
+    /// 001-x with a clean review committed at `HEAD`, so only what changes after it
+    /// can owe a review, and 002-y open with `plan_y`.
+    fn reviewed_beside(plan_x: &[&str], plan_y: &[&str]) -> (tempfile::TempDir, Repository) {
+        let (tmp, repo, _) = two_specs(plan_x, plan_y);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record_against(&head_sha(&repo), "unread: []\n"),
+        );
+        commit_all(&repo, "review(001)");
+        (tmp, repo)
+    }
+
+    /// Another session's uncommitted work on a path another open spec's plan holds, by
+    /// name or by a pattern, leaves this spec's scope and owes it no review (spec 084,
+    /// AC23), and stays in the scope of the spec whose plan holds it.
+    #[test]
+    fn an_uncommitted_path_another_open_plan_holds_leaves_the_scope_and_owes_no_review() {
+        let (tmp, _repo) = reviewed_beside(&[], &["src/theirs.rs", "src/gen/*.rs"]);
+        write(&tmp.path().join("src/theirs.rs"), "fn theirs() {}\n");
+        write(&tmp.path().join("src/gen/a.rs"), "fn a() {}\n");
+
+        let scope = x(&tmp);
+        for path in ["src/theirs.rs", "src/gen/a.rs"] {
+            assert!(!has(&scope, path), "{path}: {:?}", scope.scope);
+            assert!(
+                scope.excluded.contains(path),
+                "{path}: {:?}",
+                scope.excluded
+            );
+        }
+        assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
+        assert!(!scope.review_owed);
+
+        let theirs = y(&tmp);
+        assert!(has(&theirs, "src/theirs.rs"), "{:?}", theirs.scope);
+        assert!(has(&theirs, "src/gen/a.rs"), "{:?}", theirs.scope);
+    }
+
+    /// Every other uncommitted path joins whole (066's scenario
+    /// `review-scope-includes-uncommitted-work`): one no plan holds, one this spec's
+    /// own plan holds too, and one only a `done` spec's plan holds.
+    #[test]
+    fn an_uncommitted_path_no_other_open_plan_holds_alone_joins_and_owes_a_review() {
+        let (tmp, repo) = reviewed_beside(&["src/shared.rs"], &["src/shared.rs", "src/theirs.rs"]);
+        write(&tmp.path().join("specs/002-y/spec.md"), &spec("done"));
+        commit_all(&repo, "status(002): done");
+        for path in ["src/unplanned.rs", "src/shared.rs", "src/theirs.rs"] {
+            write(&tmp.path().join(path), "fn edited() {}\n");
+        }
+
+        let scope = x(&tmp);
+        for path in ["src/unplanned.rs", "src/shared.rs", "src/theirs.rs"] {
+            assert!(has(&scope, path), "{path}: {:?}", scope.scope);
+            assert!(
+                !scope.excluded.contains(path),
+                "{path}: {:?}",
+                scope.excluded
+            );
+            assert!(
+                scope.owed_by.iter().any(|owed| owed == path),
+                "{path}: {:?}",
+                scope.owed_by
+            );
+        }
+        assert!(scope.review_owed);
+    }
+
+    /// A `planned` spec's plan holds a path as an `in-progress` one's does.
+    #[test]
+    fn a_planned_specs_plan_holds_an_uncommitted_path_too() {
+        let (tmp, repo) = reviewed_beside(&[], &["src/theirs.rs"]);
+        write(&tmp.path().join("specs/002-y/spec.md"), &spec("planned"));
+        commit_all(&repo, "status(002): back to planned");
+        write(&tmp.path().join("src/theirs.rs"), "fn theirs() {}\n");
+
+        let scope = x(&tmp);
+        assert!(
+            scope.excluded.contains("src/theirs.rs"),
+            "{:?}",
+            scope.excluded
+        );
+        assert!(!scope.review_owed);
+    }
+
+    /// A path this spec's own commit in the window changed stays in its scope though
+    /// another open plan holds it and its uncommitted edit is another session's, or
+    /// that commit's change would be read by no review (owner, 2026-11-25).
+    #[test]
+    fn an_uncommitted_edit_to_a_path_this_specs_commit_changed_stays_in_scope() {
+        let (tmp, repo) = reviewed_beside(&[], &["src/shared.rs"]);
+        change(&tmp, &repo, "src/shared.rs", "feat(001): its own change");
+        write(&tmp.path().join("src/shared.rs"), "fn edited() {}\n");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/shared.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains("src/shared.rs"));
+        assert!(scope.review_owed);
+    }
+
+    /// A `spec.md` that is a link leaving the project is never read, so its spec holds
+    /// nothing and the path stays (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_whose_spec_md_leaves_the_project_holds_no_uncommitted_path() {
+        let (tmp, _repo) = reviewed_beside(&[], &["src/theirs.rs"]);
+        let outside = tempfile::tempdir().unwrap();
+        write(&outside.path().join("spec.md"), &spec("in-progress"));
+        let link = tmp.path().join("specs/002-y/spec.md");
+        fs::remove_file(&link).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("spec.md"), &link).unwrap();
+        write(&tmp.path().join("src/theirs.rs"), "fn theirs() {}\n");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/theirs.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains("src/theirs.rs"));
+    }
+
+    /// An uncommitted deletion another open plan holds owes this spec no review, and one
+    /// no other open plan holds still does (owner, 2026-11-25).
+    #[test]
+    fn an_uncommitted_deletion_owes_a_review_only_when_no_other_open_plan_holds_it() {
+        let (tmp, _repo) = reviewed_beside(&[], &["src/old.rs"]);
+        fs::remove_file(tmp.path().join("src/old.rs")).unwrap();
+        let scope = x(&tmp);
+        assert_eq!(scope.deleted, ["src/old.rs"]);
+        assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
+        assert!(!scope.review_owed);
+
+        let (tmp, _repo) = reviewed_beside(&[], &[]);
+        fs::remove_file(tmp.path().join("src/old.rs")).unwrap();
+        let scope = x(&tmp);
+        assert_eq!(scope.deleted, ["src/old.rs"]);
+        assert_eq!(scope.owed_by, ["src/old.rs"]);
+        assert!(scope.review_owed);
     }
 
     #[test]

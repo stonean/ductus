@@ -104,6 +104,13 @@ files before and after the work is committed.
   committed work from the window.
 - **On-disk and `HEAD` both read `in-progress`:** the ordinary case, and
   unchanged.
+- **Another session's uncommitted work on another open spec leaves the scope**
+  (spec 084, AC23). A path the Affected Files of another spec at `planned` or
+  `in-progress` hold, by name or by a pattern, and neither this spec's plan
+  nor a commit of its own in the window does, goes to `excluded`, and its
+  deletion owes no review. Every other uncommitted path still joins, so an
+  unplanned edit stays in scope; this spec's own edit to a path only another
+  open plan names joins once it is committed as this spec's.
 - **The spec's own uncommitted files enter `modified-since`** (`spec.md`,
   `tasks.md`, the `review.md` being written), as they already do once
   committed. Nothing new in kind.

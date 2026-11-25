@@ -41,7 +41,7 @@ Specs reached `done` slowly because reviews and checks were owed for changes out
 - **A commit names one spec and edits another's directory.** The named spec reviews its code. The other spec owes an analysis for its own files, and a review only for what else is in its window.
 - **A commit naming no spec touches no spec directory.** It stays in every window that holds it, as under 079, until a committed review states that it read the commit's paths. Its uncredited code makes a review owed there, and its artifacts make none. Since spec 084 it leaves every window instead, and owes the project record's review. In this repository `framework(bootstrap)` commits are an example, and a `docs(agents)` commit touching only `AGENTS.md` owes no review at all.
 - **A merge commit.** It still belongs to no spec, and what it changed itself is attributed like any commit naming no spec.
-- **Uncommitted work.** Nothing can attribute it, so its code stays in the scope of the spec under review, and an uncommitted artifact owes only the analysis.
+- **Uncommitted work.** Nothing can attribute it, so its code stays in the scope of the spec under review, but for a path another open spec's plan holds (spec 084, AC23), and an uncommitted artifact owes only the analysis.
 - **A spec with no review record.** It still owes a review, since nothing has read its code.
 - **A record holding a gating count, an open finding, the open fix-round mark, an unwaived round or no `dispositions:` map.** It still owes a review whatever changed, since only a review clears those.
 - **A configured spec root, or a project in a repository subdirectory.** The artifact set is read relative to the project root and the configured spec root, as every other path rule is.

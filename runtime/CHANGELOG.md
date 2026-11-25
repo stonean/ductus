@@ -229,6 +229,18 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   file, which `append-task` produced whenever it added a task to a phase
   before the last. `11` and `11a` are two numbers, in either order. Breaking
   for a consumer that read the old finding's message.
+- **BREAKING: another session's uncommitted work on another open spec leaves a
+  spec's review scope (spec 084, AC23; the agent's recommendations, adopted by
+  the operator, 2026-11-25).** `compute-review-scope` took every uncommitted
+  path into a spec's scope whole, so a second session's work in the same tree
+  joined every open spec's scope, and `check-review-gate` held one spec's
+  `done` as review-owed on files it never touched, as an adopter found. An
+  uncommitted path the Affected Files of another spec at `planned` or
+  `in-progress` hold, by name or by a pattern, and neither the spec's own plan
+  nor a commit of its own in the window does, now goes to `excluded`, and its
+  deletion owes the spec no review. Every other uncommitted path still joins,
+  so an unplanned edit is still read. Breaking for a consumer reading a spec's
+  scope or `review-owed` while another open spec's planned files are dirty.
 
 ### Removed
 
