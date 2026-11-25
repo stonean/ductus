@@ -290,4 +290,11 @@ MUTATIONS = [
         '',
         'check_stuck::tests::a_scope_keeps_the_walk_of_the_tip_last_asked_for',
     ),
+    (
+        'M40 a removed staging spec named in a subject still claims the commit',
+        'src/primitives/commit_attribution.rs',
+        '            .filter(|form| self.directory_of(form).is_some() || touched.contains(form))',
+        '            .filter(|form| {\n                self.directory_of(form).is_some()\n                    || touched.contains(form)\n                    || matches!(form, FeatureForm::BranchScoped { .. })\n            })',
+        'check_unreviewed_code::tests::a_folded_staging_specs_named_only_commits_are_the_projects_to_review',
+    ),
 ]

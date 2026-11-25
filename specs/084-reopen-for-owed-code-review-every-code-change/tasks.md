@@ -223,7 +223,9 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 ### 25. A removed spec's named-only commits and the project's scope
 
-- [ ] `runtime/src/primitives/commit_attribution.rs` — inferred from `Attributor::claims`, not yet run: a subject's spec claims a commit only while the attributor's source holds that spec's directory or the commit touches it, so once a staging spec is folded, or a spec consolidated away, a commit that only names it reads as claimed by no spec at any later tree. `check-unreviewed-code` would then report its code under `unclaimed` when it lies after the project record's window start, beside the upstream spec's entry for a fold below `done`, and for a fold from `done` too. Task 9's fold fixture seeds the record after the staging spec's commits, so it does not show this. Build the fixture with the seed first, and decide from what it shows whether the project's scope leaves such a commit to the spec that took the removed one's place
+Model: opus, with fable as advisor (owner, 2026-11-25).
+
+- [x] `runtime/src/primitives/commit_attribution.rs` — inferred from `Attributor::claims`, not yet run: a subject's spec claims a commit only while the attributor's source holds that spec's directory or the commit touches it, so once a staging spec is folded, or a spec consolidated away, a commit that only names it reads as claimed by no spec at any later tree. `check-unreviewed-code` would then report its code under `unclaimed` when it lies after the project record's window start, beside the upstream spec's entry for a fold below `done`, and for a fold from `done` too. Task 9's fold fixture seeds the record after the staging spec's commits, so it does not show this. Build the fixture with the seed first, and decide from what it shows whether the project's scope leaves such a commit to the spec that took the removed one's place
 
 - **Done when**: a fixture with the seed before a staging spec's named-only commit states what the check reports after the fold, and the check either leaves that code to the upstream spec or the plan says why the project reviews it too.
 

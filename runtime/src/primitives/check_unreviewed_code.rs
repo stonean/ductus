@@ -1827,6 +1827,118 @@ mod tests {
         }
     }
 
+    /// Who reports which path, `done` specs first and then the project's entry.
+    fn reporters(found: &Checked) -> Vec<(String, Vec<String>)> {
+        let mut by: Vec<(String, Vec<String>)> = found
+            .done_specs
+            .iter()
+            .map(|spec| (spec.feature.clone(), spec.paths.clone()))
+            .collect();
+        if let Some(code) = &found.unclaimed {
+            by.push(("unclaimed".into(), code.paths.clone()));
+        }
+        by
+    }
+
+    /// The seed, then a staging spec folding into the `done` 002-b at `status`
+    /// with a commit naming it alone (`src/t.rs`), and from `done` one after its
+    /// review (`src/while_done.rs`); then the fold, 002's review after it, and a
+    /// commit naming the staging spec (`src/late.rs`). Who reports what before the
+    /// fold, after it, and after that last commit.
+    fn fold_with_named_only_commits(status: &str) -> [Vec<(String, Vec<String>)>; 3] {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let repository = project_with_a_spec(root);
+        a_done_spec(root, &repository);
+        install(root, &repository);
+        let spec = "specs/1234.1-foo/spec.md";
+        put(
+            root,
+            &repository,
+            spec,
+            &staging("in-progress"),
+            "spec: staging",
+        );
+        change(root, &repository, "src/t.rs", "feat(1234.1): its code");
+        if status == "done" {
+            let record = clean_record("1234.1-foo", "2026-11-04T00:00:00Z");
+            put(
+                root,
+                &repository,
+                "specs/1234.1-foo/review.md",
+                &record,
+                "review(1234.1)",
+            );
+            put(root, &repository, spec, &staging(status), "status(1234.1)");
+            change(
+                root,
+                &repository,
+                "src/while_done.rs",
+                "fix(1234.1): after review",
+            );
+        }
+        let before = reporters(&check(root));
+        std::fs::remove_dir_all(root.join("specs/1234.1-foo")).unwrap();
+        commit_all(&repository, "fold 1234.1 into 002");
+        let after = reporters(&check(root));
+        let record = clean_record("002-b", "2026-11-05T00:00:00Z");
+        put(
+            root,
+            &repository,
+            "specs/002-b/review.md",
+            &record,
+            "review(002): after",
+        );
+        change(
+            root,
+            &repository,
+            "src/late.rs",
+            "fix(1234.1): after the fold",
+        );
+        [before, after, reporters(&check(root))]
+    }
+
+    /// A staging spec's commits that name it without touching its directory are
+    /// the project's to review once a fold removes it, the seed before them: no
+    /// spec the tree holds claims them. So the project's entry reports, beside
+    /// what a fold below `done` brought its upstream, the code the staging spec's
+    /// own review read, and is the only one reporting what it changed after that
+    /// review and a commit naming it after the fold.
+    #[test]
+    fn a_folded_staging_specs_named_only_commits_are_the_projects_to_review() {
+        let entry = |who: &str, paths: &[&str]| (who.to_string(), strings(paths));
+        let [before, after, late] = fold_with_named_only_commits("in-progress");
+        assert_eq!(before, [], "before a fold below `done`");
+        assert_eq!(
+            after,
+            [
+                entry("002-b", &["src/t.rs"]),
+                entry("unclaimed", &["src/t.rs"])
+            ],
+            "after a fold below `done`"
+        );
+        assert_eq!(
+            late,
+            [entry("unclaimed", &["src/late.rs", "src/t.rs"])],
+            "after 002's review and a commit naming the folded spec"
+        );
+        let [before, after, late] = fold_with_named_only_commits("done");
+        assert_eq!(before, [entry("1234.1-foo", &["src/while_done.rs"])]);
+        assert_eq!(
+            after,
+            [entry("unclaimed", &["src/t.rs", "src/while_done.rs"])],
+            "after a fold from `done`"
+        );
+        assert_eq!(
+            late,
+            [entry(
+                "unclaimed",
+                &["src/late.rs", "src/t.rs", "src/while_done.rs"]
+            )],
+            "after 002's review and a commit naming the folded spec"
+        );
+    }
+
     /// A project in a subdirectory of its repository is checked as one at the root.
     #[test]
     fn a_project_in_a_subdirectory_is_checked() {
