@@ -294,7 +294,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-This is the last task. The about 9 `done` specs measured as owing a review are reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079); this task waits on them. Once 084 reaches `done`, tell the owner the date of the commit that set it: the bar's two weeks start there (spec, Resolved Questions, the bar for starting the three items).
+This is the last task. It waits on the `done` specs `check-unreviewed-code` names, reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079); how and by whom is the owner's to decide, and no artifact records it yet. At `1a3a4879` it named 9 specs and 81 paths and examined every subject, 023's and 048's records parsing since task 23. Task 32 does not wait on it. Once 084 reaches `done`, tell the owner the date of the commit that set it: the bar's two weeks start there (spec, Resolved Questions, the bar for starting the three items).
 
 - [ ] Remove `[review] unreviewed-push = "warn"` from `.ductus/config.toml` once `check-unreviewed-code` reports nothing here
 
