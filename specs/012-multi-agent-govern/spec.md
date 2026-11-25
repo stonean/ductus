@@ -145,7 +145,7 @@ The signpost note added to 007 is delivered by this spec. 007 keeps its `done` s
 - [x] AC15: 007's spec gains a signpost note pointing to 012, marking the multi-file design as superseded
 - [x] AC16: The `CLAUDE.md` "Ductus File Parity" rule is removed — there is only one ductus file
 - [x] AC17: An unknown agent key in `--agents=` is rejected with a clear error before any scaffolding occurs
-- [x] AC18: `settings.local.json` entries added by `/{project}:configure` or the user are preserved across `/ductus` re-runs — only the registry's bootstrap entries are added if missing
+- [x] AC18: `settings.local.json` entries added by `/{project}:configure` or the user are preserved across `/ductus` re-runs, apart from an entry identical to one of the agent's retired seed entries, which `framework/bootstrap/ductus.md` §Permission Setup's step 2 removes since 022's task 18 — only the registry's bootstrap entries are added if missing
 - [x] AC19: All shipped markdown files pass `npx markdownlint-cli2`
 
 ## Open Questions
