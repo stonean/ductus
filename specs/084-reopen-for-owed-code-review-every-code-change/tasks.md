@@ -250,7 +250,7 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 Model: opus (owner, 2026-11-25).
 
-- [ ] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `docs/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
+- [x] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `docs/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
 
 - **Done when**: both runs end as the body item says, a second update writes nothing, and the commit records each run's outcome.
 
