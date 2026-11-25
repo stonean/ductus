@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# ductus repo pre-push hook (spec 084).
+#
+# For each ref a push updates, runs `ductus check-unreviewed-code --at` the
+# commit it pushes, and nothing for a ref it deletes, as the shipped
+# framework/bootstrap/hooks/ductus-pre-push does for an adopter. That file is
+# the copy adopters get and is tested on an adopter-shaped tree; this one finds
+# the runtime as .githooks/pre-commit does, this repository's own release build
+# first, since the framework repo is where the primitives are developed.
+#
+# The check's exit status is this hook's. It reads `[review] unreviewed-push`
+# from .ductus/config.toml, so this file parses nothing: under "warn" it prints
+# its report and exits 0, under "block", the default, it exits 1 on reported
+# code or a subject it cannot examine.
+#
+# Installation: scripts/install-hooks.sh sets `git config core.hooksPath .githooks`.
+
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+ductus_bin=""
+if [ -x runtime/target/release/ductus ]; then
+  ductus_bin="$ROOT/runtime/target/release/ductus"
+elif command -v ductus > /dev/null; then
+  ductus_bin="ductus"
+fi
+
+if [ -z "$ductus_bin" ]; then
+  echo "pre-push: the ductus runtime is not reachable." >&2
+  echo "  Looked for runtime/target/release/ductus, then \`ductus\` on PATH." >&2
+  echo "  Build it with (cd runtime && cargo build --release), or push with" >&2
+  echo "  --no-verify to bypass this hook deliberately." >&2
+  exit 1
+fi
+
+# git gives one line per ref on stdin: local ref, local sha, remote ref, remote
+# sha. A local sha of zeros alone is a ref the push deletes, carrying no commit.
+rc=0
+while read -r _ local_sha _ _; do
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+  "$ductus_bin" check-unreviewed-code --at "$local_sha" > /dev/null || rc=$?
+done
+exit "$rc"

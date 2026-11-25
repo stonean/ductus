@@ -208,7 +208,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012, 021, 025, 049, 060, 062, 069 and 081) with 81 paths, the nine the plan measured, and 023 and 048 as not examined, which task 23 owns. A subject not examined blocks as reported code does, so `block` (task 19) waits on task 23 too.
 
-- [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
+- [x] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
 
 - **Done when**: a push from this checkout runs the check and warns on the backlog, and the commit records the `done` specs and commit count it reports.
 
