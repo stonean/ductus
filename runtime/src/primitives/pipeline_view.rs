@@ -25,7 +25,7 @@ use std::fmt::Write as _;
 use crate::primitives::{flatten_line, parse_feature_dir};
 use crate::schema::primitives::{
     DashboardConfig, DashboardSessionTarget, DashboardSpec, InboxStanding, InboxState,
-    ReopeningCounts, ReopeningState, SessionNotice,
+    ReopeningCounts, ReopeningState, SessionNotice, UnreviewedCodeCounts, UnreviewedState,
 };
 use crate::schema::status::ALLOWED_STATUSES;
 
@@ -80,6 +80,7 @@ pub(crate) struct ViewData<'a> {
     pub config_name: &'a str,
     pub inbox: &'a InboxStanding,
     pub reopenings: &'a ReopeningCounts,
+    pub unreviewed: &'a UnreviewedCodeCounts,
     pub session_target: Option<&'a DashboardSessionTarget>,
     /// This process's session label, when it has an identity.
     pub session_label: Option<&'a str>,
@@ -544,6 +545,7 @@ fn summary(data: &ViewData<'_>) -> Vec<Item> {
         ));
     }
     items.extend(config_items(data));
+    items.push(whole(unreviewed_line(data.unreviewed, project)));
     items.push(whole(reopenings_line(data.reopenings)));
     items.push(whole(inbox_line(data.inbox, project)));
     items
@@ -683,6 +685,32 @@ fn folds_line(specs: &[DashboardSpec], project: &str) -> Option<(String, usize)>
         ),
         pending.len(),
     ))
+}
+
+/// The unreviewed-code item, rendered on **every** run (spec 084, AC9). A subject
+/// not examined, or a check that failed, says why, so nothing reads as no code
+/// owed over a history that was not read.
+fn unreviewed_line(counts: &UnreviewedCodeCounts, project: &str) -> String {
+    match counts.state {
+        UnreviewedState::None => "Unreviewed code: none".to_string(),
+        UnreviewedState::Found => format!(
+            "Unreviewed code: {} path(s) no committed review covers — {} done spec(s), {} \
+             path(s) no spec claims · /{project}:review each, --project for code no spec claims",
+            counts.path_count, counts.done_spec_count, counts.unclaimed_path_count,
+        ),
+        UnreviewedState::NotExamined => {
+            let reason = counts.reason.as_deref().unwrap_or("no reason given");
+            if counts.path_count == 0 {
+                format!("Unreviewed code: ? not examined — {reason}")
+            } else {
+                format!(
+                    "Unreviewed code: ? not examined — {reason} · {} path(s) found in what was \
+                     examined",
+                    counts.path_count
+                )
+            }
+        }
+    }
 }
 
 /// The reopenings item, rendered on **every** run (spec 079, AC19). A state the
@@ -1053,6 +1081,7 @@ mod tests {
         config: DashboardConfig,
         inbox: InboxStanding,
         reopenings: ReopeningCounts,
+        unreviewed: UnreviewedCodeCounts,
         target: Option<DashboardSessionTarget>,
     }
 
@@ -1096,6 +1125,7 @@ mod tests {
                     reason: Some("no repo".to_string()),
                     ..ReopeningCounts::default()
                 },
+                unreviewed: UnreviewedCodeCounts::default(),
                 target: target.map(|feature| DashboardSessionTarget {
                     feature: feature.to_string(),
                     scenario: None,
@@ -1113,6 +1143,7 @@ mod tests {
                 config_name: ".ductus/config.toml",
                 inbox: &self.inbox,
                 reopenings: &self.reopenings,
+                unreviewed: &self.unreviewed,
                 session_target: self.target.as_ref(),
                 session_label: None,
                 notices: &[],
@@ -1245,6 +1276,7 @@ mod tests {
             for item in [
                 "Counts: draft 1 · clarified 1 · planned 1 · in-progress 1 · done 2",
                 "Tags: pipeline",
+                "Unreviewed code: none",
                 "Reopenings: ? not measured — no repo",
                 "Inbox: ✓ clean",
             ] {
@@ -1483,6 +1515,7 @@ mod tests {
             config_name: ".ductus/config.toml",
             inbox: &fixture.inbox,
             reopenings: &fixture.reopenings,
+            unreviewed: &fixture.unreviewed,
             session_target: fixture.target.as_ref(),
             session_label: Some("fx"),
             notices: &[SessionNotice {
@@ -1628,6 +1661,7 @@ mod tests {
             config_name: ".ductus/config.toml",
             inbox: &fixture.inbox,
             reopenings: &fixture.reopenings,
+            unreviewed: &fixture.unreviewed,
             session_target: fixture.target.as_ref(),
             session_label: None,
             notices: &notices,
@@ -1690,6 +1724,7 @@ mod tests {
             config_name: ".ductus/config.toml",
             inbox: &fixture.inbox,
             reopenings: &fixture.reopenings,
+            unreviewed: &fixture.unreviewed,
             session_target: None,
             session_label: None,
             notices: &[],
@@ -1711,6 +1746,47 @@ mod tests {
                 assert!(view.contains(line), "{line}: {view}");
             }
         }
+    }
+
+    /// Spec 084, AC9: each state in its own words, a subject not examined and a
+    /// failed check with their reason, never as no code owed.
+    #[test]
+    fn the_unreviewed_code_line_says_each_state_in_its_own_words() {
+        let counts = |state, paths, reason: Option<&str>| UnreviewedCodeCounts {
+            state,
+            done_spec_count: 2,
+            path_count: paths,
+            unclaimed_path_count: 1,
+            reason: reason.map(str::to_string),
+        };
+        assert_eq!(
+            unreviewed_line(&counts(UnreviewedState::None, 0, None), "ductus"),
+            "Unreviewed code: none"
+        );
+        assert_eq!(
+            unreviewed_line(&counts(UnreviewedState::Found, 5, None), "ductus"),
+            "Unreviewed code: 5 path(s) no committed review covers — 2 done spec(s), 1 path(s) \
+             no spec claims · /ductus:review each, --project for code no spec claims"
+        );
+        assert_eq!(
+            unreviewed_line(
+                &counts(
+                    UnreviewedState::NotExamined,
+                    5,
+                    Some("023-a: its record does not parse")
+                ),
+                "ductus"
+            ),
+            "Unreviewed code: ? not examined — 023-a: its record does not parse · 5 path(s) \
+             found in what was examined"
+        );
+        assert_eq!(
+            unreviewed_line(
+                &counts(UnreviewedState::NotExamined, 0, Some("no repo")),
+                "ductus"
+            ),
+            "Unreviewed code: ? not examined — no repo"
+        );
     }
 
     #[test]

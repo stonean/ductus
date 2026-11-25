@@ -8,7 +8,7 @@ Display the pipeline view for all feature specs.
 
 ## Purpose
 
-Read-only overview of every feature's progress through the pipeline. Shows which specs are ready to advance, which are blocked, and what the current session target is.
+Read-only overview of every feature's progress through the pipeline. Shows which specs are ready to advance, which are blocked, and what the current session target is, and on every run how much code no committed review covers, the count the pre-push hook reports (spec 084).
 
 ## Scope Boundaries
 

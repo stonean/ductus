@@ -190,7 +190,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Handed on from task 9: the check took 2.0 s here at `3caa8357` (5,071 commits, 75 `done` specs, release build, one run), and `dashboard` runs on every `/ductus:status`, so measure the view's time with the block added. `check_unreviewed_code::compute` returns every list whole.
 
-- [ ] `dashboard`'s `unreviewed-code` block, `pipeline_view`'s line, `framework/commands/status.md` and `docs/slash-commands.md`
+- [x] `dashboard`'s `unreviewed-code` block, `pipeline_view`'s line, `framework/commands/status.md` and `docs/slash-commands.md`
 
 - **Done when**: `/ductus:status` shows the count in each of its states on every run.
 

@@ -38,7 +38,7 @@ use crate::schema::primitives::{
     DashboardArgs, DashboardConfig, DashboardResult, DashboardScenarioDetail,
     DashboardSessionTarget, DashboardSpec, Frontmatter, InboxStanding, ListsForm, ReferenceOutcome,
     ReopeningCounts, ResolutionRecord, ResolveReferencesArgs, ScenarioOpenQuestion, SessionNotice,
-    SessionSource,
+    SessionSource, UnreviewedCodeCounts,
 };
 use crate::schema::services::Services;
 use crate::schema::status::UNBLOCKING_STATUSES;
@@ -153,6 +153,7 @@ struct Loaded {
     session: SessionView,
     inbox_standing: InboxStanding,
     reopenings: ReopeningCounts,
+    unreviewed_code: UnreviewedCodeCounts,
 }
 
 fn load(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result<Loaded> {
@@ -170,6 +171,7 @@ fn load(repo: &Path, identity: Option<&Identity>, now: SystemTime) -> Result<Loa
         session,
         inbox_standing: super::inbox_standing::standing(repo)?,
         reopenings: super::measure_reopenings::counts(repo, now),
+        unreviewed_code: super::check_unreviewed_code::counts(repo),
     })
 }
 
@@ -190,6 +192,7 @@ impl Loaded {
             config: self.config,
             inbox_standing: self.inbox_standing,
             reopenings: self.reopenings,
+            unreviewed_code: self.unreviewed_code,
             form: ListsForm::Inline,
             lists_file: None,
         }
@@ -210,6 +213,7 @@ impl Loaded {
             config_name: self.config_name,
             inbox: &self.inbox_standing,
             reopenings: &self.reopenings,
+            unreviewed: &self.unreviewed_code,
             session_target: self.session_target.as_ref(),
             session_label: self.session.identity.as_deref(),
             notices: &self.session.notices,
@@ -605,7 +609,9 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::schema::primitives::{InboxState, ReopeningState, SessionNoticeKind, SessionTarget};
+    use crate::schema::primitives::{
+        InboxState, ReopeningState, SessionNoticeKind, SessionTarget, UnreviewedState,
+    };
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::TempDir;
 
@@ -2186,6 +2192,91 @@ reason = "Deferred until v2 perf budget lands."
             .position(|line| line.starts_with("Reopenings: ? not measured — "))
             .unwrap_or_else(|| panic!("{rendered}"));
         assert!(lines[row + 1].starts_with("Inbox:"), "{rendered}");
+    }
+
+    /// Spec 084, AC9: the unreviewed-code block is `check-unreviewed-code` at
+    /// `HEAD`, rendered just before the reopenings row on every run: with no
+    /// repository not examined with the error, with no project record not
+    /// examined naming the seed, after the seed none, and with code after it
+    /// found.
+    #[test]
+    fn the_unreviewed_code_block_is_the_check_at_head_in_each_state() {
+        let row = |result: &Viewed| {
+            let lines: Vec<&str> = result.rendered_markdown.lines().collect();
+            let at = lines
+                .iter()
+                .position(|line| line.starts_with("Unreviewed code: "))
+                .unwrap_or_else(|| panic!("{}", result.rendered_markdown));
+            assert!(
+                lines[at + 1].starts_with("Reopenings"),
+                "{}",
+                result.rendered_markdown
+            );
+            lines[at].to_string()
+        };
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.unreviewed_code.state, UnreviewedState::NotExamined);
+        assert!(result.unreviewed_code.reason.is_some(), "{result:?}");
+        assert!(row(&result).starts_with("Unreviewed code: ? not examined — "));
+
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "the spec");
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.unreviewed_code.state, UnreviewedState::NotExamined);
+        let reason = result.unreviewed_code.reason.clone().unwrap_or_default();
+        assert!(reason.starts_with("project: "), "{reason}");
+        assert!(reason.contains("--seed"), "{reason}");
+
+        crate::primitives::write_review::run(
+            &crate::schema::primitives::WriteReviewArgs {
+                seed: true,
+                ..crate::schema::primitives::WriteReviewArgs::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "seed the project record");
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(
+            result.unreviewed_code.state,
+            UnreviewedState::None,
+            "{result:?}"
+        );
+        assert_eq!(row(&result), "Unreviewed code: none");
+
+        crate::primitives::git_fixture::write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
+        crate::primitives::git_fixture::commit_all(&repository, "code naming no spec");
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.unreviewed_code.state, UnreviewedState::Found);
+        assert_eq!(result.unreviewed_code.path_count, 1);
+        assert_eq!(result.unreviewed_code.unclaimed_path_count, 1);
+        assert_eq!(result.unreviewed_code.done_spec_count, 0);
+        assert!(row(&result).starts_with("Unreviewed code: 1 path(s) no committed review covers"));
+
+        // A `done` spec's code, claimed by a commit touching its directory,
+        // counts beside the code no spec claims.
+        write_spec(
+            tmp.path(),
+            "002-beta",
+            "status: done\ndependencies: []\n",
+            "",
+        );
+        crate::primitives::git_fixture::commit_all(&repository, "beta as done");
+        crate::primitives::git_fixture::write(&tmp.path().join("src/b.rs"), "fn b() {}\n");
+        crate::primitives::git_fixture::write(&tmp.path().join("specs/002-beta/notes.md"), "n\n");
+        crate::primitives::git_fixture::commit_all(&repository, "beta's code");
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.unreviewed_code.done_spec_count, 1, "{result:?}");
+        assert_eq!(result.unreviewed_code.path_count, 2);
+        assert_eq!(result.unreviewed_code.unclaimed_path_count, 1);
     }
 
     /// The block and the line are the measurement's counts at `now`.

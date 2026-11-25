@@ -3721,6 +3721,9 @@ pub struct DashboardResult {
     /// how many `in-progress` specs have no unchecked task, rendered as the view's
     /// `Reopenings:` line on every run (spec 079, AC19).
     pub reopenings: ReopeningCounts,
+    /// The code no review is going to read at `HEAD`, rendered as the view's
+    /// `Unreviewed code:` line on every run (spec 084, AC9).
+    pub unreviewed_code: UnreviewedCodeCounts,
     /// Where `specs` and `tags-union` are, with the session lists when they
     /// are non-empty: in this result, or past `[artifacts] read-size-bytes` in
     /// the file `lists-file` names (spec 080, AC7).
@@ -7069,6 +7072,26 @@ pub struct ReopeningCounts {
     pub runs: usize,
     /// Why the measurement failed, on `not-measured` only: its counts are zero
     /// because nothing was examined, not because nothing was found.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// `check-unreviewed-code`'s counts at `HEAD`, as `dashboard` carries them for
+/// `/{project}:status` (spec 084).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreviewedCodeCounts {
+    /// The check's state, and `not-examined` when the check itself failed.
+    pub state: UnreviewedState,
+    /// `done` specs holding code no committed review covers.
+    pub done_spec_count: usize,
+    /// Every path reported, `deleted` ones among them.
+    pub path_count: usize,
+    /// Of those, the paths of code no spec claims.
+    pub unclaimed_path_count: usize,
+    /// On `not-examined` only: each subject not examined with why, or the
+    /// check's error when it failed, whose counts are then zero because nothing
+    /// was examined.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }

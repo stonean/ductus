@@ -67,7 +67,7 @@ Under `block` the CLI exits 1 when `state` is `found` or `not-examined`, and 0 o
 
 ## `dashboard` addition
 
-`unreviewed-code`: `{state, done-spec-count, path-count, unclaimed-path-count}` or `{state: "not-examined", reason}`, from `check-unreviewed-code` at `HEAD`, rendered by `/{project}:status` on every run.
+`unreviewed-code`: `{state, done-spec-count, path-count, unclaimed-path-count, reason}` from `check-unreviewed-code` at `HEAD`, rendered by `/{project}:status` on every run. `reason` is present on `not-examined` alone, naming each subject not examined with why, or the check's error when it failed, whose counts are then zero; the counts stand beside it, so code found where the check could read is not hidden by a subject it could not.
 
 ## Configuration
 

@@ -39,8 +39,9 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult, ListsForm, UnreviewedDoneSpec,
-    UnreviewedNotExamined, UnreviewedPushMode, UnreviewedState, UnreviewedUnclaimed,
+    CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult, ListsForm, UnreviewedCodeCounts,
+    UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode, UnreviewedState,
+    UnreviewedUnclaimed,
 };
 
 const PRIMITIVE: &str = "check-unreviewed-code";
@@ -473,6 +474,42 @@ pub struct Unreviewed {
 /// As [`compute`] and [`bound`].
 pub fn run(args: &CheckUnreviewedCodeArgs, repo: &Path) -> Result<CheckUnreviewedCodeResult> {
     bound(repo, compute(args, repo)?)
+}
+
+/// The check at `HEAD` as `dashboard` carries it for `/{project}:status` (spec
+/// 084): its counts, and on `not-examined` each subject not examined with why.
+/// A check that failed is `not-examined` with its error, so it never reads as
+/// no code owed.
+pub(crate) fn counts(repo: &Path) -> UnreviewedCodeCounts {
+    let args = CheckUnreviewedCodeArgs {
+        at: None,
+        since: None,
+    };
+    match compute(&args, repo) {
+        Ok(found) => {
+            let checked = &found.checked;
+            let reason = (!checked.not_examined.is_empty()).then(|| {
+                checked
+                    .not_examined
+                    .iter()
+                    .map(|entry| format!("{}: {}", entry.subject, entry.reason))
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            });
+            UnreviewedCodeCounts {
+                state: checked.state(),
+                done_spec_count: checked.done_specs.len(),
+                path_count: checked.reported_paths(),
+                unclaimed_path_count: checked.unclaimed_paths(),
+                reason: reason.map(|text| super::flatten_line(&text)),
+            }
+        }
+        Err(error) => UnreviewedCodeCounts {
+            state: UnreviewedState::NotExamined,
+            reason: Some(super::flatten_line(&error.to_string())),
+            ..UnreviewedCodeCounts::default()
+        },
+    }
 }
 
 /// Run the check at `at`, and with `since` at each first-parent commit from
