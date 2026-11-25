@@ -137,7 +137,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/src/primitives/classify_spec_edit.rs` | Create | Correction or reopen, from the diff; removed by spec 084 |
 | `runtime/src/primitives/measure_reopenings.rs` | Create | The outcome, from history |
 | `runtime/src/primitives/dashboard.rs` | Modify | The counts `/{project}:status` renders |
-| `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule |
+| `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule; removed by spec 084 |
 | `runtime/src/primitives/prune_plan.rs` | Modify | Only a person's waiver keeps a plan section; `reopen-required` takes the shared test of an added box |
 | `runtime/src/primitives/read_tasks.rs` | Modify | The one test of what `tasks.md` owes, and the refusal both writers share |
 | `runtime/src/primitives/mod.rs` | Modify | Module declarations |

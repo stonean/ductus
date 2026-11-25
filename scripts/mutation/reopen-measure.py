@@ -1,5 +1,6 @@
-"""Mutation list for 079's decisions from history and from a diff: the hints that
-follow whether an edit reopens a spec (`check_artifact_size.rs`), whether reopenings stayed within the bound
+"""Mutation list for 079's decisions from history and from a diff: the rule a `done`
+spec's size warning states on what reopens it (`check_artifact_size.rs`, spec
+084), whether reopenings stayed within the bound
 (`measure_reopenings.rs`), and the line `pipeline_view.rs` renders from the
 block `dashboard.rs` fills. The mutations also anchor on the readers and checks
 those decisions rest on: `read_spec.rs` (criterion folding), `read_tasks.rs`,
@@ -33,20 +34,6 @@ MUTATIONS = [
         ".is_some_and(|(_bracket, marker)| line.as_bytes()[marker] == b' ')",
         '.is_some()',
         'primitives::prune_plan::tests',
-    ),
-    (
-        'M33 a data-model trim follows the requirement rule',
-        'src/primitives/check_artifact_size.rs',
-        '(_, FixKind::Split | FixKind::Promote) | (ArtifactKind::DataModel, FixKind::Trim) => {',
-        '(_, FixKind::Split | FixKind::Promote) => {',
-        'check_artifact_size::tests::a_data_model_trim_reopens_a_done_spec',
-    ),
-    (
-        'M34 a spec trim always reopens',
-        'src/primitives/check_artifact_size.rs',
-        '(_, FixKind::Trim) => OnDone::IfRequirementChanges,',
-        '(_, FixKind::Trim) => OnDone::Always,',
-        'check_artifact_size::tests::the_effect_on_done_is_named_only_at_done',
     ),
     (
         'M35 a second clean run is never over',
@@ -722,5 +709,19 @@ MUTATIONS = [
             'if {\n            let t = trimmed;\n            if t.starts_with("```") {\n                toggled = !toggled;\n                true\n            } else {\n                toggled\n            }\n        } {',
         ],
         'primitives::spec_links::tests::a_longer_fence_holding_a_shorter_one_excludes_to_its_own_close',
+    ),
+    (
+        'M323 a done spec\'s size warning states no rule',
+        'src/primitives/check_artifact_size.rs',
+        '    if status == "done" {\n        warning.push(\' \');',
+        '    if false {\n        warning.push(\' \');',
+        'check_artifact_size::tests::a_done_specs_warning_states_the_owed_work_rule_once',
+    ),
+    (
+        'M324 every size warning states the done rule',
+        'src/primitives/check_artifact_size.rs',
+        '    if status == "done" {\n        warning.push(\' \');',
+        '    if true {\n        warning.push(\' \');',
+        'check_artifact_size::tests::a_done_specs_warning_states_the_owed_work_rule_once',
     ),
 ]

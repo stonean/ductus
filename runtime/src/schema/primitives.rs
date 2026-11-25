@@ -7904,22 +7904,6 @@ pub enum FixKind {
     PruneProject,
 }
 
-/// What a fix does to a `done` spec, by §spec-lifecycle's rules for an edit
-/// under a spec.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum OnDone {
-    /// Never reopens it: pruning `tasks.md`, or trimming `plan.md`.
-    Never,
-    /// Always reopens it: splitting the spec and promoting a scenario each
-    /// remove requirements from what it asserts, and trimming `data-model.md`
-    /// edits a contract, as `classify-spec-edit` reads one.
-    Always,
-    /// Reopens it only when the edit changes a criterion or an open question, as
-    /// `classify-spec-edit` decides: trimming `spec.md`.
-    IfRequirementChanges,
-}
-
 /// One fix an oversized artifact's warning names.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -7928,10 +7912,6 @@ pub struct ArtifactFix {
     pub fix: FixKind,
     /// The fix as the warning words it.
     pub text: String,
-    /// What the fix does to a `done` spec. Present only when the spec is
-    /// `done`; absent means not computed, never `never`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub on_done: Option<OnDone>,
 }
 
 /// One subject artifact over the threshold.
@@ -8037,8 +8017,9 @@ pub struct CheckArtifactSizeResult {
 pub struct SizeSpecHalf {
     /// Feature directory name echoed from the args.
     pub feature: String,
-    /// The spec's frontmatter `status`, which each fix's `on-done` is
-    /// computed against.
+    /// The spec's frontmatter `status`. At `done`, each subject's warning
+    /// states once that a fix reopens the spec only if it leaves an unchecked
+    /// box in its `tasks.md` or an unticked criterion in its `spec.md`.
     pub status: String,
     /// Whether the stored decisions behind `decided` were read.
     pub decisions: DecisionsState,
@@ -9116,7 +9097,7 @@ mod tests {
     };
     use super::{
         ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-        FixKind, OnDone, OversizedArtifact, ProjectFileSize, ProjectSizeState, ReadSizeThreshold,
+        FixKind, OversizedArtifact, ProjectFileSize, ProjectSizeState, ReadSizeThreshold,
         SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
     };
     use super::{
@@ -9913,7 +9894,6 @@ mod tests {
                 fixes: vec![ArtifactFix {
                     fix: FixKind::Trim,
                     text: "trim it".into(),
-                    on_done: Some(OnDone::IfRequirementChanges),
                 }],
                 warning: "w".into(),
                 message: "m".into(),
@@ -9941,8 +9921,8 @@ mod tests {
         assert_eq!(value["threshold"]["source"], "config");
         assert_eq!(value["oversized"][0]["kind"], "data-model");
         assert_eq!(
-            value["oversized"][0]["fixes"][0]["on-done"],
-            "if-requirement-changes"
+            value["oversized"][0]["fixes"][0],
+            serde_json::json!({"fix": "trim", "text": "trim it"})
         );
         assert_eq!(value["oversized"][0]["decision-key"], "artifact-size — m");
         assert_eq!(value["decisions"], "read");
@@ -9954,8 +9934,7 @@ mod tests {
         assert!(!value.as_object().unwrap().contains_key("project-files"));
         assert_eq!(round_trip(&result), result);
 
-        // Not computed is absent: a fix below `done` has no `on-done`, an
-        // undecided artifact no key.
+        // Not computed is absent: an undecided artifact has no key.
         let below = CheckArtifactSizeResult {
             threshold: ReadSizeThreshold {
                 bytes: 50_000,
@@ -9965,7 +9944,6 @@ mod tests {
                 fixes: vec![ArtifactFix {
                     fix: FixKind::Split,
                     text: "split it".into(),
-                    on_done: None,
                 }],
                 decided: false,
                 decision_key: None,
@@ -9977,12 +9955,6 @@ mod tests {
         assert_eq!(value["threshold"]["source"], "default");
         let artifact = value["oversized"][0].as_object().unwrap();
         assert!(!artifact.contains_key("decision-key"));
-        assert!(
-            !value["oversized"][0]["fixes"][0]
-                .as_object()
-                .unwrap()
-                .contains_key("on-done")
-        );
         assert_eq!(round_trip(&below), below);
     }
 

@@ -39,9 +39,8 @@ use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-    FixKind, ListsForm, OnDone, OversizedArtifact, ProjectFileKind, ProjectFileSize,
-    ProjectSizeState, ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget,
-    ThresholdSource,
+    FixKind, ListsForm, OversizedArtifact, ProjectFileKind, ProjectFileSize, ProjectSizeState,
+    ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
 };
 
 /// The finding family `/{project}:analyze` records an oversized artifact
@@ -604,27 +603,23 @@ fn oversized_artifact(
     threshold: u64,
     status: &str,
 ) -> OversizedArtifact {
-    let done = status == "done";
     let fixes: Vec<ArtifactFix> = fix_plan(kind)
         .into_iter()
         .map(|(fix, text)| ArtifactFix {
             fix,
             text: text.to_string(),
-            on_done: done.then(|| on_done(kind, fix)),
         })
         .collect();
-    let listed: Vec<String> = fixes
-        .iter()
-        .map(|fix| match fix.on_done {
-            Some(effect) => format!("{} ({})", fix.text, effect_text(effect)),
-            None => fix.text.clone(),
-        })
-        .collect();
-    let warning = format!(
+    let listed: Vec<&str> = fixes.iter().map(|fix| fix.text.as_str()).collect();
+    let mut warning = format!(
         "`{path}` is {bytes} bytes, over the {threshold}-byte read size ({pages} read pages), \
          so an agent may not read it in one call. Fixes: {}.",
         listed.join("; ")
     );
+    if status == "done" {
+        warning.push(' ');
+        warning.push_str(DONE_RULE);
+    }
     let message = finding_message(&path, bytes, pages, threshold);
     OversizedArtifact {
         path,
@@ -703,35 +698,13 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
     }
 }
 
-/// What `fix` on `kind` does to a `done` spec, as `classify-spec-edit` would read
-/// the result: pruning `tasks.md` adds no unchecked task; splitting and promoting
-/// remove requirements from what the spec asserts; trimming `plan.md` is a plan
-/// edit, which takes no back-edge whatever it changes; trimming `data-model.md`
-/// edits a contract; and trimming `spec.md`, `tasks.md`'s last fix too, reopens
-/// the spec only when it changes a criterion or an open question.
-fn on_done(kind: ArtifactKind, fix: FixKind) -> OnDone {
-    match (kind, fix) {
-        // A project file belongs to no spec, so pruning one reopens none; the
-        // caller passes it no `done` status, so the effect is never rendered.
-        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {
-            OnDone::Never
-        }
-        (_, FixKind::Split | FixKind::Promote) | (ArtifactKind::DataModel, FixKind::Trim) => {
-            OnDone::Always
-        }
-        (_, FixKind::Trim) => OnDone::IfRequirementChanges,
-    }
-}
-
-fn effect_text(effect: OnDone) -> &'static str {
-    match effect {
-        OnDone::Never => "does not reopen this done spec",
-        OnDone::Always => "reopens this done spec",
-        OnDone::IfRequirementChanges => {
-            "reopens this done spec only if the trim changes a criterion or an open question"
-        }
-    }
-}
+/// What any fix does to a `done` spec, stated once after a `done` spec's fixes:
+/// a `done` spec is `in-progress` exactly while its `tasks.md` holds an
+/// unchecked box or its `spec.md` an unticked criterion (§spec-lifecycle, spec
+/// 084), so the state the fix leaves decides, never the fix's kind. A project
+/// file belongs to no spec, and its caller passes it no status.
+const DONE_RULE: &str = "A fix reopens this done spec only if it leaves an unchecked box in its \
+                         tasks.md or an unticked criterion in its spec.md.";
 
 /// The threshold to check at, and a notice for each key in `[artifacts]`
 /// the shared registry does not recognize (spec 019): a mistyped
@@ -1427,72 +1400,37 @@ mod tests {
         );
     }
 
+    /// A `done` spec's warning states the owed-work rule once, after its fixes,
+    /// and no fix names a reopen of its own (spec 084, AC18); below `done` a
+    /// warning says nothing of reopening. The finding message, which a stored
+    /// waiver's key is parsed under, carries neither.
     #[test]
-    fn the_effect_on_done_is_named_only_at_done() {
-        let files = [("plan.md", 500), ("tasks.md", 500), ("scenarios/a.md", 500)];
+    fn a_done_specs_warning_states_the_owed_work_rule_once() {
+        let files = [
+            ("plan.md", 500),
+            ("tasks.md", 500),
+            ("data-model.md", 500),
+            ("scenarios/a.md", 500),
+        ];
         for status in ["draft", "clarified", "planned", "in-progress"] {
             let result = check(&sized(status, &files)).unwrap();
+            assert_eq!(result.oversized.len(), 4, "{status}");
             for artifact in &result.oversized {
-                assert!(
-                    artifact.fixes.iter().all(|f| f.on_done.is_none()),
-                    "{status}"
-                );
                 assert!(!artifact.warning.contains("reopen"), "{}", artifact.warning);
             }
         }
         let result = check(&sized("done", &files)).unwrap();
-        let effects: Vec<(FixKind, Option<OnDone>)> = result
-            .oversized
-            .iter()
-            .flat_map(|o| o.fixes.iter().map(|f| (f.fix, f.on_done)))
-            .collect();
-        assert_eq!(
-            effects,
-            [
-                (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::Never)),
-                (FixKind::Prune, Some(OnDone::Never)),
-                (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::IfRequirementChanges)),
-                (FixKind::Promote, Some(OnDone::Always)),
-            ]
-        );
-        let plan = &result.oversized[0].warning;
-        assert!(
-            plan.contains("for finished work (does not reopen this done spec)"),
-            "a plan trim is a plan edit, which never reopens: {plan}"
-        );
-        let tasks = &result.oversized[1].warning;
-        assert!(
-            tasks.contains("(does not reopen this done spec)"),
-            "{tasks}"
-        );
-        assert!(tasks.contains("(reopens this done spec)"), "{tasks}");
-        assert!(
-            tasks.contains(
-                "(reopens this done spec only if the trim changes a criterion or an open question)"
-            ),
-            "{tasks}"
-        );
-    }
-
-    /// A data model is a contract, so trimming one reopens a `done` spec, as
-    /// `classify-spec-edit` reads the edit (spec 079).
-    #[test]
-    fn a_data_model_trim_reopens_a_done_spec() {
-        let result = check(&sized("done", &[("data-model.md", 500)])).unwrap();
-        let effects: Vec<(FixKind, Option<OnDone>)> = result.oversized[0]
-            .fixes
-            .iter()
-            .map(|f| (f.fix, f.on_done))
-            .collect();
-        assert_eq!(
-            effects,
-            [
-                (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::Always)),
-            ]
-        );
+        assert_eq!(result.oversized.len(), 4);
+        for artifact in &result.oversized {
+            let warning = &artifact.warning;
+            assert!(warning.ends_with(&format!(". {DONE_RULE}")), "{warning}");
+            assert_eq!(warning.matches("reopen").count(), 1, "{warning}");
+            assert!(
+                artifact.fixes.iter().all(|f| !f.text.contains("reopen")),
+                "{warning}"
+            );
+            assert!(!artifact.message.contains("reopen"), "{}", artifact.message);
+        }
     }
 
     #[test]
@@ -1938,7 +1876,7 @@ mod tests {
         let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
         let agents = &result.oversized[0];
         assert_eq!(fix_kinds(agents), [FixKind::PruneProject]);
-        assert_eq!(agents.fixes[0].on_done, None);
+        assert!(!agents.warning.contains("reopen"), "{}", agents.warning);
         assert!(
             agents.warning.contains("prune --project"),
             "{}",

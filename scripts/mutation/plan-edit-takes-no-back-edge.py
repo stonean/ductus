@@ -2,9 +2,9 @@
 edit confined to a `done` spec's `plan.md` or `tasks.md` that adds no unchecked
 task takes no back-edge (§spec-lifecycle), and every surface that
 computes a reopen or a record's freshness agrees — `prune-plan`'s
-`reopen-required` (`runtime/src/primitives/prune_plan.rs`), analyze freshness
-(`runtime/src/primitives/analyze_subjects.rs`, 066), and `check-artifact-size`'s
-advice (`runtime/src/primitives/check_artifact_size.rs`, 063).
+`reopen-required` (`runtime/src/primitives/prune_plan.rs`) and analyze
+freshness (`runtime/src/primitives/analyze_subjects.rs`, 066).
+`check-artifact-size`'s advice names no per-fix reopen since spec 084.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/plan-edit-takes-no-back-edge.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -38,19 +38,5 @@ MUTATIONS = [
         '            .any(|name| *path == format!("{rel_dir}/{name}") && repo.join(path).is_file())',
         '            .any(|name| *path == format!("{rel_dir}/{name}"))',
         'analyze_subjects::tests::a_done_specs_deleted_plan_still_stales_its_record',
-    ),
-    (
-        'M4 trimming a done spec plan can reopen it',
-        'src/primitives/check_artifact_size.rs',
-        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {\n            OnDone::Never\n        }',
-        '        (_, FixKind::Prune | FixKind::PruneProject) => OnDone::Never,',
-        'check_artifact_size::tests::the_effect_on_done_is_named_only_at_done',
-    ),
-    (
-        'M5 a data-model trim on a done spec is exempt like the plan trim',
-        'src/primitives/check_artifact_size.rs',
-        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan, FixKind::Trim) => {\n            OnDone::Never\n        }',
-        '        (_, FixKind::Prune | FixKind::PruneProject) | (ArtifactKind::Plan | ArtifactKind::DataModel, FixKind::Trim) => OnDone::Never,',
-        'check_artifact_size::tests::a_data_model_trim_reopens_a_done_spec',
     ),
 ]

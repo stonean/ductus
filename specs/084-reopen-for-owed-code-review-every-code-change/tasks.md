@@ -275,7 +275,7 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-- [ ] `on_done` and `OnDone` go, with `OnDone`'s schema docs and their mutants; a `done` spec's warning states the state rule once; the table's tests rewritten
+- [x] `on_done` and `OnDone` go, with `OnDone`'s schema docs and their mutants; a `done` spec's warning states the state rule once; the table's tests rewritten
 
 - **Done when**: AC18 and AC12 hold, no result or description names a per-fix reopen, and `grep -rn classify.spec.edit` over the live-artifact set finds only historical records.
 
@@ -323,3 +323,9 @@ This is the last task. The about 9 `done` specs measured as owing a review are r
 - [ ] `specs/023-govern-refinement/review.md`, `specs/048-govern-acquired-runtime/review.md` — the waiver `reason:` that `ec41a6c2` rewrote by hand in each record's `decisions:` list is an unquoted scalar holding a colon and a space ("… 2026-11-21: that prompt …"), so the frontmatter fails to parse (`serde_norway`: "mapping values are not allowed in this context", at the 140th line of 023's block and the 467th of 048's). Both specs are `done`, so `check-review-gate` answers already-done before it reads the record, and `check-artifacts --feature 023-govern-refinement` lists no finding on it. Found by task 9's first run of `check-unreviewed-code` here, which reports both specs as not examined (2026-11-24)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+### 31. 084's plan classifies its contract changes under `BE-COMPAT-001`
+
+- [ ] `specs/084-reopen-for-owed-code-review-every-code-change/plan.md` — the plan classifies none of the primitive contracts 084 changes, which `BE-COMPAT-001`'s Verification asks of a plan that modifies one, and which `AGENTS.md` says fires on a primitive's contract (found by task 17, 2026-11-25; the agent's recommendation to add a task, adopted by the operator, 2026-11-25). Among them: `classify-spec-edit` retired, `check-artifact-size`'s `fixes[].on-done` removed, `compute-review-scope`'s window start and its scope for code no spec claims, `/ductus:analyze --fix` no longer reverting a `done` spec for a scenario's open question, and the primitives and result fields added. Derive the whole set from 084's commits, read each against the primitive's compiled description, and give the plan one paragraph classifying each as additive or as breaking within major version zero, as 057's, 058's, 063's and 066's plans do. `plan.md` is 698 bytes under `[artifacts] read-size-bytes` (50,000), so the paragraph trims what it needs to fit, or the commit says why it does not
+
+- **Done when**: the plan states each primitive contract 084 changes as additive or breaking under `BE-COMPAT-001`, and `check-artifact-size` on 084 reports `plan.md`'s size.

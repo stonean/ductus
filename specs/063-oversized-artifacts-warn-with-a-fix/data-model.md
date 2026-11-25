@@ -1,6 +1,6 @@
 # 063 — Oversized artifacts warn with a fix Data Model
 
-Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `OnDone`, `DecisionsState`, `SizeSpecHalf`, `SizeProjectHalf`, `ProjectFileSize` and `ProjectSizeState`, with `form` the shared `ListsForm` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
+Defines the configuration key `check-artifact-size` reads, the primitive's request and response, and the `artifact-size` finding `/{project}:analyze` records from it. The serialized types — `CheckArtifactSizeArgs`, `CheckArtifactSizeResult`, `ReadSizeThreshold`, `ThresholdSource`, `OversizedArtifact`, `ArtifactKind`, `ArtifactFix`, `FixKind`, `DecisionsState`, `SizeSpecHalf`, `SizeProjectHalf`, `ProjectFileSize` and `ProjectSizeState`, with `form` the shared `ListsForm` — live in `runtime/src/schema/primitives.rs` with kebab-case serde derives, and their JSON is the stable host contract, following the primitive-schema convention in [022 — Deterministic Runtime](../022-deterministic-runtime/data-model.md). A skipped subject reuses the existing `SkippedTarget`.
 
 ## Configuration
 
@@ -61,7 +61,7 @@ The shared keys sit at the top level. The spec half and the project half follow,
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `feature` | string | Echoed from the args. |
-| `status` | string | The spec's frontmatter `status`, which the `on-done` effects are computed against. |
+| `status` | string | The spec's frontmatter `status`. At `done`, each `warning` ends with the rule on what reopens the spec. |
 | `decisions` | `DecisionsState` | Whether `analysis.md`'s stored decisions were read. |
 | `path` | string | Repo-relative path of `spec.md`. |
 
@@ -82,7 +82,7 @@ The shared keys sit at the top level. The spec half and the project half follow,
 | `head-bytes` | integer, optional | Staged only: the `HEAD` copy's length. Absent when `HEAD` has none, or the repository has no commits. |
 | `refused` | boolean, optional | Staged only, for a measured file: the staged copy is over the threshold and either has no `HEAD` copy or is larger than it. An unchanged or shrunk over-limit file is not refused. |
 
-A project file over the threshold joins `oversized` with kind `project-file`, whose one fix is `prune-project`, with no `on-done` whatever the feature's status. Its `warning` and `message` are worded as a spec subject's, and a stored waiver in the named feature's `analysis.md` covers it by the decided rule below. Staged, `oversized` is judged on the staged copy. The CLI, with `--staged`, exits 1 when any file is refused or `skipped-count` is above zero, so in either form, naming each on stderr, an unmeasurable one from `project-files` (`ductus check-artifact-size --help`); a repository or `HEAD` that cannot be read is an error, never a clean result, and an index that cannot be read leaves each project file `unreadable` and in `skipped`, so the exit is 1.
+A project file over the threshold joins `oversized` with kind `project-file`, whose one fix is `prune-project`, and whose `warning` names no reopen whatever the feature's status. Its `warning` and `message` are worded as a spec subject's, and a stored waiver in the named feature's `analysis.md` covers it by the decided rule below. Staged, `oversized` is judged on the staged copy. The CLI, with `--staged`, exits 1 when any file is refused or `skipped-count` is above zero, so in either form, naming each on stderr, an unmeasurable one from `project-files` (`ductus check-artifact-size --help`); a repository or `HEAD` that cannot be read is an error, never a clean result, and an index that cannot be read leaves each project file `unreadable` and in `skipped`, so the exit is 1.
 
 Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the scenarios in the shared scenario ordering (case-insensitive, raw-byte tiebreak).
 
@@ -102,7 +102,7 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | `bytes` | integer | The file's length on disk. |
 | `pages` | integer | `ceil(bytes / threshold)`; at least 2 for every entry here. |
 | `fixes` | list of `ArtifactFix` | The fixes for this kind, in the spec's table order. Never includes a waiver. |
-| `warning` | string | The rendered one-line warning the commands print. |
+| `warning` | string | The rendered one-line warning the commands print. On a `done` spec it ends with one sentence: a fix reopens the spec only if it leaves an unchecked box in its `tasks.md` or an unticked criterion in its `spec.md` (spec 084). |
 | `message` | string | The `artifact-size` finding message, in the format below. |
 | `decided` | boolean | A stored waiver still covers this subject (the decided rule below). Always `false` unless `decisions` is `read`. |
 | `decision-key` | string, optional | The stored decision's key. Present exactly when `decided` is `true`. |
@@ -113,7 +113,6 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | --- | --- | --- |
 | `fix` | `FixKind` | `prune`, `split`, `trim`, `promote`, or `prune-project`. |
 | `text` | string | The fix as the warning words it. A `split` names the manual route and no split command. |
-| `on-done` | `OnDone`, optional | Present only when `status` is `done`: `never` (prune, and a `plan.md` trim), `always` (split, promote, and a `data-model.md` trim), or `if-requirement-changes` (any other trim, which edits `spec.md`). Never present on a `project-file`: it belongs to no spec. |
 
 Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that apply if it is still over after pruning; `spec` and `plan` → `split`, `trim`; `data-model` → `split`, `trim` (whose text forbids sub-files); `scenario` → `promote`; `project-file` → `prune-project`.
 
