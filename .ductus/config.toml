@@ -10,11 +10,6 @@ project = "ductus"
 
 [review]
 tech-stack-verified = true
-# The pre-push hook reports the code no committed review covers and lets the
-# push through, while this repository's backlog of `done` specs owing a review
-# drains (spec 084). 084's last task removes this key, so the push blocks here
-# by default, as it does for an adopter, before 084 reaches `done`.
-unreviewed-push = "warn"
 
 [runtime]
 # This repository builds the runtime it ships, so it supplies its own binary
