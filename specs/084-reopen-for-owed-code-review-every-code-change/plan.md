@@ -6,7 +6,7 @@ Implements [084 — Reopen for owed code, review every code change](spec.md).
 
 The work lands in the order the spec's Resolved Questions fix: the reopen rule first, with `classify-spec-edit` retired in the change that leaves it unread (AC12), then the sweep of what states the old one, then the machinery that owes a review to every code change, then delivery.
 
-- **The rule.** A shared owed-work helper and a `check-owed-work` primitive answer whether a spec holds an unchecked box or an unticked criterion. `/ductus:amend`, `/ductus:groom`, `/ductus:fold` and `/ductus:prune` reopen a `done` spec from that answer, `classify-spec-edit` is removed in the same change, and the constitution states the rule in place of the third back-edge.
+- **The rule.** A shared owed-work helper and a `check-owed-work` primitive answer whether a spec holds an unchecked box or an unticked criterion. `/ductus:amend`, `/ductus:groom`, `/ductus:fold` and `/ductus:prune` reopen a `done` spec from that answer, and the constitution states the rule in place of the third back-edge.
 - **The sweep.** Every live site that states the old rule is corrected. Under the new rule this leaves each `done` spec `done`.
 - **Reviews owed wherever code changed.** The review window starts where the last review ended. Code no spec claims leaves open specs' scopes for a project record, `specs/review.md`, which is seeded at the update. A `check-unreviewed-code` primitive reports the code no review is going to read, and runs from a shipped pre-push hook, from the CI template and from `/ductus:status`. `/ductus:review` reviews a `done` spec's code as the whole review, and asks the owner before a ticked criterion changes. An update reports an adopter's backlog and leaves its configuration alone.
 - **Delivery.** `check-artifact-size` stops naming per-fix reopens. Each surface owner gains its back-link, and this repository's own hook moves from `warn` to `block` once its backlog drains.
@@ -230,7 +230,7 @@ Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'
 | `.githooks/pre-push`, `.ductus/config.toml`, `specs/review.md` | Create, Modify, Create | This repository's hook, its `warn`, its seed |
 | `AGENTS.md`, `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`, `docs/developing-ductus.md` | Modify | The sweep |
 | `specs/008-*`, `011-*`, `013-*`, `014-*`, `016-*`, `022-*`, `023-*`, `026-*`, `030-*`, `035-*`, `041-*`, `047-*`, `049-*`, `050-*`, `051-*`, `054-*`, `063-*`, `066-*`, `067-*`, `073-*`, `079-*`, `080-*`, `081-*` | Modify | The sweep and AC11's notes |
-| `specs/018-*`, `020-*`, `022-*`, `046-*`, `050-*`, `051-*`, `057-*`, `066-*`, `067-*`, `079-*`, `081-*`, `083-*` | Modify | Back-links discharging `cross-spec-impact:` |
+| `specs/018-*`, `020-*`, `022-*`, `046-*`, `050-*`, `051-*`, `057-*`, `066-*`, `067-*`, `079-*`, `080-*`, `081-*`, `083-*` | Modify | Back-links discharging `cross-spec-impact:` |
 
 ## Data Model
 
@@ -271,12 +271,13 @@ Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'
 
 ## Cross-spec impact
 
-Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md`, which `check-artifacts` reads as discharging it. For 079 and 081 it sits under `## See also`, where `derive-dependencies` induces no edge, since this spec's body links both and an edge back would close a cycle. The owed back-links:
+Each spec in `cross-spec-impact:` gains a back-link to this spec in its `spec.md`, which `check-artifacts` reads as discharging it. For 079 and 081 it sits under `## See also`, which induces no edge, since an edge back to this spec, which links both, would close a cycle. The owed back-links:
 
 - **018:** the pre-push hook beside its pre-commit hook.
 - **020:** the review command's `--project` flag and its status write.
 - **022:** the `dashboard` count and the configuration key.
-- **026:** its AC20 and Family 27 scenario name the file and label, not a line.
+- **026:** AC20 and its Family 27 scenario anchor to file and label.
+- **080:** its Bound steps name the `Unreviewed code:` line's last cut.
 - **046:** `--fix`'s revert on a scenario's open question, its AC23 and AC30.
 - **050:** the constitution's new rule.
 - **051:** fold's reopen and review reset on a `done` upstream spec, its AC24 and AC25.

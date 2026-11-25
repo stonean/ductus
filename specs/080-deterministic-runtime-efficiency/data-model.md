@@ -90,7 +90,8 @@ One model (`runtime/src/primitives/pipeline_view.rs`), rendered as markdown (`re
    - the scenario-question lines, to one indented `{n} question line(s) not shown — …` line under their header;
    - the out-of-set statuses in `Counts:`, to one `{n} spec(s) in {m} other status(es)` part;
    - `Next actions:`, to `Next actions: {n} spec(s) under {m} next action(s) not shown — …`;
-   - the Notice and Unreadable lines, to `Notice: {n} notice(s) not shown — …` and `Unreadable: {n} session file(s) not shown — …`.
+   - the Notice and Unreadable lines, to `Notice: {n} notice(s) not shown — …` and `Unreadable: {n} session file(s) not shown — …`;
+5. last, a not-examined `Unreviewed code:` line drops its subjects and their reasons, to `Unreviewed code: ? not examined · {n} path(s) found in what was examined not shown — …` (spec 084).
 
 A cut view therefore never reads as complete. What every step leaves is the floor, the lines *Bound (AC24)* in `plan.md` lists, and a read size below it gets the floor, over the bound.
 

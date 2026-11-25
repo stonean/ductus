@@ -15,6 +15,8 @@ next-criterion: 30
 
 What a `ductus` slash command costs in an agent session — wall-clock time, model tokens, and the size of the tool results the agent reads — and the work of moving what the model did, where the runtime can do it, into the runtime. Every command is reviewed here; `/{project}:status` is the first case.
 
+> **Signpost:** spec 084 ([084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md)) adds the `Unreviewed code:` line to the view's summary and, past the read size, cuts a not-examined one last, to its path count; the data model's Bound and the plan's *Bound (AC24)* name it.
+
 ## Motivation
 
 The runtime made each primitive fast, but a command's cost in a session stayed the model's, because a host shows the user nothing the model did not write. Across 10 `/{project}:status` runs in this repository's Claude Code session transcripts, 2026-10-30 to 2026-11-08, the answer took 41–54 s from prompt to finished reply while its one `dashboard` call took at most 0.5 s. The model spent 10–18 s reading a 37,171–40,454-character result and 26–30 s re-typing the ~9,500-character view, 5,352–6,441 output tokens a run. A prototype `UserPromptExpansion` hook that answered `/{project}:status` from `dashboard` on 2026-11-08 showed the view in 0.17 s with no model turn, in two runs.
