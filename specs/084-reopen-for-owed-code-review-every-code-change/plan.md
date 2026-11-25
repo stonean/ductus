@@ -53,7 +53,7 @@ The runtime's behavior does not change: the host performs the revert, and the fa
 
 ### The constitution, size-neutral
 
-The current text of §spec-lifecycle's second and third back-edges, the "Any other edit there reopens" paragraph and the operational bullet on syncing a canonical record (1,651 bytes together, without their line terminators) is replaced by:
+The current text of §spec-lifecycle's second and third back-edges, the "Any other edit there reopens" paragraph and the operational bullet on syncing a canonical record are replaced by:
 
 - a back-edge bullet, **Backward via owed code**, carrying `` `done` → `in-progress` `` and stating the state rule, who writes it (the writing command, `/review` on an untick or a deferral to its own spec's work), that a scenario's open question arriving after `done` is reported and reopens nothing, and that any other edit leaves a spec `done`;
 - a shortened sentence on living specs.
@@ -62,7 +62,7 @@ The bullet keeps the `- **Backward via` form with a backticked `` `done` → `in
 
 The same commit corrects what the replacement leaves false: the count in "Three back-edges exist", the branch-scoped paragraph's "reopens by one of the two above", and §drift-prevention's two bullets that cite the mechanical class by §spec-lifecycle. The mechanical-sweep rule itself keeps two readers (below), so its statement, which the third back-edge held as cases (a) to (c), moves into §drift-prevention's sweep bullet within the same budget. If the budget does not hold it, it goes to `framework/reference/analyze.md` and the bullet points there.
 
-§implement-phase's "reopened and corrected", §drift-prevention's bullets on a meaningful edit and on the diff computing a sweep's reopens, §cross-spec-impact's `classify-spec-edit` clause and §bug-handling's fourth route (AC10) change in the same commit. `framework/constitution.md` is 49,990 bytes against the 50,000-byte ceiling `scripts/lint-governing-size.sh` reads from the index, so the commit must leave it no larger. The 1,651 bytes removed are the budget. `AGENTS.md` (49,905 bytes) is held the same way.
+§implement-phase's "reopened and corrected", §drift-prevention's bullets on a meaningful edit and on the diff computing a sweep's reopens, §cross-spec-impact's `classify-spec-edit` clause and §bug-handling's fourth route (AC10) change in the same commit, which leaves `framework/constitution.md` and `AGENTS.md` no larger, since `scripts/lint-governing-size.sh` holds each to its ceiling.
 
 ### The review window starts where the last review ended
 
@@ -172,27 +172,9 @@ Both honour the job's commented `working-directory`. The pinned `DUCTUS_VERSION`
 
 ### Retiring `classify-spec-edit`
 
-In the change that moves amend, groom, fold and prune onto `check-owed-work`, the one that leaves it unread (AC12), `runtime/src/primitives/classify_spec_edit.rs` is removed from the seven registration sites `docs/developing-ductus.md` §Adding or removing a runtime primitive names:
+In the change that moves amend, groom, fold and prune onto `check-owed-work`, the one that leaves it unread (AC12), `runtime/src/primitives/classify_spec_edit.rs` is removed from the seven registration sites `docs/developing-ductus.md` §Adding or removing a runtime primitive names, with its schema types. `scripts/gen-configure-mcp.sh` regenerates the configure allow blocks. `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools the server no longer serves gain it, as 081's AC3 did for `check-review-freshness`.
 
-- `PRIMITIVE_REGISTRY`;
-- its description constant;
-- its `#[tool]`;
-- its `dispatch_primitive` arm;
-- its `Command`;
-- `framework/runtime-tools.txt`;
-- its `runtime/tests/result_sizes.rs` case.
-
-Its schema types go with them. `scripts/gen-configure-mcp.sh` regenerates the configure allow blocks. `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools the server no longer serves gain it, as 081's AC3 did for `check-review-freshness`.
-
-Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and `line-citation-strip-066.py` go. So do its other mentions. Not comments: `descriptions::PRUNE_PLAN`'s compiled text, the `runtime/tests/mcp.rs` case on its description, and its row in `runtime/src/interpreter/mod.rs`'s `feature_argument_cases` table, a site beyond the seven. `check_artifact_size.rs`'s mention is `on_done`'s own doc, which goes with that function (below). Two compiled texts state the correction class the constitution no longer defines, and are reworded: `descriptions::RELOCATE_AUDIT_RECORDS` and the cross-spec-impact message in `check_review_gate.rs`. Comment-only:
-
-- `runtime/src/mcp/server.rs`'s doc comment on the blocking-dispatch list;
-- `relocate_audit_records.rs`;
-- `read_tasks.rs`;
-- `analyze_subjects.rs`;
-- `line_citations.rs`;
-- `criterion_verdicts.rs`;
-- `prune_plan.rs`.
+Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'s compiled text, the `runtime/tests/mcp.rs` case on its description, and its row in `runtime/src/interpreter/mod.rs`'s `feature_argument_cases` table, a site beyond the seven. Two compiled texts state the correction class the constitution no longer defines, and are reworded: `descriptions::RELOCATE_AUDIT_RECORDS` and the cross-spec-impact message in `check_review_gate.rs`.
 
 `mechanical_sweep.rs`'s module doc and `runtime/tests/mechanical_sweep_parity.rs` name the two readers the rule keeps, both through `analyze_subjects::exempt_renames`: the analysis record's freshness (`freshness_of`) and the review record's digest (`review_freshness`, called from `compute_review_scope::contracts_against_digest`). `framework/reference/review.md` §Record the run in `review.md` says `reviewed-against` is read for the rename exemption, which is true and stays (AC12).
 
@@ -203,6 +185,10 @@ Its mutants in `scripts/mutation/reopen-measure.py`, `review-022-task-46.py` and
 ### This repository's hook
 
 `.githooks/pre-push` runs the check with this repository's runtime, as `.githooks/pre-commit` locates it, the agent's recommendation adopted by the operator, 2026-11-24. `.ductus/config.toml` sets `[review] unreviewed-push = "warn"` while the measured backlog of `done` specs owing a review drains. The last task removes it, so 084 does not reach `done` at `warn`.
+
+### Contract classification
+
+**`BE-COMPAT-001`**, within major version zero: breaking: `classify-spec-edit` is retired, and a canonical `merge-permissions` call passing its allow entry is refused as a conflicting revoke; `check-artifact-size` drops `fixes[].on-done`; `compute-review-scope` starts the window where the last review ended whatever the reopen, and a `done` spec's with none recorded at the commit that set it `done`, `base-source` gaining `reached-done`, errors on more shallow clones, and lists the paths of a commit no spec claims in `excluded`, owing no review, as `brief-re-read` leaves them out of a feature's round; `ductus exec review` sends no `mark-criterion` for a `done` spec's ticked criterion judged not met; and `check-artifacts` reports no task numbering out of order (AC22). Additive: `check-owed-work`, `check-unreviewed-code` and `[review] unreviewed-push`; `write-review`'s absent `feature`, `seed` and result `seed`; an absent `feature` on `process-waivers`, `process-decisions` and the four fix-round primitives; `ductus exec review`'s `project`; `dashboard`'s `unreviewed-code` and `never-owed-count`; and `measure-reopenings`' `held-owed-work` and `never-owed-count`. `/{project}:analyze --fix`'s revert is a host step and changes no result. It ships with the pending minor bump.
 
 ## Affected Files
 
