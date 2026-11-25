@@ -1,155 +1,183 @@
 ---
 spec: 025-rule-opt-out
-last-run: 2026-10-20T02:46:29Z
-reviewed-against: 1fbc0636a33512ae64f0d7ec4c8f0a0d1b95ed3d
-diff-base: 37c8219c8730fd23b5fbac7629c11fd2d6bc5b3b
+last-run: 2026-11-25T18:16:01Z
+reviewed-against: 43bdf49eaaa2eca82b8cffd5c83021d6b9e8d2e0
+diff-base: 036f03cb52093d36add21e9d737f2c4e8824ea30
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 40
-scope: 116
+examined: 1
+scope: 5
+unread:
+  - runtime/src/primitives/dashboard.rs
+  - specs/025-rule-opt-out/analysis.md
+  - specs/025-rule-opt-out/plan.md
+  - specs/025-rule-opt-out/tasks.md
+excluded: 1266
+contract-breaks: 0
 skipped-passes: []
+fix-rounds: 0
+re-reads: 0
+diff-checked: 0
+not-re-read: 0
+budget-stop: false
 reviewed-digest:
   scenarios/a-malformed-disabled-entry-fails-fast.md: 7ee5da88cdbed0431f83d6012c89f0fa07d3683589fe42a0490def27061d8100
+criteria-judged: 9
+criteria-met: 9
+criteria-verdicts:
+  - label: AC1
+    digest: 61499e8de27ad6cb09a5562ce0d0208987f8dd76d0ffa1772f8b13b30f3d3a91
+  - label: AC2
+    digest: 18df5d4d2b0d1bebcdfeeabe7f3ecacf5357c65574c0f2e4498cd0cd46064ee7
+  - label: AC3
+    digest: b2c5a672ba88001e5bab44a35276eec5eee654bf099db9bfcece33e5f88e20b2
+  - label: AC4
+    digest: 9390359cb9f7088c7fcd297092d0c7975f229f0d4e3d16ed995782cec0c76b03
+  - label: AC5
+    digest: 0b7363f23d4b74ff6cd920b239a8f684328a0d53b4e108d35d8ba0eac2cebb8c
+  - label: AC6
+    digest: 8751965404b472dc2ad9ff0771b0ef5951a6cc42762541050f22e829261f403b
+  - label: AC7
+    digest: a4dde92f10020d84843f6e8ba803fd1f90074f2367ebed2c7ebdb6946c41afc8
+  - label: AC8
+    digest: 5c95594585558604fc785557d4dc9609c94492f484963277ed234843fff0e765
+  - label: AC9
+    digest: 9153d9ceed82f60297c98c3ad2a677668c6cc8371425e47c545764debcad8e2b
 blocking: false
 dispositions:
-  fixed: 8
-  routed: 8
-  discarded: 19
+  fixed: 0
+  deferred: 0
+  waived: 0
   undispositioned: 0
 decisions:
-  - key: "other: 025's ticked task 2 lists a malformed warning among the step-5 outcomes that task 10 replaced — `specs/025-rule-opt-out/tasks.md`"
-    outcome: discarded
-    reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
-    decided-at: 2026-10-20T02:46:29Z
-    decided-by: andy@stone.dev
   - key: "other: [rules] surfaces is validated only when a rule directory exists, while disabled entries are validated always — `runtime/src/primitives/discover_rule_files.rs`"
-    outcome: discarded
+    outcome: waived
     reason: with no rule directory nothing is selected, so the unread surfaces value changes no result; when it is validated is 033's degenerate-surfaces contract, not this change
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 063's ticked tasks 1 and 6 describe the invalid-threshold notice and default fallback that task 12 replaced — `specs/063-oversized-artifacts-warn-with-a-fix/tasks.md`"
-    outcome: discarded
+    outcome: waived
     reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 039's ticked task 5 describes BE-DRAIN-002's propagation delay as counted within the grace period, which 034's review reworded — `specs/039-reliability-backend-rules/tasks.md`"
-    outcome: discarded
+    outcome: waived
     reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 036's ticked task 2 names the manifest slot it used at the time — `specs/036-quality-cross-rules/tasks.md`"
-    outcome: discarded
+    outcome: waived
     reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "security: BE-API-013 counts expiring pre-signed URLs as single-use short-lived values; AWS documents them as reusable bearer tokens up to 7 days, and FE-STORAGE-003 forbids them — `framework/rules/security-backend.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "security: BE-API-013 allows a single-use token anywhere in a URL while FE-STORAGE-003 allows it only in a query parameter — `framework/rules/security-frontend.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "security: BE-AUTHN-001's Verification names only OWASP's headline parameter minimums — `framework/rules/security-backend.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "security: BE-API-015 flags a handshake-URL token that BE-API-013 may permit — `framework/rules/security-backend.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: QUAL-GROUND-001 cedes configuration to CFG rules that do not cover a required key missing from a file or flag — `framework/rules/quality-cross.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/017-derive-dont-ask/scenarios/required-config-values-from-any-source.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: configuration-cross.md's header names only analyze as enforcing it; which review pass applies the file is open — `framework/rules/configuration-cross.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 033's task 10 names no acceptance criterion for the chosen mechanism to amend — `specs/033-rule-surface-setting/tasks.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/033-rule-surface-setting/tasks.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 019's task 1 did not cover a host reading config by hand on the markdown-only path — `specs/019-config-decisions/tasks.md`"
-    outcome: routed
+    outcome: deferred
     target: specs/019-config-decisions/tasks.md
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: FE-SEMHTML-001 and FE-ARIA-001 both forbid a div with role=button — `framework/rules/accessibility-frontend.md`"
-    outcome: discarded
+    outcome: waived
     reason: consistent overlap of two MUSTs with no contradiction; consolidating them changes rule ownership, which 069's clarify owns
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: FE-KBD-002 and FE-CONTRAST-001 both require 3:1 for focus indicators — `framework/rules/accessibility-frontend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the owner decided FE-KBD-002's MUST carries the 3:1 ratio (069 Resolved Questions, 2026-10-19); the overlap is consistent
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: accessibility-frontend.md's first header paragraph is long — `framework/rules/accessibility-frontend.md`"
-    outcome: discarded
+    outcome: waived
     reason: style only; the content is accurate, and 069's first open question owns what the header claims about conformance
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: FE-STORAGE-006 confines its Cache API MUST to service-worker code — `framework/rules/security-frontend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the rule is accurate as scoped; widening a MUST to page scripts is a new requirement for the owner, not an accuracy defect
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-REPR-001's Verification names specs/system.md for the API-wide representation — `framework/rules/api-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the Statement's one representation across the API needs a declared one to be checkable; the Verification names where it is declared
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-SCHEMA-001's SDL-versus-introspection split and BE-ERRENV-001's overlap with BE-ERR-002 — `framework/rules/api-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: both splits are recorded as intended in 068; low
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-AUTHN-010's factor list reads as closed — `framework/rules/security-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the sentence carries no obligation keyword and the Verification enforces MFA presence, the SMS-sole ban and no skip path, consistent with BE-AUTHN-021; whether push is acceptable is a substantive owner change
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-DEPS-002 and BE-DEPS-006 Verifications ask for an update process their Statements do not name — `framework/rules/security-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: no flag condition fires on its absence; adding it to the MUST or removing it changes scope, and no accuracy defect requires either
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: security-backend.md's header lists its categories in a different order from its sections — `framework/rules/security-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the category set matches; no artifact specifies the order, and the header matches 008's data-model table order
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-COORD-001's Verification asks a plan to say whether a lock guards correctness or efficiency — `framework/rules/concurrency-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the Statement's MAY turns on that classification; the Verification asks for exactly the fact it needs
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: BE-QUERY-004, BE-POOL-005 and BE-TXN-004 repeat PostgreSQL background sentences — `framework/rules/performance-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: the repeated sentences are accurate and not contradictory; each rule stands alone
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: concurrency, observability, reliability, quality and configuration section titles are sentence case — `framework/rules/concurrency-backend.md`"
-    outcome: discarded
+    outcome: waived
     reason: 017's and 036's data models record their files' category names in sentence case (017 task 38, an owner decision); 008's title-case bullet describes the security files
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: ticked task-1 items in 037, 038 and 039 say one RFC 2119 keyword, and 039's task 4 names an alert — `specs/039-reliability-backend-rules/tasks.md`"
-    outcome: discarded
+    outcome: waived
     reason: "spent task history: each records what the task said when it was done, and rewriting it records a fiction"
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
   - key: "other: 008's first resolved question reasons from CI gating — `specs/008-security-rules/spec.md`"
-    outcome: discarded
+    outcome: waived
     reason: a resolved question records the reasoning at the time; rewriting it records a fiction
     decided-at: 2026-10-20T02:46:29Z
     decided-by: andy@stone.dev
@@ -159,7 +187,13 @@ decisions:
 
 ## Summary
 
-Five-pass review of 025 over `37c8219c..1fbc0636` plus the working tree, after task 10's fail-fast fix (`a32af25b`). The 116 scope entries are the 2026-10-19 rule-file window that 034's review read in an earlier session, plus this session's 063 commits, the 025 fix and 019's open question. **What this session read** (`examined: 40`): 025's `spec.md`, `plan.md`, `tasks.md` and scenario in full; `runtime/src/primitives/discover_rule_files.rs` in full (by this pass and two parallel reviewer passes reading `a32af25b` through git); the fix's diffs to `runtime/src/primitives/mod.rs` and `framework/commands/review.md`, with review.md's Inputs, step-5 filter, Waivers and adopter notes; 022's `review-runtime-acceleration` scenario in full; all eleven `framework/rules/*.md` in full; and the files 063's review and analysis read earlier this session (063's six artifacts and records, `check_artifact_size.rs`, the three other command sources, README, the bootstrap, AGENTS.md, CLAUDE.md, 019's scenario, spec and tasks, 039's `review.md`). **Not read** (76 entries): `framework/bootstrap/govern.md` (`cmp` identical), the generated mirrors (`scripts/gen-claude-commands.sh --check` in sync), `framework/commands/status.md` beyond the disabled-rule-files callout AC6 names, `framework/constitution.md` beyond §design-principles and the §rules opt-out paragraph, `docs/`, and the other specs' artifacts. **Findings: none remain.** One MUST fired on the deliverable and was fixed in the run: `BE-INPUT-011`, since the notice lines rendered `file` raw and `reason` through `collapse_whitespace` alone, so a newline in `file` forged a `loading rule files:` line and an escape sequence in `reason` survived; both now pass through `flatten_line`. `BE-COMPAT-001` was judged met (the result schema is unchanged), and the plan now classifies the behavior change as breaking with a minor-bump commitment. **The fix:** a malformed entry halts `discover-rule-files` before selection with `PrimitiveError::InvalidDisabledRuleFile`, naming the index, the field and the value; verified through the CLI binary in a `/tmp` fixture. Seven mutations run this session each fail a test (skip instead of halt, byte counting, no flattening in the error, in the `file` notice and in the `reason` notice, Debug formatting, rejecting adopter fields). **Observations: 35.** Eight fixed in the run (the value named in a type mismatch, non-ASCII reasons shown as written, the halted run's non-zero exit stated, review.md's `<config-path>`, AC1's 15-codepoint example annotated, two rotted AGENTS.md line citations in the Motivation replaced, the config path returned once, an adopter-field test). Two new discards: 025's spent task 2, and `[rules] surfaces` validated only inside the rule-directory branch, which is 033's contract. The 8 routed and 17 discarded observations standing from earlier passes keep their text and dispositions; the routed note on 025's own task 10 is discharged by this fix and is not carried.
+Review of 025's code changed since its last review, from `036f03cb` (`last-review`) to `43bdf49e`, for 084's task 19. The five passes read the spec's own change, the hunks of `bee36927` (`analyze(025)`) in `runtime/src/primitives/dashboard.rs`, against the five loaded rule files, each read whole (231,962 bytes): no finding and no observation. That hunk's production code no longer exists at the head: the disabled-rule-files callout renders in `runtime/src/primitives/pipeline_view.rs` through `view_text`, which flattens newlines, and the slice's test `a_disabled_file_name_renders_on_one_line` survives in `dashboard.rs`. The criteria step judged all nine criteria met against the code, driving `discover-rule-files`, `dashboard`, `render-status` and `check-artifacts` and eleven tests. Examined 1 of 5: `specs/025-rule-opt-out/spec.md`, read whole by the criteria step. Unread, by the operator's decision to read each spec's own change (084's `tasks.md`, task 19): `runtime/src/primitives/dashboard.rs`, read at the slice's hunks and the parts the criteria name; `specs/025-rule-opt-out/analysis.md`, `plan.md` and `tasks.md`, not opened by the passes. The host read `tasks.md` (143 bytes) to check the one expired decision: its ticked task 2 left with `a70ff74c`'s prune.
+
+0 fix round(s): 0 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+80 of 2527 commits in the window no spec claimed.
+
+9 of 9 acceptance criteria judged met.
 
 ## MUST violations (blocking)
 
@@ -177,47 +211,1298 @@ Five-pass review of 025 over `37c8219c..1fbc0636` plus the working tree, after t
 
 *None.*
 
+## Deferred findings
+
+*None.*
+
+## Acceptance criteria
+
+- AC1 — met: `runtime/src/primitives/discover_rule_files.rs` `validate_disabled_entry` (basename matched exactly, reason `trim().chars().count()` >= `MIN_REASON_LEN` 16; path-component value falls to the unknown warning, driven by CLI); tests `the_reason_length_counts_codepoints_not_bytes`, `every_malformed_entry_halts_naming_its_index_and_field`.
+- AC2 — met: `apply_disabled_filter` in `runtime/src/primitives/discover_rule_files.rs` emits `disabled-rule-file: <f> — <reason> (<config>)` with whitespace collapsed and the `(no-op)` notice, returned in `notices` for step 2 of `framework/commands/review.md`; tests `disabled_rule_file_drops_selected_file_with_notice`, `reason_whitespace_is_collapsed_in_the_notice`, `disabled_rule_file_non_selected_is_a_no_op_notice`.
+- AC3 — met: `apply_disabled_filter` pushes `unknown disabled-rule-file: <f> (no such file in the rule-file directory)` and continues without error (wording generalised as the criterion's note records); test `disabled_rule_file_unknown_warns`, CLI drive exit 0.
+- AC4 — met: `validate_disabled_entries`/`validate_disabled_entry` in `runtime/src/primitives/discover_rule_files.rs` run before selection and return `PrimitiveError::InvalidDisabledRuleFile` naming index and field (CLI drive: exit 1, entry not removed, no blocking record); tests `every_malformed_entry_halts_naming_its_index_and_field`, `a_malformed_entry_halts_after_well_formed_ones`.
+- AC5 — met: `apply_disabled_filter` keeps a `seen` list, warns `duplicate disabled-rule-file: <f> — entry [N] ignored` and applies only the first (CLI drive confirmed); test `duplicate_disabled_rule_file_first_applies_rest_warn`.
+- AC6 — met: `config_items` in `runtime/src/primitives/pipeline_view.rs` renders `Disabled rule files: N (config) — names` from `dashboard.rs` `disabled_rule_files` (CLI `render-status` drive showed the line); tests `rendered_config_callout_names_new_layout_config`, `rendered_target_bold_row_recovery_blocked_and_config_callouts`.
+- AC7 — met: `runtime/src/schema/config_keys.rs` registers `disabled-rule-files` with `file`/`reason`, so no unknown-key notice (`dashboard` CLI drive: `unknown-keys` empty) and `check-artifacts` on a project carrying the key reported nothing about it; test `the_registry_recognizes_every_key_this_reader_reads`.
+- AC8 — met: `apply_disabled_filter` in `runtime/src/primitives/discover_rule_files.rs` treats every basename alike, with no security-file carve-out; test `notice_ordering_unrecognized_then_disabled_then_loading` disables `security-backend.md`.
+- AC9 — met: The schema is in `specs/025-rule-opt-out/spec.md` and in `framework/commands/review.md` Config (`[[review.disabled-rule-files]]` bullet, step 2); the spec's Affected files table lists further edits not asserted by the criterion itself.
+
 ## Observations
 
-- other: 025's ticked task 2 lists a malformed warning among the step-5 outcomes that task 10 replaced — `specs/025-rule-opt-out/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
-- other: [rules] surfaces is validated only when a rule directory exists, while disabled entries are validated always — `runtime/src/primitives/discover_rule_files.rs` — **discarded**: with no rule directory nothing is selected, so the unread surfaces value changes no result; when it is validated is 033's degenerate-surfaces contract, not this change
-- other: 063's ticked tasks 1 and 6 describe the invalid-threshold notice and default fallback that task 12 replaced — `specs/063-oversized-artifacts-warn-with-a-fix/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
-- other: 039's ticked task 5 describes BE-DRAIN-002's propagation delay as counted within the grace period, which 034's review reworded — `specs/039-reliability-backend-rules/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
-- other: 036's ticked task 2 names the manifest slot it used at the time — `specs/036-quality-cross-rules/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
-- security: BE-API-013 counts expiring pre-signed URLs as single-use short-lived values; AWS documents them as reusable bearer tokens up to 7 days, and FE-STORAGE-003 forbids them — `framework/rules/security-backend.md` — **routed** to `specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md`
-- security: BE-API-013 allows a single-use token anywhere in a URL while FE-STORAGE-003 allows it only in a query parameter — `framework/rules/security-frontend.md` — **routed** to `specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md`
-- security: BE-AUTHN-001's Verification names only OWASP's headline parameter minimums — `framework/rules/security-backend.md` — **routed** to `specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md`
-- security: BE-API-015 flags a handshake-URL token that BE-API-013 may permit — `framework/rules/security-backend.md` — **routed** to `specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md`
-- other: QUAL-GROUND-001 cedes configuration to CFG rules that do not cover a required key missing from a file or flag — `framework/rules/quality-cross.md` — **routed** to `specs/017-derive-dont-ask/scenarios/required-config-values-from-any-source.md`
-- other: configuration-cross.md's header names only analyze as enforcing it; which review pass applies the file is open — `framework/rules/configuration-cross.md` — **routed** to `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md`
-- other: 033's task 10 names no acceptance criterion for the chosen mechanism to amend — `specs/033-rule-surface-setting/tasks.md` — **routed** to `specs/033-rule-surface-setting/tasks.md`
-- other: 019's task 1 did not cover a host reading config by hand on the markdown-only path — `specs/019-config-decisions/tasks.md` — **routed** to `specs/019-config-decisions/tasks.md`
-- other: FE-SEMHTML-001 and FE-ARIA-001 both forbid a div with role=button — `framework/rules/accessibility-frontend.md` — **discarded**: consistent overlap of two MUSTs with no contradiction; consolidating them changes rule ownership, which 069's clarify owns
-- other: FE-KBD-002 and FE-CONTRAST-001 both require 3:1 for focus indicators — `framework/rules/accessibility-frontend.md` — **discarded**: the owner decided FE-KBD-002's MUST carries the 3:1 ratio (069 Resolved Questions, 2026-10-19); the overlap is consistent
-- other: accessibility-frontend.md's first header paragraph is long — `framework/rules/accessibility-frontend.md` — **discarded**: style only; the content is accurate, and 069's first open question owns what the header claims about conformance
-- other: FE-STORAGE-006 confines its Cache API MUST to service-worker code — `framework/rules/security-frontend.md` — **discarded**: the rule is accurate as scoped; widening a MUST to page scripts is a new requirement for the owner, not an accuracy defect
-- other: BE-REPR-001's Verification names specs/system.md for the API-wide representation — `framework/rules/api-backend.md` — **discarded**: the Statement's one representation across the API needs a declared one to be checkable; the Verification names where it is declared
-- other: BE-SCHEMA-001's SDL-versus-introspection split and BE-ERRENV-001's overlap with BE-ERR-002 — `framework/rules/api-backend.md` — **discarded**: both splits are recorded as intended in 068; low
-- other: BE-AUTHN-010's factor list reads as closed — `framework/rules/security-backend.md` — **discarded**: the sentence carries no obligation keyword and the Verification enforces MFA presence, the SMS-sole ban and no skip path, consistent with BE-AUTHN-021; whether push is acceptable is a substantive owner change
-- other: BE-DEPS-002 and BE-DEPS-006 Verifications ask for an update process their Statements do not name — `framework/rules/security-backend.md` — **discarded**: no flag condition fires on its absence; adding it to the MUST or removing it changes scope, and no accuracy defect requires either
-- other: security-backend.md's header lists its categories in a different order from its sections — `framework/rules/security-backend.md` — **discarded**: the category set matches; no artifact specifies the order, and the header matches 008's data-model table order
-- other: BE-COORD-001's Verification asks a plan to say whether a lock guards correctness or efficiency — `framework/rules/concurrency-backend.md` — **discarded**: the Statement's MAY turns on that classification; the Verification asks for exactly the fact it needs
-- other: BE-QUERY-004, BE-POOL-005 and BE-TXN-004 repeat PostgreSQL background sentences — `framework/rules/performance-backend.md` — **discarded**: the repeated sentences are accurate and not contradictory; each rule stands alone
-- other: concurrency, observability, reliability, quality and configuration section titles are sentence case — `framework/rules/concurrency-backend.md` — **discarded**: 017's and 036's data models record their files' category names in sentence case (017 task 38, an owner decision); 008's title-case bullet describes the security files
-- other: ticked task-1 items in 037, 038 and 039 say one RFC 2119 keyword, and 039's task 4 names an alert — `specs/039-reliability-backend-rules/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
-- other: 008's first resolved question reasons from CI gating — `specs/008-security-rules/spec.md` — **discarded**: a resolved question records the reasoning at the time; rewriting it records a fiction
-- quality: a type mismatch in an entry named the field's type but not its value — `runtime/src/primitives/discover_rule_files.rs` — **fixed**
-- quality: the short reason was Debug-formatted, escaping the combining marks of a non-ASCII reason — `runtime/src/primitives/discover_rule_files.rs` — **fixed**
-- quality: a halted run's exit code was unstated, and the plan's iff sentence implied 0 — `specs/025-rule-opt-out/plan.md` — **fixed**
-- quality: review.md's error template named a repo-relative <config-file> where the halt prints the full path — `framework/commands/review.md` — **fixed**
-- quality: AC1's non-ASCII example reason is 15 codepoints and now halts, unremarked — `specs/025-rule-opt-out/spec.md` — **fixed**
-- quality: 025's Motivation cited AGENTS.md:58 and AGENTS.md line 42, both rotted to unrelated entries — `specs/025-rule-opt-out/spec.md` — **fixed**
-- simplicity: run re-joined the config path load_ductus_toml had resolved and dropped — `runtime/src/primitives/discover_rule_files.rs` — **fixed**
-- test: no test covered the adopter-added field on an entry that the commit and the open-schema rule promise — `runtime/src/primitives/discover_rule_files.rs` — **fixed**
+*None.*
 
 ## Skipped passes
 
 *None.*
+
+## Excluded from scope
+
+- `.claude/commands/ductus/amend.md`
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/audit.md`
+- `.claude/commands/ductus/clarify.md`
+- `.claude/commands/ductus/configure.md`
+- `.claude/commands/ductus/consolidate.md`
+- `.claude/commands/ductus/fold.md`
+- `.claude/commands/ductus/groom.md`
+- `.claude/commands/ductus/help.md`
+- `.claude/commands/ductus/implement.md`
+- `.claude/commands/ductus/link.md`
+- `.claude/commands/ductus/log.md`
+- `.claude/commands/ductus/plan.md`
+- `.claude/commands/ductus/prune.md`
+- `.claude/commands/ductus/review.md`
+- `.claude/commands/ductus/specify.md`
+- `.claude/commands/ductus/status.md`
+- `.claude/commands/ductus/target.md`
+- `.ductus/config.toml`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/clarify.md`
+- `.ductus/reference/consolidate.md`
+- `.ductus/reference/fold.md`
+- `.ductus/reference/groom.md`
+- `.ductus/reference/implement.md`
+- `.ductus/reference/log.md`
+- `.ductus/reference/plan.md`
+- `.ductus/reference/prune.md`
+- `.ductus/reference/review.md`
+- `.ductus/reference/specify.md`
+- `.ductus/reference/status.md`
+- `.gitattributes`
+- `.githooks/pre-commit`
+- `.githooks/pre-push`
+- `.github/workflows/framework-checks.yml`
+- `.github/workflows/generators.yml`
+- `.github/workflows/runtime-acquisition.yml`
+- `.github/workflows/runtime-currency.yml`
+- `.github/workflows/runtime-release.yml`
+- `.github/workflows/runtime.yml`
+- `.gitignore`
+- `.pi/extensions/ductus.ts`
+- `.pi/prompts/ductus-amend.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-audit.md`
+- `.pi/prompts/ductus-clarify.md`
+- `.pi/prompts/ductus-configure.md`
+- `.pi/prompts/ductus-consolidate.md`
+- `.pi/prompts/ductus-fold.md`
+- `.pi/prompts/ductus-groom.md`
+- `.pi/prompts/ductus-help.md`
+- `.pi/prompts/ductus-implement.md`
+- `.pi/prompts/ductus-link.md`
+- `.pi/prompts/ductus-log.md`
+- `.pi/prompts/ductus-plan.md`
+- `.pi/prompts/ductus-prune.md`
+- `.pi/prompts/ductus-review.md`
+- `.pi/prompts/ductus-specify.md`
+- `.pi/prompts/ductus-status.md`
+- `.pi/prompts/ductus-target.md`
+- `AGENTS.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `README.md`
+- `docs/analyze.md`
+- `docs/cross-service-references.md`
+- `docs/developing-ductus.md`
+- `docs/rules.md`
+- `docs/runtime.md`
+- `docs/shared-constitution.md`
+- `docs/slash-commands.md`
+- `framework/bootstrap/configure/claude.md`
+- `framework/bootstrap/configure/pi.md`
+- `framework/bootstrap/ductus-procedure.md`
+- `framework/bootstrap/ductus.md`
+- `framework/bootstrap/govern.md`
+- `framework/bootstrap/hooks/ductus-pre-commit`
+- `framework/bootstrap/hooks/ductus-pre-push`
+- `framework/bootstrap/hooks/pre-push`
+- `framework/bootstrap/pi/ductus-bridge.ts`
+- `framework/commands/amend.md`
+- `framework/commands/analyze.md`
+- `framework/commands/audit.md`
+- `framework/commands/clarify.md`
+- `framework/commands/consolidate.md`
+- `framework/commands/fold.md`
+- `framework/commands/groom.md`
+- `framework/commands/help.md`
+- `framework/commands/implement.md`
+- `framework/commands/link.md`
+- `framework/commands/log.md`
+- `framework/commands/plan.md`
+- `framework/commands/prune.md`
+- `framework/commands/review.md`
+- `framework/commands/specify.md`
+- `framework/commands/status.md`
+- `framework/commands/target.md`
+- `framework/constitution.md`
+- `framework/migrations.toml`
+- `framework/migrations/audit-record-relocate.md`
+- `framework/migrations/claude-md-import-syntax.md`
+- `framework/migrations/constitution-import.md`
+- `framework/migrations/constitution-relocate.md`
+- `framework/migrations/criterion-label-backfill.md`
+- `framework/migrations/ductus-rename.md`
+- `framework/migrations/generator-primitives.md`
+- `framework/migrations/govern-dir-consolidate.md`
+- `framework/migrations/inbox-guidance-refresh.md`
+- `framework/migrations/memory-routing-leaves-claude-md.md`
+- `framework/migrations/project-review-record.md`
+- `framework/migrations/remove-legacy-constitutions-region.md`
+- `framework/migrations/runtime-store-path.md`
+- `framework/migrations/session-file-consolidate.md`
+- `framework/migrations/strip-inbox-guidance.md`
+- `framework/migrations/substitute-seed-placeholders.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/clarify.md`
+- `framework/reference/consolidate.md`
+- `framework/reference/fold.md`
+- `framework/reference/groom.md`
+- `framework/reference/implement.md`
+- `framework/reference/log.md`
+- `framework/reference/plan.md`
+- `framework/reference/prune.md`
+- `framework/reference/review.md`
+- `framework/reference/specify.md`
+- `framework/reference/status.md`
+- `framework/rules/accessibility-frontend.md`
+- `framework/rules/api-backend.md`
+- `framework/rules/concurrency-backend.md`
+- `framework/rules/configuration-cross.md`
+- `framework/rules/observability-backend.md`
+- `framework/rules/performance-backend.md`
+- `framework/rules/performance-frontend.md`
+- `framework/rules/quality-cross.md`
+- `framework/rules/reliability-backend.md`
+- `framework/rules/security-backend.md`
+- `framework/rules/security-cross.md`
+- `framework/rules/security-frontend.md`
+- `framework/runtime-tools.txt`
+- `framework/templates/ci/adopter-generators.yml`
+- `framework/templates/project/agents.md`
+- `framework/templates/project/claude-md.md`
+- `framework/templates/project/errors.md`
+- `framework/templates/project/events.md`
+- `framework/templates/project/gitignore`
+- `framework/templates/project/inbox.md`
+- `framework/templates/project/system.md`
+- `framework/templates/spec/spec.md`
+- `framework/templates/spec/tasks.md`
+- `install.sh`
+- `package-lock.json`
+- `package.json`
+- `runtime/CHANGELOG.md`
+- `runtime/Cargo.lock`
+- `runtime/Cargo.toml`
+- `runtime/README.md`
+- `runtime/legacy-prose-commands.txt`
+- `runtime/rust-toolchain.toml`
+- `runtime/src/hook.rs`
+- `runtime/src/host.rs`
+- `runtime/src/interpreter/analyze_tally.rs`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/interpreter/payload.rs`
+- `runtime/src/io.rs`
+- `runtime/src/lib.rs`
+- `runtime/src/main.rs`
+- `runtime/src/mcp/flag_help.rs`
+- `runtime/src/mcp/mod.rs`
+- `runtime/src/mcp/server.rs`
+- `runtime/src/parser/mod.rs`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/append_inbox.rs`
+- `runtime/src/primitives/append_question.rs`
+- `runtime/src/primitives/append_task.rs`
+- `runtime/src/primitives/apply_manifest.rs`
+- `runtime/src/primitives/bounded_lists.rs`
+- `runtime/src/primitives/brief_re_read.rs`
+- `runtime/src/primitives/check_artifact_size.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_command_flags.rs`
+- `runtime/src/primitives/check_corpus_links.rs`
+- `runtime/src/primitives/check_departures.rs`
+- `runtime/src/primitives/check_orphaned_references.rs`
+- `runtime/src/primitives/check_owed_work.rs`
+- `runtime/src/primitives/check_prescriptions.rs`
+- `runtime/src/primitives/check_promotion_coverage.rs`
+- `runtime/src/primitives/check_review_gate.rs`
+- `runtime/src/primitives/check_rule_ids.rs`
+- `runtime/src/primitives/check_step_references.rs`
+- `runtime/src/primitives/check_stuck.rs`
+- `runtime/src/primitives/check_unfolded_specs.rs`
+- `runtime/src/primitives/check_unreviewed_code.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/create_feature.rs`
+- `runtime/src/primitives/create_plan_artifacts.rs`
+- `runtime/src/primitives/create_scenario.rs`
+- `runtime/src/primitives/criterion_verdicts.rs`
+- `runtime/src/primitives/decisions.rs`
+- `runtime/src/primitives/departures.rs`
+- `runtime/src/primitives/derive_boundary.rs`
+- `runtime/src/primitives/derive_dependencies.rs`
+- `runtime/src/primitives/derive_references.rs`
+- `runtime/src/primitives/derive_routing_candidates.rs`
+- `runtime/src/primitives/diff_cross_spec.rs`
+- `runtime/src/primitives/discover_rule_files.rs`
+- `runtime/src/primitives/enforce_manifest.rs`
+- `runtime/src/primitives/extract_archive.rs`
+- `runtime/src/primitives/fetch_archive.rs`
+- `runtime/src/primitives/fix_rounds.rs`
+- `runtime/src/primitives/guarded.rs`
+- `runtime/src/primitives/host_config.rs`
+- `runtime/src/primitives/inbox_standing.rs`
+- `runtime/src/primitives/invalidate_review.rs`
+- `runtime/src/primitives/label_criteria.rs`
+- `runtime/src/primitives/line_citations.rs`
+- `runtime/src/primitives/lint_markdown.rs`
+- `runtime/src/primitives/mark_criterion.rs`
+- `runtime/src/primitives/mark_task.rs`
+- `runtime/src/primitives/measure_reopenings.rs`
+- `runtime/src/primitives/mechanical_sweep.rs`
+- `runtime/src/primitives/merge_managed_block.rs`
+- `runtime/src/primitives/merge_permissions.rs`
+- `runtime/src/primitives/merge_status_hook.rs`
+- `runtime/src/primitives/migrate_session_file.rs`
+- `runtime/src/primitives/mod.rs`
+- `runtime/src/primitives/owed_work.rs`
+- `runtime/src/primitives/pipeline_view.rs`
+- `runtime/src/primitives/process_decisions.rs`
+- `runtime/src/primitives/process_waivers.rs`
+- `runtime/src/primitives/prune_plan.rs`
+- `runtime/src/primitives/prune_project.rs`
+- `runtime/src/primitives/prune_tasks.rs`
+- `runtime/src/primitives/read_deprecation_labels.rs`
+- `runtime/src/primitives/read_re_read.rs`
+- `runtime/src/primitives/read_section.rs`
+- `runtime/src/primitives/read_spec.rs`
+- `runtime/src/primitives/read_tasks.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/remove_inbox_item.rs`
+- `runtime/src/primitives/render_help.rs`
+- `runtime/src/primitives/render_status.rs`
+- `runtime/src/primitives/resolve_anchor.rs`
+- `runtime/src/primitives/resolve_constitutions.rs`
+- `runtime/src/primitives/resolve_feature.rs`
+- `runtime/src/primitives/resolve_references.rs`
+- `runtime/src/primitives/retire_feature.rs`
+- `runtime/src/primitives/review_subject.rs`
+- `runtime/src/primitives/rewrite_spec_links.rs`
+- `runtime/src/primitives/rule_sections.rs`
+- `runtime/src/primitives/rule_verdicts.rs`
+- `runtime/src/primitives/run_generator.rs`
+- `runtime/src/primitives/set_status.rs`
+- `runtime/src/primitives/shipped_rule_ids.txt`
+- `runtime/src/primitives/spec_links.rs`
+- `runtime/src/primitives/start_fix_rounds.rs`
+- `runtime/src/primitives/tasks_counter.rs`
+- `runtime/src/primitives/tool_loading.rs`
+- `runtime/src/primitives/traverse_deps.rs`
+- `runtime/src/primitives/unwritable_dir.rs`
+- `runtime/src/primitives/validate_frontmatter.rs`
+- `runtime/src/primitives/write_analysis.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/src/primitives/write_review/departure_waivers.rs`
+- `runtime/src/primitives/write_review/moved_scope.rs`
+- `runtime/src/primitives/write_review/project_record.rs`
+- `runtime/src/primitives/write_review/seed.rs`
+- `runtime/src/primitives/write_session.rs`
+- `runtime/src/schema/config_keys.rs`
+- `runtime/src/schema/constitutions.rs`
+- `runtime/src/schema/descriptions.rs`
+- `runtime/src/schema/extensions.rs`
+- `runtime/src/schema/mod.rs`
+- `runtime/src/schema/paths.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/src/schema/procedure.rs`
+- `runtime/src/schema/protocol.rs`
+- `runtime/src/schema/registry.rs`
+- `runtime/src/schema/services.rs`
+- `runtime/src/schema/severity.rs`
+- `runtime/src/session.rs`
+- `runtime/tests/bounded_list_gates.rs`
+- `runtime/tests/check_artifact_size_cli.rs`
+- `runtime/tests/check_step_references_cli.rs`
+- `runtime/tests/check_unreviewed_code_cli.rs`
+- `runtime/tests/closed_stdout.rs`
+- `runtime/tests/common/corpus.rs`
+- `runtime/tests/common/mod.rs`
+- `runtime/tests/concurrent_sessions.rs`
+- `runtime/tests/config_unknown_keys.rs`
+- `runtime/tests/consolidate_hook.rs`
+- `runtime/tests/crlf_preservation.rs`
+- `runtime/tests/cross_service.rs`
+- `runtime/tests/derive_dependencies_golden.rs`
+- `runtime/tests/derive_references_golden.rs`
+- `runtime/tests/derive_unwritable_cli.rs`
+- `runtime/tests/exec_stderr_gone.rs`
+- `runtime/tests/exec_subprocess.rs`
+- `runtime/tests/fetch_archive_cert_env_startup.rs`
+- `runtime/tests/fetch_archive_startup_env.rs`
+- `runtime/tests/fix_rounds.rs`
+- `runtime/tests/fixtures/ductus-basic/.govern.session.toml`
+- `runtime/tests/fixtures/ductus-basic/framework/bootstrap/install.md`
+- `runtime/tests/fixtures/ductus-basic/mock-http/staging/framework/reference/specify.md`
+- `runtime/tests/fixtures/ductus-basic/project/.ductus/reference/stale.md`
+- `runtime/tests/fixtures/ductus-basic/project/framework/skills/old-skill.md`
+- `runtime/tests/fixtures/exec-pi-legacy-host/.govern.toml`
+- `runtime/tests/fixtures/exec-pi-legacy-host/.pi/prompts/acme-smoke.md`
+- `runtime/tests/fixtures/exec-pi-legacy-host/specs/001-basic/spec.md`
+- `runtime/tests/fixtures/exec-pi-session/.govern.session.toml`
+- `runtime/tests/fixtures/exec-pi-session/.govern.toml`
+- `runtime/tests/fixtures/exec-pi-session/.pi/prompts/acme-smoke.md`
+- `runtime/tests/fixtures/exec-pi-session/specs/001-basic/spec.md`
+- `runtime/tests/fixtures/gitignore-releases/ductus-v0.28.0`
+- `runtime/tests/fixtures/gitignore-releases/ductus-v0.29.11`
+- `runtime/tests/fixtures/gitignore-releases/ductus-v0.49.2`
+- `runtime/tests/fixtures/gitignore-releases/ductus-v0.56.0`
+- `runtime/tests/fixtures/gitignore-releases/ductus-v0.59.0`
+- `runtime/tests/fixtures/gitignore-releases/gvrn-v0.10.0`
+- `runtime/tests/fixtures/gitignore-releases/gvrn-v0.12.0`
+- `runtime/tests/fixtures/gitignore-releases/gvrn-v0.13.0`
+- `runtime/tests/fixtures/gitignore-releases/gvrn-v0.22.0`
+- `runtime/tests/fixtures/gitignore-releases/unreleased`
+- `runtime/tests/fixtures/gitignore-releases/v0.1.0`
+- `runtime/tests/fixtures/gitignore-releases/v0.2.0`
+- `runtime/tests/fixtures/implement-basic/.govern.session.toml`
+- `runtime/tests/fixtures/implement-basic/stdin.jsonl`
+- `runtime/tests/fixtures/review-basic/.govern.session.toml`
+- `runtime/tests/fixtures/review-basic/specs/007-review/spec.md`
+- `runtime/tests/fixtures/review-basic/stdin.jsonl`
+- `runtime/tests/golden/analyze-basic.jsonl`
+- `runtime/tests/golden/implement-basic.jsonl`
+- `runtime/tests/golden/plan-basic.jsonl`
+- `runtime/tests/golden/review-basic.jsonl`
+- `runtime/tests/golden/specify-basic.jsonl`
+- `runtime/tests/golden/status-basic.jsonl`
+- `runtime/tests/hook_status.rs`
+- `runtime/tests/line_ending_discipline.rs`
+- `runtime/tests/lint_markdown_scope.rs`
+- `runtime/tests/manifest_cli_args.rs`
+- `runtime/tests/mcp.rs`
+- `runtime/tests/measure_reopenings.rs`
+- `runtime/tests/mechanical_sweep_parity.rs`
+- `runtime/tests/merge_status_hook.rs`
+- `runtime/tests/mixed_corpus.rs`
+- `runtime/tests/parity.rs`
+- `runtime/tests/resolve_constitutions_size.rs`
+- `runtime/tests/result_sizes.rs`
+- `runtime/tests/review_command.rs`
+- `runtime/tests/specify_command.rs`
+- `runtime/tests/specs_root_override.rs`
+- `runtime/tests/status_view_bound.rs`
+- `runtime/tests/walker.rs`
+- `scripts/analyze/analyze_lib.py`
+- `scripts/analyze/briefs.py`
+- `scripts/analyze/check.py`
+- `scripts/analyze/combine.py`
+- `scripts/analyze/detect.py`
+- `scripts/analyze/judge-brief.md`
+- `scripts/analyze/record.py`
+- `scripts/analyze/split.py`
+- `scripts/analyze/step15-brief.md`
+- `scripts/audit/README.md`
+- `scripts/audit/adopter-shell-behavior.sh`
+- `scripts/audit/analyze-record-backlog.sh`
+- `scripts/audit/archive-contents.sh`
+- `scripts/audit/audit-family-parity.sh`
+- `scripts/audit/broken-relative-links.sh`
+- `scripts/audit/check-zero.sh`
+- `scripts/audit/command-flag-hint-parity.sh`
+- `scripts/audit/cross-doc-consistency.sh`
+- `scripts/audit/deprecation-removal.sh`
+- `scripts/audit/done-spec-criteria.sh`
+- `scripts/audit/feature-dir-grammar-parity.sh`
+- `scripts/audit/fixture-session-shape.sh`
+- `scripts/audit/host-namespace-parity.sh`
+- `scripts/audit/installer-command-parity.sh`
+- `scripts/audit/installer-registry-parity.sh`
+- `scripts/audit/introducing-drift.sh`
+- `scripts/audit/lib.sh`
+- `scripts/audit/manifest-destination-links.sh`
+- `scripts/audit/manifest-parity.sh`
+- `scripts/audit/marker-list-parity.sh`
+- `scripts/audit/migration-coverage.sh`
+- `scripts/audit/permission-entry-shape.sh`
+- `scripts/audit/permission-wildcard-position.sh`
+- `scripts/audit/placeholder-roundtrip.sh`
+- `scripts/audit/primitive-promotion-candidates.sh`
+- `scripts/audit/promotion-coverage.sh`
+- `scripts/audit/readme-command-parity.sh`
+- `scripts/audit/rename-sweep-residue.sh`
+- `scripts/audit/run-all.sh`
+- `scripts/audit/runtime-hardcoded-paths.sh`
+- `scripts/audit/runtime-probe-parity.sh`
+- `scripts/audit/self-url-resolution.sh`
+- `scripts/audit/shipped-anchor-resolution.sh`
+- `scripts/audit/sibling-coupling.sh`
+- `scripts/audit/ssot-invariants.sh`
+- `scripts/audit/step-reference-integrity.sh`
+- `scripts/audit/sweep-target-manifest-parity.sh`
+- `scripts/audit/template-alignment.sh`
+- `scripts/audit/version-agreement.sh`
+- `scripts/check-npm-audit.py`
+- `scripts/check-release-tag.sh`
+- `scripts/check-runtime-currency.sh`
+- `scripts/gen-claude-commands.sh`
+- `scripts/gen-configure-mcp.sh`
+- `scripts/lint-frontmatter.sh`
+- `scripts/lint-governing-size.sh`
+- `scripts/lint-procedure-parseability.sh`
+- `scripts/lint-release-ordering.sh`
+- `scripts/lint-rule-ids.sh`
+- `scripts/lint-tool-coverage.sh`
+- `scripts/measure-command-cost.py`
+- `scripts/measure-replace-under-server.sh`
+- `scripts/measure-result-sizes.sh`
+- `scripts/mutation/analysis-design-fix-067.py`
+- `scripts/mutation/analysis-standing-decision.py`
+- `scripts/mutation/anchor-and-label-results-bounded.py`
+- `scripts/mutation/append-task-lost-update.py`
+- `scripts/mutation/apply-manifest-roots.py`
+- `scripts/mutation/archive-staging-outside.py`
+- `scripts/mutation/artifact-size-bounded.py`
+- `scripts/mutation/claude-md-imports.py`
+- `scripts/mutation/command-file-containment.py`
+- `scripts/mutation/command-reference-split.py`
+- `scripts/mutation/commit-counts.py`
+- `scripts/mutation/compare-and-set-022.py`
+- `scripts/mutation/compare-and-set-041.py`
+- `scripts/mutation/compare-and-set-051.py`
+- `scripts/mutation/compare-and-set-057.py`
+- `scripts/mutation/compare-and-set-066.py`
+- `scripts/mutation/compare-and-set-067.py`
+- `scripts/mutation/config-key-lists-bounded.py`
+- `scripts/mutation/containment-and-bounds-067.py`
+- `scripts/mutation/corpus-link-containment.py`
+- `scripts/mutation/create-feature-claim.py`
+- `scripts/mutation/create-scenario-exclusive.py`
+- `scripts/mutation/criteria-in-review-066.py`
+- `scripts/mutation/criterion-body-path-links.py`
+- `scripts/mutation/criterion-ticks-outside-the-digest.py`
+- `scripts/mutation/cross-service-references.py`
+- `scripts/mutation/declined-note-edits.py`
+- `scripts/mutation/departure-waivers.py`
+- `scripts/mutation/departures-bounded.py`
+- `scripts/mutation/departures.py`
+- `scripts/mutation/destination-checks.py`
+- `scripts/mutation/exec-arguments.py`
+- `scripts/mutation/exec-departures.py`
+- `scripts/mutation/exec-requests-bounded.py`
+- `scripts/mutation/exec-scenario-anchors-067.py`
+- `scripts/mutation/fetch-archive-loopback-http.py`
+- `scripts/mutation/fetch-archive-startup-env.py`
+- `scripts/mutation/fetch-archive-user-agent.py`
+- `scripts/mutation/findings-cost-in-proportion-to-risk.py`
+- `scripts/mutation/fix-round-record.py`
+- `scripts/mutation/fix-round-results-bounded.py`
+- `scripts/mutation/freshness-results-have-a-bounded-size.py`
+- `scripts/mutation/gate-cross-spec-containment.py`
+- `scripts/mutation/gitignore-release-replay.py`
+- `scripts/mutation/installed-file-modes.py`
+- `scripts/mutation/json-flag-help-022.py`
+- `scripts/mutation/line-citation-strip-066.py`
+- `scripts/mutation/line-number-citations-067.py`
+- `scripts/mutation/loop-inputs-screened.py`
+- `scripts/mutation/merge-permissions-canonical.py`
+- `scripts/mutation/merge-status-hook.py`
+- `scripts/mutation/moved-scope-066.py`
+- `scripts/mutation/never-owed-084.py`
+- `scripts/mutation/one-description.py`
+- `scripts/mutation/out-of-round-findings.py`
+- `scripts/mutation/outward-link-reads-067.py`
+- `scripts/mutation/owed-work-084.py`
+- `scripts/mutation/own-record-is-no-round.py`
+- `scripts/mutation/owner-reviews-067-checks.py`
+- `scripts/mutation/owner-reviews-067.py`
+- `scripts/mutation/plan-edit-takes-no-back-edge.py`
+- `scripts/mutation/process-decisions-results-bounded.py`
+- `scripts/mutation/process-decisions-retained.py`
+- `scripts/mutation/project-record-084.py`
+- `scripts/mutation/protected-paths.py`
+- `scripts/mutation/prune-open-region.py`
+- `scripts/mutation/prune-plan-bounded.py`
+- `scripts/mutation/prune-project-containment.py`
+- `scripts/mutation/prune-project.py`
+- `scripts/mutation/prune-result-keys.py`
+- `scripts/mutation/prune-review-fixes-041.py`
+- `scripts/mutation/pruned-task-number.py`
+- `scripts/mutation/quoted-heading-forms-067.py`
+- `scripts/mutation/re-read-budget.py`
+- `scripts/mutation/reachable-trigger-bar-078.py`
+- `scripts/mutation/record-path-quoting-066.py`
+- `scripts/mutation/reference-and-rule-reads.py`
+- `scripts/mutation/relocate-merge-children-057.py`
+- `scripts/mutation/render-help.py`
+- `scripts/mutation/reopen-measure.py`
+- `scripts/mutation/resolve-constitutions-size.py`
+- `scripts/mutation/retire-feature-screens.py`
+- `scripts/mutation/review-022-fixes-2026-11-19.py`
+- `scripts/mutation/review-022-task-41.py`
+- `scripts/mutation/review-022-task-42.py`
+- `scripts/mutation/review-022-task-43.py`
+- `scripts/mutation/review-022-task-44.py`
+- `scripts/mutation/review-022-task-46.py`
+- `scripts/mutation/review-022-task-48.py`
+- `scripts/mutation/review-departures-bounded.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/review-scope-cells-and-deletions.py`
+- `scripts/mutation/reviews-follow-what-changed.py`
+- `scripts/mutation/rewrite-spec-links.py`
+- `scripts/mutation/root-prefixed-references.py`
+- `scripts/mutation/routing-path-claims.py`
+- `scripts/mutation/rule-files-left-to-analysis-020.py`
+- `scripts/mutation/rule-sections-fences.py`
+- `scripts/mutation/rule-verdicts-converge.py`
+- `scripts/mutation/run.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/scope-results-bounded.py`
+- `scripts/mutation/session-file-containment.py`
+- `scripts/mutation/session-lock-backoff.py`
+- `scripts/mutation/site-anchors-020.py`
+- `scripts/mutation/status-count-084.py`
+- `scripts/mutation/status-view-identity.py`
+- `scripts/mutation/stderr-warnings-022.py`
+- `scripts/mutation/step-references-bounded.py`
+- `scripts/mutation/step-references-reach.py`
+- `scripts/mutation/suffixed-task-number.py`
+- `scripts/mutation/tool-loading.py`
+- `scripts/mutation/unreviewed-code-084.py`
+- `scripts/mutation/waived-verdict.py`
+- `scripts/mutation/waiver-notices-flatten.py`
+- `scripts/mutation/waivers-bounded.py`
+- `scripts/npm-audit-allowed.json`
+- `scripts/run-workflow-steps.py`
+- `scripts/stale-literals.sh`
+- `scripts/tests/pi-bridge-harness.mjs`
+- `scripts/tests/test-analyze-scripts.py`
+- `scripts/tests/test-anchor-and-label-families.sh`
+- `scripts/tests/test-archive-contents.sh`
+- `scripts/tests/test-audit-path-containment.sh`
+- `scripts/tests/test-check-npm-audit.sh`
+- `scripts/tests/test-check-release-tag.sh`
+- `scripts/tests/test-check-runtime-currency.sh`
+- `scripts/tests/test-departure-attribution.sh`
+- `scripts/tests/test-deprecation-removal.sh`
+- `scripts/tests/test-done-spec-owed-work.sh`
+- `scripts/tests/test-feature-dir-grammar-parity.sh`
+- `scripts/tests/test-gen-claude-commands.sh`
+- `scripts/tests/test-gen-configure-mcp.sh`
+- `scripts/tests/test-host-namespace-parity.sh`
+- `scripts/tests/test-install.sh`
+- `scripts/tests/test-lint-governing-size.sh`
+- `scripts/tests/test-lint-release-ordering.sh`
+- `scripts/tests/test-lint-tool-coverage.sh`
+- `scripts/tests/test-migration-coverage.sh`
+- `scripts/tests/test-pre-commit-staging.sh`
+- `scripts/tests/test-run-workflow-steps.sh`
+- `scripts/tests/test-stale-literals.sh`
+- `scripts/tests/test-step-reference-integrity.sh`
+- `specs/000-slash-commands/analysis.md`
+- `specs/000-slash-commands/plan.md`
+- `specs/000-slash-commands/review.md`
+- `specs/000-slash-commands/scenarios/a-done-stop-says-the-request-is-not-built.md`
+- `specs/000-slash-commands/scenarios/analyze-reads-the-layout-derived-command-set.md`
+- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md`
+- `specs/000-slash-commands/scenarios/dashboard-dependencies-column.md`
+- `specs/000-slash-commands/scenarios/scenario-without-task-visibility.md`
+- `specs/000-slash-commands/scenarios/target-clear-flag.md`
+- `specs/000-slash-commands/scenarios/target-names-the-step-the-gate-would-name.md`
+- `specs/000-slash-commands/scenarios/validation-gates.md`
+- `specs/000-slash-commands/spec.md`
+- `specs/000-slash-commands/tasks.md`
+- `specs/001-system-spec-templates/tasks.md`
+- `specs/002-project-scaffolding/analysis.md`
+- `specs/002-project-scaffolding/plan.md`
+- `specs/002-project-scaffolding/review.md`
+- `specs/002-project-scaffolding/scenarios/claude-md-template-imports-load.md`
+- `specs/002-project-scaffolding/spec.md`
+- `specs/002-project-scaffolding/tasks.md`
+- `specs/003-bootstrap-automation/analysis.md`
+- `specs/003-bootstrap-automation/plan.md`
+- `specs/003-bootstrap-automation/review.md`
+- `specs/003-bootstrap-automation/scenarios/a-language-with-no-template-of-its-name.md`
+- `specs/003-bootstrap-automation/scenarios/curl-sh-installer.md`
+- `specs/003-bootstrap-automation/spec.md`
+- `specs/003-bootstrap-automation/tasks.md`
+- `specs/006-bug-workflow/analysis.md`
+- `specs/006-bug-workflow/plan.md`
+- `specs/006-bug-workflow/review.md`
+- `specs/006-bug-workflow/spec.md`
+- `specs/006-bug-workflow/tasks.md`
+- `specs/007-govern-workflow/analysis.md`
+- `specs/007-govern-workflow/plan.md`
+- `specs/007-govern-workflow/review.md`
+- `specs/007-govern-workflow/scenarios/a-first-adoption-with-existing-specs-is-not-an-update.md`
+- `specs/007-govern-workflow/scenarios/ductus-self-update-precheck.md`
+- `specs/007-govern-workflow/spec.md`
+- `specs/007-govern-workflow/tasks.md`
+- `specs/008-security-rules/analysis.md`
+- `specs/008-security-rules/data-model.md`
+- `specs/008-security-rules/plan.md`
+- `specs/008-security-rules/research.md`
+- `specs/008-security-rules/review.md`
+- `specs/008-security-rules/scenarios/a-cache-partition-is-purged-when-the-session-ends.md`
+- `specs/008-security-rules/scenarios/a-custom-credential-header-does-not-follow-a-redirect.md`
+- `specs/008-security-rules/scenarios/a-statement-carries-one-obligation-keyword.md`
+- `specs/008-security-rules/scenarios/a-throwaway-credential-owes-no-revocation-path.md`
+- `specs/008-security-rules/scenarios/an-absent-origin-on-a-cookie-connection-is-flagged.md`
+- `specs/008-security-rules/scenarios/an-operator-proxy-is-the-fetch-trust-boundary.md`
+- `specs/008-security-rules/scenarios/be-deps-005-flags-what-its-statement-requires.md`
+- `specs/008-security-rules/scenarios/independent-review-findings-await-the-owner.md`
+- `specs/008-security-rules/scenarios/rules-are-as-short-as-their-required-content.md`
+- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
+- `specs/008-security-rules/scenarios/single-host-appliance-rule-fit.md`
+- `specs/008-security-rules/scenarios/the-tag-check-reads-every-entry-above-the-newest-version.md`
+- `specs/008-security-rules/scenarios/x-frame-options-carries-one-strength.md`
+- `specs/008-security-rules/spec.md`
+- `specs/008-security-rules/tasks.md`
+- `specs/009-scenario-targeting/analysis.md`
+- `specs/009-scenario-targeting/plan.md`
+- `specs/009-scenario-targeting/review.md`
+- `specs/009-scenario-targeting/spec.md`
+- `specs/009-scenario-targeting/tasks.md`
+- `specs/010-agent-autonomy/analysis.md`
+- `specs/010-agent-autonomy/plan.md`
+- `specs/010-agent-autonomy/review.md`
+- `specs/010-agent-autonomy/scenarios/implement-offers-the-next-step.md`
+- `specs/010-agent-autonomy/spec.md`
+- `specs/010-agent-autonomy/tasks.md`
+- `specs/011-brownfield-process/spec.md`
+- `specs/011-brownfield-process/tasks.md`
+- `specs/012-multi-agent-govern/analysis.md`
+- `specs/012-multi-agent-govern/data-model.md`
+- `specs/012-multi-agent-govern/plan.md`
+- `specs/012-multi-agent-govern/review.md`
+- `specs/012-multi-agent-govern/scenarios/a-dropped-hosts-leftover-tree-is-named.md`
+- `specs/012-multi-agent-govern/scenarios/settings-template-bash-allowlist.md`
+- `specs/012-multi-agent-govern/spec.md`
+- `specs/012-multi-agent-govern/tasks.md`
+- `specs/013-text-first-artifacts/analysis.md`
+- `specs/013-text-first-artifacts/data-model.md`
+- `specs/013-text-first-artifacts/plan.md`
+- `specs/013-text-first-artifacts/review.md`
+- `specs/013-text-first-artifacts/scenarios/criterion-identifiers.md`
+- `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md`
+- `specs/013-text-first-artifacts/spec.md`
+- `specs/013-text-first-artifacts/tasks.md`
+- `specs/014-reclarify-backedge/analysis.md`
+- `specs/014-reclarify-backedge/plan.md`
+- `specs/014-reclarify-backedge/review.md`
+- `specs/014-reclarify-backedge/scenarios/reopen-after-informal-edits.md`
+- `specs/014-reclarify-backedge/spec.md`
+- `specs/014-reclarify-backedge/tasks.md`
+- `specs/015-tarball-fetch/analysis.md`
+- `specs/015-tarball-fetch/plan.md`
+- `specs/015-tarball-fetch/review.md`
+- `specs/015-tarball-fetch/spec.md`
+- `specs/015-tarball-fetch/tasks.md`
+- `specs/016-cross-cutting-rules/analysis.md`
+- `specs/016-cross-cutting-rules/plan.md`
+- `specs/016-cross-cutting-rules/review.md`
+- `specs/016-cross-cutting-rules/spec.md`
+- `specs/016-cross-cutting-rules/tasks.md`
+- `specs/017-derive-dont-ask/analysis.md`
+- `specs/017-derive-dont-ask/data-model.md`
+- `specs/017-derive-dont-ask/plan.md`
+- `specs/017-derive-dont-ask/review.md`
+- `specs/017-derive-dont-ask/scenarios/a-commit-stages-only-its-own-generated-files.md`
+- `specs/017-derive-dont-ask/scenarios/a-path-list-commit-leaves-the-shared-index-current.md`
+- `specs/017-derive-dont-ask/scenarios/a-secret-at-rest-is-flagged-in-every-project-shape.md`
+- `specs/017-derive-dont-ask/scenarios/a-throwaway-credential-is-not-a-secret.md`
+- `specs/017-derive-dont-ask/scenarios/generator-sync-claim-honesty.md`
+- `specs/017-derive-dont-ask/scenarios/ranged-and-inventoried-config-values-from-any-source.md`
+- `specs/017-derive-dont-ask/scenarios/required-config-values-from-any-source.md`
+- `specs/017-derive-dont-ask/scenarios/the-adopter-ci-template-can-run.md`
+- `specs/017-derive-dont-ask/scenarios/tracked-specs-not-worktree.md`
+- `specs/017-derive-dont-ask/spec.md`
+- `specs/017-derive-dont-ask/tasks.md`
+- `specs/018-adopter-owned-pre-commit/analysis.md`
+- `specs/018-adopter-owned-pre-commit/plan.md`
+- `specs/018-adopter-owned-pre-commit/review.md`
+- `specs/018-adopter-owned-pre-commit/spec.md`
+- `specs/018-adopter-owned-pre-commit/tasks.md`
+- `specs/019-config-decisions/analysis.md`
+- `specs/019-config-decisions/data-model.md`
+- `specs/019-config-decisions/plan.md`
+- `specs/019-config-decisions/review.md`
+- `specs/019-config-decisions/scenarios/an-unknown-config-key-is-named.md`
+- `specs/019-config-decisions/spec.md`
+- `specs/019-config-decisions/tasks.md`
+- `specs/020-code-review/analysis.md`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/plan.md`
+- `specs/020-code-review/review.md`
+- `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md`
+- `specs/020-code-review/scenarios/review-reports-a-defect-under-its-owner.md`
+- `specs/020-code-review/scenarios/waiver-expiry.md`
+- `specs/020-code-review/scenarios/waiver-file-lists.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
+- `specs/021-runtime-boundary/analysis.md`
+- `specs/021-runtime-boundary/plan.md`
+- `specs/021-runtime-boundary/review.md`
+- `specs/021-runtime-boundary/spec.md`
+- `specs/021-runtime-boundary/tasks.md`
+- `specs/022-deterministic-runtime/analysis.md`
+- `specs/022-deterministic-runtime/data-model.md`
+- `specs/022-deterministic-runtime/plan.md`
+- `specs/022-deterministic-runtime/review.md`
+- `specs/022-deterministic-runtime/scenarios/a-closed-stdout-is-a-quiet-exit.md`
+- `specs/022-deterministic-runtime/scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md`
+- `specs/022-deterministic-runtime/scenarios/a-done-when-clause-reads-to-its-end.md`
+- `specs/022-deterministic-runtime/scenarios/a-path-argument-resolves-inside-its-base.md`
+- `specs/022-deterministic-runtime/scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md`
+- `specs/022-deterministic-runtime/scenarios/append-inbox-comment-aware-write.md`
+- `specs/022-deterministic-runtime/scenarios/append-task-honours-slug-with-explicit-body.md`
+- `specs/022-deterministic-runtime/scenarios/apply-manifest-substitution-contract.md`
+- `specs/022-deterministic-runtime/scenarios/apply-manifest.md`
+- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md`
+- `specs/022-deterministic-runtime/scenarios/check-stuck-tasks-md-advancement.md`
+- `specs/022-deterministic-runtime/scenarios/clarify-command-acceleration.md`
+- `specs/022-deterministic-runtime/scenarios/cli-config-dir-per-contributor.md`
+- `specs/022-deterministic-runtime/scenarios/commands-dir-parameterization.md`
+- `specs/022-deterministic-runtime/scenarios/config-readers-name-unknown-keys.md`
+- `specs/022-deterministic-runtime/scenarios/config-resolution-single-probe.md`
+- `specs/022-deterministic-runtime/scenarios/config-sourced-paths-and-the-traversal-boundary.md`
+- `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md`
+- `specs/022-deterministic-runtime/scenarios/coverage-expansion-primitives.md`
+- `specs/022-deterministic-runtime/scenarios/coverage-residue-cleanup.md`
+- `specs/022-deterministic-runtime/scenarios/criterion-label-assignment.md`
+- `specs/022-deterministic-runtime/scenarios/dashboard-primitive.md`
+- `specs/022-deterministic-runtime/scenarios/derive-boundary-uncommitted-spec-dir.md`
+- `specs/022-deterministic-runtime/scenarios/done-when-authoring-forms.md`
+- `specs/022-deterministic-runtime/scenarios/every-mcp-argument-has-a-cli-form.md`
+- `specs/022-deterministic-runtime/scenarios/exec-clarify-asks-each-open-question.md`
+- `specs/022-deterministic-runtime/scenarios/fetch-archive-dns-rebinding.md`
+- `specs/022-deterministic-runtime/scenarios/framework-list-dedup.md`
+- `specs/022-deterministic-runtime/scenarios/govern-bootstrap.md`
+- `specs/022-deterministic-runtime/scenarios/groom-command-acceleration.md`
+- `specs/022-deterministic-runtime/scenarios/host-protocol-conformance.md`
+- `specs/022-deterministic-runtime/scenarios/implement-completion-gate.md`
+- `specs/022-deterministic-runtime/scenarios/installed-files-are-not-group-writable.md`
+- `specs/022-deterministic-runtime/scenarios/lint-markdown-lints-only-what-it-is-given.md`
+- `specs/022-deterministic-runtime/scenarios/lint-markdown-tool-resolution.md`
+- `specs/022-deterministic-runtime/scenarios/merge-managed-block-renamed-subsection.md`
+- `specs/022-deterministic-runtime/scenarios/merge-managed-block-subsection-insertion.md`
+- `specs/022-deterministic-runtime/scenarios/resolve-references-cli-exec-wiring.md`
+- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
+- `specs/022-deterministic-runtime/scenarios/review-scope-parse-fidelity.md`
+- `specs/022-deterministic-runtime/scenarios/routing-ranks-by-claimed-path.md`
+- `specs/022-deterministic-runtime/scenarios/runtime-review-019-hardening.md`
+- `specs/022-deterministic-runtime/scenarios/scaffolding-primitives.md`
+- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
+- `specs/022-deterministic-runtime/scenarios/severity-is-a-closed-set-not-a-string.md`
+- `specs/022-deterministic-runtime/scenarios/skipscanner-inline-code-exemption.md`
+- `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md`
+- `specs/022-deterministic-runtime/scenarios/specify-routes-before-scaffolding.md`
+- `specs/022-deterministic-runtime/scenarios/the-cli-surface-nothing-pins.md`
+- `specs/022-deterministic-runtime/scenarios/the-constitutions-registry-validates-its-values.md`
+- `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md`
+- `specs/022-deterministic-runtime/scenarios/unchecked-done-when-clause-tally.md`
+- `specs/022-deterministic-runtime/scenarios/write-session-primitive.md`
+- `specs/022-deterministic-runtime/scenarios/writecode-boundary-derivation.md`
+- `specs/022-deterministic-runtime/scenarios/writecode-payload-bundling.md`
+- `specs/022-deterministic-runtime/scenarios/writecode-payload-canonicalize-paths.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/022-deterministic-runtime/tasks.md`
+- `specs/023-govern-refinement/analysis.md`
+- `specs/023-govern-refinement/plan.md`
+- `specs/023-govern-refinement/review.md`
+- `specs/023-govern-refinement/scenarios/configure-dedup-permissions.md`
+- `specs/023-govern-refinement/scenarios/configure-inert-write-path-entries.md`
+- `specs/023-govern-refinement/scenarios/configure-permission-pattern-safety.md`
+- `specs/023-govern-refinement/scenarios/configure-retires-formerly-canonical-entries.md`
+- `specs/023-govern-refinement/scenarios/extend-existing-scenario-task.md`
+- `specs/023-govern-refinement/scenarios/living-specs.md`
+- `specs/023-govern-refinement/spec.md`
+- `specs/023-govern-refinement/tasks.md`
+- `specs/024-rule-loader/analysis.md`
+- `specs/024-rule-loader/plan.md`
+- `specs/024-rule-loader/review.md`
+- `specs/024-rule-loader/spec.md`
+- `specs/024-rule-loader/tasks.md`
+- `specs/026-framework-self-audit/analysis.md`
+- `specs/026-framework-self-audit/plan.md`
+- `specs/026-framework-self-audit/review.md`
+- `specs/026-framework-self-audit/scenarios/audit-script-refactors.md`
+- `specs/026-framework-self-audit/scenarios/families-follow-the-command-reference-split.md`
+- `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md`
+- `specs/026-framework-self-audit/scenarios/family-18-marker-list-parity.md`
+- `specs/026-framework-self-audit/scenarios/family-22-adopter-shell-behavior.md`
+- `specs/026-framework-self-audit/scenarios/family-23-sweep-target-manifest-parity.md`
+- `specs/026-framework-self-audit/scenarios/family-24-rename-sweep-residue.md`
+- `specs/026-framework-self-audit/scenarios/family-26-broken-relative-links.md`
+- `specs/026-framework-self-audit/scenarios/family-27-done-spec-unchecked-criteria.md`
+- `specs/026-framework-self-audit/scenarios/family-28-audit-family-registry-parity.md`
+- `specs/026-framework-self-audit/scenarios/family-34-reference-section-reachability.md`
+- `specs/026-framework-self-audit/scenarios/family-34-step-reference-integrity.md`
+- `specs/026-framework-self-audit/scenarios/family-35-manifest-destination-links.md`
+- `specs/026-framework-self-audit/scenarios/family-36-self-url-resolution.md`
+- `specs/026-framework-self-audit/scenarios/family-39-shipped-anchor-resolution.md`
+- `specs/026-framework-self-audit/scenarios/family-40-deprecated-rules-are-removed-on-time.md`
+- `specs/026-framework-self-audit/scenarios/host-namespace-parity.md`
+- `specs/026-framework-self-audit/scenarios/readme-command-parity.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/026-framework-self-audit/tasks.md`
+- `specs/027-bootstrap-migration-registry/analysis.md`
+- `specs/027-bootstrap-migration-registry/plan.md`
+- `specs/027-bootstrap-migration-registry/review.md`
+- `specs/027-bootstrap-migration-registry/scenarios/a-first-adoption-runs-no-migration.md`
+- `specs/027-bootstrap-migration-registry/scenarios/a-projects-own-constitution-is-not-relocated.md`
+- `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md`
+- `specs/027-bootstrap-migration-registry/scenarios/migrations-apply-once-per-repo.md`
+- `specs/027-bootstrap-migration-registry/scenarios/seed-files-keep-no-literal-placeholder.md`
+- `specs/027-bootstrap-migration-registry/spec.md`
+- `specs/027-bootstrap-migration-registry/tasks.md`
+- `specs/029-bootstrap-runtime-autowire/analysis.md`
+- `specs/029-bootstrap-runtime-autowire/plan.md`
+- `specs/029-bootstrap-runtime-autowire/review.md`
+- `specs/029-bootstrap-runtime-autowire/scenarios/archive-fetch-direct-codeload.md`
+- `specs/029-bootstrap-runtime-autowire/scenarios/project-inputs-asked-once.md`
+- `specs/029-bootstrap-runtime-autowire/scenarios/runtime-probe-parity-audit.md`
+- `specs/029-bootstrap-runtime-autowire/scenarios/state-a-deterministic-path-forcing.md`
+- `specs/029-bootstrap-runtime-autowire/spec.md`
+- `specs/029-bootstrap-runtime-autowire/tasks.md`
+- `specs/030-cross-service-references/analysis.md`
+- `specs/030-cross-service-references/data-model.md`
+- `specs/030-cross-service-references/plan.md`
+- `specs/030-cross-service-references/review.md`
+- `specs/030-cross-service-references/scenarios/referenced-service-spec-root.md`
+- `specs/030-cross-service-references/spec.md`
+- `specs/030-cross-service-references/tasks.md`
+- `specs/033-rule-surface-setting/analysis.md`
+- `specs/033-rule-surface-setting/plan.md`
+- `specs/033-rule-surface-setting/review.md`
+- `specs/033-rule-surface-setting/scenarios/an-out-of-surface-citation-resolves.md`
+- `specs/033-rule-surface-setting/spec.md`
+- `specs/033-rule-surface-setting/tasks.md`
+- `specs/034-performance-backend-rules/analysis.md`
+- `specs/034-performance-backend-rules/plan.md`
+- `specs/034-performance-backend-rules/review.md`
+- `specs/034-performance-backend-rules/spec.md`
+- `specs/034-performance-backend-rules/tasks.md`
+- `specs/035-groom-session-target/analysis.md`
+- `specs/035-groom-session-target/plan.md`
+- `specs/035-groom-session-target/review.md`
+- `specs/035-groom-session-target/scenarios/confirmation-names-reopen.md`
+- `specs/035-groom-session-target/scenarios/reopen-done-spec-on-scenario.md`
+- `specs/035-groom-session-target/tasks.md`
+- `specs/036-quality-cross-rules/analysis.md`
+- `specs/036-quality-cross-rules/data-model.md`
+- `specs/036-quality-cross-rules/plan.md`
+- `specs/036-quality-cross-rules/review.md`
+- `specs/036-quality-cross-rules/scenarios/a-bound-test-pins-the-stated-figure.md`
+- `specs/036-quality-cross-rules/spec.md`
+- `specs/036-quality-cross-rules/tasks.md`
+- `specs/037-observability-backend-rules/analysis.md`
+- `specs/037-observability-backend-rules/plan.md`
+- `specs/037-observability-backend-rules/review.md`
+- `specs/037-observability-backend-rules/spec.md`
+- `specs/037-observability-backend-rules/tasks.md`
+- `specs/038-concurrency-backend-rules/analysis.md`
+- `specs/038-concurrency-backend-rules/plan.md`
+- `specs/038-concurrency-backend-rules/review.md`
+- `specs/038-concurrency-backend-rules/scenarios/a-declared-loss-tolerant-message-owes-no-outbox.md`
+- `specs/038-concurrency-backend-rules/scenarios/lock-the-parent-before-rewriting-its-children.md`
+- `specs/038-concurrency-backend-rules/spec.md`
+- `specs/038-concurrency-backend-rules/tasks.md`
+- `specs/039-reliability-backend-rules/analysis.md`
+- `specs/039-reliability-backend-rules/plan.md`
+- `specs/039-reliability-backend-rules/review.md`
+- `specs/039-reliability-backend-rules/scenarios/expendable-messages-may-be-dropped-when-recorded.md`
+- `specs/039-reliability-backend-rules/spec.md`
+- `specs/039-reliability-backend-rules/tasks.md`
+- `specs/040-configurable-specs-dir/analysis.md`
+- `specs/040-configurable-specs-dir/plan.md`
+- `specs/040-configurable-specs-dir/scenarios/command-prose-resolves-spec-root.md`
+- `specs/040-configurable-specs-dir/scenarios/spec-root-rule-stated-once.md`
+- `specs/040-configurable-specs-dir/spec.md`
+- `specs/040-configurable-specs-dir/tasks.md`
+- `specs/041-task-pruning/analysis.md`
+- `specs/041-task-pruning/data-model.md`
+- `specs/041-task-pruning/plan.md`
+- `specs/041-task-pruning/review.md`
+- `specs/041-task-pruning/scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`
+- `specs/041-task-pruning/scenarios/a-pruned-task-number-is-never-reissued.md`
+- `specs/041-task-pruning/scenarios/a-suffixed-task-number-is-a-task.md`
+- `specs/041-task-pruning/scenarios/an-open-fenced-block-or-comment-is-not-examined.md`
+- `specs/041-task-pruning/scenarios/plan-records-the-design-as-it-stands.md`
+- `specs/041-task-pruning/scenarios/prune-all-walks-every-spec.md`
+- `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md`
+- `specs/041-task-pruning/scenarios/prune-walks-the-project-files.md`
+- `specs/041-task-pruning/spec.md`
+- `specs/041-task-pruning/tasks.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/analysis.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/plan.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/review.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/scenarios/provenance-tags-name-resolved-config-path.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/spec.md`
+- `specs/042-consolidate-govern-per-project-files-under-govern-directory/tasks.md`
+- `specs/043-workflows-sunset/analysis.md`
+- `specs/043-workflows-sunset/plan.md`
+- `specs/043-workflows-sunset/review.md`
+- `specs/043-workflows-sunset/spec.md`
+- `specs/043-workflows-sunset/tasks.md`
+- `specs/044-relocate-constitution-under-govern-directory/analysis.md`
+- `specs/044-relocate-constitution-under-govern-directory/plan.md`
+- `specs/044-relocate-constitution-under-govern-directory/review.md`
+- `specs/044-relocate-constitution-under-govern-directory/spec.md`
+- `specs/044-relocate-constitution-under-govern-directory/tasks.md`
+- `specs/045-decision-state-drift-detection/analysis.md`
+- `specs/045-decision-state-drift-detection/data-model.md`
+- `specs/045-decision-state-drift-detection/plan.md`
+- `specs/045-decision-state-drift-detection/review.md`
+- `specs/045-decision-state-drift-detection/spec.md`
+- `specs/045-decision-state-drift-detection/tasks.md`
+- `specs/046-scenario-open-question-visibility/analysis.md`
+- `specs/046-scenario-open-question-visibility/plan.md`
+- `specs/046-scenario-open-question-visibility/review.md`
+- `specs/046-scenario-open-question-visibility/spec.md`
+- `specs/046-scenario-open-question-visibility/tasks.md`
+- `specs/047-analyze-findings-durability/analysis.md`
+- `specs/047-analyze-findings-durability/plan.md`
+- `specs/047-analyze-findings-durability/review.md`
+- `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md`
+- `specs/047-analyze-findings-durability/scenarios/analyze-run-durability.md`
+- `specs/047-analyze-findings-durability/spec.md`
+- `specs/047-analyze-findings-durability/tasks.md`
+- `specs/048-govern-acquired-runtime/analysis.md`
+- `specs/048-govern-acquired-runtime/data-model.md`
+- `specs/048-govern-acquired-runtime/plan.md`
+- `specs/048-govern-acquired-runtime/review.md`
+- `specs/048-govern-acquired-runtime/scenarios/fetch-archive-reads-its-proxy-once.md`
+- `specs/048-govern-acquired-runtime/scenarios/pointer-follows-the-store.md`
+- `specs/048-govern-acquired-runtime/scenarios/retired-namespace-tools-are-off-limits.md`
+- `specs/048-govern-acquired-runtime/scenarios/state-a-version-checks-the-pin.md`
+- `specs/048-govern-acquired-runtime/scenarios/state-b-continues-in-session.md`
+- `specs/048-govern-acquired-runtime/spec.md`
+- `specs/048-govern-acquired-runtime/tasks.md`
+- `specs/049-rename-govern-to-ductus/plan.md`
+- `specs/049-rename-govern-to-ductus/spec.md`
+- `specs/049-rename-govern-to-ductus/tasks.md`
+- `specs/050-constitution/analysis.md`
+- `specs/050-constitution/plan.md`
+- `specs/050-constitution/review.md`
+- `specs/050-constitution/scenarios/a-canonical-source-is-pointed-at-not-copied.md`
+- `specs/050-constitution/scenarios/a-decision-is-attributed-to-whoever-made-it.md`
+- `specs/050-constitution/scenarios/a-declared-cross-spec-impact-gates-done.md`
+- `specs/050-constitution/scenarios/a-partial-read-is-not-a-read.md`
+- `specs/050-constitution/scenarios/a-primitive-is-probed-in-a-local-clone.md`
+- `specs/050-constitution/scenarios/a-project-command-is-run-not-reproduced.md`
+- `specs/050-constitution/scenarios/a-retired-feature-leaves-no-spec.md`
+- `specs/050-constitution/scenarios/a-retired-filename-leaves-a-decision-record.md`
+- `specs/050-constitution/scenarios/a-review-may-precede-its-commit.md`
+- `specs/050-constitution/scenarios/a-status-commit-holds-only-the-transition.md`
+- `specs/050-constitution/scenarios/adopter-practices-classified-for-promotion.md`
+- `specs/050-constitution/scenarios/agents-md-holds-only-what-every-session-needs.md`
+- `specs/050-constitution/scenarios/an-answer-is-applied-as-chosen.md`
+- `specs/050-constitution/scenarios/artifacts-are-as-short-as-their-required-content.md`
+- `specs/050-constitution/scenarios/findings-route-by-scope.md`
+- `specs/050-constitution/scenarios/governance-is-multi-source.md`
+- `specs/050-constitution/scenarios/knowledge-routes-by-population-not-by-kind.md`
+- `specs/050-constitution/scenarios/memory-routing-lives-in-agents-md.md`
+- `specs/050-constitution/scenarios/reports-end-with-the-remaining-work.md`
+- `specs/050-constitution/scenarios/the-constitution-fits-one-read.md`
+- `specs/050-constitution/scenarios/the-constitution-states-rules-not-stories.md`
+- `specs/050-constitution/spec.md`
+- `specs/050-constitution/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/analysis.md`
+- `specs/051-branch-scoped-spec-numbering/data-model.md`
+- `specs/051-branch-scoped-spec-numbering/plan.md`
+- `specs/051-branch-scoped-spec-numbering/review.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-definition-and-a-title-follow-the-link-grammar.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-fold-target-is-held-to-the-name-grammar.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-link-inside-the-target-stays-inside-it.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-pending-fold-never-holds-done.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/fold-target-checked-before-the-rewrite.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/rewrites-preserve-line-endings.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/the-spec-root-is-read-before-the-first-write.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/051-branch-scoped-spec-numbering/tasks.md`
+- `specs/052-spec-supersession-and-consolidation/analysis.md`
+- `specs/052-spec-supersession-and-consolidation/plan.md`
+- `specs/052-spec-supersession-and-consolidation/review.md`
+- `specs/052-spec-supersession-and-consolidation/scenarios/the-content-move-and-the-consolidation-commit-together.md`
+- `specs/052-spec-supersession-and-consolidation/spec.md`
+- `specs/052-spec-supersession-and-consolidation/tasks.md`
+- `specs/054-remove-supersession/analysis.md`
+- `specs/054-remove-supersession/plan.md`
+- `specs/054-remove-supersession/review.md`
+- `specs/054-remove-supersession/spec.md`
+- `specs/054-remove-supersession/tasks.md`
+- `specs/055-shared-constitution/analysis.md`
+- `specs/055-shared-constitution/data-model.md`
+- `specs/055-shared-constitution/plan.md`
+- `specs/055-shared-constitution/review.md`
+- `specs/055-shared-constitution/scenarios/a-registered-source-is-named-with-its-description.md`
+- `specs/055-shared-constitution/scenarios/target-reports-each-constitutions-size.md`
+- `specs/055-shared-constitution/spec.md`
+- `specs/055-shared-constitution/tasks.md`
+- `specs/056-bootstrap-archive-boundary-split/analysis.md`
+- `specs/056-bootstrap-archive-boundary-split/plan.md`
+- `specs/056-bootstrap-archive-boundary-split/review.md`
+- `specs/056-bootstrap-archive-boundary-split/scenarios/the-walker-places-every-archive-half-section.md`
+- `specs/056-bootstrap-archive-boundary-split/spec.md`
+- `specs/056-bootstrap-archive-boundary-split/tasks.md`
+- `specs/057-analyze-artifact-and-record-relocation/analysis.md`
+- `specs/057-analyze-artifact-and-record-relocation/data-model.md`
+- `specs/057-analyze-artifact-and-record-relocation/plan.md`
+- `specs/057-analyze-artifact-and-record-relocation/review.md`
+- `specs/057-analyze-artifact-and-record-relocation/scenarios/a-merge-carries-each-keys-whole-value.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/tasks.md`
+- `specs/058-findings-route-at-discovery/analysis.md`
+- `specs/058-findings-route-at-discovery/data-model.md`
+- `specs/058-findings-route-at-discovery/plan.md`
+- `specs/058-findings-route-at-discovery/review.md`
+- `specs/058-findings-route-at-discovery/scenarios/analysis-drift-judges-the-record-it-writes.md`
+- `specs/058-findings-route-at-discovery/scenarios/analyze-findings-match-decisions-by-host-judgment.md`
+- `specs/058-findings-route-at-discovery/scenarios/analyze-state-drift-judges-the-record-it-writes.md`
+- `specs/058-findings-route-at-discovery/scenarios/auto-records-disposition-tasks-without-pausing.md`
+- `specs/058-findings-route-at-discovery/scenarios/findings-cost-in-proportion-to-risk.md`
+- `specs/058-findings-route-at-discovery/spec.md`
+- `specs/058-findings-route-at-discovery/tasks.md`
+- `specs/059-project-in-a-repository-subdirectory/analysis.md`
+- `specs/059-project-in-a-repository-subdirectory/plan.md`
+- `specs/059-project-in-a-repository-subdirectory/review.md`
+- `specs/059-project-in-a-repository-subdirectory/spec.md`
+- `specs/059-project-in-a-repository-subdirectory/tasks.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/analysis.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/review.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/an-assessment-sees-the-loaded-rule-files.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/an-assessment-sees-the-rule-it-asks-about.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/scenarios/rule-judging-runs-from-repo-scripts.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/spec.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/tasks.md`
+- `specs/061-updates-track-the-latest-release-tag/analysis.md`
+- `specs/061-updates-track-the-latest-release-tag/plan.md`
+- `specs/061-updates-track-the-latest-release-tag/review.md`
+- `specs/061-updates-track-the-latest-release-tag/spec.md`
+- `specs/061-updates-track-the-latest-release-tag/tasks.md`
+- `specs/062-concurrent-session-targets/analysis.md`
+- `specs/062-concurrent-session-targets/data-model.md`
+- `specs/062-concurrent-session-targets/plan.md`
+- `specs/062-concurrent-session-targets/review.md`
+- `specs/062-concurrent-session-targets/scenarios/first-writers-create-the-ignore-file-once.md`
+- `specs/062-concurrent-session-targets/spec.md`
+- `specs/062-concurrent-session-targets/tasks.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/analysis.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/plan.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/review.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/an-invalid-threshold-fails-fast.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/an-unknown-artifacts-key-is-named.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/project-files-are-measured.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/spec.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/tasks.md`
+- `specs/064-pi-host-support/analysis.md`
+- `specs/064-pi-host-support/plan.md`
+- `specs/064-pi-host-support/review.md`
+- `specs/064-pi-host-support/scenarios/colon-form-commands-run-on-pi.md`
+- `specs/064-pi-host-support/scenarios/the-bridge-closes-its-server-at-shutdown.md`
+- `specs/064-pi-host-support/spec.md`
+- `specs/064-pi-host-support/tasks.md`
+- `specs/065-configurable-source-repository/plan.md`
+- `specs/065-configurable-source-repository/spec.md`
+- `specs/065-configurable-source-repository/tasks.md`
+- `specs/066-audit-records-and-the-completion-gate/analysis.md`
+- `specs/066-audit-records-and-the-completion-gate/data-model.md`
+- `specs/066-audit-records-and-the-completion-gate/plan.md`
+- `specs/066-audit-records-and-the-completion-gate/review.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-done-spec-has-no-transition-to-gate.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-multi-number-renumber-is-one-rewrite.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-renamed-file-contributes-its-rewrites.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-review-states-what-it-read.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-supplied-summary-carries-the-loops-account.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/a-write-result-states-what-it-wrote.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/checkbox-state-is-outside-the-analysis-digest.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/criteria-are-verified-in-review.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/freshness-results-have-a-bounded-size.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/only-gating-findings-hold-done.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/process-decisions-results-have-a-bounded-size.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/process-waivers-file-lists.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/process-waivers-notices-flatten-stored-text.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/record-paths-are-quoted-only-when-they-need-it.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-includes-uncommitted-work.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-plan-affected-table-format.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-union.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/review-staleness-on-done-specs.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/scope-results-have-a-bounded-size.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/the-committed-tree-horizon.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/the-cross-spec-impact-gate.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/the-fix-round-loop-is-recorded-and-gated.md`
+- `specs/066-audit-records-and-the-completion-gate/scenarios/write-analysis-and-the-second-gate.md`
+- `specs/066-audit-records-and-the-completion-gate/spec.md`
+- `specs/066-audit-records-and-the-completion-gate/tasks.md`
+- `specs/067-analyze-and-audit-checks/analysis.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/review.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-bare-port-span-names-its-remedy.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-none-list-item-is-no-open-question.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-plan-heading-is-matched-without-regard-to-case.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-record-cites-a-removed-rule.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md`
+- `specs/067-analyze-and-audit-checks/scenarios/adopter-corpus-link-integrity.md`
+- `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md`
+- `specs/067-analyze-and-audit-checks/scenarios/an-at-path-import-is-a-reference.md`
+- `specs/067-analyze-and-audit-checks/scenarios/analyze-artifact-checks.md`
+- `specs/067-analyze-and-audit-checks/scenarios/anchor-reference-kinds.md`
+- `specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md`
+- `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md`
+- `specs/067-analyze-and-audit-checks/scenarios/criterion-adopter-scope-destinations.md`
+- `specs/067-analyze-and-audit-checks/scenarios/criterion-negated-creation-phrasing.md`
+- `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
+- `specs/067-analyze-and-audit-checks/scenarios/deprecation-labels-are-read-by-the-runtime.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-references-results-are-bounded.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/derive-unparseable-frontmatter-is-reported.md`
+- `specs/067-analyze-and-audit-checks/scenarios/disposition-drift-is-advisory.md`
+- `specs/067-analyze-and-audit-checks/scenarios/every-agents-generated-copies-are-excluded.md`
+- `specs/067-analyze-and-audit-checks/scenarios/frontmatter-severity-tiers-on-both-sides.md`
+- `specs/067-analyze-and-audit-checks/scenarios/generated-reference-copies-are-excluded.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphan-check-skips-ignored-local-state.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`
+- `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-historical-roots.md`
+- `specs/067-analyze-and-audit-checks/scenarios/per-agent-scaffold-paths-ship-to-adopter.md`
+- `specs/067-analyze-and-audit-checks/scenarios/pointers-into-shipped-files-are-judged.md`
+- `specs/067-analyze-and-audit-checks/scenarios/promotion-coverage-header-without-a-key.md`
+- `specs/067-analyze-and-audit-checks/scenarios/scenario-consistency-reads-tasks-history.md`
+- `specs/067-analyze-and-audit-checks/scenarios/shared-constitution-references-are-judged.md`
+- `specs/067-analyze-and-audit-checks/scenarios/sibling-link-grammar-is-the-shared-one.md`
+- `specs/067-analyze-and-audit-checks/scenarios/sibling-symlink-trust-boundary.md`
+- `specs/067-analyze-and-audit-checks/scenarios/spec-integrity-and-plan-consistency-are-run.md`
+- `specs/067-analyze-and-audit-checks/scenarios/status-gated-families-are-not-silent.md`
+- `specs/067-analyze-and-audit-checks/scenarios/the-promotion-coverage-line.md`
+- `specs/067-analyze-and-audit-checks/scenarios/traverse-deps-cycle-check.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/067-analyze-and-audit-checks/tasks.md`
+- `specs/068-api-backend-rules/analysis.md`
+- `specs/068-api-backend-rules/plan.md`
+- `specs/068-api-backend-rules/review.md`
+- `specs/068-api-backend-rules/scenarios/repr-003-bounded-numbers-and-patch-001-format-home.md`
+- `specs/068-api-backend-rules/spec.md`
+- `specs/068-api-backend-rules/tasks.md`
+- `specs/069-accessibility-frontend-rules/analysis.md`
+- `specs/069-accessibility-frontend-rules/plan.md`
+- `specs/069-accessibility-frontend-rules/review.md`
+- `specs/069-accessibility-frontend-rules/scenarios/verifications-flag-only-what-the-statement-covers.md`
+- `specs/069-accessibility-frontend-rules/spec.md`
+- `specs/069-accessibility-frontend-rules/tasks.md`
+- `specs/070-performance-frontend-rules/analysis.md`
+- `specs/070-performance-frontend-rules/plan.md`
+- `specs/070-performance-frontend-rules/review.md`
+- `specs/070-performance-frontend-rules/spec.md`
+- `specs/070-performance-frontend-rules/tasks.md`
+- `specs/071-command-reference-split/analysis.md`
+- `specs/071-command-reference-split/plan.md`
+- `specs/071-command-reference-split/review.md`
+- `specs/071-command-reference-split/scenarios/reference-sections-are-reached-by-a-step.md`
+- `specs/071-command-reference-split/spec.md`
+- `specs/071-command-reference-split/tasks.md`
+- `specs/072-governing-documents-stay-within-one-read/analysis.md`
+- `specs/072-governing-documents-stay-within-one-read/plan.md`
+- `specs/072-governing-documents-stay-within-one-read/review.md`
+- `specs/072-governing-documents-stay-within-one-read/spec.md`
+- `specs/072-governing-documents-stay-within-one-read/tasks.md`
+- `specs/073-decided-rule-departures-are-recorded/analysis.md`
+- `specs/073-decided-rule-departures-are-recorded/data-model.md`
+- `specs/073-decided-rule-departures-are-recorded/plan.md`
+- `specs/073-decided-rule-departures-are-recorded/review.md`
+- `specs/073-decided-rule-departures-are-recorded/spec.md`
+- `specs/073-decided-rule-departures-are-recorded/tasks.md`
+- `specs/075-agents-md-holds-what-every-session-needs/analysis.md`
+- `specs/075-agents-md-holds-what-every-session-needs/plan.md`
+- `specs/075-agents-md-holds-what-every-session-needs/review.md`
+- `specs/075-agents-md-holds-what-every-session-needs/spec.md`
+- `specs/075-agents-md-holds-what-every-session-needs/tasks.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/analysis.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/plan.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/review.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/spec.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/tasks.md`
+- `specs/077-security-cross-rules/analysis.md`
+- `specs/077-security-cross-rules/data-model.md`
+- `specs/077-security-cross-rules/plan.md`
+- `specs/077-security-cross-rules/review.md`
+- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
+- `specs/077-security-cross-rules/spec.md`
+- `specs/077-security-cross-rules/tasks.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/analysis.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/plan.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/review.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/scenarios/a-reviews-own-record-is-no-fix-round.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/scenarios/fix-round-results-have-a-bounded-size.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/tasks.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/research.md`
+- `specs/079-review-and-analysis-work-converges/review.md`
+- `specs/079-review-and-analysis-work-converges/scenarios/the-excluded-section-lists-paths-only.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/analysis.md`
+- `specs/080-deterministic-runtime-efficiency/data-model.md`
+- `specs/080-deterministic-runtime-efficiency/plan.md`
+- `specs/080-deterministic-runtime-efficiency/research.md`
+- `specs/080-deterministic-runtime-efficiency/review.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/a-step-gates-on-a-bounded-list-by-its-count.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/configure-types-no-permission-entries.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/groom-derives-routing-candidates.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/help-answers-with-no-model-turn.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/one-search-covers-referenced-sections.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/reference-reads-follow-the-cited-sections.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/rules-load-without-shell-reads.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/the-search-goes-out-with-the-first-call.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
+- `specs/080-deterministic-runtime-efficiency/tasks.md`
+- `specs/081-reviews-and-checks-follow-what-changed/analysis.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
+- `specs/081-reviews-and-checks-follow-what-changed/tasks.md`
+- `specs/082-rule-assessments-converge-across-runs/analysis.md`
+- `specs/082-rule-assessments-converge-across-runs/data-model.md`
+- `specs/082-rule-assessments-converge-across-runs/plan.md`
+- `specs/082-rule-assessments-converge-across-runs/review.md`
+- `specs/082-rule-assessments-converge-across-runs/spec.md`
+- `specs/082-rule-assessments-converge-across-runs/tasks.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/analysis.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/plan.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/review.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/spec.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/tasks.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/data-model.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/plan.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/spec.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/tasks.md`
+- `specs/085-the-audit-record-gate-reads-records-through-the-runtime/spec.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/plan.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/spec.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/tasks.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/plan.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/tasks.md`
+- `specs/README.md`
+- `specs/inbox.md`
+- `specs/review.md`
+- `specs/system.md`
+- `version`
 
 ## Unexamined governance
 
