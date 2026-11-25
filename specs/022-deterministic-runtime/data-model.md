@@ -930,7 +930,7 @@ Response payload:
 
 ### `verifyCriteria` (follow-on)
 
-Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario, and since 066's task 27 (its scenario `criteria-are-verified-in-review`) sent by `/ductus:review`'s criteria step, its step 7.2, rather than `/ductus:implement`'s completion gate: one request carrying every acceptance criterion, whatever the review's window holds, and the LLM judges each criterion against the code — the verification stays semantic while the checkbox flips stay mechanical. Each verdict drives one `mark-criterion` call setting its checkbox to the verdict, ticked when met and unticked when not, and on `ductus exec` the verdicts are `write-review`'s `criteria`; never batch-marked.
+Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario, and since 066's task 27 (its scenario `criteria-are-verified-in-review`) sent by `/ductus:review`'s criteria step, its step 7.2, rather than `/ductus:implement`'s completion gate: one request carrying every acceptance criterion, whatever the review's window holds, and the LLM judges each criterion against the code — the verification stays semantic while the checkbox flips stay mechanical. Each verdict drives one `mark-criterion` call setting its checkbox to the verdict, ticked when met and unticked when not, except that on a `done` spec a ticked criterion judged not met changes only once the owner says which side is correct, and `ductus exec`'s walk, with nobody to ask, leaves it (spec 084); on `ductus exec` the verdicts are `write-review`'s `criteria`; never batch-marked.
 
 Request payload:
 

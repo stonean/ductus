@@ -130,7 +130,7 @@ Scenario `a-write-result-states-what-it-wrote`, from the same report: each recor
 | `framework/constitution.md` | Modify | §drift-prevention names the strip beside the deprecated-label substitution as a mechanical sweep (task 25); §implement-phase places criterion verification in review, and the review record table gains the criteria fields (task 27) |
 | `scripts/mutation/line-citation-strip-066.py` | Create | The mutation list proving a strip is mechanical and nothing else becomes so (task 25) |
 | `runtime/src/schema/extensions.rs` | Modify | `verifyCriteria`'s docs name `/{project}:review` as its sender (task 27) |
-| `runtime/src/interpreter/mod.rs` | Modify | The `mark-criterion` binding applies each `verifyCriteria` verdict, and `write-review` binds them as `criteria` (task 27) |
+| `runtime/src/interpreter/mod.rs` | Modify | The `mark-criterion` binding applies each `verifyCriteria` verdict but a not-met one on a `done` spec (spec 084), and `write-review` binds them as `criteria` (task 27) |
 | `AGENTS.md` | Modify | The pre-done verification ordering entry retired, since review now verifies (task 27) |
 | `framework/reference/review.md` | Modify | What the criteria step reads and how the subagent runs it (task 27) |
 | `framework/commands/implement.md` | Modify | The completion gate without its criteria steps (task 27) |
