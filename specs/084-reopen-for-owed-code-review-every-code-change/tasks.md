@@ -179,8 +179,8 @@ Both call `check-owed-work --all`, which names each spec it cannot judge in `ski
 
 Handed on from task 9: under `warn` the CLI exits 0 with the same stderr report, a path line being `check-unreviewed-code:   {path}`, so the step's per-path annotation reads those lines or the result's `done-specs` and `unclaimed`.
 
-- [ ] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
-- [ ] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
+- [x] `framework/templates/ci/adopter-generators.yml`: `fetch-depth: 0` with its comment, the unreviewed-code step, and a `done`-spec owed-work step calling `check-owed-work`'s corpus form once
+- [x] `scripts/audit/done-spec-criteria.sh` calls the same corpus form in place of its python parse; `scripts/tests/test-done-spec-owed-work.sh`, run from `framework-checks.yml`
 
 - **Done when**: AC9's CI half and AC15 hold, each step run by `scripts/run-workflow-steps.py` on a fixture fails with its condition present and passes without it.
 
@@ -237,6 +237,12 @@ Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012,
 - [ ] `runtime/src/main.rs` — the CLI's last stderr line prints `` `/{project}:review` `` literally (found by task 11, 2026-11-24), where `pipeline_view` substitutes the project's namespace; batch with task 26's runtime change
 
 - **Done when**: the line names the project's own review command, and a test fails with the substitution removed.
+
+### 28. A scratch-adopter bootstrap for the hook, the seed and the CI template
+
+- [ ] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `docs/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
+
+- **Done when**: both runs end as the body item says, a second update writes nothing, and the commit records each run's outcome.
 
 ## Phase D — Delivery
 

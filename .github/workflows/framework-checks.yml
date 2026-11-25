@@ -372,6 +372,15 @@ jobs:
       - name: (ac) Archive carries only what a run reads
         run: bash scripts/tests/test-archive-contents.sh
 
+      # (ad) Family 27 and the adopter CI template's owed-work and
+      # unreviewed-code steps (spec 084). Step (h) runs the family over this
+      # repository, where no `done` spec owes work, and nothing here runs the
+      # template, so a check that stopped failing would pass. The test builds
+      # fixture repositories, given the runtime built above, and runs the
+      # template's steps through scripts/run-workflow-steps.py in each.
+      - name: (ad) Done specs owing work and unreviewed code fail their checks
+        run: bash scripts/tests/test-done-spec-owed-work.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

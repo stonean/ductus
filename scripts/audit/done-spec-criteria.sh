@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # scripts/audit/done-spec-criteria.sh — Family 27 of /audit.
 #
-# A spec at `status: done` whose Acceptance Criteria still carry an unchecked
-# box. The completion gate is supposed to make this unreachable — only
-# framework/commands/review.md's criteria step ticks a criterion, and
-# check-review-gate blocks `unticked-criterion` while any remains unchecked
-# (066 task 27) — so reaching `done` with one unticked means the gate was
-# bypassed or a review's marking step failed.
+# A spec at `status: done` that owes work: an unchecked box in its `tasks.md`,
+# under any heading, or an unticked acceptance criterion in its `spec.md`. A
+# `done` spec is `in-progress` exactly while it holds either (spec 084), and the
+# command whose write leaves it owing work reopens it, so reaching this state
+# means a hand edit bypassed that or a review's marking step failed.
 #
 # It happened here. 026 reached `done` in e9262df with AC19 unchecked, and
 # every signal stayed green for the whole interval: run-all.sh exited 0,
@@ -14,43 +13,20 @@
 # found by a hand-written grep while sweeping for remaining work — the same way
 # Family 24's residue was found, and the same reason that family exists.
 #
-# The direction of the failure is what makes it worth a check. An unchecked
-# criterion under a `done` spec reads as work that was never finished, so
-# either the spec is lying about being complete or the criterion is lying about
-# being unmet. Both are cheap to repair and neither announces itself.
-# `check-artifacts` deliberately does not cover it: its criterion-path-existence
-# family asks whether a *checked* criterion's paths exist, the opposite
-# direction.
-#
-# METHOD. Exact rather than heuristic — the subject is a checkbox in a known
-# section of a file with known frontmatter, so nothing is inferred:
-#
-#   27a Enumerate tracked spec.md files under the spec root via `git ls-files`.
-#       Untracked specs are skipped and counted, matching derive-dependencies'
-#       `untracked-skipped`; silently ignoring one would let a spec escape the
-#       check by never having been committed.
-#   27b Read `status:` from the frontmatter block only. The token appears in
-#       prose across the corpus (026's own scenarios contain it), so a repo-wide
-#       grep would match documents *describing* the state.
-#   27c Within a `done` spec, scan only the Acceptance Criteria section, skip
-#       fenced blocks, and report each `- [ ]` with its file:line and label.
-#
-# Only `done` specs are examined. A spec at draft / clarified / planned /
-# in-progress is *expected* to carry unchecked criteria — that is what those
-# states mean — and flagging them would make this fire on every spec in flight
-# and be ignored within a day.
-#
-# NOT a finding: a spec with no Acceptance Criteria section at all. Section
-# completeness is /ductus:analyze's artifact-tier concern, and duplicating it
-# would cross the boundary audit.md §Boundary with `/ductus:analyze` draws
-# between the two commands.
+# METHOD. The family parses nothing: `check-owed-work --all` reads every `done`
+# spec by the runtime's one owed-work test, the one the reopen decision, the
+# completion gate and `check-artifacts`' review-state drift read (spec 084), so
+# this family cannot drift from them. It reports each `done` spec's unchecked
+# boxes and unticked criteria, and each spec the primitive could not judge,
+# with its reason; a spec git does not track is skipped and counted, matching
+# derive-dependencies' `untracked-skipped`.
 #
 # The examined count goes to stderr so a clean exit reads as "examined N done
-# specs, all criteria checked" and never as "nothing to examine", and an empty
+# specs, none owing work" and never as "nothing to examine", and an empty
 # enumeration is a finding rather than a pass — the fail-closed direction
 # Families 17, 18, and 23 already take.
 #
-# Requires `python3`.
+# Requires `python3` and the runtime (`ductus_bin`).
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -58,8 +34,15 @@ set -uo pipefail
 audit_family done-spec-criteria
 
 if ! command -v python3 >/dev/null 2>&1; then
-  emit "(precondition)" "python3 not on PATH — cannot parse spec frontmatter" \
+  emit "(precondition)" "python3 not on PATH — cannot read check-owed-work's result" \
     "install python3 and re-run"
+  exit 1
+fi
+
+bin="$(ductus_bin)"
+if [ -z "$bin" ]; then
+  emit "(precondition)" "no ductus runtime reachable — check-owed-work did not run, which is not the same as clean" \
+    "build runtime/ (cargo build --release) or run /ductus, then re-run"
   exit 1
 fi
 
@@ -82,114 +65,75 @@ case $? in
     ;;
 esac
 
-files="$(git ls-files -- "$SPECS_ROOT/*/spec.md" 2>/dev/null)"
-if [ -z "$files" ]; then
-  emit "$SPECS_ROOT/" "no tracked spec.md files found — the enumeration is broken, not the corpus" \
-    "check the spec root and that specs are committed"
+if ! result="$("$bin" check-owed-work --all 2> /dev/null)"; then
+  emit "$SPECS_ROOT/" "check-owed-work --all failed — no spec was judged, which is not the same as clean" \
+    "run $bin check-owed-work --all directly and read the error"
   exit "$drift"
 fi
 
-# Untracked specs are invisible to `git ls-files`. Count them so the scope line
-# states what went unexamined rather than implying full coverage.
-untracked="$(git ls-files --others --exclude-standard -- "$SPECS_ROOT/*/spec.md" 2>/dev/null | grep -c . || true)"
-
 report="$(
-  printf '%s\n' "$files" | python3 -c '
-import os, sys, re
+  printf '%s' "$result" | python3 -c '
+import json, sys
 
-ROOT = os.path.realpath(".")
-paths = [p for p in sys.stdin.read().splitlines() if p]
-examined = 0
-findings = []
-
-for path in paths:
-    # A tracked symbolic link resolving outside the repository is reported
-    # and never opened (026 plan, BE-INPUT-004).
-    if os.path.commonpath([ROOT, os.path.realpath(path)]) != ROOT:
-        findings.append((path, 0, "", "resolves outside the repository, so it was not read"))
-        continue
-    try:
-        with open(path, encoding="utf-8") as fh:
-            lines = fh.read().splitlines()
-    except OSError as exc:
-        findings.append((path, 0, "", "unreadable: %s" % exc))
-        continue
-
-    # 27b — status from the frontmatter block only, never a loose grep.
-    if not lines or lines[0].strip() != "---":
-        continue
-    status = None
-    for i in range(1, len(lines)):
-        if lines[i].strip() == "---":
-            break
-        m = re.match(r"^status:\s*(\S+)\s*$", lines[i])
-        if m:
-            status = m.group(1)
-    if status != "done":
-        continue
-    examined += 1
-
-    # 27c — Acceptance Criteria section only, fences skipped.
-    in_section = False
-    in_fence = False
-    for idx, line in enumerate(lines, start=1):
-        if re.match(r"^```", line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if re.match(r"^##\s+", line):
-            in_section = bool(re.match(r"^##\s+Acceptance Criteria\s*$", line))
-            continue
-        if not in_section:
-            continue
-        if re.match(r"^\s*-\s+\[ \]", line):
-            label = ""
-            m = re.search(r"\[ \]\s*(?:\*\*)?(AC\d+)", line)
-            if m:
-                label = m.group(1)
-            findings.append((path, idx, label, ""))
-
-print("EXAMINED %d" % examined)
-for path, line, label, err in findings:
-    if err:
-        print("ERROR\t%s\t%d\t%s" % (path, line, err))
+result = json.load(sys.stdin)
+lists = result
+if result.get("form") == "file":
+    lists = json.load(open(result["lists-file"], encoding="utf-8"))
+print("EXAMINED %d" % result["examined-count"])
+untracked = 0
+for skip in lists.get("skipped", []):
+    if skip["reason"] == "untracked":
+        untracked += 1
     else:
-        print("FINDING\t%s\t%d\t%s" % (path, line, label or "(unlabelled)"))
+        print("SKIP\t%s\t%s" % (skip["feature"], skip["reason"]))
+print("UNTRACKED %d" % untracked)
+for spec in lists.get("specs", []):
+    for box in spec["unchecked-boxes"]:
+        print("BOX\t%s\t%s" % (spec["feature"], box["line"]))
+    for criterion in spec["unticked-criteria"]:
+        print("CRITERION\t%s\t%s" % (spec["feature"], criterion.get("label") or "(unlabelled)"))
 '
 )"
 
 if [ -z "$report" ]; then
-  emit "$SPECS_ROOT/" "criterion scan produced no output — it did not run, which is not the same as clean" \
+  emit "$SPECS_ROOT/" "check-owed-work's result could not be read — the family did not run, which is not the same as clean" \
     "run scripts/audit/done-spec-criteria.sh directly and read the error"
   exit "$drift"
 fi
 
 examined="$(printf '%s\n' "$report" | sed -n 's/^EXAMINED //p')"
-: "${examined:=0}"
+untracked="$(printf '%s\n' "$report" | sed -n 's/^UNTRACKED //p')"
+: "${examined:=0}" "${untracked:=0}"
 
-if [ "$examined" -eq 0 ]; then
-  emit "$SPECS_ROOT/" "no specs at status: done were found among the tracked specs — the status parse is broken, not the corpus" \
-    "confirm spec frontmatter carries a status: key and re-run"
-  exit "$drift"
-fi
-
-while IFS="$(printf '\t')" read -r kind path line detail; do
+while IFS="$(printf '\t')" read -r kind feature detail; do
   case "$kind" in
-    FINDING)
-      emit "$path:$line" "spec is status: done but criterion $detail is unchecked" \
+    BOX)
+      emit "$SPECS_ROOT/$feature/tasks.md" "spec is status: done but tasks.md holds an unchecked box: $detail" \
+        "tick it if the work is done, or reopen the spec to in-progress if it is not"
+      ;;
+    CRITERION)
+      emit "$SPECS_ROOT/$feature/spec.md" "spec is status: done but criterion $detail is unchecked" \
         "tick $detail if the work is done, or reopen the spec to in-progress if it is not"
       ;;
-    ERROR)
-      emit "$path:$line" "$detail" "fix the file so the criterion scan can read it"
+    SKIP)
+      case "$detail" in
+        outside-project) why="holds a link leaving the project, so nothing under it was read" ;;
+        *) why="could not be judged ($detail), which is not the same as owing nothing" ;;
+      esac
+      emit "$SPECS_ROOT/$feature/" "$why" "fix the spec directory so check-owed-work can read it"
       ;;
   esac
 done <<EOF
-$(printf '%s\n' "$report" | grep -E '^(FINDING|ERROR)	' || true)
+$(printf '%s\n' "$report" | grep -E '^(BOX|CRITERION|SKIP)	' || true)
 EOF
 
-# Scope, on stderr: a clean exit means "these N done specs have every criterion
-# checked", never "all specs are complete".
+if [ "$examined" -eq 0 ] && [ "$drift" -eq 0 ]; then
+  emit "$SPECS_ROOT/" "no specs at status: done were found among the tracked specs — the enumeration is broken, not the corpus" \
+    "check the spec root, that specs are committed, and that their frontmatter carries a status: key"
+fi
+
+# Scope, on stderr: a clean exit means "these N done specs owe no work", never
+# "all specs are complete".
 echo "done-spec-criteria: examined $examined spec(s) at status: done under $SPECS_ROOT/ (untracked skipped: $untracked)" >&2
 
 exit "$drift"

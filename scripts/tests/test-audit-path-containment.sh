@@ -538,7 +538,7 @@ ln -s "$repo2/spec.md" "$dir/specs/002-bad/spec.md"
 track "$dir"
 run_family "$dir" done-spec-criteria.sh
 expect "O: Family 27 reports a tracked spec.md linking out of the tree" 1 \
-  '^done-spec-criteria \| specs/002-bad/spec\.md:0 \| resolves outside the repository, so it was not read'
+  '^done-spec-criteria \| specs/002-bad/ \| holds a link leaving the project, so nothing under it was read'
 expect_absent "O: Family 27 never reads it (the unchecked criterion it would report)" 'is unchecked'
 
 dir="$(new_tree o2 done-spec-criteria.sh)"

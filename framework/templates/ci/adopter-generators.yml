@@ -28,6 +28,12 @@
 #      went vacuous: it skipped any spec whose `spec.md` frontmatter had no
 #      `review:` block, which ductus 0.50.0 made true of every spec.
 #
+#   3. Owed work and unreviewed code (spec 084) — no spec at `status: done`
+#      holds an unchecked box in `tasks.md` or an unticked criterion, and no
+#      code is left that no review is going to read, as the pre-push hook
+#      (.githooks/ductus-pre-push) reports it. `[review] unreviewed-push`
+#      governs the second here as it does the hook.
+#
 # When new adopter-relevant checks are added by future ductus releases, this
 # template gains a step for each. /ductus neither installs nor updates it (CI
 # files would need platform detection beyond ductus's scope), so re-copy it
@@ -64,7 +70,14 @@ jobs:
     #   run:
     #     working-directory: path/to/project
     steps:
+      # Full history: the unreviewed-code step reads where each `done` spec's
+      # review window and the project record's start, which a checkout of the
+      # default depth of 1 stops before. The check reports a shallow history
+      # as not examined, never as clean, so without this the step fails under
+      # "block" on every run.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       # The steps below run the ductus runtime, and a checkout carries none:
       # /ductus keeps it in a per-machine store and links it from
@@ -341,3 +354,67 @@ jobs:
               sys.exit(1)
           sys.exit(1 if findings else 0)
           PY
+
+      - name: Done specs owe no work
+        # A `done` spec is `in-progress` exactly while its `tasks.md` holds an
+        # unchecked box or its `spec.md` an unticked acceptance criterion (spec
+        # 084), and the command that leaves it owing work reopens it; this
+        # catches a hand edit that did not. `ductus check-owed-work --all` reads
+        # every `done` spec by that one test. A spec it could not judge fails
+        # the step too, since one nothing read must not pass as one that owes
+        # nothing; one git does not track is counted and skipped.
+        run: |
+          set -euo pipefail
+          result="$(mktemp)"
+          ductus check-owed-work --all > "$result"
+          python3 - "$result" <<'PY'
+          import json
+          import sys
+
+          result = json.load(open(sys.argv[1], encoding="utf-8"))
+          lists = result
+          if result.get("form") == "file":
+              lists = json.load(open(result["lists-file"], encoding="utf-8"))
+          failures = 0
+          for spec in lists.get("specs", []):
+              for box in spec["unchecked-boxes"]:
+                  print("::error::done spec %s: tasks.md holds an unchecked box: %s" % (spec["feature"], box["line"]))
+                  failures += 1
+              for criterion in spec["unticked-criteria"]:
+                  print("::error::done spec %s: criterion %s is unticked: %s" % (spec["feature"], criterion.get("label") or "(unlabelled)", criterion["text"]))
+                  failures += 1
+          untracked = 0
+          for skip in lists.get("skipped", []):
+              if skip["reason"] == "untracked":
+                  untracked += 1
+              else:
+                  print("::error::%s could not be judged (%s), which is not the same as owing nothing" % (skip["feature"], skip["reason"]))
+                  failures += 1
+          print("check-owed-work examined %d done spec(s); %d untracked skipped." % (result["examined-count"], untracked))
+          if failures:
+              print("Tick what is done, or set the spec to in-progress and finish it.")
+          sys.exit(1 if failures else 0)
+          PY
+
+      - name: No code is left unreviewed
+        # `ductus check-unreviewed-code` reports the code no review is going to
+        # read: code a `done` spec claims, or that no spec claims, changed by a
+        # commit no committed review covers (spec 084). It reads `[review]
+        # unreviewed-push` from .ductus/config.toml as the pre-push hook does,
+        # and its exit status is the step's: under "block", the default, the
+        # step fails on reported code and on a subject the check could not
+        # examine; under "warn" it passes with a warning per reported path and
+        # per subject not examined; any other value fails naming the key. It
+        # reads history, hence the full checkout above.
+        run: |
+          set -euo pipefail
+          report="$(mktemp)"
+          code=0
+          ductus check-unreviewed-code > /dev/null 2> "$report" || code=$?
+          cat "$report" >&2
+          if [ "$code" -eq 0 ]; then
+            sed -n -e 's/%/%25/g' \
+              -e 's/^check-unreviewed-code:   \(.*\)$/::warning::no committed review covers \1/p' \
+              -e 's/^check-unreviewed-code: \(.* was not examined: .*\)$/::warning::\1/p' "$report"
+          fi
+          exit "$code"
