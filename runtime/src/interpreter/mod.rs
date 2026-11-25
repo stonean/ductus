@@ -1224,9 +1224,10 @@ fn dispatch_primitive(
     // checkbox, ticked when met and unticked when not, addressed by the
     // 0-based index its request listed, so only a verdict marks a criterion
     // and one with none is left as it is (066 task 27; data-model
-    // §verifyCriteria). With no `verifyCriteria` response the seeded
-    // arguments stand, so direct MCP/CLI calls and other commands are
-    // unaffected.
+    // §verifyCriteria). On a `done` spec a not-met verdict marks nothing, since
+    // the walk has nobody to ask which side is correct (spec 084, AC3 and
+    // AC5). With no `verifyCriteria` response the seeded arguments stand, so
+    // direct MCP/CLI calls and other commands are unaffected.
     if name == "mark-criterion"
         && let Some(verify) = bindings.get("llm:verifyCriteria")
     {
@@ -1432,6 +1433,13 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) -> primit
 /// Set each criterion's checkbox to its `verifyCriteria` verdict, one
 /// `mark-criterion` call per verdict, and report every call's result under
 /// `criteria-marked` (066 task 27).
+///
+/// On a spec step 7.1's `read-spec` reported `done`, a not-met verdict marks
+/// nothing: whether the code or the criterion is correct is the owner's to say
+/// before either changes, and the walk has nobody to ask, so the criterion
+/// stays as it is and `write-review` still records it not met, which leaves
+/// the record blocking, the review-state drift `/{project}:analyze --fix`
+/// reverts (spec 084, AC3 and AC5).
 fn mark_each_verdict(
     verify: &Value,
     bindings: &Map<String, Value>,
@@ -1444,8 +1452,16 @@ fn mark_each_verdict(
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
+    let done = bindings
+        .get("frontmatter")
+        .and_then(|frontmatter| frontmatter.get("status"))
+        .and_then(Value::as_str)
+        == Some("done");
     let mut marked = Vec::new();
     for verdict in verdicts.results {
+        if done && !verdict.met {
+            continue;
+        }
         let args = MarkCriterionArgs {
             feature: feature.clone(),
             criterion_index: usize::try_from(verdict.index).ok(),
@@ -1979,6 +1995,92 @@ mod tests {
         let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
         assert!(review.contains("blocking: false"), "{review}");
         assert!(review.contains("criteria-met: 1"), "{review}");
+    }
+
+    /// The review walk's criteria steps over the spec `specs/001-x` under
+    /// `root`, `read-spec` through `write-review`, with one verdict on its
+    /// first criterion.
+    fn criteria_walk(root: &Path, met: bool) {
+        let step = |number: u32, name: &str| Step::Primitive {
+            number: StepNumber(vec![7, number]),
+            name: name.into(),
+            prose: String::new(),
+            location: loc(),
+        };
+        let procedure = Procedure {
+            command: "review".into(),
+            steps: vec![
+                step(0, "read-spec"),
+                Step::Extension {
+                    number: StepNumber(vec![7, 1]),
+                    identifier: "verifyCriteria".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+                step(2, "mark-criterion"),
+                Step::Primitive {
+                    number: StepNumber(vec![11]),
+                    name: "write-review".into(),
+                    prose: String::new(),
+                    location: loc(),
+                },
+            ],
+        };
+        let responses = format!(
+            "{{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{{\"results\":[{{\"index\":0,\"met\":{met},\"note\":\"src/limits.rs `floor`\"}}]}}}}\n"
+        );
+        let mut context = Map::new();
+        context.insert("feature".into(), Value::String("001-x".into()));
+        context.insert(
+            "reviewed-at".into(),
+            Value::String("2026-11-18T00:00:00Z".into()),
+        );
+        context.insert("reviewed-against".into(), Value::String("abc1234".into()));
+        context.insert("diff-base".into(), Value::String(String::new()));
+        context.insert("empty-scope".into(), Value::Bool(true));
+        let mut reader = Cursor::new(responses);
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            root.to_path_buf(),
+            context,
+            &mut reader,
+            &mut writer,
+        )
+        .unwrap();
+        assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+    }
+
+    /// Spec 084, AC3 and AC5: the review walk has nobody to ask whether a
+    /// `done` spec's code or its criterion is correct, so a ticked criterion it
+    /// judges not met stays ticked, no status is written, and the record still
+    /// names it not met and blocks; an `in-progress` spec's is unticked.
+    #[test]
+    fn the_review_walk_leaves_a_done_specs_ticked_criterion_judged_not_met() {
+        for (status, kept) in [("done", true), ("in-progress", false)] {
+            let tmp = tempfile::tempdir().unwrap();
+            let dir = tmp.path().join("specs/001-x");
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(
+                dir.join("spec.md"),
+                format!(
+                    "---\nstatus: {status}\ndependencies: []\n---\n\n# x\n\n## Acceptance Criteria\n\n\
+                     - [x] AC1: The limit is never below the safety bound.\n"
+                ),
+            )
+            .unwrap();
+            criteria_walk(tmp.path(), false);
+            let spec = std::fs::read_to_string(dir.join("spec.md")).unwrap();
+            let mark = if kept { "- [x] AC1" } else { "- [ ] AC1" };
+            assert!(spec.contains(mark), "{status}: {spec}");
+            assert!(spec.contains(&format!("status: {status}\n")), "{spec}");
+            let review = std::fs::read_to_string(dir.join("review.md")).unwrap();
+            assert!(review.contains("blocking: true"), "{status}: {review}");
+            assert!(
+                review.contains("criteria-not-met:\n  - AC1"),
+                "{status}: {review}"
+            );
+        }
     }
 
     /// An exec run has no operator to disposition an observation, and a pass

@@ -492,9 +492,13 @@ fn unreviewed_code_blocks(r: &CheckUnreviewedCodeResult) -> bool {
 }
 
 /// The stderr report of `check-unreviewed-code`: one line per subject with its
-/// counts, one per path, and one per subject not examined with its reason. No
-/// line when nothing is reported.
-fn unreviewed_code_lines(found: &primitives::check_unreviewed_code::Unreviewed) -> Vec<String> {
+/// counts, one per path, and one per subject not examined with its reason, and
+/// under `block` the review command to run, in the project's namespace
+/// `project`. No line when nothing is reported.
+fn unreviewed_code_lines(
+    found: &primitives::check_unreviewed_code::Unreviewed,
+    project: &str,
+) -> Vec<String> {
     let name = "check-unreviewed-code";
     let checked = &found.checked;
     let mut lines = Vec::new();
@@ -542,7 +546,7 @@ fn unreviewed_code_lines(found: &primitives::check_unreviewed_code::Unreviewed) 
     if !lines.is_empty() {
         lines.push(match found.mode {
             UnreviewedPushMode::Block => format!(
-                "{name}: review it (`/{{project}}:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead"
+                "{name}: review it (`/{project}:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead"
             ),
             UnreviewedPushMode::Warn => {
                 format!("{name}: `[review] unreviewed-push = \"warn\"`: reported, not blocked")
@@ -1456,7 +1460,11 @@ fn main() -> ExitCode {
             // hook's reader sees it (spec 084, AC8).
             let found = primitives::check_unreviewed_code::compute(&args, &repo);
             if let Ok(found) = &found {
-                for line in unreviewed_code_lines(found) {
+                // The namespace `pipeline_view` names commands in. A host
+                // configuration that cannot be read leaves the placeholder.
+                let project = ductus::host::Host::load(&repo)
+                    .map_or_else(|_| "{project}".to_string(), |host| host.project);
+                for line in unreviewed_code_lines(found, &project) {
                     warn(format_args!("{line}"));
                 }
             }
@@ -1693,7 +1701,10 @@ mod tests {
             UnreviewedDoneSpec, UnreviewedNotExamined, UnreviewedPushMode, UnreviewedUnclaimed,
         };
         assert_eq!(
-            unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Block, Checked::default())),
+            unreviewed_code_lines(
+                &unreviewed(UnreviewedPushMode::Block, Checked::default()),
+                "acme"
+            ),
             [] as [String; 0]
         );
         let checked = Checked {
@@ -1716,7 +1727,10 @@ mod tests {
             }],
             examined: 2,
         };
-        let lines = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Block, checked.clone()));
+        let lines = unreviewed_code_lines(
+            &unreviewed(UnreviewedPushMode::Block, checked.clone()),
+            "acme",
+        );
         assert_eq!(
             lines[..7],
             [
@@ -1726,11 +1740,11 @@ mod tests {
                 "check-unreviewed-code: code no spec claims: 1 path(s) changed by 1 commit(s) after cccccccc with no committed review",
                 "check-unreviewed-code:   src/u.rs",
                 "check-unreviewed-code: 003-c was not examined: its record does not parse",
-                "check-unreviewed-code: review it (`/{project}:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead",
+                "check-unreviewed-code: review it (`/acme:review` on each spec, `--project` for code no spec claims) and commit the record, or set `[review] unreviewed-push = \"warn\"` to be warned instead",
             ]
         );
         assert_eq!(lines.len(), 7);
-        let warned = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Warn, checked));
+        let warned = unreviewed_code_lines(&unreviewed(UnreviewedPushMode::Warn, checked), "acme");
         assert_eq!(warned[..6], lines[..6], "the same report");
         assert_eq!(
             warned[6],

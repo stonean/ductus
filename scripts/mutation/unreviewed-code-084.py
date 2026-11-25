@@ -297,4 +297,32 @@ MUTATIONS = [
         '            .filter(|form| {\n                self.directory_of(form).is_some()\n                    || touched.contains(form)\n                    || matches!(form, FeatureForm::BranchScoped { .. })\n            })',
         'check_unreviewed_code::tests::a_folded_staging_specs_named_only_commits_are_the_projects_to_review',
     ),
+    (
+        'M41 the exec walk marks a done spec\'s criterion judged not met',
+        'src/interpreter/mod.rs',
+        '        if done && !verdict.met {\n            continue;\n        }\n',
+        '',
+        'interpreter::tests::the_review_walk_leaves_a_done_specs_ticked_criterion_judged_not_met',
+    ),
+    (
+        'M42 the exec walk marks no criterion judged not met at any status',
+        'src/interpreter/mod.rs',
+        '        if done && !verdict.met {',
+        '        if !verdict.met {',
+        'interpreter::tests::the_review_walk_leaves_a_done_specs_ticked_criterion_judged_not_met',
+    ),
+    (
+        'M43 the block report names the namespace placeholder',
+        'src/main.rs',
+        '"{name}: review it (`/{project}:review` on each spec,',
+        '"{name}: review it (`/{{project}}:review` on each spec,',
+        '--test check_unreviewed_code_cli the_block_report_names_the_projects_own_review_command',
+    ),
+    (
+        'M44 the CLI reads no namespace for the block report',
+        'src/main.rs',
+        '.map_or_else(|_| "{project}".to_string(), |host| host.project);',
+        '.map_or_else(|_| "{project}".to_string(), |_| "{project}".to_string());',
+        '--test check_unreviewed_code_cli the_block_report_names_the_projects_own_review_command',
+    ),
 ]

@@ -231,14 +231,18 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 ### 26. The exec walk leaves a `done` spec's ticked criterion judged not met
 
-- [ ] `runtime/src/interpreter/mod.rs` — `mark_each_verdict` sets every criterion to its `verifyCriteria` verdict, so under `ductus exec` a `done` spec's ticked criterion judged not met is unticked with nobody asked and no status written, against AC3 and AC5 (found by task 10, 2026-11-24). On a `done` spec, read from step 7.1's `read-spec` result in the walk's bindings, it leaves such a criterion as it is, and `write-review` still records it not met, so the record's `blocking: true` is the review-state drift `/ductus:analyze --fix` reverts: the host path's rule when nobody can be asked (the agent's recommendation, adopted by the operator, 2026-11-24)
-- [ ] `framework/commands/review.md` step 7.3 and `framework/reference/review.md` §Criteria step say what the exec walk does, and `scripts/gen-claude-commands.sh` is re-run
+Model: opus, with fable as advisor (owner, 2026-11-25).
+
+- [x] `runtime/src/interpreter/mod.rs` — `mark_each_verdict` sets every criterion to its `verifyCriteria` verdict, so under `ductus exec` a `done` spec's ticked criterion judged not met is unticked with nobody asked and no status written, against AC3 and AC5 (found by task 10, 2026-11-24). On a `done` spec, read from step 7.1's `read-spec` result in the walk's bindings, it leaves such a criterion as it is, and `write-review` still records it not met, so the record's `blocking: true` is the review-state drift `/ductus:analyze --fix` reverts: the host path's rule when nobody can be asked (the agent's recommendation, adopted by the operator, 2026-11-24)
+- [x] `framework/commands/review.md` step 7.3 and `framework/reference/review.md` §Criteria step say what the exec walk does, and `scripts/gen-claude-commands.sh` is re-run
 
 - **Done when**: a unit test proves the exec walk keeps a `done` spec's ticked criterion judged not met ticked and still unticks an `in-progress` spec's, each failing with its behavior removed, the interpreter's mutants pass `scripts/mutation/run.py`, and `runtime/tests/golden/review-basic.jsonl` matches.
 
 ### 27. `check-unreviewed-code`'s guidance names the review command unsubstituted
 
-- [ ] `runtime/src/main.rs` — the CLI's last stderr line prints `` `/{project}:review` `` literally (found by task 11, 2026-11-24), where `pipeline_view` substitutes the project's namespace; batch with task 26's runtime change
+Model: opus, with fable as advisor (owner, 2026-11-25).
+
+- [x] `runtime/src/main.rs` — the CLI's last stderr line prints `` `/{project}:review` `` literally (found by task 11, 2026-11-24), where `pipeline_view` substitutes the project's namespace; batch with task 26's runtime change
 
 - **Done when**: the line names the project's own review command, and a test fails with the substitution removed.
 

@@ -140,6 +140,27 @@ fn reported_code_exits_1_under_block_and_0_under_warn_with_the_same_report() {
     assert_eq!(result(&warned)["mode"], "warn");
 }
 
+/// The block report names the review command in the project's own namespace,
+/// `[host] project`, as `/{project}:status` names every command.
+#[test]
+fn the_block_report_names_the_projects_own_review_command() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), true);
+    write(
+        tmp.path(),
+        ".ductus/config.toml",
+        "[host]\nproject = \"acme\"\n",
+    );
+    let blocked = check(tmp.path(), &[]);
+    assert_eq!(blocked.status.code(), Some(1), "{blocked:?}");
+    let report = String::from_utf8_lossy(&blocked.stderr).to_string();
+    assert!(
+        report.contains("review it (`/acme:review` on each spec"),
+        "{report}"
+    );
+    assert!(!report.contains("{project}"), "{report}");
+}
+
 #[test]
 fn a_subject_not_examined_is_treated_as_reported_code_is() {
     let tmp = tempfile::tempdir().unwrap();
