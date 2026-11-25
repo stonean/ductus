@@ -25,8 +25,7 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   2026-11-23).** `compute-review-scope` gains `commits-examined` and
   `commits-unclaimed`, inline in both forms: every commit its window's walk
   visited, and those no spec claimed although they changed a path in the
-  project, counted before any credit, so a clean merge is examined and never
-  unclaimed and a crediting review leaves the count as it was. Both are absent
+  project, so a clean merge is examined and never unclaimed. Both are absent
   when there is no window, an empty diff-base. `write-review` states them in
   `review.md`'s `## Summary`, or that the scope had no window, and the record
   gains no field. A project whose commit subjects never name a spec now sees
@@ -123,15 +122,15 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   a record carrying a gating count, an open finding, a contract break, a
   criterion not met, the open fix-round mark or an unwaived round left the
   window at the reopening, so each re-run read the whole reopening again.
-  `compute-review-scope` now starts it at that record's `reviewed-against`, no
-  earlier than the reopen, when the record states `unread: []`: the fixes its
+  `compute-review-scope` now starts it at that record's `reviewed-against`,
+  when the record states `unread: []`: the fixes its
   open loop or an unwaived round left unread lie after that commit, and what
   it leaves open joins the scope as before, as does what the held record the
   window starts at leaves open when a later run is passed over. A clean record
   keeps the commit finishing it. A held record stating no empty `unread` or no
   `reviewed-against`, every one written before 0.60.0's `unread` among them,
   still moves no start. `base-source` gains `held-review` and
-  `reopen-past-partial-review`, the second when every run since the reopen was
+  `reopen-past-partial-review`, the second when every review recorded was
   passed over for not reading its scope, which read `reopen` before. Breaking
   for a consumer matching `base-source` against its earlier values, and for a
   held record's next window, which narrows to what came after its passes.
@@ -173,8 +172,10 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   deferral to a `done` spec from `/ductus:analyze`, `/ductus:review` or
   `/ductus:implement`, reopen it only when `check-owed-work` reports owed
   work, so an edit to a scenario's text, a data model or prose leaves it
-  `done`. A fold resets the upstream spec's review record only when it
-  reopens it. `/ductus:analyze --fix` no longer sets a `done` spec back for a
+  `done`. When `/ductus:amend` would change a `done` spec's ticked criterion
+  that disagrees with the code, it asks the owner which is correct first, and
+  one whose code is correct is corrected and stays ticked, its spec `done`. A
+  fold resets the upstream spec's review record only when it reopens it. `/ductus:analyze --fix` no longer sets a `done` spec back for a
   scenario's open question, which stays a blocking finding and still holds
   `done` at the gate. §bug-handling's fourth route adds a scenario only when
   the requirement needs more precision, and §drift-prevention states the
