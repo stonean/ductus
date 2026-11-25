@@ -205,7 +205,7 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   fix round no longer counts an unclaimed commit's paths as the reviewed
   spec's own, so its rounds and its scope agree. Breaking for a consumer
   reading an open spec's scope or `review-owed` for code naming no spec.
-- **`/ductus:review` of a `done` spec asks before a ticked criterion changes,
+- **BREAKING: `/ductus:review` of a `done` spec asks before a ticked criterion changes,
   and reopens the spec for owed work (spec 084, AC3 and AC5; the agent's
   recommendations, adopted by the operator, 2026-11-24).** Step 7.3 puts a
   ticked criterion judged not met to the owner, or decides and says so in the
@@ -217,7 +217,9 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   to the spec's own work appends a task and writes `in-progress`. Where
   nobody can be asked, as under `ductus exec`, such a criterion stays ticked
   and such a finding is recorded undispositioned, so the record blocks,
-  review-state drift that `/ductus:analyze --fix` reverts.
+  review-state drift that `/ductus:analyze --fix` reverts. Breaking for a
+  consumer of the `ductus exec review` stream, which no longer carries the
+  `mark-criterion` that unticked such a criterion.
 
 ### Removed
 
