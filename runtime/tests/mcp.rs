@@ -507,7 +507,7 @@ fn descriptions_hold_the_check_artifacts_details_067_points_at() {
         (descriptions::CHECK_ARTIFACTS, "data-model.md never)"),
         (
             descriptions::CHECK_ARTIFACTS,
-            "when tasks.md exists: numbering",
+            "when tasks.md exists: no two tasks carrying the same number",
         ),
         (
             descriptions::CHECK_ARTIFACTS,

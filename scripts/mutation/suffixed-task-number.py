@@ -1,11 +1,13 @@
 """Mutation list for the suffixed task number (spec 041, scenario
 `a-suffixed-task-number-is-a-task`): `split_numbered_heading` reads digits and
-at most one lowercase letter before the dot, `TaskNumber` orders them, and
+at most one lowercase letter before the dot, `TaskNumber` parses them, and
 `read-tasks`, `prune-tasks`, `mark-task`, `append-task` and `check-artifacts`
-read the number through them. Each mutation puts one consumer back on the
+read the number through them. Each of M1 to M11 puts one consumer back on the
 digits-only reading it had before, so a kill shows that consumer's own test
 holds the behaviour. M1 reverts the grammar itself, which `read-tasks`,
-`prune-tasks` and `mark-task` read directly.
+`prune-tasks` and `mark-task` read directly. M12 to M14 hold `check-artifacts`'
+numbering check to its rule (spec 084, AC22): a number repeated anywhere down
+the file is reported, and an order is not.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/suffixed-task-number.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -69,13 +71,6 @@ MUTATIONS = [
         'suffixed_task',
     ),
     (
-        'M8 a number orders by its suffix before its digits',
-        'src/primitives/mod.rs',
-        '    digits: u32,\n    suffix: Option<char>,\n}',
-        '    suffix: Option<char>,\n    digits: u32,\n}',
-        'suffixed_task',
-    ),
-    (
         'M9 an uppercase letter is accepted as a suffix',
         'src/primitives/mod.rs',
         'suffix.is_some_and(|c| !c.is_ascii_lowercase())',
@@ -95,5 +90,26 @@ MUTATIONS = [
         'split_numbered_heading(heading).is_some()\n}',
         "heading.starts_with(|c: char| c.is_ascii_digit()) && heading.trim_start_matches(|c: char| c.is_ascii_digit()).starts_with('.')\n}",
         'a_suffixed_flat_remnant',
+    ),
+    (
+        'M12 the numbering check reports no repeated number',
+        'src/primitives/check_artifacts.rs',
+        '&& !seen.insert(number)',
+        '&& { seen.insert(number); false }',
+        'a_repeated_task_number a_repeated_suffixed_task_number',
+    ),
+    (
+        'M13 the numbering check reports a number below an earlier one',
+        'src/primitives/check_artifacts.rs',
+        '&& !seen.insert(number)',
+        '&& (!seen.insert(number) || seen.iter().any(|earlier| earlier.digits() > number.digits()))',
+        'task_numbers_out_of_order_yield_no_finding',
+    ),
+    (
+        'M14 the numbering check compares a number only with the task before it',
+        'src/primitives/check_artifacts.rs',
+        '&& !seen.insert(number)',
+        '&& { let repeat = seen.contains(&number); seen.clear(); seen.insert(number); repeat }',
+        'a_repeated_task_number_yields_blocking_finding',
     ),
 ]

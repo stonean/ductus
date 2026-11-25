@@ -3582,13 +3582,14 @@ pub(crate) fn iter_task_numbers_at_levels<'a>(
 }
 
 /// A task number: decimal digits and at most one lowercase letter, as
-/// [`split_numbered_heading`] reads it (`11`, `11a`). Orders by its digits,
-/// then its suffix — `11` before `11a` before `12` — which is what
-/// `check-artifacts`' numbering check and `append-task`'s next number read.
-/// A person hand-inserts a suffixed number between two others rather than
-/// renumber; no primitive writes one (spec 041, scenario
-/// `a-suffixed-task-number-is-a-task`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// [`split_numbered_heading`] reads it (`11`, `11a`). Two are the same number
+/// when their digits and suffix both match, which is what `check-artifacts`'
+/// numbering check reads to report a repeat; `append-task`'s next number
+/// reads the digits alone. Numbers carry no order a reader needs, so they need
+/// not rise down a file (spec 084, AC22). A person hand-inserts a suffixed
+/// number between two others rather than renumber; no primitive writes one
+/// (spec 041, scenario `a-suffixed-task-number-is-a-task`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct TaskNumber {
     digits: u32,
     suffix: Option<char>,
@@ -3727,7 +3728,7 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
 /// This is the single home for the grammar: `read-tasks`, `prune-tasks`,
 /// `mark-task`, `append-task`, and the phase scanner below all read the same
 /// tasks file, so a divergence here would let one primitive see a task
-/// another does not. The number's order is [`TaskNumber`]'s.
+/// another does not.
 ///
 /// A signed number (`+5.`) is no task: the local parsers this grammar replaced
 /// read the sign through `str::parse`, and the numbering walk and the slug
@@ -4973,12 +4974,10 @@ mod tests {
     }
 
     #[test]
-    fn suffixed_task_numbers_order_by_digits_then_suffix() {
+    fn a_suffixed_task_number_keeps_its_suffix() {
         let parse = |n: &str| TaskNumber::parse(n).unwrap();
-        assert!(parse("11") < parse("11a"));
-        assert!(parse("11a") < parse("11b"));
-        assert!(parse("11a") < parse("12"));
-        assert!(parse("2") < parse("10"));
+        assert_ne!(parse("11"), parse("11a"));
+        assert_ne!(parse("11a"), parse("11b"));
         assert_eq!(parse("11a").to_string(), "11a");
         assert_eq!(parse("11a").digits(), 11);
         assert_eq!(TaskNumber::parse("11ab"), None);

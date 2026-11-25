@@ -13,7 +13,7 @@ Since 079's AC27 a box under that heading already holds the gate, drift, `check-
 ## Behavior
 
 - A task number is digits followed by at most one lowercase letter, then the dot. `11.` and `11a.` are task numbers; `11ab.` and `11A.` are not.
-- Numbers order by their digits, then the suffix: `11` before `11a` before `12`. `check-artifacts`' numbering check compares a suffixed number in that order rather than skipping it.
+- `11` and `11a` are two numbers. `check-artifacts`' numbering check reads a suffixed number whole rather than skipping it.
 - `read-tasks` lists a suffixed task, and `mark-task` addresses it as `11a`.
 - `prune-tasks` treats a suffixed task as any task: spent, it leaves, and its phase follows the same rule, so no heading is stranded under the title; pending, it stays.
 - `append-task` numbers past the highest digits, so with `11a` the highest it writes `12`, and it never writes a suffix.
@@ -24,7 +24,7 @@ Since 079's AC27 a box under that heading already holds the gate, drift, `check-
 ## Edge Cases
 
 - A heading with digits and a letter but no dot (`3a quick wins`) is no task, as `3 quick wins` is not.
-- Two sections with one suffixed number, or `11a` ahead of `11`, report as not strictly increasing.
+- Two sections with one suffixed number report as a repeated number, and `11a` ahead of `11` reports nothing, since numbers need not rise down the file (spec 084, AC22).
 - A suffixed heading above the task level in a mixed file reads as a flat remnant, as `## 11.` does, not as a phase.
 - A pruned suffixed number is covered by [the entry on reissuing a number](a-pruned-task-number-is-never-reissued.md): `append-task` never writes a suffix, so its answer does not change.
 

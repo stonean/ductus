@@ -121,7 +121,7 @@ proves `read-tasks` and `mark-task` agree with and without it
 
 A task number is decimal digits and at most one lowercase letter before the
 dot (`11`, `11a`); `split_numbered_heading` stays the one home of that
-grammar, and `TaskNumber` orders by digits then suffix. `read-tasks`,
+grammar, and `TaskNumber` holds what it reads. `read-tasks`,
 `mark-task`, `prune-tasks`, `append-task`'s two guards and `check-artifacts`'
 numbering check read through them. `append-task` numbers past the highest
 digits, never writes a suffix, and reports `task-number` as a string, since a

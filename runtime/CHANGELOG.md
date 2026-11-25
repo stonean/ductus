@@ -220,6 +220,15 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   review-state drift that `/ductus:analyze --fix` reverts. Breaking for a
   consumer of the `ductus exec review` stream, which no longer carries the
   `mark-criterion` that unticked such a criterion.
+- **BREAKING: `check-artifacts`' task numbering blocks a repeated number, not
+  an order (spec 084, AC22; the agent's recommendation, adopted by the
+  operator, 2026-11-25).** `task-consistency` reports a blocking finding for
+  each task whose number an earlier task in `tasks.md` already carries,
+  wherever the two sit, since `mark-task` ticks only the first heading
+  carrying a number. It no longer reports numbers that do not rise down the
+  file, which `append-task` produced whenever it added a task to a phase
+  before the last. `11` and `11a` are two numbers, in either order. Breaking
+  for a consumer that read the old finding's message.
 
 ### Removed
 

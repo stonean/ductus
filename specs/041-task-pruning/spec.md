@@ -18,6 +18,8 @@ That accumulation has no durable value. A task's purpose is spent the moment it 
 `ductus` has no command to reclaim that space. `/{project}:prune` fills the gap: a deliberate, confirmed reduction of `tasks.md` back toward a lean working set — or all the way back to the template's initial state — recovering the file's usefulness without losing anything that matters, because history and the spec already hold the record.
 
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) narrowed what decides a plan section: its disposition rule waives every `plan-record` finding it does not fix, with `decided-by: rule`, so only a person's waiver now keeps a section from `/{project}:prune`, and AC17 says so.
+>
+> **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) changed the task numbering `check-artifacts` holds, which the scenario `a-suffixed-task-number-is-a-task` states: it blocks a number two tasks share, and no longer numbers that do not rise down the file.
 
 ## Behavior
 

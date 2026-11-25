@@ -22,8 +22,8 @@
 //!   modifies domain entities" — a semantic judgment the runtime cannot
 //!   make deterministically, so it stays optional (and with the host).
 //! - **task-consistency** (blocking) — reference §"Task consistency
-//!   (blocking if tasks exist)": task numbers
-//!   are strictly increasing in declaration order, and every task section
+//!   (blocking if tasks exist)": no two tasks carry
+//!   the same number, in any order down the file, and every task section
 //!   carries a `Done when` clause. The reference's "tasks reference the
 //!   plan" item is a semantic-link judgment and stays with the
 //!   host. Runs only when `tasks.md` exists.
@@ -759,25 +759,27 @@ fn check_completeness(
 }
 
 /// (b) Task consistency — reference §"Task consistency (blocking if
-/// tasks exist)": numbered headings strictly increasing in declaration
-/// order, and every task section carries a `Done when` clause.
+/// tasks exist)": no numbered heading repeats an earlier one's number, since
+/// `mark-task` ticks the first heading carrying a number and never reaches a
+/// later one, and every task section carries a `Done when` clause. The
+/// numbers need not rise down the file: `/{project}:implement` walks file
+/// order, and `append-task` numbers past the highest present, so a task it
+/// adds to an earlier phase sits above a lower number (spec 084, AC22).
 fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], tasks_path: &str) {
-    let mut prev: Option<super::TaskNumber> = None;
+    let mut seen: HashSet<super::TaskNumber> = HashSet::new();
     for task in tasks {
-        if let Some(number) = super::TaskNumber::parse(&task.number) {
-            if let Some(previous) = prev
-                && number <= previous
-            {
-                findings.push(ArtifactFinding {
-                    family: "task-consistency".into(),
-                    severity: AnalyzeSeverity::Blocking,
-                    message: format!(
-                        "task numbering is not strictly increasing: task {number} follows task {previous}"
-                    ),
-                    path: tasks_path.to_string(),
-                });
-            }
-            prev = Some(number);
+        if let Some(number) = super::TaskNumber::parse(&task.number)
+            && !seen.insert(number)
+        {
+            findings.push(ArtifactFinding {
+                family: "task-consistency".into(),
+                severity: AnalyzeSeverity::Blocking,
+                message: format!(
+                    "task {} ({}) repeats an earlier task's number",
+                    task.number, task.heading
+                ),
+                path: tasks_path.to_string(),
+            });
         }
         if task.done_when.is_none() {
             findings.push(ArtifactFinding {
@@ -3479,7 +3481,7 @@ mod tests {
     // --- task consistency --------------------------------------------------------
 
     #[test]
-    fn strictly_increasing_numbered_tasks_with_done_when_are_clean() {
+    fn numbered_tasks_with_done_when_are_clean() {
         let tmp = tempdir().unwrap();
         write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
         write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
@@ -3488,26 +3490,46 @@ mod tests {
         assert!(result.clean, "{:?}", result.findings);
     }
 
+    /// A number repeated anywhere down the file is reported once per repeat,
+    /// not only beside the task it repeats, since `mark-task` reaches only
+    /// the first heading carrying it (spec 084, AC22).
     #[test]
-    fn non_increasing_numbering_yields_blocking_finding() {
+    fn a_repeated_task_number_yields_blocking_finding() {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        let tasks = "# T\n\n\
+            ## 1. First\n\n- [ ] a\n\n- **Done when**: done.\n\n\
+            ## 2. Second\n\n- [ ] b\n\n- **Done when**: done.\n\n\
+            ## 1. Again\n\n- [ ] c\n\n- **Done when**: done.\n";
+        write(tmp.path(), "specs/042-demo/tasks.md", tasks);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(
+            result.findings,
+            vec![ArtifactFinding {
+                family: "task-consistency".into(),
+                severity: AnalyzeSeverity::Blocking,
+                message: "task 1 (Again) repeats an earlier task's number".into(),
+                path: "specs/042-demo/tasks.md".into(),
+            }]
+        );
+    }
+
+    /// Numbers that do not rise down the file are no finding: the walk reads
+    /// file order, and `append-task` numbers a task it adds to an earlier
+    /// phase past the highest present (spec 084, AC22).
+    #[test]
+    fn task_numbers_out_of_order_yield_no_finding() {
         let tmp = tempdir().unwrap();
         write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
         write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
         let tasks = "# T\n\n\
             ## 2. Second\n\n- [ ] a\n\n- **Done when**: done.\n\n\
-            ## 1. Out of order\n\n- [ ] b\n\n- **Done when**: done.\n";
+            ## 30. Appended\n\n- [ ] b\n\n- **Done when**: done.\n\n\
+            ## 1. Out of order\n\n- [ ] c\n\n- **Done when**: done.\n";
         write(tmp.path(), "specs/042-demo/tasks.md", tasks);
         let result = run(&args(), tmp.path()).unwrap();
-        let numbering: Vec<&ArtifactFinding> = result
-            .findings
-            .iter()
-            .filter(|f| f.message.contains("strictly increasing"))
-            .collect();
-        assert_eq!(numbering.len(), 1);
-        assert_eq!(numbering[0].family, "task-consistency");
-        assert_eq!(numbering[0].severity, AnalyzeSeverity::Blocking);
-        assert_eq!(numbering[0].path, "specs/042-demo/tasks.md");
-        assert!(numbering[0].message.contains("task 1 follows task 2"));
+        assert!(result.clean, "{:?}", result.findings);
     }
 
     #[test]
@@ -6500,7 +6522,7 @@ mod tests {
             .unwrap()
             .findings
             .into_iter()
-            .filter(|f| f.message.contains("strictly increasing"))
+            .filter(|f| f.family == "task-consistency")
             .map(|f| f.message)
             .collect()
     }
@@ -6509,23 +6531,21 @@ mod tests {
         format!("## {number}. T\n\n- [ ] a\n\n- **Done when**: done.\n\n")
     }
 
+    /// `11` and `11a` are two numbers, in either order.
     #[test]
-    fn suffixed_task_numbering_in_order_is_clean() {
+    fn suffixed_task_numbers_that_differ_are_clean() {
         let tasks = format!("# T\n\n{}{}{}", task("11"), task("11a"), task("12"));
         assert_eq!(numbering_findings(&tasks), Vec::<String>::new());
+        let ahead = format!("# T\n\n{}{}", task("11a"), task("11"));
+        assert_eq!(numbering_findings(&ahead), Vec::<String>::new());
     }
 
     #[test]
-    fn suffixed_task_numbering_out_of_order_is_reported() {
-        let ahead = format!("# T\n\n{}{}", task("11a"), task("11"));
-        assert_eq!(
-            numbering_findings(&ahead),
-            vec!["task numbering is not strictly increasing: task 11 follows task 11a"]
-        );
+    fn a_repeated_suffixed_task_number_is_reported() {
         let twice = format!("# T\n\n{}{}", task("11a"), task("11a"));
         assert_eq!(
             numbering_findings(&twice),
-            vec!["task numbering is not strictly increasing: task 11a follows task 11a"]
+            vec!["task 11a (T) repeats an earlier task's number"]
         );
     }
 

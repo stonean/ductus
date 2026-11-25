@@ -63,7 +63,7 @@ The size check never escalates an unreadable subject: on a `done` spec, **Scenar
 
 - Tasks reference the plan
 - Each task has a "done when" condition
-- Tasks are numbered in strictly increasing order: digits and at most one lowercase letter before the dot (`11`, `11a`), ordered by digits then suffix (`11` < `11a` < `12`)
+- No two tasks carry the same number, a number being digits and at most one lowercase letter before the dot (`11` and `11a` are two), since `mark-task` ticks only the first heading carrying one; the numbers need not rise down the file
 
 ## Grounding (advisory)
 
