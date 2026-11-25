@@ -827,6 +827,28 @@ fn a_rule_two_entries_name_derives_one_waiver_from_the_first_and_is_named() {
     );
 }
 
+/// A second entry for a rule waives nothing, even a finding the first does not decide: a
+/// first entry scoped to `src/a.rs` in `walk` leaves `src/b.rs`'s finding counted, which an
+/// unscoped second entry would otherwise waive.
+#[test]
+fn a_second_entry_for_a_rule_waives_nothing_the_first_leaves_counted() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), &format!("{SCOPED_ENTRY}{MUST_ENTRY}"));
+    let findings = [
+        finding(MUST_RULE, "must", "src/a.rs"),
+        finding(MUST_RULE, "must", "src/b.rs"),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
+    assert_eq!(written.must_violations, 1, "{written:?}");
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(
+        stored[0]["reason"],
+        "the guard is declined at this one check"
+    );
+    assert_eq!(written.malformed_departures.len(), 1, "{written:?}");
+}
+
 #[test]
 fn a_run_writing_its_record_twice_counts_the_stored_departure_waived_both_times() {
     let tmp = tempfile::tempdir().unwrap();

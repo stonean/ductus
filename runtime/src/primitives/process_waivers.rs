@@ -259,7 +259,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
                 continue;
             }
             if matches!(located.kind, Kind::Departure | Kind::DepartureSite { .. })
-                && departure_gone(waiver, &rule, &located, spec_path.as_deref(), &mut entries)?
+                && departure_gone(&rule, &located, spec_path.as_deref(), &mut entries)?
             {
                 classified.notices.push(format!(
                     "waiver expired: rule {shown_rule} at {at} ({shown_reason})"
@@ -358,23 +358,20 @@ impl Pass<'_> {
     }
 }
 
-/// Whether `waiver` carries the departure marker and the spec's `## Applicable Rules` no
-/// longer decides `located`, one of its anchors: no well-formed entry for `rule`, the first
-/// one being the rule's; an entry whose form is not the anchor's, a file anchor needing an
+/// Whether the spec's `## Applicable Rules` no longer decides `located`, an anchor of a
+/// waiver carrying the departure marker: no well-formed entry for `rule`, the first one
+/// being the rule's; an entry whose form is not the anchor's, a file anchor needing an
 /// entry with no `covers:` and a site anchor a scoped one; or a scoped entry whose
-/// `covers:` does not list the anchor's file and site. `entries` caches the entries, read
-/// from the spec at `spec_path` by the first marked waiver, so a record with no marker
-/// reads nothing else; the project record has no spec, and so no entry.
+/// `covers:` does not list the anchor's file and site. Only a marked waiver's anchors reach
+/// it, since [`read_anchors`] gives a departure kind to no other. `entries` caches the
+/// entries, read from the spec at `spec_path` by the first marked waiver, so a record with
+/// no marker reads nothing else; the project record has no spec, and so no entry.
 fn departure_gone(
-    waiver: &RawWaiver,
     rule: &str,
     located: &Located<'_>,
     spec_path: Option<&Path>,
     entries: &mut Option<Vec<departures::Entry>>,
 ) -> Result<bool> {
-    if waiver.departure != Some(true) {
-        return Ok(false);
-    }
     if entries.is_none() {
         *entries = Some(match spec_path {
             Some(spec_path) => departures::parse(&super::read_text(spec_path)?).entries,

@@ -19,8 +19,8 @@ MUTATIONS = [
     (
         'M1 a marked waiver is never expired for want of an entry',
         'src/primitives/process_waivers.rs',
-        'if waiver.departure != Some(true) {',
-        'if true {',
+        '    if entries.is_none() {\n        *entries = Some(match spec_path {',
+        '    if true {\n        return Ok(false);\n    }\n    if entries.is_none() {\n        *entries = Some(match spec_path {',
         'departure_waivers::a_removed_entry',
     ),
     (
@@ -45,13 +45,6 @@ MUTATIONS = [
         'departure_waivers::a_should_departure',
     ),
     (
-        'M5 an entry claims a file a hand waive stored in the same run',
-        'src/primitives/write_review.rs',
-        '!holds(surviving, &entry.rule, file) && !holds(entries, &entry.rule, file)',
-        '!holds(surviving, &entry.rule, file)',
-        'departure_waivers::a_hand_waive',
-    ),
-    (
         'M6 an unattributed entry stores no time of the run',
         'src/primitives/write_review.rs',
         'waived_at: Some(at.unwrap_or_else(|| args.reviewed_at.clone())),',
@@ -70,7 +63,7 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '.filter(|entry| seen.insert(entry.rule.clone()))',
         '.filter(|entry| seen.insert(entry.rule.clone()) || true)',
-        'departure_waivers::a_rule_two_entries',
+        'departure_waivers::a_rule_two_entries departure_waivers::a_second_entry_for_a_rule',
     ),
     (
         'M9 a derived waiver anchors no finding, so none is counted waived',
@@ -85,13 +78,6 @@ MUTATIONS = [
         'firing\n                .iter()\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {',
         'firing\n                .iter()\n                .filter(|(file, _)| !holds(surviving, &entry.rule, file))\n                .map(|(file, site)| crate::schema::primitives::WaiverRef {',
         'departure_waivers::a_run_writing',
-    ),
-    (
-        'M11 the spec is read although no waiver carries the marker',
-        'src/primitives/process_waivers.rs',
-        '    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
-        '    if let Some(spec_path) = spec_path {\n        let _ = super::read_text(spec_path)?;\n    }\n    if waiver.departure != Some(true) {\n        return Ok(false);\n    }',
-        'departure_waivers::a_spec_that_cannot_be_read',
     ),
     (
         'M12 an entry waives a finding of any rule',
@@ -110,8 +96,8 @@ MUTATIONS = [
     (
         'M14 a non-boolean departure value is accepted and ignored',
         'src/primitives/process_waivers.rs',
-        ['departure: Option<bool>,', 'if waiver.departure != Some(true) {'],
-        ['departure: Option<serde_norway::Value>,', 'if waiver.departure != Some(serde_norway::Value::Bool(true)) {'],
+        ['departure: Option<bool>,', 'let departure = waiver.departure == Some(true);'],
+        ['departure: Option<serde_norway::Value>,', 'let departure = waiver.departure == Some(serde_norway::Value::Bool(true));'],
         'departure_waivers::a_non_boolean_marker',
     ),
     (

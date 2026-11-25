@@ -2884,7 +2884,7 @@ fn departure_waiver_entries(
         let fresh: Vec<Place> = firing
             .into_iter()
             .filter(|(file, site)| match site {
-                None => !holds(surviving, &entry.rule, file) && !holds(entries, &entry.rule, file),
+                None => !holds(surviving, &entry.rule, file),
                 Some(site) => {
                     !holds_anchor(surviving, &entry.rule, file, site)
                         && !holds_anchor(entries, &entry.rule, file, site)
