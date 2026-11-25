@@ -269,6 +269,13 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 - **Done when**: a test fails with the fallback arm removed or changed, and its mutant is killed.
 
+### 33. Uncommitted paths another open spec's plan holds leave a spec's review scope
+
+- [ ] `runtime/src/primitives/compute_review_scope.rs` — `split_changes` takes every uncommitted path into the scope whole ("Uncommitted work cannot be attributed, so it joins whole"), so another session's uncommitted work on another spec in the same tree joins every open spec's scope, and `check-review-gate` holds a spec's `done` as review-owed on files it never touched (an adopter's report, 2026-11-25; the plan's Trade-offs recorded it as a limitation). An uncommitted path leaves the scope, listed in `excluded`, only when the Affected Files of another spec at `planned` or `in-progress` holds it, by name or by a pattern, and the spec's own plan does not, so an unplanned edit still joins every open scope (AC23; the agent's recommendation, adopted by the operator, 2026-11-25). A test for each direction, each failing with its behavior removed, and their mutants killed
+- [ ] `COMPUTE_REVIEW_SCOPE`, `framework/reference/review.md` §Window and coverage's "Uncommitted work stays" sentence, the plan's Limitation bullet and its `BE-COMPAT-001` paragraph (`plan.md` is 49,980 bytes, 20 under `[artifacts] read-size-bytes`, so the edit trims what it needs to fit), 066's scenario `review-scope-includes-uncommitted-work` and 066's 084 signpost, and a `runtime/CHANGELOG.md` entry
+
+- **Done when**: AC23 holds: a fixture whose uncommitted path another `in-progress` spec's plan holds leaves it out of the scope, and one no other open plan holds keeps it in, each failing with its behavior removed; the mutants are killed; and `check-artifacts` on 084 and 066 reports no new finding.
+
 ## Phase D — Delivery
 
 ### 17. `check-artifact-size` names no per-fix reopen

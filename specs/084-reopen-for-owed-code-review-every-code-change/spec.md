@@ -2,7 +2,7 @@
 status: in-progress
 dependencies: [079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [018-adopter-owned-pre-commit, 020-code-review, 022-deterministic-runtime, 041-task-pruning, 046-scenario-open-question-visibility, 050-constitution, 051-branch-scoped-spec-numbering, 057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 078-review-fix-rounds-are-re-read-within-a-bound, 079-review-and-analysis-work-converges, 081-reviews-and-checks-follow-what-changed, 083-commits-are-attributed-to-specs-without-a-subject-convention]
-next-criterion: 23
+next-criterion: 24
 ---
 
 # 084 — Reopen for owed code, review every code change
@@ -79,6 +79,7 @@ A `done` spec reopens only when it owes code: an unchecked task or an unticked a
 - [ ] AC20: An update that installs the pre-push hook runs the unreviewed-code check once and reports each `done` spec it names with its path count, and `[review] unreviewed-push` with its two values, and writes no configuration. A fixture adopter with a `done` spec's code changed since its review is shown that spec and keeps its configuration byte for byte.
 - [ ] AC21: A `done` spec with a scenario holding an unresolved open question keeps its status under `/{project}:analyze --fix`, which still reports the question as a blocking finding with its two exits, and the completion gate still blocks `in-progress` → `done` on one. A deferral to a `done` spec from `/{project}:analyze`, `/{project}:review` or `/{project}:implement` reopens it only when the one primitive reports owed work. 046's AC23 and AC30 carry "Superseded in part (spec 084)".
 - [ ] AC22: `check-artifacts`' task-consistency family reports a blocking finding when two tasks in a `tasks.md` carry the same number, and none when the numbers do not rise down the file, and a test proves each direction.
+- [ ] AC23: `compute-review-scope` leaves an uncommitted path out of a spec's scope, listing it in `excluded`, only when the Affected Files of another spec's `plan.md`, that spec at `planned` or `in-progress`, holds the path by name or by a pattern, and the spec's own plan does not; every other uncommitted path joins the scope, as 066's scenario `review-scope-includes-uncommitted-work` requires, and a test proves both directions.
 
 ## Applicable Rules
 
