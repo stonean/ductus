@@ -265,7 +265,7 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 ### 30. The block report's fallback when the namespace cannot be read
 
-- [ ] `runtime/src/main.rs`, `runtime/tests/check_unreviewed_code_cli.rs` — `check-unreviewed-code`'s call site prints the `{project}` placeholder when `Host::load` fails, as for a `.ductus/session.toml` that does not parse, and no test covers that arm: M44 mutates only the success arm (found by tasks 26 and 27's landing, 2026-11-25; the agent's recommendation to add a task, adopted by the operator, 2026-11-25). A CLI test with a session file that does not parse, whose block report names the placeholder, and a mutant on the fallback arm in `scripts/mutation/unreviewed-code-084.py`
+- [x] `runtime/src/main.rs`, `runtime/tests/check_unreviewed_code_cli.rs` — `check-unreviewed-code`'s call site prints the `{project}` placeholder when `Host::load` fails, as for a `.ductus/session.toml` that does not parse, and no test covers that arm: M44 mutates only the success arm (found by tasks 26 and 27's landing, 2026-11-25; the agent's recommendation to add a task, adopted by the operator, 2026-11-25). A CLI test with a session file that does not parse, whose block report names the placeholder, and a mutant on the fallback arm in `scripts/mutation/unreviewed-code-084.py`
 
 - **Done when**: a test fails with the fallback arm removed or changed, and its mutant is killed.
 

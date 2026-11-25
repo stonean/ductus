@@ -161,6 +161,30 @@ fn the_block_report_names_the_projects_own_review_command() {
     assert!(!report.contains("{project}"), "{report}");
 }
 
+/// A host configuration that cannot be read, here a session file that does
+/// not parse, leaves the review command's `{project}` placeholder in the block
+/// report, and the report and its exit status stand.
+#[test]
+fn the_block_report_keeps_the_placeholder_when_the_namespace_cannot_be_read() {
+    let tmp = tempfile::tempdir().unwrap();
+    fixture(tmp.path(), true);
+    write(
+        tmp.path(),
+        ".ductus/config.toml",
+        "[host]\nproject = \"acme\"\n",
+    );
+    write(tmp.path(), ".ductus/session.toml", "feature = [\n");
+    let blocked = check(tmp.path(), &[]);
+    assert_eq!(blocked.status.code(), Some(1), "{blocked:?}");
+    let report = String::from_utf8_lossy(&blocked.stderr).to_string();
+    assert!(report.contains("  src/u.rs\n"), "{report}");
+    assert!(
+        report.contains("review it (`/{project}:review` on each spec"),
+        "{report}"
+    );
+    assert!(!report.contains("/acme:review"), "{report}");
+}
+
 #[test]
 fn a_subject_not_examined_is_treated_as_reported_code_is() {
     let tmp = tempfile::tempdir().unwrap();

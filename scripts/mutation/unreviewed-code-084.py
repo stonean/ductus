@@ -325,4 +325,11 @@ MUTATIONS = [
         '.map_or_else(|_| "{project}".to_string(), |_| "{project}".to_string());',
         '--test check_unreviewed_code_cli the_block_report_names_the_projects_own_review_command',
     ),
+    (
+        'M45 a namespace that cannot be read is reported as the default one',
+        'src/main.rs',
+        '.map_or_else(|_| "{project}".to_string(), |host| host.project);',
+        '.map_or_else(|_| "ductus".to_string(), |host| host.project);',
+        '--test check_unreviewed_code_cli the_block_report_keeps_the_placeholder_when_the_namespace_cannot_be_read',
+    ),
 ]
