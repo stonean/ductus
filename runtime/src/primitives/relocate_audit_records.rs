@@ -22,8 +22,9 @@
 //! is meaningful at all.
 //!
 //! **Touch body prose.** The edit is confined to the frontmatter block, so it
-//! is a correction under §spec-lifecycle and a `done` spec stays `done`. The body is compared before and after, and a run that finds
-//! itself having changed it halts — the same stopping condition
+//! leaves no unchecked box and no unticked criterion, and under §spec-lifecycle
+//! a `done` spec stays `done`. The body is compared before and after, and a run
+//! that finds itself having changed it halts — the same stopping condition
 //! `criterion-label-backfill` states for its own sweep.
 //!
 //! **Silently pick a winner when both sides carry a value.** Every spec in a

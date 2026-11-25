@@ -29,7 +29,7 @@ MANIFEST="$ROOT/framework/runtime-tools.txt"
 for arg in "$@"; do
   case "$arg" in
     -h|--help)
-      sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0")"
       echo "  Exits 0 when every command naming a runtime tool carries the pointer."
