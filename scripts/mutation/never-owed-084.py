@@ -68,7 +68,7 @@ MUTATIONS = [
         'src/primitives/measure_reopenings.rs',
         '        return Ok(*cached);\n',
         '        return Ok(!*cached);\n',
-        'measure_reopenings::tests::a_reopening_never_owing_work_is_counted_and_one_not_counted_is_not',
+        'measure_reopenings::tests::never_owed_counts_each_closed_reopening_that_held_no_work',
     ),
     (
         'M8 the reopening drops what its pass held',
@@ -80,17 +80,9 @@ MUTATIONS = [
     (
         'M9 the count takes the reopenings that held owed work',
         'src/primitives/measure_reopenings.rs',
-        '            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count(),\n',
-        '            never_owed_count: self.reopenings.iter().filter(|r| r.held_owed_work).count(),\n',
-        'measure_reopenings::tests::a_reopening_never_owing_work_is_counted_and_one_not_counted_is_not',
-    ),
-    (
-        'M10 a reopening not counted is counted never owed',
-        'src/primitives/measure_reopenings.rs',
-        '            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count(),\n',
-        '            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count()\n'
-        '                + self.not_counted.len(),\n',
-        'measure_reopenings::tests::a_reopening_never_owing_work_is_counted_and_one_not_counted_is_not',
+        '            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count()\n',
+        '            never_owed_count: self.reopenings.iter().filter(|r| r.held_owed_work).count()\n',
+        'measure_reopenings::tests::never_owed_counts_each_closed_reopening_that_held_no_work',
     ),
     (
         'M11 the result drops the count',
@@ -105,5 +97,33 @@ MUTATIONS = [
         '    ("measure-reopenings", "never-owed-count", None),\n',
         '',
         'measure_reopenings::tests::a_result_past_the_read_size_moves_its_lists_to_a_file',
+    ),
+    (
+        'M13 a reopening not counted is not judged',
+        'src/primitives/measure_reopenings.rs',
+        '            held_owed_work: Some(self.held_owed),\n',
+        '            held_owed_work: None,\n',
+        'measure_reopenings::tests::never_owed_counts_each_closed_reopening_that_held_no_work',
+    ),
+    (
+        'M14 a reopening not counted leaves the count',
+        'src/primitives/measure_reopenings.rs',
+        '                    .filter(|r| r.held_owed_work == Some(false))\n',
+        '                    .filter(|_| false)\n',
+        'measure_reopenings::tests::a_reopening_with_no_run_is_not_counted',
+    ),
+    (
+        'M15 every reopening not counted is counted never owed',
+        'src/primitives/measure_reopenings.rs',
+        '                    .filter(|r| r.held_owed_work == Some(false))\n',
+        '                    .filter(|_| true)\n',
+        'measure_reopenings::tests::never_owed_counts_each_closed_reopening_that_held_no_work',
+    ),
+    (
+        'M16 a pass with no start is judged never owed',
+        'src/primitives/measure_reopenings.rs',
+        '            reason: NotCountedReason::NoInProgressCommit,\n            held_owed_work: None,\n',
+        '            reason: NotCountedReason::NoInProgressCommit,\n            held_owed_work: Some(false),\n',
+        'measure_reopenings::tests::a_closing_with_no_pass_is_not_counted',
     ),
 ]

@@ -7014,6 +7014,10 @@ pub struct NotCountedReopening {
     pub end: String,
     /// Why it is not counted.
     pub reason: NotCountedReason,
+    /// See [`Reopening::held_owed_work`]. Absent for `no-in-progress-commit`, which
+    /// has no pass to read, so it is not judged (spec 084, AC16).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub held_owed_work: Option<bool>,
 }
 
 /// Result for `measure-reopenings`.
@@ -7042,8 +7046,9 @@ pub struct MeasureReopeningsResult {
     pub over_bound_count: usize,
     /// Entries in `not-counted`, in either form.
     pub not_counted_count: usize,
-    /// Entries in `reopenings` that never held owed work, in either form; a
-    /// `not-counted` reopening is outside it.
+    /// Closed reopenings, in `reopenings` or `not-counted`, whose `held-owed-work`
+    /// is false, in either form; a `no-in-progress-commit` one carries none and is
+    /// outside it.
     pub never_owed_count: usize,
     /// Entries in `waiting`, in either form.
     pub waiting_count: usize,

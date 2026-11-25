@@ -62,8 +62,8 @@ Under `block` the CLI exits 1 when `state` is `found` or `not-examined`, and 0 o
 
 | Field | Where | Meaning |
 | --- | --- | --- |
-| `held-owed-work` | each entry of `reopenings` | Whether any commit in the reopening that touched the spec's directory left its `tasks.md` holding an unchecked box or its `spec.md` an unticked criterion |
-| `never-owed-count` | top level and `ReopeningCounts` | Closed reopenings with `held-owed-work: false`; `not-counted` reopenings are outside it |
+| `held-owed-work` | each entry of `reopenings`, and of `not-counted` with a `start` | Whether any commit in the reopening that touched the spec's directory left its `tasks.md` holding an unchecked box or its `spec.md` an unticked criterion; absent on a `no-in-progress-commit` entry, which has no pass to read and is not judged |
+| `never-owed-count` | top level and `ReopeningCounts` | Closed reopenings, counted or not, with `held-owed-work: false` |
 
 ## `dashboard` addition
 

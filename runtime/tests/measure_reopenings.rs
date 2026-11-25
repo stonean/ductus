@@ -215,7 +215,7 @@ fn every_kind_of_reopening_is_reported_and_status_shows_the_counts() {
     assert_eq!(result["closed-count"], 6);
     assert_eq!(result["over-bound-count"], 1);
     assert_eq!(result["not-counted-count"], 2);
-    assert_eq!(result["never-owed-count"], 3);
+    assert_eq!(result["never-owed-count"], 5);
     assert_eq!(result["waiting-count"], 1);
     assert_eq!(result["runs"], 7);
     assert_eq!(result["form"], "inline");
@@ -234,6 +234,7 @@ fn every_kind_of_reopening_is_reported_and_status_shows_the_counts() {
         entry(not_counted, "005-no-run")["reason"],
         "no-recorded-run"
     );
+    assert_eq!(entry(not_counted, "005-no-run")["held-owed-work"], false);
     assert_eq!(
         entry(not_counted, "006-damaged")["reason"],
         "record-unparseable"

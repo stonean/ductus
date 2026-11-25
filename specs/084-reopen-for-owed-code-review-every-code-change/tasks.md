@@ -206,6 +206,8 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
+Waits on task 29, which runs first (owner, 2026-11-25).
+
 Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012, 021, 025, 049, 060, 062, 069 and 081) with 81 paths, the nine the plan measured, and 023 and 048 as not examined, which task 23 owns. A subject not examined blocks as reported code does, so `block` (task 19) waits on task 23 too.
 
 - [ ] `.githooks/pre-push`, and `[review] unreviewed-push = "warn"` in `.ductus/config.toml`
@@ -244,6 +246,15 @@ Handed on from task 9: at `3caa8357` the check reports 9 `done` specs (000, 012,
 
 - **Done when**: both runs end as the body item says, a second update writes nothing, and the commit records each run's outcome.
 
+### 29. Every closed reopening is judged for owed work
+
+Model: opus, with fable as advisor (owner, 2026-11-25).
+
+- [x] `runtime/src/primitives/measure_reopenings.rs`, `runtime/src/schema/primitives.rs` — task 15 (204126e0) gave `held-owed-work` to the counted `reopenings` alone and left `not-counted` ones outside `never-owed-count`, as `data-model.md` and the plan scoped it, where AC16 reads "for each closed reopening" and `closed-count` holds both lists. So a reopening with no new run (`no-recorded-run`), the likeliest shape of a spurious reopen, reached no defect count. `NotCountedReopening` gains `held-owed-work` for a pass with a start (`no-recorded-run`, `record-unparseable`), absent for `no-in-progress-commit`, which has no pass to read and is not judged, and `never-owed-count` counts every closed reopening whose `held-owed-work` is false (the agent's recommendation, adopted by the operator, 2026-11-25). None was not counted at `47cae941` or at `204126e0`
+- [x] `data-model.md` §`measure-reopenings` additions, `plan.md` §Measuring the bar and `MEASURE_REOPENINGS` say so; fixtures for a not-counted reopening each way and a squashed one, with their mutants
+
+- **Done when**: a `no-recorded-run` reopening that never held owed work counts in `never-owed-count` and one that held it does not, a `no-in-progress-commit` entry carries no `held-owed-work`, each fixture fails with its behavior removed, and the mutants are killed.
+
 ## Phase D — Delivery
 
 ### 17. `check-artifact-size` names no per-fix reopen
@@ -260,6 +271,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [ ] Each of 018, 020, 022, 046, 050, 051, 057, 066, 067, 078, 079, 081 and 083 gains the back-link the plan's Cross-spec impact names, 079's and 081's under `## See also`
 - [ ] 066's scenario `criteria-are-verified-in-review` gains the `done`-spec exception
+- [ ] 079's `data-model.md` §`measure-reopenings`: its `reopenings` and `not-counted` rows name `held-owed-work`, and its counts row and its sentence on what `dashboard` carries name `never-owed-count`, as tasks 15 and 29 leave them (the agent's recommendation, adopted by the operator, 2026-11-25)
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]` entries for every change adopters see (AC13)
 
 - **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 084 and no new finding on the thirteen, and the changelog names each primitive added and retired.

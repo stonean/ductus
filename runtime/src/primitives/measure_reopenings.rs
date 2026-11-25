@@ -16,11 +16,12 @@
 //! pass: when its status moves to `done` from another status it is reported as not
 //! counted, and from `done` to `done` nothing can show it.
 //!
-//! Each counted reopening also says whether it held owed work (spec 084, AC16): whether a
-//! version of the spec's directory the walk observes inside it, at each commit that
-//! touched the directory from its start to its closing commit, held an unchecked box in
-//! `tasks.md` or an unticked criterion in `spec.md`, by the owed-work test. A box added
-//! and ticked in one commit shows none.
+//! Each closed reopening with a start, counted or not, also says whether it held owed
+//! work (spec 084, AC16): whether a version of the spec's directory the walk observes
+//! inside it, at each commit that touched the directory from its start to its closing
+//! commit, held an unchecked box in `tasks.md` or an unticked criterion in `spec.md`, by
+//! the owed-work test. A box added and ticked in one commit shows none. One with no
+//! start, as a squashed pass, has no pass to read and is not judged.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -150,7 +151,12 @@ impl Measurement {
             closed_count: self.reopenings.len() + self.not_counted.len(),
             over_bound_count: self.reopenings.iter().filter(|r| r.over_bound).count(),
             not_counted_count: self.not_counted.len(),
-            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count(),
+            never_owed_count: self.reopenings.iter().filter(|r| !r.held_owed_work).count()
+                + self
+                    .not_counted
+                    .iter()
+                    .filter(|r| r.held_owed_work == Some(false))
+                    .count(),
             waiting_count: self.waiting.len(),
             runs: self.reopenings.iter().map(|r| r.reviews + r.analyses).sum(),
             reason: None,
@@ -841,6 +847,7 @@ impl OpenPass {
             start: Some(start.to_string()),
             end: self.end.to_string(),
             reason,
+            held_owed_work: Some(self.held_owed),
         };
         if self.unreadable {
             return Err(not_counted(NotCountedReason::RecordUnparseable));
@@ -876,13 +883,15 @@ impl OpenPass {
         })
     }
 
-    /// A closing commit with no in-progress pass to delimit it.
+    /// A closing commit with no in-progress pass to delimit it, so none to judge for
+    /// owed work.
     fn without_a_start(self, feature: &str) -> NotCountedReopening {
         NotCountedReopening {
             feature: feature.to_string(),
             start: None,
             end: self.end.to_string(),
             reason: NotCountedReason::NoInProgressCommit,
+            held_owed_work: None,
         }
     }
 }
@@ -1319,9 +1328,12 @@ mod tests {
                 start: Some(start.to_string()),
                 end: end.to_string(),
                 reason: NotCountedReason::NoRecordedRun,
+                held_owed_work: Some(false),
             }
         );
-        assert_eq!(fixture.measure().counts().closed_count, 1);
+        let counts = fixture.measure().counts();
+        assert_eq!(counts.closed_count, 1);
+        assert_eq!(counts.never_owed_count, 1);
     }
 
     /// A record carried in from the reopening before names no run of this one.
@@ -2075,8 +2087,10 @@ mod tests {
                 start: None,
                 end: end.to_string(),
                 reason: NotCountedReason::NoInProgressCommit,
+                held_owed_work: None,
             }
         );
+        assert_eq!(fixture.measure().counts().never_owed_count, 0);
     }
 
     #[test]
@@ -2145,12 +2159,14 @@ mod tests {
                     start: Some(main.to_string()),
                     end: main_end.to_string(),
                     reason: NotCountedReason::NoRecordedRun,
+                    held_owed_work: Some(false),
                 },
                 NotCountedReopening {
                     feature: FEATURE.into(),
                     start: None,
                     end: side_end.to_string(),
                     reason: NotCountedReason::NoInProgressCommit,
+                    held_owed_work: None,
                 },
             ]
         );
@@ -2172,6 +2188,7 @@ mod tests {
                 start: None,
                 end: end.to_string(),
                 reason: NotCountedReason::NoInProgressCommit,
+                held_owed_work: None,
             }
         );
     }
@@ -2359,9 +2376,10 @@ mod tests {
     }
 
     /// The box inside a comment is the tasks template's example, which a reset
-    /// `tasks.md` holds and the owed-work test does not read.
+    /// `tasks.md` holds and the owed-work test does not read. The second reopening,
+    /// holding no new run, is not counted, and is judged for owed work all the same.
     #[test]
-    fn a_reopening_never_owing_work_is_counted_and_one_not_counted_is_not() {
+    fn never_owed_counts_each_closed_reopening_that_held_no_work() {
         let fixture = Fixture::new();
         fixture.status("in-progress");
         fixture.commit(
@@ -2371,11 +2389,14 @@ mod tests {
         fixture.commit("review.md", &review("2026-01-01T00:00:00Z", ""));
         fixture.status("done");
         fixture.status("in-progress");
+        fixture.commit("tasks.md", "## 1. One\n\n- [x] a\n- [ ] b\n");
+        fixture.commit("tasks.md", "## 1. One\n\n- [x] a\n- [x] b\n");
         fixture.status("done");
         let measurement = fixture.measure();
         assert_eq!(measurement.reopenings.len(), 1, "{measurement:?}");
         assert!(!measurement.reopenings[0].held_owed_work);
         assert_eq!(measurement.not_counted.len(), 1, "{measurement:?}");
+        assert_eq!(measurement.not_counted[0].held_owed_work, Some(true));
         assert_eq!(measurement.counts().never_owed_count, 1);
     }
 
