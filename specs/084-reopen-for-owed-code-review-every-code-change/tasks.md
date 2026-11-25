@@ -248,6 +248,8 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 ### 28. A scratch-adopter bootstrap for the hook, the seed and the CI template
 
+Model: opus (owner, 2026-11-25).
+
 - [ ] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `docs/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
 
 - **Done when**: both runs end as the body item says, a second update writes nothing, and the commit records each run's outcome.
@@ -260,6 +262,12 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 - [x] `data-model.md` §`measure-reopenings` additions, `plan.md` §Measuring the bar and `MEASURE_REOPENINGS` say so; fixtures for a not-counted reopening each way and a squashed one, with their mutants
 
 - **Done when**: a `no-recorded-run` reopening that never held owed work counts in `never-owed-count` and one that held it does not, a `no-in-progress-commit` entry carries no `held-owed-work`, each fixture fails with its behavior removed, and the mutants are killed.
+
+### 30. The block report's fallback when the namespace cannot be read
+
+- [ ] `runtime/src/main.rs`, `runtime/tests/check_unreviewed_code_cli.rs` — `check-unreviewed-code`'s call site prints the `{project}` placeholder when `Host::load` fails, as for a `.ductus/session.toml` that does not parse, and no test covers that arm: M44 mutates only the success arm (found by tasks 26 and 27's landing, 2026-11-25; the agent's recommendation to add a task, adopted by the operator, 2026-11-25). A CLI test with a session file that does not parse, whose block report names the placeholder, and a mutant on the fallback arm in `scripts/mutation/unreviewed-code-084.py`
+
+- **Done when**: a test fails with the fallback arm removed or changed, and its mutant is killed.
 
 ## Phase D — Delivery
 
