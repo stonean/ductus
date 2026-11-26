@@ -17,9 +17,10 @@
 //!
 //! So staleness is a **content** comparison: the record carries a per-path
 //! digest of the subject set as the run read it, and freshness is a digest
-//! match. `analyzed-against` survives as provenance and is read for exactly
-//! one thing — the mechanical-sweep rename exemption, which genuinely needs
-//! two trees.
+//! match. `analyzed-against` survives as provenance, and freshness reads it
+//! for one thing — the mechanical-sweep rename exemption, which genuinely
+//! needs two trees; `rule_verdicts` also reads it, for a changed rule file's
+//! copy (spec 088).
 //!
 //! The second thing this buys is that the two surfaces no longer need
 //! different reference points. A commit sha cannot describe a working tree, so
@@ -436,7 +437,8 @@ pub(crate) fn freshness_of(
 
 /// Drop the candidates whose change was a uniform repo-wide rename.
 ///
-/// The one place `analyzed-against` is still read. A contract that changed only
+/// Freshness's one read of `analyzed-against`, which `rule_verdicts` also reads
+/// for a changed rule file's copy (spec 088). A contract that changed only
 /// in spelling states what it stated before, so a rename sweep must not stale
 /// the record — §drift-prevention's mechanical-sweep rule, which the review record's digest
 /// applies through the same exemption. Measured on the review half before it had the

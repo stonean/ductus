@@ -1101,8 +1101,9 @@ mod tests {
         );
     }
 
-    /// A rule file whose rules changed judges that file's rules again and
-    /// leaves the other files' current (AC5).
+    /// With no copy of the file the run judged, here a record naming no
+    /// `analyzed-against`, a rule file whose rules changed judges every rule of
+    /// that file again (spec 088) and leaves the other files' current (AC5).
     #[test]
     fn an_edited_rule_file_judges_its_own_rules_only() {
         let tmp = feature();

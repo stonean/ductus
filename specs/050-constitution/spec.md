@@ -22,6 +22,8 @@ it, how it is structured, and what reaches adopters through it.
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) amended the constitution. §spec-lifecycle's *Backward via owed code* replaced the third back-edge and the correction and mechanical classes: a `done` spec is `in-progress` exactly while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, read from that state and never from an edit's diff. §drift-prevention now states the mechanical-sweep rule, and §bug-handling's fourth route adds a scenario only when the requirement needs more precision.
 >
 > **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) amended the constitution. §spec-phase's tree names a project file's parts under `.ductus/docs/{file}/` and the file as their index; §drift-prevention's routing sends architecture to a project file or a part of one and a procedure to a part of `AGENTS.md` in `.ductus/docs/agents/`, and *No dead references* counts project files and their parts as live artifacts; the canonical-sources table names 087 for a project file's index and parts.
+>
+> **Signpost:** [088 — Rule judgments cost only what changed](../088-rule-judgments-cost-only-what-changed/spec.md) added two fields to the analyze record row of §text-first-artifacts, `rules-judged` and `rules-carried`, the loaded rules a run judged and the stored verdicts it carried.
 
 ## Ownership
 

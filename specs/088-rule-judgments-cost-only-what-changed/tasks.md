@@ -44,8 +44,8 @@ Run the backfill as `runtime/target/release/ductus backfill-section-digest` from
 
 ## 5. The specs this changes link back (cross-spec impact)
 
-- [ ] Blockquoted signposts back-linking 088 in 050's, 066's and 082's `spec.md` bodies, each leaving its spec `done`
-- [ ] The prose-claim sweep for the per-file rule: `scripts/stale-literals.sh`, then a search by meaning (re-judged "with the rest of its file", "per-file", "its own rules non-current") across the live-artifact set, `framework/reference/analyze.md` included, each stale claim corrected
+- [x] Blockquoted signposts back-linking 088 in 050's, 066's and 082's `spec.md` bodies, each leaving its spec `done`
+- [x] The prose-claim sweep for the per-file rule: `scripts/stale-literals.sh`, then a search by meaning (re-judged "with the rest of its file", "per-file", "its own rules non-current") across the live-artifact set, `framework/reference/analyze.md` included, each stale claim corrected
 
 - **Done when**: `check-review-gate` reports 050, 066 and 082 discharged, and the sweep leaves no live claim of the per-file rule.
 

@@ -10,6 +10,8 @@ next-criterion: 8
 `/{project}:analyze` records a verdict for each loaded rule it assesses, against the subjects it judged. A later run re-judges a rule only when its subjects changed. A record that judged fewer rules than were loaded says so on every path, not only under `ductus exec`.
 
 > **Signpost:** [073 — Decided rule departures are recorded](../073-decided-rule-departures-are-recorded/spec.md) adds a third verdict shape, `waived`, to the rule-verdict map for a rule the spec's departure entry names; the data model carries it.
+>
+> **Signpost:** [088 — Rule judgments cost only what changed](../088-rule-judgments-cost-only-what-changed/spec.md) narrowed a stored verdict's currency: a rule file whose digest moved is compared rule by rule with its copy at the record's `analyzed-against`, so only a rule whose own text changed, and each rule naming one, is judged again, and `discover-rule-files` names under `rejudged-files` each file judged again whole, with why. Its `backfill-section-digest` writes AC7's `section-digest` into each record still current that predates it.
 
 ## Motivation
 

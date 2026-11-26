@@ -4335,7 +4335,9 @@ mod tests {
     }
 
     /// Spec 082, AC5: a rule edited between two runs over an unchanged spec is
-    /// judged again, and its file's neighbours are not.
+    /// judged again, with every rule of its file, since a project in no
+    /// repository holds no copy of the file the run judged (spec 088), and the
+    /// other files' rules are not.
     #[test]
     fn an_edited_rule_file_is_judged_again_over_an_unchanged_spec() {
         let tmp = spec_repo("status: in-progress\ndependencies: []");
