@@ -44,8 +44,8 @@ Landed on 2026-11-14 after 000's review record; with the real `markdownlint-cli2
 
 ### 50. A path-list commit carries every file the hook rewrites into the shared index (owner decision, 2026-11-25)
 
-- [ ] Widen `scenarios/a-path-list-commit-leaves-the-shared-index-current.md` from generated outputs to every file the hook rewrites, a markdown file `markdownlint-cli2 --fix` changed among them: task 48's `carry_to_shared` in `.githooks/pre-commit` filters to `$generated_outputs`, so a named markdown file `--fix` rewrote in `git commit -- <paths>` still leaves its pre-fix copy staged in the shared index (found by code reading while landing task 48, 2026-11-25)
-- [ ] `carry_to_shared` drops the generated-outputs filter; the starting-blob guard still leaves another session's staged entry as it was
-- [ ] `scripts/tests/test-pre-commit-staging.sh` holds a path-list case for a markdown file `--fix` rewrites, and it fails with the filter restored
+- [x] Widen `scenarios/a-path-list-commit-leaves-the-shared-index-current.md` from generated outputs to every file the hook rewrites, a markdown file `markdownlint-cli2 --fix` changed among them: task 48's `carry_to_shared` in `.githooks/pre-commit` filters to `$generated_outputs`, so a named markdown file `--fix` rewrote in `git commit -- <paths>` still leaves its pre-fix copy staged in the shared index (found by code reading while landing task 48, 2026-11-25)
+- [x] `carry_to_shared` drops the generated-outputs filter; the starting-blob guard still leaves another session's staged entry as it was
+- [x] `scripts/tests/test-pre-commit-staging.sh` holds a path-list case for a markdown file `--fix` rewrites, and it fails with the filter restored
 
 - **Done when**: after `git commit -- <paths>` naming a markdown file the hook's `--fix` rewrites, `git diff --cached` names no carried file, the case proves it in both directions, and `generators.yml`'s and `framework-checks.yml`'s steps pass locally.

@@ -41,6 +41,9 @@
 #      `cargo test` that stages a file in a fixture repository, as a runtime
 #      test does, acts on the fixture, and the commit's index keeps its entries
 #      (spec 017 task 49)
+#   M. a path-list commit naming a markdown file --fix rewrites carries the
+#      fixed blob into the shared index too, so `git diff --cached` names no
+#      carried file (spec 017 task 50)
 #
 # HOOK_UNDER_TEST overrides the hook (scripts/mutation-style proofs that a case
 # fails with a behavior removed). The runtime is ./runtime/target/release/ductus
@@ -350,6 +353,23 @@ fi
 check "K: the commit holds README.md and nothing else" \
   test "$(committed_files "$R")" = "README.md"
 check "K: the shared index matches HEAD" g "$R" diff --cached --quiet
+
+# M. a path-list commit naming a markdown file the hook's --fix rewrites. Git
+# stages the named file's working copy, trailing whitespace and all, in the
+# temporary index and the shared one alike; the hook commits the fixed blob, and
+# the shared index must hold it too, or it reads as a staged reversal.
+new_case m
+printf 'a line with trailing space   \n' >> "$R/README.md"
+if commit "$R" "case m" -- README.md; then
+  pass "M: the path-list commit succeeds"
+else
+  fail "M: the path-list commit failed: $(cat "$CASE/commit.out")"
+fi
+check "M: the commit holds README.md fixed" \
+  bash -c 'git -C "$1" show HEAD:README.md | grep -qx "a line with trailing space"' _ "$R"
+check "M: the shared index names no carried file" g "$R" diff --cached --quiet
+check "M: the fixed README.md follows the commit in the working tree" \
+  test -z "$(g "$R" status --porcelain -- README.md)"
 
 # F. a markdown file staged in part.
 new_case f

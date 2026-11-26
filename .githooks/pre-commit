@@ -27,12 +27,13 @@
 #
 # A path-list commit (`git commit -- <paths>`) runs the hook against a
 # temporary index (`next-index-*.lock`) while git holds the shared index as
-# `index.lock` and renames it over `index` after the commit, so a generated
-# output written to the temporary index alone would return to the shared one as
-# its pre-commit blob, a staged reversal. The hook therefore also writes each
-# generated output it carries to that `index.lock`, where the entry still holds
-# the blob the commit started from; an entry another session staged differently
-# is left as it was (spec 017 / a-path-list-commit-leaves-the-shared-index-current).
+# `index.lock` and renames it over `index` after the commit, so a file written
+# to the temporary index alone, a generated output or a named file `--fix` or a
+# derivation rewrote, would return to the shared one as its pre-commit blob, a
+# staged reversal. The hook therefore also writes each file it carries to that
+# `index.lock`, where the entry still holds the blob the commit started from; an
+# entry another session staged differently is left as it was (spec 017 /
+# a-path-list-commit-leaves-the-shared-index-current).
 #
 # The runtime is resolved first, since gen-claude-commands.sh builds the Claude
 # copies with its apply-manifest and is passed it as DUCTUS_BIN (spec 080). An
@@ -199,7 +200,7 @@ case "${GIT_INDEX_FILE:-}" in
   */next-index-*.lock | next-index-*.lock)
     shared_lock="$(dirname "$GIT_INDEX_FILE")/index.lock"
     if [ ! -f "$shared_lock" ]; then
-      echo "pre-commit: path-list commit, but $shared_lock is missing; generated outputs are not carried into the shared index." >&2
+      echo "pre-commit: path-list commit, but $shared_lock is missing; the files the hook rewrites are not carried into the shared index." >&2
       shared_lock=""
     fi
     ;;
@@ -285,12 +286,12 @@ hook_git_vars=(GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
   git diff --cached --raw --no-abbrev -z --no-renames "$orig_tree" > "$scratch/changes.raw"
 )
 
-# Write a generated output the commit carries into a path-list commit's shared
-# index (index.lock), only where its entry is still the blob the commit started
-# from, so another session's staged entry is left as it was. An empty $4 removes.
+# Write a file the commit carries, a generated output or a named file the
+# scratch run rewrote, into a path-list commit's shared index (index.lock), only
+# where its entry is still the blob the commit started from, so another
+# session's staged entry is left as it was. An empty $4 removes.
 carry_to_shared() { # carry_to_shared <rel> <start-blob> <mode> <new-blob>
   [ -n "$shared_lock" ] || return 0
-  grep -qE "$generated_outputs" <<< "$1" || return 0
   local cur want="$2"
   cur="$(GIT_INDEX_FILE="$shared_lock" git ls-files -s -- "$1" | awk '{ print $2 }')"
   case "$want" in *[!0]*) ;; *) want="" ;; esac
