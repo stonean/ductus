@@ -91,7 +91,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
   - **Not checked.** A call that fails, or a binary with no such subcommand, is reported as not checked, naming the command, never as nothing to backfill.
   - **Report.** It reports the count written and names each record left, which gains the digest at its spec's next analysis.
   - **Status.** It leaves each `done` spec `done`, since it writes only `analysis.md` and leaves no unchecked box or unticked criterion (§spec-lifecycle).
-- **Exercised.** A scratch-adopter bootstrap run exercises the entry, as AGENTS.md requires for a change under `framework/migrations/` (`docs/developing-ductus.md`, Exercising an installer change).
+- **Exercised.** A scratch-adopter bootstrap run exercises the entry, as AGENTS.md requires for a change under `framework/migrations/` (`.ductus/docs/agents/developing-ductus.md`, Exercising an installer change).
 - **This repository.** A task runs the primitive over this corpus and commits the records it writes, as `framework/migrations/criterion-label-backfill.md` records that this repository was swept when its primitive landed.
 
 ### Tests: each behavior fails with its condition removed
