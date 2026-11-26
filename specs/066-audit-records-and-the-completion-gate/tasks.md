@@ -1,5 +1,5 @@
 ---
-next-task: 32
+next-task: 33
 ---
 
 # 066 — Audit Records and the Completion Gate Tasks
@@ -81,3 +81,13 @@ Owed after this task (2026-11-19): nothing. 066 itself is `done` (`0c4d20fc`), a
 - [x] The remedy wording follows in `framework/commands/review.md` step 11, `framework/reference/review.md` §Window and coverage, `WRITE_REVIEW` in `runtime/src/schema/descriptions.rs` and `runtime/CHANGELOG.md`
 
 - **Done when**: The refusal's size is bounded whatever moved, proven by tests their mutants turn red; the whole `cargo test` passes; and 066's next review reads the change.
+
+## 32. A mechanical sweep leaves a criterion's verdict standing (from 087's task 16)
+
+Found when 087's task 12 moved the procedure file into `.ductus/docs/agents/`: 071's ticked AC17 changed only by that path, and 071, `done`, read `review-owed: true` with `criteria-owing` AC17, where before the sweep it read false. The fix clears it with no review of 071 (the agent's recommendation, adopted by the operator, 2026-11-26).
+
+- [ ] `criterion_verdicts::owing_in` (`runtime/src/primitives/criterion_verdicts.rs`), as `compute-review-scope` calls it for its `criteria-owing` and `review-owed`, which `check-review-gate` reads, reads a ticked criterion whose text differs from a recorded verdict's only by a mechanical sweep, by the one rule `mechanical_sweep` applies to the analysis record's freshness and the review record's digest (§drift-prevention), as still judged met; a criterion changed by anything more still owes a review
+- [ ] Tests: a ticked criterion whose path a sweep substituted, between the record's `reviewed-against` and HEAD, owes nothing; one reworded owes a review; one whose sweep commit cannot be read owes a review, never nothing; each fails under a mutant listed in a `scripts/mutation/` list
+- [ ] In the same change: 066's data model on `criteria-verdicts`, `COMPUTE_REVIEW_SCOPE` in `runtime/src/schema/descriptions.rs`, and `runtime/CHANGELOG.md` state the rule
+
+- **Done when**: 071's `compute-review-scope` reads `review-owed: false` again with no review of 071; the tests pass and are proven to fail without the rule; the whole `cargo test` passes; and 066's next review reads the change.
