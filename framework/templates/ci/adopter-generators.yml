@@ -4,7 +4,7 @@
 # to enforce that ductus's invariants stay intact on every PR. GitHub reads
 # workflows only from the repository's root, so a project that is a
 # subdirectory of its repository puts the file there too and sets the job's
-# working directory below. Two classes of check run:
+# working directory below. These classes of check run:
 #
 #   1. Generator sync — generated frontmatter (spec `dependencies:` and
 #      `references:`, via `ductus derive-dependencies` and
@@ -46,7 +46,7 @@ on:
   # No `paths:` filter, deliberately. GitHub evaluates `on.paths` before any
   # job runs, so it cannot read the configured spec root the way the runtime
   # the steps below run does ([paths] specs-root, spec 040). A hardcoded
-  # 'specs/**' silently disables BOTH gates for every adopter who renamed
+  # 'specs/**' silently disables every check for every adopter who renamed
   # their spec root — the workflow simply never triggers, which reads as a
   # clean CI rather than an absent one. Running on every PR is the cheaper
   # error: a gate that cannot run must never look like one that passed.

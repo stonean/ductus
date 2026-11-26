@@ -1,4 +1,4 @@
-"""Mutation list for spec 085 task 1: `check-audit-records`
+"""Mutation list for spec 085 tasks 1 and 4: `check-audit-records`
 (`runtime/src/primitives/check_audit_records.rs`), its bound
 (`bounded_lists.rs`' rows for its counts of no list), and its CLI report and
 exit status (`runtime/src/main.rs`). Each behavior is mutated once and killed
@@ -214,8 +214,8 @@ MUTATIONS = [
     (
         'M30 an analyze finding names the review command',
         'src/primitives/check_audit_records.rs',
-        '        AuditRecordKind::Analyze => ("analyze", "analyze"),',
-        '        AuditRecordKind::Analyze => ("analyze", "review"),',
+        '        AuditRecordKind::Analyze => "analyze",',
+        '        AuditRecordKind::Analyze => "review",',
         'check_audit_records::tests::a_message_names_the_projects_own_command',
     ),
     (

@@ -350,11 +350,11 @@ fn record_file(kind: AuditRecordKind) -> &'static str {
     }
 }
 
-/// The record's name and the command that writes it.
-fn record_names(kind: AuditRecordKind) -> (&'static str, &'static str) {
+/// The record's name, which is also the command that writes it.
+fn record_name(kind: AuditRecordKind) -> &'static str {
     match kind {
-        AuditRecordKind::Review => ("review", "review"),
-        AuditRecordKind::Analyze => ("analyze", "analyze"),
+        AuditRecordKind::Review => "review",
+        AuditRecordKind::Analyze => "analyze",
     }
 }
 
@@ -368,7 +368,7 @@ fn record_message(
     project: &str,
 ) -> String {
     let file = record_file(record);
-    let (name, command) = record_names(record);
+    let name = record_name(record);
     let reason = if detail.is_empty() {
         String::new()
     } else {
@@ -376,16 +376,16 @@ fn record_message(
     };
     match kind {
         AuditRecordFindingKind::RecordUnreadable => format!(
-            "{file} exists but carries no readable frontmatter record{reason} — undeterminable is not clean; re-run /{project}:{command}"
+            "{file} exists but carries no readable frontmatter record{reason} — undeterminable is not clean; re-run /{project}:{name}"
         ),
         AuditRecordFindingKind::NoLastRun => {
-            format!("done spec has a null or absent {name}.last-run — run /{project}:{command}")
+            format!("done spec has a null or absent {name}.last-run — run /{project}:{name}")
         }
         AuditRecordFindingKind::NoBlocking => format!(
-            "{file} carries a {name} record with no blocking field — the gate turns on it, and absent is not false; re-run /{project}:{command}"
+            "{file} carries a {name} record with no blocking field — the gate turns on it, and absent is not false; re-run /{project}:{name}"
         ),
         _ => format!(
-            "done spec has {name}.blocking=true — see {path}, and resolve its findings with /{project}:{command}"
+            "done spec has {name}.blocking=true — see {path}, and resolve its findings with /{project}:{name}"
         ),
     }
 }
@@ -518,12 +518,12 @@ fn exempt_set(record: AuditRecordKind, specs: &[String], mark: usize) -> AuditEx
 
 /// The finding for one spec of an exempt set over its mark, on its `spec.md`.
 fn over_mark(root: &str, feature: &str, set: &AuditExemptSet, project: &str) -> AuditRecordFinding {
-    let (name, command) = record_names(set.record);
+    let name = record_name(set.record);
     AuditRecordFinding {
         kind: AuditRecordFindingKind::ExemptOverMark,
         path: format!("{root}/{feature}/spec.md"),
         message: format!(
-            "done spec has no {name} record, and the exempt set ({count}) now exceeds its baseline ({mark}) — the set cannot grow, so the completion gate was bypassed. Run /{project}:{command} against {feature}, or raise {BASELINE_FILE} deliberately ({key}: {count}) and say why in the commit.",
+            "done spec has no {name} record, and the exempt set ({count}) now exceeds its baseline ({mark}) — the set cannot grow, so the completion gate was bypassed. Run /{project}:{name} against {feature}, or raise {BASELINE_FILE} deliberately ({key}: {count}) and say why in the commit.",
             count = set.count,
             mark = set.mark,
             key = set.key,

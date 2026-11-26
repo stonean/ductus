@@ -34,14 +34,14 @@ The adopter CI template's audit-record gate reads each `done` spec's review and 
 
 > **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) asks a spec that adds a primitive to state what a run of it costs, in a unit it can measure, and what it retires.
 
-Measured at `ed3375eb` with the release build, over this repository's corpus of 83 specs, 78 at `done`:
+Measured at `8990a700` with the release build, over this repository's corpus of 83 specs, 78 at `done`:
 
-- **A run.** One `check-audit-records` call took 0.06 s of wall time in four of five runs and 0.07 s in the fifth, by `/usr/bin/time -p` with a warm file cache, on a Darwin arm64 machine.
-- **What it reads.** 10,922,907 bytes of file contents, by `wc -c` of the files it opens:
-  - the 83 `spec.md` files, 1,913,074 bytes;
+- **A run.** One `check-audit-records` call took 0.06 s of wall time in each of five runs after one that warmed the file cache, by `/usr/bin/time -p`, on a Darwin arm64 machine.
+- **What it reads.** 10,927,816 bytes of file contents, by `wc -c` of the files it opens:
+  - the 83 `spec.md` files, 1,918,162 bytes;
   - each `done` spec's `review.md` and `analysis.md`, once, 156 files and 9,006,762 bytes;
   - `.ductus/config.toml`, 955 bytes, read three times, by the spec-root, command-namespace and read-size readers;
-  - the checkout's session file, 206 bytes, which CI does not hold.
+  - the checkout's session file, 27 bytes in the worktree of that commit the run was timed in, which CI does not hold.
 
   The tracked files' sizes are those of the commit's blobs. The count leaves out the git index the untracked listing reads and the directory walks.
 - **What it adds.** One MCP tool.
@@ -49,17 +49,17 @@ Measured at `ed3375eb` with the release build, over this repository's corpus of 
   - Pi's bridge (`framework/bootstrap/pi/ductus-bridge.ts`) registers the tool with both at load.
   - Its result over that script's large fixture corpus is 21,197 characters.
 - **What it retires.**
-  - The step's inline python, 159 lines and 8,327 bytes between `python3 - <<'PY'` and `PY` at `ff1f2157`, so the step went from 195 lines and 10,350 bytes to 64 lines and 3,460 bytes, each counted from its `- name:` line through the next step's.
+  - The step's inline python, 159 lines and 8,327 bytes between `python3 - <<'PY'` and `PY` at `ff1f2157`, so the step went from 195 lines and 10,350 bytes to 64 lines and 3,450 bytes, each counted from its `- name:` line through the next step's.
   - The derive step's spec-root extraction and output, which took that step from 26 lines and 1,487 bytes to 13 and 677.
   - No primitive, check or record field, since the step held its own reader, not one the runtime had.
 
 ## Acceptance Criteria
 
-- [ ] AC1: `framework/templates/ci/adopter-generators.yml`'s audit-record gate calls one runtime primitive over the corpus and parses no frontmatter or markdown of its own.
-- [ ] AC2: The primitive reports each `done` spec's review and analyze record as absent, present or unparseable, and reports as a finding naming its file a present record with a null `last-run`, with no `blocking` field or with `blocking: true`, and a spec whose `spec.md` frontmatter cannot be read or names no `status`, or whose directory holds a link leaving the project.
-- [ ] AC3: The primitive holds each never-run set against its committed high-water mark, read from `audit-record-baseline.txt` in the project's `.ductus/`: a mark is zero when the file is absent or omits its key, a malformed or unreadable file is a finding naming it, and the step fails when either exempt set exceeds its mark.
-- [ ] AC4: The step reports the specs it examined, those at `done` and each exempt count with its mark on every run, and fails when it examined none.
-- [ ] AC5: A test proves each finding fails the step with its condition present and passes without it, from a project at the repository root and from one in a subdirectory.
+- [x] AC1: `framework/templates/ci/adopter-generators.yml`'s audit-record gate calls one runtime primitive over the corpus and parses no frontmatter or markdown of its own.
+- [x] AC2: The primitive reports each `done` spec's review and analyze record as absent, present or unparseable, and reports as a finding naming its file a present record with a null `last-run`, with no `blocking` field or with `blocking: true`, and a spec whose `spec.md` frontmatter cannot be read or names no `status`, or whose directory holds a link leaving the project.
+- [x] AC3: The primitive holds each never-run set against its committed high-water mark, read from `audit-record-baseline.txt` in the project's `.ductus/`: a mark is zero when the file is absent or omits its key, a malformed or unreadable file is a finding naming it, and the step fails when either exempt set exceeds its mark.
+- [x] AC4: The step reports the specs it examined, those at `done` and each exempt count with its mark on every run, and fails when it examined none.
+- [x] AC5: A test proves each finding fails the step with its condition present and passes without it, from a project at the repository root and from one in a subdirectory.
 
 ## Applicable Rules
 
