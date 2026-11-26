@@ -56,10 +56,12 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
   - Only direct names count: a rule naming one only through another reads that other's text, which did not change.
   - Each `AssessableRule` carries the names its Statement and Verification hold, taken when `LoadedRuleFile::read` parses the file, so the scan reads no further file.
 - **When the copy cannot stand in.** Every rule of the file is `Stale`, as before 088, and so is each rule naming one of them. `standing` names the file with one of the closed set of reasons in [data-model.md](data-model.md), and `discover-rule-files` reports it under `verdicts.rejudged-files`. A shallow clone that lacks the commit reads as `commit-not-held`.
-- **The stale doc comments.** `AnalyzeBlock::analyzed_against` (`runtime/src/schema/primitives.rs`) says it is "Read for exactly one thing", which this makes two. Three other texts state the per-file rule, and each says what is now true:
-  - point 3 of `rule_verdicts`' module doc;
-  - `NoReuse::RuleFilesChanged`'s "keeps the per-file rule";
-  - `DISCOVER_RULE_FILES`' "a file whose content alone changed makes only its own rules non-current" (`runtime/src/schema/descriptions.rs`).
+- **The stale texts.** Each text saying `analyzed-against` is read for one thing, which this makes two, or stating the per-file rule says what is now true:
+  - `AnalyzeBlock::analyzed_against` (`runtime/src/schema/primitives.rs`), "Read for exactly one thing", and `analyze_subjects`' module doc and `exempt_renames`' doc;
+  - point 3 of `rule_verdicts`' module doc, and `NoReuse::RuleFilesChanged`'s "keeps the per-file rule";
+  - `DISCOVER_RULE_FILES`' "a file whose content alone changed makes only its own rules non-current" (`runtime/src/schema/descriptions.rs`);
+  - the doc comments of `an_edited_rule_file_judges_its_own_rules_only` (`rule_verdicts.rs`) and `an_edited_rule_file_is_judged_again_over_an_unchanged_spec` (`write_analysis.rs`), whose fixtures exercise the fallback;
+  - **§Stored rule verdicts** and **§Record fields** in `framework/reference/analyze.md`, `docs/analyze.md`, the implement reference's freshness sentence, and the other specs' texts *Cross-spec impact* names.
 
 ### `write-analysis` records the two counts (AC1)
 
@@ -104,17 +106,22 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
   - each rule naming a rule of a whole-file re-judge, or one the edit removed, is judged;
   - a shallow clone whose boundary lies past `analyzed-against` re-judges the whole file, naming `commit-not-held`;
   - `judged-copy-differs`, in both directions;
-  - a record with no `analyzed-against`;
+  - a record with no `analyzed-against`, and a file the commit's tree lacks, each named with its reason;
   - a reorder keeps every verdict, and a rule moved in from another file is judged;
-  - a project in a subdirectory (`git_fixture::subdirectory_project`).
+  - a project in a subdirectory (`git_fixture::subdirectory_project`);
+  - `discover-rule-files` names a re-judged file under `rejudged-files`, inline and, past the read size, in the file form;
+  - the exec walker asks about the edited rule and the rule naming it alone.
 - **AC3.**
   - A record matching as recorded gains the digest.
   - One matching at another status gains the digest of that status's text, equal to `section_digest` of the spec at that status.
   - A stale one is untouched and named, and an unreadable one untouched.
   - A second run writes nothing.
   - The written record, with the block removed, is byte-identical to the original.
-  - A changed record is refused.
+  - A changed record is refused, and the CLI exits non-zero on it in either form.
   - A pinned record is reported and untouched.
+  - A record whose design subjects hold no section is counted and left.
+  - Past the read size the lists move to the file.
+  - A CRLF record gains the field in its own line ending (`runtime/tests/crlf_preservation.rs`).
   - The project-in-a-subdirectory case runs too.
 - **Mutants.** Each behavior has a mutant its test turns red, listed in `scripts/mutation/rule-judgments-088.py`.
 
@@ -137,35 +144,43 @@ It retires no primitive, check or record field. The counts hold what no field he
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/rule_verdicts.rs` | Modify | `standing` takes the project root; the copy at `analyzed-against`, its guard, the per-rule comparison and the reasons; `LoadedRuleFile`'s path; module doc |
+| `runtime/src/primitives/rule_verdicts.rs` | Modify | `standing` takes the project root; the copy at `analyzed-against`, its guard, the per-rule comparison and the reasons; `LoadedRuleFile`'s path; module doc; a fallback test's doc comment |
+| `runtime/src/primitives/rule_sections.rs` | Modify | `section_digests`, the file digest and each rule's own from one parse, and `named_rule_ids` |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | Its `LoadedRuleFile` paths; `verdicts.rejudged-files`, bounded |
 | `runtime/src/interpreter/payload.rs` | Modify | Its `standing` call |
-| `runtime/src/primitives/write_analysis.rs` | Modify | The two counts; the `section-digest` renderer moved out for the backfill; its `standing` call |
-| `runtime/src/primitives/analyze_subjects.rs` | Modify | The per-file hash and `section_digest` with `spec.md`'s text supplied |
+| `runtime/src/primitives/write_analysis.rs` | Modify | The two counts; the `section-digest` renderer moved out for the backfill; its `standing` call; a fallback test's doc comment |
+| `runtime/src/primitives/analyze_subjects.rs` | Modify | The per-file hash and `section_digest` with `spec.md`'s text supplied; its module doc and `exempt_renames`' doc name the rule-file copy's read of `analyzed-against` |
 | `runtime/src/primitives/backfill_section_digest.rs` | Create | The primitive |
 | `runtime/src/primitives/mod.rs` | Modify | Declare the module |
 | `runtime/src/schema/primitives.rs` | Modify | The backfill's arguments and result; `verdicts`' `rejudged-files`; `analyzed_against`'s doc comment |
 | `runtime/src/schema/descriptions.rs` | Modify | `DISCOVER_RULE_FILES`, `WRITE_ANALYSIS`, and the backfill's description |
 | `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` entry |
 | `runtime/src/mcp/server.rs` | Modify | Its `#[tool]` |
-| `runtime/src/interpreter/mod.rs` | Modify | Its `dispatch_primitive` arm |
+| `runtime/src/interpreter/mod.rs` | Modify | Its `dispatch_primitive` arm; the exec walker's AC2 test |
 | `runtime/src/main.rs` | Modify | Its `Command` and exit rule |
 | `runtime/tests/result_sizes.rs` | Modify | Its measured `case` |
+| `runtime/tests/crlf_preservation.rs` | Modify | The backfill's CRLF case |
 | `framework/runtime-tools.txt` | Modify | The tool's line |
-| `framework/bootstrap/configure/*.md` | Modify | Generated allow blocks (`scripts/gen-configure-mcp.sh`) |
+| `framework/bootstrap/configure/*.md` and `.claude/commands/ductus/configure.md` | Modify | Generated allow blocks (`scripts/gen-configure-mcp.sh`), and the claude file's generated command copy |
 | `framework/migrations/section-digest-backfill.md` | Create | The procedure |
 | `framework/migrations.toml` | Modify | Its entry |
 | `framework/bootstrap/ductus.md` | Modify | The claude seed gains the backfill's two entries |
 | `framework/bootstrap/govern.md` | Modify | The same, byte-identical to `ductus.md` |
 | `install.sh` | Modify | Its copy of the claude seed gains them |
 | `framework/constitution.md` | Modify | The analyze-record row gains `rules-judged` and `rules-carried` |
+| `framework/reference/analyze.md` and `.ductus/reference/analyze.md` | Modify | §Stored rule verdicts and the record fields state the per-rule rule and the two counts; the copy is generated |
+| `framework/reference/implement.md` and `.ductus/reference/implement.md` | Modify | The freshness sentence scopes its "only" to freshness; the copy is generated |
+| `docs/analyze.md` | Modify | The two counts, the `rule-digest` row's per-rule rule, and `analyzed-against`'s second read |
 | `scripts/mutation/rule-judgments-088.py` | Create | Each behavior's mutant |
+| `scripts/mutation/rule-verdicts-converge.py` | Modify | 082's mutants re-anchored where the comparison and the `section-digest` renderer moved |
 | `runtime/CHANGELOG.md` | Modify | The counts, the narrowing, the primitive and the migration |
 | `specs/*/analysis.md` | Modify | This corpus's records the backfill writes |
 | `specs/088-rule-judgments-cost-only-what-changed/spec.md` | Modify | The cost and what it retires, beside a signpost to 089 |
 | `specs/082-rule-assessments-converge-across-runs/data-model.md` | Modify | Relations and the `verdicts` section state the per-rule rule and point here |
 | `specs/082-rule-assessments-converge-across-runs/spec.md` | Modify | The per-file Resolved Question annotated as superseded; a signpost back-linking 088 |
-| `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | `write-analysis`' rule assessments gain the two counts |
+| `specs/082-rule-assessments-converge-across-runs/plan.md` | Modify | Its Trade-offs: a rule edit judges a whole file's rules only when the copy cannot stand in |
+| `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md` | Modify | Its one read of `analyzed-against` is freshness's |
+| `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | `write-analysis`' rule assessments gain the two counts; the `*-against` paragraph names the rule-file copy |
 | `specs/066-audit-records-and-the-completion-gate/spec.md` | Modify | Signpost back-linking 088 |
 | `specs/050-constitution/spec.md` | Modify | Signpost back-linking 088 |
 
@@ -189,11 +204,13 @@ It retires no primitive, check or record field. The counts hold what no field he
 ## Cross-spec impact
 
 - **050** owns the constitution's contents. Its analyze-record row gains `rules-judged` and `rules-carried`, in the change that writes them (task 1). The constitution held 49,869 bytes at `1ffaf951` by `wc -c`, 131 under the 50,000 that `scripts/lint-governing-size.sh` holds it to, and the other lane edits it, so the size is measured again at landing. A blockquoted signpost in 050's `spec.md` back-linking 088 discharges it (task 5).
-- **066** owns the record's schema and `write-analysis`' contract. Its data model's rule-assessment bullet under `write-analysis` gains the two counts by [data-model.md](data-model.md), in task 1. Nothing binds the written keys to that bullet or to the constitution's row (no test under `runtime/tests` or `scripts/audit` names them). A signpost in 066's `spec.md` discharges it (task 5).
+- **066** owns the record's schema and `write-analysis`' contract. Its data model's rule-assessment bullet under `write-analysis` gains the two counts by [data-model.md](data-model.md), in task 1, and its paragraph on the `*-against` fields names the rule-file copy as a second read of `analyzed-against`, in task 5. Nothing binds the written keys to that bullet or to the constitution's row (no test under `runtime/tests` or `scripts/audit` names them). A signpost in 066's `spec.md` discharges it (task 5).
 - **082** owns verdict currency and `discover-rule-files`' `verdicts` (AGENTS.md: "a feature-specific primitive lives with its feature").
   - Its data model's Relations ("a verdict is current while its rule's `rule-digest` entry matches the file") and its `discover-rule-files` section state the per-rule rule and point here for `rejudged-files`.
   - Its Resolved Question keeping the hash "per rule file, so a rule an upgrade edits is judged again with the rest of its file" is annotated as superseded by spec 088, named in prose: a link there would induce an edge from 082 to 088, a cycle with 088's own dependency on 082.
-  - These land in the change that makes the per-file rule false (task 2), and a signpost in its `spec.md` discharges it (task 5). They change a data model and prose only, so 082 stays `done`.
+  - Its plan's Trade-offs on the per-file hash say a rule edit judges a whole file's rules only when the copy cannot stand in (task 5).
+  - These land in the change that makes the per-file rule false (task 2), and a signpost in its `spec.md` discharges it (task 5). They change a data model, a plan and prose only, so 082 stays `done`.
+- **047** owes nothing. Its scenario `analyze-record-freshness` names the rename exemption as freshness's one read of `analyzed-against` (task 5), and a scenario's text edit leaves 047 `done` (§spec-lifecycle).
 - **060** owes nothing. Its walker asks about each rule "without a current stored verdict (spec 082)", which stays true as currency narrows.
 - **022** owes nothing. Its data model points at 082's for the `verdicts` block (082's plan, Cross-spec impact), and `ProjectRepository` and `blob_text` are called, not changed.
 - **089**'s AC4 binds 088: the cost statement and a signpost back-linking 089 in 088's body (task 6).
