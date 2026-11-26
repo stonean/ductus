@@ -23,9 +23,9 @@ Blocked on task 1: the step calls the primitive, and its test runs this tree's r
 
 Blocked on task 2: the measured run is the shipped step's. Its first subtask is blocked on task 4 too: a measurement at `2e784849` found each record read twice, which task 4 removes, so the cost is measured on the run task 4 leaves.
 
-- [ ] Measure one `check-audit-records` run over this repository's corpus, its wall time by `/usr/bin/time -p` and the bytes it reads, and the description's bytes; state them in `spec.md`'s body with what it retires, as the plan's *What a run costs, and what it retires* says, beside a blockquoted signpost to [089](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md)
-- [ ] Blockquoted signposts back-linking 085 in 057's and 066's `spec.md` bodies, saying the step now runs `check-audit-records`, each leaving its spec `done`
-- [ ] The prose-claim sweep for the step's old parse (`scripts/stale-literals.sh`, then a search by meaning for the step's inline reader), each stale claim corrected
+- [x] Measure one `check-audit-records` run over this repository's corpus, its wall time by `/usr/bin/time -p` and the bytes it reads, and the description's bytes; state them in `spec.md`'s body with what it retires, as the plan's *What a run costs, and what it retires* says, beside a blockquoted signpost to [089](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md)
+- [x] Blockquoted signposts back-linking 085 in 057's and 066's `spec.md` bodies, saying the step now runs `check-audit-records`, each leaving its spec `done`
+- [x] The prose-claim sweep for the step's old parse (`scripts/stale-literals.sh`, then a search by meaning for the step's inline reader), each stale claim corrected
 
 - **Done when**: `check-review-gate` reports 057 and 066 discharged, the spec states its cost with its method and units, and the sweep leaves no live claim of the old parse.
 

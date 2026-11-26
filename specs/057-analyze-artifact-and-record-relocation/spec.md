@@ -33,6 +33,14 @@ instead of two.
 > unchecked box or whose `spec.md` holds an unticked criterion. The other,
 > `No code is left unreviewed`, runs `check-unreviewed-code` and follows
 > `[review] unreviewed-push` as the pre-push hook does.
+>
+> **Signpost:** [085 — The audit-record gate reads records through the runtime](../085-the-audit-record-gate-reads-records-through-the-runtime/spec.md)
+> replaced the audit-record gate's inline frontmatter parse (AC17) with
+> `ductus check-audit-records`. The step still reads each `done` spec's
+> record from `review.md` and `analysis.md` and bounds its exempt set with
+> the committed marks in `.ductus/audit-record-baseline.txt`, now through the
+> completion gate's own read and parse, and annotates each finding on its
+> file.
 
 ## Motivation
 
