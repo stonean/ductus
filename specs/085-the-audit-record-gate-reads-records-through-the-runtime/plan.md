@@ -58,7 +58,7 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
 
 ### The template's step runs the primitive
 
-- **The step.** The step runs `ductus check-audit-records`, prints its report, and maps each finding line to `::error file=` with the project's path from the work tree (`git rev-parse --show-prefix`, as today, spec 059). Its exit status is the CLI's.
+- **The step.** The step runs `ductus check-audit-records`, prints its report, and maps each finding line to `::error file=` with the project's path from the work tree (`git rev-parse --show-prefix`, as today, spec 059), escaping `%` in the message. The nothing-examined line becomes an error of its own, and so does a check that fails with no line to annotate, naming its exit status. Its exit status is the CLI's.
 - **No interpolation.** It holds no `${{ }}` expression, so `scripts/run-workflow-steps.py` can run it, and it parses no frontmatter or markdown.
 - **The derive step.** Its spec-root extraction and `specs-root` output go, since the gate was their only reader.
 - **The header.** The template's header item 2 says the step runs the primitive.
@@ -76,13 +76,14 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
   - It asserts the step ran, never skipped.
   - It asserts each finding fails the step and is annotated on its file with the project's prefix.
   - It asserts the clean corpus passes with the counts reported.
+  - It asserts an empty corpus and a spec root that cannot be listed each fail the step with an error of its own, and that a `%` in a message is escaped.
 - **Where it runs.** `framework-checks.yml` gains a step running it after the runtime build, since a test that shells out to a repository script is a change to the job that runs it (§design-principles).
 
 ### What a run costs, and what it retires (089, AC4)
 
 A run is one `check-audit-records` call. It reads each feature's `spec.md` and the two records of each `done` spec. It is measured over this repository's corpus by wall time (`/usr/bin/time -p`, seconds) and by bytes read (`wc -c` of the files it opens).
 
-It also adds one MCP tool, whose description joins every session's deferred tool list, measured in bytes. It retires the step's inline python, 159 lines at `d4fa51ba` between `python3 - <<'PY'` and `PY`, and the derive step's spec-root extraction. It retires no primitive, check or record field, since the step it replaces held its own reader, not one the runtime had.
+It also adds one MCP tool, its description measured in bytes. Claude Code lists only its name in each session's deferred tools and loads its description and input schema when the tool is fetched, and Pi's bridge registers it with both at load. It retires the step's inline python, 159 lines at `d4fa51ba` between `python3 - <<'PY'` and `PY`, and the derive step's spec-root extraction. It retires no primitive, check or record field, since the step it replaces held its own reader, not one the runtime had.
 
 The measured figures go in the spec's body, where 089's Behavior puts them, beside a blockquoted signpost to 089, which induces no dependency edge (task 3).
 

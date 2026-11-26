@@ -1,7 +1,8 @@
-//! `check-audit-records` — every `done` spec's review and analyze record, read
-//! through the loaders `check-review-gate` reads them by (spec 085), so the
-//! adopter CI template's audit-record gate parses no frontmatter of its own
-//! (§runtime-boundary, principle 3).
+//! `check-audit-records` — every `done` spec's review and analyze record, each
+//! file read once and parsed by the read and parse of the loaders
+//! `check-review-gate` reads them by (spec 085), so the adopter CI template's
+//! audit-record gate parses no frontmatter of its own (§runtime-boundary,
+//! principle 3).
 //!
 //! A record is absent (never run, so it joins that record's exempt set),
 //! present and unreadable (undeterminable, a finding), or present, when a null

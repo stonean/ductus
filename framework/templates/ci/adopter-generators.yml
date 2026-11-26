@@ -152,8 +152,8 @@ jobs:
       - name: Audit-record gate on done specs
         # `ductus check-audit-records` reads every spec at `status: done`: its
         # review record from `review.md` and its analyze record from
-        # `analysis.md`, through the loaders the completion gate reads them by
-        # (spec 085), so this step parses no frontmatter of its own. Each must
+        # `analysis.md`, by the completion gate's own read and parse (spec
+        # 085), so this step parses no frontmatter of its own. Each must
         # carry a non-null `last-run` and `blocking: false`. Catches the
         # bypass case where someone edits frontmatter directly to set `done`
         # without running /ductus:review and /ductus:analyze.

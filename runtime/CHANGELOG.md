@@ -116,7 +116,7 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 - **`check-audit-records` reads every `done` spec's audit records (spec 085,
   AC2 and AC3; the agent's recommendations, adopted by the operator,
   2026-11-25).** It reads each `done` spec's `review.md` and `analysis.md`
-  through the loaders `check-review-gate` uses. An absent record joins that
+  once, by the read and parse of the loaders `check-review-gate` uses. An absent record joins that
   record's exempt set. A record that does not load, or whose `last-run` is
   null, absent or blank, is a finding, and so is one with no `blocking` key,
   since absent is not `false`, or with `blocking: true`. Each exempt set is

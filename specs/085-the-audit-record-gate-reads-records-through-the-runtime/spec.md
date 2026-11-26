@@ -45,7 +45,7 @@ Measured at `ed3375eb` with the release build, over this repository's corpus of 
 
   The tracked files' sizes are those of the commit's blobs. The count leaves out the git index the untracked listing reads and the directory walks.
 - **What it adds.** One MCP tool.
-  - Claude Code lists only its name in each session's deferred tools. Its description, 3,147 bytes, and input schema, 74, load when the tool is fetched: 3,221 characters by `scripts/measure-result-sizes.sh`, all ASCII.
+  - Claude Code lists only its name in each session's deferred tools. Its description, 3,184 bytes, and input schema, 74, load when the tool is fetched: 3,258 characters by `scripts/measure-result-sizes.sh`, all ASCII, measured at the commit that last edited `CHECK_AUDIT_RECORDS`.
   - Pi's bridge (`framework/bootstrap/pi/ductus-bridge.ts`) registers the tool with both at load.
   - Its result over that script's large fixture corpus is 21,197 characters.
 - **What it retires.**
@@ -57,7 +57,7 @@ Measured at `ed3375eb` with the release build, over this repository's corpus of 
 
 - [ ] AC1: `framework/templates/ci/adopter-generators.yml`'s audit-record gate calls one runtime primitive over the corpus and parses no frontmatter or markdown of its own.
 - [ ] AC2: The primitive reports each `done` spec's review and analyze record as absent, present or unparseable, and reports as a finding naming its file a present record with a null `last-run`, with no `blocking` field or with `blocking: true`, and a spec whose `spec.md` frontmatter cannot be read or names no `status`, or whose directory holds a link leaving the project.
-- [ ] AC3: The primitive holds each never-run set against its committed high-water mark, read from `.ductus/audit-record-baseline.txt`: a mark is zero when the file is absent or omits its key, a malformed or unreadable file is a finding naming it, and the step fails when either exempt set exceeds its mark.
+- [ ] AC3: The primitive holds each never-run set against its committed high-water mark, read from `audit-record-baseline.txt` in the project's `.ductus/`: a mark is zero when the file is absent or omits its key, a malformed or unreadable file is a finding naming it, and the step fails when either exempt set exceeds its mark.
 - [ ] AC4: The step reports the specs it examined, those at `done` and each exempt count with its mark on every run, and fails when it examined none.
 - [ ] AC5: A test proves each finding fails the step with its condition present and passes without it, from a project at the repository root and from one in a subdirectory.
 
