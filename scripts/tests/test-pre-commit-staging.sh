@@ -36,6 +36,11 @@
 #      (spec 017 task 48)
 #   K. a path-list commit carrying no generated output leaves the shared index
 #      untouched
+#   L. a commit from a linked worktree with a runtime/ path staged, where git
+#      hands the hook an absolute GIT_DIR and GIT_INDEX_FILE: a stand-in
+#      `cargo test` that stages a file in a fixture repository, as a runtime
+#      test does, acts on the fixture, and the commit's index keeps its entries
+#      (spec 017 task 49)
 #
 # HOOK_UNDER_TEST overrides the hook (scripts/mutation-style proofs that a case
 # fails with a behavior removed). The runtime is ./runtime/target/release/ductus
@@ -407,6 +412,49 @@ check "H: HEAD did not move" \
   test "$(g "$R" rev-parse HEAD)" = "$head_before"
 check "H: the index is as it was staged" \
   test "$(g "$R" write-tree)" = "$index_before"
+
+# L. a commit from a linked worktree with a runtime/ path staged. Git hands the
+# hook an absolute GIT_DIR and GIT_INDEX_FILE there, and the hook runs the
+# runtime's checks, so a test that runs git in a fixture repository would act
+# on the commit's own repository and index if it inherited them. The worktree
+# lacks the gitignored runtime link and markdown stub, so they are made again,
+# and a stand-in `cargo` on PATH for this commit alone stages a file in a
+# fixture repository on `cargo test`, leaving a marker that it ran.
+new_case l
+WT="$CASE/wt"
+FIXTURE="$CASE/fixture"
+g "$R" worktree add -q --detach "$WT"
+mkdir -p "$WT/runtime/target/release" "$WT/node_modules/.bin" "$CASE/bin"
+ln -s "$RUNTIME" "$WT/runtime/target/release/ductus"
+cp "$R/node_modules/.bin/markdownlint-cli2" "$WT/node_modules/.bin/"
+cat > "$CASE/bin/cargo" <<'STUB'
+#!/usr/bin/env bash
+# Stands in for the runtime's checks: `cargo test` builds a fixture repository
+# and stages a file in it, as a test that runs git does.
+[ "$1" = test ] || exit 0
+git init -q "$CARGO_STUB_FIXTURE"
+printf 'fixture\n' > "$CARGO_STUB_FIXTURE/fixture-entry"
+git -C "$CARGO_STUB_FIXTURE" add fixture-entry
+: > "$CARGO_STUB_FIXTURE.ran"
+STUB
+chmod +x "$CASE/bin/cargo"
+printf 'pub fn f() {}\n' > "$WT/runtime/lib.rs"
+g "$WT" add -- runtime/lib.rs
+if ( export PATH="$CASE/bin:$PATH" CARGO_STUB_FIXTURE="$FIXTURE"
+     unset DUCTUS_SKIP_RUNTIME_CHECKS
+     commit "$WT" "case l" ); then
+  pass "L: the commit from a linked worktree succeeds"
+else
+  fail "L: the commit from a linked worktree failed: $(cat "$CASE/commit.out")"
+fi
+check "L: the runtime checks ran the stand-in cargo test" test -e "$FIXTURE.ran"
+check "L: the stand-in's git add staged into the fixture's own index" \
+  g "$FIXTURE" ls-files --error-unmatch fixture-entry
+check "L: the commit holds the staged runtime path and nothing else" \
+  test "$(committed_files "$WT")" = "runtime/lib.rs"
+check "L: the worktree's index names no fixture entry" \
+  bash -c '! git -C "$1" ls-files --error-unmatch fixture-entry > /dev/null 2>&1' _ "$WT"
+check "L: the worktree's index matches the commit" g "$WT" diff --cached --quiet
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures case(s) failed" >&2

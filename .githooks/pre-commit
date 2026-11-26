@@ -74,7 +74,8 @@
 #
 # When staged files include anything under runtime/, this hook additionally
 # runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
-# -- -D warnings`, and `cargo test` against the runtime crate. Skip the
+# -- -D warnings`, and `cargo test` against the runtime crate, with git's
+# exported variables cleared so no test can write the commit's index. Skip the
 # cargo checks for a single commit with DUCTUS_SKIP_RUNTIME_CHECKS=1.
 #
 # After every write above has landed, it runs
@@ -206,13 +207,15 @@ esac
 orig_tree="$(git write-tree)"
 head_sha="$(git rev-parse --verify -q HEAD || true)"
 
-# Every git command and primitive aimed at the scratch repository runs with
-# git's own exported variables cleared: git sets GIT_DIR (absolute in a linked
-# worktree) for a hook, and either it or GIT_INDEX_FILE would aim them back at
-# the real repository.
+# Git's own exported variables. Git sets GIT_INDEX_FILE for a hook, and in a
+# linked worktree GIT_DIR too, both absolute there, so a git command run by
+# anything the hook starts, wherever it runs, would act on this repository and
+# the commit's index. Every git command and primitive aimed at the scratch
+# repository below, and the runtime checks, run with them cleared.
+hook_git_vars=(GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
+  GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES)
 (
-  unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR \
-    GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+  unset "${hook_git_vars[@]}"
   git init -q "$scratch"
   printf '%s\n' "$real_objects" > "$scratch/.git/objects/info/alternates"
   if [ -n "$head_sha" ]; then
@@ -352,7 +355,10 @@ if [[ "${DUCTUS_SKIP_RUNTIME_CHECKS:-0}" != "1" ]] \
   if ! command -v cargo > /dev/null; then
     echo "pre-commit: runtime/ changes staged but cargo not on PATH; skipping verification" >&2
   else
+    # A test that runs git in a fixture repository must act on the fixture,
+    # never on the commit's index (spec 017 task 49).
     (
+      unset "${hook_git_vars[@]}"
       cd runtime
       cargo fmt --all -- --check
       cargo clippy --all-targets --all-features -- -D warnings

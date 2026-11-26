@@ -52,12 +52,13 @@ pub fn release_binary() -> std::path::PathBuf {
 /// that runs git in a fixture repository acts on the fixture and never on the
 /// repository whose hook is running the suite. A commit from a linked
 /// worktree hands its pre-commit hook an absolute `GIT_DIR` and
-/// `GIT_INDEX_FILE`, and this repository's hook runs `cargo test`: inherited,
-/// they make a fixture's `git init` re-initialise the outer repository, its
-/// `git config` write the outer config, and its `git add` stage into the
-/// outer index. A test that spawns git builds its command here, as one that
-/// spawns the runtime builds it with [`ductus_command`], and one that spawns
-/// a program that runs git itself passes its command through
+/// `GIT_INDEX_FILE`: inherited by a test, they make a fixture's `git init`
+/// re-initialise the outer repository, its `git config` write the outer
+/// config, and its `git add` stage into the outer index. This repository's
+/// hook clears them before it runs `cargo test` (spec 017 task 49), and no
+/// test relies on that: one that spawns git builds its command here, as one
+/// that spawns the runtime builds it with [`ductus_command`], and one that
+/// spawns a program that runs git itself passes its command through
 /// [`without_git_hook_variables`].
 pub fn git_command() -> Command {
     without_git_hook_variables(Command::new("git"))

@@ -336,11 +336,13 @@ fn fixture_tests() -> Vec<&'static str> {
 }
 
 /// A commit from a linked worktree hands its pre-commit hook an absolute
-/// `GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE`, and the hook runs this
-/// suite, so each fixture test must act on its own repository with all three
-/// naming another one (066 task 8). Each is re-run in a child of this binary
-/// with them set to a repository it never builds, and must pass, and must
-/// have run: a filter that matches no test exits 0 too.
+/// `GIT_DIR` and `GIT_INDEX_FILE`, so each fixture test must act on its own
+/// repository with a hook's git variables naming another one (066 task 8),
+/// whether or not the hook running the suite clears them, as this
+/// repository's does (spec 017 task 49). Each is re-run in a child of this
+/// binary with `GIT_DIR`, `GIT_WORK_TREE` and `GIT_INDEX_FILE` set to a
+/// repository it never builds, and must pass, and must have run: a filter
+/// that matches no test exits 0 too.
 #[test]
 fn the_fixture_tests_pass_under_a_hooks_git_variables() {
     let other = tempfile::tempdir().unwrap();
