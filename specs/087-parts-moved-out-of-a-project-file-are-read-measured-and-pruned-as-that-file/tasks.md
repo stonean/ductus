@@ -147,7 +147,7 @@ The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a p
 - [x] Run `/ductus:prune --project` here, confirm the move `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` with every referrer the search finds, this spec's own files included, and end the run after the move, before the entry walk
 - [x] Commit the rename and substitution alone, as a mechanical sweep
 - [x] In a commit of its own: add `.ductus/docs/` to `AGENTS.md`'s sweep-targets list; re-measure `AGENTS.md` against its 50,000-byte ceiling; restore each line of this spec's `spec.md`, `plan.md` and `tasks.md` that the substitution made `X → X`, or that records a measurement of the old path, to the old path in the `` ` → ` `` form or to non-path form
-- [ ] Run `scripts/audit/run-all.sh` after the commits
+- [x] Run `scripts/audit/run-all.sh` after the commits
 
 - **Done when**: the file is at its new path; every line `git grep -n 'docs/developing-ductus[.]md'` lists records the move in the `` ` → ` `` form; the two commits' combined diff holds no `X → X` (both readings the agent's recommendation, adopted by the operator, 2026-11-26); `check-corpus-links`, `scripts/lint-governing-size.sh` and the audit run pass; the sweep commit names each file the move wrote.
 
