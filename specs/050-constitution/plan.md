@@ -397,7 +397,7 @@ The one entry the promotion-coverage notice reported unclassified on 2026-10-17,
 
 #### Fifth round — project-only
 
-The row for the one entry since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges`, to `docs/developing-ductus.md`, was this table's only row, so the table went with it.
+The row for the one entry since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges`, to `.ductus/docs/agents/developing-ductus.md`, was this table's only row, so the table went with it.
 
 Two entries were reclassified after checking the constitution rather than the
 survey: **W14 and W15 were already promoted, and are gone.** They stated

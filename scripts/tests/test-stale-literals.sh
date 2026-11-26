@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test surface for scripts/stale-literals.sh, the literal search of a
-# landing's sweep (docs/developing-ductus.md §Landing a runtime change, step 3).
+# landing's sweep (.ductus/docs/agents/developing-ductus.md §Landing a runtime change, step 3).
 #
 # The search is only worth running if two things hold:
 #   - it lists what a diff left behind;

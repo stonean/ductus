@@ -10,7 +10,7 @@ examined: 1
 scope: 7
 unread:
   - .ductus/reference/review.md
-  - docs/developing-ductus.md
+  - .ductus/docs/agents/developing-ductus.md
   - framework/reference/review.md
   - runtime/CHANGELOG.md
   - specs/081-reviews-and-checks-follow-what-changed/analysis.md
@@ -118,7 +118,7 @@ decisions:
 
 ## Summary
 
-Review of 081's code changed since its last review, from `11a20ebd` (`last-review`) to `861c18ae`, for 084's task 19. The five passes read the spec's own change, the hunks of three commits (`f894be65`, `e54acd35`, `4959acf0`) in `docs/developing-ductus.md`, against the five loaded rule files, each read whole (231,962 bytes): no finding and one observation. The Review bullet briefed subagent B on "the other nine rule files", while the paragraph the same slice adds above it says a review loads five since 020's AC17, so B's files are two. A chore, fixed in the run by the rule: the bullet now names `quality-cross.md` and `configuration-cross.md`. The passes were re-run over that fix's diff, against the same five rule files read whole: no finding and no observation, the bullet agreeing with the earlier paragraph and with `discover-rule-files`, which selects those five here. One fix round, re-read by an independent agent from `brief-re-read`'s brief: clean, and the next round empty. The new bullets' fetch counts, token figures and incident dates are session history, which no source at hand could re-check. The criteria step judged all 14 criteria met against the tree; AC10, AC13 and AC14 were judged in the part 084 left in force. Stored decisions: 10 retained on files this scope does not hold; none names `docs/developing-ductus.md`. Examined 1 of 7: `specs/081-reviews-and-checks-follow-what-changed/spec.md`, read whole by the criteria step. Unread, by the operator's decision to read each spec's own change (084's `tasks.md`, task 19): `docs/developing-ductus.md`, read at the slice's hunks and the Review bullet's and Sizing paragraph's lines; `framework/reference/review.md` and `specs/081-reviews-and-checks-follow-what-changed/plan.md`, read in part; and `.ductus/reference/review.md`, `runtime/CHANGELOG.md` and 081's `analysis.md`, not opened by the passes.
+Review of 081's code changed since its last review, from `11a20ebd` (`last-review`) to `861c18ae`, for 084's task 19. The five passes read the spec's own change, the hunks of three commits (`f894be65`, `e54acd35`, `4959acf0`) in `.ductus/docs/agents/developing-ductus.md`, against the five loaded rule files, each read whole (231,962 bytes): no finding and one observation. The Review bullet briefed subagent B on "the other nine rule files", while the paragraph the same slice adds above it says a review loads five since 020's AC17, so B's files are two. A chore, fixed in the run by the rule: the bullet now names `quality-cross.md` and `configuration-cross.md`. The passes were re-run over that fix's diff, against the same five rule files read whole: no finding and no observation, the bullet agreeing with the earlier paragraph and with `discover-rule-files`, which selects those five here. One fix round, re-read by an independent agent from `brief-re-read`'s brief: clean, and the next round empty. The new bullets' fetch counts, token figures and incident dates are session history, which no source at hand could re-check. The criteria step judged all 14 criteria met against the tree; AC10, AC13 and AC14 were judged in the part 084 left in force. Stored decisions: 10 retained on files this scope does not hold; none names `.ductus/docs/agents/developing-ductus.md`. Examined 1 of 7: `specs/081-reviews-and-checks-follow-what-changed/spec.md`, read whole by the criteria step. Unread, by the operator's decision to read each spec's own change (084's `tasks.md`, task 19): `.ductus/docs/agents/developing-ductus.md`, read at the slice's hunks and the Review bullet's and Sizing paragraph's lines; `framework/reference/review.md` and `specs/081-reviews-and-checks-follow-what-changed/plan.md`, read in part; and `.ductus/reference/review.md`, `runtime/CHANGELOG.md` and 081's `analysis.md`, not opened by the passes.
 
 1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
 
@@ -165,7 +165,7 @@ Review of 081's code changed since its last review, from `11a20ebd` (`last-revie
 
 ## Observations
 
-- convention: the Review bullet in `docs/developing-ductus.md` still briefs subagent B on "the other nine rule files", while the paragraph the same slice adds above it (since 020's AC17) says a review loads five files, so B's rule files are now two, `quality-cross.md` and `configuration-cross.md`; seven of the nine are judged by analysis alone. A maintainer who follows the bullet briefs B on files the review does not load. — `docs/developing-ductus.md` — **fixed** (decided by the rule)
+- convention: the Review bullet in `.ductus/docs/agents/developing-ductus.md` still briefs subagent B on "the other nine rule files", while the paragraph the same slice adds above it (since 020's AC17) says a review loads five files, so B's rule files are now two, `quality-cross.md` and `configuration-cross.md`; seven of the nine are judged by analysis alone. A maintainer who follows the bullet briefs B on files the review does not load. — `.ductus/docs/agents/developing-ductus.md` — **fixed** (decided by the rule)
 
 ## Skipped passes
 

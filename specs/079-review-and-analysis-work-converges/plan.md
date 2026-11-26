@@ -183,7 +183,7 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `framework/reference/groom.md` | Modify | Dispositions |
 | `framework/reference/status.md` | Modify | Drops what `dashboard` renders |
 | `docs/analyze.md` | Modify | Dispositions |
-| `docs/developing-ductus.md` | Create | Procedures moved out of `AGENTS.md` |
+| `.ductus/docs/agents/developing-ductus.md` | Create | Procedures moved out of `AGENTS.md` |
 | `docs/slash-commands.md` | Modify | Dispositions, reopen |
 | `README.md` | Modify | Confirmation claim |
 | `AGENTS.md` | Modify | Retired window and fix-round entries |

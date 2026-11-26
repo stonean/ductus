@@ -222,7 +222,7 @@ decisions:
     decided-by: rule
   - key: "other: nothing ties the reasons check-artifacts, resolve-anchor, check-rule-ids and the exec walker's tally emit to UNEXAMINED_REASONS; the test holds the list equal to the data model's table only, so a skip reason added to a check and not to the list and table makes every write-analysis that records it fail with a refusal naming the reason (loud, never a silent record). Every reason those sources emit at HEAD is in the list (checked by reading each emitter) — `runtime/src/primitives/write_analysis.rs`"
     outcome: waived
-    reason: the refusal is loud and names the reason, so the gap cannot pass as a clean record; docs/developing-ductus.md's closed-set procedure greps a sibling reason such as root-absent across runtime/src and so reaches UNEXAMINED_REASONS; a test enumerating every emitter would copy the checks' reason sets, which this review found equal to the list at HEAD
+    reason: the refusal is loud and names the reason, so the gap cannot pass as a clean record; .ductus/docs/agents/developing-ductus.md's closed-set procedure greps a sibling reason such as root-absent across runtime/src and so reaches UNEXAMINED_REASONS; a test enumerating every emitter would copy the checks' reason sets, which this review found equal to the list at HEAD
     decided-at: 2026-11-18T02:04:08Z
     decided-by: rule
   - key: other — a run judging only some criteria records criteria-judged and criteria-met over those alone, and its generated Summary reads 'N of N', with no count of the criteria it left unjudged — `runtime/src/primitives/write_review.rs`
@@ -232,7 +232,7 @@ decisions:
     decided-by: rule
   - key: other — 66203361 (task 27b) also carries 029 task 17's edit to framework/bootstrap/ductus.md and govern.md, dropping the 'after a fallback to tar' clause, which its message does not name — `framework/bootstrap/ductus.md`
     outcome: waived
-    reason: another session's staged hunk that rode along through the shared index; docs/developing-ductus.md §Running a second session records the incident, history on main stays as written, and the section reads consistently with 029 task 17
+    reason: another session's staged hunk that rode along through the shared index; .ductus/docs/agents/developing-ductus.md §Running a second session records the incident, history on main stays as written, and the section reads consistently with 029 task 17
     decided-at: 2026-11-19T00:38:50Z
     decided-by: rule
   - key: bug — criterion_verdicts keeps verdicts by text digest, so two criteria whose text is the same, labels set aside, share one met verdict — `runtime/src/primitives/criterion_verdicts.rs`
@@ -255,7 +255,7 @@ decisions:
     reason: the walker halts on any primitive error by design; the refused criterion is left as it was and no record is written, so the review stays owed and compute-review-scope names every criterion not judged met, the scenario's outcome
     decided-at: 2026-11-19T00:38:50Z
     decided-by: rule
-  - key: other — docs/developing-ductus.md §Sizing a review's parts calls the nine loaded rule files backend and gives 285,666 bytes, against 285,795 at HEAD with three of them cross files — `docs/developing-ductus.md`
+  - key: other — .ductus/docs/agents/developing-ductus.md §Sizing a review's parts calls the nine loaded rule files backend and gives 285,666 bytes, against 285,795 at HEAD with three of them cross files — `.ductus/docs/agents/developing-ductus.md`
     outcome: waived
     reason: a dated measurement of 2026-11-16 and 2026-11-17, outside efd3d488's hunks, and the drift changes no sizing rule the paragraph states
     decided-at: 2026-11-19T00:38:50Z
@@ -412,7 +412,7 @@ Window 4517dd74 to 4825d1d3 (diff-base from the last review; base-source last-re
 - `AGENTS.md`
 - `README.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/slash-commands.md`
 - `framework/bootstrap/configure/claude.md`

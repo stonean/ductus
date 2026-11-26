@@ -9,7 +9,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
 - [x] Create `runtime/src/primitives/owed_work.rs` calling `read_tasks::unchecked_lines` and `read_spec::parse_checkboxes`, and move `check_artifacts::check_unchecked_boxes`, `check_artifacts::check_unticked_criteria`, `check_review_gate::unchecked_task_block`, `check_review_gate::unticked_criterion_block` and `measure_reopenings::waiting_features` onto it, each keeping the half it read: `waiting_features` the boxes alone
-- [x] Add `check-owed-work` at the seven registration sites `docs/developing-ductus.md` names, with its compiled description
+- [x] Add `check-owed-work` at the seven registration sites `.ductus/docs/agents/developing-ductus.md` names, with its compiled description
 - [x] Its corpus form: with `all`, every `done` spec that owes work, `examined-count` and `skipped`
 - [x] Test both directions and add a mutant per condition, each killed
 
@@ -157,7 +157,7 @@ Handed on from task 9: the CLI's exit status is the hook's (`unreviewed_code_blo
 - [x] `framework/bootstrap/hooks/ductus-pre-push` and `framework/bootstrap/hooks/pre-push`, shaped as the pre-commit pair
 - [x] `framework/bootstrap/ductus.md` §Shared Files rows and the `claude` registry row's `chmod` seed, mirrored in `framework/bootstrap/govern.md` and `install.sh`; `framework/bootstrap/ductus-procedure.md` §Hook Installation
 - [x] A `scripts/audit/adopter-shell-behavior.sh` fixture for each AC8 case; `.github/workflows/runtime.yml`'s path triggers stay as they are, since no runtime test reads the hook (the agent's recommendation, adopted by the operator, 2026-11-24)
-- [x] A scratch-adopter bootstrap, per `docs/developing-ductus.md`'s installer section
+- [x] A scratch-adopter bootstrap, per `.ductus/docs/agents/developing-ductus.md`'s installer section
 
 - **Done when**: AC8 holds on an adopter-shaped tree, each case proven, a shallow clone and a missing runtime among them.
 
@@ -250,7 +250,7 @@ Model: opus, with fable as advisor (owner, 2026-11-25).
 
 Model: opus (owner, 2026-11-25).
 
-- [x] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `docs/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
+- [x] `framework/bootstrap/`, `framework/migrations/`, `framework/templates/ci/` — tasks 11 and 12 exercised the manifest rows with `apply-manifest` and the migration's steps by hand (a6216034's message), not a `/ductus --ref=main` run by an agent reading the procedure, which `AGENTS.md` asks for after such a change; deferred to run once with task 13's template change (owner, 2026-11-24). Run it per `.ductus/docs/agents/developing-ductus.md` §Exercising an installer change without a push, on a subject behind the release: an update that gains `.githooks/ductus-pre-push`, `.githooks/pre-push` and a seeded `specs/review.md` with the migration's backlog report, and a first adoption that gains the seed
 
 - **Done when**: both runs end as the body item says, a second update writes nothing, and the commit records each run's outcome.
 
@@ -301,7 +301,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 
 Model: opus, with fable as advisor (owner, 2026-11-24).
 
-This is the last task. It waits on the `done` specs `check-unreviewed-code` names, reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079). At `68c420a5` it named 9 specs and 81 paths and examined every subject. 025, 062, 012, 000 and 069 were reviewed since, in that order, each record committed and pushed, so at `716f7378` it names 049, 060, 081 and 021, 74 paths, owed in that order. One session reviews them one by one, smallest first, each from a clean worktree of `origin/main` (owner, 2026-11-25). One worktree serves them in turn only because each record is committed with its fixes before the next spec's first `write-review`, as `docs/developing-ductus.md` §Sizing a review's parts requires in a shared tree. The passes are batched: one part over the eight small windows, two over 021's, and one criteria part per spec. They read each spec's own change, the hunks of the commits that gave it its paths: about 365 KB at `68c420a5`, 303 KB of it 021's. Each entry an older record left `unread`, such as `runtime/CHANGELOG.md`, is named `unread` again, which still moves the window (`compute_review_scope::recorded_run`), and that spec's next review reads it (both the agent's recommendations, adopted by the operator, 2026-11-25). Once 084 reaches `done`, tell the owner the date of the commit that set it: the bar's two weeks start there (spec, Resolved Questions, the bar).
+This is the last task. It waits on the `done` specs `check-unreviewed-code` names, reviewed outside this spec's tasks, since no task schedules `/ductus:review` (spec 079). At `68c420a5` it named 9 specs and 81 paths and examined every subject. 025, 062, 012, 000 and 069 were reviewed since, in that order, each record committed and pushed, so at `716f7378` it names 049, 060, 081 and 021, 74 paths, owed in that order. One session reviews them one by one, smallest first, each from a clean worktree of `origin/main` (owner, 2026-11-25). One worktree serves them in turn only because each record is committed with its fixes before the next spec's first `write-review`, as `.ductus/docs/agents/developing-ductus.md` §Sizing a review's parts requires in a shared tree. The passes are batched: one part over the eight small windows, two over 021's, and one criteria part per spec. They read each spec's own change, the hunks of the commits that gave it its paths: about 365 KB at `68c420a5`, 303 KB of it 021's. Each entry an older record left `unread`, such as `runtime/CHANGELOG.md`, is named `unread` again, which still moves the window (`compute_review_scope::recorded_run`), and that spec's next review reads it (both the agent's recommendations, adopted by the operator, 2026-11-25). Once 084 reaches `done`, tell the owner the date of the commit that set it: the bar's two weeks start there (spec, Resolved Questions, the bar).
 
 - [x] Remove `[review] unreviewed-push = "warn"` from `.ductus/config.toml` once `check-unreviewed-code` reports nothing here
 

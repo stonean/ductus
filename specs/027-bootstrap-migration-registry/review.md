@@ -238,7 +238,7 @@ Review of the window since 027's last review (diff base `32d726ed`, base-source 
 
 ## Excluded from scope
 
-- `docs/developing-ductus.md` — 066-audit-records-and-the-completion-gate
+- `.ductus/docs/agents/developing-ductus.md` — 066-audit-records-and-the-completion-gate
 - `specs/066-audit-records-and-the-completion-gate/tasks.md` — 066-audit-records-and-the-completion-gate
 
 ## Unexamined governance

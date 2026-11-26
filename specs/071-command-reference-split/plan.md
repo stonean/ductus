@@ -326,7 +326,7 @@ to a follow-up.
 | `specs/067-analyze-and-audit-checks/data-model.md` | Edit | `resolve-anchor` kind and count |
 | `specs/026-framework-self-audit/scenarios/*.md` | Create | The family-subject scenario |
 | `AGENTS.md` | Edit | Project Structure; the pre-commit-hook gotcha |
-| `docs/developing-ductus.md` | Edit | The new-slash-command procedure names the reference file and its manifest row |
+| `.ductus/docs/agents/developing-ductus.md` | Edit | The new-slash-command procedure names the reference file and its manifest row |
 
 ## Trade-offs
 

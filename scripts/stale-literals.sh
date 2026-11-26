@@ -7,7 +7,7 @@
 #   - a fixture copying a contract string the change narrowed;
 #   - a figure another landing had moved;
 #   - a header naming a count the change made untrue.
-# docs/developing-ductus.md §Landing a runtime change, step 3, runs this before
+# .ductus/docs/agents/developing-ductus.md §Landing a runtime change, step 3, runs this before
 # a change commits and before a fix round's brief-re-read. Reading the change's
 # enumerations and re-measuring its figures stay the operator's: a word like
 # "two" is no literal this can search for.

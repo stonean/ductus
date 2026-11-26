@@ -172,7 +172,7 @@ Both honour the job's commented `working-directory`. The pinned `DUCTUS_VERSION`
 
 ### Retiring `classify-spec-edit`
 
-In the change that moves amend, groom, fold and prune onto `check-owed-work`, the one that leaves it unread (AC12), `runtime/src/primitives/classify_spec_edit.rs` is removed from the seven registration sites `docs/developing-ductus.md` §Adding or removing a runtime primitive names, with its schema types. `scripts/gen-configure-mcp.sh` regenerates the configure allow blocks. `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools the server no longer serves gain it, as 081's AC3 did for `check-review-freshness`.
+In the change that moves amend, groom, fold and prune onto `check-owed-work`, the one that leaves it unread (AC12), `runtime/src/primitives/classify_spec_edit.rs` is removed from the seven registration sites `.ductus/docs/agents/developing-ductus.md` §Adding or removing a runtime primitive names, with its schema types. `scripts/gen-configure-mcp.sh` regenerates the configure allow blocks. `merge_permissions::RETIRED_ALLOW` and `framework/bootstrap/configure/claude.md`'s list of tools the server no longer serves gain it, as 081's AC3 did for `check-review-freshness`.
 
 Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'s compiled text, the `runtime/tests/mcp.rs` case on its description, and its row in `runtime/src/interpreter/mod.rs`'s `feature_argument_cases` table, a site beyond the seven. Two compiled texts state the correction class the constitution no longer defines, and are reworded: `descriptions::RELOCATE_AUDIT_RECORDS` and the cross-spec-impact message in `check_review_gate.rs`.
 
@@ -228,7 +228,7 @@ Its mutants and its other mentions go. Not comments: `descriptions::PRUNE_PLAN`'
 | `framework/migrations/audit-record-relocate.md`, `criterion-label-backfill.md` | Modify | The sweep: each calls its edit a correction under §spec-lifecycle |
 | `.github/workflows/framework-checks.yml` | Modify | The new test |
 | `.githooks/pre-push`, `.ductus/config.toml`, `specs/review.md` | Create, Modify, Create | This repository's hook, its `warn`, its seed |
-| `AGENTS.md`, `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`, `docs/developing-ductus.md` | Modify | The sweep |
+| `AGENTS.md`, `README.md`, `specs/README.md`, `docs/slash-commands.md`, `docs/analyze.md`, `.ductus/docs/agents/developing-ductus.md` | Modify | The sweep |
 | `specs/008-*`, `011-*`, `013-*`, `014-*`, `016-*`, `022-*`, `023-*`, `026-*`, `030-*`, `035-*`, `041-*`, `047-*`, `049-*`, `050-*`, `051-*`, `054-*`, `063-*`, `066-*`, `067-*`, `073-*`, `079-*`, `080-*`, `081-*` | Modify | The sweep and AC11's notes |
 | `specs/018-*`, `020-*`, `022-*`, `046-*`, `050-*`, `051-*`, `057-*`, `066-*`, `067-*`, `079-*`, `080-*`, `081-*`, `083-*` | Modify | Back-links discharging `cross-spec-impact:` |
 

@@ -17,7 +17,7 @@ The 2026-07-11 coverage review found ~22 of 100 parsed command steps are determi
 
 ## Behavior
 
-New primitives, each wired at every site per `docs/developing-ductus.md` §Adding or removing a runtime primitive (schema Args/Result, primitive module + `mod.rs`, MCP server + `TOOL_NAMES`, `PRIMITIVE_NAMES`, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entry, regenerated configure permission blocks):
+New primitives, each wired at every site per `.ductus/docs/agents/developing-ductus.md` §Adding or removing a runtime primitive (schema Args/Result, primitive module + `mod.rs`, MCP server + `TOOL_NAMES`, `PRIMITIVE_NAMES`, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entry, regenerated configure permission blocks):
 
 - `remove-inbox-item` — dedup-aware removal of one bullet from `specs/inbox.md` (the complement of `append-inbox`, same atomic-write contract); groom step 9 invokes it.
 - `diff-cross-spec` (or a mode on `derive-boundary`) — the `git diff` from the window it reports as `window-base` (spec 079) filtered to paths outside `specs/{feature}/`, plus the inbox-window additions; implement steps 7/13 and the review captured-issues section invoke it. **058 removed the inbox-window half**: `diff-cross-spec` returns the cross-spec paths alone, and the review has no captured-issues section.

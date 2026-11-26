@@ -48,7 +48,7 @@ Implemented in `364c330b` (landed on `main` 2026-11-12), and verified by the scr
 - [x] spec.md: AC7 annotated superseded, since the loop also reads the pre-run `git status --porcelain -- specs/`, the active config and the guard's procedure-file existence. AC21 narrowed: an absent target emits nothing, while a present, converged target reports one `left as is` line in inbox-guidance-refresh, memory-routing-leaves-claude-md, remove-legacy-constitutions-region, strip-inbox-guidance and constitution-import. AC27's `aborts the batch at that entry` annotated superseded by 367c8817's guard-first placement
 - [x] AC30 and `scenarios/migrations-apply-once-per-repo.md` Behavior bullet 5 cite `gitignore-marker-rename` in the past tense, since c061c1f0 archived it
 
-- **Done when**: each item holds against the tree; Family 10 and its tests pass on the tree and the new case fails without the check; the landing follows docs/developing-ductus.md §Landing a runtime change steps 3 to 5; and 027's review of the window since fdf80a2f, its analysis and its gate follow
+- **Done when**: each item holds against the tree; Family 10 and its tests pass on the tree and the new case fails without the check; the landing follows .ductus/docs/agents/developing-ductus.md §Landing a runtime change steps 3 to 5; and 027's review of the window since fdf80a2f, its analysis and its gate follow
 
 ## 20. Exercise task 19's guard text in a scratch-adopter bootstrap
 

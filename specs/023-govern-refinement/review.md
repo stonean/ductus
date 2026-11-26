@@ -116,7 +116,7 @@ dispositions:
   waived: 7
   undispositioned: 0
 decisions:
-  - key: "convention: Adding or removing a runtime primitive names six sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `docs/developing-ductus.md`"
+  - key: "convention: Adding or removing a runtime primitive names six sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `.ductus/docs/agents/developing-ductus.md`"
     outcome: waived
     reason: "the pipeline's own maintainer procedure: a doc line would rest the next removal on the remover's memory, and a check deriving retired MCP entries from history is a new audit family, not a mechanical fix; this run retired the three entries the gap left"
     decided-at: 2026-11-07T23:21:03Z

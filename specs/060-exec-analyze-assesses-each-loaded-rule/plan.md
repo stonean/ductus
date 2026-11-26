@@ -146,7 +146,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
   Each is parsed and checked when the script starts, never coerced to its default. A value that fails exits 2, naming the setting, the value and the bound.
 - **Shares keep each rule file whole and balance by rendered bytes.** A cell is one share beside the spec, plan, data model and a scenario group. Scenarios are grouped only when one cell would pass `--cell-bytes`, into the fewest groups that keep each cell within it. A share or cell that cannot fit, because a rule file or a scenario is larger than its budget, is named in a note. The defaults are `DEFAULT_SHARE_BYTES` and `DEFAULT_CELL_BYTES`:
   - 135,000 bytes a share, just over the largest of the three rendered shares the 2026-11-18 analyses judged whole (114,213 to 132,784 bytes, by `wc -c`);
-  - 480,000 a cell, the top of the 450 to 480 KB cells that `docs/developing-ductus.md` §Sizing an analysis's judges records finishing whole reads.
+  - 480,000 a cell, the top of the 450 to 480 KB cells that `.ductus/docs/agents/developing-ductus.md` §Sizing an analysis's judges records finishing whole reads.
 - **The briefs point at the canonical text.** A judge reads steps 11, 12 or 15 and the reference sections they name, so a template restates none of them. It carries only the run's facts and the JSON `check.py` reads back.
 - **A cite is checked with `read-section`.** Its exact-text heading match uses the same `heading_lines` parse that `write-analysis`'s `cite_resolves` does, so a cite `check.py` passes is one the record keeps.
 - **A disagreement goes to the host, never to a default.** Cells agreeing on a finding give a finding. A finding beside a cell that read other scenarios and found none is unsettled, since that cell may have read what addresses it. `record.py` refuses any rule its plan file does not settle.
@@ -183,7 +183,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
 | `scripts/analyze/*.py`, `scripts/analyze/*.md` | Create | The host's rule-judging orchestration and its two brief templates |
 | `scripts/tests/test-analyze-scripts.py` | Create | Each script against a stub runtime |
 | `.github/workflows/framework-checks.yml` | Modify | Step (ab) runs the test |
-| `docs/developing-ductus.md` | Modify | §Sizing an analysis's judges names the scripts and the disagreement rule |
+| `.ductus/docs/agents/developing-ductus.md` | Modify | §Sizing an analysis's judges names the scripts and the disagreement rule |
 | `docs/runtime.md` | Modify | Its environment-variable table lists `ANALYZE_WORK` and `ANALYZE_TIMEOUT_SECONDS`, and names `scripts/analyze/` in `DUCTUS_BIN`'s row |
 | `AGENTS.md` | Modify | Points every session at `scripts/analyze/` |
 

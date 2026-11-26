@@ -521,15 +521,15 @@ decisions:
     decided-by: rule
   - key: "reuse: main.rs and the interpreter keep separate hand-maintained per-primitive lists — `runtime/src/main.rs`"
     outcome: waived
-    reason: flat registries pinned by set-equality tests, a design docs/developing-ductus.md records
+    reason: flat registries pinned by set-equality tests, a design .ductus/docs/agents/developing-ductus.md records
     decided-at: 2026-11-11T13:40:45Z
     decided-by: rule
   - key: "contract: the two flattened Option result halves allow neither or both; an untagged enum would keep exactly one — `runtime/src/schema/primitives.rs`"
     outcome: waived
-    reason: rmcp refuses a tool output schema that is not an object, and an untagged enum's root is anyOf; docs/developing-ductus.md records the flattened-halves design
+    reason: rmcp refuses a tool output schema that is not an object, and an untagged enum's root is anyOf; .ductus/docs/agents/developing-ductus.md records the flattened-halves design
     decided-at: 2026-11-11T13:40:45Z
     decided-by: rule
-  - key: "convention: Adding or removing a runtime primitive names seven sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `docs/developing-ductus.md`"
+  - key: "convention: Adding or removing a runtime primitive names seven sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `.ductus/docs/agents/developing-ductus.md`"
     outcome: waived
     reason: "the pipeline's own maintainer procedure: a doc line would rest the next removal on the remover's memory, and a check deriving the retired entries is new design, not a chore"
     decided-at: 2026-11-11T13:40:45Z
@@ -614,7 +614,7 @@ Reviewed 071's window from `dec1b0b6` (the 2026-11-19 reopening; the base `compu
 - AC14 — met: `.github/workflows/runtime.yml` lists 'framework/reference/*.md' directly after 'framework/commands/*.md' under both on.pull_request.paths and on.push.paths (the only two places commands/*.md appears)
 - AC15 — met: `runtime/tests/parity.rs` assert_reference_installed_and_pruned reads `.ductus/reference/specify.md` (contains /acme:specify, no {project}) and runs enforce-manifest --directory project/.ductus/reference with expected [`specify.md`], asserting stale.md removed and `specify.md` kept; in a scratch copy with its own CARGO_TARGET_DIR the test passes, and fails when the fixture row is removed (read `specify.md`: No such file), when keep-literals suppresses substitution ('must install with {project} -> acme'), and when the enforce-manifest call is neutralised ('must remove a reference file no row produces')
 - AC16 — met: `framework/constitution.md` canonical-sources row 'Pipeline command behavior' reads '`framework/commands/*.md` (...), with its reference in `framework/reference/*.md`'; the <!-- §runtime-host-integration --> section (Host integration) says a command's reference keeps what a step does with the result, host judgment and policy, installed at `.ductus/reference/<command>.md` and read only where a step points
-- AC17 — met: `docs/developing-ductus.md` 'A command with a reference takes two more' paragraph names `framework/reference/<name>.md` and its row in `framework/bootstrap/ductus.md` Shared Files, `framework/reference/<name>.md` -> `.ductus/reference/<name>.md`, which Family 16 fails a reference without
+- AC17 — met: `.ductus/docs/agents/developing-ductus.md` 'A command with a reference takes two more' paragraph names `framework/reference/<name>.md` and its row in `framework/bootstrap/ductus.md` Shared Files, `framework/reference/<name>.md` -> `.ductus/reference/<name>.md`, which Family 16 fails a reference without
 - AC18 — met: `scripts/audit/run-all.sh` exits 0 at the worktree head, `scripts/gen-claude-commands.sh --check`, `scripts/gen-configure-mcp.sh` and `scripts/gen-help-tables.sh` leave the tree unchanged, and `derive-dependencies` and `derive-references` report no drift
 - AC19 — met: `npx markdownlint-cli2` 0 issues over 884 files, every `scripts/lint-*.sh` and `scripts/tests/*.sh` exits 0, `shellcheck -S warning` over the tracked shell set 0, and under `runtime/` cargo fmt --check, clippy --release --all-targets --locked -D warnings and cargo test --release --locked all exit 0
 - AC20 — met: `plan.md` 'Bytes loaded per invocation, measured after the split' states sha c9b2155c, date and method (git show c9b2155c:<path> | wc -c); re-measured all 13 command rows (after) and 13 reference rows with that method: every figure equal, totals 175,387 and 199,406, 255,509 fewer, percentages recomputed (76.3 62.9 70.5 86.9 38.6 45.4 42.4 43.0 10.1 69.0 55.1 0.3 14.8, total 59.3); before column matches the spec's 430,896 (see observation: the table is point-in-time)

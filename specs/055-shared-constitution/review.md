@@ -231,7 +231,7 @@ Five-pass review of 055's reopening (diff-base 53fde26d, base-source reopen) at 
 - `.pi/prompts/ductus-analyze.md`
 - `.pi/prompts/ductus-review.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `framework/commands/analyze.md`
 - `framework/commands/review.md`

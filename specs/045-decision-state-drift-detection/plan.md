@@ -18,7 +18,7 @@ Everything lands inside the existing `check-artifacts` primitive. No new primiti
 
 `check-artifacts` runs its families in one `run` that appends to a single `Vec<ArtifactFinding>` (`run` in `runtime/src/primitives/check_artifacts.rs`); 046 added `scenario-open-questions` through exactly this path (`check_scenario_open_questions` in `check_artifacts.rs`). Two more are appended the same way, named `link-adjacent-drift` and `criterion-path-existence` to match the existing kebab-case family names.
 
-Consequence worth stating because it inverts the usual expectation: the primitive-registration sites `docs/developing-ductus.md` lists (§Adding or removing a runtime primitive) need no change. `check-artifacts` is already registered: `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`, its subcommand in `runtime/src/main.rs`, its tool in `runtime/src/mcp/server.rs`, its `dispatch_primitive` arm in `runtime/src/interpreter/mod.rs`, and `framework/runtime-tools.txt` (each found by `grep -n 'check-artifacts\|CheckArtifacts'` at `ab2ad085`). Nothing new is registered anywhere.
+Consequence worth stating because it inverts the usual expectation: the primitive-registration sites `.ductus/docs/agents/developing-ductus.md` lists (§Adding or removing a runtime primitive) need no change. `check-artifacts` is already registered: `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`, its subcommand in `runtime/src/main.rs`, its tool in `runtime/src/mcp/server.rs`, its `dispatch_primitive` arm in `runtime/src/interpreter/mod.rs`, and `framework/runtime-tools.txt` (each found by `grep -n 'check-artifacts\|CheckArtifacts'` at `ab2ad085`). Nothing new is registered anywhere.
 
 ### Implementation ownership: the runtime work lives as scenarios under 067
 

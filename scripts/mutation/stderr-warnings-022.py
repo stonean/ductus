@@ -10,7 +10,7 @@ code a mutation anchors on changes, update the anchor in the same change
 (`run.py --check`).
 
 The test runs the release binary, which `cargo build --release` rebuilds from
-the mutated tree, so rebuild it after a run (docs/developing-ductus.md,
+the mutated tree, so rebuild it after a run (.ductus/docs/agents/developing-ductus.md,
 Proving a test fails).
 
 The behaviours and the tests that hold them:

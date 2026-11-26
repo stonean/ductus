@@ -310,7 +310,7 @@ Not examined here: the two workflows' checks under Linux GNU tar and Windows tar
 - `.pi/prompts/ductus-implement.md` — 066-audit-records-and-the-completion-gate
 - `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
 - `AGENTS.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
-- `docs/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
+- `.ductus/docs/agents/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
 - `docs/slash-commands.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
 - `framework/bootstrap/ductus-procedure.md` — 027-bootstrap-migration-registry
 - `framework/commands/implement.md` — 066-audit-records-and-the-completion-gate

@@ -362,7 +362,7 @@ its schema.
 - [x] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [x] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
 - [x] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/*.md`, and §runtime-host-integration says what a command's reference keeps.
-- [x] AC17: `docs/developing-ductus.md`'s procedure for adding a slash command names the reference file and its manifest row.
+- [x] AC17: `.ductus/docs/agents/developing-ductus.md`'s procedure for adding a slash command names the reference file and its manifest row.
 - [x] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
 - [x] AC19: The whole local gate passes: `npx markdownlint-cli2`, the `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings` and `cargo test --release --locked`.
 - [x] AC20: The bytes each command loads per invocation, before and after the split, are recorded in the plan from a measurement taken after the split.

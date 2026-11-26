@@ -185,7 +185,7 @@ Review of 069's code changed since its last review, from `17ff99fa` (`last-revie
 - `AGENTS.md`
 - `README.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/shared-constitution.md`
 - `docs/slash-commands.md`

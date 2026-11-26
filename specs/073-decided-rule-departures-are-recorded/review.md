@@ -273,7 +273,7 @@ Fixed in the run, before this record:
 - `.pi/prompts/ductus-groom.md`
 - `.pi/prompts/ductus-implement.md`
 - `.pi/prompts/ductus-specify.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `framework/bootstrap/ductus.md`
 - `framework/bootstrap/govern.md`
 - `framework/commands/groom.md`

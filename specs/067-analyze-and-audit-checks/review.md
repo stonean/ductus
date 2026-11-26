@@ -348,7 +348,7 @@ Five-pass review of 067's reopening (diff-base cdee8ab0, base-source reopen) at 
 - `.claude/commands/ductus/review.md`
 - `.pi/prompts/ductus-review.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/shared-constitution.md`
 - `framework/bootstrap/ductus.md`

@@ -272,7 +272,7 @@ Review of 021's code changed since its last review, from `945217ff` (`last-revie
 - `CHANGELOG.md`
 - `docs/analyze.md`
 - `docs/cross-service-references.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/runtime.md`
 - `docs/shared-constitution.md`

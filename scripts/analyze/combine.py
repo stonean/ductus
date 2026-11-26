@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Combine the cells' answers into one verdict per rule (spec 060, scenario
-rule-judging-runs-from-repo-scripts; docs/developing-ductus.md, Sizing an
+rule-judging-runs-from-repo-scripts; .ductus/docs/agents/developing-ductus.md, Sizing an
 analysis's judges).
 
 usage: python3 -I scripts/analyze/combine.py FEATURE

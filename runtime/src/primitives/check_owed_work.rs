@@ -626,7 +626,7 @@ mod tests {
     }
 
     /// Each shape round-trips to itself, and neither half reads the other's keys
-    /// (`docs/developing-ductus.md`, *A result with two shapes*).
+    /// (`.ductus/docs/agents/developing-ductus.md`, *A result with two shapes*).
     #[test]
     fn each_result_shape_round_trips() {
         let tmp = project();

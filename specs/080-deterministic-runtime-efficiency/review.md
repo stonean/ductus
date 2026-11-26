@@ -459,15 +459,15 @@ decisions:
     decided-by: rule
   - key: "reuse: main.rs and the interpreter keep separate hand-maintained per-primitive lists — `runtime/src/main.rs`"
     outcome: waived
-    reason: flat registries pinned by set-equality tests, a design docs/developing-ductus.md records
+    reason: flat registries pinned by set-equality tests, a design .ductus/docs/agents/developing-ductus.md records
     decided-at: 2026-11-11T14:41:07Z
     decided-by: rule
   - key: "contract: the two flattened Option result halves allow neither or both; an untagged enum would keep exactly one — `runtime/src/schema/primitives.rs`"
     outcome: waived
-    reason: rmcp refuses a tool output schema that is not an object, and an untagged enum's root is anyOf; docs/developing-ductus.md records the flattened-halves design
+    reason: rmcp refuses a tool output schema that is not an object, and an untagged enum's root is anyOf; .ductus/docs/agents/developing-ductus.md records the flattened-halves design
     decided-at: 2026-11-11T14:41:07Z
     decided-by: rule
-  - key: "convention: Adding or removing a runtime primitive names seven sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `docs/developing-ductus.md`"
+  - key: "convention: Adding or removing a runtime primitive names seven sites but neither /configure step 4 retired list, and no check catches a removed tool missing from them — `.ductus/docs/agents/developing-ductus.md`"
     outcome: waived
     reason: "the pipeline's own maintainer procedure: a doc line would rest the next removal on the remover's memory, and a check deriving the retired entries is new design, not a chore"
     decided-at: 2026-11-11T14:41:07Z

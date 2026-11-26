@@ -463,7 +463,7 @@ Review of 062's code changed since its last review, from `f442447c` (`last-revie
 - `AGENTS.md`
 - `README.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/shared-constitution.md`
 - `docs/slash-commands.md`

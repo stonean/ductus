@@ -98,7 +98,7 @@ Five-pass review of 024's reopening by 925c6905 (020's task 18, AC17), diff-base
 - `.ductus/reference/review.md`
 - `.pi/prompts/ductus-analyze.md`
 - `.pi/prompts/ductus-review.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `framework/commands/analyze.md`
 - `framework/commands/review.md`

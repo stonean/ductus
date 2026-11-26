@@ -192,7 +192,7 @@ Review of 049's code changed since its last review, from `d576bf6b` (`reopen-pas
 - `README.md`
 - `docs/analyze.md`
 - `docs/cross-service-references.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/runtime.md`
 - `docs/shared-constitution.md`

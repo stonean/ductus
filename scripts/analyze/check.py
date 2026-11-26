@@ -136,7 +136,7 @@ def check(feature, m):
             problems.setdefault("subjects", []).append(f"{p} changed since split.py measured it")
     if problems.get("subjects"):
         problems["subjects"].append("re-run split.py and briefs.py, then re-judge "
-                                    "(docs/developing-ductus.md, Sizing an analysis's judges)")
+                                    "(.ductus/docs/agents/developing-ductus.md, Sizing an analysis's judges)")
     departures = {e.get("rule") for e in m.get("departures") or []}
     cites = {}
     for c in m["cells"]:

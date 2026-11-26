@@ -100,7 +100,7 @@ With `project-files`:
 - **Seed.** The `claude` row's `settings_template` seeds `Bash(.ductus/bin/ductus prune-project *)` and its `.exe` twin, as it seeds `label-criteria` and `relocate-audit-records`, so a Manual-mode bootstrap applying the entry does not prompt. `framework/bootstrap/govern.md` and `install.sh`'s copy of the seed carry it too (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **Procedure.** It runs `prune-project` as a preview, through the CLI at the pointer path that Pre-flight brought to the pinned version. It does not use the session's MCP server, which in an upgrade can be an older binary (`framework/bootstrap/ductus.md`, the agent-runtimes note: MCP when registered, otherwise the CLI). It reports each `move-candidates` target under `docs/`, with the project file linking it and `/{project}:prune --project`, and writes nothing. With no such target it reports nothing. A result without `move-candidates` is reported as not checked, naming the command, never as no link.
 - **One list.** The same list serves AC14 and AC15.
-- **Installer change.** Its task therefore includes a scratch-adopter bootstrap run (`AGENTS.md`'s rule; **§Exercising an installer change without a push** in `docs/developing-ductus.md`).
+- **Installer change.** Its task therefore includes a scratch-adopter bootstrap run (`AGENTS.md`'s rule; **§Exercising an installer change without a push** in `.ductus/docs/agents/developing-ductus.md`).
 - **Not an impact on 027.** The entry changes none of 027's contract, and no spec has declared 027 for adding one (`git grep '^cross-spec-impact:.*027' -- 'specs/*/spec.md'` finds none).
 
 ### A shared constitution's parts (AC16, AC17)
@@ -125,7 +125,7 @@ With `project-files`:
 
 ### This repository's procedure file moves
 
-`docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`, in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
+`.ductus/docs/agents/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`, in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
 
 - **Why in 087.** A real tree proves AC14's move before `done`, so a defect it finds lands in this spec. The tree holds 98 occurrences in 81 tracked files (`git grep -l` and `-c`, 2026-11-24): 69 specs, 7 scripts, 2 `runtime/src`, 1 workflow, `README.md` and `AGENTS.md`.
 - **The run is the move.** The walk stops after the move proposal (*Walk order*, above). Judging the rest of `AGENTS.md`'s entries is not part of this task.
@@ -151,7 +151,7 @@ A fixture of four project files with no `.ductus/docs/` asserts each.
 
 ### Tests fail without their behavior (AC10)
 
-Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Proving a test fails** in `docs/developing-ductus.md`). The task that adds a test records the proof in its commit.
+Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Proving a test fails** in `.ductus/docs/agents/developing-ductus.md`). The task that adds a test records the proof in its commit.
 
 ## Affected Files
 
@@ -189,7 +189,7 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `framework/migrations.toml` | Modify | Register the entry |
 | `framework/migrations/report-project-file-links-into-docs.md` | Create | Report project-file links into `docs/` |
 | `README.md` | Modify | `[artifacts]` limits parts; the moved file's path |
-| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
+| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `.ductus/docs/agents/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
 | `AGENTS.md` | Modify | Pointer to the part; sweep targets |
 | `.github/workflows/framework-checks.yml` | Modify | The moved file's path |
 | `runtime/src/parser/mod.rs` | Modify | The moved file's path |
@@ -229,7 +229,7 @@ This spec adds no `data-model.md`, because each shape belongs to its primitive's
 
 ## Trade-offs
 
-- **Rejected: a new primitive listing parts.** It needs seven registration sites (**§Adding or removing a runtime primitive** in `docs/developing-ductus.md`), an allow entry per registry layout, and an entry in two commands' `ToolSearch` lines. It would be a second tool serving a list `check-artifact-size` must produce anyway, for AC4–AC6.
+- **Rejected: a new primitive listing parts.** It needs seven registration sites (**§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md`), an allow entry per registry layout, and an entry in two commands' `ToolSearch` lines. It would be a second tool serving a list `check-artifact-size` must produce anyway, for AC4–AC6.
 - **Rejected: renumbering `/analyze` so step 17's call precedes step 15.** Up to 54 files cite those step numbers (`git grep -l -E 'step 1[5-9]|step 2[0-2]|steps? 1[5-9]'` over `framework/`, `runtime/`, `scripts/`, `docs/` and `specs/`, 2026-11-24; an upper bound, since the pattern also matches other commands' steps). Reading step 17's result in step 15 would reverse the walk's order. The chosen route costs one more call per interactive `/analyze`, whose result with no parts is 631 bytes (063's data model, **Size**).
 - **Rejected: nesting parts inside each `project-files` record.** It makes the four-record list unbounded, and the staged CLI reads that list inline.
 - **Rejected: the host moving the file and editing each referrer.** Here that is 98 occurrences in 81 files, and a mechanical rewrite is runtime-eligible (§runtime-boundary, *Eligibility criteria*).

@@ -271,7 +271,7 @@ Five-pass review of 078's reopening (diff-base 70c4f3da, base-source reopen) at 
 - `.ductus/reference/analyze.md`
 - `.pi/prompts/ductus-analyze.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/shared-constitution.md`
 - `framework/bootstrap/ductus.md`

@@ -60,7 +60,7 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 ## 5. `prune-review`
 
 - [ ] Create `runtime/src/primitives/prune_review.rs`, with `feature` or `all`, preview and `apply` with the previewed digest, as the plan's `prune-review` decision states: `drops`, `rewrites`, skips and refusals, the text splice and its re-parse check, `ReadSnapshot::write_if_unchanged`
-- [ ] Register it at the seven sites **§Adding or removing a runtime primitive** in `docs/developing-ductus.md` names, with its argument type, `PRUNE_REVIEW`, `framework/runtime-tools.txt`'s line, and `scripts/gen-configure-mcp.sh` re-run
+- [ ] Register it at the seven sites **§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md` names, with its argument type, `PRUNE_REVIEW`, `framework/runtime-tools.txt`'s line, and `scripts/gen-configure-mcp.sh` re-run
 - [ ] Tests: a record's entries on files that do not belong are dropped and claimant lines rewritten, every other byte unchanged; a record with nothing to drop or rewrite is not written; a fix-round line is not rewritten; `fix-rounds-open: true` is skipped; an unparseable record or `decisions:` list is refused naming the file, and skipped in the `all` walk; a record changed since the read is refused; `all` makes one ownership walk; `{specs-root}/review.md` is not walked
 - [ ] `specs/041-task-pruning/data-model.md`: a `prune-review` section, and its write guard naming four primitives
 

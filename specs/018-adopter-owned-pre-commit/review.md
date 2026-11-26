@@ -151,7 +151,7 @@ Window `27588f30` to `9b034410`, base-source `reopen`: `0c9f4341` reopened 018 w
 - `.pi/prompts/ductus-review.md` — 066-audit-records-and-the-completion-gate
 - `AGENTS.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
 - `README.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
-- `docs/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
+- `.ductus/docs/agents/developing-ductus.md` — 062-concurrent-session-targets, 066-audit-records-and-the-completion-gate
 - `docs/runtime.md` — 022-deterministic-runtime, 048-govern-acquired-runtime
 - `docs/slash-commands.md` — 000-slash-commands, 022-deterministic-runtime, 060-exec-analyze-assesses-each-loaded-rule, 066-audit-records-and-the-completion-gate
 - `framework/commands/amend.md` — 000-slash-commands, 066-audit-records-and-the-completion-gate

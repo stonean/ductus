@@ -226,7 +226,7 @@ Review of 012's code changed since its last review, from `067d94f6` (`last-revie
 - `AGENTS.md`
 - `README.md`
 - `docs/analyze.md`
-- `docs/developing-ductus.md`
+- `.ductus/docs/agents/developing-ductus.md`
 - `docs/rules.md`
 - `docs/runtime.md`
 - `docs/shared-constitution.md`

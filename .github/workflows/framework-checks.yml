@@ -343,7 +343,7 @@ jobs:
         run: bash scripts/tests/test-anchor-and-label-families.sh
 
       # (aa) scripts/stale-literals.sh is the literal search of a landing's
-      # sweep (docs/developing-ductus.md §Landing a runtime change, step 3).
+      # sweep (.ductus/docs/agents/developing-ductus.md §Landing a runtime change, step 3).
       # It runs by hand before a change commits, so nothing else in CI
       # exercises it. The test builds fixture repositories and shows that it:
       #   - lists a removed literal another target still holds;

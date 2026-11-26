@@ -120,7 +120,7 @@ decisions:
 - `.pi/prompts/ductus-configure.md` — 064-pi-host-support
 - `AGENTS.md` — 067-analyze-and-audit-checks, 071-command-reference-split
 - `README.md` — 067-analyze-and-audit-checks, 071-command-reference-split
-- `docs/developing-ductus.md` — 071-command-reference-split
+- `.ductus/docs/agents/developing-ductus.md` — 071-command-reference-split
 - `framework/bootstrap/configure/pi.md` — 064-pi-host-support
 - `framework/bootstrap/ductus-procedure.md` — 067-analyze-and-audit-checks, 071-command-reference-split
 - `framework/bootstrap/hooks/ductus-pre-commit` — 012-multi-agent-govern, 067-analyze-and-audit-checks
