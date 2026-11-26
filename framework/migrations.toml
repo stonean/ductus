@@ -318,3 +318,26 @@ target_paths = [
   "specs/review.md",
 ]
 procedure_file = "framework/migrations/project-review-record.md"
+
+[[migrations]]
+id = "report-project-file-links-into-docs"
+introduced_in = "0.65.0"
+# The id sorts after project-review-record on the tie-break, and must: that
+# entry was pushed first, so a --ref=main adopter who ran /ductus since then
+# records it as last_applied, and an id sorting before it would never run for
+# them (audit 10d).
+# No sunset_after. The entry writes nothing and reports links an adopter made
+# by hand, so one who skips this window is told by nothing else that a
+# procedure under docs/ now has a measured home, unless someone runs
+# prune --project.
+summary = "Report each project-file link to a markdown file under docs/, which the prune command's --project walk can move into a parts directory under .ductus/docs/; move and rewrite nothing (spec 087)"
+# Adopter-relative: the project files whose links it reads, none of which it
+# writes. Nothing under framework/ is removed by this migration, so it declares
+# no framework/ target path.
+target_paths = [
+  "AGENTS.md",
+  "specs/system.md",
+  "specs/events.md",
+  "specs/errors.md",
+]
+procedure_file = "framework/migrations/report-project-file-links-into-docs.md"

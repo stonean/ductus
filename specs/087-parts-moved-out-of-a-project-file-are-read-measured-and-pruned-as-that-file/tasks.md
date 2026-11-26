@@ -131,9 +131,10 @@ Task 3 edited the shipped hook's step-4 comment and `framework/bootstrap/ductus-
 
 Task 8 put `move-candidates` on every `prune-project` call, a plain preview included (041's `data-model.md`, §`prune-project`, *The move*), so the migration reads that list and passes no `move`. A pointer binary from before 087's release carries no `move-candidates`, which is the third run's not-checked case.
 
-- [ ] `framework/migrations/project-file-links-into-docs.md`: run `prune-project` as a preview through the CLI at the pointer path Pre-flight acquired, never the session's MCP server, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing; a result without `move-candidates` is reported as not checked, naming the command
-- [ ] Register it in `framework/migrations.toml`, with `introduced_in` read from `version` when this task runs
-- [ ] Three scratch-adopter bootstrap runs, per **§Exercising an installer change without a push** in `docs/developing-ductus.md`: one adopter whose `AGENTS.md` links a markdown file under `docs/`, one with no such link, and one whose pointer binary predates `move-candidates`
+- [x] `framework/migrations/report-project-file-links-into-docs.md`: run `prune-project` as a preview through the CLI at the pointer path Pre-flight acquired, never the session's MCP server, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing; a result without `move-candidates` is reported as not checked, naming the command
+- [x] Register it in `framework/migrations.toml` at `introduced_in` 0.65.0, the release after the tag `version` names, its id sorting after `project-review-record`'s (the agent's recommendation, adopted by the operator, 2026-11-26)
+- [x] Seed `Bash(.ductus/bin/ductus prune-project *)` and its `.exe` twin in the `claude` row of `framework/bootstrap/ductus.md`, in `framework/bootstrap/govern.md` and in `install.sh`, and drop §Permission Setup's count of the seeded subcommands, which it would make stale (the agent's recommendation, adopted by the operator, 2026-11-26)
+- [x] Three scratch-adopter bootstrap runs, per **§Exercising an installer change without a push** in `docs/developing-ductus.md`: one adopter whose `AGENTS.md` links a markdown file under `docs/`, one with no such link, and one whose pointer binary predates `move-candidates`
 
 - **Done when**: the first run reports the link and names `/{project}:prune --project`, moving and rewriting nothing, the second reports nothing, and the third reports not checked (AC15); the commit records each registry layout's impact (AC18).
 
@@ -165,3 +166,9 @@ The commits of tasks 7, 8 and 10 (`5935e9cf`, `e7a71f5a`, `f8911594`) record the
 - [ ] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle
 
 - **Done when**: 087's `spec.md` states a run's cost in a measurable unit with its method, and what it retires or why none, beside a blockquoted signpost to 089; `derive-dependencies` reports no cycle (089's AC4). Lands before 087's review (the agent's recommendation, adopted by the operator, 2026-11-26).
+
+## 15. Disposition out-of-spec finding: the bootstrap seed omits the subcommands 084's steps run through the CLI
+
+- [ ] `framework/bootstrap/ductus.md` — §State B says Permission Setup seeded each subcommand a remaining step runs, and §Permission Setup names the eleven the bootstrap and its migrations run, yet Hook Installation's `write-review` seed (`framework/bootstrap/ductus-procedure.md`) and `project-review-record`'s `write-review` and `check-unreviewed-code` (`framework/migrations/project-review-record.md`) run as `.ductus/bin/ductus <subcommand>` on a State B run and are not in the `claude` row's `settings_template`, nor in `install.sh`'s copy, so a Manual-mode Claude run prompts for each
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

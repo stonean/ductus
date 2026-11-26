@@ -96,7 +96,8 @@ With `project-files`:
 
 ### The migration entry announces the move (AC15)
 
-- **Entry.** The procedure is `framework/migrations/project-file-links-into-docs.md`, registered in `framework/migrations.toml`. Its `introduced_in` is read from `version` at implement time, as the release that carries this spec.
+- **Entry.** The procedure is `framework/migrations/report-project-file-links-into-docs.md`, registered in `framework/migrations.toml` at `introduced_in` 0.65.0, the release after the `ductus-v0.64.0` tag that `version` names. Pending entries are those after `last_applied` by `introduced_in`, then `id` (`framework/bootstrap/ductus-procedure.md`, Pre-run Migrations), so the id sorts after `project-review-record`, 084's entry at 0.65.0, and a `--ref=main` adopter whose `last_applied` is that entry still runs this one (audit 10d; the agent's recommendation, adopted by the operator, 2026-11-26).
+- **Seed.** The `claude` row's `settings_template` seeds `Bash(.ductus/bin/ductus prune-project *)` and its `.exe` twin, as it seeds `label-criteria` and `relocate-audit-records`, so a Manual-mode bootstrap applying the entry does not prompt. `framework/bootstrap/govern.md` and `install.sh`'s copy of the seed carry it too (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **Procedure.** It runs `prune-project` as a preview, through the CLI at the pointer path that Pre-flight brought to the pinned version. It does not use the session's MCP server, which in an upgrade can be an older binary (`framework/bootstrap/ductus.md`, the agent-runtimes note: MCP when registered, otherwise the CLI). It reports each `move-candidates` target under `docs/`, with the project file linking it and `/{project}:prune --project`, and writes nothing. With no such target it reports nothing. A result without `move-candidates` is reported as not checked, naming the command, never as no link.
 - **One list.** The same list serves AC14 and AC15.
 - **Installer change.** Its task therefore includes a scratch-adopter bootstrap run (`AGENTS.md`'s rule; **§Exercising an installer change without a push** in `docs/developing-ductus.md`).
@@ -135,7 +136,7 @@ With `project-files`:
 
 ### Every registry layout (AC18)
 
-No primitive is added and no tool is renamed, so neither layout's allow list changes. Each layout takes the command changes through its generated copies: `.claude/commands/ductus/*.md` for `claude-style` and `.pi/prompts/ductus-*.md` for `pi`, which the hook regenerates. Each commit that ships a command or runtime surface records both layouts' impact in its message.
+No primitive is added and no tool is renamed, so neither layout's MCP allow list changes. The `claude` row's bootstrap seed gains `prune-project` for the migration entry, and `pi` has no permission surface to seed. Each layout takes the command changes through its generated copies: `.claude/commands/ductus/*.md` for `claude-style` and `.pi/prompts/ductus-*.md` for `pi`, which the hook regenerates. Each commit that ships a command or runtime surface records both layouts' impact in its message.
 
 ### No regression without parts (AC8)
 
@@ -182,10 +183,11 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `framework/commands/prune.md` | Modify | Parts, routing, the move, scope |
 | `framework/commands/target.md` | Modify | Step 4 reports a constitution's parts |
 | `framework/constitution.md` | Modify | Tree, routing, live artifacts, canonical source |
-| `framework/bootstrap/ductus.md` | Modify | Memory-routing line; `read-size-bytes` comment |
+| `framework/bootstrap/ductus.md` | Modify | Memory-routing line; `read-size-bytes` comment; the `prune-project` seed |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of `ductus.md` |
+| `install.sh` | Modify | Its copy of the `claude` seed |
 | `framework/migrations.toml` | Modify | Register the entry |
-| `framework/migrations/project-file-links-into-docs.md` | Create | Report project-file links into `docs/` |
+| `framework/migrations/report-project-file-links-into-docs.md` | Create | Report project-file links into `docs/` |
 | `README.md` | Modify | `[artifacts]` limits parts; the moved file's path |
 | `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
 | `AGENTS.md` | Modify | Pointer to the part; sweep targets |
