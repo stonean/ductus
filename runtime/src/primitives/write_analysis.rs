@@ -721,9 +721,10 @@ pub(crate) fn finding_key_of(family: &str, message: &str) -> String {
     format!("{} — {}", single_line(family), single_line(message))
 }
 
-/// The three rule-assessment fields the record carries beside the counts
+/// The rule-assessment fields the record carries beside the tier counts
 /// (spec 082): each fired rule's verdict, each assessable rule left unjudged,
-/// and the digest of each loaded rule file.
+/// the digest of each loaded rule file and each design subject's sections;
+/// and the rules the run judged and carried (spec 088).
 #[derive(Default)]
 struct RuleFields {
     verdicts: BTreeMap<String, RuleVerdict>,
@@ -731,6 +732,13 @@ struct RuleFields {
     digest: BTreeMap<String, String>,
     /// The design subjects' sections at write time (AC7).
     sections: BTreeMap<String, String>,
+    /// The assessable rules the run judged, in full or against the changed
+    /// sections, whose judgment the record keeps (spec 088, AC1).
+    judged: u32,
+    /// The assessable rules the run did not judge whose stored verdict stood:
+    /// a fired one carried forward, or a current one that did not fire. With
+    /// [`Self::judged`] and `unjudged` they partition the assessable rules.
+    carried: u32,
     /// Reported in the result and the body, recorded in no field.
     contradictions: Vec<RuleContradiction>,
     /// Each `waived` verdict in `verdicts` with its rule's tier, MUST-tier
@@ -899,6 +907,10 @@ fn derive_rule_fields(
     };
     for (rule, current) in standing.rules() {
         let id = rule.id.as_str();
+        // Each rule lands in one of three places, and a rule that did not land
+        // in `unjudged` counts as judged or carried by whether this run judged
+        // it (spec 088, AC1).
+        let unjudged_before = fields.unjudged.len();
         if !judged.contains(id) {
             match current {
                 // A carried waiver whose entry is gone is not carried: it
@@ -912,6 +924,9 @@ fn derive_rule_fields(
                 Currency::NotFired => {}
                 // The changed sections are what nobody judged.
                 Currency::Rejudge { .. } | Currency::Stale => fields.unjudged.push(rule.id.clone()),
+            }
+            if fields.unjudged.len() == unjudged_before {
+                fields.carried += 1;
             }
             continue;
         }
@@ -948,6 +963,9 @@ fn derive_rule_fields(
                 carry(&mut fields, rule, current, &entries);
             }
             None => {}
+        }
+        if fields.unjudged.len() == unjudged_before {
+            fields.judged += 1;
         }
     }
     // Every `waived` verdict, supplied or carried, takes its fields from the
@@ -1316,7 +1334,8 @@ fn render_contradictions(contradictions: &[RuleContradiction]) -> String {
         .join("\n")
 }
 
-/// The rule-assessment fields, each omitted when empty. A verdict is a flow
+/// The rule-assessment fields, each omitted when empty but the two counts,
+/// written on every record (spec 088). A verdict is a flow
 /// mapping whose text values are always double-quoted, since a plain scalar
 /// that block context accepts would end at a `,` or `}` here (spec 082).
 fn render_rule_fields(out: &mut String, rules: &RuleFields) {
@@ -1377,6 +1396,10 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
             let _ = writeln!(out, "  {}: {flow}", yaml_string(&single_line(id)));
         }
     }
+    // Written on every record, zero when no rule loaded, so a record says
+    // what its run cost; one written before spec 088 holds neither.
+    let _ = writeln!(out, "rules-judged: {}", rules.judged);
+    let _ = writeln!(out, "rules-carried: {}", rules.carried);
     if !rules.unjudged.is_empty() {
         out.push_str("unjudged-rules:\n");
         for id in &rules.unjudged {
@@ -3489,11 +3512,18 @@ mod tests {
                     "34".repeat(8),
                 ),
             ]),
+            judged: 3,
+            carried: 4,
             contradictions: Vec::new(),
             waived: Vec::new(),
         };
         let dir = tmp.path().join("specs/042-demo");
-        fs::write(dir.join("analysis.md"), rendered_with(&rules)).unwrap();
+        let rendered = rendered_with(&rules);
+        assert!(
+            rendered.contains("rules-judged: 3\nrules-carried: 4\n"),
+            "{rendered}"
+        );
+        fs::write(dir.join("analysis.md"), rendered).unwrap();
         let crate::primitives::RecordLoad::Present(record) =
             crate::primitives::load_analyze_record(&dir)
         else {
@@ -3668,6 +3698,112 @@ mod tests {
         );
         assert_eq!(result.unexamined, 0);
         assert!(analysis_md(&tmp).contains("*None — every target was examined.*"));
+    }
+
+    /// The record's `rules-judged` and `rules-carried`, read from its
+    /// frontmatter text, since no reader type holds them (spec 088).
+    fn rule_counts(tmp: &TempDir) -> (u32, u32) {
+        let text = analysis_md(tmp);
+        let frontmatter = text.split("\n---\n").next().unwrap();
+        let count = |key: &str| {
+            let prefix = format!("{key}: ");
+            let found: Vec<u32> = frontmatter
+                .lines()
+                .filter_map(|line| line.strip_prefix(prefix.as_str()))
+                .map(|value| value.parse().unwrap())
+                .collect();
+            assert_eq!(found.len(), 1, "one {key} line in:\n{frontmatter}");
+            found[0]
+        };
+        (count("rules-judged"), count("rules-carried"))
+    }
+
+    /// Spec 088, AC1: a run that carries one verdict and judges one rule
+    /// records one rule judged and one carried; the first run, judging both,
+    /// carried none.
+    #[test]
+    fn a_run_carrying_one_verdict_and_judging_one_rule_records_both_counts() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 0);
+        first.rule_verdicts =
+            BTreeMap::from([("TS-RULE-001".to_string(), addressed("spec.md#Behavior"))]);
+        run(&first, tmp.path()).unwrap();
+        assert_eq!(rule_counts(&tmp), (2, 0));
+
+        let mut second = args();
+        second.judged_rules = vec!["TS-RULE-002".into()];
+        run(&second, tmp.path()).unwrap();
+        assert_eq!(rule_counts(&tmp), (1, 1));
+        assert_eq!(
+            written_record(&tmp).rule_verdicts["TS-RULE-001"],
+            addressed("spec.md#Behavior")
+        );
+    }
+
+    /// Spec 088, AC1: a rule current and not fired, which the run did not
+    /// judge, counts as carried, and a record of a run with no rule loaded
+    /// still states both counts, at zero.
+    #[test]
+    fn a_carried_quiet_rule_counts_as_carried_and_no_rule_loaded_records_zero() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(rule_counts(&tmp), (0, 0));
+
+        with_rules(&tmp, 2, 0);
+        let mut first = args();
+        first.judged_rules = rule_ids(2, 0);
+        run(&first, tmp.path()).unwrap();
+        run(&args(), tmp.path()).unwrap();
+        assert_eq!(rule_counts(&tmp), (0, 2));
+    }
+
+    /// Spec 088, AC1: a judged rule whose `addressed` citation does not
+    /// resolve is unjudged, and counts in neither count.
+    #[test]
+    fn an_unresolved_addressed_verdict_counts_in_neither() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 2, 0);
+        let mut a = args();
+        a.judged_rules = rule_ids(2, 0);
+        a.rule_verdicts =
+            BTreeMap::from([("TS-RULE-001".to_string(), addressed("spec.md#Nowhere"))]);
+        run(&a, tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules, ["TS-RULE-001"]);
+        assert_eq!(rule_counts(&tmp), (1, 0));
+    }
+
+    /// Spec 088's Edge Cases: the two counts and `unjudged-rules` partition
+    /// the assessable rules: a carried finding and a carried quiet rule are
+    /// carried, a rule judged is judged, and a judged rule whose citation
+    /// fails and a rule left unjudged twice are in neither.
+    #[test]
+    fn the_counts_and_the_unjudged_rules_partition_a_mixed_run() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 2);
+        let mut first = args();
+        first.judged_rules = rule_ids(3, 1);
+        first.blocking_findings = 1;
+        first.rule_verdicts =
+            BTreeMap::from([("TS-RULE-001".to_string(), finding_verdict("names none"))]);
+        run(&first, tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules, ["TS-SHLD-002"]);
+
+        let mut second = args();
+        second.blocking_findings = 1;
+        second.judged_rules = vec!["TS-RULE-002".into(), "TS-RULE-003".into()];
+        second.rule_verdicts =
+            BTreeMap::from([("TS-RULE-002".to_string(), addressed("spec.md#Nowhere"))]);
+        run(&second, tmp.path()).unwrap();
+        let record = written_record(&tmp);
+        assert_eq!(record.unjudged_rules, ["TS-RULE-002", "TS-SHLD-002"]);
+        let (judged, carried) = rule_counts(&tmp);
+        assert_eq!((judged, carried), (1, 2));
+        assert_eq!(
+            judged as usize + carried as usize + record.unjudged_rules.len(),
+            rule_ids(3, 2).len()
+        );
     }
 
     /// Spec 082, AC1: a second run over an unchanged spec, told nothing,

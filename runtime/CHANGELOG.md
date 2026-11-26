@@ -6,6 +6,14 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **An analysis record says how many rules its run judged and how many
+  verdicts it carried (spec 088, AC1).** `write-analysis` writes
+  `rules-judged`, the assessable rules the run judged, in full or against the
+  changed sections, whose judgment the record keeps, and `rules-carried`,
+  those it did not judge whose stored verdict stood, fired or not, on every
+  record, both zero when no rule file is loaded. With `unjudged-rules` they
+  partition the assessable rules. A record written before them holds neither,
+  which says nothing of what its run judged.
 - **A departure entry can name the sites it covers (spec 073, AC9 to AC15;
   the agent's recommendations, adopted by the operator, 2026-11-23).** An
   entry's optional `covers:` lists `` `file` in `site` `` items, and

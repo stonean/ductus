@@ -6,9 +6,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Land tasks 1 to 3 together if they are ready in one sitting, per `.ductus/docs/agents/developing-ductus.md` §Landing a runtime change. The other lane edits `runtime/src/main.rs`, `runtime/src/primitives/mod.rs`, `runtime/src/schema/descriptions.rs`, `runtime/src/schema/primitives.rs` and `runtime/tests/result_sizes.rs`, so fetch and rebase before each landing.
 
-- [ ] `derive_rule_fields` in `runtime/src/primitives/write_analysis.rs` counts `rules-judged` and `rules-carried` as the plan's *`write-analysis` records the two counts* says, and `render_rule_fields` writes both on every record; `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs` states them
-- [ ] In the same change: `framework/constitution.md`'s analyze-record row gains both fields, the file measured again under `scripts/lint-governing-size.sh`'s ceiling, and 066's data model's `write-analysis` rule-assessment bullet gains them by this spec's data model
-- [ ] Unit tests: a fixture run that carries one verdict and judges one rule records `rules-judged: 1` and `rules-carried: 1`; a carried not-fired rule counts as carried; an unresolved `addressed` counts in neither; the two counts and `unjudged-rules` partition a mixed run; each has a mutant its test turns red, listed in `scripts/mutation/rule-judgments-088.py`
+- [x] `derive_rule_fields` in `runtime/src/primitives/write_analysis.rs` counts `rules-judged` and `rules-carried` as the plan's *`write-analysis` records the two counts* says, and `render_rule_fields` writes both on every record; `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs` states them
+- [x] In the same change: `framework/constitution.md`'s analyze-record row gains both fields, the file measured again under `scripts/lint-governing-size.sh`'s ceiling, and 066's data model's `write-analysis` rule-assessment bullet gains them by this spec's data model
+- [x] Unit tests: a fixture run that carries one verdict and judges one rule records `rules-judged: 1` and `rules-carried: 1`; a carried not-fired rule counts as carried; an unresolved `addressed` counts in neither; the two counts and `unjudged-rules` partition a mixed run; each has a mutant its test turns red, listed in `scripts/mutation/rule-judgments-088.py`
 
 - **Done when**: both counts are written, stated in the constitution's row and 066's data model, and proven by tests their mutants turn red; `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and the whole `cargo test` pass.
 
