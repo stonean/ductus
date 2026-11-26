@@ -15,7 +15,7 @@ Implements [085 — The audit-record gate reads records through the runtime](spe
 
 ## Overview
 
-A new corpus-wide primitive, `check-audit-records`, reads every `done` spec's review and analyze record through the loaders `check-review-gate` uses, holds each never-run set against the committed high-water marks, and reports each finding with its project-relative path and the counts. The adopter CI template's step "Audit-record gate on done specs" runs it and turns its report into annotations, as the step "No code is left unreviewed" does `check-unreviewed-code`'s, so the step parses no frontmatter or markdown. Each property the step's inline python enforced is kept, decision by decision below (`QUAL-DELEG-001`).
+A new corpus-wide primitive, `check-audit-records`, reads every `done` spec's review and analyze record by the read and parse of the loaders `check-review-gate` uses, each record file once, holds each never-run set against the committed high-water marks, and reports each finding with its project-relative path and the counts. The adopter CI template's step "Audit-record gate on done specs" runs it and turns its report into annotations, as the step "No code is left unreviewed" does `check-unreviewed-code`'s, so the step parses no frontmatter or markdown. Each property the step's inline python enforced is kept, decision by decision below (`QUAL-DELEG-001`).
 
 ## Technical Decisions
 
@@ -35,12 +35,12 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
 
 ### Records through the gate's loaders, with a probe for `blocking`
 
-- **Three states.** Each record is read by `load_review_record` and `load_analyze_record` (`runtime/src/primitives/mod.rs`), whose `RecordLoad` is the step's three states:
+- **Three states.** Each record file is read once by `read_record` and parsed by `parse_record` (`runtime/src/primitives/mod.rs`), the two halves of `load_record`, which `load_review_record` and `load_analyze_record` run, so its `RecordLoad` is the step's three states:
   - `Absent` joins its record's exempt set;
   - `Unreadable` is a finding carrying the loader's reason;
   - `Present` is checked.
 - **`last-run`.** A present record whose `last-run` is null, absent or blank once trimmed is a finding. YAML's null spellings (`null`, `Null`, `NULL`, `~`, an empty value) deserialize to `None`. The blank string is checked by the primitive, as the step checked it.
-- **`blocking`.** `ReviewBlock` and `AnalyzeBlock` (`runtime/src/schema/primitives.rs`) default an absent `blocking` to `false` (`#[serde(default)]`). So for a present record the primitive also reads the same file through `load_record` into a probe holding only `blocking` as an optional raw value, and an absent key is a finding (absent is not `false`). A probe that does not load as `Present` is a finding too, never a pass. `blocking: true` is a finding.
+- **`blocking`.** `ReviewBlock` and `AnalyzeBlock` (`runtime/src/schema/primitives.rs`) default an absent `blocking` to `false` (`#[serde(default)]`). So for a present record the primitive also parses the text it read through `parse_record` into a probe holding only `blocking` as an optional raw value, so the file is read once, and an absent key is a finding (absent is not `false`). A probe that does not parse reads as no key, a finding too, never a pass. `blocking: true` is a finding.
 - **Messages.** Each finding keeps the step's message and names the command to run.
 
 ### The runtime reads the baseline file
@@ -91,7 +91,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 | File | Action | Purpose |
 | --- | --- | --- |
 | `runtime/src/primitives/check_audit_records.rs` | Create | The primitive: walk, records, probe, baseline, findings |
-| `runtime/src/primitives/mod.rs` | Modify | Declare the module |
+| `runtime/src/primitives/mod.rs` | Modify | Declare the module; split `load_record` into `read_record` and `parse_record` |
 | `runtime/src/primitives/bounded_lists.rs` | Modify | `IRREGULAR_COUNTS` rows for `examined-count` and `done-count`, counts of no list |
 | `runtime/src/schema/primitives.rs` | Modify | Its arguments and result types |
 | `runtime/src/schema/descriptions.rs` | Modify | `CHECK_AUDIT_RECORDS`, its one description |
@@ -118,7 +118,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 
 ## Trade-offs
 
-- **Rejected: an optional `blocking` in the record types.** Making `ReviewBlock` and `AnalyzeBlock`'s `blocking` optional would carry absent-is-not-false into every reader. But it changes the shared types 066 owns and `check-review-gate`'s verdict on a record with no field, outside this spec. The probe reads the key's presence through the same `load_record`.
+- **Rejected: an optional `blocking` in the record types.** Making `ReviewBlock` and `AnalyzeBlock`'s `blocking` optional would carry absent-is-not-false into every reader. But it changes the shared types 066 owns and `check-review-gate`'s verdict on a record with no field, outside this spec. The probe reads the key's presence through the same `parse_record`, from the text the record was parsed from.
 - **Known limitation: the local gate reads an absent `blocking` as `false`.** So a hand-written record without the field passes the local gate and fails this CI step, which is where such a hand edit is caught, as before this spec.
 - **Rejected: a JSON parse in the step.** The step "Done specs owe no work" parses `check-owed-work`'s JSON with python. This step maps the CLI's report lines and takes its exit status, as the step "No code is left unreviewed" does, so all its logic lives in the runtime, where its tests are.
 - **Rejected: a CLI-only primitive.** Principle 5 leaves off MCP only a primitive that runs a project command, writes outside the project, or writes a host's settings. This one does none of these.
@@ -132,5 +132,5 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 ## Cross-spec impact
 
 - **057** owns the step's properties (its AC17). AC17 stays true, since the step still reads the two records and bounds the exempt set with a committed mark. A blockquoted signpost in 057's body back-linking 085 discharges it, leaving 057 `done` (task 3).
-- **066** owns the audit records and their loaders, which gain a caller and do not change. A blockquoted signpost in 066's body back-linking 085 discharges it (task 3).
+- **066** owns the audit records and their loaders. `load_record` splits into its read and parse halves, `read_record` and `parse_record`, which it composes, so its callers see no change, and the halves gain a caller. A blockquoted signpost in 066's body back-linking 085 discharges it (task 3).
 - **089**'s AC4 binds 085: the cost statement and a signpost back-linking 089 in 085's body (task 3).

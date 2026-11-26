@@ -827,27 +827,51 @@ impl<T> RecordLoad<T> {
     }
 }
 
-/// Load an audit record from the frontmatter of the artifact that owns it.
+/// Load an audit record from the frontmatter of the artifact that owns it:
+/// [`read_record`], then [`parse_record`].
 ///
 /// A missing file is [`RecordLoad::Absent`]; every other failure — unreadable
 /// bytes, a missing frontmatter fence, YAML that will not deserialize — is
 /// [`RecordLoad::Unreadable`] with the reason.
 pub(crate) fn load_record<T: serde::de::DeserializeOwned>(path: &Path) -> RecordLoad<T> {
+    match read_record(path) {
+        RecordLoad::Absent => RecordLoad::Absent,
+        RecordLoad::Unreadable(reason) => RecordLoad::Unreadable(reason),
+        RecordLoad::Present(content) => match parse_record(&content, path) {
+            Ok(record) => RecordLoad::Present(record),
+            Err(reason) => RecordLoad::Unreadable(reason),
+        },
+    }
+}
+
+/// The text of an audit record's artifact: [`RecordLoad::Absent`] when the
+/// file is missing, and [`RecordLoad::Unreadable`] with the reason when it
+/// cannot be read as UTF-8 text. [`load_record`]'s first half, for a reader
+/// that parses one text more than once (`check-audit-records`' probe).
+pub(crate) fn read_record(path: &Path) -> RecordLoad<String> {
     if !path.exists() {
         return RecordLoad::Absent;
     }
-    let content = match std::fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(source) => return RecordLoad::Unreadable(source.to_string()),
-    };
-    let (fm_text, _body) = match split_frontmatter(&content, path) {
-        Ok(split) => split,
-        Err(error) => return RecordLoad::Unreadable(error.to_string()),
-    };
-    match serde_norway::from_str::<T>(fm_text) {
-        Ok(record) => RecordLoad::Present(record),
-        Err(error) => RecordLoad::Unreadable(error.to_string()),
+    match std::fs::read_to_string(path) {
+        Ok(text) => RecordLoad::Present(text),
+        Err(source) => RecordLoad::Unreadable(source.to_string()),
     }
+}
+
+/// An audit record parsed from `content`, the text of the artifact at `path`,
+/// which names it in an error: its frontmatter split off and deserialized.
+/// [`load_record`]'s second half.
+///
+/// # Errors
+///
+/// The reason, when the frontmatter fence is missing or the YAML will not
+/// deserialize as `T`.
+pub(crate) fn parse_record<T: serde::de::DeserializeOwned>(
+    content: &str,
+    path: &Path,
+) -> std::result::Result<T, String> {
+    let (fm_text, _body) = split_frontmatter(content, path).map_err(|error| error.to_string())?;
+    serde_norway::from_str::<T>(fm_text).map_err(|error| error.to_string())
 }
 
 /// The review record, from `{feature_dir}/review.md`.

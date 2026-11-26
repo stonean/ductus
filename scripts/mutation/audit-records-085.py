@@ -3,7 +3,8 @@
 (`bounded_lists.rs`' rows for its counts of no list), and its CLI report and
 exit status (`runtime/src/main.rs`). Each behavior is mutated once and killed
 by the test that names it: the walk's skips and findings, each record finding,
-the probe for `blocking`, the baseline's states and format, the exempt sets
+the probe for `blocking`, read from the record's own text so each record
+file is read once, the baseline's states and format, the exempt sets
 against their marks, the spec root that cannot be listed, the namespace in
 messages, the lists file past the read size, and the CLI's lines and exit.
 
@@ -99,23 +100,9 @@ MUTATIONS = [
     (
         'M12 a record with no blocking key passes',
         'src/primitives/check_audit_records.rs',
-        '        RecordLoad::Present(BlockingProbe { blocking: None }) => {\n            return Judged::Finding(AuditRecordFindingKind::NoBlocking, String::new());\n        }',
-        '        RecordLoad::Present(BlockingProbe { blocking: None }) => {}',
+        '    if !record.blocking_key {\n        return Judged::Finding(AuditRecordFindingKind::NoBlocking, String::new());\n    }\n',
+        '',
         'check_audit_records::tests::each_record_finding_fails_with_its_condition_and_passes_without_it',
-    ),
-    (
-        'M13 a probe that does not load passes',
-        'src/primitives/check_audit_records.rs',
-        '        RecordLoad::Unreadable(reason) => {\n            return Judged::Finding(AuditRecordFindingKind::NoBlocking, reason);\n        }',
-        '        RecordLoad::Unreadable(_) => {}',
-        'check_audit_records::tests::a_record_is_judged_by_its_load_and_its_probe',
-    ),
-    (
-        'M14 a probe that finds the record gone passes',
-        'src/primitives/check_audit_records.rs',
-        '        RecordLoad::Absent => {\n            return Judged::Finding(\n                AuditRecordFindingKind::NoBlocking,\n                "it was gone when read again".into(),\n            );\n        }',
-        '        RecordLoad::Absent => {}',
-        'check_audit_records::tests::a_record_is_judged_by_its_load_and_its_probe',
     ),
     (
         'M15 blocking: true passes',
@@ -125,11 +112,11 @@ MUTATIONS = [
         'check_audit_records::tests::each_record_finding_fails_with_its_condition_and_passes_without_it',
     ),
     (
-        'M16 the probe reads nothing from the file',
+        'M16 the probe reads no key from the text',
         'src/primitives/check_audit_records.rs',
-        '            match judge(load, || load_record::<BlockingProbe>(&path)) {',
-        '            let _ = &path;\n            match judge(load, || {\n                RecordLoad::Present(BlockingProbe {\n                    blocking: Some(serde_norway::Value::Bool(false)),\n                })\n            }) {',
-        'check_audit_records::tests::each_record_finding_fails_with_its_condition_and_passes_without_it',
+        '                .is_ok_and(|probe| probe.blocking.is_some());',
+        '                .is_ok();',
+        'check_audit_records::tests::the_probe_reads_the_key_from_the_records_own_text',
     ),
     (
         'M17 a baseline linked out of the project is read',
@@ -356,5 +343,12 @@ MUTATIONS = [
         '            emit_result_gated(outcome, audit_records_blocks)',
         '            emit_result_gated(outcome, |_| false)',
         '--test check_audit_records_cli a_finding_exits_one_naming_its_file',
+    ),
+    (
+        'M49 each record file is read a second time',
+        'src/primitives/check_audit_records.rs',
+        '            let text = read(&path);\n',
+        '            let _ = read(&path);\n            let text = read(&path);\n',
+        'check_audit_records::tests::each_record_file_is_read_once',
     ),
 ]

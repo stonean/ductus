@@ -21,10 +21,18 @@ Blocked on task 1: the step calls the primitive, and its test runs this tree's r
 
 ## 3. The cost is stated and the affected specs link back (089 AC4, cross-spec impact)
 
-Blocked on task 2: the measured run is the shipped step's.
+Blocked on task 2: the measured run is the shipped step's. Its first subtask is blocked on task 4 too: a measurement at `2e784849` found each record read twice, which task 4 removes, so the cost is measured on the run task 4 leaves.
 
 - [ ] Measure one `check-audit-records` run over this repository's corpus, its wall time by `/usr/bin/time -p` and the bytes it reads, and the description's bytes; state them in `spec.md`'s body with what it retires, as the plan's *What a run costs, and what it retires* says, beside a blockquoted signpost to [089](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md)
 - [ ] Blockquoted signposts back-linking 085 in 057's and 066's `spec.md` bodies, saying the step now runs `check-audit-records`, each leaving its spec `done`
 - [ ] The prose-claim sweep for the step's old parse (`scripts/stale-literals.sh`, then a search by meaning for the step's inline reader), each stale claim corrected
 
 - **Done when**: `check-review-gate` reports 057 and 066 discharged, the spec states its cost with its method and units, and the sweep leaves no live claim of the old parse.
+
+## 4. Each record is read once (AC2)
+
+- [x] `load_record` in `runtime/src/primitives/mod.rs` splits into a read half and a parse half, `load_record` composing them, so its two callers, `load_review_record` and `load_analyze_record`, see no change
+- [x] `check-audit-records` reads each `done` spec's record once and parses that text into the record type, by the gate's parse, and into the `blocking` probe; the probe's arm for a record gone when read again goes, as it is unreachable; `scripts/mutation/audit-records-085.py` drops that arm's mutant and re-anchors the probe's, with a mutant for a second read its test turns red
+- [x] 085's Resolved Question naming the loaders, and the plan's probe decision, its Trade-offs entry and its Cross-spec impact line on 066, edited to say the record is read once through `load_record`'s halves (the agent's recommendation, adopted by the operator, 2026-11-26)
+
+- **Done when**: a run reads each record file once, proven by a test its mutant turns red; `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, the whole `cargo test` and the mutation list pass.

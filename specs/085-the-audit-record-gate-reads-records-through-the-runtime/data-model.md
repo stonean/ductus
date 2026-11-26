@@ -32,7 +32,7 @@ A spec root that is absent or cannot be listed fails the call with an error nami
 | `spec-unreadable` | its `spec.md` | `spec.md` cannot be read as UTF-8 text, or its frontmatter does not parse as spec frontmatter (a list field holding a scalar fails it too) or names no `status` |
 | `record-unreadable` | the record's file | A `done` spec's `review.md` or `analysis.md` exists and does not load (the loader's reason in `message`) |
 | `no-last-run` | the record's file | A present record's `last-run` is null, absent or blank |
-| `no-blocking` | the record's file | A present record has no `blocking` key, or its probe did not load |
+| `no-blocking` | the record's file | A present record has no `blocking` key, or its probe of the same text did not parse |
 | `blocking` | the record's file | A present record carries `blocking: true` |
 | `baseline-malformed` | the baseline file | A known key's value is not a whole number |
 | `baseline-unreadable` | the baseline file | The file exists and cannot be read |

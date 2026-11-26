@@ -15,18 +15,19 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 
 use crate::host::Host;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, RecordLoad, Result,
-    frontmatter_status, list_feature_dirs, list_untracked_specs, load_analyze_record, load_record,
-    load_review_record, read_text, validate_contained, validate_feature_argument,
+    frontmatter_status, list_feature_dirs, list_untracked_specs, parse_record, read_record,
+    read_text, validate_contained, validate_feature_argument,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AuditBaseline, AuditBaselineState, AuditExemptSet, AuditRecordFinding, AuditRecordFindingKind,
-    AuditRecordKind, AuditRecordSkip, AuditRecordSkipReason, CheckAuditRecordsArgs,
-    CheckAuditRecordsResult, ListsForm,
+    AnalyzeBlock, AuditBaseline, AuditBaselineState, AuditExemptSet, AuditRecordFinding,
+    AuditRecordFindingKind, AuditRecordKind, AuditRecordSkip, AuditRecordSkipReason,
+    CheckAuditRecordsArgs, CheckAuditRecordsResult, ListsForm, ReviewBlock,
 };
 
 const PRIMITIVE: &str = "check-audit-records";
@@ -76,8 +77,8 @@ pub fn run(_args: &CheckAuditRecordsArgs, repo: &Path) -> Result<CheckAuditRecor
     bound(repo, compute(repo)?)
 }
 
-/// Read every `done` spec's records under the configured spec root, and the
-/// baseline file.
+/// Read every `done` spec's records under the configured spec root, each
+/// record file once, and the baseline file.
 ///
 /// # Errors
 ///
@@ -89,6 +90,15 @@ pub fn run(_args: &CheckAuditRecordsArgs, repo: &Path) -> Result<CheckAuditRecor
 /// which specs are untracked has no answer; and an I/O error resolving the
 /// project root.
 pub fn compute(repo: &Path) -> Result<AuditRecords> {
+    compute_reading(repo, &mut read_record)
+}
+
+/// [`compute`], each record file's text read through `read`: [`read_record`]
+/// outside the tests, which count the reads through it.
+fn compute_reading(
+    repo: &Path,
+    read: &mut dyn FnMut(&Path) -> RecordLoad<String>,
+) -> Result<AuditRecords> {
     let specs_root = paths::Paths::load(repo)?.specs_root;
     let project = Host::load(repo)?.project;
     open_root(repo, &specs_root)?;
@@ -97,7 +107,7 @@ pub fn compute(repo: &Path) -> Result<AuditRecords> {
         .collect();
     let mut walk = Walk::default();
     for feature in list_feature_dirs(repo, &specs_root)? {
-        walk.spec(repo, &specs_root, &feature, &untracked, &project)?;
+        walk.spec(repo, &specs_root, &feature, &untracked, &project, read)?;
     }
     let (baseline, marks) = read_baseline(repo, &mut walk.findings)?;
     let exempt = [
@@ -164,6 +174,7 @@ impl Walk {
         feature: &str,
         untracked: &BTreeSet<String>,
         project: &str,
+        read: &mut dyn FnMut(&Path) -> RecordLoad<String>,
     ) -> Result<()> {
         let dir_rel = format!("{root}/{feature}");
         match validate_feature_argument(repo, root, feature) {
@@ -207,19 +218,19 @@ impl Walk {
         }
         self.done += 1;
         let dir = repo.join(&dir_rel);
-        let review = fields(load_review_record(&dir), |r| {
-            (r.last_run.clone(), r.blocking)
-        });
-        let analyze = fields(load_analyze_record(&dir), |r| {
-            (r.last_run.clone(), r.blocking)
-        });
-        for (kind, load) in [
-            (AuditRecordKind::Review, review),
-            (AuditRecordKind::Analyze, analyze),
-        ] {
+        for kind in [AuditRecordKind::Review, AuditRecordKind::Analyze] {
             let file = record_file(kind);
             let path = dir.join(file);
-            match judge(load, || load_record::<BlockingProbe>(&path)) {
+            let text = read(&path);
+            let load = match kind {
+                AuditRecordKind::Review => {
+                    fields::<ReviewBlock>(text, &path, |r| (r.last_run.clone(), r.blocking))
+                }
+                AuditRecordKind::Analyze => {
+                    fields::<AnalyzeBlock>(text, &path, |r| (r.last_run.clone(), r.blocking))
+                }
+            };
+            match judge(load) {
                 Judged::Exempt => match kind {
                     AuditRecordKind::Review => self.review_exempt.push(feature.to_string()),
                     AuditRecordKind::Analyze => self.analyze_exempt.push(feature.to_string()),
@@ -247,24 +258,40 @@ impl Walk {
     }
 }
 
-/// The two fields of a record the gate turns on: `last-run` and `blocking`.
+/// The fields of a record the gate turns on: `last-run`, `blocking`, and whether
+/// the frontmatter carries a `blocking` key at all.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Fields {
     last_run: Option<String>,
     blocking: bool,
+    blocking_key: bool,
 }
 
-/// `load` with its record reduced to [`Fields`].
-fn fields<T>(
-    load: RecordLoad<T>,
+/// The record file's text, `text`, parsed by the gate's parse ([`parse_record`])
+/// into `T` and reduced to [`Fields`] by `read`, its `blocking` key read from the
+/// same text by [`BlockingProbe`], so the file is read once. A probe that does
+/// not parse reads as no key, never as a pass.
+fn fields<T: DeserializeOwned>(
+    text: RecordLoad<String>,
+    path: &Path,
     read: impl FnOnce(&T) -> (Option<String>, bool),
 ) -> RecordLoad<Fields> {
-    match load {
-        RecordLoad::Absent => RecordLoad::Absent,
-        RecordLoad::Unreadable(reason) => RecordLoad::Unreadable(reason),
-        RecordLoad::Present(record) => {
+    let text = match text {
+        RecordLoad::Absent => return RecordLoad::Absent,
+        RecordLoad::Unreadable(reason) => return RecordLoad::Unreadable(reason),
+        RecordLoad::Present(text) => text,
+    };
+    match parse_record::<T>(&text, path) {
+        Err(reason) => RecordLoad::Unreadable(reason),
+        Ok(record) => {
             let (last_run, blocking) = read(&record);
-            RecordLoad::Present(Fields { last_run, blocking })
+            let blocking_key = parse_record::<BlockingProbe>(&text, path)
+                .is_ok_and(|probe| probe.blocking.is_some());
+            RecordLoad::Present(Fields {
+                last_run,
+                blocking,
+                blocking_key,
+            })
         }
     }
 }
@@ -284,13 +311,12 @@ enum Judged {
     Exempt,
     /// Present, with a `last-run`, a `blocking` key and `blocking: false`.
     Clean,
-    /// A finding, with the reason a load gave, empty when there is none.
+    /// A finding, with the reason the load gave, empty when there is none.
     Finding(AuditRecordFindingKind, String),
 }
 
-/// Judge a record from its load, reading its `blocking` key through `probe`
-/// only when it is present and has run.
-fn judge(load: RecordLoad<Fields>, probe: impl FnOnce() -> RecordLoad<BlockingProbe>) -> Judged {
+/// Judge a record from its load.
+fn judge(load: RecordLoad<Fields>) -> Judged {
     let record = match load {
         RecordLoad::Absent => return Judged::Exempt,
         RecordLoad::Unreadable(reason) => {
@@ -305,20 +331,8 @@ fn judge(load: RecordLoad<Fields>, probe: impl FnOnce() -> RecordLoad<BlockingPr
     {
         return Judged::Finding(AuditRecordFindingKind::NoLastRun, String::new());
     }
-    match probe() {
-        RecordLoad::Present(BlockingProbe { blocking: Some(_) }) => {}
-        RecordLoad::Present(BlockingProbe { blocking: None }) => {
-            return Judged::Finding(AuditRecordFindingKind::NoBlocking, String::new());
-        }
-        RecordLoad::Absent => {
-            return Judged::Finding(
-                AuditRecordFindingKind::NoBlocking,
-                "it was gone when read again".into(),
-            );
-        }
-        RecordLoad::Unreadable(reason) => {
-            return Judged::Finding(AuditRecordFindingKind::NoBlocking, reason);
-        }
+    if !record.blocking_key {
+        return Judged::Finding(AuditRecordFindingKind::NoBlocking, String::new());
     }
     if record.blocking {
         Judged::Finding(AuditRecordFindingKind::Blocking, String::new())
@@ -367,7 +381,7 @@ fn record_message(
             format!("done spec has a null or absent {name}.last-run — run /{project}:{command}")
         }
         AuditRecordFindingKind::NoBlocking => format!(
-            "{file} carries a {name} record with no readable blocking field{reason} — the gate turns on it, and absent is not false; re-run /{project}:{command}"
+            "{file} carries a {name} record with no blocking field — the gate turns on it, and absent is not false; re-run /{project}:{command}"
         ),
         _ => format!(
             "done spec has {name}.blocking=true — see {path}, and resolve its findings with /{project}:{command}"
@@ -822,61 +836,105 @@ mod tests {
         assert_eq!(found.done, 1);
     }
 
-    fn present(last_run: Option<&str>, blocking: bool) -> RecordLoad<Fields> {
+    fn present(last_run: Option<&str>, blocking: bool, blocking_key: bool) -> RecordLoad<Fields> {
         RecordLoad::Present(Fields {
             last_run: last_run.map(str::to_string),
             blocking,
+            blocking_key,
         })
     }
 
-    fn probe_with(blocking: Option<bool>) -> RecordLoad<BlockingProbe> {
-        RecordLoad::Present(BlockingProbe {
-            blocking: blocking.map(serde_norway::Value::Bool),
-        })
-    }
-
-    /// The judgment, whatever its probe: an absent or unreadable record and one
-    /// with no `last-run` never read the probe, and a probe that does not load,
-    /// or finds no key, is a finding, never a pass.
+    /// The judgment of each load: absent is exempt, unreadable and a record
+    /// with no `last-run` or no `blocking` key are findings, and `blocking:
+    /// true` is one.
     #[test]
-    fn a_record_is_judged_by_its_load_and_its_probe() {
-        let unread = || -> RecordLoad<BlockingProbe> { panic!("the probe was read") };
-        assert_eq!(judge(RecordLoad::Absent, unread), Judged::Exempt);
-        assert_eq!(
-            judge(RecordLoad::Unreadable("bad".into()), unread),
-            Judged::Finding(AuditRecordFindingKind::RecordUnreadable, "bad".into())
-        );
-        assert_eq!(
-            judge(present(None, false), unread),
-            Judged::Finding(AuditRecordFindingKind::NoLastRun, String::new())
-        );
-        assert_eq!(
-            judge(present(Some(" \t"), false), unread),
-            Judged::Finding(AuditRecordFindingKind::NoLastRun, String::new())
-        );
+    fn a_record_is_judged_by_its_load() {
+        use AuditRecordFindingKind::{Blocking, NoBlocking, NoLastRun, RecordUnreadable};
         let ran = Some("2026-11-25T00:00:00Z");
+        let finding = |kind| Judged::Finding(kind, String::new());
+        assert_eq!(judge(RecordLoad::Absent), Judged::Exempt);
         assert_eq!(
-            judge(present(ran, false), || probe_with(Some(false))),
-            Judged::Clean
+            judge(RecordLoad::Unreadable("bad".into())),
+            Judged::Finding(RecordUnreadable, "bad".into())
+        );
+        assert_eq!(judge(present(None, false, true)), finding(NoLastRun));
+        assert_eq!(judge(present(Some(" \t"), false, true)), finding(NoLastRun));
+        assert_eq!(judge(present(ran, false, true)), Judged::Clean);
+        assert_eq!(judge(present(ran, true, true)), finding(Blocking));
+        assert_eq!(judge(present(ran, false, false)), finding(NoBlocking));
+    }
+
+    /// The probe reads the key from the text the record was parsed from: a
+    /// frontmatter with the key loads with it, one without loads without it.
+    #[test]
+    fn the_probe_reads_the_key_from_the_records_own_text() {
+        let path = Path::new("specs/001-a/review.md");
+        let read = |r: &ReviewBlock| (r.last_run.clone(), r.blocking);
+        let with = fields::<ReviewBlock>(RecordLoad::Present(REVIEW.into()), path, read);
+        let without = fields::<ReviewBlock>(
+            RecordLoad::Present(REVIEW.replace(NOT_BLOCKING, "")),
+            path,
+            read,
+        );
+        assert!(
+            matches!(
+                with,
+                RecordLoad::Present(Fields {
+                    blocking_key: true,
+                    ..
+                })
+            ),
+            "{with:?}"
+        );
+        assert!(
+            matches!(
+                without,
+                RecordLoad::Present(Fields {
+                    blocking_key: false,
+                    blocking: false,
+                    ..
+                })
+            ),
+            "{without:?}"
         );
         assert_eq!(
-            judge(present(ran, true), || probe_with(Some(true))),
-            Judged::Finding(AuditRecordFindingKind::Blocking, String::new())
+            fields::<ReviewBlock>(RecordLoad::Absent, path, read),
+            RecordLoad::Absent
         );
+    }
+
+    /// A run reads each record file once, its probe included, and every
+    /// `done` spec's two.
+    #[test]
+    fn each_record_file_is_read_once() {
+        let project = Project::new(Layout::Root);
+        project.done("001-a").done("002-b").commit();
+        let mut reads: Vec<std::path::PathBuf> = Vec::new();
+        let found = compute_reading(&project.root, &mut |path: &Path| {
+            reads.push(path.to_path_buf());
+            read_record(path)
+        })
+        .unwrap();
+        assert!(found.findings.is_empty(), "{found:?}");
+        let mut read: Vec<String> = reads
+            .iter()
+            .map(|path| {
+                path.strip_prefix(&project.root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        read.sort();
         assert_eq!(
-            judge(present(ran, false), || probe_with(None)),
-            Judged::Finding(AuditRecordFindingKind::NoBlocking, String::new())
+            read,
+            vec![
+                "specs/001-a/analysis.md",
+                "specs/001-a/review.md",
+                "specs/002-b/analysis.md",
+                "specs/002-b/review.md",
+            ]
         );
-        assert_eq!(
-            judge(present(ran, false), || RecordLoad::Unreadable(
-                "gone bad".into()
-            )),
-            Judged::Finding(AuditRecordFindingKind::NoBlocking, "gone bad".into())
-        );
-        assert!(matches!(
-            judge(present(ran, false), || RecordLoad::Absent),
-            Judged::Finding(AuditRecordFindingKind::NoBlocking, _)
-        ));
     }
 
     /// A `spec.md` whose status cannot be read is a finding and is not examined:
