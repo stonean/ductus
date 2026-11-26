@@ -53,6 +53,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 4. `/analyze` reads parts and records the findings
 
+Tasks 1–3 landed the result this task reads: `check-artifact-size` with `project-files` carries `parts`, `parts-count`, `part-findings` and `part-findings-count` in its project half, and, staged only, `refused` and `refused-count` (063's `data-model.md`, *The project half*). An unreadable part, and a directory under `.ductus/docs/` that could not be listed, are in `skipped` under `artifact-unreadable`. This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M39.
+
 - [ ] `framework/commands/analyze.md`: Scope Boundaries name the parts; step 15 invokes `check-artifact-size` with `project-files` and no feature before judging the plan against `system.md`, reads every part listed and names them; step 17 records each `part-findings` entry as Advisory, family `project-parts`
 - [ ] `framework/reference/analyze.md`: in §Plan consistency (blocking if plan exists), *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
 - [ ] `runtime/src/interpreter/analyze_tally.rs`: the `check-artifact-size` arm adds `part-findings-count` to advisory; an interpreter test shows an exec `/analyze` counting an unlinked part
@@ -122,6 +124,8 @@ Task 3 made the shipped hook refuse a grown part, so the constitution's §text-f
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); `/target` over the fixture reports the part's bytes, names the over-limit part with its repository, reports a not-checked-out entry's parts as not measured, and continues (AC16, AC17); the commit records each registry layout's impact (AC18).
 
 ## 11. The migration entry
+
+Task 3 edited the shipped hook's step-4 comment and `framework/bootstrap/ductus-procedure.md` without a scratch-adopter run, which this task's three bootstrap runs, installing that hook, stand in for (the agent's recommendation, adopted by the operator, 2026-11-25): confirm in each run that the installed `.githooks/ductus-pre-commit` carries the parts wording.
 
 - [ ] `framework/migrations/project-file-links-into-docs.md`: run `prune-project` as a preview through the CLI at the pointer path Pre-flight acquired, never the session's MCP server, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing; a result without `move-candidates` is reported as not checked, naming the command
 - [ ] Register it in `framework/migrations.toml`, with `introduced_in` read from `version` when this task runs
