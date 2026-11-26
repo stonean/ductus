@@ -1,5 +1,5 @@
 ---
-status: draft
+status: clarified
 dependencies: [057-analyze-artifact-and-record-relocation, 084-reopen-for-owed-code-review-every-code-change]
 cross-spec-impact: [057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate]
 next-criterion: 6
@@ -22,11 +22,19 @@ The adopter CI template's audit-record gate reads each `done` spec's review and 
 - It honours the job's commented `working-directory` and the configured spec root, and annotates each finding on its file from the repository root, as the step does (spec 059).
 - The template's pinned runtime serves the primitive, so the pin moves in the release that ships it.
 
+## Edge Cases
+
+- A `spec.md` whose frontmatter parses but carries no `status` is a finding, as one that does not parse is: whether it is `done` is unknown, so its records were never examined. The step's own parse skipped it as not `done`.
+- A spec directory that is or holds a symbolic link leaving the project is a finding naming the link, never read; an untracked spec is counted and skipped, as `check-owed-work`'s corpus form does.
+- A baseline key the file does not name holds a mark of zero; a key the primitive does not know is ignored; a value that is not a whole number, or a file that cannot be read, is the malformed-file finding, and the exempt sets are still counted and reported.
+- A `done` spec with one record present and the other absent counts only in the absent record's exempt set.
+- A spec root that cannot be listed is an error, never zero specs examined, and the step fails on it.
+
 ## Acceptance Criteria
 
 - [ ] AC1: `framework/templates/ci/adopter-generators.yml`'s audit-record gate calls one runtime primitive over the corpus and parses no frontmatter or markdown of its own.
-- [ ] AC2: The primitive reports each `done` spec's review and analyze record as absent, present or unparseable, and reports as a finding naming its file a present record with a null `last-run`, with no `blocking` field or with `blocking: true`, and a spec whose `spec.md` frontmatter cannot be read.
-- [ ] AC3: The never-run set is held against the committed high-water marks, zero when the baseline file is absent, a malformed file is a finding, and the step fails when either exempt set exceeds its mark.
+- [ ] AC2: The primitive reports each `done` spec's review and analyze record as absent, present or unparseable, and reports as a finding naming its file a present record with a null `last-run`, with no `blocking` field or with `blocking: true`, and a spec whose `spec.md` frontmatter cannot be read or names no `status`, or whose directory holds a link leaving the project.
+- [ ] AC3: The primitive holds each never-run set against its committed high-water mark, read from `.ductus/audit-record-baseline.txt`: a mark is zero when the file is absent or omits its key, a malformed or unreadable file is a finding naming it, and the step fails when either exempt set exceeds its mark.
 - [ ] AC4: The step reports the specs it examined, those at `done` and each exempt count with its mark on every run, and fails when it examined none.
 - [ ] AC5: A test proves each finding fails the step with its condition present and passes without it, from a project at the repository root and from one in a subdirectory.
 
@@ -37,9 +45,10 @@ The adopter CI template's audit-record gate reads each `done` spec's review and 
 
 ## Open Questions
 
-- Is the primitive new, or a corpus form of an existing one: `check-review-gate`'s record checks, or `check-owed-work`'s corpus form, which 084 adds to the same template?
-- Does the runtime read the baseline file, or does the step keep reading it? It is plain text, not frontmatter or markdown, but a count the runtime compares against a mark it read itself cannot disagree with the mark.
+*None — all resolved.*
 
 ## Resolved Questions
 
 - **A new spec, built for the next release** (the agent's recommendation, adopted by the operator, 2026-11-24; built without waiting for 084's bar, the owner's decision, 2026-11-25). The step predates 084, which the owner chose not to widen to cover it. A task on 057 would reopen it, and one on 066 would hold its close, one analysis away at `ea691221`, behind the build. Its review and analysis count in 084's bar (b), which gates nothing (084's Resolved Questions). Rejected: an inbox item, which §design-principles names no disposition; a waiver, since no requirement puts the step out of scope; and building it only once that bar is read, which holds the next release two weeks.
+- **The primitive is new** (the agent's recommendation, adopted by the operator, 2026-11-25). It reads each `done` spec's two records through `load_review_record` and `load_analyze_record` in `runtime/src/primitives/mod.rs`, whose `RecordLoad` holds the step's three states (absent, unreadable, present), and walks the corpus as `check-owed-work`'s corpus form does, with its skip reasons (`runtime/src/primitives/check_owed_work.rs`, read at `4cfcf172`). Rejected: a corpus form of `check-review-gate`, whose first check answers `already-done` for exactly the `done` specs this one examines; and `check-owed-work`'s corpus form, whose `owes` is 084's one owed-work test, which a missing or blocking record must never feed.
+- **The runtime reads the baseline file** (the agent's recommendation, adopted by the operator, 2026-11-25). The primitive reads `.ductus/audit-record-baseline.txt`, compares each exempt count with its mark, and reports a malformed or unreadable file as a finding, so the step parses nothing and one reader holds both the counts and the marks. The step was the file's only reader (`git grep audit-record-baseline` at `4cfcf172`); this repository's own audit reads a different file, `scripts/audit/analyze-record-baseline.txt`. Rejected: the step keeping its `baselines()` parse and mark comparison, about 45 lines no runtime test covers.
