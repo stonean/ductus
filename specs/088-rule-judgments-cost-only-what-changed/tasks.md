@@ -55,7 +55,7 @@ Task 2's commit already corrected the per-file claims it found: `DISCOVER_RULE_F
 
 Blocked on tasks 1 to 4: the cost is measured on the shipped code, at a commit already on `origin/main`, which the statement cites by sha.
 
-- [ ] Measure each figure the plan's *What a run costs, and what it retires* names, the tally of `rejudged-files` reasons over this corpus among them, and state them in `spec.md`'s body with what it retires, beside a blockquoted signpost to [089](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md)
+- [x] Measure each figure the plan's *What a run costs, and what it retires* names, the tally of `rejudged-files` reasons over this corpus among them, and state them in `spec.md`'s body with what it retires, beside a blockquoted signpost to [089](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md)
 
 - **Done when**: the spec states each cost with its method, units and commit, and what it retires or why none.
 

@@ -30,6 +30,22 @@ A `/{project}:analyze` run judges a loaded rule afresh only when what that rule 
 - A record with no `analyzed-against`, or one naming a commit the repository does not hold, re-judges each changed file whole, and the result names the reason.
 - The two counts AC1 records sum to the loaded rules a run assessed, a not-fired verdict carried counting as carried.
 
+## Cost
+
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) asks this spec to state what a run of what it adds costs, in a measurable unit, and what it retires.
+
+Measured at `254db2af` with the release build, in `git clone --local` copies of this repository, on a Darwin arm64 machine. Wall times are `/usr/bin/time -p`'s, whose resolution is 0.01 s, unless stated.
+
+- **The two counts (AC1).** 35 bytes a record, by `wc -c` of the `rules-judged:` and `rules-carried:` lines `write-analysis` wrote into 036's record over the 306 assessable rules the 12 loaded rule files define, judging all of them (`306` and `0`) or none (`0` and `306`); at most 37 while both counts have three digits.
+- **The per-rule comparison (AC2).**
+  - A rule-file commit owes fewer judgments: over the 22 commits that touched `framework/rules/` after `a3629a95`, 104, where 082's per-file rule owed 1,009 (the Resolved Questions, measured at `1ffaf951`).
+  - The added read is one commit lookup and one blob read per changed rule file per call. A `discover-rule-files --all --rules --feature` call over 036, whose record's eight changed rule files are each read at its `analyzed-against`, took a median 19.5 ms against 17.2 ms once a record no rule file had changed since replaced it, 40 calls each after three that warmed the cache, by `time.perf_counter` around each process: 2.3 ms, about 0.3 ms a file, and 0.01 s by `/usr/bin/time -p` either way. With `QUAL-STUB-001`'s Verification edited, `judge` held it and the two rules whose Verifications name it, `QUAL-CLAIM-001` and `QUAL-TEST-001`.
+  - `rejudged-files` held no entry over every feature. Of the 83 features, 79 with a record, `verdicts.reason` read `subjects-changed` for 22 and `no-prior-verdicts` for 22, and 39 reached the per-rule step. On 26 of them a rule file had changed since the record's `analyzed-against`, 123 files in all by `git diff --name-only` over `framework/rules/`; any whose rules' digest moved was read at that commit, and none was named. The 83 calls took 0.85 s in all, 0.01 to 0.02 s each.
+- **The backfill (AC3).**
+  - Its description is 2,525 characters, all ASCII, and its input schema 381: 2,906 load with the tool, of 252,789 across the 76 tools, by `scripts/measure-result-sizes.sh` at `254db2af` with a clean tree. Its result is 218 characters on that script's fixture corpora.
+  - A run over this corpus at `7f8095e1`, before its records were backfilled, wrote 10 records in 0.11 s; five runs after it wrote none in 0.04 s each, as did five at `254db2af`.
+- **What it retires.** No primitive, check or record field. The counts hold what no field held, since `judged-rules` is an argument `write-analysis` never stored; AC2 replaces 082's per-file currency rule, not a field; and the backfill, which its migration runs once per repository, writes a field only an analysis run wrote before it.
+
 ## Acceptance Criteria
 
 - [ ] AC1: `write-analysis` records, for each run, the count of loaded rules judged afresh and the count of stored verdicts carried, and a test proves both counts on a fixture run that carries one verdict and judges one rule afresh.
