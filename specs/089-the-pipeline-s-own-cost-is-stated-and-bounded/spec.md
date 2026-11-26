@@ -2,7 +2,7 @@
 status: draft
 dependencies: [050-constitution, 072-governing-documents-stay-within-one-read, 087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file]
 cross-spec-impact: [050-constitution, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs]
-next-criterion: 4
+next-criterion: 5
 ---
 
 # 089 — The pipeline's own cost is stated and bounded
@@ -24,6 +24,7 @@ A spec that adds a check, an audit-record field or a primitive states what a run
 
 - [ ] AC1: `framework/constitution.md` §design-principles states that a spec adding a check, an audit-record field or a primitive states what a run of it costs in a measurable unit, and which existing check, field or primitive it retires, or why none.
 - [ ] AC2: `scripts/lint-governing-size.sh` holds `AGENTS.md` and `framework/constitution.md` to ceilings below 50,000 bytes and each `framework/commands/{name}.md` with its `framework/reference/{name}.md` to a ceiling, fails naming the file, its size, its ceiling and its fix when one is over, and a test proves each ceiling fails when exceeded and passes at it.
+- [ ] AC4: 085, 086, 087 and 088 each state in their spec what a run of what they add costs, in a measurable unit, and what they retire, or why none, before any of them reaches `done`; each carries this spec in its `cross-spec-impact:` or a signpost back-linking it.
 - [ ] AC3: Every file the script governs is at or under its ceiling at the commit that lowers the ceilings, and `scripts/audit/run-all.sh` passes there.
 
 ## Applicable Rules
@@ -32,8 +33,11 @@ A spec that adds a check, an audit-record field or a primitive states what a run
 
 ## Open Questions
 
-- Is the cost statement a hard filter, deferring a design that states neither, as the other design principles do, or advisory?
-- Does it apply to the specs already `planned` or `in-progress` when it lands, among them 085, 086, 087 and 088, each of which adds a primitive or a record field?
 - What are the new ceilings for `AGENTS.md` and `framework/constitution.md`?
 - Is a command's ceiling held per file or over the command and its reference together, and at what size?
-- Is a before-and-after token comparison wanted? Claude Code's session transcripts are the only record of tokens (080's Motivation used them) and are pruned on a retention period, so the current ones must be kept now for one.
+
+## Resolved Questions
+
+- **The cost statement is a hard filter** (the agent's recommendation, adopted by the operator, 2026-11-25): a §design-principles bullet, so a design that states neither a run's cost nor what it retires is redesigned or deferred, as that section's preamble binds every principle in it. Rejected: an advisory prompt outside §design-principles, under which a design that skips it ships.
+- **It binds every spec not yet `done` when it lands** (the agent's recommendation, adopted by the operator, 2026-11-25): 085, 086, 087 and 088 each state a run's cost and what they retire before their `done`, judged at each one's analysis. Rejected: binding only specs specified after it, under which the four open designs ship without the statement.
+- **Sizes are measured in bytes alone** (the agent's recommendation, adopted by the operator, 2026-11-25): the ceilings bind bytes, and the governing documents' session-start load is their bytes, which `wc -c` measures the same way at any commit. Rejected: a before-and-after token comparison from Claude Code's session transcripts, which measures the same load through a tokenizer with session-to-session variance.
