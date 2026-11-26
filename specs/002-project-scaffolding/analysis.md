@@ -34,6 +34,36 @@ dispositions:
   deferred: 0
   waived: 0
   undispositioned: 0
+section-digest:
+  "plan.md": 47014f5083dc3c88
+  "plan.md#002 — Project Scaffolding Templates Plan": 4a3ca63f181ba1d6
+  "plan.md#Affected Files": 5000000c32f889ee
+  "plan.md#CLAUDE.md imports the constitution and AGENTS.md in the form Claude Code resolves": 98e30aa440818f49
+  "plan.md#Considered: including `{description}` placeholder in templates": d59cdfb845cc4411
+  "plan.md#Considered: naming the README template `readme.md`": d7676a8362a776a8
+  "plan.md#Gitignore stays minimal": 62a8d574834fbbfa
+  "plan.md#Open Questions Resolved": 06f01e106515972f
+  "plan.md#Overview": 833e43911820c143
+  "plan.md#README template derived from an adopter project": 5935656764d0818f
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#Trade-offs": 6d48e49804e54ced
+  "scenarios/claude-md-template-imports-load.md": bed4644af848762e
+  "scenarios/claude-md-template-imports-load.md#Behavior": 11f466421837c47d
+  "scenarios/claude-md-template-imports-load.md#Claude-md-template-imports-load": 79711585dc639efc
+  "scenarios/claude-md-template-imports-load.md#Context": 554f4f34f195a4bf
+  "scenarios/claude-md-template-imports-load.md#Edge Cases": 547495df8754830b
+  "scenarios/claude-md-template-imports-load.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/claude-md-template-imports-load.md#Resolved Questions": a87ab1db4bced931
+  "spec.md": 4e6e98a9551bcbf5
+  "spec.md#.gitignore template": 40b3b8223876f5bd
+  "spec.md#002 — Project Scaffolding Templates": f15f3b7bad4868ca
+  "spec.md#Acceptance Criteria": 40ef498f83cd9aad
+  "spec.md#Behavior": 8a24897e3cf86d3e
+  "spec.md#CLAUDE.md template": f7178e634e243d89
+  "spec.md#Problem": eef24dab195d2011
+  "spec.md#README.md template": 417500d710a21bdb
+  "spec.md#References": 089f5066fb13a9a9
+  "spec.md#Resolved Questions": a9d866513ccd2d59
 ---
 
 # Analysis — 002-project-scaffolding

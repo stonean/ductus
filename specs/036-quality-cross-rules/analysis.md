@@ -45,6 +45,46 @@ decisions:
     reason: the scenario adds one clause to QUAL-TEST-001 and its Resolved Questions reject a rule of its own; promoting it would mint a spec for a single Verification condition
     decided-at: 2026-11-14T03:20:34Z
     decided-by: rule
+section-digest:
+  "data-model.md": e3b0c44298fc1c14
+  "data-model.md#036 — Cross-cutting code-quality rules Data Model": 8dfc8bd9cb29b44a
+  "data-model.md#Category abbreviations": b71dc70ae1bcef0f
+  "data-model.md#QUAL-CLAIM namespace (Unsubstantiated clean results category)": a9c5f2e909184fb3
+  "data-model.md#QUAL-DELEG namespace (Delegation to shared code category)": 3513d148ba70fc99
+  "data-model.md#QUAL-GROUND namespace (Verify contracts category)": 9d859b91b4fb21ac
+  "data-model.md#QUAL-STUB namespace (Silent stubs category)": df3b888269f3d638
+  "data-model.md#QUAL-TEST namespace (Tests that cannot fail category)": 7ee2bb452ef3bd7a
+  "data-model.md#Rule set": 238b92b98242f88d
+  "data-model.md#Severity and ID-stability invariants": 878dfceef6cce84a
+  "data-model.md#`QUAL` rule ID format": 0380ed691e2d7139
+  "data-model.md#`QUAL` surface": e170a1ab0da46d6c
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#036 — Cross-cutting code-quality rules Plan": 8da20637acfc06f2
+  "plan.md#Affected Files": daac937dcdcf1e4c
+  "plan.md#Cross-spec impact": b80ceca5c75bf47d
+  "plan.md#Manifest wiring — `framework/bootstrap/ductus.md`": 60eccb66cd5e3eb0
+  "plan.md#New surface registration — `scripts/lint-rule-ids.sh`": c23f64f8772106a0
+  "plan.md#Overview": 3f5c44948fcf9e8e
+  "plan.md#Surface registry — `specs/036-quality-cross-rules/data-model.md`": 60b34f7fb262a192
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The rule file — `framework/rules/quality-cross.md`": b34853e64eb407fe
+  "plan.md#Trade-offs": bbf024b1db6dd10a
+  "scenarios/a-bound-test-pins-the-stated-figure.md": 761f3959ea5ea586
+  "scenarios/a-bound-test-pins-the-stated-figure.md#A-bound-test-pins-the-stated-figure": 34de5ece52520e3d
+  "scenarios/a-bound-test-pins-the-stated-figure.md#Behavior": 2a59134cda0b7dcb
+  "scenarios/a-bound-test-pins-the-stated-figure.md#Context": 769844e8c959ff03
+  "scenarios/a-bound-test-pins-the-stated-figure.md#Edge Cases": f489731755af6356
+  "scenarios/a-bound-test-pins-the-stated-figure.md#Open Questions": 20edda8881516e4e
+  "scenarios/a-bound-test-pins-the-stated-figure.md#Resolved Questions": 949d0246ea2ffd12
+  "spec.md": c39c38c02fafb018
+  "spec.md#036 — Cross-cutting code-quality rules": 5cf195d10d6b1b42
+  "spec.md#Acceptance Criteria": 5f6ebd80d9c54e98
+  "spec.md#Added categories": 4612c6dd7846ac3a
+  "spec.md#Boundaries (cross-reference, do not duplicate)": c6ab7f4d05f2f996
+  "spec.md#Motivation": f2b6ebc25f36a864
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Resolved Questions": aad49a15fe416c87
+  "spec.md#Rule set scope": 70d98498a6b28677
 ---
 
 # Analysis — 036-quality-cross-rules

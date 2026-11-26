@@ -34,6 +34,45 @@ dispositions:
   deferred: 0
   waived: 0
   undispositioned: 0
+section-digest:
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#056 — Bootstrap archive-boundary split Plan": d7b2d8c512d7a578
+  "plan.md#Affected Files": ccf12b2b2ddd46d6
+  "plan.md#Five excisions, not nine": 359c35363ac5c647
+  "plan.md#One pointer, placed where the archive first exists": f50f39f6e69d9237
+  "plan.md#Overview": 8a8c8cd90475fcff
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The allowlist header is corrected in the same change": 69897d4e8c1478c7
+  "plan.md#The archive half is reference prose, and is allowlisted as such": efb99d14f9f23811
+  "plan.md#The boundary is already settled; this plan does not re-derive it": fd88dfe9744995bb
+  "plan.md#Trade-offs": 4a54a6a207aa872e
+  "plan.md#Verification is by running the consumers, not by reading the assignment": 94f8eb23cd4e7227
+  "plan.md#`govern.md` is re-copied, and gains no counterpart": 811163e36a1ebb84
+  "scenarios/the-walker-places-every-archive-half-section.md": e08cf0130f1a37f9
+  "scenarios/the-walker-places-every-archive-half-section.md#Behavior": e4c2d6662951c7a4
+  "scenarios/the-walker-places-every-archive-half-section.md#Context": eb5746feb5d3d122
+  "scenarios/the-walker-places-every-archive-half-section.md#Edge Cases": 5e9b8779f6c58ba0
+  "scenarios/the-walker-places-every-archive-half-section.md#Open Questions": 20edda8881516e4e
+  "scenarios/the-walker-places-every-archive-half-section.md#Resolved Questions": dd445da3b45082c4
+  "scenarios/the-walker-places-every-archive-half-section.md#The-walker-places-every-archive-half-section": 2536f21ad54b1ce6
+  "spec.md": 0cda5b24404d714b
+  "spec.md#056 — Bootstrap archive-boundary split": 90b06dcd00897aae
+  "spec.md#Acceptance Criteria": d98cb9574d7d313d
+  "spec.md#Behavior": 29ab98cdbf8ff7c1
+  "spec.md#It is execution order, not reading order": 8e3e76469097f745
+  "spec.md#Measured": 8e0945decff95e5e
+  "spec.md#Motivation": ad6208eca9776317
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Rationale disposition": e1a6d91f65e1940c
+  "spec.md#Resolved Questions": f1d5b35356c304b7
+  "spec.md#Staleness": b85d0dc6943edde3
+  "spec.md#The boundary": 77ae870ecfe74b18
+  "spec.md#The retired bootstrap alias": 9f7110aa08772e35
+  "spec.md#What stays, and why": d019ed1aa4c6a484
+  "spec.md#What the adopter installs": 8efea1a142ae1c4a
+  "spec.md#What the run reads, and when": 073273d99f99a201
+  "spec.md#What the split does not reach": bc0c71f897060e58
+  "spec.md#Why the walk moves 26%, not the ~40% this was scoped at": ac5528c9bb6ea52a
 ---
 
 # Analysis — 056-bootstrap-archive-boundary-split

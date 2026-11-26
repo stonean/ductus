@@ -55,6 +55,85 @@ decisions:
     reason: "deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)"
     decided-at: 2026-10-16T02:24:44Z
     decided-by: andy@stone.dev
+section-digest:
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#\"Removal must ship with migration\" is discipline-only at v1": 884265da5032c770
+  "plan.md#027 — Bootstrap Migration Registry Plan": 2d5ff531c98b37ba
+  "plan.md#Affected Files": 8285684241b46399
+  "plan.md#Bootstrap loop placement and shape": 292b87e22e4281c3
+  "plan.md#CHANGELOG.md append at sunset is maintainer-discipline": 7101eaa5bb05ee9b
+  "plan.md#CHANGELOG.md shape": b0dc5820154b48ed
+  "plan.md#Considered: `apply-migrations` runtime primitive (deferred)": ad0e4f9296716256
+  "plan.md#Considered: declarative-step DSL for simple migrations (rejected)": 880cc1fc53367234
+  "plan.md#Considered: git archaeology inside Family 10 (rejected)": 86969845a4695831
+  "plan.md#Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)": e9ce4dc6d2199799
+  "plan.md#Family 10 design (`scripts/audit/migration-coverage.sh`)": b36d167a4424d139
+  "plan.md#Known Limitations": 7421d7dce1b66d0e
+  "plan.md#Overview": 76f25f79b72165d6
+  "plan.md#Procedure file content format is loosely specified": 205e8385779f2821
+  "plan.md#Procedure file shape (`framework/migrations/{id}.md`)": 34cdc8dd0cee5dea
+  "plan.md#Registry schema (`framework/migrations.toml`)": d484a386c37aa867
+  "plan.md#SemVer comparison (no new primitive)": 75f776f94bf8b42a
+  "plan.md#Sunset commit shape": 1be00679ff49ff09
+  "plan.md#Sunset values are chosen per entry, with no signal behind them": 24d26197afa3e8fe
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#Trade-offs": 6d48e49804e54ced
+  "plan.md#`.ductus/config.toml` `[migrations]` section": a687cb624fdd40b1
+  "scenarios/a-first-adoption-runs-no-migration.md": 3e99ab13247f49a0
+  "scenarios/a-first-adoption-runs-no-migration.md#A-first-adoption-runs-no-migration": eb23563e1120614d
+  "scenarios/a-first-adoption-runs-no-migration.md#Behavior": 92715e02355989a7
+  "scenarios/a-first-adoption-runs-no-migration.md#Context": f2d33678d56ce53e
+  "scenarios/a-first-adoption-runs-no-migration.md#Edge Cases": 30be94bd2f35538d
+  "scenarios/a-first-adoption-runs-no-migration.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/a-first-adoption-runs-no-migration.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/a-projects-own-constitution-is-not-relocated.md": eed4384ebb780e83
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#A-projects-own-constitution-is-not-relocated": 2dc6566ce01391df
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#Behavior": 9f3d81ca902a0312
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#Context": 5fa23a413d4e290a
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#Edge Cases": efcf511de227ee6c
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#Open Questions": 20edda8881516e4e
+  "scenarios/a-projects-own-constitution-is-not-relocated.md#Resolved Questions": 89598f006fc11ffe
+  "scenarios/migration-chain-reference-integrity.md": f4036d4aa3763d17
+  "scenarios/migration-chain-reference-integrity.md#Behavior": 27fa50580e5c0b02
+  "scenarios/migration-chain-reference-integrity.md#Context": 3cbd692fcb06fc19
+  "scenarios/migration-chain-reference-integrity.md#Edge Cases": ee65192609166341
+  "scenarios/migration-chain-reference-integrity.md#Migration-chain-reference-integrity": 95a56070fcd9cbc3
+  "scenarios/migration-chain-reference-integrity.md#Open Questions": a474af12b9f56e5a
+  "scenarios/migration-chain-reference-integrity.md#Resolved Questions": 33ade76134eb0455
+  "scenarios/migrations-apply-once-per-repo.md": 3e99ab13247f49a0
+  "scenarios/migrations-apply-once-per-repo.md#Behavior": 1420ab71b3d45d38
+  "scenarios/migrations-apply-once-per-repo.md#Context": 4439fe2c3304c51b
+  "scenarios/migrations-apply-once-per-repo.md#Edge Cases": 144ad729f2209392
+  "scenarios/migrations-apply-once-per-repo.md#Migrations-apply-once-per-repo": c3916f9fdf81835d
+  "scenarios/migrations-apply-once-per-repo.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/migrations-apply-once-per-repo.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/seed-files-keep-no-literal-placeholder.md": 3e99ab13247f49a0
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Behavior": 46db7a12451679ad
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Context": b3f7e6a414f53732
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Edge Cases": 47268b67145c29df
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/seed-files-keep-no-literal-placeholder.md#Seed-files-keep-no-literal-placeholder": f1dfe467201dada6
+  "spec.md": aace4ea04f734bb9
+  "spec.md#027 — Bootstrap Migration Registry": dc40a1dd3dd20960
+  "spec.md#Acceptance Criteria": 22162e6761ba81f1
+  "spec.md#Adopter State": e35431a5f066521e
+  "spec.md#Adopter state": e8ccb0b9a38d6df4
+  "spec.md#Audit (Family 10)": 4913d1211ad5662e
+  "spec.md#Audit Family": 50504753d2fe2518
+  "spec.md#Bootstrap Loop": 0f9a9ffe4efae8f3
+  "spec.md#Bootstrap loop": f115301c0e23558e
+  "spec.md#Edge cases and failure modes": 7db10b428620bc75
+  "spec.md#Idempotency": 9104de86f600d47d
+  "spec.md#Migration scope": 3b89bde990f62ac1
+  "spec.md#Motivation": 67b6b869d59b3129
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Out of scope": fced5b30257802ab
+  "spec.md#Registry Shape": 0bbaa3d64b5c60a7
+  "spec.md#Registry shape": f8ffc4b1f4ee3188
+  "spec.md#Resolved Questions": a03ad8d5d3ee8267
+  "spec.md#Sunset and Adopter Changelog": a4916bc02ed8878f
+  "spec.md#Sunset and archive": eb4e69e7f336627b
 ---
 
 # Analysis — 027-bootstrap-migration-registry

@@ -41,6 +41,50 @@ decisions:
     reason: an edge case describing the state the migration superseded, the /.govern.session.toml ignore line, which neither file carries now; it records what the migration had to handle, and plan.md cites .gitignore for it
     decided-at: 2026-11-18T12:57:56Z
     decided-by: rule
+section-digest:
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#042 — Consolidate ductus per-project files under a `.ductus/` directory Plan": cbfbe073a53b5494
+  "plan.md#Affected Files": f6e37b93d79ea0b7
+  "plan.md#Config/session doc + canonical-source updates": 085f1d9b1075df97
+  "plan.md#Dogfooding + fixtures": c42ffdb31530f1cc
+  "plan.md#No data model": a5991beec5f33a33
+  "plan.md#Overview": 2dac51fa29b5aa0a
+  "plan.md#Session constant + compile-time guards move to the new path": e51612cbef27c598
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#Test strategy": ada0d4c6e5e512ab
+  "plan.md#The `govern-dir-consolidate` migration": 7ae9f79b1e6f4b9d
+  "plan.md#Trade-offs": 648821edfb811bf0
+  "plan.md#Two shared runtime path resolvers with legacy fallback": 26b8bcd08763ebd7
+  "plan.md#Write policy — the `/ductus` migration is the sole cutover": e336245a933edade
+  "plan.md#gitignore supersession": ad8b284b94ee10c6
+  "scenarios/provenance-tags-name-resolved-config-path.md": c04ca6daded21b4e
+  "scenarios/provenance-tags-name-resolved-config-path.md#Behavior": 27f13b56ac27f0b2
+  "scenarios/provenance-tags-name-resolved-config-path.md#Context": 206612af0ac9700c
+  "scenarios/provenance-tags-name-resolved-config-path.md#Edge Cases": df0b2b0a1d9a7585
+  "scenarios/provenance-tags-name-resolved-config-path.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/provenance-tags-name-resolved-config-path.md#Provenance-tags-name-resolved-config-path": 57c6c794c2e8f83f
+  "scenarios/provenance-tags-name-resolved-config-path.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/runtime-doc-strings-name-active-paths.md": cc1084e3b46a5f04
+  "scenarios/runtime-doc-strings-name-active-paths.md#Behavior": 7aadf23f7ecb89f3
+  "scenarios/runtime-doc-strings-name-active-paths.md#Context": ce6ad11665ebc0e6
+  "scenarios/runtime-doc-strings-name-active-paths.md#Edge Cases": c7311d72d0f8e7c5
+  "scenarios/runtime-doc-strings-name-active-paths.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/runtime-doc-strings-name-active-paths.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/runtime-doc-strings-name-active-paths.md#Runtime-doc-strings-name-active-paths": 3aa6475939057bd4
+  "spec.md": 394078f337af7175
+  "spec.md#042 — Consolidate ductus per-project files under a `.ductus/` directory": 277071ca98bf0008
+  "spec.md#Acceptance Criteria": 851ad968cd88cf84
+  "spec.md#Config file: `.ductus/config.toml`": 5d62799069a37b85
+  "spec.md#Documentation and canonical sources": a6bbdc8ac3dbedc7
+  "spec.md#Edge cases and transition hazards": 3a18add6823aaec9
+  "spec.md#Motivation": 575220c7a4bfef22
+  "spec.md#Open Questions": 77ef24ad40ad6b03
+  "spec.md#Resolved Questions": 3eb75a118ff1dd56
+  "spec.md#Scripts (retired)": 935c40627926af83
+  "spec.md#Session file: `.ductus/session.toml`": c9e08187583230d8
+  "spec.md#Target layout": 395a5a3ead9e6e85
+  "spec.md#Transition and fallback": f955aadd741d96bf
+  "spec.md#`/ductus` migration: reorganize a project on the old layout": 8ce618287284436e
 ---
 
 # Analysis — 042-consolidate-govern-per-project-files-under-govern-directory

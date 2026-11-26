@@ -80,6 +80,41 @@ decisions:
     reason: "advisory and no chore: a Resolved Question's account of the posture when it was decided; data-model.md's Schema validation section states the current posture with its sources"
     decided-at: 2026-11-14T02:18:25Z
     decided-by: rule
+section-digest:
+  "data-model.md": e3b0c44298fc1c14
+  "data-model.md#019 — Config-Persisted Decisions Data Model": f5ee2009a16d0322
+  "data-model.md#File location and lifecycle": f868ec8617d06824
+  "data-model.md#Future sections": 63b1e62ebb30fa5d
+  "data-model.md#Schema validation": e5c74c3edc7d32f1
+  "data-model.md#Sections": cf30abd5da1d781c
+  "data-model.md#Unknown keys": d398166703c967d7
+  "data-model.md#`[pinned]` — file pinning": fd8aff40a9434ca2
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#019 — Config-Persisted Decisions Plan": 5b492138ee59af31
+  "plan.md#Affected Files": d69d91c808243d54
+  "plan.md#Overview": d4768fd6378e2efd
+  "plan.md#Persisted decisions are config sections": ee7ac1a901d5136d
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The runtime half is owned by 022 and 063": 1292997c0e5ce871
+  "plan.md#Trade-offs": 311797268e9ff4fa
+  "plan.md#Unknown keys are reported by name, never dropped": 978db784257bc789
+  "plan.md#Validation is per key, at the point of use": cefa1846a72a809e
+  "plan.md#Writes leave the rest of the file intact": ef4410c91e9394a1
+  "scenarios/an-unknown-config-key-is-named.md": 5473ad62d52d0e72
+  "scenarios/an-unknown-config-key-is-named.md#An-unknown-config-key-is-named": f50be02c6a33947a
+  "scenarios/an-unknown-config-key-is-named.md#Behavior": 85c210f0cba36a99
+  "scenarios/an-unknown-config-key-is-named.md#Context": 50bae7c555fbd0a4
+  "scenarios/an-unknown-config-key-is-named.md#Edge Cases": 33aab20b82b64845
+  "scenarios/an-unknown-config-key-is-named.md#Open Questions": 20edda8881516e4e
+  "scenarios/an-unknown-config-key-is-named.md#Resolved Questions": 2353c885aac392ee
+  "spec.md": 254f4f45c4457c56
+  "spec.md#019 — Config-Persisted Decisions": 483102d7cf3e2ea0
+  "spec.md#Acceptance Criteria": 8052bb7826173fd9
+  "spec.md#Behavior": b4f6f3e988075a70
+  "spec.md#Motivation": c0e8322b0226f3e6
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Resolved Questions": 529569a1e658d6d2
+  "spec.md#Schema": 87f6d51e4b93fc29
 ---
 
 # Analysis — 019-config-decisions

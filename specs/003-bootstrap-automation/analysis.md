@@ -42,6 +42,47 @@ dispositions:
   deferred: 0
   waived: 0
   undispositioned: 0
+section-digest:
+  "plan.md": 989cfcf0e576f1a0
+  "plan.md#003 — Bootstrap Automation Plan": 9ffe15065db09f37
+  "plan.md#Affected Files": 4a83783a662d47fe
+  "plan.md#Considered: a single `/ductus:work` command instead of ten standard commands": 9fd455552604d57b
+  "plan.md#Considered: generating standard commands dynamically from templates": 3a951804d0aedff9
+  "plan.md#Considered: skipping the configure command for this repo": e283272ef2cdc77b
+  "plan.md#Open Questions Resolved": 06f01e106515972f
+  "plan.md#Overview": 7ed9b624e688a712
+  "plan.md#Session file path": 8bc97427b3605f5d
+  "plan.md#Standard commands are literal copies with placeholder replacement": c14b0e7e2ae93d8d
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The per-language `.gitignore` fetch is bounded": c83c8e41a8d593f0
+  "plan.md#Trade-offs": 6d48e49804e54ced
+  "scenarios/a-language-with-no-template-of-its-name.md": 78f9168eaf27502c
+  "scenarios/a-language-with-no-template-of-its-name.md#A-language-with-no-template-of-its-name": e91e4013f2736add
+  "scenarios/a-language-with-no-template-of-its-name.md#Behavior": 32f950a3ab396f9f
+  "scenarios/a-language-with-no-template-of-its-name.md#Context": 92814468a67f6ab1
+  "scenarios/a-language-with-no-template-of-its-name.md#Edge Cases": b91d4a4bf9857a97
+  "scenarios/a-language-with-no-template-of-its-name.md#Open Questions": 20edda8881516e4e
+  "scenarios/a-language-with-no-template-of-its-name.md#Resolved Questions": 5129626a9c67a350
+  "scenarios/curl-sh-installer.md": 50d3794a575f214e
+  "scenarios/curl-sh-installer.md#Behavior": b1b269d26dca20d1
+  "scenarios/curl-sh-installer.md#Context": b8720edf3e88642e
+  "scenarios/curl-sh-installer.md#Edge Cases": 163a0af1a4b3b15a
+  "scenarios/curl-sh-installer.md#One-line installer (curl | sh)": bae08673560c030a
+  "scenarios/curl-sh-installer.md#Open Questions": 545eadd502d01a7c
+  "scenarios/curl-sh-installer.md#Resolved Questions": e267b4b49a06485a
+  "spec.md": f20d50202826771a
+  "spec.md#/ductus:init": 0be4071270bcd3eb
+  "spec.md#003 — Bootstrap Automation": 87da8f334729d41b
+  "spec.md#Acceptance Criteria": 22162e6761ba81f1
+  "spec.md#Behavior": 29ab98cdbf8ff7c1
+  "spec.md#Inputs": 2e1bd83b429790b5
+  "spec.md#Pre-flight Check": 96aaeba34680aa3a
+  "spec.md#Problem": 4403a6978bc023ae
+  "spec.md#References": 0f29184bdab1595d
+  "spec.md#Resolved Questions": 3d291d716dfc0b0c
+  "spec.md#Scaffolding Steps": 3b2c4677b390483d
+  "spec.md#Standard pipeline commands": c29b9a20f69d3f91
+  "spec.md#What it does NOT do": 17e27eb41568d1de
 ---
 
 # Analysis — 003-bootstrap-automation

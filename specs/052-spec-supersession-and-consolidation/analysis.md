@@ -36,6 +36,39 @@ dispositions:
   deferred: 0
   waived: 0
   undispositioned: 0
+section-digest:
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#052 — Spec consolidation Plan": f36eed247306d8bc
+  "plan.md#Affected Files": 7d7a400b499d7691
+  "plan.md#Overview": d89d6984264f4f28
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#The confirmation names content loss, not directory removal": bbc048a25ff0fd2b
+  "plan.md#Trade-offs": 36027a31221468c8
+  "plan.md#`retire-feature`'s sequential refusal is gated, never removed": 33b29511bc11c657
+  "plan.md#`rewrite-spec-links` is reused": f5afefe5bc396e4a
+  "scenarios/stranded-session-after-removal.md": a3d5fb75307bc3ea
+  "scenarios/stranded-session-after-removal.md#Behavior": 00367926a6428691
+  "scenarios/stranded-session-after-removal.md#Context": 8bc3bf31fced4467
+  "scenarios/stranded-session-after-removal.md#Edge Cases": 0e52cfc57b3c508d
+  "scenarios/stranded-session-after-removal.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/stranded-session-after-removal.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/stranded-session-after-removal.md#Stranded-session-after-removal": df97673c5774c131
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md": a3d5fb75307bc3ea
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#Behavior": 03396ce9da49a357
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#Context": d2f53d3cffc9bdb9
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#Edge Cases": 6fb0ad59febe48b4
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#Resolved Questions": 11e3be44f3f87442
+  "scenarios/the-content-move-and-the-consolidation-commit-together.md#The-content-move-and-the-consolidation-commit-together": 258648919c652234
+  "spec.md": d378b3509b1bd50d
+  "spec.md#052 — Spec consolidation": 5d6feb54c9bc4016
+  "spec.md#Acceptance Criteria": c3492fd32ef8c6c3
+  "spec.md#Consolidation": 7ed65fdf4cb8a8bf
+  "spec.md#Interruption and re-runs": bcd88b1090542be5
+  "spec.md#Motivation": a5375dcefe64fd37
+  "spec.md#One-spec and two-spec commands": 4b438c97f4185713
+  "spec.md#Open Questions": 20edda8881516e4e
+  "spec.md#Resolved Questions": ad99de732b333f4c
 ---
 
 # Analysis — 052-spec-supersession-and-consolidation

@@ -56,6 +56,58 @@ decisions:
     reason: The runtime and its bridge are a per-agent stdio process with no tracing pipeline; adding the first span belongs to a spec about the runtime's observability, as 022's analysis decided for fetch-archive.
     decided-at: 2026-11-11T01:07:44Z
     decided-by: rule
+section-digest:
+  "plan.md": e3b0c44298fc1c14
+  "plan.md#064 — Pi Host Support Plan": 264a5dec547a2879
+  "plan.md#Affected Files": 1ac60da7eb030a6e
+  "plan.md#D1 — Command surface: flat project-hyphenated prompt templates": 4cec33a697f63930
+  "plan.md#D2 — Tool surface: zero-dependency extension bridge over the runtime's MCP server": b753e2acc6c0d15d
+  "plan.md#D3 — One runtime change: Pi's command-file candidate": 35a0652c6c02fe64
+  "plan.md#D4 — `configure/pi.md`: verify-and-repair": 4e6ced62230c93e0
+  "plan.md#D5 — Audit and generator fan-out (mechanical, per AC10/AC11/AC6)": 2bf9ba6de768c5a5
+  "plan.md#D6 — Bootstrap prose (ductus.md, mirrored to govern.md byte-for-byte)": 85d1601a58d04978
+  "plan.md#D7 — Constitution, README, AGENTS.md, docs (prose sweep, per AC12/AC13)": f2eaf2382b57f5d3
+  "plan.md#D8 — 022 back-edge and release sequencing": 33075782426aaade
+  "plan.md#D9 — In-repo smoke test (verification record, AC14)": 22e6f94fdc3ec36d
+  "plan.md#Overview": 975f33872820b8c5
+  "plan.md#Technical Decisions": ad85a1d406c0b799
+  "plan.md#Trade-offs": aa1873baf4e15b1c
+  "scenarios/colon-form-commands-run-on-pi.md": efbf9281a3a40486
+  "scenarios/colon-form-commands-run-on-pi.md#Behavior": 6ce1a13f916a4b84
+  "scenarios/colon-form-commands-run-on-pi.md#Colon-form-commands-run-on-pi": 1da64d4e94abce35
+  "scenarios/colon-form-commands-run-on-pi.md#Context": 9c0adc2f3eb06bf4
+  "scenarios/colon-form-commands-run-on-pi.md#Edge Cases": 9a50e109f7f8d79d
+  "scenarios/colon-form-commands-run-on-pi.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/colon-form-commands-run-on-pi.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/pi-layout-is-dispatched.md": efbf9281a3a40486
+  "scenarios/pi-layout-is-dispatched.md#Behavior": bca2fa604117ac34
+  "scenarios/pi-layout-is-dispatched.md#Context": 12a3cb991dfc65be
+  "scenarios/pi-layout-is-dispatched.md#Edge Cases": 36d713e41c4296ba
+  "scenarios/pi-layout-is-dispatched.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/pi-layout-is-dispatched.md#Pi-layout-is-dispatched": 53c7281d688c26ae
+  "scenarios/pi-layout-is-dispatched.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md": efbf9281a3a40486
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#Behavior": c3dd0defc0cd0007
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#Context": e068b398e16618ad
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#Edge Cases": 5d63d50a7a02be36
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/the-bridge-closes-its-server-at-shutdown.md#The-bridge-closes-its-server-at-shutdown": 6363ecc148d7b23d
+  "scenarios/the-bridge-fails-loudly-and-recovers.md": efbf9281a3a40486
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#Behavior": 3720e9122887e53f
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#Context": e34f81574a7f4027
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#Edge Cases": fe226dadf380c19a
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#Open Questions": 9fc5979d590cdb97
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#Resolved Questions": b5f7b98fb3491576
+  "scenarios/the-bridge-fails-loudly-and-recovers.md#The-bridge-fails-loudly-and-recovers": 3833d5aa01961591
+  "spec.md": 49d8fc7e1861d9bf
+  "spec.md#064 — Pi Host Support": 4e0f0b2f46200285
+  "spec.md#Acceptance Criteria": 7fef92eb654f9bc6
+  "spec.md#Compatibility Contract": b7ca1fe1b78d94e8
+  "spec.md#Design Decisions": 084b6d019ea186ac
+  "spec.md#Motivation": fbafbaaecc433089
+  "spec.md#Resolved Questions": 3069eddbe9288f3e
+  "spec.md#Verified Pi Layout": 73d53f585cdc2ac1
 ---
 
 # Analysis — 064-pi-host-support
