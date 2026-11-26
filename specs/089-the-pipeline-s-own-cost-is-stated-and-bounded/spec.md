@@ -1,5 +1,5 @@
 ---
-status: draft
+status: clarified
 dependencies: [050-constitution, 072-governing-documents-stay-within-one-read, 087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file]
 cross-spec-impact: [050-constitution, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs]
 next-criterion: 5
@@ -18,12 +18,18 @@ A spec that adds a check, an audit-record field or a primitive states what a run
 ## Behavior
 
 - A spec that adds a check, an audit-record field or a primitive states in its body what a run of it costs, in a unit it can measure (model turns, bytes loaded, commits or wall time), and which existing check, field or primitive it retires, or why none.
-- `AGENTS.md` and `framework/constitution.md` each sit under a ceiling below 50,000 bytes, and each command with its reference under a ceiling, checked on every commit by `scripts/lint-governing-size.sh`. Each is cut to fit by the routes 072 and 075 name, retiring, merging, or moving a rule to the check that enforces it or to the one command that applies it, or by moving a section into a part (087). Sizes are bytes by `wc -c`.
+- `AGENTS.md` and `framework/constitution.md` each sit under a ceiling below 50,000 bytes, at the size its cut reaches rounded up to the next 1,000, and each command file and reference file under the 50,000-byte read size, checked on every commit by `scripts/lint-governing-size.sh`. Each is cut to fit by the routes 072 and 075 name, retiring, merging, or moving a rule to the check that enforces it or to the one command that applies it, or by moving a section into a part (087). Sizes are bytes by `wc -c`.
+
+## Edge Cases
+
+- A governed file that is absent or cannot be read fails the check naming it, never passes as under its ceiling.
+- A new command file or reference file is held to the read size from its first commit, with no ceiling row to add.
+- A spec that adds a check, field or primitive and retires none states why none, which satisfies the rule; one stating neither cost nor retirement is deferred.
 
 ## Acceptance Criteria
 
 - [ ] AC1: `framework/constitution.md` §design-principles states that a spec adding a check, an audit-record field or a primitive states what a run of it costs in a measurable unit, and which existing check, field or primitive it retires, or why none.
-- [ ] AC2: `scripts/lint-governing-size.sh` holds `AGENTS.md` and `framework/constitution.md` to ceilings below 50,000 bytes and each `framework/commands/{name}.md` with its `framework/reference/{name}.md` to a ceiling, fails naming the file, its size, its ceiling and its fix when one is over, and a test proves each ceiling fails when exceeded and passes at it.
+- [ ] AC2: `scripts/lint-governing-size.sh` holds `AGENTS.md` and `framework/constitution.md` each to a ceiling below 50,000 bytes, set at the size its cut reaches rounded up to the next 1,000 bytes, and each `framework/commands/*.md` and `framework/reference/*.md` to the 50,000-byte read size, fails naming the file, its size, its ceiling and its fix when one is over, and a test proves each ceiling fails when exceeded and passes at it.
 - [ ] AC4: 085, 086, 087 and 088 each state in their spec what a run of what they add costs, in a measurable unit, and what they retire, or why none, before any of them reaches `done`; each carries this spec in its `cross-spec-impact:` or a signpost back-linking it.
 - [ ] AC3: Every file the script governs is at or under its ceiling at the commit that lowers the ceilings, and `scripts/audit/run-all.sh` passes there.
 
@@ -33,11 +39,12 @@ A spec that adds a check, an audit-record field or a primitive states what a run
 
 ## Open Questions
 
-- What are the new ceilings for `AGENTS.md` and `framework/constitution.md`?
-- Is a command's ceiling held per file or over the command and its reference together, and at what size?
+*None — all resolved.*
 
 ## Resolved Questions
 
 - **The cost statement is a hard filter** (the agent's recommendation, adopted by the operator, 2026-11-25): a §design-principles bullet, so a design that states neither a run's cost nor what it retires is redesigned or deferred, as that section's preamble binds every principle in it. Rejected: an advisory prompt outside §design-principles, under which a design that skips it ships.
 - **It binds every spec not yet `done` when it lands** (the agent's recommendation, adopted by the operator, 2026-11-25): 085, 086, 087 and 088 each state a run's cost and what they retire before their `done`, judged at each one's analysis. Rejected: binding only specs specified after it, under which the four open designs ship without the statement.
 - **Sizes are measured in bytes alone** (the agent's recommendation, adopted by the operator, 2026-11-25): the ceilings bind bytes, and the governing documents' session-start load is their bytes, which `wc -c` measures the same way at any commit. Rejected: a before-and-after token comparison from Claude Code's session transcripts, which measures the same load through a tokenizer with session-to-session variance.
+- **Each governing document's ceiling is set at the size its cut reaches, rounded up to the next 1,000 bytes** (the agent's recommendation, adopted by the operator, 2026-11-25): every cut the routes of 072 and 075 allow is made first, so the ceiling marks where the document's required content ends, which a lower one would cut into and a higher one would let regrow. An inventory read on 2026-11-25 (each entry classed by route from the documents' text, its routes not yet verified by a cut) put `AGENTS.md`'s required content near 32,400 to 37,000 bytes of its 49,567, and the constitution's near 46,800 of its 49,519 once its rules only one command applies move to that command's reference. Rejected: fixed numbers chosen from the inventory before the cut, and keeping the constitution at 50,000.
+- **Each command file and each reference file is held to the 50,000-byte read size, per file** (the agent's recommendation, adopted by the operator, 2026-11-25), the ceiling `check-artifact-size` holds every spec artifact to (063) and `scripts/lint-governing-size.sh` held the governing documents to (072), so every one stays one read. A command file loads whole on each run and a reference is read by section (each command's Instructions say to invoke `read-section` rather than read the whole file), so a command and its reference are never one load. `framework/reference/analyze.md` (67,438 bytes) and `framework/reference/review.md` (64,028) exceed it and are cut to fit; every command file is under it (`review.md` the largest at 37,760; `wc -c`, 2026-11-25). Rejected: a ceiling per file set at each cut's size, 30 numbers; and one over each command with its reference, a sum no load reads.
