@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [041-task-pruning, 050-constitution, 055-shared-constitution, 063-oversized-artifacts-warn-with-a-fix, 075-agents-md-holds-what-every-session-needs, 081-reviews-and-checks-follow-what-changed]
 cross-spec-impact: [022-deterministic-runtime, 041-task-pruning, 050-constitution, 055-shared-constitution, 063-oversized-artifacts-warn-with-a-fix, 067-analyze-and-audit-checks, 075-agents-md-holds-what-every-session-needs]
 next-criterion: 22
