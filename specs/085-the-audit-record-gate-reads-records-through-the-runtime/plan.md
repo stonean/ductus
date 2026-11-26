@@ -124,7 +124,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 - **Rejected: a JSON parse in the step.** The template's step "Done specs owe no work" parses `check-owed-work`'s JSON with python. This step maps the CLI's report lines and takes its exit status, as the step "No code is left unreviewed" does, so all its logic lives in the runtime, where its tests are.
 - **Rejected: a CLI-only primitive.** Principle 5 leaves off MCP only a primitive that runs a project command, writes outside the project, or writes a host's settings. This one does none of these.
 - **Where the reader is narrower than the step's** (`QUAL-DELEG-001`). It differs from the step's parse, read at `ea691221`, in four places:
-  - A directory without a feature name is no longer read, because §numbering holds one membership rule. In an adopter that is `specs/templates/`, whose `spec.md` is a template.
+  - A directory without a feature name is no longer read, because §numbering holds one membership rule. In an adopter that is `specs/templates/`, whose `spec.md` is a template, installed there from `framework/templates/spec/spec.md` by the table under "`ductus`-owned shared files (strategy: update)" in `framework/bootstrap/ductus.md`.
   - An untracked spec is skipped, as `check-owed-work` skips one. A CI checkout holds none.
   - A quoted `"null"` `last-run` is a string, as the gate reads it, where the step's parse stripped the quotes.
   - A blank `last-run` stays a finding.
