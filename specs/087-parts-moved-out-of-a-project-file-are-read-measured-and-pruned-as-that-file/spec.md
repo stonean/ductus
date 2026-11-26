@@ -64,6 +64,24 @@ A **part** is a markdown file directly under a project file's parts directory, a
 - **A shared constitution that is not checked out** has its parts reported as not measured, never as under the limit.
 - **A pinned project file** is still an index when its directory holds parts: pinning governs what `/ductus` writes, not what is measured.
 
+## Cost
+
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) asks this spec to state what a run of what it adds costs, in a measurable unit, and what it retires.
+
+Measured at `4e5ee251` with the release build of its `runtime/`, over this repository, on a Darwin arm64 machine (Apple M4 Max). A result's size is the bytes `wc -c` counts on stdout, compact JSON and a newline. A wall time is five runs after a warm-up, by `time.perf_counter` around the call, with a warm file cache.
+
+- **`check-artifact-size` with `project-files` and no feature**, the call `/analyze` step 15 and `/plan`'s checklist each add once a run: a 527-byte result, 70 bytes of it 087's `parts` and `part-findings` with their counts, in 0.009 s each run. This repository holds no part at that commit, so both lists are empty.
+- **The parts `/plan` and `/analyze` then read**, each part listed under `system.md`, and under their conditions `events.md` and `errors.md`, read whole: 0 bytes here. Each part is held to `[artifacts] read-size-bytes`, 50,000 bytes by default, so a run reads at most that per part. In the adopter's report the parts of one `system.md` were about 90 KB (Resolved Questions, *Does a command read every part*). `/implement` and `/review` read only the parts a pointer names for the work in hand.
+- **`prune-project`'s preview**, which `/prune --project` and the migration entry make, the entry once per repository: a 33,657-byte result in 0.011 to 0.012 s, 438 bytes of it 087's `move-candidates` (four here), `part-files`, `part-findings` and `parts-unlisted` with their counts.
+- **The move** `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`:
+  - its preview, a 40,764-byte result in 0.100 to 0.109 s, whose literal search read 1,478 tracked files and found 132 occurrences in 92;
+  - its apply, confirming all 92, a 38,291-byte result in 0.568 to 0.637 s, writing 93 files, timed once in each of three `git clone --local` copies at that commit, since task 12 makes the move in this tree.
+- **`resolve-constitutions`**, which `/target` step 4 reports: 61 bytes in 0.009 s, since this repository registers no shared constitution. Each part of a registered one adds one record to `parts`.
+- **Descriptions**, loaded when a Claude Code session fetches the tool and by Pi's bridge at load. 087's five commits to `runtime/src/schema/descriptions.rs` grew `check-artifact-size`'s by 1,502 characters, `prune-project`'s by 2,366 and `resolve-constitutions`' by 735, each commit's change the literal's length less its length at the parent. With their input schemas the three load 5,334, 8,616 and 2,688 characters at that commit, by `scripts/measure-result-sizes.sh`.
+- **Bound.** Over that script's large fixture corpus at that commit, with unlinked parts, or move candidates and referrers, past the read size, `check-artifact-size` with `project-files` returns 75,094 characters unbounded and 564 at the default read size, `prune-project` 78,095 and 720, and `prune-project` with `move` 270,984 and 860, the rest in `lists-file`.
+
+**What it retires.** Nothing. 087 widens what existing commands read, measure and route, and none of the result fields, findings, the move or the migration entry it adds stands in for a primitive, check, step or record field that existed. A procedure's home moves from `docs/` to `.ductus/docs/agents/`, which changes where it lives and retires nothing.
+
 ## Acceptance Criteria
 
 - [ ] AC1: Over a fixture with an index `system.md` and one part, a runtime primitive's result lists the part under its project file with its state, and `framework/commands/plan.md`, `framework/reference/plan.md` and `framework/commands/analyze.md` direct the run to read every part that result lists under the file before judging the plan against the file, and to name the parts it read.

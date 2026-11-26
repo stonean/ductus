@@ -162,8 +162,8 @@ The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a p
 
 The commits of tasks 7, 8 and 10 (`5935e9cf`, `e7a71f5a`, `f8911594`) record the result sizes `scripts/measure-result-sizes.sh` measured and the descriptions' growth. Measure again at the commit this task runs on, and measure the move as a preview over this repository, which writes nothing, since task 12 makes the move after this task.
 
-- [ ] Measure one run of each thing 087 adds, after tasks 8–13: the `check-artifact-size` call with `project-files` and no feature that `/plan` and `/analyze` make (result bytes), the parts those commands then read (bytes loaded), and `prune-project`'s preview and move (result bytes and wall time) over this repository, stating each figure's method, units, population and commit
-- [ ] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle
+- [x] Measure one run of each thing 087 adds, after tasks 8–13: the `check-artifact-size` call with `project-files` and no feature that `/plan` and `/analyze` make (result bytes), the parts those commands then read (bytes loaded), and `prune-project`'s preview and move (result bytes and wall time) over this repository, stating each figure's method, units, population and commit
+- [x] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle
 
 - **Done when**: 087's `spec.md` states a run's cost in a measurable unit with its method, and what it retires or why none, beside a blockquoted signpost to 089; `derive-dependencies` reports no cycle (089's AC4). Lands before 087's review (the agent's recommendation, adopted by the operator, 2026-11-26).
 
