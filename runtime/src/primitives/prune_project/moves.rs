@@ -31,6 +31,7 @@ use crate::primitives::{
     Change, PrimitiveError, ReadSnapshot, Result, commit_if_unchanged, leaves_project,
     project_parts, rel_path, tracked_project_paths, validate_contained,
 };
+use crate::schema::paths::DUCTUS_DIR;
 use crate::schema::primitives::{
     FileMove, MoveCandidate, MoveReferrer, ProjectFileKind, ProjectSearch, SearchState,
 };
@@ -62,8 +63,8 @@ pub(super) fn candidates(
             let name = link.rsplit('/').next().unwrap_or(&link);
             let movable = project_parts::is_part_name(name)
                 && !project_file(&link)
-                && !under(&link, root)
-                && !under(&link, ".ductus")
+                && !project_parts::in_dir(&link, root)
+                && !project_parts::in_dir(&link, DUCTUS_DIR)
                 && !leaves_project(repo, &link)
                 && repo.join(&link).is_file();
             if movable {
@@ -78,13 +79,6 @@ pub(super) fn candidates(
         .into_iter()
         .map(|(path, linked_from)| MoveCandidate { path, linked_from })
         .collect()
-}
-
-/// Whether `path` lies under `dir`, both project-relative, by whole
-/// components.
-fn under(path: &str, dir: &str) -> bool {
-    path.strip_prefix(dir)
-        .is_some_and(|rest| rest.starts_with('/'))
 }
 
 /// Refuse a move whose `to` is not a new markdown file directly under a parts
@@ -191,7 +185,7 @@ pub(super) fn search(
 /// lock, `to`, each referrer and `from` are read again; one that changed
 /// since this apply read it refuses the whole move, and each that changed is
 /// named. Otherwise `to` is created with the moved file's relative links
-/// rewritten, at `from`'s mode on Unix, each referrer is rewritten, and
+/// rewritten, at `from`'s permissions, each referrer is rewritten, and
 /// `from` is removed.
 pub(super) fn apply(repo: &Path, mv: &FileMove, before_write: impl FnOnce()) -> Result<Outcome> {
     let from = ReadSnapshot::read(repo, &mv.from)?;
@@ -235,7 +229,11 @@ pub(super) fn apply(repo: &Path, mv: &FileMove, before_write: impl FnOnce()) -> 
     }
 
     let moved = relocate_links(text, &mv.from, &mv.to, repo);
-    let mode = file_mode(&repo.join(&mv.from));
+    // Not `mirror_source_mode`: the commit below removes `from`, so its
+    // permissions are read here, before it.
+    let permissions = std::fs::metadata(repo.join(&mv.from))
+        .ok()
+        .map(|meta| meta.permissions());
     before_write();
     let mut changes = vec![(&to, Change::Create(&moved))];
     changes.extend(
@@ -252,7 +250,14 @@ pub(super) fn apply(repo: &Path, mv: &FileMove, before_write: impl FnOnce()) -> 
             ..Outcome::default()
         });
     }
-    restore_mode(&repo.join(&mv.to), mode)?;
+    if let Some(permissions) = permissions {
+        // [`commit_if_unchanged`] creates `to` at its tempfile's `0600`.
+        let to_path = repo.join(&mv.to);
+        std::fs::set_permissions(&to_path, permissions).map_err(|source| PrimitiveError::Io {
+            path: to_path,
+            source,
+        })?;
+    }
     let mut written = vec![mv.to.clone()];
     written.extend(referrers.into_iter().map(|(path, _, _)| path));
     Ok(Outcome {
@@ -261,41 +266,6 @@ pub(super) fn apply(repo: &Path, mv: &FileMove, before_write: impl FnOnce()) -> 
         stale_referrers: Some(Vec::new()),
         ..Outcome::default()
     })
-}
-
-/// The mode of `path` on Unix, to give the moved file.
-#[cfg(unix)]
-fn file_mode(path: &Path) -> Option<u32> {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path)
-        .ok()
-        .map(|meta| meta.permissions().mode())
-}
-
-#[cfg(not(unix))]
-fn file_mode(_path: &Path) -> Option<u32> {
-    None
-}
-
-/// Give the moved file `from`'s mode: [`commit_if_unchanged`] creates it at
-/// its tempfile's `0600`.
-#[cfg(unix)]
-fn restore_mode(path: &Path, mode: Option<u32>) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    let Some(mode) = mode else {
-        return Ok(());
-    };
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).map_err(|source| {
-        PrimitiveError::Io {
-            path: path.into(),
-            source,
-        }
-    })
-}
-
-#[cfg(not(unix))]
-fn restore_mode(_path: &Path, _mode: Option<u32>) -> Result<()> {
-    Ok(())
 }
 
 /// The byte offset of each occurrence of `needle` in `hay`, left to right and

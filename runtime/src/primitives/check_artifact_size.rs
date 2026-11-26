@@ -449,7 +449,7 @@ fn measure_project_files(
         if let Some(bytes) = entry.bytes {
             let head = head_bytes(project, &rel)?;
             entry.head_bytes = head;
-            entry.refused = Some(bytes > threshold && head.is_none_or(|head| bytes > head));
+            entry.refused = Some(is_refused(bytes, head, threshold));
         }
         records.push(entry);
     }
@@ -508,23 +508,24 @@ fn staged_parts(
         skip(skipped, project_parts::DOCS_DIR.to_string());
         return Ok(Vec::new());
     };
-    let mut found: Vec<(usize, String)> = index
+    let subjects = project_subjects(root);
+    // Each part with its project file, paired by the part's own kind.
+    let mut found: Vec<(usize, String, String)> = index
         .iter()
         .filter_map(|entry| {
             let git_path = String::from_utf8_lossy(&entry.path).into_owned();
             let rel = project.to_project(&git_path)?;
             let kind = project_parts::part_of(rel)?;
             let order = project_parts::KINDS.iter().position(|k| *k == kind)?;
-            Some((order, rel.to_string()))
+            let file = &subjects.iter().find(|(subject, _)| *subject == kind)?.1;
+            Some((order, rel.to_string(), file.clone()))
         })
         .collect();
     found.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| scenario_name_cmp(&a.1, &b.1)));
     // A conflicted path is one entry per stage: one part.
     found.dedup();
-    let subjects = project_subjects(root);
     let mut parts = Vec::new();
-    for (order, rel) in found {
-        let project_file = subjects[order].1.clone();
+    for (_, rel, project_file) in found {
         let mut part = match staged_bytes(&project, &rel) {
             Staged::Measured(bytes) => part_size(rel, project_file, Some(bytes), None),
             // Listed by the index, yet no one staged copy is there to read.
@@ -535,12 +536,18 @@ fn staged_parts(
         };
         if let Some(bytes) = part.bytes {
             part.head_bytes = head_bytes(&project, &part.path)?;
-            part.refused =
-                Some(bytes > threshold && part.head_bytes.is_none_or(|head| bytes > head));
+            part.refused = Some(is_refused(bytes, part.head_bytes, threshold));
         }
         parts.push(part);
     }
     Ok(parts)
+}
+
+/// Whether a staged file of `bytes` is refused: over `threshold`, and larger
+/// than its `HEAD` copy when it has one, so a file left unchanged or shrunk
+/// passes.
+fn is_refused(bytes: u64, head: Option<u64>, threshold: u64) -> bool {
+    bytes > threshold && head.is_none_or(|head| bytes > head)
 }
 
 /// A part's record: `measured` with its `bytes`, or `unreadable` without.
@@ -2390,6 +2397,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_parts_directory_that_cannot_be_listed_is_skipped_never_empty() {
         let tmp = indexed_tree(40);
         let _outside = crate::primitives::outward::dir(tmp.path(), ".ductus/docs/errors", |dir| {
@@ -2402,6 +2410,31 @@ mod tests {
             parts(&result).len(),
             1,
             "nothing is listed through the link"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_non_markdown_entry_that_is_a_link_leaving_the_project_is_skipped_and_no_part() {
+        let tmp = indexed_tree(40);
+        let _outside =
+            crate::primitives::outward::file(tmp.path(), ".ductus/docs/system/diagram.png", "png");
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        let skipped: Vec<(&str, &str)> = result
+            .skipped
+            .iter()
+            .map(|s| (s.path.as_str(), s.reason.as_str()))
+            .collect();
+        assert_eq!(
+            skipped,
+            [(".ductus/docs/system/diagram.png", "artifact-unreadable")]
+        );
+        assert!(
+            !parts(&result)
+                .iter()
+                .any(|part| part.path.ends_with("diagram.png")),
+            "{:?}",
+            parts(&result)
         );
     }
 

@@ -537,7 +537,6 @@ fn write_parts(root: &Path) {
 /// under the spec root, each of which the corpus commits, so each is a
 /// tracked referrer.
 fn write_move(root: &Path) {
-    use std::fmt::Write as _;
     let docs = root.join("docs");
     std::fs::create_dir_all(&docs).unwrap();
     let mut agents = String::from("# Agents\n\n");
@@ -841,6 +840,40 @@ fn the_corpus_scales_every_dimension() {
     let mut walk = repo.revwalk().unwrap();
     walk.push_head().unwrap();
     assert_eq!(walk.count(), 3);
+}
+
+/// The parts and move cases each carry what they are named for: on a corpus
+/// read at a size past every result, each mode's result is larger than the
+/// plain call's by more than a few records, so a prep that builds nothing, or
+/// a mode that names no move, measures an empty list and fails here, in
+/// `cargo test`, rather than reading as a bounded result in the table.
+#[test]
+fn the_parts_and_move_modes_each_grow_their_result_past_the_plain_call() {
+    let size = CorpusSize {
+        read_size_bytes: Some(UNBOUNDED),
+        ..corpus::SMALL
+    };
+    let template = tempfile::tempdir().unwrap();
+    corpus::generate(template.path(), &size);
+    let (base, head) = commit_shas(template.path());
+    let ctx = Context { size, base, head };
+    let chars = |outcome: &Outcome| match outcome {
+        Outcome::Measured { chars, .. } => *chars,
+        Outcome::Errored(text) => panic!("the call errored: {text}"),
+        Outcome::NotMeasured(reason) => panic!("not measured: {reason}"),
+    };
+    for name in ["check-artifact-size", "prune-project"] {
+        let plain = chars(&run_case(template.path(), name, &ctx));
+        let moded = modes(name, &ctx);
+        assert!(!moded.is_empty(), "{name} has no mode");
+        for (label, args, prep) in moded {
+            let grown = chars(&call_on_copy(template.path(), name, &args, prep));
+            assert!(
+                grown >= plain + 1_000,
+                "`{name}` with {label}: {grown} chars against the plain call's {plain}"
+            );
+        }
+    }
 }
 
 #[test]

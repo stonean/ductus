@@ -1135,6 +1135,16 @@ mod tests {
             (result.parts, result.parts_count),
             (Some(Vec::new()), Some(0))
         );
+        // A registry whose only entry is not checked out lists none either.
+        let gone = repo_with_config(Some(
+            "[artifacts]\nread-size-bytes = 2000\n\
+             [constitutions.gone]\nrepo = \"https://example.test/gone\"\npath = \"missing\"\n",
+        ));
+        let result = measured_in(&gone).unwrap();
+        assert_eq!(
+            (result.parts, result.parts_count),
+            (Some(Vec::new()), Some(0))
+        );
         write_part(&dir, "a.md", 10);
         let args = ResolveConstitutionsArgs { unmeasured: true };
         let unmeasured = run_measured(&args, dir.path()).unwrap();

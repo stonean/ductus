@@ -39,6 +39,10 @@ use crate::schema::config_keys;
 /// never sets `[paths] specs-root` sees byte-for-byte identical behavior.
 pub const DEFAULT_SPECS_ROOT: &str = "specs";
 
+/// The directory holding the project's pipeline state and configuration:
+/// the config file, the session files, `docs/` (`CFG-CONST-001`).
+pub(crate) const DUCTUS_DIR: &str = ".ductus";
+
 /// Project config file under the `.ductus/` directory (spec 049).
 pub(crate) const CONFIG_FILE: &str = ".ductus/config.toml";
 

@@ -302,16 +302,12 @@ fn a_shrunk_unchanged_or_deleted_part_exits_0() {
     assert_eq!(result["parts-count"], 0, "{stdout}");
 }
 
-/// A staged part that cannot be measured, left in conflict with no stage-0
-/// entry, stops the commit and is named, in either form.
-#[test]
-fn an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form() {
-    let tmp = tempfile::tempdir().unwrap();
-    let repository = fixture(tmp.path(), 10);
-    stage(&repository, tmp.path(), PART, 20);
+/// Leave `rel`, staged, in an unresolved conflict with no stage-0 entry, so
+/// no one staged copy can be read.
+fn conflict(repository: &Repository, rel: &str) {
     let mut index = repository.index().unwrap();
-    let entry = index.get_path(Path::new(PART), 0).unwrap();
-    index.remove_path(Path::new(PART)).unwrap();
+    let entry = index.get_path(Path::new(rel), 0).unwrap();
+    index.remove_path(Path::new(rel)).unwrap();
     for stage in 1..=3_u16 {
         let staged = git2::IndexEntry {
             ctime: entry.ctime,
@@ -330,6 +326,16 @@ fn an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form() {
         index.add(&staged).unwrap();
     }
     index.write().unwrap();
+}
+
+/// A staged part that cannot be measured, left in conflict with no stage-0
+/// entry, stops the commit and is named, in either form.
+#[test]
+fn an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(&repository, tmp.path(), PART, 20);
+    conflict(&repository, PART);
     for (bytes, form) in [(100, "file"), (100_000, "inline")] {
         read_size(tmp.path(), bytes);
         let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
@@ -344,4 +350,54 @@ fn an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form() {
         assert_eq!(result["form"], form, "{stdout}");
         assert_eq!(result["refused-count"], 0, "{stdout}");
     }
+}
+
+/// A staged part whose name holds a terminal escape and a newline is named on
+/// stderr escaped, never raw, so a committed name cannot forge a report line or
+/// restyle the terminal (`BE-INPUT-011`).
+#[test]
+fn a_refused_part_with_control_characters_in_its_name_is_named_escaped() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(
+        &repository,
+        tmp.path(),
+        ".ductus/docs/system/a\u{1b}[31m\nforged.md",
+        151,
+    );
+    let (code, _, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stderr:?}");
+    assert!(stderr.contains("151 bytes staged"), "{stderr:?}");
+    assert!(stderr.contains("forged.md"), "{stderr:?}");
+    assert!(
+        !stderr.contains('\u{1b}'),
+        "a raw escape reached stderr: {stderr:?}"
+    );
+    assert_eq!(
+        stderr.lines().count(),
+        1,
+        "a newline in a name forged a line: {stderr:?}"
+    );
+}
+
+/// A staged part that cannot be measured is named on stderr with its path
+/// escaped, as a refused one is.
+#[test]
+fn an_unmeasurable_part_with_control_characters_in_its_name_is_named_escaped() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    let rel = ".ductus/docs/system/a\u{1b}[31m\nforged.md";
+    stage(&repository, tmp.path(), rel, 20);
+    conflict(&repository, rel);
+    let (code, _, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stderr:?}");
+    assert!(
+        stderr.contains("forged.md could not be measured"),
+        "{stderr:?}"
+    );
+    assert!(
+        !stderr.contains('\u{1b}'),
+        "a raw escape reached stderr: {stderr:?}"
+    );
+    assert_eq!(stderr.lines().count(), 1, "{stderr:?}");
 }

@@ -5692,7 +5692,7 @@ pub enum ProjectFileState {
     OutsideProject,
 }
 
-/// One of the four project files, as read.
+/// One subject of the walk, as read: a project file, or a part of one (`part-of`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProjectFile {
@@ -8419,9 +8419,9 @@ pub enum DecisionsState {
 /// whichever half the call asked for and nothing of the other.
 ///
 /// Inline while it fits `[artifacts] read-size-bytes`, and past it with
-/// `oversized`, `skipped` and `notices`, and the project half's `parts` and
-/// `part-findings`, in the file `lists-file` names, each count inline in
-/// both forms (specs 063 and 087, BE-PAYLOAD-001).
+/// `oversized`, `skipped` and `notices`, and the project half's `parts`,
+/// `part-findings` and, when `staged`, `refused`, in the file `lists-file`
+/// names, each count inline in both forms (specs 063 and 087, BE-PAYLOAD-001).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactSizeResult {
@@ -8464,8 +8464,8 @@ pub struct CheckArtifactSizeResult {
     pub notices_count: usize,
     /// In the file form, the file holding `oversized`, `skipped` and
     /// `notices` whole, from the project root, and with `project-files` also
-    /// `parts` and, unless `staged`, `part-findings`: a JSON object with
-    /// those keys, each present even when empty.
+    /// `parts` and, unless `staged`, `part-findings`, and, when `staged`,
+    /// `refused`: a JSON object with those keys, each present even when empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// The feature half; absent when no `feature` was named.
@@ -8617,7 +8617,9 @@ pub enum PartFindingKind {
     /// A markdown file in a subdirectory of a parts directory: parts do not
     /// nest.
     NestedFile,
-    /// A directory under `.ductus/docs/` other than the parts directories.
+    /// A directory under `.ductus/docs/` other than the parts directories, and
+    /// other than `constitution/` in a repository whose root holds a
+    /// `constitution.md`, a shared constitution's own.
     NotAPartsDirectory,
     /// A markdown file directly under `.ductus/docs/`, which holds parts
     /// directories alone.

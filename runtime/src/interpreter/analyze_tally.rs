@@ -421,7 +421,6 @@ impl AnalyzeTally {
     }
 }
 
-/// The rule tier at `pointer` in an `assessSpecQuality` payload.
 /// The count a result carries as the scalar `key`, 0 when it carries none.
 fn scalar_count(result: &Value, key: &str) -> u32 {
     result
@@ -430,6 +429,7 @@ fn scalar_count(result: &Value, key: &str) -> u32 {
         .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX))
 }
 
+/// The rule tier at `pointer` in an `assessSpecQuality` payload.
 fn rule_tier(payload: &Value, pointer: &str) -> Option<RuleSeverity> {
     payload
         .pointer(pointer)

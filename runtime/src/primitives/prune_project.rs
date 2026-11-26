@@ -2358,6 +2358,51 @@ No component writes a file of its own.
         assert_eq!(mode & 0o777, 0o644);
     }
 
+    /// The move's search names a tracked file that is a link leaving the
+    /// project and never reads it, as the catalog search does: it is no
+    /// referrer, and an apply naming it as one refuses as stale, writing
+    /// nothing.
+    #[cfg(unix)]
+    #[test]
+    fn the_moves_search_names_a_tracked_link_out_and_does_not_read_it() {
+        let (dir, repository) = movable();
+        let outside = TempDir::new().unwrap();
+        let target = outside.path().join("secret.md");
+        write(&target, "see docs/procedure.md\n");
+        link(&target, &dir.path().join("src/linked.md"));
+        commit_all(&repository, "a tracked link out");
+
+        let result = run(&moving(&[], false), dir.path()).unwrap();
+        let search = result.move_search.as_ref().unwrap();
+        assert_eq!(search.state, SearchState::Ran);
+        assert_eq!(
+            search.outside_project.clone().unwrap(),
+            vec!["src/linked.md".to_string()]
+        );
+        assert_eq!(search.outside_project_count, Some(1));
+        let referrers: Vec<&str> = result
+            .move_referrers
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|r| r.path.as_str())
+            .collect();
+        assert!(!referrers.contains(&"src/linked.md"), "{referrers:?}");
+
+        let before = tree(dir.path());
+        let result = run(&moving(&["AGENTS.md", "src/linked.md"], true), dir.path()).unwrap();
+        assert!(!result.applied);
+        assert_eq!(
+            result.stale_referrers,
+            Some(vec!["src/linked.md".to_string()])
+        );
+        assert_eq!(
+            tree(dir.path()),
+            before,
+            "an apply that refuses writes nothing"
+        );
+    }
+
     /// A found referrer the operator left out is kept as it is, so a record
     /// keeps the old name.
     #[test]

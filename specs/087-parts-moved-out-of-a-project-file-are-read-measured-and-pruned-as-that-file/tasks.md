@@ -25,7 +25,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has every other open spec's implementation follow it (owner, 2026-11-24). 084's task 17 also rewrites `check_artifact_size.rs`. Start once `check-review-gate` on 084 has passed and its status reads `done`.
 
 - [x] Create `runtime/src/primitives/project_parts.rs`: the four parts directories keyed by `ProjectFileKind`, each directory's parts in `scenario_name_cmp` order, linkage from each project file's links, and the five integrity finding kinds, as the plan's *One definition of the part set* states
-- [x] Make `link_targets`, `link_destination` and `lexical_join` in `runtime/src/primitives/check_corpus_links.rs` `pub(crate)`, and call them rather than copy them
+- [x] Make `link_targets`, `link_file_part`, `link_base` and `lexical_join` in `runtime/src/primitives/check_corpus_links.rs` `pub(crate)`, and call them rather than copy them
 - [x] Unit tests: a markdown file directly under each of the four directories is a part whether or not it is linked; a non-markdown file there is neither a part nor a finding; each of the five finding kinds fires on its fixture and not on a clean one; a part that is a link leaving the project is `unreadable` and never opened; a project with no `.ductus/docs/` yields no part and no finding
 
 - **Done when**: the module's unit tests pass, and each is proven to fail with its behavior removed (AC10).
@@ -45,7 +45,7 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 ## 3. The staged check and the hook refuse a grown part
 
 - [x] Under `staged`, read the part set from the index's entries directly under each parts directory through `ProjectRepository::discover` and `to_git`, with `head-bytes` and `refused` per part; leave `part-findings` absent
-- [x] Add the inline `refused-count`; have `runtime/src/main.rs` exit on it and name each refused part on stderr, reading `parts` from the lists file in the file form
+- [x] Add the inline `refused-count`; have `runtime/src/main.rs` exit on it and name each refused part on stderr, from the result before it is bounded, so it reads no lists file
 - [x] `runtime/tests/check_artifact_size_cli.rs`: a staged part over the limit with no `HEAD` copy, or larger than it, exits 1 naming its path, size, limit and fix, in both forms; a shrunk or unchanged over-limit part exits 0; a deleted part passes
 - [x] Create `runtime/tests/size_hook.rs`, which runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` (not `.githooks/`) over a fixture repository, as `runtime/tests/consolidate_hook.rs` does: a commit growing a part past the limit is refused, and one shrinking it passes, which covers AC5 including a project in a repository subdirectory
 
@@ -160,7 +160,7 @@ The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a p
 
 ## 14. 087's run cost and what it retires, for 089's AC4
 
-The commits of tasks 7, 8 and 10 (`5935e9cf`, `e7a71f5a`, `f8911594`) record the result sizes `scripts/measure-result-sizes.sh` measured and the descriptions' growth. Measure again at the commit this task runs on, and measure the move as a preview over this repository, which writes nothing, since task 12 makes the move after this task.
+The commits of tasks 7, 8 and 10 (`5935e9cf`, `e7a71f5a`, `e672d428`) record the result sizes `scripts/measure-result-sizes.sh` measured and the descriptions' growth. Measure again at the commit this task runs on, and measure the move as a preview over this repository, which writes nothing, since task 12 makes the move after this task.
 
 - [x] Measure one run of each thing 087 adds, after tasks 8–13: the `check-artifact-size` call with `project-files` and no feature that `/plan` and `/analyze` make (result bytes), the parts those commands then read (bytes loaded), and `prune-project`'s preview and move (result bytes and wall time) over this repository, stating each figure's method, units, population and commit
 - [x] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle

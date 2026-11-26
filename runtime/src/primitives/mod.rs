@@ -4196,11 +4196,12 @@ pub(crate) fn spec_feature_slug(path: &str, specs_root: &str) -> Option<String> 
 /// confined to artifacts owes no review. `specs_root` is one directory name, as
 /// `validate_specs_root` holds it.
 pub(crate) fn is_project_artifact(path: &str, specs_root: &str) -> bool {
+    use crate::schema::paths::DUCTUS_DIR;
     let under = |root: &str| {
         path.strip_prefix(root)
             .is_some_and(|rest| rest.starts_with('/'))
     };
-    under(specs_root) || under(".ductus") || matches!(path, "AGENTS.md" | "CLAUDE.md")
+    under(specs_root) || under(DUCTUS_DIR) || matches!(path, "AGENTS.md" | "CLAUDE.md")
 }
 
 #[cfg(test)]

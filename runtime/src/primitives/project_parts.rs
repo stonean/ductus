@@ -18,7 +18,7 @@
 //! unlinked one (`QUAL-CLAIM-001`).
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::primitives::check_corpus_links::{
     LinkFilePart, lexical_join, link_base, link_file_part, link_targets,
@@ -32,10 +32,19 @@ pub(crate) const DOCS_DIR: &str = ".ductus/docs";
 
 /// The parts directory of a registered shared constitution, under its
 /// checkout, beside the `constitution.md` read from there (spec 087,
-/// *Parts*). In a project it is no project file's, yet it is a parts
-/// directory, so it is no `not-a-parts-directory` finding there (the owner,
-/// 2026-11-25).
+/// *Parts*). It is no project file's, so in a project it is a
+/// `not-a-parts-directory` finding like any other directory, except in a
+/// shared constitution's own repository, which is marked by a
+/// `constitution.md` at its root (`specs/055-shared-constitution/data-model.md`:
+/// a checkout's document is `{path}/constitution.md`): there it is a parts
+/// directory and no finding (the agent's recommendation, adopted by the
+/// operator, 2026-11-25; narrowed to a project with a root `constitution.md`,
+/// the agent's recommendation, adopted by the operator, 2026-11-26).
 pub(crate) const CONSTITUTION_PARTS_DIR: &str = ".ductus/docs/constitution";
+
+/// The document that marks a project root as a shared constitution's own
+/// repository.
+const CONSTITUTION_FILE: &str = "constitution.md";
 
 /// The project files that may have parts, in `project_subjects` order.
 pub(crate) const KINDS: [ProjectFileKind; 4] = [
@@ -46,8 +55,9 @@ pub(crate) const KINDS: [ProjectFileKind; 4] = [
 ];
 
 /// How deep the nested-file walk descends before it records the directory
-/// as unlisted and stops: far past any real tree, so that a link to an
-/// ancestor ends as a report rather than a stack overflow.
+/// as unlisted and stops: a bound on the stack, far past any real tree. A
+/// link to a directory already walked is skipped by its canonical path, so
+/// the walk ends in finitely many directories whatever links it meets.
 const MAX_NESTED_DEPTH: u32 = 32;
 
 /// `kind`'s parts directory, project-relative.
@@ -207,7 +217,8 @@ pub(crate) fn project_parts(repo: &Path, root: &str) -> ProjectParts {
         .collect();
     missing_parts(repo, &subjects, &links, &mut out.findings);
 
-    for (((kind, file), file_links), dir) in subjects.iter().zip(&links).zip(KINDS.map(parts_dir)) {
+    for ((kind, file), file_links) in subjects.iter().zip(&links) {
+        let dir = parts_dir(*kind);
         let listing = list_dir(repo, dir);
         out.unlisted.extend(listing.unlisted);
         for listed in listing.parts {
@@ -234,11 +245,14 @@ pub(crate) fn project_parts(repo: &Path, root: &str) -> ProjectParts {
             });
         }
         let mut nested = Vec::new();
+        let mut walked: BTreeSet<PathBuf> = BTreeSet::new();
+        walked.extend(std::fs::canonicalize(repo.join(dir)).ok());
         for subdir in listing.subdirs {
             nested_files(
                 repo,
                 &subdir,
                 MAX_NESTED_DEPTH,
+                &mut walked,
                 &mut nested,
                 &mut out.unlisted,
             );
@@ -266,7 +280,9 @@ pub(crate) fn project_parts(repo: &Path, root: &str) -> ProjectParts {
 /// A `missing-part` finding for each distinct link of a project file that
 /// resolves into a parts directory, to no file. A link that is, or passes
 /// through, a symbolic link leaving the project is never probed: the
-/// directory it enters is reported unlisted instead.
+/// directory it enters is reported unlisted instead, as is a link whose
+/// probe fails for any reason but the file's absence (a directory that cannot
+/// be searched): its state is unknown, never missing.
 fn missing_parts(
     repo: &Path,
     subjects: &[(ProjectFileKind, String)],
@@ -278,7 +294,10 @@ fn missing_parts(
         for link in file_links.iter().flatten() {
             if KINDS.iter().any(|kind| in_dir(link, parts_dir(*kind)))
                 && !leaves_project(repo, link)
-                && !repo.join(link).exists()
+                && matches!(
+                    std::fs::metadata(repo.join(link)),
+                    Err(ref err) if err.kind() == std::io::ErrorKind::NotFound
+                )
             {
                 missing.insert((link.clone(), file.clone()));
             }
@@ -312,8 +331,12 @@ fn strays(repo: &Path, out: &mut ProjectParts) {
             path: stray.path,
         });
     }
+    let shared_constitution =
+        !leaves_project(repo, CONSTITUTION_FILE) && repo.join(CONSTITUTION_FILE).is_file();
     for dir in docs.subdirs {
-        if KINDS.iter().any(|kind| parts_dir(*kind) == dir) || dir == CONSTITUTION_PARTS_DIR {
+        if KINDS.iter().any(|kind| parts_dir(*kind) == dir)
+            || (shared_constitution && dir == CONSTITUTION_PARTS_DIR)
+        {
             continue;
         }
         out.findings.push(PartFinding {
@@ -332,7 +355,7 @@ fn strays(repo: &Path, out: &mut ProjectParts) {
 
 /// Whether `path` lies under `dir`, both project-relative, by whole
 /// components.
-fn in_dir(path: &str, dir: &str) -> bool {
+pub(crate) fn in_dir(path: &str, dir: &str) -> bool {
     path.strip_prefix(dir)
         .is_some_and(|rest| rest.starts_with('/'))
 }
@@ -388,11 +411,15 @@ pub(crate) fn index_links(text: &str, file: &str, repo: &Path) -> Vec<String> {
 
 /// Append every markdown file at any depth under `dir`, a subdirectory of a
 /// parts directory, to `out`, and every directory it could not look at to
-/// `unlisted`.
+/// `unlisted`. `walked` holds the canonical path of each directory already
+/// walked, the parts directory's own first: a directory reached again through
+/// a link adds nothing, so the walk is bounded by the directories that exist.
+/// One whose canonical path cannot be taken is unlisted.
 fn nested_files(
     repo: &Path,
     dir: &str,
     depth_budget: u32,
+    walked: &mut BTreeSet<PathBuf>,
     out: &mut Vec<String>,
     unlisted: &mut Vec<String>,
 ) {
@@ -400,11 +427,18 @@ fn nested_files(
         unlisted.push(dir.to_string());
         return;
     }
+    let Ok(canonical) = std::fs::canonicalize(repo.join(dir)) else {
+        unlisted.push(dir.to_string());
+        return;
+    };
+    if !walked.insert(canonical) {
+        return;
+    }
     let listing = list_dir(repo, dir);
     out.extend(listing.parts.into_iter().map(|part| part.path));
     unlisted.extend(listing.unlisted);
     for subdir in listing.subdirs {
-        nested_files(repo, &subdir, depth_budget - 1, out, unlisted);
+        nested_files(repo, &subdir, depth_budget - 1, walked, out, unlisted);
     }
 }
 
@@ -608,6 +642,49 @@ mod tests {
         assert!(message.contains("`specs/system.md`"), "{message}");
     }
 
+    /// A link into a parts directory that cannot be searched is neither
+    /// present nor missing: the directory is reported unlisted instead.
+    #[test]
+    #[cfg(unix)]
+    fn a_link_into_a_directory_that_cannot_be_searched_is_not_a_missing_part() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        let dir = repo.join(".ductus/docs/system");
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o000)).unwrap();
+        let parts = project_parts(repo, "specs");
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(kinds(&parts), Vec::new(), "{:?}", parts.findings);
+        assert_eq!(parts.unlisted, vec![".ductus/docs/system".to_string()]);
+    }
+
+    /// A non-markdown entry that is a link leaving the project is never
+    /// probed: it is unlisted, and is no part.
+    #[test]
+    #[cfg(unix)]
+    fn a_non_markdown_entry_that_is_a_link_leaving_the_project_is_unlisted_and_no_part() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        let _outside =
+            crate::primitives::outward::file(repo, ".ductus/docs/system/diagram.png", "png");
+        let parts = project_parts(repo, "specs");
+        assert_eq!(
+            parts.unlisted,
+            vec![".ductus/docs/system/diagram.png".to_string()]
+        );
+        assert!(
+            !parts
+                .parts
+                .iter()
+                .any(|part| part.path.ends_with("diagram.png")),
+            "{:?}",
+            parts.parts
+        );
+        assert_eq!(kinds(&parts), Vec::new());
+    }
+
     #[test]
     fn a_part_its_project_file_does_not_link_is_unlinked() {
         let tmp = tempdir().unwrap();
@@ -675,6 +752,41 @@ mod tests {
         assert_eq!(parts.parts.len(), 4, "a nested file is no part");
     }
 
+    /// A link to the parts directory itself, as a subdirectory of it, ends the
+    /// walk at once: it adds no finding, where a depth bound alone reports its
+    /// part again at every level.
+    #[test]
+    #[cfg(unix)]
+    fn a_link_to_the_parts_directory_from_within_it_is_walked_once() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        std::os::unix::fs::symlink(".", repo.join(".ductus/docs/system/a")).unwrap();
+        let parts = project_parts(repo, "specs");
+        assert_eq!(kinds(&parts), Vec::new(), "{:?}", parts.findings);
+        assert_eq!(parts.unlisted, Vec::<String>::new());
+    }
+
+    /// A second link to a directory already walked adds no finding for the
+    /// files it holds.
+    #[test]
+    #[cfg(unix)]
+    fn a_link_to_a_directory_already_walked_adds_no_nested_file() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        write(repo, ".ductus/docs/system/deeper/inner.md", "# Inner\n");
+        std::os::unix::fs::symlink("deeper", repo.join(".ductus/docs/system/alias")).unwrap();
+        let parts = project_parts(repo, "specs");
+        let nested: Vec<&str> = parts
+            .findings
+            .iter()
+            .filter(|finding| finding.kind == PartFindingKind::NestedFile)
+            .map(|finding| finding.path.as_str())
+            .collect();
+        assert_eq!(nested.len(), 1, "one file, one finding: {nested:?}");
+    }
+
     #[test]
     fn a_directory_under_docs_that_is_no_parts_directory_is_reported() {
         let tmp = tempdir().unwrap();
@@ -693,6 +805,8 @@ mod tests {
         let tmp = tempdir().unwrap();
         let repo = tmp.path();
         clean(repo);
+        // The root document marks the repository as a shared constitution's own.
+        write(repo, "constitution.md", "# Constitution\n");
         write(
             repo,
             ".ductus/docs/constitution/security.md",
@@ -704,6 +818,51 @@ mod tests {
             parts.parts.len(),
             4,
             "a constitution's part is no project part"
+        );
+    }
+
+    #[test]
+    fn a_constitution_parts_directory_in_a_project_with_no_root_constitution_is_a_stray_directory()
+    {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        write(
+            repo,
+            ".ductus/docs/constitution/security.md",
+            "# Security\n",
+        );
+        let parts = project_parts(repo, "specs");
+        assert_eq!(
+            kinds(&parts),
+            vec![(
+                PartFindingKind::NotAPartsDirectory,
+                ".ductus/docs/constitution"
+            )]
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_root_constitution_that_is_a_link_leaving_the_project_marks_no_shared_constitution() {
+        let tmp = tempdir().unwrap();
+        let repo = tmp.path();
+        clean(repo);
+        write(
+            repo,
+            ".ductus/docs/constitution/security.md",
+            "# Security\n",
+        );
+        let _outside =
+            crate::primitives::outward::file(repo, "constitution.md", "# Constitution\n");
+        let parts = project_parts(repo, "specs");
+        assert_eq!(
+            kinds(&parts),
+            vec![(
+                PartFindingKind::NotAPartsDirectory,
+                ".ductus/docs/constitution"
+            )],
+            "a link out of the project is never probed, so it marks nothing"
         );
     }
 
@@ -722,6 +881,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_part_that_is_a_link_leaving_the_project_is_unreadable() {
         let tmp = tempdir().unwrap();
         let repo = tmp.path();
@@ -747,6 +907,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_parts_directory_that_is_a_link_leaving_the_project_is_unlisted_never_empty() {
         let tmp = tempdir().unwrap();
         let repo = tmp.path();
@@ -779,6 +940,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_project_file_that_cannot_be_read_leaves_its_parts_linkage_unknown() {
         let tmp = tempdir().unwrap();
         let repo = tmp.path();

@@ -19,22 +19,18 @@ One runtime function defines a project file's parts and the integrity findings o
 
 ## Technical Decisions
 
-### Implementation follows 084's `done`
-
-084's Resolved Questions, *Landing order*: every other open spec's implementation follows 084 reaching `done`, and a clarification may precede it (owner, 2026-11-24). Planning writes no code either. 084's pending tasks also change surfaces this plan changes: `check_artifact_size.rs` (its task 17 removes `OnDone`), `framework/commands/review.md`, `framework/reference/review.md`, `framework/bootstrap/` and `framework/migrations/` (084's implementing session, 2026-11-24). Task 1 carries the wait. This plan cites `check_artifact_size.rs` only by symbols 084 leaves in place.
-
 ### One definition of the part set
 
 A new module, `runtime/src/primitives/project_parts.rs`, is the only enumeration of parts, so no two primitives can disagree about what a part is.
 
 - **Parts directories.** `.ductus/docs/agents/`, `.ductus/docs/system/`, `.ductus/docs/events/` and `.ductus/docs/errors/` are under the project root, not the spec root. Each is keyed by the `ProjectFileKind` that `project_subjects` (`runtime/src/primitives/check_artifact_size.rs`) pairs with its file. `project_subjects` stays the four files.
-- **A part** is a `*.md` regular file directly under one of them, listed in `scenario_name_cmp` order, the order `check-artifact-size` uses for scenarios. Any other file there is neither measured nor reported (AC11). A part that is, or lies under, a symbolic link leaving the project is `unreadable` and never opened, as a project file is (`leaves_project`; `BE-INPUT-004`).
+- **A part** is a `*.md` regular file directly under one of them, listed in `scenario_name_cmp` order, the order `check-artifact-size` uses for scenarios. Any other file there is neither measured nor reported, except one that is a symbolic link leaving the project, which is unlisted, since whether it is a file or a directory is never probed (AC11; the agent's recommendation, adopted by the operator, 2026-11-26). A part that is, or lies under, a symbolic link leaving the project is `unreadable` and never opened, as a project file is (`leaves_project`; `BE-INPUT-004`).
 - **Linkage.** Each project file's inline markdown links outside fenced blocks and HTML comments are resolved relative to that file. A part is linked when its own project file links it, since the index names each part (spec, *Parts*). A link from another project file is an ordinary link (spec, Edge Cases). The scan is `check-corpus-links`': `link_targets`, `link_file_part`, `link_base` and `lexical_join` in `runtime/src/primitives/check_corpus_links.rs`, the middle two taken out of its `classify` so a fragment, a scheme, a shape and a root-absolute target are judged once. Those helpers become `pub(crate)`, and are not copied. They run here the same way, except that a link in an HTML comment is skipped as one in a fence is, so nothing else widens (`QUAL-DELEG-001`).
 - **Integrity findings.** Each carries a kind, a path and a runtime-worded message:
-  - `missing-part`: a project file's link resolves into a parts directory, to no file.
+  - `missing-part`: a project file's link resolves into a parts directory, to no file. A link whose target cannot be looked up, as under a directory that cannot be searched, is not judged: that directory is reported unlisted.
   - `unlinked-part`.
-  - `nested-file`: a markdown file at any depth in a subdirectory of a parts directory.
-  - `not-a-parts-directory`: a directory under `.ductus/docs/` other than the four and `constitution/`, which is a shared constitution's parts directory in its own repository (the agent's recommendation, adopted by the operator, 2026-11-25).
+  - `nested-file`: a markdown file at any depth in a subdirectory of a parts directory. The walk enters each directory once, by its canonical path, so a link to a directory already walked adds nothing.
+  - `not-a-parts-directory`: a directory under `.ductus/docs/` other than the four, and other than `constitution/` in a project whose root holds `constitution.md`, which marks a shared constitution's own repository (the agent's recommendation, adopted by the operator, 2026-11-25; narrowed to that marker, the agent's recommendation, adopted by the operator, 2026-11-26). A root `constitution.md` that is a symbolic link leaving the project is never probed and marks nothing.
   - `not-a-part`: a markdown file directly under `.ductus/docs/` (AC20).
 - **What could not be looked at.** A directory under `.ductus/docs/` that is, or lies under, a symbolic link leaving the project, or that cannot be listed, is returned as unlisted, never as one holding no parts. A part whose project file exists but cannot be read has unknown linkage, never an `unlinked-part` finding (`QUAL-CLAIM-001`).
 - **A shared constitution's directory.** `{checkout}/.ductus/docs/constitution/` is listed by the same directory function. It gets no linkage and no integrity findings, because no command here judges another repository's index (AC17).
@@ -216,6 +212,24 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `specs/022-deterministic-runtime/spec.md` | Modify | Signpost |
 | `specs/067-analyze-and-audit-checks/data-model.md` | Modify | `plan-consistency` judges the parts too |
 | `specs/067-analyze-and-audit-checks/spec.md` | Modify | Signpost |
+| `runtime/src/schema/paths.rs` | Modify | The `.ductus` directory constant |
+| `runtime/src/interpreter/mod.rs` | Modify | Exec `/analyze` tests: an unlinked part counted, a shared constitution's part not |
+| `framework/bootstrap/hooks/ductus-pre-commit` | Modify | Step 4 refuses a grown part |
+| `framework/bootstrap/ductus-procedure.md` | Modify | The hook's description names the part refusal |
+| `docs/analyze.md` | Modify | The Artifact size row names the parts; the Project parts row |
+| `scripts/analyze/split.py` | Modify | Step 15's subjects take the measured parts |
+| `scripts/analyze/briefs.py` | Modify | Step 15's brief names the parts |
+| `scripts/analyze/step15-brief.md` | Modify | The plan is judged against the file and its parts |
+| `scripts/analyze/record.py` | Modify | An Advisory `project-parts` finding per `part-findings` entry |
+| `scripts/analyze/detect.py` | Modify | The size summary shows `part-findings` |
+| `scripts/tests/test-analyze-scripts.py` | Modify | Task 13's cases |
+| `scripts/mutation/project-parts-087.py` | Create | 087's mutants |
+| `scripts/mutation/artifact-size-bounded.py` | Modify | A docstring and an anchor follow `report_refused_sizes` |
+| `scripts/mutation/compare-and-set-041.py` | Modify | Anchors moved by the apply's refactor |
+| `scripts/mutation/prune-project.py` | Modify | Anchors moved by the walk's refactor |
+| `scripts/mutation/prune-project-containment.py` | Modify | Anchors moved by the move |
+| `scripts/mutation/resolve-constitutions-size.py` | Modify | Anchors moved by the parts measure |
+| `scripts/mutation/owner-reviews-067.py` | Modify | An anchor re-pointed at the shared helper |
 
 The 69 spec files that name the procedure file's old path are re-pointed by the move too.
 
@@ -230,7 +244,7 @@ This spec adds no `data-model.md`, because each shape belongs to its primitive's
 ## Trade-offs
 
 - **Rejected: a new primitive listing parts.** It needs seven registration sites (**§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md`), an allow entry per registry layout, and an entry in two commands' `ToolSearch` lines. It would be a second tool serving a list `check-artifact-size` must produce anyway, for AC4–AC6.
-- **Rejected: renumbering `/analyze` so step 17's call precedes step 15.** Up to 54 files cite those step numbers (`git grep -l -E 'step 1[5-9]|step 2[0-2]|steps? 1[5-9]'` over `framework/`, `runtime/`, `scripts/`, `docs/` and `specs/`, 2026-11-24; an upper bound, since the pattern also matches other commands' steps). Reading step 17's result in step 15 would reverse the walk's order. The chosen route costs one more call per interactive `/analyze`, whose result with no parts is 631 bytes (063's data model, **Size**).
+- **Rejected: renumbering `/analyze` so step 17's call precedes step 15.** Up to 54 files cite those step numbers (`git grep -l -E 'step 1[5-9]|step 2[0-2]|steps? 1[5-9]'` over `framework/`, `runtime/`, `scripts/`, `docs/` and `specs/`, 2026-11-24; an upper bound, since the pattern also matches other commands' steps). Reading step 17's result in step 15 would reverse the walk's order. The chosen route costs one more call per interactive `/analyze`, whose result over this repository the spec's *Cost* section measures.
 - **Rejected: nesting parts inside each `project-files` record.** It makes the four-record list unbounded, and the staged CLI reads that list inline.
 - **Rejected: the host moving the file and editing each referrer.** Here that is 98 occurrences in 81 files, and a mechanical rewrite is runtime-eligible (§runtime-boundary, *Eligibility criteria*).
 - **Rejected: a search that also resolves links written relative to another directory.** The spec names a literal search (*Moving what exists*). Such a link — `docs/b.md` linking `x.md` — is not found, and the preview says the search was literal, as the catalog search does.

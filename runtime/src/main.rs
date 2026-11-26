@@ -792,7 +792,7 @@ fn report_refused_sizes(result: &CheckArtifactSizeResult) {
                 "check-artifact-size: {} is {} bytes staged ({}), over the {}-byte read size \
                  ([artifacts] read-size-bytes). Split it into sibling parts in its parts directory, \
                  each named by a pointer in {}. `git commit --no-verify` bypasses this deliberately.",
-                part.path,
+                display_text(&part.path),
                 part.bytes.unwrap_or_default(),
                 head(part.head_bytes),
                 result.threshold.bytes,
@@ -804,7 +804,8 @@ fn report_refused_sizes(result: &CheckArtifactSizeResult) {
         let _ = writeln!(
             stderr,
             "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
-            skipped.path, skipped.reason
+            display_text(&skipped.path),
+            skipped.reason
         );
     }
 }

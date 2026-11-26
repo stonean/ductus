@@ -2364,6 +2364,9 @@ mod tests {
     /// size, and the project's own `.ductus/docs/constitution/`, the parts
     /// directory a constitution keeps in its repository, each leave the
     /// record's counts at zero, since nothing in this project can fix them.
+    /// The project's own directory is exempt only because the project root
+    /// holds a `constitution.md`, which marks it a shared constitution's own
+    /// repository; the fixture writes one.
     #[test]
     fn an_exec_analyze_records_no_finding_for_a_shared_constitutions_part() {
         let repo = analyze_repo(None);
@@ -2381,6 +2384,7 @@ mod tests {
             "x".repeat(50_001),
         )
         .unwrap();
+        std::fs::write(repo.path().join("constitution.md"), "# Own\n").unwrap();
         let own = repo.path().join(".ductus/docs/constitution");
         std::fs::create_dir_all(&own).unwrap();
         std::fs::write(own.join("security.md"), "# Security\n").unwrap();

@@ -95,8 +95,8 @@ MUTATIONS = [
     (
         'M10 a malformed read size falls back to the default instead of halting',
         'src/primitives/resolve_constitutions.rs',
-        '    let (threshold, notices) = resolve_threshold(repo)?;',
-        '    let (threshold, notices) = resolve_threshold(repo).unwrap_or((crate::schema::primitives::ReadSizeThreshold { bytes: 50_000, source: crate::schema::primitives::ThresholdSource::Default }, Vec::new()));',
+        ['    let (threshold, notices) = resolve_threshold(repo)?;', '    bound(repo, &mut result)?;\n'],
+        ['    let (threshold, notices) = resolve_threshold(repo).unwrap_or((crate::schema::primitives::ReadSizeThreshold { bytes: 50_000, source: crate::schema::primitives::ThresholdSource::Default }, Vec::new()));', ''],
         'resolve_constitutions::tests::a_malformed_read_size_halts_the_measured_entry',
     ),
     (

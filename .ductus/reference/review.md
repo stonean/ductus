@@ -179,7 +179,8 @@ SHOULD unless the duplication contradicts an explicit MUST in `AGENTS.md`
 ### Quality pass
 
 Detect bugs, missing error handling, unhandled edge cases, off-by-one errors,
-and contract violations against `specs/errors.md`. Each finding carries a
+and contract violations against `specs/errors.md` and the parts its pointers
+name for the code under review (spec 087). Each finding carries a
 `confidence` tier — `high` or `low` (the string the `write-review` contract
 consumes, compared case-insensitively). A `low`-confidence finding is recorded
 in the Low-confidence section regardless of severity and is excluded from the
