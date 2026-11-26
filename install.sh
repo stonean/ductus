@@ -260,6 +260,8 @@ case "$agent" in
       "Bash(.ductus/bin/ductus.exe write-review *)",
       "Bash(.ductus/bin/ductus check-unreviewed-code *)",
       "Bash(.ductus/bin/ductus.exe check-unreviewed-code *)",
+      "Bash(.ductus/bin/ductus backfill-section-digest *)",
+      "Bash(.ductus/bin/ductus.exe backfill-section-digest *)",
       "Bash(.ductus/bin/ductus merge-status-hook *)",
       "Bash(.ductus/bin/ductus.exe merge-status-hook *)",
       "Read(//private/var/folders/**/T/ductus-*/**)",

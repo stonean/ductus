@@ -91,6 +91,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
   - **Not checked.** A call that fails, or a binary with no such subcommand, is reported as not checked, naming the command, never as nothing to backfill.
   - **Report.** It reports the count written and names each record left, which gains the digest at its spec's next analysis.
   - **Status.** It leaves each `done` spec `done`, since it writes only `analysis.md` and leaves no unchecked box or unticked criterion (§spec-lifecycle).
+- **The seed.** The claude row's `settings_template` gains `Bash(.ductus/bin/ductus backfill-section-digest *)` and its `.exe` twin, in `framework/bootstrap/ductus.md`, its byte-identical copy `framework/bootstrap/govern.md` and `install.sh`'s copy, since `framework/bootstrap/ductus.md` §Permission Setup seeds one rule per CLI subcommand the bootstrap and its migrations run (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **Exercised.** A scratch-adopter bootstrap run exercises the entry, as AGENTS.md requires for a change under `framework/migrations/` (`.ductus/docs/agents/developing-ductus.md`, Exercising an installer change).
 - **This repository.** A task runs the primitive over this corpus and commits the records it writes, as `framework/migrations/criterion-label-backfill.md` records that this repository was swept when its primitive landed.
 
@@ -154,6 +155,9 @@ It retires no primitive, check or record field. The counts hold what no field he
 | `framework/bootstrap/configure/*.md` | Modify | Generated allow blocks (`scripts/gen-configure-mcp.sh`) |
 | `framework/migrations/section-digest-backfill.md` | Create | The procedure |
 | `framework/migrations.toml` | Modify | Its entry |
+| `framework/bootstrap/ductus.md` | Modify | The claude seed gains the backfill's two entries |
+| `framework/bootstrap/govern.md` | Modify | The same, byte-identical to `ductus.md` |
+| `install.sh` | Modify | Its copy of the claude seed gains them |
 | `framework/constitution.md` | Modify | The analyze-record row gains `rules-judged` and `rules-carried` |
 | `scripts/mutation/rule-judgments-088.py` | Create | Each behavior's mutant |
 | `runtime/CHANGELOG.md` | Modify | The counts, the narrowing, the primitive and the migration |

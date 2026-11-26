@@ -341,3 +341,26 @@ target_paths = [
   "specs/errors.md",
 ]
 procedure_file = "framework/migrations/report-project-file-links-into-docs.md"
+
+[[migrations]]
+id = "section-digest-backfill"
+introduced_in = "0.65.0"
+# The id sorts after report-project-file-links-into-docs on the tie-break, and
+# must: that entry was pushed first, so a --ref=main adopter who ran /ductus
+# since then records it as last_applied, and an id sorting before it would
+# never run for them (audit 10d).
+# No sunset_after. A record written before ductus 0.61.0 holds no
+# section-digest, nothing but an analysis run writes one, and an adopter who
+# skips this window has each such spec's next analysis judge every loaded
+# rule in full.
+# Independent of the other entries: none after audit-record-relocate writes
+# analysis.md, and a design subject criterion-label-backfill or
+# audit-record-relocate rewrote earlier in a chain leaves its record
+# unmatched, since the write needs the recorded digest to match.
+summary = "Write section-digest into each analysis.md that carries none and whose analyzed-digest still matches its spec's design subjects, as they stand or with spec.md's status: set to another lifecycle status, so its next analysis judges only the sections changed since; leave every other record as it was (spec 088)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "specs/*/analysis.md",
+]
+procedure_file = "framework/migrations/section-digest-backfill.md"

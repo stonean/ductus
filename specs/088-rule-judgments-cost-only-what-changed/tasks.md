@@ -35,9 +35,10 @@ Blocked on task 3: the procedure runs the primitive. Re-derive the entry's posit
 
 Run the backfill as `runtime/target/release/ductus backfill-section-digest` from the project root, built from task 3's commit, never through the session's MCP tool, which runs the binary the session started with. A run over a `git clone --local` copy of this corpus, at `b5dac62f`'s tree with task 3's code applied, wrote 10 records (002, 003, 009, 019, 027, 036, 042, 052, 056 and 064, 036's at `done`, the rest at `in-progress`) and named 39 unmatched, and a second run wrote nothing. That is 3 fewer than the 13 the spec's Resolved Questions measured at `1ffaf951`, since `2086cf6e` later edited a pointer in the design subjects of 029, 045 and 071, so re-derive the list on the tree the commit is made from.
 
-- [ ] `framework/migrations/section-digest-backfill.md` and its `framework/migrations.toml` entry, as the plan's *The migration and this repository's records* says, its id sorting after every entry at its `introduced_in`
-- [ ] A scratch-adopter bootstrap run crossing the whole migration chain, per `.ductus/docs/agents/developing-ductus.md` §Exercising an installer change without a push, on a subject holding three `analysis.md` records without `section-digest`: one matching as recorded, one matching only at another status, one stale; the run writes exactly the first two, names the third, and a second run writes nothing
-- [ ] The release build's `backfill-section-digest` run over this repository's corpus, with no pinned file, its written records committed alone, the commit's message naming each record written and left; a second run writes nothing
+- [x] `framework/migrations/section-digest-backfill.md` and its `framework/migrations.toml` entry, as the plan's *The migration and this repository's records* says, its id sorting after every entry at its `introduced_in`
+- [x] The claude seed's two `backfill-section-digest` entries, in `framework/bootstrap/ductus.md`, `framework/bootstrap/govern.md` and `install.sh`, as the plan's *The seed* says
+- [x] A scratch-adopter bootstrap run crossing the whole migration chain, per `.ductus/docs/agents/developing-ductus.md` §Exercising an installer change without a push, on a subject holding three `analysis.md` records without `section-digest`: one matching as recorded, one matching only at another status, one stale; the run writes exactly the first two, names the third, and a second run writes nothing
+- [x] The release build's `backfill-section-digest` run over this repository's corpus, with no pinned file, its written records committed alone, the commit's message naming each record written and left; a second run writes nothing
 
 - **Done when**: the bootstrap run writes exactly the two matching records and names the stale one, and its second run writes nothing; this corpus's provably current records carry `section-digest`; `scripts/audit/run-all.sh` passes after the commit.
 
@@ -65,3 +66,9 @@ The judgments a rule-file commit owes are already measured, in the spec's Resolv
 - the backfill's description and input schema bytes;
 - a backfill run's wall time over this corpus;
 - the tally of `rejudged-files` reasons over every feature.
+
+## 7. Disposition out-of-spec finding: no check holds the claude seed to the CLI subcommands the migrations run
+
+- [ ] `framework/bootstrap/ductus.md` §Permission Setup — the claude `settings_template` seeds one rule per CLI subcommand the bootstrap and its migrations run, and no `scripts/audit/` family compares it with the `.ductus/bin/ductus {subcommand}` calls `framework/migrations/*.md` spell, so a migration that adds a CLI call without its seed entry is reported by nothing (found adding 088's `backfill-section-digest` entry, task 4)
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.

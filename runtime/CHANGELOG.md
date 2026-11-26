@@ -20,6 +20,14 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   read or carries the field already is left untouched and reported, so a
   second run writes nothing. The CLI exits 1 on a record another writer
   changed meanwhile.
+- **An update writes `section-digest` into each current analysis record
+  (spec 088, AC3).** Migration `section-digest-backfill` runs
+  `backfill-section-digest` once through the pointer, with a `--pinned` per
+  `[pinned] files` entry, and reports the count written and each record left,
+  which gains the digest at its spec's next analysis; a call that prints no
+  result is reported as not checked. It writes only `analysis.md`, so a `done`
+  spec stays `done`. The claude bootstrap seed gains the subcommand's two
+  entries (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **An analysis record says how many rules its run judged and how many
   verdicts it carried (spec 088, AC1).** `write-analysis` writes
   `rules-judged`, the assessable rules the run judged, in full or against the
