@@ -169,7 +169,8 @@ def summary(name, r):
         return f"missing={g('missing')} sections={secs}"
     if name == "check-artifact-size":
         over = [(o.get("path"), o.get("message"), o.get("decided")) for o in g("oversized") or []]
-        return f"oversized={over} skipped={g('skipped')} notices={g('notices')}"
+        parts = [(f.get("kind"), f.get("path")) for f in g("part-findings") or []]
+        return f"oversized={over} skipped={g('skipped')} notices={g('notices')} part-findings={parts}"
     if name == "resolve-references":
         return f"references={g('references')} duplicate-repos={g('duplicate-repos')}"
     return f"findings={g('findings')} examined={g('examined')} skipped={g('skipped')}"

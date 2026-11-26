@@ -153,8 +153,8 @@ The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a p
 
 ## 13. `scripts/analyze/` follows step 15's and step 17's parts
 
-- [ ] `scripts/analyze/split.py` and `scripts/analyze/briefs.py`: step 15's subjects take each `measured` part that `check-artifact-size` with `project-files` and no feature lists under `specs/system.md`, and `scripts/analyze/step15-brief.md` judges the plan against the file and those parts, naming an `unreadable` part as unexamined, never as no contradiction
-- [ ] `scripts/analyze/record.py` generates an Advisory `project-parts` finding from each `part-findings` entry of detection's `check-artifact-size` result, as `reference_findings` generates step 13's, and `scripts/analyze/detect.py`'s summary of that result shows `part-findings`
+- [x] `scripts/analyze/split.py` and `scripts/analyze/briefs.py`: step 15's subjects take each `measured` part that `check-artifact-size` with `project-files` and no feature lists under `specs/system.md`, and `scripts/analyze/step15-brief.md` judges the plan against the file and those parts, naming an `unreadable` part as unexamined, never as no contradiction
+- [x] `scripts/analyze/record.py` generates an Advisory `project-parts` finding from each `part-findings` entry of detection's `check-artifact-size` result, as `reference_findings` generates step 13's, and `scripts/analyze/detect.py`'s summary of that result shows `part-findings`
 
 - **Done when**: a run of `scripts/analyze/` over a fixture project with an index `system.md`, a linked part and an unlinked part lists the linked part among step 15's subjects and records the unlinked part as an Advisory `project-parts` finding; `framework-checks.yml`'s steps pass.
 

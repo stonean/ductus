@@ -21,7 +21,10 @@ one cell's --cell-bytes (default lib.DEFAULT_CELL_BYTES) the scenarios are
 split into the fewest groups balanced by bytes that keep each cell within
 it, and every share is judged against every group. A share or cell that
 cannot be brought within its budget, a rule file or a scenario larger than
-it, is named in a note. Step 15 has its own reader.
+it, is named in a note. Step 15 has its own reader, whose subjects take the
+parts of specs/system.md that check-artifact-size --project-files, called
+with no feature as step 15 calls it, lists (spec 087): a measured part is
+read, and an unreadable one is named for the reader to leave unjudged.
 
 Needs detect.py's results, current for the feature as it stands, whose
 check-departures entries the briefs name. Prints discover-rule-files'
@@ -95,6 +98,21 @@ def budget_flag(args, flag):
     if n is None or n < lib.MIN_BUDGET_BYTES:
         raise lib.Unreadable(f"{flag} is {raw!r}; it takes a whole number of at least {lib.MIN_BUDGET_BYTES}")
     return n
+
+
+def system_parts(system_path):
+    """([measured part], [unreadable part]): the project-relative paths of the
+    parts check-artifact-size --project-files, with no feature, lists under
+    system_path (framework/commands/analyze.md step 15). A result with no
+    parts list is no result, never a project with no parts."""
+    found, _ = lib.call("check-artifact-size", "--project-files")
+    parts = found.get("parts")
+    if not isinstance(parts, list):
+        raise lib.Unreadable("check-artifact-size --project-files returned no parts list, so "
+                             "step 15 cannot say which parts of specs/system.md it judges against")
+    mine = [p for p in parts if p.get("project-file") == system_path]
+    return ([p["path"] for p in mine if p.get("state") == "measured"],
+            [p["path"] for p in mine if p.get("state") != "measured"])
 
 
 def run(argv):
@@ -207,6 +225,7 @@ def run(argv):
                           "out": os.path.join(w, f"out-{cell}-{run_id}.json")})
     s15 = [p for p in ("spec.md", "plan.md") if p in sizes]
     system = "specs/system.md" if os.path.isfile("specs/system.md") else None
+    parts, parts_unreadable = system_parts("specs/system.md")
     head = lib.head()
     manifest = {
         "feature": feature, "status": status, "head": head, "run": run_id,
@@ -219,7 +238,8 @@ def run(argv):
         "departures": departures, "shares": shares, "groups": groups, "cells": cells,
         "subjects": {p: {"bytes": b, "sha256": lib.sha256(os.path.join(d, p)),
                          "long-lines": long_lines(os.path.join(d, p))} for p, b in subjects},
-        "step15": {"subjects": s15, "system": system,
+        "step15": {"subjects": s15, "system": system, "system-parts": parts,
+                   "system-parts-unreadable": parts_unreadable,
                    "brief": os.path.join(w, "brief-step15.md"),
                    "out": os.path.join(w, f"out-step15-{run_id}.json")},
         "notes": notes,
@@ -228,7 +248,8 @@ def run(argv):
     print(f"== {feature}: {len(judge)} rules to judge in full, {len(rejudge)} against "
           f"{len(manifest['changed-sections'])} changed sections, {len(manifest['reusable'])} reusable verdicts "
           f"({verdicts.get('reason') or 'current'}); {len(shares)} shares x {len(groups)} scenario groups "
-          f"= {len(cells)} cells, plus a step-15 reader")
+          f"= {len(cells)} cells, plus a step-15 reader with {len(parts)} part(s) of specs/system.md "
+          f"to read and {len(parts_unreadable)} unreadable")
     for letter, s in shares.items():
         print(f"  share {letter}: {len(s['ids'])} rules, {s['bytes']} bytes, {', '.join(s['rule-files'])}")
     for c in cells:

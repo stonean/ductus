@@ -110,10 +110,18 @@ def run(argv):
         prompts.append((c["cell"], c["brief"], c["out"]))
     s = m["step15"]
     subj = subject_lines(m, s["subjects"])
+    parts, unreadable = s.get("system-parts") or [], s.get("system-parts-unreadable") or []
     if s.get("system"):
         subj += f"\n- `{s['system']}` ({os.path.getsize(s['system']):,} bytes)"
-    else:
+    elif not parts and not unreadable:
         subj += "\n- The project has no `specs/system.md`, so the plan has nothing to contradict there."
+    else:
+        subj += "\n- The project has no `specs/system.md`, but its parts below are still the file's."
+    for p in parts:
+        subj += f"\n- `{p}` ({os.path.getsize(p):,} bytes), a part of `specs/system.md`"
+    for p in unreadable:
+        subj += (f"\n- `{p}`, a part of `specs/system.md` that `check-artifact-size` could not read: do not "
+                 "judge the plan against it, and name it in your report as not examined, never as no contradiction")
     text = fill(template("step15-brief.md"), {**base, "OUT": s["out"], "SUBJECTS": subj,
                                               "LONG": long_note(m, s["subjects"])})
     with open(s["brief"], "w", encoding="utf-8") as f:

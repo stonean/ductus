@@ -95,9 +95,18 @@ Coverage:
      its output and counts it in anchor-target-unreadable, not examined, and
      record.py records the result's own anchor-target counts unexamined and
      refuses a result missing either
+  AR. split.py takes step 15's parts from check-artifact-size --project-files:
+     each measured part of specs/system.md to read, each unreadable one apart,
+     no other file's part, and exits 2 on a result with no parts list;
+     briefs.py names each; check.py fails a step-15 read account missing a
+     part; record.py writes each part-findings entry as an Advisory
+     project-parts finding, and counts an unreadable part once, under
+     artifact-unreadable (spec 087)
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
-     installed, so check-rule-ids' not-installed is non-empty
+     installed, so check-rule-ids' not-installed is non-empty, and its
+     system.md an index with a linked part and an unlinked one: both are
+     step 15's subjects, and the unlinked one is a project-parts finding
 
 ANALYZE_SCRIPTS, when set, names the directory of scripts to run, so a
 mutant can be run against these cases. Usage:
@@ -221,8 +230,8 @@ class Project:
         self.answer("read-spec", {"frontmatter": {"status": "in-progress"}})
         self.answer("check-artifacts", {"skipped": [{"reason": "ships-to-adopter"}]})
         self.answer("check-rule-ids", {"examined": 3, "citations-count": 0})
-        for name in ("check-artifact-size", "check-orphaned-references"):
-            self.answer(name, {"skipped": []})
+        self.answer("check-artifact-size", {"skipped": [], "parts": [], "part-findings": []})
+        self.answer("check-orphaned-references", {"skipped": []})
         self.answer("resolve-anchor", {"references": [], "anchor-target-unjudgeable": 0,
                                        "anchor-target-unreadable": 0})
         self.write("rules.json", json.dumps(RULES))
@@ -289,10 +298,15 @@ class Project:
         with open(c["out"], "w") as f:
             json.dump(out, f)
 
-    def step15(self, unchecked=()):
+    def step15(self, unchecked=(), skip=()):
+        """Write step 15's output: every subject, specs/system.md and each part
+        split.py listed to read, read whole, but the paths in skip."""
         s = self.manifest()["step15"]
         acct = {f"specs/{F}/{p}": [os.path.getsize(os.path.join(self.root, "specs", F, p))] * 2
                 for p in s["subjects"]}
+        for p in ([s["system"]] if s.get("system") else []) + list(s.get("system-parts") or []):
+            if p not in skip:
+                acct[p] = [os.path.getsize(os.path.join(self.root, p))] * 2
         with open(s["out"], "w") as f:
             json.dump({"grounding": [], "integrity": [], "decision-reasons": [], "bytes-read": acct,
                        "integrity-checked": {i: i not in unchecked for i in ("code-block", "rationale", "system", "contract")}},
@@ -726,7 +740,8 @@ STRICT = [  # (script, result, what the runtime always writes, the result withou
     ("record.py", "check-artifacts", "skipped list", {"findings": []}),
     ("record.py", "resolve-anchor", "anchor-target-unjudgeable count", {"references": [], "anchor-target-unreadable": 0}),
     ("record.py", "resolve-anchor", "anchor-target-unreadable count", {"references": [], "anchor-target-unjudgeable": 0}),
-    ("record.py", "check-artifact-size", "skipped list", {"oversized": []}),
+    ("record.py", "check-artifact-size", "skipped list", {"oversized": [], "part-findings": []}),
+    ("record.py", "check-artifact-size", "part-findings list", {"oversized": [], "skipped": []}),
     ("record.py", "check-rule-ids", "examined count", {"citations-count": 0}),
     ("record.py", "process-decisions", "matched list", {"expired": [], "lapsed": []}),
     ("record.py", "resolve-references", "references list", {"duplicate-repos": []}),
@@ -830,6 +845,64 @@ def aq(p, name):
            r.stdout + r.stderr + r2.stderr + json.dumps([det, wa]))
 
 
+LINKED, LOOSE, GONE = (f".ductus/docs/system/{n}.md" for n in ("linked", "loose", "gone"))
+PARTS = [
+    {"path": LINKED, "project-file": "specs/system.md", "state": "measured", "bytes": 1, "linked": True},
+    {"path": LOOSE, "project-file": "specs/system.md", "state": "measured", "bytes": 1, "linked": False},
+    {"path": GONE, "project-file": "specs/system.md", "state": "unreadable"},
+    {"path": ".ductus/docs/agents/howto.md", "project-file": "AGENTS.md", "state": "measured", "bytes": 1,
+     "linked": True},
+]
+UNLINKED = {"kind": "unlinked-part", "path": LOOSE, "message": "loose.md is a part specs/system.md does not link"}
+
+
+def ar(p, name):
+    p.write("specs/system.md", "# System\n\nIn parts: [linked](../.ductus/docs/system/linked.md).\n")
+    for part in ("system/linked.md", "system/loose.md", "agents/howto.md"):
+        p.write(f".ductus/docs/{part}", f"# {part}\n\nContent.\n")
+    p.git("add", ".")
+    p.git("-c", "user.name=t", "commit", "-qm", "parts")
+    p.answer("check-artifact-size", {"skipped": [{"path": GONE, "reason": "artifact-unreadable"}],
+                                     "parts": PARTS, "part-findings": [UNLINKED]})
+    det = p.run("detect.py", F)
+    p.split()
+    s = p.manifest()["step15"]
+    briefs = p.run("briefs.py", F)
+    brief = open(s["brief"]).read()
+    time.sleep(1.1)  # an output must be newer than the manifest's whole-second stamp
+    for c in p.manifest()["cells"]:
+        p.hand_back(c["cell"])
+    p.step15(skip=(LOOSE,))
+    short = p.run("check.py", F)
+    p.step15()
+    whole = p.run("check.py", F)
+    p.write("plan.json", json.dumps({"findings": []}))
+    rec = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    try:
+        fs = json.load(open(os.path.join(p.stub, "captured-findings-json")))
+    except OSError:
+        fs = []
+    found = [(f["tier"], f["message"], f["path"]) for f in fs if f["family"] == "project-parts"]
+    p.answer("check-artifact-size", {"skipped": [], "part-findings": []})
+    p.run("detect.py", F)
+    bare = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
+    check_(name, det.returncode == 0 and f"part-findings=[('unlinked-part', '{LOOSE}')]" in det.stdout
+           and s["system"] == "specs/system.md" and s["system-parts"] == [LINKED, LOOSE]
+           and s["system-parts-unreadable"] == [GONE]
+           and briefs.returncode == 0 and f"`{LINKED}` (" in brief and f"`{LOOSE}` (" in brief
+           and f"`{GONE}`, a part of `specs/system.md` that `check-artifact-size` could not read" in brief
+           and "howto.md" not in brief
+           and short.returncode == 1 and f"no read account for {LOOSE}" in short.stdout
+           and whole.returncode == 0
+           and rec.returncode == 0 and found == [("advisory", UNLINKED["message"], LOOSE)]
+           and wa[wa.index("--advisory") + 1] == "2" and "artifact-unreadable=1" in wa
+           and not any(x.startswith("integrity-not-checked") for x in wa)
+           and bare.returncode == 2 and "no parts list" in bare.stderr,
+           det.stdout + briefs.stderr + short.stdout + whole.stdout + rec.stdout + rec.stderr + bare.stderr
+           + json.dumps([s, found, wa]))
+
+
 def z(name):
     """detect.py through record.py --write against the real release binary,
     in a fixture project holding one rule file and an unfolded staging spec."""
@@ -859,6 +932,9 @@ def z(name):
         shutil.copy(os.path.join(REPO, "framework", "rules", "quality-cross.md"),
                     os.path.join(root, "specs", "rules", "quality-cross.md"))
         write(".ductus/constitution.md", "# Constitution\n")
+        write("specs/system.md", "# System\n\nThe architecture, in parts: [the one](../.ductus/docs/system/linked.md).\n")
+        write(".ductus/docs/system/linked.md", "# Linked part\n\nArchitecture.\n")
+        write(".ductus/docs/system/unlinked.md", "# Unlinked part\n\nMore architecture.\n")
         env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT_", "ANALYZE_", "DUCTUS_"))}
         env.update({"DUCTUS_BIN": REAL_BIN, "ANALYZE_WORK": os.path.join(base, "work"),
                     "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
@@ -888,10 +964,13 @@ def z(name):
                        "verdicts": {first: {"verdict": "addressed", "cite": "plan.md#One decision"}}},
                       open(c["out"], "w"))
         s15 = m["step15"]
+        read15 = {f"specs/{F}/{p}": [os.path.getsize(os.path.join(root, "specs", F, p))] * 2
+                  for p in s15["subjects"]}
+        for p in ([s15["system"]] if s15.get("system") else []) + list(s15.get("system-parts") or []):
+            read15[p] = [os.path.getsize(os.path.join(root, p))] * 2
         json.dump({"grounding": [], "integrity": [], "decision-reasons": [],
                    "integrity-checked": {"code-block": True, "rationale": True, "system": True, "contract": True},
-                   "bytes-read": {f"specs/{F}/{p}": [os.path.getsize(os.path.join(root, "specs", F, p))] * 2
-                                  for p in s15["subjects"]}}, open(s15["out"], "w"))
+                   "bytes-read": read15}, open(s15["out"], "w"))
         steps.append(run("check.py", F))
         steps.append(run("combine.py", F))
         with open(os.path.join(base, "plan.json"), "w") as f:
@@ -903,7 +982,9 @@ def z(name):
         good = (all(x.returncode == 0 for x in steps) and "feat.1-staging" in steps[0].stdout
                 and len(m["judge"]) > 0 and sum(len(s["ids"]) for s in m["shares"].values()) == len(m["judge"])
                 and "last-run:" in text and f"{first}:" in text and "plan.md#One decision" in text
-                and "rule-not-installed" in text)
+                and "rule-not-installed" in text
+                and s15.get("system-parts") == [".ductus/docs/system/linked.md", ".ductus/docs/system/unlinked.md"]
+                and "project-parts" in text and ".ductus/docs/system/unlinked.md" in text)
         check_(name, good, "".join(f"[{i} exit {x.returncode}] {x.stdout[-600:]}{x.stderr[-600:]}"
                                    for i, x in enumerate(steps)))
     finally:
@@ -965,6 +1046,7 @@ def main():
     case("AO. detect.py runs resolve-anchor on each scenario and counts them examined", ao)
     case("AQ. detect.py merges a scenario's counts and names one it cannot read", aq)
     case("AP. step 15 states the plan-against-spec judgment, or it is unchecked", ap)
+    case("AR. step 15 reads specs/system.md's parts, and each part finding is Advisory", ar)
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)

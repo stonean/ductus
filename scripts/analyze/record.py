@@ -33,7 +33,9 @@ rule and the Advisory tier otherwise; a finding of a rule judged against
 the changed sections alone, placed at a section verdicts.changed-sections
 does not name, is passed only as its verdict, which write-analysis records
 as a contradiction counted in no tier (spec 082, AC7). Each broken cross-service reference
-and each repository the registry holds twice is an Advisory finding. The
+and each repository the registry holds twice is an Advisory finding, and so is
+each part-findings entry of detection's check-artifact-size result, family
+project-parts (spec 087); none of these goes in the plan's findings. The
 unexamined targets are those detect.py's results name, an integrity item
 step 15 did not check, and the plan's; any the run could not read sets
 process-decisions' restricted, so a stored decision is retained rather than
@@ -131,6 +133,18 @@ def reference_findings(feature, det):
     return out
 
 
+def part_findings(det):
+    """Step 17's Advisory findings over the parts: each part-findings entry of
+    detection's check-artifact-size result, family project-parts, with the
+    runtime's message and path (framework/reference/analyze.md, Artifact
+    size). The list is always written for a project-files call, so one absent
+    is never read as none."""
+    r = load(det, "check-artifact-size")
+    return [{"tier": "advisory", "family": "project-parts", "message": f.get("message"),
+             "path": f.get("path"), "live": True}
+            for f in listed(r, "part-findings", "check-artifact-size")]
+
+
 def demoted(m, rid, v):
     """Whether a finding is a contradiction alone (spec 082, AC7): its rule
     was judged against the changed sections only, its earlier verdict was not
@@ -209,6 +223,7 @@ def run(argv):
         if r.get("verdict") == "finding":
             findings.append(rule_finding(feature, r["id"], r, r.get("tier")))
     findings += reference_findings(feature, det)
+    findings += part_findings(det)
     keys = [key(f) for f in findings if f.get("live", True)]
     dupes = sorted(k for k, n in collections.Counter(keys).items() if n > 1)
     if dupes:

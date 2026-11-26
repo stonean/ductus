@@ -24,7 +24,8 @@ For each cell in the manifest it checks that:
 - the design subjects are the ones split.py measured: none edited, added
   or removed since.
 
-The step-15 hand-back is checked for its read account and its shape. An
+The step-15 hand-back is checked for its read account, each part of
+specs/system.md split.py listed to read included, and its shape. An
 integrity item it reports unchecked is printed, and record.py records it
 under integrity-not-checked. Each judge's malformed-headings are printed,
 and record.py refuses them until the plan file names each. Writes
@@ -193,7 +194,8 @@ def check(feature, m):
     ps = [err] if err else shape(out, step15=True)
     if not ps:
         outs["step15"] = out
-        ps = read_account(out, [f"{d}/{p}" for p in s["subjects"]] + ([s["system"]] if s.get("system") else []))
+        ps = read_account(out, [f"{d}/{p}" for p in s["subjects"]] + ([s["system"]] if s.get("system") else [])
+                          + list(s.get("system-parts") or []))
         unchecked = [i for i in INTEGRITY if out["integrity-checked"][i] is False]
         for i in unchecked:
             notes.setdefault("step15", []).append(
