@@ -53,7 +53,7 @@ MUTATIONS = [
     (
         'M6 the search reads the subjects themselves',
         'src/primitives/prune_project.rs',
-        '        .filter(|path| subjects.iter().all(|(_, rel)| rel != path))\n',
+        '        .filter(|path| !excluded.contains(&path.as_str()))\n',
         '',
         'prune_project::tests::the_literal_search_reports_each_tracked_hit_outside_the_spec_root',
     ),

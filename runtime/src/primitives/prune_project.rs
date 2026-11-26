@@ -2,8 +2,12 @@
 //! (spec 041, scenario `prune-walks-the-project-files`, for spec 075).
 //!
 //! The four project files — `AGENTS.md` and the spec root's `system.md`,
-//! `events.md` and `errors.md` — are segmented into entries, each reported by
-//! its locator, size and digest, never its text. The host proposes each
+//! `events.md` and `errors.md` — and each of their parts, the markdown files
+//! directly under each one's directory in `.ductus/docs/` (spec 087), are
+//! segmented into entries, a part by its own project file's grammar, each
+//! entry reported by its locator, size and digest, never its text. The
+//! integrity findings over the parts, and each directory there that could not
+//! be listed, ride beside them for the preview to show. The host proposes each
 //! entry's home and writes it there; an apply then removes or replaces the
 //! entries it lists, refusing the whole write when any of them changed since
 //! the preview, because the host judged its moves against the text it read.
@@ -39,7 +43,8 @@ use crate::primitives::check_artifact_size::{
 };
 use crate::primitives::{
     PrimitiveError, ReadSnapshot, Result, SkipScanner, bounded_lists, hex, inline_code_spans,
-    line_ending_of, parse_atx_heading, tracked_project_paths, validate_contained, write_new_atomic,
+    line_ending_of, parse_atx_heading, project_parts, tracked_project_paths, validate_contained,
+    write_new_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -72,7 +77,8 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
     }
 }
 
-/// Segment, search and — on `apply` — write the four project files.
+/// Segment, search and — on `apply` — write the four project files and their
+/// parts.
 ///
 /// A rewrite whose file changed since it was read is not an error: it is
 /// refused, left as the other writer made it, and named in the result's
@@ -83,7 +89,8 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 ///
 /// - [`PrimitiveError::MissingArgument`] when `apply` lists nothing to do.
 /// - [`PrimitiveError::InvalidArgument`] when a list is given without
-///   `apply`, or names a path that is not one of the four subjects.
+///   `apply`, or names a path that is neither one of the four project files
+///   nor a part of one.
 /// - [`PrimitiveError::InvalidReadSize`] / [`PrimitiveError::Toml`] when the
 ///   configured read size is invalid or the config does not parse, as
 ///   `check-artifact-size` reports them.
@@ -112,27 +119,17 @@ fn run_between(
 ) -> Result<PruneProjectResult> {
     let root = paths::Paths::load(repo)?.specs_root;
     let subjects = project_subjects(&root);
-    check_args(args, &subjects)?;
+    let parts = project_parts::project_parts(repo, &root);
+    let all = subject_list(&subjects, &parts.parts);
+    check_args(args, &all)?;
     let (threshold, notices) = resolve_threshold(repo)?;
-
-    let mut files = Vec::new();
-    let mut snapshots = Vec::new();
-    let mut segments: Vec<Segment> = Vec::new();
-    for (kind, rel) in &subjects {
-        let (mut file, snapshot) = read_subject(repo, *kind, rel, threshold.bytes);
-        if let Some(text) = snapshot.as_ref().and_then(|s| s.text().ok().flatten()) {
-            let (found, tail) = segment(rel, *kind, text);
-            segments.extend(found);
-            file.unexamined_tail = tail;
-        }
-        files.push(file);
-        snapshots.push(snapshot);
-    }
+    let (files, part_files, snapshots, mut segments) = read_subjects(repo, &all, threshold.bytes);
 
     let search = if args.apply {
         None
     } else {
-        Some(search(repo, &root, &subjects, &mut segments)?)
+        let excluded: Vec<&str> = all.iter().map(|(_, rel, _)| *rel).collect();
+        Some(search(repo, &root, &excluded, &mut segments)?)
     };
 
     let (claimed, stale_entries) = claim(&segments, args);
@@ -148,7 +145,7 @@ fn run_between(
             validate_contained(repo, &home(&root, *kind).0)?;
         }
         before_write();
-        for (idx, (_, rel)) in subjects.iter().enumerate() {
+        for (idx, (_, rel, _)) in all.iter().enumerate() {
             let Some(snapshot) = &snapshots[idx] else {
                 continue;
             };
@@ -163,10 +160,10 @@ fn run_between(
                 continue;
             }
             match snapshot.write_if_unchanged(rewrite(content, &segments, &edits)) {
-                Ok(()) => written.push(rel.clone()),
+                Ok(()) => written.push((*rel).to_string()),
                 // The file changed since it was read: leave it as the other
                 // writer made it, and go on to the others (`BE-TXN-004`).
-                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push(rel.clone()),
+                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push((*rel).to_string()),
                 Err(other) => return Err(other),
             }
         }
@@ -186,6 +183,12 @@ fn run_between(
     let mut result = PruneProjectResult {
         threshold,
         files,
+        part_files_count: part_files.len(),
+        part_files: Some(part_files),
+        part_findings_count: parts.findings.len(),
+        part_findings: Some(parts.findings),
+        parts_unlisted_count: parts.unlisted.len(),
+        parts_unlisted: Some(parts.unlisted),
         form: ListsForm::Inline,
         entries_count: entries.len(),
         entries: Some(entries),
@@ -199,12 +202,79 @@ fn run_between(
         refused,
         notices,
     };
-    // `hits` ride inside their entries, so the one list moves whole: a hit
-    // list is read only beside its entry, and `entries` alone grows past the
-    // read size, since each entry is a record whether or not it has hits.
-    // The search's `outside-project` grows with the tracked files, so it
-    // moves with them.
-    let mut lists = serde_json::json!({ "entries": result.entries });
+    bound(repo, &mut result)?;
+    Ok(result)
+}
+
+/// Every subject in the order it is read and written: the four project
+/// files, then each part, which carries its project file's path and is
+/// segmented by that file's grammar.
+fn subject_list<'a>(
+    subjects: &'a [(ProjectFileKind, String); 4],
+    parts: &'a [project_parts::Part],
+) -> Vec<(ProjectFileKind, &'a str, Option<&'a str>)> {
+    subjects
+        .iter()
+        .map(|(kind, rel)| (*kind, rel.as_str(), None))
+        .chain(parts.iter().map(|part| {
+            (
+                part.kind,
+                part.path.as_str(),
+                Some(part.project_file.as_str()),
+            )
+        }))
+        .collect()
+}
+
+/// Read and segment every subject, in order: the four project files' records,
+/// the parts' records, each subject's snapshot, and every entry.
+fn read_subjects(
+    repo: &Path,
+    all: &[(ProjectFileKind, &str, Option<&str>)],
+    limit: u64,
+) -> (
+    Vec<ProjectFile>,
+    Vec<ProjectFile>,
+    Vec<Option<ReadSnapshot>>,
+    Vec<Segment>,
+) {
+    let mut files = Vec::new();
+    let mut part_files = Vec::new();
+    let mut snapshots = Vec::new();
+    let mut segments: Vec<Segment> = Vec::new();
+    for (kind, rel, part_of) in all {
+        let (mut file, snapshot) = read_subject(repo, *kind, rel, limit);
+        if let Some(text) = snapshot.as_ref().and_then(|s| s.text().ok().flatten()) {
+            let (found, tail) = segment(rel, *kind, text);
+            segments.extend(found);
+            file.unexamined_tail = tail;
+        }
+        file.part_of = part_of.map(str::to_string);
+        if part_of.is_some() {
+            part_files.push(file);
+        } else {
+            files.push(file);
+        }
+        snapshots.push(snapshot);
+    }
+    (files, part_files, snapshots, segments)
+}
+
+/// Move the result's lists to the file past the read size.
+///
+/// `hits` ride inside their entries, so the one list moves whole: a hit
+/// list is read only beside its entry, and `entries` alone grows past the
+/// read size, since each entry is a record whether or not it has hits.
+/// The search's `outside-project` grows with the tracked files, so it
+/// moves with them, and the parts' three lists grow with the project's
+/// parts (spec 087), so they move too.
+fn bound(repo: &Path, result: &mut PruneProjectResult) -> Result<()> {
+    let mut lists = serde_json::json!({
+        "entries": result.entries,
+        "part-files": result.part_files,
+        "part-findings": result.part_findings,
+        "parts-unlisted": result.parts_unlisted,
+    });
     if let Some(outside) = result
         .search
         .as_ref()
@@ -215,17 +285,24 @@ fn run_between(
     if let Some(file) = bounded_lists::place(repo, PRIMITIVE, PROJECT_FILES_KEY, &result, &lists)? {
         result.form = ListsForm::File;
         result.entries = None;
+        result.part_files = None;
+        result.part_findings = None;
+        result.parts_unlisted = None;
         if let Some(search) = result.search.as_mut() {
             search.outside_project = None;
         }
         result.lists_file = Some(file);
     }
-    Ok(result)
+    Ok(())
 }
 
-/// Refuse an argument set that names nothing to do, or a list without an
-/// apply, before anything is read.
-fn check_args(args: &PruneProjectArgs, subjects: &[(ProjectFileKind, String); 4]) -> Result<()> {
+/// Refuse an argument set that names nothing to do, a list without an apply,
+/// or a removal or replacement in a file that is neither one of the four
+/// project files nor a part of one, before any subject is read.
+fn check_args(
+    args: &PruneProjectArgs,
+    subjects: &[(ProjectFileKind, &str, Option<&str>)],
+) -> Result<()> {
     let listed = !args.remove.is_empty() || !args.replace.is_empty() || !args.create.is_empty();
     if args.apply && !listed {
         return Err(PrimitiveError::MissingArgument {
@@ -242,7 +319,7 @@ fn check_args(args: &PruneProjectArgs, subjects: &[(ProjectFileKind, String); 4]
             reason: "only an apply removes, replaces or creates; pass apply with the lists".into(),
         });
     }
-    let known = |path: &str| subjects.iter().any(|(_, rel)| rel == path);
+    let known = |path: &str| subjects.iter().any(|(_, rel, _)| *rel == path);
     let paths = args
         .remove
         .iter()
@@ -253,7 +330,7 @@ fn check_args(args: &PruneProjectArgs, subjects: &[(ProjectFileKind, String); 4]
             return Err(PrimitiveError::InvalidArgument {
                 primitive: PRIMITIVE.into(),
                 argument: argument.into(),
-                reason: format!("{path} is not one of the four project files"),
+                reason: format!("{path} is not one of the four project files or a part of one"),
             });
         }
     }
@@ -278,6 +355,7 @@ fn read_subject(
         bytes,
         over_limit: bytes.map(|bytes| bytes > limit),
         unexamined_tail: None,
+        part_of: None,
     };
     // The snapshot's read goes through `validate_contained`, so a link
     // leaving the project is refused before any open.
@@ -600,14 +678,16 @@ fn next_line_is_indented(lines: &[&str], i: usize) -> bool {
 }
 
 /// Run the literal search for every catalog identifier over the tracked files
-/// outside the spec root, the four subjects excepted, setting each such
-/// entry's `hits`. Each file is read once, unless it is, or lies under, a
-/// symbolic link resolving outside the project: that one is not read and is
-/// named in `outside-project`. With no identifier to look for, nothing is read.
+/// outside the spec root, every subject excepted — the four project files and
+/// each part, so a catalog entry is never a hit on its own file or its
+/// index — setting each such entry's `hits`. Each file is read once, unless
+/// it is, or lies under, a symbolic link resolving outside the project: that
+/// one is not read and is named in `outside-project`. With no identifier to
+/// look for, nothing is read.
 fn search(
     repo: &Path,
     root: &str,
-    subjects: &[(ProjectFileKind, String); 4],
+    excluded: &[&str],
     segments: &mut [Segment],
 ) -> Result<ProjectSearch> {
     let Some(tracked) = tracked_project_paths(repo)? else {
@@ -625,7 +705,7 @@ fn search(
     let candidates: Vec<String> = tracked
         .into_iter()
         .filter(|path| !path.starts_with(&prefix))
-        .filter(|path| subjects.iter().all(|(_, rel)| rel != path))
+        .filter(|path| !excluded.contains(&path.as_str()))
         .collect();
 
     let wanted: Vec<usize> = (0..segments.len())
@@ -1721,6 +1801,248 @@ Codes use `snake_case`.
             value["files"][0]["unexamined-tail"]["cause"],
             "open-comment"
         );
+    }
+
+    const SYSTEM_INDEX: &str = "\
+# System
+
+## Storage
+
+Read [Storage](../.ductus/docs/system/storage.md) before changing how anything is stored.
+";
+
+    const STORAGE_PART: &str = "\
+# Storage
+
+## Database
+
+All state is kept in one SQLite database.
+
+## Files
+
+No component writes a file of its own.
+";
+
+    const STORAGE: &str = ".ductus/docs/system/storage.md";
+
+    /// [`project`] with `system.md` an index linking one part.
+    fn parted() -> TempDir {
+        let dir = project();
+        write(&dir.path().join("specs/system.md"), SYSTEM_INDEX);
+        write(&dir.path().join(STORAGE), STORAGE_PART);
+        dir
+    }
+
+    /// A part is a subject after the four files, segmented by its project
+    /// file's grammar and recorded in `part-files`, and an apply removes one
+    /// of its entries (spec 087, AC7).
+    #[test]
+    fn a_part_is_walked_after_the_four_files_and_an_apply_removes_its_entry() {
+        let dir = parted();
+        let before = preview(dir.path());
+        assert!(before.files.iter().all(|f| f.part_of.is_none()));
+        let records = before.part_files.clone().unwrap();
+        assert_eq!((records.len(), before.part_files_count), (1, 1));
+        assert_eq!(records[0].path, STORAGE);
+        assert_eq!(records[0].kind, ProjectFileKind::System);
+        assert_eq!(records[0].state, ProjectFileState::Present);
+        assert_eq!(records[0].part_of.as_deref(), Some("specs/system.md"));
+        let sections: Vec<Option<&str>> = entries_of(&before, STORAGE)
+            .into_iter()
+            .map(|e| e.section.as_deref())
+            .collect();
+        assert_eq!(sections, vec![Some("Database"), Some("Files")]);
+        // The four files' entries come first, then the part's.
+        let paths: Vec<&str> = before
+            .entries
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|e| e.path.as_str())
+            .collect();
+        assert_eq!(
+            paths.iter().position(|p| *p == STORAGE),
+            Some(paths.len() - 2)
+        );
+
+        let files = entries_of(&before, STORAGE)
+            .into_iter()
+            .find(|e| e.section.as_deref() == Some("Files"))
+            .unwrap();
+        let args = PruneProjectArgs {
+            apply: true,
+            remove: vec![EntryRemoval {
+                path: STORAGE.into(),
+                digest: files.digest.clone(),
+            }],
+            ..PruneProjectArgs::default()
+        };
+        let result = run(&args, dir.path()).unwrap();
+        assert!(result.applied, "{result:?}");
+        assert_eq!(result.written, vec![STORAGE.to_string()]);
+        let written = fs::read_to_string(dir.path().join(STORAGE)).unwrap();
+        assert!(!written.contains("No component writes"), "{written}");
+        assert!(written.contains("All state is kept"), "{written}");
+    }
+
+    /// A part of `events.md` carries its catalog identifiers into the literal
+    /// search, and no part is searched as a source: the part naming
+    /// `invoice.paid` and `order.created` is a hit on neither (spec 087).
+    #[test]
+    fn a_part_of_events_md_joins_the_search_and_is_never_its_own_hit() {
+        let dir = project();
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        write(
+            &dir.path().join(".ductus/docs/events/billing.md"),
+            "# Billing\n\n## Event Catalog\n\n### invoice.paid\n\nPublished after order.created.\n",
+        );
+        write(
+            &dir.path().join("src/billing.rs"),
+            "emit(\"invoice.paid\");\n",
+        );
+        commit_all(&repository, "fixture");
+        let result = preview(dir.path());
+        let hits = |id: &str| {
+            result
+                .entries
+                .as_ref()
+                .unwrap()
+                .iter()
+                .find(|e| e.identifier.as_deref() == Some(id))
+                .and_then(|e| e.hits.clone())
+        };
+        assert_eq!(
+            hits("invoice.paid"),
+            Some(vec!["src/billing.rs".to_string()])
+        );
+        assert_eq!(hits("order.created"), Some(Vec::new()));
+        assert_eq!(result.search.unwrap().files_searched, Some(1));
+    }
+
+    /// A parts directory that cannot be listed is named in `parts-unlisted`,
+    /// never read as holding no parts, and a part that is a link leaving the
+    /// project is recorded in that state and contributes no entries
+    /// (`QUAL-CLAIM-001`).
+    #[cfg(unix)]
+    #[test]
+    fn an_unlistable_directory_and_an_outward_part_are_reported_never_read_as_none() {
+        let dir = project();
+        let outside = TempDir::new().unwrap();
+        fs::write(outside.path().join("x.md"), "# X\n\n## A\n\nText.\n").unwrap();
+        fs::create_dir_all(dir.path().join(".ductus/docs/system")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("x.md"),
+            dir.path().join(".ductus/docs/system/x.md"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(outside.path(), dir.path().join(".ductus/docs/events")).unwrap();
+        let result = preview(dir.path());
+        assert_eq!(
+            result.parts_unlisted,
+            Some(vec![".ductus/docs/events".to_string()])
+        );
+        assert_eq!(result.parts_unlisted_count, 1);
+        let records = result.part_files.clone().unwrap();
+        assert_eq!(records.len(), 1, "{records:?}");
+        assert_eq!(records[0].state, ProjectFileState::OutsideProject);
+        assert_eq!(
+            entries_of(&result, ".ductus/docs/system/x.md"),
+            Vec::<&ProjectEntry>::new()
+        );
+    }
+
+    /// Past the read size the parts' three lists move to the file whole, each
+    /// key present there, and each count stays inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn past_the_read_size_the_parts_lists_are_in_the_file_with_their_counts_inline() {
+        let dir = parted();
+        write(&dir.path().join(".ductus/docs/system/old.md"), "# Old\n");
+        let whole = preview(dir.path());
+        assert_eq!(whole.form, ListsForm::Inline);
+        let files = whole.part_files.clone().unwrap();
+        let findings = whole.part_findings.clone().unwrap();
+        assert_eq!((files.len(), findings.len()), (2, 1));
+        // Over each part, so `over-limit` reads as it did, and under the
+        // result.
+        read_size(dir.path(), 500);
+        let bounded = preview(dir.path());
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (
+                &bounded.part_files,
+                &bounded.part_findings,
+                &bounded.parts_unlisted
+            ),
+            (&None, &None, &None)
+        );
+        assert_eq!(
+            (
+                bounded.part_files_count,
+                bounded.part_findings_count,
+                bounded.parts_unlisted_count
+            ),
+            (2, 1, 0)
+        );
+        let file = bounded.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(dir.path().join(&file)).unwrap()).unwrap();
+        assert_eq!(lists["part-files"], serde_json::to_value(&files).unwrap());
+        assert_eq!(
+            lists["part-findings"],
+            serde_json::to_value(&findings).unwrap()
+        );
+        assert_eq!(lists["parts-unlisted"], serde_json::json!([]));
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
+    /// A project whose four project files name no parts keeps every earlier
+    /// key, its files' records carry no `part-of`, and the parts' lists are
+    /// present, empty and counted 0 (spec 087, AC8).
+    #[test]
+    fn a_project_with_no_parts_keeps_every_earlier_key_with_the_parts_lists_empty() {
+        let dir = project();
+        let value = serde_json::to_value(preview(dir.path())).unwrap();
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        let mut expected = vec![
+            "applied",
+            "created",
+            "entries",
+            "entries-count",
+            "files",
+            "form",
+            "kept",
+            "notices",
+            "refused",
+            "search",
+            "stale-entries",
+            "threshold",
+            "written",
+            "part-files",
+            "part-files-count",
+            "part-findings",
+            "part-findings-count",
+            "parts-unlisted",
+            "parts-unlisted-count",
+        ];
+        expected.sort_unstable();
+        assert_eq!(keys, expected);
+        for list in ["part-files", "part-findings", "parts-unlisted"] {
+            assert_eq!(value[list], serde_json::json!([]), "{list}");
+            assert_eq!(value[format!("{list}-count")], 0, "{list}");
+        }
+        for file in value["files"].as_array().unwrap() {
+            assert!(!file.as_object().unwrap().contains_key("part-of"), "{file}");
+        }
     }
 
     #[test]

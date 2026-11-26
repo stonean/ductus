@@ -82,17 +82,17 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 
 ## 7. `prune-project` walks parts
 
-This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M40.
-
-- [ ] Add each `measured` part as a subject after the four files, segmented by its project file's grammar, with its record in the new `part-files` list (`files` stays the four project files); have `check_args` accept a part's path; add `part-findings`; bound `part-files` and `part-findings` with `entries` (`runtime/src/primitives/prune_project.rs`, `runtime/src/schema/primitives.rs`, `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs`)
-- [ ] Unit tests: a fixture index and part yield the part's entries, and an apply removes a part's entry; a part of `events.md` joins the literal search; past the read size the new lists are in the lists file with their counts inline; the AC8 fixture keeps every earlier key and value
-- [ ] Update `prune-project`'s case in `runtime/tests/result_sizes.rs`
-- [ ] `framework/commands/prune.md` *Project files*: walk the parts, show `part-findings` in the preview, and route an architecture entry to `system.md` or the part it belongs in (AC7)
-- [ ] Update `specs/041-task-pruning/data-model.md` §`prune-project`
+- [x] Add each `measured` part as a subject after the four files, segmented by its project file's grammar, with its record in the new `part-files` list (`files` stays the four project files); have `check_args` accept a part's path; add `part-findings`; bound `part-files` and `part-findings` with `entries` (`runtime/src/primitives/prune_project.rs`, `runtime/src/schema/primitives.rs`, `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs`)
+- [x] Unit tests: a fixture index and part yield the part's entries, and an apply removes a part's entry; a part of `events.md` joins the literal search; past the read size the new lists are in the lists file with their counts inline; the AC8 fixture keeps every earlier key and value
+- [x] Update `prune-project`'s case in `runtime/tests/result_sizes.rs`
+- [x] `framework/commands/prune.md` *Project files*: walk the parts, show `part-findings` in the preview, and route an architecture entry to `system.md` or the part it belongs in (AC7)
+- [x] Update `specs/041-task-pruning/data-model.md` §`prune-project`
 
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over the fixture proposes the part as the home of an architecture entry that belongs in it (AC7); the commit records each registry layout's impact (AC18).
 
 ## 8. `prune-project` moves a pointer's target
+
+This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M49.
 
 - [ ] Preview: `move-candidates`, and with `move` the literal, boundary-bounded referrer search with occurrence counts over every tracked file, the spec root included and `from` excepted; both lists bounded with `entries`
 - [ ] Apply with `move` and the confirmed referrers: write `to` create-only, rewrite each confirmed referrer keeping its prefix, rewrite the moved file's own relative links, remove `from`, each under the write guard; refuse an unfound referrer and keep an unconfirmed one

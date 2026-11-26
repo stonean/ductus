@@ -89,8 +89,8 @@ MUTATIONS = [
     (
         'M11 prune-project stops writing at the first refused file',
         'src/primitives/prune_project.rs',
-        '                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push(rel.clone()),\n',
-        '                Err(PrimitiveError::ChangedSinceRead { .. }) => {\n                    refused.push(rel.clone());\n                    break;\n                }\n',
+        '                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push((*rel).to_string()),\n',
+        '                Err(PrimitiveError::ChangedSinceRead { .. }) => {\n                    refused.push((*rel).to_string());\n                    break;\n                }\n',
         'prune_project::tests::a_file_changed_after_the_apply_read_it_is_refused_and_the_rest_is_written',
     ),
     (

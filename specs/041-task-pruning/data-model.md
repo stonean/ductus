@@ -265,7 +265,7 @@ What a refusal reports:
   lists each refused spec in `skipped` with reason `changed-since-read`, so its
   `features` (the lines whose `applied` is `true`) and its `skipped` say what it
   wrote and what it refused.
-- **`prune-project`**, which rewrites up to four files, goes on past a refused
+- **`prune-project`**, which rewrites the four project files and their parts, goes on past a refused
   file and reports `written` (the files rewritten) and `refused` (the files
   changed since the read, each with its listed removals and replacements
   unapplied); `applied` is `true` only when nothing was refused. A home to
@@ -555,7 +555,7 @@ intact, in either form.
 
 ## `prune-project`
 
-The deterministic half of `/{project}:prune --project` (scenario `prune-walks-the-project-files`). It takes no feature: its subjects are the four project files 075 defines, in this order — `AGENTS.md` at the project root, then `system.md`, `events.md` and `errors.md` under the spec-root.
+The deterministic half of `/{project}:prune --project` (scenario `prune-walks-the-project-files`). It takes no feature: its subjects are the four project files 075 defines, in this order — `AGENTS.md` at the project root, then `system.md`, `events.md` and `errors.md` under the spec-root — and then each of their parts (spec 087), the markdown files directly under `.ductus/docs/agents/`, `system/`, `events/` and `errors/`, in `check-artifact-size`'s part order, each segmented by its own project file's grammar.
 
 ### Segmentation
 
@@ -570,9 +570,9 @@ An entry's **text** is its lines from its first to its last non-blank line, join
 
 ### Catalog identifiers and the literal search
 
-An `events.md` or `errors.md` entry carries an `identifier`. It is the first code span on the entry's first line (for a `row`, in its first cell), or, for a `heading` entry with none, the heading text trimmed. An entry with neither carries no identifier.
+An `events.md` or `errors.md` entry, or one of a part of either, carries an `identifier`. It is the first code span on the entry's first line (for a `row`, in its first cell), or, for a `heading` entry with none, the heading text trimmed. An entry with neither carries no identifier.
 
-The search reads every file the project's repository tracks outside the spec-root, except the four subjects, once per preview, through `ProjectRepository::discover`. It reports each file holding an identifier as a literal byte substring. An identifier built at runtime does not appear literally, which is why the walk words zero hits as *no literal occurrence found*.
+The search reads every file the project's repository tracks outside the spec-root, except every subject — the four project files and each part, so an entry is never a hit on its own file or its index — once per preview, through `ProjectRepository::discover`. It reports each file holding an identifier as a literal byte substring. An identifier built at runtime does not appear literally, which is why the walk words zero hits as *no literal occurrence found*.
 
 ### Request/response schema
 
@@ -587,7 +587,7 @@ Args:
 ```
 
 - `apply` — `false` (the default) is a preview and writes nothing.
-- `remove` — each entry to delete, by the path and digest a preview reported. On the CLI, one `--remove <digest>:<path>` per entry.
+- `remove` — each entry to delete, by the path and digest a preview reported, in a project file or a part. On the CLI, one `--remove <digest>:<path>` per entry.
 - `replace` — each entry to replace with the text `with`, which may span lines. On the CLI, `--replace-json FILE` carries the list, as the primitive's description states, since the text does not fit a scalar flag (022 task 24).
 - `create` — the homes to create from their template, from `system`, `events` and `errors`. On the CLI, one `--create <kind>` each.
 
@@ -600,8 +600,19 @@ Result (never an entry's text):
     { "path": "AGENTS.md", "kind": "agents", "state": "present",
       "bytes": 131607, "over-limit": true,
       "unexamined-tail": { "from-line": 210, "cause": "open-comment" } },
-    { "path": "specs/system.md", "kind": "system", "state": "absent" }
+    { "path": "specs/system.md", "kind": "system", "state": "present",
+      "bytes": 112, "over-limit": false }
   ],
+  "part-files": [
+    { "path": ".ductus/docs/system/storage.md", "kind": "system",
+      "state": "present", "bytes": 104, "over-limit": false,
+      "part-of": "specs/system.md" }
+  ],
+  "part-files-count": 1,
+  "part-findings": [],
+  "part-findings-count": 0,
+  "parts-unlisted": [],
+  "parts-unlisted-count": 0,
   "form": "inline",
   "entries-count": 2,
   "entries": [
@@ -624,12 +635,13 @@ Result (never an entry's text):
 
 - `threshold` — `[artifacts] read-size-bytes`, resolved by the function `check-artifact-size` uses, so an invalid value fails with that primitive's error (`PrimitiveError::InvalidReadSize`).
 - `files` — all four subjects, in subject order. `state` is `present`, `absent`, `unreadable` or `outside-project`. `bytes` and `over-limit` are present when the file is `present`, and an `unreadable` or `outside-project` file contributes no entries. `outside-project` is a file that is, or lies under, a symbolic link resolving outside the project, judged by `validate_contained` against the project root (BE-INPUT-004): it is neither read nor written. A file that is simply not there stays `absent`. A file exactly at the threshold is not over it. `unexamined-tail` is present when a `present` file ends inside an open HTML comment (`cause: open-comment`) or a `<!-- BEGIN {marker} -->` with no END (`cause: unterminated-managed-region`), and `from-line` is the 1-based line the open region begins on: that line and every line after it are in no entry and were not examined, so the file never reads as walked. When both are open, the managed region, which opened first, names the line.
-- `entries` — every entry of every present file, in file and line order. `section` is the enclosing `##` heading's text, absent in the preamble. `hits` is present exactly when `identifier` is and the search ran, and lists the files holding the identifier.
-- `form`, `entries-count`, `lists-file` — `entries`, each with its `hits`, and the search's `outside-project` are inline while the result serialized fits `[artifacts] read-size-bytes` (a result exactly at it fits), and `form` is `inline`. Past it `form` is `file`, `entries` and the search's `outside-project` are absent, and `lists-file` names the file holding them whole, from the project root: a JSON object with the key `entries`, and the key `outside-project` when the search ran, written by the bounding `check-artifact-size` and `prune-tasks` use, under `.ductus/results/prune-project/project-files/`. `entries-count` and the search's `outside-project-count` are inline in both forms. `hits` move with their entry, never apart from it, since each entry is a record whether or not it has hits. Both a preview and an apply bound the result, and an apply has written by the time a list file that cannot be written fails the call.
+- `part-files`, `part-findings` and `parts-unlisted` — each part's record, the same as a project file's with `part-of` naming its project file, every part listed whatever its state, so one that cannot be read is reported, never left out; the integrity findings over the parts, as `check-artifact-size` lists them (063's data model, `PartFinding`), which the preview shows and which hold nothing here; and each directory under `.ductus/docs/` that could not be listed, so the parts it holds are unknown, never none (the agent's recommendation, adopted by the operator, 2026-11-25). Each is present and empty in a project with no parts, with its `-count` 0.
+- `entries` — every entry of every present file, the four project files' then the parts', in file and line order. `section` is the enclosing `##` heading's text, absent in the preamble. `hits` is present exactly when `identifier` is and the search ran, and lists the files holding the identifier.
+- `form`, `entries-count`, `lists-file` — `entries`, each with its `hits`, and the search's `outside-project` are inline while the result serialized fits `[artifacts] read-size-bytes` (a result exactly at it fits), and `form` is `inline`. Past it `form` is `file`, `entries`, `part-files`, `part-findings`, `parts-unlisted` and the search's `outside-project` are absent, and `lists-file` names the file holding them whole, from the project root: a JSON object with the keys `entries`, `part-files`, `part-findings` and `parts-unlisted`, each present even when empty, and the key `outside-project` when the search ran, written by the bounding `check-artifact-size` and `prune-tasks` use, under `.ductus/results/prune-project/project-files/`. `entries-count`, `part-files-count`, `part-findings-count`, `parts-unlisted-count` and the search's `outside-project-count` are inline in both forms. `hits` move with their entry, never apart from it, since each entry is a record whether or not it has hits. Both a preview and an apply bound the result, and an apply has written by the time a list file that cannot be written fails the call.
 - `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason`, as `ductus prune-project --help` states; in the `unavailable` case no entry carries `hits`. It is absent on an apply, which reads no source. A ran search also carries `outside-project`, the tracked files it left unread because each is, or lies under, a symbolic link resolving outside the project (project-relative paths, in search order; not counted in `files-searched`), with `outside-project-count`. Each candidate is checked only when an identifier is searched for, since otherwise nothing is read.
 - `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**, which `ductus prune-project --help` states; its refusal includes `create`. Duplicate digests each claim a distinct entry.
 - `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are, one created by another writer since the apply looked included.
-- `written` and `refused` — the project files an apply rewrote, and those it refused because each changed after the apply read it (*The write guard*), each in subject order and project-relative. A refused file is left as the other writer made it, its listed removals and replacements unapplied, and the rest of the apply is written. `applied` is `false` when `refused` is non-empty.
+- `written` and `refused` — the project files and parts an apply rewrote, and those it refused because each changed after the apply read it (*The write guard*), each in subject order and project-relative. A refused file is left as the other writer made it, its listed removals and replacements unapplied, and the rest of the apply is written. `applied` is `false` when `refused` is non-empty.
 
 An apply removes or replaces the listed entries, then collapses the blank lines at each changed seam to at most one, rewriting nothing else in the file and preserving its line endings. It writes each changed file only when it is unchanged since the apply read it (*The write guard*), the read and the write both going through `validate_contained`. Before an apply writes anything, every listed `create` home is checked the same way, and one that is, or lies under, a symbolic link resolving outside the project fails the whole call with `invalid-path`, so a refused create never leaves half an apply on disk. A created home gets the framework template's text, compiled into the primitive as the `--reset` body is and held to `framework/templates/project/{kind}.md` by a unit test. It is written create-only (`write_new_atomic`), at mode `0644` on Unix, since the tempfile it persists is `0600`.
 
@@ -638,7 +650,7 @@ An apply removes or replaces the listed entries, then collapses the blank lines 
 | Code | Condition |
 | --- | --- |
 | `missing-argument` | `apply` with `remove`, `replace` and `create` all empty |
-| `invalid-argument` | `remove`, `replace` or `create` without `apply`; a listed `path` that is not one of the four subjects |
+| `invalid-argument` | `remove`, `replace` or `create` without `apply`; a listed `path` that is neither one of the four project files nor a part of one |
 | `invalid-path` | an apply lists a `create` home whose path is, or lies under, a symbolic link resolving outside the project; nothing is written |
 | `invalid-path` | a project file became, or now lies under, a symbolic link resolving outside the project between the apply's read and its write; that file is not written, and the call fails |
 | `check-artifact-size`'s invalid-threshold error | `[artifacts] read-size-bytes` is not a positive whole number, or `artifacts` is not a table |

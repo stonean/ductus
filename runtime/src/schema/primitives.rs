@@ -5499,8 +5499,9 @@ pub struct PrunePlanResult {
 // -- prune-project -----------------------------------------------------------
 
 /// Args for `prune-project`. Segments the four project files — `AGENTS.md`
-/// and the spec root's `system.md`, `events.md` and `errors.md` — into
-/// entries, and on `apply` removes, replaces or creates what the host lists.
+/// and the spec root's `system.md`, `events.md` and `errors.md` — and their
+/// parts into entries, and on `apply` removes, replaces or creates what the
+/// host lists.
 /// Takes no feature. See `specs/041-task-pruning/data-model.md`
 /// §`prune-project`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
@@ -5641,6 +5642,11 @@ pub struct ProjectFile {
     /// file was walked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unexamined_tail: Option<UnexaminedTail>,
+    /// On a part's record, the project-relative path of the project file
+    /// whose parts directory holds it (spec 087). Absent on the four project
+    /// files' records.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_of: Option<String>,
 }
 
 /// Why the lines of a file's tail were not read as entries or sections.
@@ -5731,8 +5737,8 @@ pub enum SearchState {
 pub struct ProjectSearch {
     /// Whether it ran.
     pub state: SearchState,
-    /// Tracked files read: those outside the spec root, the four subjects
-    /// excepted. Present when it ran.
+    /// Tracked files read: those outside the spec root, every subject — the
+    /// four project files and their parts — excepted. Present when it ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub files_searched: Option<usize>,
     /// Why it could not run. Present when it did not.
@@ -5760,20 +5766,48 @@ pub struct PruneProjectResult {
     pub threshold: ReadSizeThreshold,
     /// All four subjects, in subject order, as read before any write.
     pub files: Vec<ProjectFile>,
+    /// One record per part of a project file (spec 087), each a subject
+    /// after the four files, in `check-artifact-size`'s part order, with
+    /// `part-of` naming its project file, as read before any write. A part
+    /// that cannot be read is listed in its state and contributes no
+    /// entries. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_files: Option<Vec<ProjectFile>>,
+    /// Records in `part-files`, in either form.
+    #[serde(default)]
+    pub part_files_count: usize,
+    /// The integrity findings over the parts, as `check-artifact-size` lists
+    /// them, for the preview to show. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_findings: Option<Vec<PartFinding>>,
+    /// Entries in `part-findings`, in either form.
+    #[serde(default)]
+    pub part_findings_count: usize,
+    /// Each directory under `.ductus/docs/` that could not be listed, so the
+    /// parts it holds are unknown, never none: one that is, or lies under, a
+    /// symbolic link resolving outside the project, or that cannot be read.
+    /// Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parts_unlisted: Option<Vec<String>>,
+    /// Directories in `parts-unlisted`, in either form.
+    #[serde(default)]
+    pub parts_unlisted_count: usize,
     /// Where `entries` is: in this result, or past the read size in the file
     /// `lists-file` names.
     #[serde(default)]
     pub form: ListsForm,
-    /// Every entry of every present file, in file and line order, as read
-    /// before any write, each with its `hits`. Absent in the file form.
+    /// Every entry of every present file, the four project files' then the
+    /// parts', in file and line order, as read before any write, each with
+    /// its `hits`. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entries: Option<Vec<ProjectEntry>>,
     /// Entries in `entries`, in either form.
     #[serde(default)]
     pub entries_count: usize,
     /// In the file form, the file holding `entries` whole, from the project
-    /// root: a JSON object with the key `entries`, and the key
-    /// `outside-project` when the search ran.
+    /// root: a JSON object with the keys `entries`, `part-files`,
+    /// `part-findings` and `parts-unlisted`, each present even when empty, and
+    /// the key `outside-project` when the search ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// The literal search. Present on a preview, absent on an apply, which
@@ -5794,11 +5828,11 @@ pub struct PruneProjectResult {
     /// The homes listed in `create` that already existed, left as they are,
     /// including one a writer created since the apply looked.
     pub kept: Vec<ProjectHome>,
-    /// The project files an apply rewrote, in subject order, each
+    /// The project files and parts an apply rewrote, in subject order, each
     /// project-relative.
     #[serde(default)]
     pub written: Vec<String>,
-    /// The project files an apply refused to rewrite because each changed
+    /// The project files and parts an apply refused to rewrite because each changed
     /// after the apply read it (`BE-TXN-002`), in subject order. Each is left
     /// as the other writer made it, and its listed removals and replacements
     /// are unapplied: re-run the preview and the apply to read it as it now
@@ -9864,7 +9898,7 @@ mod tests {
     }
 
     #[test]
-    fn prune_project_round_trip() {
+    fn prune_project_args_round_trip() {
         let args = PruneProjectArgs {
             apply: true,
             remove: vec![EntryRemoval {
@@ -9886,7 +9920,10 @@ mod tests {
         // A dispatch with no arguments is a preview.
         let empty: PruneProjectArgs = serde_json::from_value(serde_json::json!({})).unwrap();
         assert_eq!(empty, PruneProjectArgs::default());
+    }
 
+    #[test]
+    fn prune_project_round_trip() {
         let result = PruneProjectResult {
             threshold: ReadSizeThreshold {
                 bytes: 50_000,
@@ -9900,6 +9937,7 @@ mod tests {
                     bytes: Some(131_607),
                     over_limit: Some(true),
                     unexamined_tail: None,
+                    part_of: None,
                 },
                 ProjectFile {
                     path: "specs/system.md".into(),
@@ -9908,8 +9946,15 @@ mod tests {
                     bytes: None,
                     over_limit: None,
                     unexamined_tail: None,
+                    part_of: None,
                 },
             ],
+            part_files: Some(Vec::new()),
+            part_files_count: 0,
+            part_findings: Some(Vec::new()),
+            part_findings_count: 0,
+            parts_unlisted: Some(Vec::new()),
+            parts_unlisted_count: 0,
             form: ListsForm::Inline,
             entries_count: 2,
             lists_file: None,
@@ -9969,6 +10014,29 @@ mod tests {
         assert_eq!(value["search"]["outside-project-count"], 1);
         assert_eq!(value["refused"], serde_json::json!(["specs/errors.md"]));
         assert_eq!(round_trip(&result), result);
+    }
+
+    /// A project file's record names no project file, and a part's names its
+    /// own (spec 087).
+    #[test]
+    fn a_part_record_names_its_project_file_and_a_project_files_does_not() {
+        let record = |part_of: Option<&str>| ProjectFile {
+            path: ".ductus/docs/system/storage.md".into(),
+            kind: ProjectFileKind::System,
+            state: ProjectFileState::Present,
+            bytes: Some(104),
+            over_limit: Some(false),
+            unexamined_tail: None,
+            part_of: part_of.map(str::to_string),
+        };
+        let part = record(Some("specs/system.md"));
+        assert_eq!(
+            serde_json::to_value(&part).unwrap()["part-of"],
+            "specs/system.md"
+        );
+        assert_eq!(round_trip(&part), part);
+        let file = serde_json::to_value(record(None)).unwrap();
+        assert!(!file.as_object().unwrap().contains_key("part-of"), "{file}");
     }
 
     #[test]

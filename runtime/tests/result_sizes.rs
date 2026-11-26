@@ -288,6 +288,11 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             json!({"project-files": true}),
             Prep::Parts,
         )],
+        "prune-project" => vec![(
+            "the project holding unlinked parts past the read size",
+            json!({}),
+            Prep::Parts,
+        )],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),
