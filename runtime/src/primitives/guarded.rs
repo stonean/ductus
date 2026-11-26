@@ -184,9 +184,10 @@ mod raw_writes_allowlist {
     const ALLOWED: &[(&str, usize, &str)] = &[
         (
             "src/primitives/mod.rs",
-            2,
-            "the helper itself: `write_atomic`'s forward to `write_atomic_bytes`, and the guarded \
-             write's rename under the compare-and-set lock",
+            3,
+            "the helper itself: `write_atomic`'s forward to `write_atomic_bytes`, the guarded \
+             write's rename under the compare-and-set lock, and the multi-file commit's rename \
+             under the same lock, after every file's compare",
         ),
         (
             "src/primitives/apply_manifest.rs",

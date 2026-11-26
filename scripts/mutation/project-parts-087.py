@@ -9,7 +9,12 @@ project file through `check-corpus-links`' link scan
 disk and staged, reports one over the read size with its fix, and bounds the
 parts, their findings and the refused list; and the staged CLI
 (`runtime/src/main.rs`), which exits on a refused part and names it, through
-the shipped hook (`runtime/tests/size_hook.rs`).
+the shipped hook (`runtime/tests/size_hook.rs`); and `prune-project`'s walk of
+the parts (`runtime/src/primitives/prune_project.rs`) and its move
+(`runtime/src/primitives/prune_project/moves.rs`): the candidates, the
+boundary-bounded referrer search, the apply's checks, and the multi-file
+commit it makes under one lock hold (`commit_if_unchanged`,
+`runtime/src/primitives/mod.rs`), with the CLI's `--move-json`.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/project-parts-087.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -355,8 +360,197 @@ MUTATIONS = [
     (
         'M48 an apply writes no part',
         'src/primitives/prune_project.rs',
-        '        for (idx, (_, rel, _)) in all.iter().enumerate() {',
-        '        for (idx, (_, rel, _)) in all.iter().take(4).enumerate() {',
+        '    for (idx, (_, rel, _)) in all.iter().enumerate() {',
+        '    for (idx, (_, rel, _)) in all.iter().take(4).enumerate() {',
         'primitives::prune_project::tests::a_part_is_walked_after_the_four_files_and_an_apply_removes_its_entry',
+    ),
+    (
+        'M49 a link to a markdown file that does not exist is a move candidate',
+        'src/primitives/prune_project/moves.rs',
+        '                && repo.join(&link).is_file();',
+        '                ;',
+        'primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        'M50 a file under the spec root is a move candidate',
+        'src/primitives/prune_project/moves.rs',
+        '                && !under(&link, root)\n',
+        '',
+        'primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        "M51 the move candidates leave out a part's links",
+        'src/primitives/prune_project/moves.rs',
+        '    for ((_, rel, _), text) in subjects.iter().zip(texts) {',
+        '    for ((_, rel, _), text) in subjects.iter().zip(texts).take(4) {',
+        'primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        'M52 the referrer search lists no referrer',
+        'src/primitives/prune_project/moves.rs',
+        '        if found > 0 {',
+        '        if false {',
+        'primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        'M53 the referrer search reads the moved file itself',
+        'src/primitives/prune_project/moves.rs',
+        '    for path in tracked.iter().filter(|path| *path != from) {',
+        '    for path in tracked.iter().filter(|_| true) {',
+        'primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        'M54 an occurrence needs no boundary before it',
+        'src/primitives/prune_project/moves.rs',
+        '        if bounded_before(hay, start) && bounded_after(hay, end) {',
+        '        if bounded_after(hay, end) {',
+        'primitives::prune_project::moves::tests::an_occurrence_needs_a_boundary_before_it',
+    ),
+    (
+        'M55 an occurrence needs no boundary after it',
+        'src/primitives/prune_project/moves.rs',
+        '        if bounded_before(hay, start) && bounded_after(hay, end) {',
+        '        if bounded_before(hay, start) {',
+        'primitives::prune_project::moves::tests::an_occurrence_needs_a_boundary_after_it primitives::prune_project::tests::a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing',
+    ),
+    (
+        'M56 a run of ../ segments is no boundary',
+        'src/primitives/prune_project/moves.rs',
+        '        if hay[..at].ends_with(b"../") {',
+        '        if false {',
+        'primitives::prune_project::moves::tests::an_occurrence_needs_a_boundary_before_it',
+    ),
+    (
+        'M57 the rewrite drops the text before each occurrence',
+        'src/primitives/prune_project/moves.rs',
+        '        out.extend_from_slice(&hay[last..start]);\n',
+        '',
+        'primitives::prune_project::moves::tests::a_substitution_keeps_each_prefix_and_rewrites_only_occurrences',
+    ),
+    (
+        "M58 the moved file's relative links are left as they were",
+        'src/primitives/prune_project/moves.rs',
+        '            if moved != rel {',
+        '            if false {',
+        'primitives::prune_project::moves::tests::the_moved_files_relative_links_are_rewritten_for_its_new_directory primitives::prune_project::tests::a_confirmed_move_writes_the_part_repoints_both_links_and_removes_the_file',
+    ),
+    (
+        'M59 a self-link in the moved file is not taken to its new path',
+        'src/primitives/prune_project/moves.rs',
+        '            if path == from {',
+        '            if false {',
+        'primitives::prune_project::moves::tests::the_moved_files_relative_links_are_rewritten_for_its_new_directory',
+    ),
+    (
+        'M60 a stale referrer does not refuse the apply',
+        'src/primitives/prune_project/moves.rs',
+        '    if !stale.is_empty() {',
+        '    if false {',
+        'primitives::prune_project::tests::a_referrer_the_search_would_not_find_refuses_the_whole_apply',
+    ),
+    (
+        'M61 a confirmed referrer holding no occurrence is not stale',
+        'src/primitives/prune_project/moves.rs',
+        '                    .is_some_and(|bytes| !occurrences(bytes, mv.from.as_bytes()).is_empty())',
+        '                    .is_some()',
+        'primitives::prune_project::tests::a_referrer_the_search_would_not_find_refuses_the_whole_apply',
+    ),
+    (
+        'M62 an untracked confirmed referrer is not stale',
+        'src/primitives/prune_project/moves.rs',
+        'tracked.binary_search_by(|t| t.as_str().cmp(path)).is_ok()',
+        'true',
+        'primitives::prune_project::tests::a_referrer_the_search_would_not_find_refuses_the_whole_apply',
+    ),
+    (
+        'M63 the move does not remove its file',
+        'src/primitives/prune_project/moves.rs',
+        '    changes.push((&from, Change::Remove));\n',
+        '',
+        'primitives::prune_project::tests::a_confirmed_move_writes_the_part_repoints_both_links_and_removes_the_file',
+    ),
+    (
+        "M64 the moved file keeps its tempfile's mode",
+        'src/primitives/prune_project/moves.rs',
+        '    restore_mode(&repo.join(&mv.to), mode)?;\n',
+        '',
+        'primitives::prune_project::tests::the_moved_file_keeps_its_mode',
+    ),
+    (
+        'M65 with no repository the move search reads as no referrer',
+        'src/primitives/prune_project/moves.rs',
+        '            None,\n        ));\n    };',
+        '            Some(Vec::new()),\n        ));\n    };',
+        'primitives::prune_project::tests::with_no_repository_the_moves_search_is_unavailable_never_no_referrer',
+    ),
+    (
+        'M66 a move is accepted beside another list on an apply',
+        'src/primitives/prune_project.rs',
+        '        let refusal = if args.apply && listed {',
+        '        let refusal = if false {',
+        'primitives::prune_project::tests::a_move_outside_its_contract_is_refused_before_anything_is_read',
+    ),
+    (
+        "M67 a move's referrers are accepted on a preview",
+        'src/primitives/prune_project.rs',
+        '        } else if !args.apply && !mv.referrers.is_empty() {',
+        '        } else if false {',
+        'primitives::prune_project::tests::a_move_outside_its_contract_is_refused_before_anything_is_read',
+    ),
+    (
+        'M68 a move to a path outside every parts directory is accepted',
+        'src/primitives/prune_project/moves.rs',
+        '    if project_parts::part_of(&mv.to).is_none() {',
+        '    if false {',
+        'primitives::prune_project::tests::a_move_outside_its_contract_is_refused_before_anything_is_read',
+    ),
+    (
+        'M69 a move over an existing file is accepted',
+        'src/primitives/prune_project/moves.rs',
+        '    if repo.join(&mv.to).symlink_metadata().is_ok() {',
+        '    if false {',
+        'primitives::prune_project::tests::a_move_outside_its_contract_is_refused_before_anything_is_read',
+    ),
+    (
+        'M70 a move of a file that is no candidate is accepted',
+        'src/primitives/prune_project/moves.rs',
+        '    if !candidates.iter().any(|candidate| candidate.path == mv.from) {',
+        '    if false {',
+        'primitives::prune_project::tests::a_move_outside_its_contract_is_refused_before_anything_is_read',
+    ),
+    (
+        "M71 the file form keeps the move's lists inline",
+        'src/primitives/prune_project.rs',
+        '        result.move_candidates = None;\n        result.move_referrers = None;\n',
+        '',
+        'primitives::prune_project::tests::past_the_read_size_the_moves_lists_are_in_the_file_with_their_counts_inline',
+    ),
+    (
+        'M72 the lists file does not hold the referrers',
+        'src/primitives/prune_project.rs',
+        '        lists["move-referrers"] = serde_json::json!(referrers);\n',
+        '',
+        'primitives::prune_project::tests::past_the_read_size_the_moves_lists_are_in_the_file_with_their_counts_inline',
+    ),
+    (
+        'M73 a commit writes over a file changed since its read',
+        'src/primitives/mod.rs',
+        '    if !stale.is_empty() {\n        return Ok(stale);\n    }\n',
+        '',
+        'primitives::tests::one_changed_file_refuses_the_whole_commit_and_each_is_named primitives::tests::a_commit_rereads_every_file_once_the_lock_is_held primitives::prune_project::tests::a_referrer_changed_since_the_read_refuses_the_whole_move',
+    ),
+    (
+        'M74 a commit goes on past a create another writer raced',
+        'src/primitives/mod.rs',
+        '            return Ok(vec![snapshot.rel.clone()]);',
+        '            continue;',
+        'primitives::tests::a_create_raced_after_the_compare_stops_the_commit_before_any_write',
+    ),
+    (
+        'M75 the CLI drops --move-json',
+        'src/main.rs',
+        '        args.move_file = Some(ductus::primitives::load_cli_json("move-json", path)?);',
+        '        let _ = path;',
+        '--bin ductus tests::a_json_flag_fills_its_argument_and_is_staging_bound',
     ),
 ]

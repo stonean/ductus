@@ -33,6 +33,7 @@
 //!
 //! Defined by `specs/067-analyze-and-audit-checks/scenarios/adopter-corpus-link-integrity.md`.
 
+use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
 
 use crate::host::AGENT_CONFIG_DIRS;
@@ -395,12 +396,36 @@ fn scan_file(
     place: (&Path, &Path, &Containment),
     result: &mut CorpusLinks,
 ) {
+    for (idx, range) in checked_lines(text) {
+        for target in link_targets(&text[range]) {
+            classify(target, (relative, idx + 1), place, result);
+        }
+    }
+}
+
+/// Each line of `text` whose links the scan checks, as its 0-based index and
+/// its byte range in `text`, line ending excluded: every line but a leading
+/// frontmatter block's and a fenced block's. Shared with `prune-project`'s
+/// move, which rewrites the moved file's links over exactly these lines, so a
+/// link it leaves alone is one this scan never checks (spec 087).
+pub(crate) fn checked_lines(text: &str) -> Vec<(usize, Range<usize>)> {
+    let mut out = Vec::new();
     let mut fm_seen = false;
     let mut in_fm = false;
     let mut fences = Fences::default();
+    let mut start = 0;
 
-    for (idx, raw) in text.lines().enumerate() {
+    for (idx, raw) in text.split_inclusive('\n').enumerate() {
+        let next = start + raw.len();
+        // As `str::lines` splits, a `\n` or `\r\n` ending, and then one more
+        // trailing `\r`, as the scan always stripped.
+        let raw = match raw.strip_suffix('\n') {
+            Some(body) => body.strip_suffix('\r').unwrap_or(body),
+            None => raw,
+        };
         let line = raw.strip_suffix('\r').unwrap_or(raw);
+        let range = start..start + line.len();
+        start = next;
 
         if is_frontmatter_fence(line) {
             if !fm_seen && idx == 0 {
@@ -430,10 +455,9 @@ fn scan_file(
         // Blockquoted lines are **not** skipped. The blockquote exemption
         // belongs to `derive-dependencies`, where it decides whether a link
         // induces an edge; a link inside a sunset banner still has to resolve.
-        for target in link_targets(line) {
-            classify(target, (relative, idx + 1), place, result);
-        }
+        out.push((idx, range));
     }
+    out
 }
 
 /// Every `](target)` target on one line, with inline code spans removed first.
@@ -443,6 +467,15 @@ fn scan_file(
 /// Family 26 reports seven false positives on this corpus without it — every
 /// one a doc correctly describing a link rather than making one.
 pub(crate) fn link_targets(line: &str) -> Vec<&str> {
+    link_target_ranges(line)
+        .into_iter()
+        .map(|range| &line[range])
+        .collect()
+}
+
+/// [`link_targets`], as each target's byte range in `line`, so a caller can
+/// rewrite a target in place.
+pub(crate) fn link_target_ranges(line: &str) -> Vec<Range<usize>> {
     let mut out = Vec::new();
     let spans = inline_code_spans(line);
     let mut cursor = 0;
@@ -458,7 +491,7 @@ pub(crate) fn link_targets(line: &str) -> Vec<&str> {
         let Some(target) = link_destination(rest) else {
             continue;
         };
-        out.push(target);
+        out.push(cursor..cursor + target.len());
     }
     out
 }

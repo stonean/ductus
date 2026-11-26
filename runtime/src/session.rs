@@ -438,10 +438,11 @@ pub fn lock_append_task(repo: &Path) -> Result<SessionLock> {
 /// of a file and the rename that replaces it (`BE-TXN-002`,
 /// [`crate::primitives::ReadSnapshot::write_if_unchanged`]), on
 /// `.ductus/locks/compare-and-set.lock`: one lock for the project's every
-/// guarded file, since a hold lasts one re-read and one rename. When a caller
-/// holds [`lock_append_task`] too it took that one first. The directory is
-/// created and self-ignored, and the wait, its bound and its refusal of a link
-/// leaving the project are [`lock_append_task`]'s. It waits at most `timeout`:
+/// guarded file, since a hold lasts one re-read and one rename per file it
+/// changes. When a caller holds [`lock_append_task`] too it took that one
+/// first. The directory is created and self-ignored, and the wait, its bound
+/// and its refusal of a link leaving the project are [`lock_append_task`]'s.
+/// It waits at most `timeout`:
 /// [`SESSION_LOCK_TIMEOUT`] in production, shortened by a test to meet a holder
 /// without waiting it out.
 ///

@@ -39,7 +39,7 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) changed surfaces this spec owns. `dashboard` carries an `unreviewed-code` block, `check-unreviewed-code`'s counts at `HEAD`, which `/{project}:status` renders on every run, and the runtime reads `[review] unreviewed-push`, `"block"` or `"warn"` and `block` when absent, which `check-unreviewed-code` follows.
 >
-> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. An exec `/{project}:analyze` counts each of `check-artifact-size`'s `part-findings` as advisory, and `check-corpus-links`' `link_targets`, `link_file_part`, `link_base` and `lexical_join` are `pub(crate)`, shared with `project_parts`.
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. An exec `/{project}:analyze` counts each of `check-artifact-size`'s `part-findings` as advisory, and `check-corpus-links`' `link_targets`, `link_file_part`, `link_base` and `lexical_join` are `pub(crate)`, shared with `project_parts`, as are `checked_lines` and `link_target_ranges`, through which `prune-project`'s move rewrites a moved file's links. The compare-and-set guard gains `commit_if_unchanged`, which compares every file a change spans under one hold of its lock before writing any, for that move; the plan's *Compare before persist* states its hold.
 
 ## Motivation
 

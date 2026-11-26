@@ -79,6 +79,12 @@ enum Prep {
     /// `.ductus/docs/system/` (spec 087): `check-artifact-size`'s `parts` and
     /// `part-findings` grow with a project's parts, and the corpus has none.
     Parts,
+    /// An `AGENTS.md` linking [`MOVE_CANDIDATES`] markdown files under
+    /// `docs/`, the procedure among them, and every tracked markdown file
+    /// under the spec root naming the procedure's path (spec 087):
+    /// `prune-project`'s `move-candidates` grow with a project file's links,
+    /// and a move's `move-referrers` with the tracked files naming its file.
+    Move,
 }
 
 /// How many departure entries [`Prep::Departures`] writes: enough that the
@@ -88,6 +94,14 @@ const DEPARTURE_ENTRIES: usize = 300;
 /// How many parts [`Prep::Parts`] writes: enough that `parts` and
 /// `part-findings` together pass the default read size of 50,000 bytes.
 const PART_FILES: usize = 200;
+
+/// How many markdown files [`Prep::Move`]'s `AGENTS.md` links: enough that
+/// `move-candidates` and `move-referrers` together pass the default read
+/// size of 50,000 bytes.
+const MOVE_CANDIDATES: usize = 400;
+
+/// The file [`Prep::Move`]'s move takes into `.ductus/docs/agents/`.
+const MOVE_FROM: &str = "docs/procedure.md";
 
 /// The read size the growth columns are measured at: past any result here, so
 /// no bounded result moves its lists, and growth is a fact about what each
@@ -289,11 +303,18 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             json!({"project-files": true}),
             Prep::Parts,
         )],
-        "prune-project" => vec![(
-            "the project holding unlinked parts past the read size",
-            json!({}),
-            Prep::Parts,
-        )],
+        "prune-project" => vec![
+            (
+                "the project holding unlinked parts past the read size",
+                json!({}),
+                Prep::Parts,
+            ),
+            (
+                "`move`, its candidates and referrers past the read size",
+                json!({"move": {"from": MOVE_FROM, "to": ".ductus/docs/agents/procedure.md"}}),
+                Prep::Move,
+            ),
+        ],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),
@@ -424,6 +445,7 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         Prep::Cycle => close_the_chain(copy.path()),
         Prep::Departures => write_departure_entries(copy.path()),
         Prep::Parts => write_parts(copy.path()),
+        Prep::Move => write_move(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -499,6 +521,40 @@ fn write_parts(root: &Path) {
     std::fs::create_dir_all(&dir).unwrap();
     for i in 0..PART_FILES {
         std::fs::write(dir.join(format!("part-{i:03}.md")), format!("# Part {i}\n")).unwrap();
+    }
+}
+
+/// Link [`MOVE_CANDIDATES`] markdown files under `docs/`, [`MOVE_FROM`]
+/// first, from `AGENTS.md`, and name [`MOVE_FROM`] in every markdown file
+/// under the spec root, each of which the corpus commits, so each is a
+/// tracked referrer.
+fn write_move(root: &Path) {
+    use std::fmt::Write as _;
+    let docs = root.join("docs");
+    std::fs::create_dir_all(&docs).unwrap();
+    let mut agents = String::from("# Agents\n\n");
+    for i in 0..MOVE_CANDIDATES {
+        let rel = if i == 0 {
+            MOVE_FROM.to_string()
+        } else {
+            format!("docs/candidate-{i:03}.md")
+        };
+        std::fs::write(root.join(&rel), format!("# Candidate {i}\n")).unwrap();
+        writeln!(agents, "- [{rel}]({rel})").unwrap();
+    }
+    std::fs::write(root.join("AGENTS.md"), agents).unwrap();
+    let mut stack = vec![root.join("specs")];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "md") {
+                let mut text = std::fs::read_to_string(&path).unwrap();
+                writeln!(text, "\nThe steps are in `{MOVE_FROM}`.").unwrap();
+                std::fs::write(&path, text).unwrap();
+            }
+        }
     }
 }
 

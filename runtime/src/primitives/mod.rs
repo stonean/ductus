@@ -1475,7 +1475,8 @@ fn join_paths(paths: &[PathBuf]) -> String {
 /// (`BE-LOCK-002`).** A caller that holds `append-task`'s lock takes this one
 /// second, and nothing takes them the other way. The wait is
 /// [`crate::session::SESSION_LOCK_TIMEOUT`]; the hold is one re-read and one
-/// rename. **Handling path (`BE-TXN-004`).** A refusal is
+/// rename, or one of each per file a [`commit_if_unchanged`] changes.
+/// **Handling path (`BE-TXN-004`).** A refusal is
 /// [`PrimitiveError::ChangedSinceRead`], which the caller reports so the
 /// operator re-runs the command.
 ///
@@ -1587,6 +1588,88 @@ impl ReadSnapshot {
         hook(Stage::BeforeRename);
         write_atomic_bytes(&path, content)
     }
+}
+
+/// One change [`commit_if_unchanged`] makes to a file a [`ReadSnapshot`] read.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Change<'a> {
+    /// Create the file, which the snapshot read absent, with this text,
+    /// refusing to replace one another writer put there
+    /// ([`write_new_atomic`]).
+    Create(&'a str),
+    /// Replace the file with these bytes, keeping its mode.
+    Write(&'a [u8]),
+    /// Remove the file.
+    Remove,
+}
+
+/// Make every change in `changes`, only when every file still holds what its
+/// snapshot saw: the compare-and-set guard of [`ReadSnapshot`] over several
+/// files at once, so a change spanning them is whole or absent among the
+/// writers that go through the guard (`BE-TXN-002`; spec 087, the move).
+///
+/// Under one hold of the compare-and-set lock it reads each file again,
+/// through the containment check, and compares it with its snapshot. When any
+/// differs it writes nothing and returns each that changed, project-relative,
+/// in the order given. Otherwise it creates, then writes, then removes, and
+/// returns no path: a create that finds a file another writer put there since
+/// the compare is returned, before any write or removal is made. The hold
+/// is one re-read and one write per change (`BE-LOCK-002`), against the one of
+/// each a single file's [`ReadSnapshot::write_if_unchanged`] takes. Every
+/// snapshot must be of one project.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when the lock cannot be taken within
+/// [`crate::session::SESSION_LOCK_TIMEOUT`], or a re-read or change fails:
+/// the changes before the failing one stand. [`PrimitiveError::InvalidPath`]
+/// when a path now leaves the project, before anything is changed.
+pub(crate) fn commit_if_unchanged(changes: &[(&ReadSnapshot, Change<'_>)]) -> Result<Vec<String>> {
+    commit_within(changes, crate::session::SESSION_LOCK_TIMEOUT, &mut |_| {})
+}
+
+/// [`commit_if_unchanged`], waiting at most `timeout` for the lock and
+/// calling `hook` at each [`Stage`], once for the whole commit.
+fn commit_within(
+    changes: &[(&ReadSnapshot, Change<'_>)],
+    timeout: std::time::Duration,
+    hook: &mut dyn FnMut(Stage),
+) -> Result<Vec<String>> {
+    let Some((first, _)) = changes.first() else {
+        return Ok(Vec::new());
+    };
+    let _lock = crate::session::lock_compare_and_set(&first.repo, timeout)?;
+    hook(Stage::BeforeReread);
+    let mut stale = Vec::new();
+    for (snapshot, _) in changes {
+        validate_contained(&snapshot.repo, &snapshot.rel)?;
+        if read_observed(&snapshot.repo.join(&snapshot.rel))? != snapshot.observed {
+            stale.push(snapshot.rel.clone());
+        }
+    }
+    if !stale.is_empty() {
+        return Ok(stale);
+    }
+    hook(Stage::BeforeRename);
+    for (snapshot, change) in changes {
+        if let Change::Create(text) = change
+            && !write_new_atomic(&snapshot.repo.join(&snapshot.rel), text)?
+        {
+            return Ok(vec![snapshot.rel.clone()]);
+        }
+    }
+    for (snapshot, change) in changes {
+        if let Change::Write(bytes) = change {
+            write_atomic_bytes(&snapshot.repo.join(&snapshot.rel), bytes)?;
+        }
+    }
+    for (snapshot, change) in changes {
+        if let Change::Remove = change {
+            let path = snapshot.repo.join(&snapshot.rel);
+            std::fs::remove_file(&path).map_err(|source| PrimitiveError::Io { path, source })?;
+        }
+    }
+    Ok(Vec::new())
 }
 
 /// The bytes at `path`, or `None` when nothing is there.
@@ -5157,6 +5240,108 @@ mod tests {
             PrimitiveError::ChangedSinceRead { .. }
         ));
         assert!(!tmp.path().join("f.md").exists());
+    }
+
+    /// A tree holding `a.md` and `b.md`, with a snapshot of each and of the
+    /// absent `new.md`.
+    fn three_snapshots() -> (tempfile::TempDir, [ReadSnapshot; 3]) {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.md"), "a").unwrap();
+        std::fs::write(tmp.path().join("b.md"), "b").unwrap();
+        let read = |rel| ReadSnapshot::read(tmp.path(), rel).unwrap();
+        let snaps = [read("a.md"), read("b.md"), read("new.md")];
+        (tmp, snaps)
+    }
+
+    /// An unchanged commit creates, writes and removes, and returns no path
+    /// (spec 087, the move).
+    #[test]
+    fn an_unchanged_commit_makes_every_change() {
+        let (tmp, [a, b, new]) = three_snapshots();
+        let changed = commit_if_unchanged(&[
+            (&new, Change::Create("new")),
+            (&a, Change::Write(b"ours")),
+            (&b, Change::Remove),
+        ])
+        .unwrap();
+        assert!(changed.is_empty(), "{changed:?}");
+        let read = |rel: &str| std::fs::read_to_string(tmp.path().join(rel)).ok();
+        assert_eq!(read("new.md").as_deref(), Some("new"));
+        assert_eq!(read("a.md").as_deref(), Some("ours"));
+        assert_eq!(read("b.md"), None);
+    }
+
+    /// One file changed since its read refuses the whole commit: nothing is
+    /// created, written or removed, and each changed file is named, in the
+    /// order given (`BE-TXN-002`).
+    #[test]
+    fn one_changed_file_refuses_the_whole_commit_and_each_is_named() {
+        let (tmp, [a, b, new]) = three_snapshots();
+        std::fs::write(tmp.path().join("b.md"), "theirs").unwrap();
+        std::fs::write(tmp.path().join("new.md"), "theirs too").unwrap();
+        let changed = commit_if_unchanged(&[
+            (&new, Change::Create("new")),
+            (&a, Change::Write(b"ours")),
+            (&b, Change::Remove),
+        ])
+        .unwrap();
+        assert_eq!(changed, ["new.md", "b.md"]);
+        let read = |rel: &str| std::fs::read_to_string(tmp.path().join(rel)).unwrap();
+        assert_eq!(read("new.md"), "theirs too");
+        assert_eq!(read("a.md"), "a");
+        assert_eq!(read("b.md"), "theirs");
+    }
+
+    /// A change landing once the lock is held is seen by the re-read, so the
+    /// commit is refused whole rather than half made.
+    #[test]
+    fn a_commit_rereads_every_file_once_the_lock_is_held() {
+        let (tmp, [a, b, _]) = three_snapshots();
+        let other = tmp.path().join("b.md");
+        let mut hook = |stage| {
+            if stage == Stage::BeforeReread {
+                std::fs::write(&other, "theirs").unwrap();
+            }
+        };
+        let changed = commit_within(
+            &[(&a, Change::Write(b"ours")), (&b, Change::Remove)],
+            crate::session::SESSION_LOCK_TIMEOUT,
+            &mut hook,
+        )
+        .unwrap();
+        assert_eq!(changed, ["b.md"]);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("a.md")).unwrap(),
+            "a"
+        );
+    }
+
+    /// A file created after the compare passed is never replaced: the create
+    /// is returned, and no write or removal is made.
+    #[test]
+    fn a_create_raced_after_the_compare_stops_the_commit_before_any_write() {
+        let (tmp, [a, b, new]) = three_snapshots();
+        let raced = tmp.path().join("new.md");
+        let mut hook = |stage| {
+            if stage == Stage::BeforeRename {
+                std::fs::write(&raced, "theirs").unwrap();
+            }
+        };
+        let changed = commit_within(
+            &[
+                (&new, Change::Create("new")),
+                (&a, Change::Write(b"ours")),
+                (&b, Change::Remove),
+            ],
+            crate::session::SESSION_LOCK_TIMEOUT,
+            &mut hook,
+        )
+        .unwrap();
+        assert_eq!(changed, ["new.md"]);
+        let read = |rel: &str| std::fs::read_to_string(tmp.path().join(rel)).unwrap();
+        assert_eq!(read("new.md"), "theirs");
+        assert_eq!(read("a.md"), "a");
+        assert_eq!(read("b.md"), "b");
     }
 
     /// A change landing after the lock is taken and before the re-read is

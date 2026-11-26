@@ -424,13 +424,17 @@ fn hydrate_write_analysis(args: &mut WriteAnalysisArgs) -> Result<(), String> {
     )
 }
 
-/// Fill `prune-project`'s structured argument from its `--*-json` path.
+/// Fill `prune-project`'s structured arguments from their `--*-json` paths.
 fn hydrate_prune_project(args: &mut PruneProjectArgs) -> Result<(), String> {
     hydrate_field(
         "replace-json",
         args.replace_json.as_ref(),
         &mut args.replace,
-    )
+    )?;
+    if let Some(path) = args.move_json.as_ref() {
+        args.move_file = Some(ductus::primitives::load_cli_json("move-json", path)?);
+    }
+    Ok(())
 }
 
 fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
@@ -2609,6 +2613,25 @@ mod tests {
         assert_eq!(decisions.fired, vec!["grounding — m".to_string()]);
         assert_eq!(decisions.fired_violations.len(), 1);
         assert_eq!(decisions.fired_violations[0].site.as_deref(), Some("walk"));
+
+        // `prune-project` fills `move` from `--move-json`, one move a file
+        // (spec 087), and leaves it unset when the flag is absent.
+        let moved = dir.path().join("move.json");
+        std::fs::write(
+            &moved,
+            r#"{"from":"docs/x.md","to":".ductus/docs/agents/x.md","referrers":["AGENTS.md"]}"#,
+        )
+        .unwrap();
+        let mut prune = ductus::schema::primitives::PruneProjectArgs {
+            move_json: Some(moved.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        super::hydrate_prune_project(&mut prune).unwrap();
+        let mv = prune.move_file.unwrap();
+        assert_eq!((mv.from.as_str(), mv.referrers.len()), ("docs/x.md", 1));
+        let mut unset = ductus::schema::primitives::PruneProjectArgs::default();
+        super::hydrate_prune_project(&mut unset).unwrap();
+        assert_eq!(unset.move_file, None);
     }
 
     /// `BE-INPUT-004`: the exec seed refuses a shared default that is a

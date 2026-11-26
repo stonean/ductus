@@ -5501,14 +5501,15 @@ pub struct PrunePlanResult {
 /// Args for `prune-project`. Segments the four project files — `AGENTS.md`
 /// and the spec root's `system.md`, `events.md` and `errors.md` — and their
 /// parts into entries, and on `apply` removes, replaces or creates what the
-/// host lists.
+/// host lists, or makes the one `move` it names (spec 087).
 /// Takes no feature. See `specs/041-task-pruning/data-model.md`
 /// §`prune-project`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct PruneProjectArgs {
-    /// Perform the listed removals, replacements and creations. When false
-    /// (the default) the primitive is a pure preview and writes nothing.
+    /// Perform the listed removals, replacements and creations, or the
+    /// `move`. When false (the default) the primitive is a pure preview and
+    /// writes nothing.
     #[serde(default)]
     #[arg(long)]
     pub apply: bool,
@@ -5534,6 +5535,57 @@ pub struct PruneProjectArgs {
     #[serde(default)]
     #[arg(long = "create", value_enum)]
     pub create: Vec<ProjectHome>,
+    /// One move of a `move-candidates` file into a parts directory (spec
+    /// 087): a preview runs the literal search for its referrers, and an
+    /// apply naming it, and nothing else, makes the move with the referrers
+    /// the operator confirmed. On the CLI, `--move-json FILE`.
+    #[serde(default, rename = "move", skip_serializing_if = "Option::is_none")]
+    #[arg(skip)]
+    pub move_file: Option<FileMove>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `move` argument as the MCP tool takes it (spec 087).
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub move_json: Option<String>,
+}
+
+/// One move of a project-file pointer's target into a parts directory (spec
+/// 087).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct FileMove {
+    /// The file to move, project-relative: a `move-candidates` path.
+    pub from: String,
+    /// Where it goes, project-relative: a new markdown file directly under a
+    /// parts directory.
+    pub to: String,
+    /// On an apply, the referrers the operator confirmed, each a path the
+    /// preview's search listed: each is rewritten, and a found one left out is
+    /// kept as it is. Empty on a preview, which finds them.
+    #[serde(default)]
+    pub referrers: Vec<String>,
+}
+
+/// A markdown file a project file or part links to that a move could take
+/// into a parts directory (spec 087).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MoveCandidate {
+    /// Its project-relative path.
+    pub path: String,
+    /// Each project file and part linking it, in subject order.
+    pub linked_from: Vec<String>,
+}
+
+/// A tracked file the move's literal search found holding `from`'s path.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MoveReferrer {
+    /// Its project-relative path.
+    pub path: String,
+    /// How many times it holds `from`'s path with a boundary on each side,
+    /// each an occurrence an apply rewrites.
+    pub occurrences: usize,
 }
 
 /// One entry an apply deletes: the path and digest a preview reported.
@@ -5731,14 +5783,17 @@ pub enum SearchState {
     Unavailable,
 }
 
-/// The literal search behind a catalog entry's removal proposal.
+/// A literal search: the one behind a catalog entry's removal proposal, or
+/// a move's search for its referrers (spec 087).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProjectSearch {
     /// Whether it ran.
     pub state: SearchState,
-    /// Tracked files read: those outside the spec root, every subject — the
-    /// four project files and their parts — excepted. Present when it ran.
+    /// Tracked files read: for the catalog search, those outside the spec
+    /// root, every subject — the four project files and their parts —
+    /// excepted; for a move's, every tracked file but `from`. Present when it
+    /// ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub files_searched: Option<usize>,
     /// Why it could not run. Present when it did not.
@@ -5748,8 +5803,9 @@ pub struct ProjectSearch {
     /// link resolving outside the project (BE-INPUT-004), as project-relative
     /// paths in search order. Present when it ran, inline while the result
     /// fits the read size; in the file form it is absent and the file
-    /// `lists-file` names holds it under the key `outside-project`. A file
-    /// listed here is not in `files-searched`. Checked only when an
+    /// `lists-file` names holds it under the key `outside-project`, or
+    /// `move-outside-project` for a move's search. A file listed here is not
+    /// in `files-searched`. The catalog search checks one only when an
     /// identifier is searched for, since otherwise nothing is read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outside_project: Option<Vec<String>>,
@@ -5792,6 +5848,16 @@ pub struct PruneProjectResult {
     /// Directories in `parts-unlisted`, in either form.
     #[serde(default)]
     pub parts_unlisted_count: usize,
+    /// Each markdown file inside the project that exists and that a project
+    /// file or part links to, outside every parts directory, the spec root
+    /// and `.ductus/`, and other than `AGENTS.md`, sorted by path: what a
+    /// `move` may take into a parts directory (spec 087). The host judges
+    /// which is a part. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub move_candidates: Option<Vec<MoveCandidate>>,
+    /// Records in `move-candidates`, in either form.
+    #[serde(default)]
+    pub move_candidates_count: usize,
     /// Where `entries` is: in this result, or past the read size in the file
     /// `lists-file` names.
     #[serde(default)]
@@ -5806,37 +5872,66 @@ pub struct PruneProjectResult {
     pub entries_count: usize,
     /// In the file form, the file holding `entries` whole, from the project
     /// root: a JSON object with the keys `entries`, `part-files`,
-    /// `part-findings` and `parts-unlisted`, each present even when empty, and
-    /// the key `outside-project` when the search ran.
+    /// `part-findings`, `parts-unlisted` and `move-candidates`, each present
+    /// even when empty, the key `outside-project` when the search ran, and on
+    /// a preview with `move` whose search ran, the keys `move-referrers` and
+    /// `move-outside-project`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
-    /// The literal search. Present on a preview, absent on an apply, which
-    /// reads no source.
+    /// The literal search for the catalog identifiers. Present on a preview,
+    /// absent on an apply, which reads no source for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub search: Option<ProjectSearch>,
+    /// The literal search for `move`'s `from` over every tracked file but
+    /// `from`, the spec root included (spec 087). Present on a preview with
+    /// `move`; in the file form its `outside-project` is under the lists
+    /// file's key `move-outside-project`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub move_search: Option<ProjectSearch>,
+    /// Each tracked file `move-search` found holding `from`'s path, in path
+    /// order, with its occurrences: the referrers the operator confirms.
+    /// Present on a preview with `move` whose search ran; absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub move_referrers: Option<Vec<MoveReferrer>>,
+    /// Records in `move-referrers`, in either form, when its search ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub move_referrers_count: Option<usize>,
     /// Whether the apply wrote everything it listed. `false` on a preview,
     /// on an apply refused as stale (nothing written, creations included),
     /// and on one where a file changed after it was read (`refused` names it,
-    /// `written` the files that were written anyway).
+    /// `written` the files that were written anyway). An apply with `move`
+    /// is `true` exactly when it moved: `to` written, each confirmed referrer
+    /// rewritten and `from` removed.
     pub applied: bool,
     /// Each listed removal or replacement with no entry of that path and
     /// digest left to claim. Non-empty means the whole apply was refused and
     /// nothing was written, creations included.
     pub stale_entries: Vec<EntryRemoval>,
+    /// On an apply with `move`, each confirmed referrer the search would not
+    /// find: untracked, `from` itself, outside the project, unreadable, or
+    /// holding no occurrence of `from`'s path. Non-empty means the whole
+    /// apply was refused and nothing was written. Absent on any other call.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stale_referrers: Option<Vec<String>>,
     /// The homes created from their template.
     pub created: Vec<ProjectHome>,
     /// The homes listed in `create` that already existed, left as they are,
     /// including one a writer created since the apply looked.
     pub kept: Vec<ProjectHome>,
     /// The project files and parts an apply rewrote, in subject order, each
-    /// project-relative.
+    /// project-relative. For an apply with `move`, `to` and then each
+    /// referrer it rewrote, in path order.
     #[serde(default)]
     pub written: Vec<String>,
     /// The project files and parts an apply refused to rewrite because each changed
     /// after the apply read it (`BE-TXN-002`), in subject order. Each is left
     /// as the other writer made it, and its listed removals and replacements
     /// are unapplied: re-run the preview and the apply to read it as it now
-    /// is. The rest of the apply was written.
+    /// is. The rest of the apply was written. For an apply with `move`, each
+    /// of `to`, the confirmed referrers and `from` found changed under the
+    /// one lock hold the move takes, and then nothing was written: a move is
+    /// whole or absent.
     #[serde(default)]
     pub refused: Vec<String>,
     /// Each key in `[artifacts]` no reader recognizes, named as
@@ -9409,9 +9504,9 @@ mod tests {
         SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
     };
     use super::{
-        EntryKind, EntryRemoval, EntryReplacement, ProjectEntry, ProjectFile, ProjectFileKind,
-        ProjectFileState, ProjectHome, ProjectSearch, PruneProjectArgs, PruneProjectResult,
-        SearchState,
+        EntryKind, EntryRemoval, EntryReplacement, MoveCandidate, MoveReferrer, ProjectEntry,
+        ProjectFile, ProjectFileKind, ProjectFileState, ProjectHome, ProjectSearch,
+        PruneProjectArgs, PruneProjectResult, SearchState,
     };
 
     /// Spec 076: a `dispositions:` map written before the rename reads under
@@ -10076,11 +10171,26 @@ mod tests {
             }],
             create: vec![ProjectHome::System],
             replace_json: None,
+            move_file: None,
+            move_json: None,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["create"], serde_json::json!(["system"]));
         assert_eq!(value["replace"][0]["with"], "- a pointer");
+        assert!(!value.as_object().unwrap().contains_key("move"));
         assert_eq!(round_trip(&args), args);
+        // A move goes on the wire as `move`, its referrers defaulting empty.
+        let moving: PruneProjectArgs = serde_json::from_value(serde_json::json!({
+            "move": {"from": "docs/x.md", "to": ".ductus/docs/agents/x.md"}
+        }))
+        .unwrap();
+        let mv = moving.move_file.clone().unwrap();
+        assert_eq!((mv.from.as_str(), mv.referrers.len()), ("docs/x.md", 0));
+        assert_eq!(
+            serde_json::to_value(&moving).unwrap()["move"]["to"],
+            ".ductus/docs/agents/x.md"
+        );
+        assert_eq!(round_trip(&moving), moving);
         // A dispatch with no arguments is a preview.
         let empty: PruneProjectArgs = serde_json::from_value(serde_json::json!({})).unwrap();
         assert_eq!(empty, PruneProjectArgs::default());
@@ -10119,6 +10229,8 @@ mod tests {
             part_findings_count: 0,
             parts_unlisted: Some(Vec::new()),
             parts_unlisted_count: 0,
+            move_candidates: Some(Vec::new()),
+            move_candidates_count: 0,
             form: ListsForm::Inline,
             entries_count: 2,
             lists_file: None,
@@ -10153,8 +10265,12 @@ mod tests {
                 outside_project: Some(vec!["docs/linked.md".into()]),
                 outside_project_count: Some(1),
             }),
+            move_search: None,
+            move_referrers: None,
+            move_referrers_count: None,
             applied: false,
             stale_entries: Vec::new(),
+            stale_referrers: None,
             created: Vec::new(),
             kept: Vec::new(),
             written: vec!["AGENTS.md".into()],
@@ -10178,6 +10294,41 @@ mod tests {
         assert_eq!(value["search"]["outside-project-count"], 1);
         assert_eq!(value["refused"], serde_json::json!(["specs/errors.md"]));
         assert_eq!(round_trip(&result), result);
+    }
+
+    /// A move's candidate and referrer records keep their wire names, and a
+    /// call with no `move` carries none of the move's own fields (spec 087).
+    #[test]
+    fn a_moves_records_round_trip_and_a_call_without_one_carries_none() {
+        let candidate = MoveCandidate {
+            path: "docs/x.md".into(),
+            linked_from: vec!["AGENTS.md".into()],
+        };
+        let value = serde_json::to_value(&candidate).unwrap();
+        assert_eq!(value["linked-from"][0], "AGENTS.md");
+        assert_eq!(round_trip(&candidate), candidate);
+        let referrer = MoveReferrer {
+            path: "specs/001-x/spec.md".into(),
+            occurrences: 2,
+        };
+        assert_eq!(serde_json::to_value(&referrer).unwrap()["occurrences"], 2);
+        assert_eq!(round_trip(&referrer), referrer);
+        let result: PruneProjectResult = serde_json::from_value(serde_json::json!({
+            "threshold": {"bytes": 50_000, "source": "default"},
+            "files": [], "applied": false, "stale-entries": [],
+            "created": [], "kept": [],
+        }))
+        .unwrap();
+        let wire = serde_json::to_value(&result).unwrap();
+        for key in [
+            "move-search",
+            "move-referrers",
+            "move-referrers-count",
+            "stale-referrers",
+        ] {
+            assert!(!wire.as_object().unwrap().contains_key(key), "{key}");
+        }
+        assert_eq!(wire["move-candidates-count"], 0);
     }
 
     /// A project file's record names no project file, and a part's names its

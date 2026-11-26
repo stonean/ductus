@@ -19,6 +19,11 @@
 //! identifier built at runtime does not appear, which is why the walk words
 //! zero hits as *no literal occurrence found*.
 //!
+//! Every call also lists the move candidates, the markdown files a project
+//! file or part links to outside the parts directories, and a call naming
+//! one `move` searches for its referrers on a preview and makes the move on
+//! an apply, whole or not at all (the `moves` module; spec 087).
+//!
 //! A rewrite guards the window between its read and its rename
 //! (`BE-TXN-002`): each file is read once into a [`ReadSnapshot`], and its
 //! rewrite is refused, never forced, when the file changed since. The apply
@@ -53,6 +58,8 @@ use crate::schema::primitives::{
     SearchState, TailCause, UnexaminedTail,
 };
 
+mod moves;
+
 const PRIMITIVE: &str = "prune-project";
 
 /// `framework/templates/project/system.md`, compiled in because an adopter's
@@ -83,14 +90,18 @@ fn home(root: &str, home: ProjectHome) -> (String, &'static str) {
 /// A rewrite whose file changed since it was read is not an error: it is
 /// refused, left as the other writer made it, and named in the result's
 /// `refused`, while the other files are written and named in `written`
-/// (`BE-TXN-002`, `BE-TXN-004`).
+/// (`BE-TXN-002`, `BE-TXN-004`). A move is the exception: one of its files
+/// changed refuses the whole move, so `written` is empty.
 ///
 /// # Errors
 ///
 /// - [`PrimitiveError::MissingArgument`] when `apply` lists nothing to do.
 /// - [`PrimitiveError::InvalidArgument`] when a list is given without
 ///   `apply`, or names a path that is neither one of the four project files
-///   nor a part of one.
+///   nor a part of one; when a `move` carries referrers on a preview, sits
+///   beside another list on an apply, names a `from` that is no move
+///   candidate, or a `to` that is not a new markdown file directly under a
+///   parts directory.
 /// - [`PrimitiveError::InvalidReadSize`] / [`PrimitiveError::Toml`] when the
 ///   configured read size is invalid or the config does not parse, as
 ///   `check-artifact-size` reports them.
@@ -109,6 +120,22 @@ pub fn run(args: &PruneProjectArgs, repo: &Path) -> Result<PruneProjectResult> {
     run_between(args, repo, || {})
 }
 
+/// One subject: its project file's kind, its path, and for a part, the path
+/// of the project file it is a part of.
+type Subject<'a> = (ProjectFileKind, &'a str, Option<&'a str>);
+
+/// What an apply did: written in full, refused in part, or refused whole as
+/// stale. A preview leaves it empty.
+#[derive(Debug, Default)]
+struct Outcome {
+    applied: bool,
+    created: Vec<ProjectHome>,
+    kept: Vec<ProjectHome>,
+    written: Vec<String>,
+    refused: Vec<String>,
+    stale_referrers: Option<Vec<String>>,
+}
+
 /// [`run`], calling `before_write` after everything is read and computed and
 /// before the first write, which a test replaces to change a file in that
 /// window.
@@ -124,60 +151,41 @@ fn run_between(
     check_args(args, &all)?;
     let (threshold, notices) = resolve_threshold(repo)?;
     let (files, part_files, snapshots, mut segments) = read_subjects(repo, &all, threshold.bytes);
+    let texts: Vec<Option<&str>> = snapshots
+        .iter()
+        .map(|snapshot| snapshot.as_ref().and_then(|s| s.text().ok().flatten()))
+        .collect();
+    let move_candidates = moves::candidates(repo, &root, &all, &texts);
+    if let Some(mv) = &args.move_file {
+        moves::check(repo, mv, &move_candidates)?;
+    }
 
-    let search = if args.apply {
-        None
+    let (search, move_search, move_referrers) = if args.apply {
+        (None, None, None)
     } else {
         let excluded: Vec<&str> = all.iter().map(|(_, rel, _)| *rel).collect();
-        Some(search(repo, &root, &excluded, &mut segments)?)
+        let search = search(repo, &root, &excluded, &mut segments)?;
+        match &args.move_file {
+            Some(mv) => {
+                let (move_search, referrers) = moves::search(repo, &mv.from)?;
+                (Some(search), Some(move_search), referrers)
+            }
+            None => (Some(search), None, None),
+        }
     };
 
     let (claimed, stale_entries) = claim(&segments, args);
-    let applied = args.apply && stale_entries.is_empty();
-    let mut created = Vec::new();
-    let mut kept = Vec::new();
-    let mut written = Vec::new();
-    let mut refused = Vec::new();
-    if applied {
-        // Every home to create is checked before anything is written, so a
-        // refused one never leaves half an apply on disk.
-        for kind in &args.create {
-            validate_contained(repo, &home(&root, *kind).0)?;
-        }
-        before_write();
-        for (idx, (_, rel, _)) in all.iter().enumerate() {
-            let Some(snapshot) = &snapshots[idx] else {
-                continue;
-            };
-            let Some(content) = snapshot.text()? else {
-                continue;
-            };
-            let edits: Vec<&(usize, Option<&str>)> = claimed
-                .iter()
-                .filter(|(seg, _)| segments[*seg].entry.path == *rel)
-                .collect();
-            if edits.is_empty() {
-                continue;
-            }
-            match snapshot.write_if_unchanged(rewrite(content, &segments, &edits)) {
-                Ok(()) => written.push((*rel).to_string()),
-                // The file changed since it was read: leave it as the other
-                // writer made it, and go on to the others (`BE-TXN-004`).
-                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push((*rel).to_string()),
-                Err(other) => return Err(other),
-            }
-        }
-        for kind in &args.create {
-            let (rel, body) = home(&root, *kind);
-            if create_home(&repo.join(&rel), body)? {
-                created.push(*kind);
-            } else {
-                kept.push(*kind);
-            }
-        }
-    }
-    // An apply that refused a file did not write everything it listed.
-    let applied = applied && refused.is_empty();
+    let outcome = match (&args.move_file, args.apply) {
+        (Some(mv), true) => moves::apply(repo, mv, before_write)?,
+        (None, true) if stale_entries.is_empty() => apply_entries(
+            repo,
+            (&root, args),
+            (&all, &snapshots),
+            (&segments, &claimed),
+            before_write,
+        )?,
+        _ => Outcome::default(),
+    };
 
     let entries: Vec<ProjectEntry> = segments.into_iter().map(|seg| seg.entry).collect();
     let mut result = PruneProjectResult {
@@ -189,21 +197,81 @@ fn run_between(
         part_findings: Some(parts.findings),
         parts_unlisted_count: parts.unlisted.len(),
         parts_unlisted: Some(parts.unlisted),
+        move_candidates_count: move_candidates.len(),
+        move_candidates: Some(move_candidates),
         form: ListsForm::Inline,
         entries_count: entries.len(),
         entries: Some(entries),
         lists_file: None,
         search,
-        applied,
+        move_search,
+        move_referrers_count: move_referrers.as_ref().map(Vec::len),
+        move_referrers,
+        applied: outcome.applied,
         stale_entries,
-        created,
-        kept,
-        written,
-        refused,
+        stale_referrers: outcome.stale_referrers,
+        created: outcome.created,
+        kept: outcome.kept,
+        written: outcome.written,
+        refused: outcome.refused,
         notices,
     };
     bound(repo, &mut result)?;
     Ok(result)
+}
+
+/// Remove and replace the claimed entries, each file under its own guard,
+/// then create the homes listed. A file changed since it was read is
+/// refused and named, and the rest are written (`BE-TXN-004`).
+fn apply_entries(
+    repo: &Path,
+    (root, args): (&str, &PruneProjectArgs),
+    (all, snapshots): (&[Subject<'_>], &[Option<ReadSnapshot>]),
+    (segments, claimed): (&[Segment], &[(usize, Option<&str>)]),
+    before_write: impl FnOnce(),
+) -> Result<Outcome> {
+    let mut outcome = Outcome::default();
+    // Every home to create is checked before anything is written, so a
+    // refused one never leaves half an apply on disk.
+    for kind in &args.create {
+        validate_contained(repo, &home(root, *kind).0)?;
+    }
+    before_write();
+    for (idx, (_, rel, _)) in all.iter().enumerate() {
+        let Some(snapshot) = &snapshots[idx] else {
+            continue;
+        };
+        let Some(content) = snapshot.text()? else {
+            continue;
+        };
+        let edits: Vec<&(usize, Option<&str>)> = claimed
+            .iter()
+            .filter(|(seg, _)| segments[*seg].entry.path == *rel)
+            .collect();
+        if edits.is_empty() {
+            continue;
+        }
+        match snapshot.write_if_unchanged(rewrite(content, segments, &edits)) {
+            Ok(()) => outcome.written.push((*rel).to_string()),
+            // The file changed since it was read: leave it as the other
+            // writer made it, and go on to the others (`BE-TXN-004`).
+            Err(PrimitiveError::ChangedSinceRead { .. }) => {
+                outcome.refused.push((*rel).to_string());
+            }
+            Err(other) => return Err(other),
+        }
+    }
+    for kind in &args.create {
+        let (rel, body) = home(root, *kind);
+        if create_home(&repo.join(&rel), body)? {
+            outcome.created.push(*kind);
+        } else {
+            outcome.kept.push(*kind);
+        }
+    }
+    // An apply that refused a file did not write everything it listed.
+    outcome.applied = outcome.refused.is_empty();
+    Ok(outcome)
 }
 
 /// Every subject in the order it is read and written: the four project
@@ -267,13 +335,16 @@ fn read_subjects(
 /// read size, since each entry is a record whether or not it has hits.
 /// The search's `outside-project` grows with the tracked files, so it
 /// moves with them, and the parts' three lists grow with the project's
-/// parts (spec 087), so they move too.
+/// parts (spec 087), so they move too, as do the move's candidates, which
+/// grow with the project files' links, and its referrers and the files its
+/// search left unread, which grow with the tracked files.
 fn bound(repo: &Path, result: &mut PruneProjectResult) -> Result<()> {
     let mut lists = serde_json::json!({
         "entries": result.entries,
         "part-files": result.part_files,
         "part-findings": result.part_findings,
         "parts-unlisted": result.parts_unlisted,
+        "move-candidates": result.move_candidates,
     });
     if let Some(outside) = result
         .search
@@ -282,13 +353,28 @@ fn bound(repo: &Path, result: &mut PruneProjectResult) -> Result<()> {
     {
         lists["outside-project"] = serde_json::json!(outside);
     }
+    if let Some(referrers) = &result.move_referrers {
+        lists["move-referrers"] = serde_json::json!(referrers);
+    }
+    if let Some(outside) = result
+        .move_search
+        .as_ref()
+        .and_then(|s| s.outside_project.as_ref())
+    {
+        lists["move-outside-project"] = serde_json::json!(outside);
+    }
     if let Some(file) = bounded_lists::place(repo, PRIMITIVE, PROJECT_FILES_KEY, &result, &lists)? {
         result.form = ListsForm::File;
         result.entries = None;
         result.part_files = None;
         result.part_findings = None;
         result.parts_unlisted = None;
-        if let Some(search) = result.search.as_mut() {
+        result.move_candidates = None;
+        result.move_referrers = None;
+        for search in [result.search.as_mut(), result.move_search.as_mut()]
+            .into_iter()
+            .flatten()
+        {
             search.outside_project = None;
         }
         result.lists_file = Some(file);
@@ -297,6 +383,7 @@ fn bound(repo: &Path, result: &mut PruneProjectResult) -> Result<()> {
 }
 
 /// Refuse an argument set that names nothing to do, a list without an apply,
+/// a move's referrers on a preview, a move beside another list on an apply,
 /// or a removal or replacement in a file that is neither one of the four
 /// project files nor a part of one, before any subject is read.
 fn check_args(
@@ -304,11 +391,12 @@ fn check_args(
     subjects: &[(ProjectFileKind, &str, Option<&str>)],
 ) -> Result<()> {
     let listed = !args.remove.is_empty() || !args.replace.is_empty() || !args.create.is_empty();
-    if args.apply && !listed {
+    if args.apply && !listed && args.move_file.is_none() {
         return Err(PrimitiveError::MissingArgument {
             primitive: PRIMITIVE.into(),
             argument: "remove".into(),
-            reason: "an apply writes what it lists, so list a removal, replacement or creation"
+            reason: "an apply writes what it lists, so list a removal, replacement, creation or \
+                     move"
                 .into(),
         });
     }
@@ -318,6 +406,28 @@ fn check_args(
             argument: "apply".into(),
             reason: "only an apply removes, replaces or creates; pass apply with the lists".into(),
         });
+    }
+    if let Some(mv) = &args.move_file {
+        let refusal = if args.apply && listed {
+            Some(
+                "an apply with move lists nothing else: the move rewrites project files, so \
+                 preview again and judge their entries afresh",
+            )
+        } else if !args.apply && !mv.referrers.is_empty() {
+            Some(
+                "referrers are what an apply rewrites; a preview finds them, so pass them only \
+                 with apply",
+            )
+        } else {
+            None
+        };
+        if let Some(reason) = refusal {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: PRIMITIVE.into(),
+                argument: "move".into(),
+                reason: reason.into(),
+            });
+        }
     }
     let known = |path: &str| subjects.iter().any(|(_, rel, _)| *rel == path);
     let paths = args
@@ -869,7 +979,7 @@ mod tests {
 
     use super::*;
     use crate::primitives::git_fixture::{commit_all, write};
-    use crate::schema::primitives::EntryReplacement;
+    use crate::schema::primitives::{EntryReplacement, FileMove};
 
     const AGENTS: &str = "\
 # Project: demo
@@ -2000,8 +2110,9 @@ No component writes a file of its own.
     }
 
     /// A project whose four project files name no parts keeps every earlier
-    /// key, its files' records carry no `part-of`, and the parts' lists are
-    /// present, empty and counted 0 (spec 087, AC8).
+    /// key, its files' records carry no `part-of`, and the parts' lists and
+    /// the move candidates are present, empty and counted 0, while a call
+    /// naming no move carries none of the move's own fields (spec 087, AC8).
     #[test]
     fn a_project_with_no_parts_keeps_every_earlier_key_with_the_parts_lists_empty() {
         let dir = project();
@@ -2033,16 +2144,387 @@ No component writes a file of its own.
             "part-findings-count",
             "parts-unlisted",
             "parts-unlisted-count",
+            "move-candidates",
+            "move-candidates-count",
         ];
         expected.sort_unstable();
         assert_eq!(keys, expected);
-        for list in ["part-files", "part-findings", "parts-unlisted"] {
+        for list in [
+            "part-files",
+            "part-findings",
+            "parts-unlisted",
+            "move-candidates",
+        ] {
             assert_eq!(value[list], serde_json::json!([]), "{list}");
             assert_eq!(value[format!("{list}-count")], 0, "{list}");
         }
         for file in value["files"].as_array().unwrap() {
             assert!(!file.as_object().unwrap().contains_key("part-of"), "{file}");
         }
+    }
+
+    const PROCEDURE: &str = "docs/procedure.md";
+    const MOVED: &str = ".ductus/docs/agents/procedure.md";
+    const SPEC: &str = "specs/001-x/spec.md";
+
+    const STORAGE_LINKING: &str = ".ductus/docs/system/storage.md";
+
+    /// AC14's fixture, committed: `AGENTS.md` points at a procedure under
+    /// `docs/` that a spec under the spec root also links, and so does a
+    /// linked part of `system.md`, and the procedure links back to
+    /// `AGENTS.md` relatively. `AGENTS.md` also links that spec, which lies
+    /// under the spec root, and a markdown file that does not exist, neither
+    /// of them a candidate. A source file names a longer path ending in the
+    /// procedure's, and another a longer one starting with it, neither of
+    /// them an occurrence.
+    fn movable() -> (TempDir, git2::Repository) {
+        let dir = project();
+        let agents = format!(
+            "{AGENTS}\nRead [the procedure]({PROCEDURE}) before a release, [the spec]({SPEC}) \
+             and [the old one](docs/gone.md).\n"
+        );
+        write(&dir.path().join("AGENTS.md"), &agents);
+        write(
+            &dir.path().join("specs/system.md"),
+            "# System\n\n## Storage\n\nSee [storage](../.ductus/docs/system/storage.md).\n",
+        );
+        write(
+            &dir.path().join(STORAGE_LINKING),
+            "# Storage\n\n## Files\n\nThe steps are in [the procedure](../../../docs/procedure.md).\n",
+        );
+        write(
+            &dir.path().join(PROCEDURE),
+            "# Procedure\n\nSee [AGENTS.md](../AGENTS.md) and [the spec](../specs/001-x/spec.md#ac1).\n",
+        );
+        write(
+            &dir.path().join(SPEC),
+            "# 001\n\nThe steps are in [the procedure](../../docs/procedure.md).\n",
+        );
+        write(
+            &dir.path().join("src/a.rs"),
+            "// see foo/docs/procedure.md\n",
+        );
+        write(&dir.path().join("src/b.rs"), "// see docs/procedure.mdx\n");
+        let repository = git2::Repository::init(dir.path()).unwrap();
+        commit_all(&repository, "fixture");
+        (dir, repository)
+    }
+
+    fn moving(referrers: &[&str], apply: bool) -> PruneProjectArgs {
+        PruneProjectArgs {
+            apply,
+            move_file: Some(FileMove {
+                from: PROCEDURE.into(),
+                to: MOVED.into(),
+                referrers: referrers.iter().map(|r| (*r).to_string()).collect(),
+            }),
+            ..PruneProjectArgs::default()
+        }
+    }
+
+    /// Every file under `dir` but `.git/` and `.ductus/locks/`, with its
+    /// bytes.
+    fn tree(dir: &Path) -> Vec<(String, Vec<u8>)> {
+        let mut out = Vec::new();
+        let mut stack = vec![dir.to_path_buf()];
+        while let Some(at) = stack.pop() {
+            for entry in fs::read_dir(&at).unwrap() {
+                let path = entry.unwrap().path();
+                let rel = crate::primitives::rel_path(&path, dir);
+                if rel == ".git" || rel == ".ductus/locks" {
+                    continue;
+                }
+                if path.is_dir() {
+                    stack.push(path);
+                } else {
+                    out.push((rel, fs::read(&path).unwrap()));
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+
+    /// A preview lists the procedure among the move candidates, and naming
+    /// the move shows the search that found the second file, each referrer
+    /// with its occurrences, while a longer path ending or starting with the
+    /// procedure's is no referrer; the preview writes nothing, so a declined
+    /// move leaves the tree as it was (spec 087, AC14).
+    #[test]
+    fn a_preview_lists_the_candidate_and_the_search_for_its_referrers_writing_nothing() {
+        let (dir, _repository) = movable();
+        let plain = preview(dir.path());
+        let candidates = plain.move_candidates.clone().unwrap();
+        assert_eq!(plain.move_candidates_count, 1);
+        assert_eq!(candidates[0].path, PROCEDURE);
+        assert_eq!(
+            candidates[0].linked_from,
+            vec!["AGENTS.md".to_string(), STORAGE_LINKING.into()]
+        );
+        assert!(plain.move_search.is_none() && plain.move_referrers.is_none());
+
+        let before = tree(dir.path());
+        let result = run(&moving(&[], false), dir.path()).unwrap();
+        let search = result.move_search.clone().unwrap();
+        assert_eq!(search.state, SearchState::Ran);
+        // Every tracked file but the procedure: the four project files, the
+        // part, the spec and the two sources.
+        assert_eq!(search.files_searched, Some(8));
+        let referrers: Vec<(&str, usize)> = result
+            .move_referrers
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|r| (r.path.as_str(), r.occurrences))
+            .collect();
+        assert_eq!(
+            referrers,
+            vec![(STORAGE_LINKING, 1), ("AGENTS.md", 1), (SPEC, 1)]
+        );
+        assert_eq!(result.move_referrers_count, Some(3));
+        assert!(!result.applied && result.written.is_empty());
+        assert_eq!(tree(dir.path()), before, "a preview writes nothing");
+    }
+
+    /// On confirmation the file moves, both links are re-pointed keeping
+    /// each one's prefix, and the moved file's own relative links still name
+    /// what they named; the moved file is then a linked part of `AGENTS.md`
+    /// (spec 087, AC14).
+    #[test]
+    fn a_confirmed_move_writes_the_part_repoints_both_links_and_removes_the_file() {
+        let (dir, _repository) = movable();
+        let result = run(
+            &moving(&["AGENTS.md", SPEC, STORAGE_LINKING], true),
+            dir.path(),
+        )
+        .unwrap();
+        assert!(result.applied, "{result:?}");
+        assert_eq!(
+            result.written,
+            vec![
+                MOVED.to_string(),
+                STORAGE_LINKING.into(),
+                "AGENTS.md".into(),
+                SPEC.into()
+            ]
+        );
+        assert_eq!(result.refused, Vec::<String>::new());
+        assert_eq!(result.stale_referrers, Some(Vec::new()));
+        assert!(!dir.path().join(PROCEDURE).exists());
+        let read = |rel: &str| fs::read_to_string(dir.path().join(rel)).unwrap();
+        assert_eq!(
+            read(MOVED),
+            "# Procedure\n\nSee [AGENTS.md](../../../AGENTS.md) and [the spec](../../../specs/001-x/spec.md#ac1).\n"
+        );
+        assert!(read("AGENTS.md").contains(&format!("[the procedure]({MOVED})")));
+        assert!(read(SPEC).contains("(../../.ductus/docs/agents/procedure.md)"));
+        assert!(read(STORAGE_LINKING).contains("(../../../.ductus/docs/agents/procedure.md)"));
+        assert_eq!(read("src/a.rs"), "// see foo/docs/procedure.md\n");
+        assert_eq!(read("src/b.rs"), "// see docs/procedure.mdx\n");
+
+        let after = preview(dir.path());
+        let parts: Vec<String> = after
+            .part_files
+            .clone()
+            .unwrap()
+            .into_iter()
+            .map(|part| part.path)
+            .collect();
+        assert_eq!(parts, vec![MOVED.to_string(), STORAGE_LINKING.into()]);
+        assert_eq!(after.part_findings, Some(Vec::new()), "the part is linked");
+        assert_eq!(after.move_candidates, Some(Vec::new()));
+    }
+
+    /// The moved file keeps its mode, where its tempfile's is `0600`.
+    #[cfg(unix)]
+    #[test]
+    fn the_moved_file_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let (dir, _repository) = movable();
+        fs::set_permissions(
+            dir.path().join(PROCEDURE),
+            fs::Permissions::from_mode(0o644),
+        )
+        .unwrap();
+        assert!(
+            run(&moving(&["AGENTS.md"], true), dir.path())
+                .unwrap()
+                .applied
+        );
+        let mode = fs::metadata(dir.path().join(MOVED))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o644);
+    }
+
+    /// A found referrer the operator left out is kept as it is, so a record
+    /// keeps the old name.
+    #[test]
+    fn an_unconfirmed_referrer_is_kept() {
+        let (dir, _repository) = movable();
+        let spec = fs::read_to_string(dir.path().join(SPEC)).unwrap();
+        let result = run(&moving(&["AGENTS.md"], true), dir.path()).unwrap();
+        assert!(result.applied, "{result:?}");
+        assert_eq!(result.written, vec![MOVED.to_string(), "AGENTS.md".into()]);
+        assert_eq!(fs::read_to_string(dir.path().join(SPEC)).unwrap(), spec);
+    }
+
+    /// A confirmed referrer the search would not find — holding no
+    /// occurrence, untracked, or the moved file itself — refuses the whole
+    /// apply, and nothing is written.
+    #[test]
+    fn a_referrer_the_search_would_not_find_refuses_the_whole_apply() {
+        let (dir, _repository) = movable();
+        write(&dir.path().join("untracked.md"), "[p](docs/procedure.md)\n");
+        let before = tree(dir.path());
+        let result = run(
+            &moving(&["AGENTS.md", "src/a.rs", "untracked.md", PROCEDURE], true),
+            dir.path(),
+        )
+        .unwrap();
+        assert!(!result.applied);
+        assert_eq!(
+            result.stale_referrers,
+            Some(vec![
+                PROCEDURE.to_string(),
+                "src/a.rs".into(),
+                "untracked.md".into()
+            ])
+        );
+        assert!(result.written.is_empty() && result.refused.is_empty());
+        assert_eq!(tree(dir.path()), before);
+    }
+
+    /// A referrer changed after the apply read it refuses the whole move: the
+    /// part is not written, no referrer is rewritten, the file stays, and the
+    /// changed one is named and left as the other writer made it
+    /// (`BE-TXN-002`; the agent's recommendation, adopted by the operator,
+    /// 2026-11-26).
+    #[test]
+    fn a_referrer_changed_since_the_read_refuses_the_whole_move() {
+        let (dir, _repository) = movable();
+        let theirs = "# 001\n\nEdited: see [the procedure](../../docs/procedure.md).\n";
+        let agents = fs::read_to_string(dir.path().join("AGENTS.md")).unwrap();
+        let result = run_between(&moving(&["AGENTS.md", SPEC], true), dir.path(), || {
+            fs::write(dir.path().join(SPEC), theirs).unwrap();
+        })
+        .unwrap();
+        assert!(!result.applied);
+        assert_eq!(result.refused, vec![SPEC.to_string()]);
+        assert_eq!(result.written, Vec::<String>::new());
+        assert!(dir.path().join(PROCEDURE).exists());
+        assert!(!dir.path().join(MOVED).exists());
+        assert_eq!(fs::read_to_string(dir.path().join(SPEC)).unwrap(), theirs);
+        assert_eq!(
+            fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
+            agents
+        );
+    }
+
+    /// A move names a candidate and a new part, takes its referrers only on
+    /// an apply, and an apply naming it lists nothing else.
+    #[test]
+    fn a_move_outside_its_contract_is_refused_before_anything_is_read() {
+        let (dir, _repository) = movable();
+        let refused = |args: &PruneProjectArgs| {
+            matches!(
+                run(args, dir.path()),
+                Err(PrimitiveError::InvalidArgument { ref argument, .. }) if argument == "move"
+            )
+        };
+        let with = |from: &str, to: &str| PruneProjectArgs {
+            move_file: Some(FileMove {
+                from: from.into(),
+                to: to.into(),
+                referrers: Vec::new(),
+            }),
+            ..PruneProjectArgs::default()
+        };
+        assert!(
+            refused(&moving(&["AGENTS.md"], false)),
+            "referrers on a preview"
+        );
+        let mut beside = moving(&["AGENTS.md"], true);
+        beside.create = vec![ProjectHome::System];
+        assert!(refused(&beside), "a move beside another list");
+        assert!(
+            refused(&with(PROCEDURE, "docs/agents/procedure.md")),
+            "not a parts directory"
+        );
+        assert!(
+            refused(&with(PROCEDURE, ".ductus/docs/agents/sub/p.md")),
+            "nested"
+        );
+        assert!(
+            refused(&with(PROCEDURE, ".ductus/docs/agents/p.txt")),
+            "not markdown"
+        );
+        write(
+            &dir.path().join(".ductus/docs/agents/taken.md"),
+            "# Taken\n",
+        );
+        assert!(
+            refused(&with(PROCEDURE, ".ductus/docs/agents/taken.md")),
+            "exists"
+        );
+        assert!(refused(&with("src/a.rs", MOVED)), "not a candidate");
+        assert!(refused(&with("docs/missing.md", MOVED)), "not a candidate");
+        assert!(run(&with(PROCEDURE, MOVED), dir.path()).is_ok());
+    }
+
+    /// Past the read size the move's candidates, referrers and the files its
+    /// search left unread are in the lists file, each count inline
+    /// (`BE-PAYLOAD-001`).
+    #[test]
+    fn past_the_read_size_the_moves_lists_are_in_the_file_with_their_counts_inline() {
+        let (dir, _repository) = movable();
+        let whole = run(&moving(&[], false), dir.path()).unwrap();
+        read_size(dir.path(), 500);
+        let bounded = run(&moving(&[], false), dir.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        assert_eq!(
+            (&bounded.move_candidates, &bounded.move_referrers),
+            (&None, &None)
+        );
+        assert_eq!(bounded.move_candidates_count, 1);
+        assert_eq!(bounded.move_referrers_count, Some(3));
+        assert_eq!(bounded.move_search.as_ref().unwrap().outside_project, None);
+        let file = bounded.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(dir.path().join(&file)).unwrap()).unwrap();
+        assert_eq!(
+            lists["move-candidates"],
+            serde_json::to_value(whole.move_candidates.unwrap()).unwrap()
+        );
+        assert_eq!(
+            lists["move-referrers"],
+            serde_json::to_value(whole.move_referrers.unwrap()).unwrap()
+        );
+        assert_eq!(lists["move-outside-project"], serde_json::json!([]));
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
+    /// With no repository the move's search did not run, so it lists no
+    /// referrer, never zero of them.
+    #[test]
+    fn with_no_repository_the_moves_search_is_unavailable_never_no_referrer() {
+        let dir = project();
+        write(
+            &dir.path().join("AGENTS.md"),
+            &format!("{AGENTS}\n[p]({PROCEDURE})\n"),
+        );
+        write(&dir.path().join(PROCEDURE), "# P\n");
+        let result = run(&moving(&[], false), dir.path()).unwrap();
+        assert_eq!(result.move_search.unwrap().state, SearchState::Unavailable);
+        assert_eq!(
+            (result.move_referrers, result.move_referrers_count),
+            (None, None)
+        );
     }
 
     #[test]

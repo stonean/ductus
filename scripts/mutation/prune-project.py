@@ -74,8 +74,8 @@ MUTATIONS = [
     (
         'M9 a stale listing still lets the rest of the apply write',
         'src/primitives/prune_project.rs',
-        '    let applied = args.apply && stale_entries.is_empty();',
-        '    let applied = args.apply;',
+        '        (None, true) if stale_entries.is_empty() => apply_entries(',
+        '        (None, true) => apply_entries(',
         'prune_project::tests::a_stale_listing_refuses_the_whole_apply',
     ),
     (

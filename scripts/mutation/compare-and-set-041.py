@@ -82,22 +82,22 @@ MUTATIONS = [
     (
         'M10 prune-project writes a project file over a changed one',
         'src/primitives/prune_project.rs',
-        '            match snapshot.write_if_unchanged(rewrite(content, &segments, &edits)) {\n',
-        '            match crate::primitives::write_atomic(&snapshot.repo.join(&snapshot.rel), &rewrite(content, &segments, &edits)) {\n',
+        '        match snapshot.write_if_unchanged(rewrite(content, segments, &edits)) {\n',
+        '        match crate::primitives::write_atomic(&snapshot.repo.join(&snapshot.rel), &rewrite(content, segments, &edits)) {\n',
         'prune_project::tests::a_file_changed_after_the_apply_read_it_is_refused_and_the_rest_is_written',
     ),
     (
         'M11 prune-project stops writing at the first refused file',
         'src/primitives/prune_project.rs',
-        '                Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push((*rel).to_string()),\n',
-        '                Err(PrimitiveError::ChangedSinceRead { .. }) => {\n                    refused.push((*rel).to_string());\n                    break;\n                }\n',
+        '                outcome.refused.push((*rel).to_string());\n            }\n',
+        '                outcome.refused.push((*rel).to_string());\n                break;\n            }\n',
         'prune_project::tests::a_file_changed_after_the_apply_read_it_is_refused_and_the_rest_is_written',
     ),
     (
         'M12 prune-project reports an apply that refused a file as applied',
         'src/primitives/prune_project.rs',
-        '    let applied = applied && refused.is_empty();\n',
-        '    let applied = applied;\n',
+        '    outcome.applied = outcome.refused.is_empty();\n',
+        '    outcome.applied = true;\n',
         'prune_project::tests::a_file_changed_after_the_apply_read_it_is_refused_and_the_rest_is_written',
     ),
     (

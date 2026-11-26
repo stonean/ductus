@@ -17,7 +17,7 @@ section: "Behavior"
 - **Entries.** An entry is a heading section at `###` or deeper, or, inside a `##` section's own body, a top-level list item with its nested lines, a table body row, or another blank-line-separated block. HTML comments and the `ductus:memory-routing` and `ductus:constitutions` regions are never entries, and `##` headings are structure. `data-model.md` records the grammar.
 - **Catalog entries.** For an `events.md` or `errors.md` entry, the preview gives its identifier (the first code span on its first line, in a table row's first cell, or a heading's own text when it holds none) and the literal search behind any removal proposal: the files searched (tracked files outside the spec root) and each one containing the identifier. The walk shows that search, and no hits reads *no literal occurrence found*.
 - **The walk.** For each entry, the host proposes a home from 075's table and the operator confirms. The host writes the home, then calls apply, the order step 8 uses for a plan section.
-  - A procedure goes to `docs/` or a README beside the code. A skill is named, never written.
+  - A procedure goes to a part under `.ductus/docs/agents/` or a README beside the code (spec 087). A skill is named, never written.
   - A one-feature decision goes to that spec's Resolved Questions, or to an existing scenario the operator names, never a new scenario. An entry that leaves a `done` spec an unchecked box or an unticked criterion reopens it, named before the write; one into its Resolved Questions leaves it `done`.
   - An organization rule is named with its shared constitution's `repo`, and leaves `AGENTS.md` only once the operator confirms it has landed there.
   - Nothing is written outside the project.

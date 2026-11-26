@@ -94,13 +94,13 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 
 This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M49.
 
-- [ ] Preview: `move-candidates`, and with `move` the literal, boundary-bounded referrer search with occurrence counts over every tracked file, the spec root included and `from` excepted; both lists bounded with `entries`
-- [ ] Apply with `move` and the confirmed referrers: write `to` create-only, rewrite each confirmed referrer keeping its prefix, rewrite the moved file's own relative links, remove `from`, each under the write guard; refuse an unfound referrer and keep an unconfirmed one
-- [ ] The CLI's `move` argument (`runtime/src/main.rs`), as `--replace-json` carries a list, through a file in the system temp directory
-- [ ] Unit tests: AC14's fixture (an `AGENTS.md` pointer to a markdown file under `docs/` that a second file, under the spec root, also links) moves and re-points both links, and rewrites the moved file's own relative links; a declined move writes nothing; a referrer changed since the read is refused; a longer path ending in `from` is not matched
-- [ ] Update the `result_sizes.rs` case for the move's lists
-- [ ] `framework/commands/prune.md`: the procedure route to `.ductus/docs/agents/`, a README or a named skill (AC13); the move proposals before the entry walk, showing the search and confirming each referrer, after which the operator may end the run with each unjudged entry reported as not examined; Scope Boundaries naming the referrer writes
-- [ ] Update `specs/041-task-pruning/data-model.md` and add the signpost in `specs/041-task-pruning/spec.md`
+- [x] Preview: `move-candidates`, and with `move` the literal, boundary-bounded referrer search with occurrence counts over every tracked file, the spec root included and `from` excepted; both lists bounded with `entries`
+- [x] Apply with `move` and the confirmed referrers: write `to` create-only, rewrite each confirmed referrer keeping its prefix, rewrite the moved file's own relative links, remove `from`, each under the write guard; refuse an unfound referrer and keep an unconfirmed one
+- [x] The CLI's `move` argument (`runtime/src/main.rs`), as `--replace-json` carries a list, through a file in the system temp directory
+- [x] Unit tests: AC14's fixture (an `AGENTS.md` pointer to a markdown file under `docs/` that a second file, under the spec root, also links) moves and re-points both links, and rewrites the moved file's own relative links; a declined move writes nothing; a referrer changed since the read is refused; a longer path ending in `from` is not matched
+- [x] Update the `result_sizes.rs` case for the move's lists
+- [x] `framework/commands/prune.md`: the procedure route to `.ductus/docs/agents/`, a README or a named skill (AC13); the move proposals before the entry walk, showing the search and confirming each referrer, after which the operator may end the run with each unjudged entry reported as not examined; Scope Boundaries naming the referrer writes
+- [x] Update `specs/041-task-pruning/data-model.md` and add the signpost in `specs/041-task-pruning/spec.md`
 
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over AC14's fixture shows the search, moves the file and re-points both links on confirmation, and writes nothing when declined (AC14); the same run ended after the move proposals reports each entry it did not judge as not examined, never as kept (AC21); the commit records each registry layout's impact (AC18).
 
@@ -152,3 +152,10 @@ Runs after every other task, from a session started after task 8's build is inst
 - [ ] `scripts/analyze/record.py` generates an Advisory `project-parts` finding from each `part-findings` entry of detection's `check-artifact-size` result, as `reference_findings` generates step 13's, and `scripts/analyze/detect.py`'s summary of that result shows `part-findings`
 
 - **Done when**: a run of `scripts/analyze/` over a fixture project with an index `system.md`, a linked part and an unlinked part lists the linked part among step 15's subjects and records the unlinked part as an Advisory `project-parts` finding; `framework-checks.yml`'s steps pass.
+
+## 14. 087's run cost and what it retires, for 089's AC4
+
+- [ ] Measure one run of each thing 087 adds, after tasks 8–13: the `check-artifact-size` call with `project-files` and no feature that `/plan` and `/analyze` make (result bytes), the parts those commands then read (bytes loaded), and `prune-project`'s preview and move (result bytes and wall time) over this repository, stating each figure's method, units, population and commit
+- [ ] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle
+
+- **Done when**: 087's `spec.md` states a run's cost in a measurable unit with its method, and what it retires or why none, beside a blockquoted signpost to 089; `derive-dependencies` reports no cycle (089's AC4). Lands before 087's review (the agent's recommendation, adopted by the operator, 2026-11-26).

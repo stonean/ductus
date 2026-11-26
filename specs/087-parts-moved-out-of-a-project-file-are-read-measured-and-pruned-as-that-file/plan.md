@@ -83,16 +83,15 @@ With `project-files`:
 - **Subjects.** The four project files come first, then each `measured` part from `project_parts`. Each part is segmented by its project file's grammar (041's data model, §`prune-project`, Segmentation), so a part of `events.md` carries catalog identifiers and joins the literal search, while every part, like each project file, is left out of the search's sources, so an entry is never a hit on its own file. `files` stays the four project files. Each part gets the same record, with `part-of` naming its project file, in a new list, `part-files`. `check_args` accepts a part's path for `remove` and `replace`. The result carries `part-findings` for the preview to show, and `parts-unlisted`, each directory under `.ductus/docs/` that could not be listed, so its parts read as unknown, never none (the agent's recommendation, adopted by the operator, 2026-11-25).
 - **Bound.** `part-files`, `part-findings`, `parts-unlisted`, `move-candidates` and a move's referrers each grow with the project. They join `entries` among the lists moved to `lists-file` past the read size, each with its count inline (041's data model §`prune-project`, `form`; `BE-PAYLOAD-001`).
 - **Routing** (host; `framework/commands/prune.md`, *Project files*). An architecture entry goes to `system.md` or to the part it belongs in. A procedure leaving `AGENTS.md` goes to a part under `.ductus/docs/agents/`, a README beside the code, or a named skill. The host writes a new part before the apply, as it writes any home.
-- **Candidates.** A preview lists `move-candidates`: each distinct markdown target inside the project that a project file or part links to, outside every parts directory, the spec root and `.ductus/`, with the files linking it. The host judges which target is a part (spec, Resolved Questions, *How do existing pointers move*).
+- **Candidates.** A preview lists `move-candidates`: each distinct markdown target inside the project that exists, that a project file or part links to, outside every parts directory, the spec root and `.ductus/`, and other than `AGENTS.md`, with the files linking it. The host judges which target is a part (spec, Resolved Questions, *How do existing pointers move*).
 - **Walk order.** The move proposals come before the entry walk, and the operator may end the run after them. The report then names each entry left unjudged as not examined, never as kept.
-- **Search.** A preview passing `move: [{from, to}]` runs the literal search for `from`'s project-relative path. The search covers every file the project's repository tracks, the spec root included, except `from` itself (`tracked_project_paths`). That scope differs from the catalog search's, which leaves out the spec root (`search` in `prune_project.rs`); here the spec root holds 69 of the 81 referrers. A file that is, or lies under, a link leaving the project is named and not read, as the catalog search names one. A match needs a boundary before the path, so a longer path ending in it does not match. The result lists each referrer with its occurrence count. `to` must be a new `*.md` path directly under a parts directory.
-- **Apply.** An apply passes the same `move` with the referrers the operator confirmed. A referrer the search did not find is refused. A found one left out is kept, so a decision record keeps the old name (§drift-prevention, the sweep rule). The apply then:
-  - writes `to` create-only (`write_new_atomic`);
+- **Search.** A preview passing `move: {from, to}` runs the literal search for `from`'s project-relative path. A call names one move, so each move's search reads the tree the last one left. `from` must be a `move-candidates` path, and `to` a new `*.md` path directly under a parts directory. The search covers every file the project's repository tracks, the spec root included, except `from` itself (`tracked_project_paths`). That scope differs from the catalog search's, which leaves out the spec root (`search` in `prune_project.rs`); here the spec root holds 69 of the 81 referrers. A file that is, or lies under, a link leaving the project is named and not read, as the catalog search names one. A match needs a boundary on each side (the agent's recommendation, adopted by the operator, 2026-11-26). Before the path, once a run of `./` and `../` segments and a root `/` are set aside, no path character joins it, so a longer path ending in it does not match. After it, no path character follows, and a `.` followed by one is a longer name, so a longer path starting with it does not match either. One function finds the occurrences a preview counts and an apply rewrites. The result lists each referrer with its occurrence count.
+- **Apply.** An apply passes the same `move` with the referrers the operator confirmed, and lists nothing else: the move rewrites project files, whose entries the walk previews afresh. A confirmed referrer the search would not find refuses the whole apply before anything is written, as a stale entry does. A found one left out is kept, so a decision record keeps the old name (§drift-prevention, the sweep rule). Under one hold of the compare-and-set lock, the apply reads `from`, `to` and each confirmed referrer again and compares each with its read (the agent's recommendation, adopted by the operator, 2026-11-26). When any changed, it writes nothing and names each. Otherwise it:
+  - writes `to` create-only (`write_new_atomic`), with the moved file's own relative links rewritten for its new directory, which §drift-prevention's *No dead references in live artifacts* requires in the same change;
   - rewrites each confirmed referrer's occurrences to `to`'s path, keeping the prefix before each, so `../../docs/x.md` becomes `../../.ductus/docs/agents/x.md`;
-  - rewrites the moved file's own relative links for its new directory, which §drift-prevention's *No dead references in live artifacts* requires in the same change;
   - removes `from`.
 
-  Each file is written under the write guard (041's data model, *The write guard*). A referrer that changed since the read is refused and named.
+  So a move is whole or absent among the writers that go through the guard, and a refusal leaves no referrer naming a file that is gone. The hold is one re-read and one write per file the move names (041's data model, *The write guard*; 022's plan, *Compare before persist*).
 - **Scope.** Writing referrers outside the four project files widens `--project`'s writes, as 075 widened them for homes, and `framework/commands/prune.md`'s Scope Boundaries says so.
 
 ### The migration entry announces the move (AC15)
@@ -162,6 +161,10 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `runtime/src/primitives/check_corpus_links.rs` | Modify | Link scanner helpers made `pub(crate)` |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | Parts, `part-findings`, `refused-count`, staged parts |
 | `runtime/src/primitives/prune_project.rs` | Modify | Parts as subjects, `move-candidates`, `move` |
+| `runtime/src/primitives/prune_project/moves.rs` | Create | The move's candidates, search and apply |
+| `runtime/src/primitives/guarded.rs` | Modify | The raw-writes allowlist counts the multi-file commit's rename |
+| `runtime/src/session.rs` | Modify | The compare-and-set lock's hold bound |
+| `specs/022-deterministic-runtime/plan.md` | Modify | The compare-and-set guard's hold bound |
 | `runtime/src/primitives/resolve_constitutions.rs` | Modify | A loaded constitution's parts |
 | `runtime/src/schema/primitives.rs` | Modify | New fields, kinds and arguments |
 | `runtime/src/schema/descriptions.rs` | Modify | The three primitives' descriptions |
@@ -201,6 +204,9 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `specs/063-oversized-artifacts-warn-with-a-fix/spec.md` | Modify | Signpost |
 | `specs/041-task-pruning/data-model.md` | Modify | Parts as subjects; the move |
 | `specs/041-task-pruning/spec.md` | Modify | Signpost |
+| `specs/041-task-pruning/plan.md` | Modify | A procedure's home in the host judgment |
+| `specs/041-task-pruning/scenarios/prune-walks-the-project-files.md` | Modify | A procedure's home in the walk |
+| `docs/slash-commands.md` | Modify | `/prune --project`'s move |
 | `specs/055-shared-constitution/data-model.md` | Modify | A loaded record's parts; bound |
 | `specs/055-shared-constitution/spec.md` | Modify | Signpost; departure reason |
 | `specs/050-constitution/spec.md` | Modify | Signpost |
@@ -236,7 +242,7 @@ This spec adds no `data-model.md`, because each shape belongs to its primitive's
 
 | Spec | What changes | Discharge |
 | --- | --- | --- |
-| 022 | Exec tally arm; link scanner made `pub(crate)` | Signpost in its `spec.md` |
+| 022 | Exec tally arm; link scanner made `pub(crate)`; the guard's multi-file commit under one lock hold | Signpost in its `spec.md`; its plan's hold bound |
 | 041 | `prune-project` parts, candidates and move; `/prune --project` text | Signpost; data model §`prune-project` |
 | 050 | Constitution tree, routing, live artifacts, canonical sources | Signpost |
 | 055 | `resolve-constitutions` parts; `/target` step 4; departure reason | Signpost; data model; departure reason |

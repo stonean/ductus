@@ -20,6 +20,8 @@ That accumulation has no durable value. A task's purpose is spent the moment it 
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) narrowed what decides a plan section: its disposition rule waives every `plan-record` finding it does not fix, with `decided-by: rule`, so only a person's waiver now keeps a section from `/{project}:prune`, and AC17 says so.
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) changed the task numbering `check-artifacts` holds, which the scenario `a-suffixed-task-number-is-a-task` states: it blocks a number two tasks share, and no longer numbers that do not rise down the file.
+>
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. `prune-project` walks each part of a project file after the four files, lists the files a project file or part points at as `move-candidates`, and on a call naming one `move` searches for its referrers or makes it, whole or not at all; `/{project}:prune --project` makes its move proposals before the entry walk and sends a procedure leaving `AGENTS.md` to `.ductus/docs/agents/`. The schema is this spec's data model, §`prune-project`.
 
 ## Behavior
 

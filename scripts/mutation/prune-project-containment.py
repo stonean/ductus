@@ -33,7 +33,7 @@ MUTATIONS = [
     (
         'M3 a home to create is not checked before the apply writes',
         'src/primitives/prune_project.rs',
-        '        for kind in &args.create {\n            validate_contained(repo, &home(&root, *kind).0)?;\n        }\n',
+        '    for kind in &args.create {\n        validate_contained(repo, &home(root, *kind).0)?;\n    }\n',
         '',
         'prune_project::tests::a_refused_create_leaves_no_half_an_apply_on_disk prune_project::tests::a_linked_spec_root_makes_its_files_outside_project_and_refuses_a_create',
     ),
