@@ -1397,8 +1397,9 @@ fn spec_file(repo: &Path, path: &str) -> String {
 ///   does not narrow it. Unbound without a `feature` to name the directory.
 ///
 /// - `project-files` — `true`, step 17's second subject set: the four project
-///   files `check-artifact-size` measures beside the feature's artifacts (spec
-///   063, scenario `project-files-are-measured`). A dispatch carries no
+///   files and their parts, which `check-artifact-size` measures beside the
+///   feature's artifacts (spec 063, scenario `project-files-are-measured`;
+///   spec 087). A dispatch carries no
 ///   per-step arguments, so the walk seeds the key rather than naming it.
 ///
 /// `analyzed-at` and `analyzed-against` are not derived: the caller supplies
@@ -2323,6 +2324,36 @@ mod tests {
         assert!(analysis.contains("\nadvisory: 1\n"), "{analysis}");
         assert!(analysis.contains("\nblocking: false\n"), "{analysis}");
         assert!(analysis.contains("  undispositioned: 1\n"), "{analysis}");
+    }
+
+    /// An exec `/analyze` counts an integrity finding over a project file's
+    /// parts as advisory (spec 087, AC6): a part under `.ductus/docs/system/`
+    /// that `system.md` does not link is one advisory finding in the record,
+    /// and the same part linked is none. The part is under the read size, so
+    /// nothing is oversized and the finding is the whole count.
+    #[test]
+    fn an_exec_analyze_counts_an_unlinked_part_as_advisory() {
+        let record = |index: &str| -> String {
+            let repo = analyze_repo(None);
+            std::fs::write(repo.path().join("specs/system.md"), index).unwrap();
+            let parts = repo.path().join(".ductus/docs/system");
+            std::fs::create_dir_all(&parts).unwrap();
+            std::fs::write(parts.join("a.md"), "# a\n").unwrap();
+            let procedure = analyze_procedure(vec![Step::Primitive {
+                number: StepNumber(vec![17]),
+                name: "check-artifact-size".into(),
+                prose: String::new(),
+                location: loc(),
+            }]);
+            let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+            assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+            analysis_text(repo.path())
+        };
+        let unlinked = record("# System\n");
+        assert!(unlinked.contains("\nadvisory: 1\n"), "{unlinked}");
+        assert!(unlinked.contains("\nblocking: false\n"), "{unlinked}");
+        let linked = record("# System\n\n- [A](../.ductus/docs/system/a.md)\n");
+        assert!(linked.contains("\nadvisory: 0\n"), "{linked}");
     }
 
     /// BE-PAYLOAD-001 under `ductus exec`: with `[artifacts] read-size-bytes`

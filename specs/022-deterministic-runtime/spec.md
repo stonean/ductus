@@ -38,6 +38,8 @@ Spec [021-runtime-boundary](../021-runtime-boundary/spec.md) made the runtime co
 > **Signpost:** [020](../020-code-review/spec.md) changed a surface this spec owns. A finding carries a `site`, and `process-waivers` and `write-review` anchor a waiver, and a violation's deferral, at a rule, file and site with `covers`, the findings it covers: a finding at another site, more findings than it covers, or an anchor recorded before sites each count (020's AC19); scenario `review-runtime-acceleration` states the step.
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) changed surfaces this spec owns. `dashboard` carries an `unreviewed-code` block, `check-unreviewed-code`'s counts at `HEAD`, which `/{project}:status` renders on every run, and the runtime reads `[review] unreviewed-push`, `"block"` or `"warn"` and `block` when absent, which `check-unreviewed-code` follows.
+>
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. An exec `/{project}:analyze` counts each of `check-artifact-size`'s `part-findings` as advisory, and `check-corpus-links`' `link_targets`, `link_file_part`, `link_base` and `lexical_join` are `pub(crate)`, shared with `project_parts`.
 
 ## Motivation
 

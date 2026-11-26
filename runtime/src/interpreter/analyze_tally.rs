@@ -131,11 +131,7 @@ impl AnalyzeTally {
                     crate::primitives::resolve_anchor::UNJUDGEABLE,
                     crate::primitives::resolve_anchor::UNREADABLE,
                 ] {
-                    let unjudged = result
-                        .get(reason)
-                        .and_then(Value::as_u64)
-                        .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
-                    self.record_unexamined(reason, unjudged);
+                    self.record_unexamined(reason, scalar_count(result, reason));
                 }
             }
             // Step 5: a missing citation is blocking and a deprecated one
@@ -224,10 +220,14 @@ impl AnalyzeTally {
                 }
             }
             // Step 17: every oversized artifact is advisory at every status,
-            // decided or not, for the reason step 16's are; a subject the size
-            // check could not measure is unexamined, never clean.
+            // decided or not, for the reason step 16's are; so is each
+            // integrity finding over a project file's parts, counted by the
+            // scalar that stays inline in either form and is absent when the
+            // result computed none (spec 087); a subject the size check could
+            // not measure is unexamined, never clean.
             "check-artifact-size" => {
                 self.advisory += count("oversized");
+                self.advisory += scalar_count(result, "part-findings-count");
                 self.record_unexamined("artifact-unreadable", count("skipped"));
             }
             _ => {}
@@ -422,6 +422,14 @@ impl AnalyzeTally {
 }
 
 /// The rule tier at `pointer` in an `assessSpecQuality` payload.
+/// The count a result carries as the scalar `key`, 0 when it carries none.
+fn scalar_count(result: &Value, key: &str) -> u32 {
+    result
+        .get(key)
+        .and_then(Value::as_u64)
+        .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX))
+}
+
 fn rule_tier(payload: &Value, pointer: &str) -> Option<RuleSeverity> {
     payload
         .pointer(pointer)

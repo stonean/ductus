@@ -289,4 +289,11 @@ MUTATIONS = [
         '    for skipped in result.skipped.iter().flatten().filter(|s| !s.path.contains("/docs/")) {',
         '--test check_artifact_size_cli an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form',
     ),
+    (
+        'M39 an exec /analyze does not count a part finding as advisory',
+        'src/interpreter/analyze_tally.rs',
+        '                self.advisory += scalar_count(result, "part-findings-count");',
+        '                self.advisory += scalar_count(result, "no-such-count");',
+        'interpreter::tests::an_exec_analyze_counts_an_unlinked_part_as_advisory',
+    ),
 ]

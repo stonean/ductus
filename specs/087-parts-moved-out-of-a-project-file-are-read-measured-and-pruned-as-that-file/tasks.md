@@ -55,11 +55,11 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 Tasks 1–3 landed the result this task reads: `check-artifact-size` with `project-files` carries `parts`, `parts-count`, `part-findings` and `part-findings-count` in its project half, and, staged only, `refused` and `refused-count` (063's `data-model.md`, *The project half*). An unreadable part, and a directory under `.ductus/docs/` that could not be listed, are in `skipped` under `artifact-unreadable`. This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M39.
 
-- [ ] `framework/commands/analyze.md`: Scope Boundaries name the parts; step 15 invokes `check-artifact-size` with `project-files` and no feature before judging the plan against `system.md`, reads every part listed and names them; step 17 records each `part-findings` entry as Advisory, family `project-parts`
-- [ ] `framework/reference/analyze.md`: in §Plan consistency (blocking if plan exists), *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
-- [ ] `runtime/src/interpreter/analyze_tally.rs`: the `check-artifact-size` arm adds `part-findings-count` to advisory; an interpreter test shows an exec `/analyze` counting an unlinked part
-- [ ] Add the signpost in `specs/022-deterministic-runtime/spec.md`, a blockquote linking this spec, for the tally and the scanner's visibility
-- [ ] In `specs/067-analyze-and-audit-checks/data-model.md`, make the `plan-consistency` entry's "a contradiction of `system.md`" cover its parts, and add a signpost in `specs/067-analyze-and-audit-checks/spec.md`
+- [x] `framework/commands/analyze.md`: Scope Boundaries name the parts; step 15 invokes `check-artifact-size` with `project-files` and no feature before judging the plan against `system.md`, reads every part listed and names them; step 17 records each `part-findings` entry as Advisory, family `project-parts`
+- [x] `framework/reference/analyze.md`: in §Plan consistency (blocking if plan exists), *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
+- [x] `runtime/src/interpreter/analyze_tally.rs`: the `check-artifact-size` arm adds `part-findings-count` to advisory; an interpreter test shows an exec `/analyze` counting an unlinked part
+- [x] Add the signpost in `specs/022-deterministic-runtime/spec.md`, a blockquote linking this spec, for the tally and the scanner's visibility
+- [x] In `specs/067-analyze-and-audit-checks/data-model.md`, make the `plan-consistency` entry's "a contradiction of `system.md`" cover its parts, and add a signpost in `specs/067-analyze-and-audit-checks/spec.md`
 
 - **Done when**: the interpreter test passes and is proven to fail without the arm (AC10); a fixture `/analyze` run over a project with an unlinked part and a stray directory records each as an Advisory `project-parts` finding, and with the part unreadable records the plan-against-`system.md` judgment unexamined (AC1, AC2, AC6, AC12, AC20); the commit records each registry layout's impact (AC18).
 

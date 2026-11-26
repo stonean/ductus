@@ -677,8 +677,8 @@ MUTATIONS = [
     (
         'M89 the exec tally drops the unjudged anchor counts',
         'src/interpreter/analyze_tally.rs',
-        '                    self.record_unexamined(reason, unjudged);',
-        '                    let _ = (reason, unjudged);',
+        '                    self.record_unexamined(reason, scalar_count(result, reason));',
+        '                    let _ = reason;',
         'an_unjudged_anchor_reference_is_recorded_unexamined',
     ),
     (
