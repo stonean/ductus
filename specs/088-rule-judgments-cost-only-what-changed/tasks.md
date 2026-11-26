@@ -69,6 +69,6 @@ The judgments a rule-file commit owes are already measured, in the spec's Resolv
 
 ## 7. Disposition out-of-spec finding: no check holds the claude seed to the CLI subcommands the migrations run
 
-- [ ] `framework/bootstrap/ductus.md` §Permission Setup — the claude `settings_template` seeds one rule per CLI subcommand the bootstrap and its migrations run, and no `scripts/audit/` family compares it with the `.ductus/bin/ductus {subcommand}` calls `framework/migrations/*.md` spell, so a migration that adds a CLI call without its seed entry is reported by nothing (found adding 088's `backfill-section-digest` entry, task 4)
+- [x] `framework/bootstrap/ductus.md` §Permission Setup — the claude `settings_template` seeds one rule per CLI subcommand the bootstrap and its migrations run, and no `scripts/audit/` family compares it with the `.ductus/bin/ductus {subcommand}` calls `framework/migrations/*.md` spell, so a migration that adds a CLI call without its seed entry is reported by nothing (found adding 088's `backfill-section-digest` entry, task 4) — waived: AGENTS.md waives an observation about the pipeline's own machinery made in framework work unless it shows code breaking its contract, and this shows none: each of the five CLI subcommands the migrations run is seeded (checked at `08510de3`; the agent's recommendation, adopted by the operator, 2026-11-26)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
