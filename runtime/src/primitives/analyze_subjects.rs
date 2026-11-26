@@ -173,8 +173,21 @@ pub(crate) struct SubjectDigest {
 /// subdirectory shrink the subject set silently, so a digest taken after it
 /// became unreadable would compare clean against one taken before.
 pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -> SubjectDigest {
+    subject_digest_with(feature_dir, is_subject, None)
+}
+
+/// [`subject_digest`], with `spec_text` read in place of `spec.md`'s text on
+/// disk when it is `Some`, so `backfill-section-digest` can digest the
+/// subjects as they read with `spec.md` at another status through the one
+/// per-file hash (spec 088, AC3).
+pub(crate) fn subject_digest_with(
+    feature_dir: &Path,
+    is_subject: fn(&str) -> bool,
+    spec_text: Option<&str>,
+) -> SubjectDigest {
     let mut digests = BTreeMap::new();
     let mut unreadable = walk_subjects(feature_dir, is_subject, |rel, text| {
+        let text = spec_in_place(&rel, text, spec_text);
         // Every subject is digested whole. A record's own artifact is
         // excluded by the membership predicate rather than partially
         // excised here: excising only the frontmatter left the body —
@@ -253,11 +266,29 @@ fn walk_subjects(
 /// keys it. A subject that cannot be read contributes no key; the record's
 /// `analyzed-unreadable` names it, and no verdict is reused over it.
 pub(crate) fn section_digest(feature_dir: &Path) -> BTreeMap<String, String> {
+    section_digest_with(feature_dir, None)
+}
+
+/// [`section_digest`], with `spec_text` read in place of `spec.md`'s text on
+/// disk when it is `Some` (spec 088, AC3).
+pub(crate) fn section_digest_with(
+    feature_dir: &Path,
+    spec_text: Option<&str>,
+) -> BTreeMap<String, String> {
     let mut sections = BTreeMap::new();
     walk_subjects(feature_dir, is_design_subject, |rel, text| {
-        sections.extend(file_sections(&rel, text));
+        sections.extend(file_sections(&rel, spec_in_place(&rel, text, spec_text)));
     });
     sections
+}
+
+/// `spec_text` for the subject `rel` when it is `spec.md` and one is given,
+/// else the text the walk read.
+fn spec_in_place<'a>(rel: &str, text: &'a str, spec_text: Option<&'a str>) -> &'a str {
+    match spec_text {
+        Some(spec) if rel == "spec.md" => spec,
+        _ => text,
+    }
 }
 
 /// The sections of one design subject, `rel` within the feature, with their

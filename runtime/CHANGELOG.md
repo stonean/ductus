@@ -6,6 +6,20 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **`backfill-section-digest` gives each current analysis record the
+  section digests its run would have written (spec 088, AC3; the agent's
+  recommendation, adopted by the operator, 2026-11-26).** A new MCP tool and
+  CLI command, with no argument but `pinned`: it walks every feature directory
+  under the spec root and writes `section-digest` into each `analysis.md`
+  that carries none and whose `analyzed-digest` matches its spec's design
+  subjects, as they stand or with `spec.md`'s `status:` set to another
+  lifecycle status, since a `done` spec's analysis ran before the done flip,
+  the digests being those of the text that matched. The field is placed
+  before the frontmatter's closing fence, every other byte as it was, each
+  write guarded; a record that matches at no status, is pinned, cannot be
+  read or carries the field already is left untouched and reported, so a
+  second run writes nothing. The CLI exits 1 on a record another writer
+  changed meanwhile.
 - **An analysis record says how many rules its run judged and how many
   verdicts it carried (spec 088, AC1).** `write-analysis` writes
   `rules-judged`, the assessable rules the run judged, in full or against the

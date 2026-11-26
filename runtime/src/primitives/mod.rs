@@ -18,6 +18,7 @@ pub mod append_inbox;
 pub mod append_question;
 pub mod append_task;
 pub mod apply_manifest;
+pub mod backfill_section_digest;
 pub(crate) mod bounded_lists;
 pub mod brief_re_read;
 pub mod check_artifact_size;

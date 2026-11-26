@@ -2,7 +2,8 @@
 rules its run judged and carried (`runtime/src/primitives/write_analysis.rs`,
 task 1), and a changed rule file judged rule by rule with the rules naming a
 changed one (`rule_verdicts.rs`, `discover_rule_files.rs` and the exec walker's
-`payload.rs`, task 2). Each
+`payload.rs`, task 2), and the backfill of `section-digest`
+(`backfill_section_digest.rs` and its CLI exit in `main.rs`, task 3). Each
 behavior is mutated once and killed by the test that names it.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/rule-judgments-088.py
@@ -156,5 +157,96 @@ MUTATIONS = [
         '        .map(|feature_dir| rule_verdicts::standing(repo, feature_dir, &digested));\n',
         '        .map(|feature_dir| rule_verdicts::standing(Path::new("/nonexistent-088"), feature_dir, &digested));\n',
         'interpreter::tests::an_exec_step_asks_about_an_edited_rule_and_its_namer_alone',
+    ),
+    (
+        'M21 a record matching as it stands is not written',
+        'src/primitives/backfill_section_digest.rs',
+        '    if design_subjects_match(feature_dir, record, None) == Some(true) {\n',
+        '    if false {\n',
+        'primitives::backfill_section_digest::tests::a_current_record_gains_its_digest_and_every_other_byte_stands',
+    ),
+    (
+        'M22 no other status is tried',
+        'src/primitives/backfill_section_digest.rs',
+        '    let (spec, (current, span)) = spec.zip(status_at)?;\n',
+        '    let (spec, (current, span)) = None::<(&str, (String, std::ops::Range<usize>))>?;\n',
+        'primitives::backfill_section_digest::tests::a_record_analyzed_at_another_status_gains_that_text_s_digest',
+    ),
+    (
+        'M23 the digests written are the text on disk, not the text that matched',
+        'src/primitives/backfill_section_digest.rs',
+        '        let sections = section_digest_with(&feature_dir, spec_text.as_deref());\n',
+        '        let sections = section_digest_with(&feature_dir, None);\n',
+        'primitives::backfill_section_digest::tests::a_record_analyzed_at_another_status_gains_that_text_s_digest',
+    ),
+    (
+        'M24 a record carrying section-digest is written again',
+        'src/primitives/backfill_section_digest.rs',
+        '        if !record.section_digest.is_empty() {\n',
+        '        if false && !record.section_digest.is_empty() {\n',
+        'primitives::backfill_section_digest::tests::a_second_run_writes_nothing',
+    ),
+    (
+        'M25 a pinned record is written',
+        'src/primitives/backfill_section_digest.rs',
+        '        if pinned.contains(&rel.as_str()) {\n',
+        '        if false {\n',
+        'primitives::backfill_section_digest::tests::a_pinned_record_and_an_unreadable_one_are_named_and_left_untouched',
+    ),
+    (
+        'M26 a refused write fails the call',
+        'src/primitives/backfill_section_digest.rs',
+        '            Err(PrimitiveError::ChangedSinceRead { .. }) => refused.push(feature),\n',
+        '',
+        'primitives::backfill_section_digest::tests::a_record_changed_since_it_was_read_is_refused',
+    ),
+    (
+        'M27 the field is placed after the frontmatter',
+        'src/primitives/backfill_section_digest.rs',
+        '    Ok(format!("{}{field}{}", &content[..at], &content[at..]))\n',
+        '    Ok(format!("{content}{field}"))\n',
+        'primitives::backfill_section_digest::tests::a_current_record_gains_its_digest_and_every_other_byte_stands',
+    ),
+    (
+        'M28 a record matching at no status is written',
+        'src/primitives/backfill_section_digest.rs',
+        '            (design_subjects_match(feature_dir, record, Some(&text)) == Some(true))\n',
+        '            (design_subjects_match(feature_dir, record, Some(&text)) != Some(true) || true)\n',
+        'primitives::backfill_section_digest::tests::a_stale_record_is_named_and_left_as_it_was',
+    ),
+    (
+        'M29 a record with no section is counted written',
+        'src/primitives/backfill_section_digest.rs',
+        '        if sections.is_empty() {\n',
+        '        if false {\n',
+        'primitives::backfill_section_digest::tests::a_record_with_no_design_subject_is_counted_and_left',
+    ),
+    (
+        'M30 past the read size the lists stay inline',
+        'src/primitives/backfill_section_digest.rs',
+        '        result.written = None;\n',
+        '',
+        'primitives::backfill_section_digest::tests::past_the_read_size_the_lists_move_to_the_file',
+    ),
+    (
+        'M31 an unreadable record is not named',
+        'src/primitives/backfill_section_digest.rs',
+        '                unreadable.push(unread(reason));\n',
+        '',
+        'primitives::backfill_section_digest::tests::a_pinned_record_and_an_unreadable_one_are_named_and_left_untouched',
+    ),
+    (
+        'M32 a refused record does not fail the CLI',
+        'src/main.rs',
+        '    r.refused_count > 0\n}\n',
+        '    false\n}\n',
+        '--bin ductus tests::a_refused_record_alone_blocks_the_backfill_in_either_form',
+    ),
+    (
+        'M33 the field keeps LF in a CRLF record',
+        'src/primitives/backfill_section_digest.rs',
+        '        let field = with_line_ending(&field, line_ending_of(&content));\n',
+        '',
+        '--test crlf_preservation backfill_section_digest_preserves_crlf',
     ),
 ]

@@ -1345,16 +1345,7 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
             let _ = writeln!(out, "  {}: {digest}", yaml_string(&single_line(file)));
         }
     }
-    // A key is a path and a heading, which may hold any character a heading
-    // can, so it is always double-quoted, and never flattened: the next run
-    // compares it with the key it computes, and a flattened one would never
-    // match, so its section would read as changed on every run.
-    if !rules.sections.is_empty() {
-        out.push_str("section-digest:\n");
-        for (section, digest) in &rules.sections {
-            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));
-        }
-    }
+    render_section_digest(out, &rules.sections);
     if !rules.verdicts.is_empty() {
         out.push_str("rule-verdicts:\n");
         for (id, verdict) in &rules.verdicts {
@@ -1405,6 +1396,23 @@ fn render_rule_fields(out: &mut String, rules: &RuleFields) {
         for id in &rules.unjudged {
             let _ = writeln!(out, "  - {}", yaml_string(&single_line(id)));
         }
+    }
+}
+
+/// The `section-digest` field as every record carries it, omitted when
+/// empty: the one rendering `write-analysis` and `backfill-section-digest`
+/// share, so a backfilled field reads back as a written one (spec 088). A key
+/// is a path and a heading, which may hold any character a heading can, so it
+/// is always double-quoted, and never flattened: the next run compares it
+/// with the key it computes, and a flattened one would never match, so its
+/// section would read as changed on every run.
+pub(crate) fn render_section_digest(out: &mut String, sections: &BTreeMap<String, String>) {
+    if sections.is_empty() {
+        return;
+    }
+    out.push_str("section-digest:\n");
+    for (section, digest) in sections {
+        let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));
     }
 }
 

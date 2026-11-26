@@ -140,6 +140,27 @@ fn not_measured(name: &str) -> Option<&'static str> {
     })
 }
 
+/// The primitives measured with no argument, their subject the corpus.
+const NO_ARGUMENT: &[&str] = &[
+    "backfill-section-digest",
+    "check-audit-records",
+    "check-command-flags",
+    "check-corpus-links",
+    "check-orphaned-references",
+    "check-step-references",
+    "check-unfolded-specs",
+    "check-unreviewed-code",
+    "dashboard",
+    "derive-dependencies",
+    "derive-references",
+    "discover-rule-files",
+    "measure-reopenings",
+    "prune-project",
+    "render-status",
+    "resolve-constitutions",
+    "resolve-session",
+];
+
 fn case(name: &str, ctx: &Context) -> Case {
     if let Some(reason) = not_measured(name) {
         return Case::NotMeasured(reason);
@@ -150,23 +171,10 @@ fn case(name: &str, ctx: &Context) -> Case {
     let base = ctx.base.as_str();
     let head = ctx.head.as_str();
     let call = Case::Call;
+    if NO_ARGUMENT.contains(&name) {
+        return call(json!({}));
+    }
     match name {
-        "check-audit-records"
-        | "check-command-flags"
-        | "check-corpus-links"
-        | "check-orphaned-references"
-        | "check-step-references"
-        | "check-unfolded-specs"
-        | "check-unreviewed-code"
-        | "dashboard"
-        | "derive-dependencies"
-        | "derive-references"
-        | "discover-rule-files"
-        | "measure-reopenings"
-        | "prune-project"
-        | "render-status"
-        | "resolve-constitutions"
-        | "resolve-session" => call(json!({})),
         "check-artifact-size"
         | "check-artifacts"
         | "check-departures"

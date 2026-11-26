@@ -41,10 +41,11 @@ use crate::primitives::tool_loading::AlwaysLoaded;
 use crate::schema::descriptions;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
-    AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
-    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
-    CheckAuditRecordsArgs, CheckAuditRecordsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
-    CheckCorpusLinksArgs, CheckCorpusLinksResult, CheckDeparturesArgs, CheckDeparturesResult,
+    AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BackfillSectionDigestArgs,
+    BackfillSectionDigestResult, BriefReReadArgs, BriefReReadResult, CheckArtifactSizeArgs,
+    CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult, CheckAuditRecordsArgs,
+    CheckAuditRecordsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs,
+    CheckCorpusLinksResult, CheckDeparturesArgs, CheckDeparturesResult,
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckOwedWorkArgs,
     CheckOwedWorkResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
     CheckPromotionCoverageArgs, CheckPromotionCoverageResult, CheckReviewGateArgs,
@@ -1117,6 +1118,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckOwedWorkArgs>,
     ) -> Result<Json<CheckOwedWorkResult>, String> {
         primitives::check_owed_work::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "backfill-section-digest",
+        description = descriptions::BACKFILL_SECTION_DIGEST
+    )]
+    async fn backfill_section_digest(
+        &self,
+        params: Parameters<BackfillSectionDigestArgs>,
+    ) -> Result<Json<BackfillSectionDigestResult>, String> {
+        primitives::backfill_section_digest::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

@@ -308,8 +308,8 @@ MUTATIONS = [
     (
         'M38 a section key is flattened when written',
         'src/primitives/write_analysis.rs',
-        '            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));',
-        '            let _ = writeln!(out, "  {}: {digest}", yaml_quoted(&single_line(section)));',
+        '        let _ = writeln!(out, "  {}: {digest}", yaml_quoted(section));',
+        '        let _ = writeln!(out, "  {}: {digest}", yaml_quoted(&single_line(section)));',
         'write_analysis::tests::the_rule_fields_read_back_through_the_loader',
     ),
     (

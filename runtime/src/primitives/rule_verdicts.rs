@@ -41,7 +41,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path};
 
-use crate::primitives::analyze_subjects::{is_design_subject, section_digest, subject_digest};
+use crate::primitives::analyze_subjects::{is_design_subject, section_digest, subject_digest_with};
 use crate::primitives::departures::{self, Attribution};
 use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::rule_sections::{named_rule_ids, parse_rule_sections, section_digests};
@@ -437,7 +437,7 @@ pub(crate) fn standing(project: &Path, feature_dir: &Path, files: &[LoadedRuleFi
     if prior.rule_digest.is_empty() {
         return unreusable(rules, NoReuse::NoPriorVerdicts);
     }
-    let Some(whole_files_match) = design_subjects_match(feature_dir, &prior) else {
+    let Some(whole_files_match) = design_subjects_match(feature_dir, &prior, None) else {
         return unreusable(rules, NoReuse::SubjectsChanged);
     };
     let sections = (!prior.section_digest.is_empty())
@@ -662,20 +662,27 @@ fn unreusable(rules: Vec<(AssessableRule, Currency)>, why: NoReuse) -> Standing 
 
 /// Whether the design subjects now are the ones the prior record was taken
 /// over, the same set, each with the same digest; `None` when one of them, on
-/// either side, could not be read, which no section can settle.
+/// either side, could not be read, which no section can settle. With
+/// `spec_text`, `spec.md` is read as that text, which
+/// `backfill-section-digest` uses to ask whether the subjects match with
+/// `spec.md` at another status (spec 088, AC3).
 ///
 /// An unreadable entry that is no markdown file is a directory the walk could
 /// not reach, and everything beneath it is unreachable, so it blocks too; one
 /// that is a markdown file blocks only when it is a design subject, since a
 /// `tasks.md` the record could not read decides nothing here.
-fn design_subjects_match(feature_dir: &Path, prior: &AnalyzeBlock) -> Option<bool> {
+pub(crate) fn design_subjects_match(
+    feature_dir: &Path,
+    prior: &AnalyzeBlock,
+    spec_text: Option<&str>,
+) -> Option<bool> {
     let is_markdown = |path: &str| {
         Path::new(path)
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
     };
     let blocks = |path: &String| is_design_subject(path) || !is_markdown(path);
-    let now = subject_digest(feature_dir, is_design_subject);
+    let now = subject_digest_with(feature_dir, is_design_subject, spec_text);
     if now.unreadable.iter().any(blocks) || prior.analyzed_unreadable.iter().any(blocks) {
         return None;
     }
@@ -813,7 +820,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use crate::primitives::analyze_subjects::is_analyze_subject;
+    use crate::primitives::analyze_subjects::{is_analyze_subject, subject_digest};
     use std::fmt::Write as _;
     use std::fs;
     use tempfile::{TempDir, tempdir};

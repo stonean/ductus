@@ -118,6 +118,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__check-artifact-size`
    - `mcp__ductus__check-owed-work`
    - `mcp__ductus__check-audit-records`
+   - `mcp__ductus__backfill-section-digest`
    - `mcp__ductus__check-unreviewed-code`
    - `mcp__ductus__derive-routing-candidates`
    - `mcp__ductus__check-corpus-links`

@@ -26,8 +26,9 @@ use std::path::Path;
 
 use ductus::primitives;
 use ductus::schema::primitives::{
-    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, InvalidateReviewArgs, PruneTasksArgs,
-    RemoveInboxItemArgs, RewriteSpecLinksArgs, WriteReviewArgs,
+    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, BackfillSectionDigestArgs,
+    InvalidateReviewArgs, PruneTasksArgs, RemoveInboxItemArgs, RewriteSpecLinksArgs,
+    WriteAnalysisArgs, WriteReviewArgs,
 };
 
 /// Every `\n` in `text` is preceded by `\r` — i.e. the file is uniformly CRLF
@@ -361,4 +362,47 @@ fn invalidate_review_preserves_crlf_across_both_halves() {
         read_expected_spec(),
         "spec.md must be untouched"
     );
+}
+
+/// `backfill-section-digest` places its field in a CRLF record in the
+/// record's own ending (spec 088, AC3): the record, written by
+/// `write-analysis` over the CRLF subjects, its `section-digest` then
+/// removed and the whole made CRLF, gains the field and stays uniformly CRLF.
+#[test]
+fn backfill_section_digest_preserves_crlf() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    write_crlf(&repo.join("specs/050-alpha/spec.md"), SPEC);
+    primitives::write_analysis::run(
+        &WriteAnalysisArgs {
+            feature: "050-alpha".into(),
+            analyzed_at: "2026-11-26T00:00:00Z".into(),
+            analyzed_against: "abc".into(),
+            ..Default::default()
+        },
+        repo,
+    )
+    .unwrap();
+    let record = repo.join("specs/050-alpha/analysis.md");
+    let mut without = String::new();
+    let mut skipping = false;
+    for line in read(&record).replace("\r\n", "\n").split_inclusive('\n') {
+        if line.starts_with("section-digest:") {
+            skipping = true;
+            continue;
+        }
+        if skipping && line.starts_with("  ") {
+            continue;
+        }
+        skipping = false;
+        without.push_str(line);
+    }
+    write_crlf(&record, &without);
+
+    let result =
+        primitives::backfill_section_digest::run(&BackfillSectionDigestArgs::default(), repo)
+            .unwrap();
+    assert_eq!(result.written_count, 1, "{result:?}");
+    assert_crlf(&record, "backfill-section-digest");
+    assert!(read(&record).contains("section-digest:\r\n"));
 }

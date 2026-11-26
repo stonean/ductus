@@ -7267,6 +7267,97 @@ pub struct CheckAuditRecordsResult {
     pub lists_file: Option<String>,
 }
 
+// -- backfill-section-digest (spec 088) --------------------------------------
+
+/// Args for `backfill-section-digest`: the pinned files, which it leaves
+/// untouched. Its subject is the corpus under the configured spec root.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct BackfillSectionDigestArgs {
+    /// Paths from the project root the project pins, its `.ductus/config.toml`
+    /// `[pinned] files`, which the caller reads and passes, as it does to
+    /// `apply-manifest`: a record named here is reported and left untouched.
+    #[serde(default)]
+    #[arg(long = "pinned")]
+    pub pinned: Vec<String>,
+}
+
+/// One record `backfill-section-digest` wrote.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct BackfilledRecord {
+    /// The feature directory's name.
+    pub feature: String,
+    /// The `status:` value of the `spec.md` text whose digests the record
+    /// matched, the one written: as it stands or another lifecycle status.
+    /// Absent when `spec.md` names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matched_at: Option<String>,
+}
+
+/// One record `backfill-section-digest` could not read.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnreadableAnalysisRecord {
+    /// The feature directory's name.
+    pub feature: String,
+    /// Why it could not be read or parsed.
+    pub reason: String,
+}
+
+/// Result for `backfill-section-digest` (spec 088, AC3).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct BackfillSectionDigestResult {
+    /// The spec root walked, from the project root.
+    pub specs_root: String,
+    /// The feature directories holding an `analysis.md`.
+    pub examined: usize,
+    /// Entries in `written`, in either form.
+    pub written_count: usize,
+    /// Each record that gained `section-digest`, in corpus order. Absent in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub written: Option<Vec<BackfilledRecord>>,
+    /// Entries in `unmatched`, in either form.
+    pub unmatched_count: usize,
+    /// Each record whose design subjects match at no status, left untouched;
+    /// it gains the digest at its spec's next analysis. Absent in the file
+    /// form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unmatched: Option<Vec<String>>,
+    /// Records already carrying `section-digest`, left as they are.
+    pub has_section_digest: usize,
+    /// Records whose design subjects hold no section, so nothing to write.
+    pub no_design_subject: usize,
+    /// Entries in `pinned`, in either form.
+    pub pinned_count: usize,
+    /// Each record `pinned` named, left untouched. Absent when none is, and in
+    /// the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pinned: Option<Vec<String>>,
+    /// Entries in `unreadable`, in either form.
+    pub unreadable_count: usize,
+    /// Each record that could not be read or parsed, left untouched. Absent
+    /// when none is, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unreadable: Option<Vec<UnreadableAnalysisRecord>>,
+    /// Entries in `refused`, in either form.
+    pub refused_count: usize,
+    /// Each record another writer changed between this call's read and its
+    /// write, left as that writer made it; run again. Absent when none is, and
+    /// in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<Vec<String>>,
+    /// Where the lists are: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding them whole, from the project root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
 // -- measure-reopenings (spec 079) -------------------------------------------
 
 /// Args for `measure-reopenings`: whether reopenings stayed within the bound on

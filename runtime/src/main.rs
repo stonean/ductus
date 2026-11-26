@@ -13,26 +13,26 @@ use ductus::primitives;
 use ductus::schema::config_keys::display_text;
 use ductus::schema::descriptions;
 use ductus::schema::primitives::{
-    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
-    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckAuditRecordsArgs,
-    CheckAuditRecordsResult, CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckDeparturesArgs,
-    CheckOrphanedReferencesArgs, CheckOwedWorkArgs, CheckPrescriptionsArgs,
-    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
-    CheckStuckArgs, CheckUnfoldedSpecsArgs, CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult,
-    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult,
-    DeriveReferencesArgs, DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
-    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
-    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
-    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
-    TraverseDepsArgs, UnreviewedPushMode, UnreviewedState, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs,
+    BackfillSectionDigestArgs, BackfillSectionDigestResult, BriefReReadArgs, CheckArtifactSizeArgs,
+    CheckArtifactSizeResult, CheckArtifactsArgs, CheckAuditRecordsArgs, CheckAuditRecordsResult,
+    CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs,
+    CheckOwedWorkArgs, CheckPrescriptionsArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs,
+    CheckRuleIdsArgs, CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs,
+    CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
+    MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
+    ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
+    UnreviewedState, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -234,6 +234,8 @@ enum Command {
     CheckOwedWork(CheckOwedWorkArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_AUDIT_RECORDS), long_about = descriptions::CHECK_AUDIT_RECORDS)]
     CheckAuditRecords(CheckAuditRecordsArgs),
+    #[command(about = descriptions::summary(descriptions::BACKFILL_SECTION_DIGEST), long_about = descriptions::BACKFILL_SECTION_DIGEST)]
+    BackfillSectionDigest(BackfillSectionDigestArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_UNREVIEWED_CODE), long_about = descriptions::CHECK_UNREVIEWED_CODE)]
     CheckUnreviewedCode(CheckUnreviewedCodeArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_TASKS), long_about = descriptions::PRUNE_TASKS)]
@@ -489,6 +491,13 @@ where
 /// drift was just resolved, so it is not a failure.
 fn derive_dependencies_blocks(r: &DeriveDependenciesResult) -> bool {
     r.cycles_count > 0 || r.unwritable_count > 0 || r.refused_count > 0 || (!r.wrote && r.drift)
+}
+
+/// Whether `backfill-section-digest` exits non-zero: a record another writer
+/// changed before its write landed (`refused`, `BE-TXN-002`), which a second
+/// run repairs. It reads `refused-count`, which both forms carry.
+fn backfill_blocks(r: &BackfillSectionDigestResult) -> bool {
+    r.refused_count > 0
 }
 
 /// Whether `check-unreviewed-code` exits non-zero: under `block`, when code is
@@ -1542,6 +1551,22 @@ fn main() -> ExitCode {
                 found.and_then(|found| primitives::check_audit_records::bound(&repo, found));
             emit_result_gated(outcome, audit_records_blocks)
         }
+        Command::BackfillSectionDigest(args) => {
+            // Each refused record is named before the result is bounded, so
+            // one the bound moves to a file is still named on stderr (spec 088).
+            let backfilled = primitives::backfill_section_digest::compute(&args, &repo);
+            if let Ok(backfilled) = &backfilled {
+                report_refused(
+                    "backfill-section-digest",
+                    "section-digest",
+                    backfilled.refused.as_deref().unwrap_or_default(),
+                );
+            }
+            let outcome = backfilled.and_then(|backfilled| {
+                primitives::backfill_section_digest::bound(&repo, backfilled)
+            });
+            emit_result_gated(outcome, backfill_blocks)
+        }
         Command::CheckUnreviewedCode(args) => {
             // The whole answer is reported before the result is bounded, so a
             // path the bound moves to a file is still named on stderr, where a
@@ -1626,11 +1651,14 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{
-        Cli, audit_records_blocks, audit_records_lines, cli_command, derive_dependencies_blocks,
-        derive_references_blocks, drop_target_for_a_project_review, refused_lines, seed_context,
-        unreviewed_code_blocks, unreviewed_code_lines, unwritable_lines,
+        Cli, audit_records_blocks, audit_records_lines, backfill_blocks, cli_command,
+        derive_dependencies_blocks, derive_references_blocks, drop_target_for_a_project_review,
+        refused_lines, seed_context, unreviewed_code_blocks, unreviewed_code_lines,
+        unwritable_lines,
     };
-    use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
+    use ductus::schema::primitives::{
+        BackfillSectionDigestResult, DeriveDependenciesResult, DeriveReferencesResult, ListsForm,
+    };
 
     /// A `check-audit-records` answer: `examined` specs, one finding when
     /// `finding` holds its path and message, and a review set over its mark.
@@ -2057,6 +2085,25 @@ mod tests {
             refs.refused = None;
             refs.refused_count = 1;
             assert!(derive_references_blocks(&refs), "references, {form:?}");
+        }
+    }
+
+    /// `backfill-section-digest` exits non-zero on a refused record, in
+    /// either form, and on nothing else: an unmatched, pinned or unreadable
+    /// record is reported, never a failure (spec 088).
+    #[test]
+    fn a_refused_record_alone_blocks_the_backfill_in_either_form() {
+        for form in [ListsForm::Inline, ListsForm::File] {
+            let mut result = BackfillSectionDigestResult {
+                form,
+                unmatched_count: 3,
+                pinned_count: 1,
+                unreadable_count: 1,
+                ..BackfillSectionDigestResult::default()
+            };
+            assert!(!backfill_blocks(&result), "no refusal, {form:?}");
+            result.refused_count = 1;
+            assert!(backfill_blocks(&result), "a refusal, {form:?}");
         }
     }
 
