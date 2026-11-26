@@ -27,11 +27,11 @@ A new corpus-wide primitive, `check-audit-records`, reads every `done` spec's re
 
 The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`runtime/src/primitives/mod.rs`), as `corpus_owed` and `judge` in `runtime/src/primitives/check_owed_work.rs` do, so the corpus is §numbering's one membership rule: a directory without a feature name is not a spec.
 
-- **A link leaving the project.** `validate_feature_argument` contains each feature directory, walking it for outward links, so `spec.md`, `review.md` and `analysis.md`, opened under fixed names beneath it, are covered. Its `InvalidPath` is a finding naming the link, never a skip.
+- **A link leaving the project.** `validate_feature_argument` (`runtime/src/primitives/mod.rs`) contains each feature directory, walking it for outward links through `validate_feature_path`, so `spec.md`, `review.md` and `analysis.md`, opened under fixed names beneath it, are covered. Its `InvalidPath` is a finding naming the link, never a skip.
 - **Untracked, or no `spec.md`.** An untracked spec is skipped with its reason and counted. So is a feature directory holding no `spec.md`, which the step's own walk never enumerated.
-- **The spec's frontmatter.** A `spec.md` that cannot be read, or whose frontmatter `frontmatter_status` cannot read a `status` from, is a finding, since whether it is `done` is unknown.
+- **The spec's frontmatter.** A `spec.md` that cannot be read, or whose frontmatter `frontmatter_status` (`runtime/src/primitives/mod.rs`) cannot read a `status` from, is a finding, since whether it is `done` is unknown.
 - **Examined, and done.** Every other spec counts as examined. A `done` one has its records read.
-- **An unlistable spec root is an error.** `list_feature_dirs` returns an empty list for a root `read_dir` cannot open, so the primitive opens the root itself first. A root that is absent or cannot be listed fails the call naming it, never zero specs examined. With that, the template's derive step no longer resolves the root for the gate.
+- **An unlistable spec root is an error.** `list_feature_dirs` returns an empty list for a root `read_dir` cannot open, by its doc comment and its `read_dir` arm in `runtime/src/primitives/mod.rs`, so the primitive opens the root itself first. A root that is absent or cannot be listed fails the call naming it, never zero specs examined. With that, the template's derive step no longer resolves the root for the gate.
 
 ### Records through the gate's loaders, with a probe for `blocking`
 
@@ -39,14 +39,14 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
   - `Absent` joins its record's exempt set;
   - `Unreadable` is a finding carrying the loader's reason;
   - `Present` is checked.
-- **`last-run`.** A present record whose `last-run` is null, absent or blank once trimmed is a finding. YAML's null spellings (`null`, `Null`, `NULL`, `~`, an empty value) deserialize to `None`. The blank string is checked by the primitive, as the step checked it.
+- **`last-run`.** A present record whose `last-run` is null, absent or blank once trimmed is a finding. YAML's null spellings (`null`, `Null`, `NULL`, `~`, an empty value) deserialize to `None`, each a `no-last-run` finding in the test `each_record_finding_fails_with_its_condition_and_passes_without_it` (`RECORD_CASES` in `runtime/src/primitives/check_audit_records.rs`). The blank string is checked by the primitive, as the step checked it.
 - **`blocking`.** `ReviewBlock` and `AnalyzeBlock` (`runtime/src/schema/primitives.rs`) default an absent `blocking` to `false` (`#[serde(default)]`). So for a present record the primitive also parses the text it read through `parse_record` into a probe holding only `blocking` as an optional raw value, so the file is read once, and an absent key is a finding (absent is not `false`). A probe that does not parse reads as no key, a finding too, never a pass. `blocking: true` is a finding.
 - **Messages.** Each finding keeps the step's message and names the command to run.
 
 ### The runtime reads the baseline file
 
 - **Where.** The primitive reads `.ductus/audit-record-baseline.txt`, contained by `validate_contained`, a link leaving the project being a finding naming it.
-- **Format.** The format is the step's: text after `#` is a comment, a line without `:` is ignored, keys are `review-exempt` and `analyze-exempt`, and a key the primitive does not know is ignored.
+- **Format.** The format is that of the step's `baselines()`, read at `ea691221`: text after `#` is a comment, a line without `:` is ignored, keys are `review-exempt` and `analyze-exempt`, and a key the primitive does not know is ignored.
 - **Absent, malformed or unreadable.** An absent file, or a key it omits, holds a mark of zero. A value that is not a whole number, or a file that cannot be read, is a finding naming the file. Its marks read so far stand, and the exempt sets are still counted and reported.
 - **Over its mark.** An exempt set over its mark is a finding per exempt spec, on its `spec.md`, saying the completion gate was bypassed and how to raise the mark deliberately, as the step's did.
 
@@ -83,7 +83,7 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
 
 A run is one `check-audit-records` call. It reads each feature's `spec.md` and the two records of each `done` spec. It is measured over this repository's corpus by wall time (`/usr/bin/time -p`, seconds) and by bytes read (`wc -c` of the files it opens).
 
-It also adds one MCP tool, its description measured in bytes. Claude Code lists only its name in each session's deferred tools and loads its description and input schema when the tool is fetched, and Pi's bridge registers it with both at load. It retires the step's inline python, 159 lines at `d4fa51ba` between `python3 - <<'PY'` and `PY`, and the derive step's spec-root extraction. It retires no primitive, check or record field, since the step it replaces held its own reader, not one the runtime had.
+It also adds one MCP tool, its description measured in bytes. Claude Code lists only its name in each session's deferred tools and loads its description and input schema when the tool is fetched, as the section "Target's tools loaded with the session (task 9)" of `specs/080-deterministic-runtime-efficiency/research.md` observed for a tool the `target` command does not call, and Pi's bridge registers it with both at load. It retires the step's inline python, 159 lines at `d4fa51ba` between `python3 - <<'PY'` and `PY`, and the derive step's spec-root extraction. It retires no primitive, check or record field, since the step it replaces held its own reader, not one the runtime had.
 
 The measured figures go in the spec's body, where 089's Behavior puts them, beside a blockquoted signpost to 089, which induces no dependency edge (task 3).
 
@@ -121,9 +121,9 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 
 - **Rejected: an optional `blocking` in the record types.** Making `ReviewBlock` and `AnalyzeBlock`'s `blocking` optional would carry absent-is-not-false into every reader. But it changes the shared types 066 owns and `check-review-gate`'s verdict on a record with no field, outside this spec. The probe reads the key's presence through the same `parse_record`, from the text the record was parsed from.
 - **Known limitation: the local gate reads an absent `blocking` as `false`.** So a hand-written record without the field passes the local gate and fails this CI step, which is where such a hand edit is caught, as before this spec.
-- **Rejected: a JSON parse in the step.** The step "Done specs owe no work" parses `check-owed-work`'s JSON with python. This step maps the CLI's report lines and takes its exit status, as the step "No code is left unreviewed" does, so all its logic lives in the runtime, where its tests are.
+- **Rejected: a JSON parse in the step.** The template's step "Done specs owe no work" parses `check-owed-work`'s JSON with python. This step maps the CLI's report lines and takes its exit status, as the step "No code is left unreviewed" does, so all its logic lives in the runtime, where its tests are.
 - **Rejected: a CLI-only primitive.** Principle 5 leaves off MCP only a primitive that runs a project command, writes outside the project, or writes a host's settings. This one does none of these.
-- **Where the reader is narrower than the step's** (`QUAL-DELEG-001`). It differs from the step's parse in four places:
+- **Where the reader is narrower than the step's** (`QUAL-DELEG-001`). It differs from the step's parse, read at `ea691221`, in four places:
   - A directory without a feature name is no longer read, because §numbering holds one membership rule. In an adopter that is `specs/templates/`, whose `spec.md` is a template.
   - An untracked spec is skipped, as `check-owed-work` skips one. A CI checkout holds none.
   - A quoted `"null"` `last-run` is a string, as the gate reads it, where the step's parse stripped the quotes.
