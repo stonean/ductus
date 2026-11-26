@@ -1,31 +1,30 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-22T06:48:24Z
-reviewed-against: 1ce4caeb71365eb446cea762482af1c4932fb360
-diff-base: 6f679f6429d2fe416f73bddc197be4dbc9bd1e8e
+last-run: 2026-11-26T02:02:06Z
+reviewed-against: 4825d1d3e34c356fef93f19607b41668a3e25a72
+diff-base: 4517dd7411646680f09d3f884f5aa834f960bd48
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 8
-scope: 14
+examined: 12
+scope: 17
 unread:
   - .claude/commands/ductus/review.md
   - .ductus/reference/review.md
   - .pi/prompts/ductus-review.md
-  - runtime/CHANGELOG.md
   - runtime/src/schema/descriptions.rs
-  - runtime/tests/golden/review-basic.jsonl
-excluded: 2
+  - specs/066-audit-records-and-the-completion-gate/analysis.md
+excluded: 377
 contract-breaks: 0
 skipped-passes: []
-fix-rounds: 3
+fix-rounds: 1
 re-reads: 1
-diff-checked: 1
+diff-checked: 0
 not-re-read: 0
 budget-stop: false
 reviewed-digest:
-  data-model.md: 957555d58f8d2d3547221128b9a6fa08245f318235108e36f8ae3ef5c7d6df05
-  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: fc060f7f8dd91322a08ccf6d8e9a630c483c84c1725225088cf3e1937baba7ad
+  data-model.md: 2ff42cbfed5eea6f916e1cf916ef5c746afa7c9f4ed39161f759875b327cada5
+  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: 0816f5c6cd5c4a4d38da12d52352935b49c883592ecc524df8d5310fa7c50bfe
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -35,19 +34,19 @@ reviewed-digest:
   scenarios/a-write-result-states-what-it-wrote.md: 71d4b19f014d1bc19335c9ec29af30fa4e782d57538db9167962cd7064f649de
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 39b59f38bb7b419b250d16d6ff6f3fec473959a3f9293706a6fcab931f6f232d
   scenarios/checkbox-state-is-outside-the-analysis-digest.md: ca9c4875ae8dec48c0c79edc74f3af3d4ee405601c6a8b1dee3c9a68f748834d
-  scenarios/criteria-are-verified-in-review.md: 46195c281734fabf5056a32817a48667b7d6465b7a2f3f8119f16c238637c8c7
+  scenarios/criteria-are-verified-in-review.md: 6208e0012abbd2f4ce372c80d40a571f8b5ae615aae136ddbc995accb7fab742
   scenarios/freshness-results-have-a-bounded-size.md: 0365689904e4ca8d3a11c14ce4411acbe95373560bf6ffa390a17afda8c832e0
   scenarios/only-gating-findings-hold-done.md: 27a6385fb7da6ccd6bf74303f92559b00998fe170248408e1df76bdf3a0b0f29
   scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
-  scenarios/process-waivers-file-lists.md: 3fb3b9e54f414691d28d984ba76cd48c7e1de4fe2ee67259a44ea8559da447dc
+  scenarios/process-waivers-file-lists.md: ae9414857f88794608b39b9abea16e76faa90a4ab21e5f325da80c27875719ae
   scenarios/process-waivers-notices-flatten-stored-text.md: a0fe96d2f894add12b9ed470dfdc011ce1383b1528871c8d68ec64bb85d64c03
   scenarios/record-paths-are-quoted-only-when-they-need-it.md: 729b1dccb47871d2a8f4fe1dc7e0cbe1449d92eb8c28004a1490859e88ff491d
   scenarios/review-base-includes-the-transition-commit.md: 10d6d341e7338ac19fc9f35c9d2f79960ebc73aca7bf5e702adad17924cd8518
-  scenarios/review-scope-includes-uncommitted-work.md: 9864ae8c8bb85d0ab1606b222b983f6fe449f89b21580af7b0a1c4e644e45bba
+  scenarios/review-scope-includes-uncommitted-work.md: 0e24e90807ac2080c3ec6f2f796fe779c5e1e64c15b6a9818645d681e0f4917c
   scenarios/review-scope-plan-affected-table-format.md: 501c1d9737e6d2b928318c02e1d13164817ba7c1054854cd599f14707caba767
   scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md: e33e76432da85f5cc661041515f0f3aae300ad9974065e5eadba696cc820748c
   scenarios/review-scope-union.md: 50722645d52601a9b8f0c799272f58923a7250623abc097ad38bb5a4ec62181e
-  scenarios/review-staleness-on-done-specs.md: e0c14689fc666e2658b2cf7f9891b0f00d717aee8bd3c871717d54ed7ff6900c
+  scenarios/review-staleness-on-done-specs.md: 9384e71288c352b8cdfb3b4b017eaee03653969b866240616e2ec1ed9165132e
   scenarios/scope-results-have-a-bounded-size.md: 99120b144942e06b365e220c30085592a02c477c548e6336f8c23400e1ee4c9d
   scenarios/the-committed-tree-horizon.md: 046b6a8dcef5f85bdb9083308311729911f5afa49f0351c0505bc558b5adb96b
   scenarios/the-cross-spec-impact-gate.md: f94b4a47110ad23eab638e824f87b4a50b926e3df6ae70fe18d0261a8377cb35
@@ -62,16 +61,16 @@ criteria-verdicts:
   - label: AC2
     digest: 15e0d6111aba62f9bcc84078d271215849a876e276afe5800b61a65f6a9b8575
   - label: AC3
-    digest: 3a190e6004f98db810c4da984808ab2869b504ff8783b6c194789b591765d4a2
+    digest: b88772ed7bce3d067a58302ac1e5113b955fb1d87b151305e81d8de34f9e0593
   - label: AC4
     digest: e9c519e1f2a474c3e09a61a1f92e0417efb822600a7879dca7a9f5cf91525531
   - label: AC5
     digest: 288faa8b2d4022c825de9c8c0047ae4ab2e6a8895cce3afe76089cd74d5b0c50
   - label: AC6
-    digest: 010fec4de3c948b457a9c6ce91153ca3e200783fe86ab5f7b66b154a9cc07016
+    digest: 0150b922b5d455c41307dc24c35119a8f491e0e1fbe9f34da3108a7697c11322
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 6
   deferred: 0
   waived: 11
   undispositioned: 0
@@ -306,15 +305,22 @@ decisions:
     reason: truncate in resolve_constitutions.rs also trims trailing whitespace before its ellipsis, so one shared helper would change one caller's output (QUAL-DELEG-001), and each is a few lines private to its module
     decided-at: 2026-11-22T06:48:24Z
     decided-by: rule
+  - key: "other: AC2's rejection of a malformed `--unexamined-reason` pair holds in code, driven by hand, but no test calls `parse_reason_count` in `runtime/src/schema/primitives.rs` — `runtime/src/schema/primitives.rs`"
+    outcome: waived
+    reason: "not mechanical: a unit test is new authoring, and no contract breaks — the CLI refuses a pair with no `=`, a non-integer, a negative count and an empty reason, driven by hand in this review"
+    decided-at: 2026-11-26T02:01:05Z
+    decided-by: rule
 ---
 
 # Review — 066-audit-records-and-the-completion-gate
 
 ## Summary
 
-A later review of 066. Its window runs from 6f679f64, the last review's commit (base-source last-review), to 1ce4caeb. It holds 945d1edc, the analysis's design edit bounding the moved-scope refusal under BE-PAYLOAD-001, which the owner confirmed, and 1ce4caeb, task 31's code. ec41a6c2's edits to 023's and 048's review records are excluded as theirs. One subagent reviewer ran the five passes against the four rule files review loads (configuration-cross.md, quality-cross.md, security-backend.md, security-cross.md; 182,653 bytes), reading each whole. It read 8 of the 14 scope entries whole: write_review/moved_scope.rs, scripts/mutation/moved-scope-066.py, the scenario a-commit-after-the-scope-was-resolved-refuses-the-write, tasks.md, framework/commands/review.md, framework/reference/review.md, plan.md and data-model.md. It checked every claim in the scenario, and the data model's refusal paragraph, against the code. Six entries are listed unread. Of runtime/schema/descriptions.rs and runtime/CHANGELOG.md the reviewer read the window hunks with the whole WRITE_REVIEW description and the whole [Unreleased] entry. Of runtime/tests/golden/review-basic.jsonl it read the window diff, and the host confirmed the file differs only in the fixture's commit sha. The three generated mirrors were not opened: their changed lines follow their sources through the generator, re-run in sync. The criteria step was the host's. No code a criterion names changed in this window except write_review/moved_scope.rs, so each of the six was judged again on the last review's evidence, and the 16 tests their verdicts cite were run again; all pass. No rule violation was found. Of five observations, three were fixed in the run. First, the refusal's listing command named by the operator's chosen bound, git diff --name-only, printed repository-root paths in a project below the work tree's root and left out a path a later commit reverted. It is now git log --relative --name-only --format=, verified on a built repository, the agent's recommendation, adopted by the operator, 2026-11-22. Second, each moved path now keeps at most three commits, each formatted once per commit. Third, a test now covers each bound's edge, with three more mutants. The 16 mutants in scripts/mutation/moved-scope-066.py are all killed. The cut helper's resemblance to resolve_constitutions.rs's truncate is waived by the rule, and the plan's Affected Files matches its stored decision. Ten stored decisions on in-scope files were checked against those files and still stand. The fix round's re-read found two SHOULDs: the data model and the moved_scope.rs doc comment called the command's output the set the refusal counts, where it is a superset of it. Its two prescribed edits were applied and matched by check-prescriptions, and the plan's copy of the phrase was corrected in an exempt round.
+Window 4517dd74 to 4825d1d3 (diff-base from the last review; base-source last-review): 233 commits examined, 7 claimed by no spec. 17 scope entries (the 15 the scope resolved at the start, then `framework/commands/review.md` and `framework/reference/review.md` once the run's own edits joined them), 12 examined: `runtime/CHANGELOG.md` and `runtime/tests/golden/review-basic.jsonl` as the window's hunks, `spec.md`, `data-model.md`, `plan.md`, five scenarios, and the two review sources whole. Unread: `runtime/src/schema/descriptions.rs` (the window's hunks read as changed-word pairs, the unchanged remainder of its long strings unread), `specs/066-audit-records-and-the-completion-gate/analysis.md` (a record, no part read it), and the three generated copies of review.md, whose sources `framework/commands/review.md` and `framework/reference/review.md` were read whole and the generator re-run in sync. Loaded rule files: `configuration-cross.md`, `quality-cross.md`, `security-backend.md`, `security-cross.md`, `security-frontend.md`, each read whole; no pass was skipped. No MUST or SHOULD finding; all six criteria judged met. Observations: six fixed in the run (AC3's superseded note corrected on the owner's decision that the code is right), one waived by the rule, ten stored decisions matched.
 
-3 fix round(s): 1 re-read, 1 diff-checked, 1 exempt, 0 not re-read. Exempt: round 3.
+1 fix round(s): 1 re-read, 0 diff-checked, 0 exempt, 0 not re-read.
+
+7 of 233 commits in the window no spec claimed.
 
 6 of 6 acceptance criteria judged met.
 
@@ -340,29 +346,32 @@ A later review of 066. Its window runs from 6f679f64, the last review's commit (
 
 ## Acceptance criteria
 
-- AC1 — met: write_analysis.rs run_between derives blocking from gating_counts and refuses unparseable spec.md (probe: YAML error, analysis.md unchanged); check_review_gate.rs analyze_half_block runs after review_half_block; tests malformed_frontmatter_is_never_given_a_clean_record, blocking_is_set_by_either_gating_tier, a_review_with_no_map_is_named_before_an_analysis_with_none pass.
-- AC2 — met: write_analysis.rs UNEXAMINED_REASONS and refuse_unknown_reasons; probe: reasons 3+4 plus writer-added 308 gave unexamined 315 and the result returned it, a non-integer or unknown reason was rejected; tests the_breakdown_is_written_and_sorted, a_supplied_total_cannot_contradict_its_breakdown, a_fully_examined_run_omits_the_map pass.
-- AC3 — met: write_review.rs render_contracts writes reviewed-digest ({} with no contracts) and compute_review_scope.rs contracts_against_digest reads it (tests a_review_record_with_no_digest_raises_no_review_notice, a_record_with_no_digest_passes_with_a_notice); analyze_subjects.rs exempt_renames reports candidates when trees are unavailable; the corrected annotation holds: compute_review_scope.rs read_records takes diff-base..reviewed-against as a record's credited window (spec 081), and write_review/moved_scope.rs refuse_a_moved_scope guards it (write_review_refuses_a_write_whose_scope_a_later_commit_moved, mutant M2 killed)
-- AC4 — met: check_review_gate.rs already_done_block is check 0, ahead of lint, exact match on done; probe: 050-constitution returns already-done, status 'Done' falls through to analyze-stale; tests a_done_spec_short_circuits_without_claiming_to_have_passed, an_unrecognized_status_is_not_treated_as_done, a_done_spec_is_not_held_against_a_later_lint_violation pass; implement.md step 11 halts on a blocked result.
-- AC5 — met: check_review_gate.rs classify_cross_spec_entry and cross_spec_impact_block run after the scenario-question, task and criterion checks and before the review record, links_back uses derive_dependencies::scan_line over LinkScope::Pointers, all five states reported on a pass, read-only; tests a_blockquoted_signpost_discharges_the_obligation and the four symlink and non-UTF-8 outside-project tests pass.
-- AC6 — met: line_citations.rs strips_to and strip are shared by mechanical_sweep.rs, classify_spec_edit.rs and analyze_subjects.rs exempt_renames (both freshness records); tests a_strip_only_commit_leaves_the_records_current (strip current, strip plus a word stale), hosts_ports_and_other_colons_are_not_citations, a_citation_added_to_a_criterion_reopens pass.
+- AC1 — met: `write_analysis::run_between` derives `blocking` and refuses unparseable frontmatter; `check_review_gate::run_with_lint` orders the analyze half after the review checks; test `malformed_frontmatter_is_never_given_a_clean_record`
+- AC2 — met: `UNEXAMINED_REASONS`, `refuse_unknown_reasons` and the summed `unexamined` in `write_analysis`; a malformed pair refused by `parse_reason_count` (driven by hand), tests `the_reason_list_is_the_data_models_table` and `a_reason_outside_the_closed_set_is_refused`
+- AC3 — met: `write_review::render_review` records `reviewed-digest`; no `review-stale` remains in `runtime/src`; `analyze_subjects::review_freshness` and `moved_scope::refuse_a_moved_scope`; the superseded note's text now says `reviewed-against` starts the next window of a held record (spec 079)
+- AC4 — met: `check_review_gate::already_done_block` returns the done variant before `markdown_lint_block`, only for the exact value `done`
+- AC5 — met: `check_review_gate::cross_spec_impact_block` and `classify_cross_spec_entry` with `validate_contained`, ordered after the unticked-criterion check and before the review record
+- AC6 — met: `analyze_subjects::exempt_renames` via `freshness_of` and `review_freshness` from `compute_review_scope::contracts_against_digest`; `line_citations::strips_to`; test `a_strip_only_commit_leaves_the_records_current`; `classify_spec_edit.rs` deleted
 
 ## Observations
 
-- reuse: `cut` in moved_scope.rs duplicates `truncate(text, budget)` in resolve_constitutions.rs (count characters, append an ellipsis when cut); the two differ only in `truncate` trimming trailing whitespace before the ellipsis, a property QUAL-DELEG-001 asks be enumerated before one replaces the other — `runtime/src/primitives/write_review/moved_scope.rs` — **waived**: truncate in resolve_constitutions.rs also trims trailing whitespace before its ellipsis, so one shared helper would change one caller's output (QUAL-DELEG-001), and each is a few lines private to its module (decided by the rule)
-- efficiency: `refuse_a_moved_scope` formats the same `named` commit string once per (commit, scope path) instead of once per commit, and keeps every one in `moved` although a refusal shows at most three per path and counts the rest; a sweep of N scope paths in one commit builds N identical strings — `runtime/src/primitives/write_review/moved_scope.rs` — **fixed** (decided by the rule)
-- other: no test holds exactly NAMED_PATHS moved paths, NAMED_COMMITS commits on one path or a SUBJECT_CHARS-long subject, so `moved.len() > NAMED_PATHS` to `>=` (prints ", and 0 more"), `commits.len() > NAMED_COMMITS` to `>=` (prints "; 0 more") and `<= SUBJECT_CHARS` to `<` (a needless ellipsis) all survive, and moved-scope-066.py lists none of them — `scripts/mutation/moved-scope-066.py` — **fixed** (decided by the rule)
-- other: the command the refusal gives, `git diff --name-only <sha> HEAD`, does not list every moved path as the scenario and data model say: it prints the net change, so a scope path a later commit changed and a later one reverted is counted in `moved` and absent from the output, and in a project below the work tree's root it prints root-relative paths, outside-project ones included, where scope entries are project-relative; AGENTS.md's Gotchas and the shipped pre-commit hook use `--relative --name-only` for this reason — `runtime/src/primitives/write_review/moved_scope.rs` (breaks the spec's contract) — **fixed**
-- convention: plan.md's Affected Files table omits `scripts/mutation/moved-scope-066.py` and `runtime/CHANGELOG.md`, both changed by tasks 29 to 31, though it lists each sibling mutation list (compare-and-set-066.py, criteria-in-review-066.py, line-citation-strip-066.py) — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through c6aa33df, whose subject names 066 (decided by the rule)
-- other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **waived**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
-- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **waived**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
-- other — `framework/commands/review.md` step 1 (94e5b151) says a zero scope with `deleted-count` above zero is empty 'because every path it would hold was deleted', but `deleted` holds every window deletion whoever's commit made it and `excluded` can also empty the scope, so the sentence and the Summary naming each `deleted` path can mislabel another spec's deletions — `framework/commands/review.md:119` — **waived**: the scenario's edge case scopes the claim to the spec's own code deletions with review-owed true; the report over-names rather than hides a path, and no gate reads it. The wording fix reopens review.md's generated mirrors and 066 for a low-confidence imprecision (decided by the rule)
-- other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137` — **waived**: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both. (decided by the rule)
-- other — plan.md Affected Files omits files f65ef759 changed for task 25: docs/analyze.md, framework/reference/implement.md, runtime/src/primitives/mod.rs, scripts/mutation/reopen-measure.py and 079's spec.md — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims and is the owner's plan decision, not a mechanical edit; every one of these files is already in the window through the commit that changed it (decided by the rule)
-- other — the data model's compute-review-scope Size paragraph says performReview's request names every in-scope file whole, but the exec walker's load_scope_files (runtime/src/interpreter/payload.rs) silently skips a scope file that is missing, unreadable or not UTF-8, naming only a path leaving the project in unexaminable — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **waived**: the code is 022 and 080's exec walker, outside 066's primitives; the sentence cites 022's data model for the claim, a correction lands in 022's directory, and nothing in 066's code depends on it (decided by the rule)
-- other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
-- other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md` — **waived**: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim. (decided by the rule)
-- other: no step of framework/commands/analyze.md or framework/commands/review.md tells the host to compare write-analysis's hard-fail, blocking-findings and advisory or write-review's excluded, unread-count and decisions with what it passed, so the discrepancy those fields were added to expose (a dropped decision, a net count) surfaces only when a host happens to look — `framework/commands/review.md` — **waived**: the scenario adds the fields so a host can reconcile a record without reading it back and states no obligation to compare them; a step requiring the comparison is a new requirement about the pipeline's own machinery, not a mechanical fix (decided by the rule)
+- other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — `framework/commands/review.md` — **waived**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
+- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — `framework/reference/review.md` — **waived**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
+- other — `framework/commands/review.md` step 1 (94e5b151) says a zero scope with `deleted-count` above zero is empty 'because every path it would hold was deleted', but `deleted` holds every window deletion whoever's commit made it and `excluded` can also empty the scope, so the sentence and the Summary naming each `deleted` path can mislabel another spec's deletions — `framework/commands/review.md:119` — `framework/commands/review.md` — **waived**: the scenario's edge case scopes the claim to the spec's own code deletions with review-owed true; the report over-names rather than hides a path, and no gate reads it. The wording fix reopens review.md's generated mirrors and 066 for a low-confidence imprecision (decided by the rule)
+- other — review.md step 12 invokes write-review a second time with step 11's arguments, after the whole fix-round loop, which is the longer window in which another writer can change review.md; the changed-since-read handling sentence sits only in step 11, so step 12 meets a refusal with its handling path stated one step earlier. — `framework/commands/review.md:137` — `framework/commands/review.md` — **waived**: step 12's write is defined as step 11's arguments but for loop-open, and step 11's sentence is scoped to 'a write' of write-review, not to its first call; the operator reads one handling path for both. (decided by the rule)
+- other — plan.md Affected Files omits files f65ef759 changed for task 25: docs/analyze.md, framework/reference/implement.md, runtime/src/primitives/mod.rs, scripts/mutation/reopen-measure.py and 079's spec.md — `specs/066-audit-records-and-the-completion-gate/plan.md` — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims and is the owner's plan decision, not a mechanical edit; every one of these files is already in the window through the commit that changed it (decided by the rule)
+- other — the data model's compute-review-scope Size paragraph says performReview's request names every in-scope file whole, but the exec walker's load_scope_files (runtime/src/interpreter/payload.rs) silently skips a scope file that is missing, unreadable or not UTF-8, naming only a path leaving the project in unexaminable — `specs/066-audit-records-and-the-completion-gate/data-model.md` — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **waived**: the code is 022 and 080's exec walker, outside 066's primitives; the sentence cites 022's data model for the claim, a correction lands in 022's directory, and nothing in 066's code depends on it (decided by the rule)
+- other — plan.md's Affected Files omits files task 27's commits changed, among them criterion_verdicts.rs, invalidate_review.rs, main.rs, mod.rs, tests/mcp.rs, tests/review_command.rs, the fixtures, framework/reference/audit.md, docs/slash-commands.md and four mutation lists — `specs/066-audit-records-and-the-completion-gate/plan.md` — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through the commit naming 066 that changed it (decided by the rule)
+- other — the task 22 CHANGELOG entry's new BREAKING sentence names `matched`, `expired`, `retained` and `notices` as absent inline past the read size, which holds (process_decisions::run sets each None when bounded_lists::place returns a file), but not that in the inline form `notices` now carries one summary line per reason where 0.59.11 carried one line per retained decision; the entry's earlier sentence states it, so the BREAKING label is already earned and nothing is wrong — `runtime/CHANGELOG.md` — `runtime/CHANGELOG.md` — **waived**: The changed content of `notices` is stated two sentences earlier in the same entry, and the entry is already labelled BREAKING; repeating it adds no claim. (decided by the rule)
+- convention: plan.md's Affected Files table omits files tasks 29 and 30 changed (runtime/CHANGELOG.md, runtime/src/primitives/write_review/departure_waivers.rs, runtime/tests/fix_rounds.rs, runtime/tests/parity.rs, runtime/tests/walker.rs) and gives framework/reference/review.md, descriptions.rs and primitives.rs purposes naming other tasks only — `specs/066-audit-records-and-the-completion-gate/plan.md` — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: compute-review-scope reads Affected Files to attribute paths in commits several specs claim, so adding a path changes what 066 claims, the owner's plan decision rather than a mechanical edit; each is already in the window through c6aa33df, whose subject names 066 (decided by the rule)
+- other: no step of framework/commands/analyze.md or framework/commands/review.md tells the host to compare write-analysis's hard-fail, blocking-findings and advisory or write-review's excluded, unread-count and decisions with what it passed, so the discrepancy those fields were added to expose (a dropped decision, a net count) surfaces only when a host happens to look — `framework/commands/review.md` — `framework/commands/review.md` — **waived**: the scenario adds the fields so a host can reconcile a record without reading it back and states no obligation to compare them; a step requiring the comparison is a new requirement about the pipeline's own machinery, not a mechanical fix (decided by the rule)
+- bug: `framework/commands/review.md` step 11 gave `unread`'s rationale as another spec's window taking each entry it leaves out as read, which spec 084's credit removal made false; now says the spec's next review reads each entry and a held record moves the next window's start only when it is empty — `framework/commands/review.md` — **fixed** (decided by the rule)
+- other: `framework/reference/review.md` Run review passes said a departure entry's waiver covers every site in its files, true after spec 073 of an unscoped entry only; now reads an unscoped departure entry's waiver — `framework/reference/review.md` — **fixed** (decided by the rule)
+- convention: `framework/reference/review.md` report template said Excluded from scope lists each path left to another spec, though 084 also excludes the project record's paths and another open spec's uncommitted work; now reads each path the scope left out — `framework/reference/review.md` — **fixed** (decided by the rule)
+- bug: spec 066 AC3's superseded note said `compute-review-scope` reads `reviewed-against` to credit what the record states it read (spec 081), which spec 084 removed; the owner decided the code is right, so the text now says it starts the next window of a record the gate holds (spec 079), AC3 staying ticked — `specs/066-audit-records-and-the-completion-gate/spec.md` — **fixed** (decided by the rule)
+- other: `data-model.md` and `plan.md` ended a record whose `diff-base` names no commit credits nothing, though the `write-review` description now says it states no window; both now say states no window — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **fixed** (decided by the rule)
+- other: `plan.md` Overview counted five acceptance criteria where the spec holds six; now six — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
+- other: AC2's rejection of a malformed `--unexamined-reason` pair holds in code, driven by hand, but no test calls `parse_reason_count` in `runtime/src/schema/primitives.rs` — `runtime/src/schema/primitives.rs` — **waived**: not mechanical: a unit test is new authoring, and no contract breaks — the CLI refuses a pair with no `=`, a non-integer, a negative count and an empty reason, driven by hand in this review (decided by the rule)
 
 ## Skipped passes
 
@@ -370,8 +379,383 @@ A later review of 066. Its window runs from 6f679f64, the last review's commit (
 
 ## Excluded from scope
 
+- `.claude/commands/ductus/amend.md`
+- `.claude/commands/ductus/analyze.md`
+- `.claude/commands/ductus/configure.md`
+- `.claude/commands/ductus/consolidate.md`
+- `.claude/commands/ductus/fold.md`
+- `.claude/commands/ductus/groom.md`
+- `.claude/commands/ductus/help.md`
+- `.claude/commands/ductus/implement.md`
+- `.claude/commands/ductus/prune.md`
+- `.claude/commands/ductus/specify.md`
+- `.claude/commands/ductus/status.md`
+- `.ductus/reference/analyze.md`
+- `.ductus/reference/audit.md`
+- `.ductus/reference/fold.md`
+- `.ductus/reference/groom.md`
+- `.ductus/reference/implement.md`
+- `.ductus/reference/prune.md`
+- `.gitattributes`
+- `.githooks/pre-push`
+- `.github/workflows/framework-checks.yml`
+- `.pi/prompts/ductus-amend.md`
+- `.pi/prompts/ductus-analyze.md`
+- `.pi/prompts/ductus-consolidate.md`
+- `.pi/prompts/ductus-fold.md`
+- `.pi/prompts/ductus-groom.md`
+- `.pi/prompts/ductus-help.md`
+- `.pi/prompts/ductus-implement.md`
+- `.pi/prompts/ductus-prune.md`
+- `.pi/prompts/ductus-specify.md`
+- `.pi/prompts/ductus-status.md`
+- `AGENTS.md`
+- `README.md`
+- `docs/analyze.md`
+- `docs/developing-ductus.md`
+- `docs/rules.md`
+- `docs/slash-commands.md`
+- `framework/bootstrap/configure/claude.md`
+- `framework/bootstrap/ductus-procedure.md`
+- `framework/bootstrap/ductus.md`
+- `framework/bootstrap/govern.md`
+- `framework/bootstrap/hooks/ductus-pre-push`
+- `framework/bootstrap/hooks/pre-push`
+- `framework/commands/amend.md`
+- `framework/commands/analyze.md`
+- `framework/commands/consolidate.md`
+- `framework/commands/fold.md`
+- `framework/commands/groom.md`
+- `framework/commands/help.md`
+- `framework/commands/implement.md`
+- `framework/commands/prune.md`
+- `framework/commands/specify.md`
+- `framework/commands/status.md`
+- `framework/constitution.md`
+- `framework/migrations.toml`
+- `framework/migrations/audit-record-relocate.md`
+- `framework/migrations/criterion-label-backfill.md`
+- `framework/migrations/project-review-record.md`
+- `framework/reference/analyze.md`
+- `framework/reference/audit.md`
+- `framework/reference/fold.md`
+- `framework/reference/groom.md`
+- `framework/reference/implement.md`
+- `framework/reference/prune.md`
+- `framework/rules/accessibility-frontend.md`
+- `framework/rules/security-backend.md`
+- `framework/rules/security-frontend.md`
+- `framework/runtime-tools.txt`
+- `framework/templates/ci/adopter-generators.yml`
+- `framework/templates/spec/spec.md`
+- `install.sh`
+- `runtime/Cargo.lock`
+- `runtime/Cargo.toml`
+- `runtime/src/interpreter/mod.rs`
+- `runtime/src/interpreter/payload.rs`
+- `runtime/src/main.rs`
+- `runtime/src/mcp/server.rs`
+- `runtime/src/parser/mod.rs`
+- `runtime/src/primitives/analyze_subjects.rs`
+- `runtime/src/primitives/append_inbox.rs`
+- `runtime/src/primitives/append_question.rs`
+- `runtime/src/primitives/bounded_lists.rs`
+- `runtime/src/primitives/brief_re_read.rs`
+- `runtime/src/primitives/check_artifact_size.rs`
+- `runtime/src/primitives/check_artifacts.rs`
+- `runtime/src/primitives/check_corpus_links.rs`
+- `runtime/src/primitives/check_departures.rs`
+- `runtime/src/primitives/check_owed_work.rs`
+- `runtime/src/primitives/check_prescriptions.rs`
+- `runtime/src/primitives/check_review_gate.rs`
+- `runtime/src/primitives/check_stuck.rs`
+- `runtime/src/primitives/check_unreviewed_code.rs`
+- `runtime/src/primitives/commit_attribution.rs`
+- `runtime/src/primitives/compute_review_scope.rs`
+- `runtime/src/primitives/criterion_verdicts.rs`
+- `runtime/src/primitives/dashboard.rs`
+- `runtime/src/primitives/decisions.rs`
+- `runtime/src/primitives/departures.rs`
+- `runtime/src/primitives/derive_references.rs`
+- `runtime/src/primitives/derive_routing_candidates.rs`
+- `runtime/src/primitives/fix_rounds.rs`
+- `runtime/src/primitives/guarded.rs`
+- `runtime/src/primitives/invalidate_review.rs`
+- `runtime/src/primitives/label_criteria.rs`
+- `runtime/src/primitives/line_citations.rs`
+- `runtime/src/primitives/lint_markdown.rs`
+- `runtime/src/primitives/mark_criterion.rs`
+- `runtime/src/primitives/mark_task.rs`
+- `runtime/src/primitives/measure_reopenings.rs`
+- `runtime/src/primitives/mechanical_sweep.rs`
+- `runtime/src/primitives/merge_managed_block.rs`
+- `runtime/src/primitives/merge_permissions.rs`
+- `runtime/src/primitives/merge_status_hook.rs`
+- `runtime/src/primitives/mod.rs`
+- `runtime/src/primitives/owed_work.rs`
+- `runtime/src/primitives/pipeline_view.rs`
+- `runtime/src/primitives/process_decisions.rs`
+- `runtime/src/primitives/process_waivers.rs`
+- `runtime/src/primitives/prune_plan.rs`
+- `runtime/src/primitives/read_re_read.rs`
+- `runtime/src/primitives/read_spec.rs`
+- `runtime/src/primitives/read_tasks.rs`
+- `runtime/src/primitives/relocate_audit_records.rs`
+- `runtime/src/primitives/remove_inbox_item.rs`
+- `runtime/src/primitives/resolve_constitutions.rs`
+- `runtime/src/primitives/review_subject.rs`
+- `runtime/src/primitives/set_status.rs`
+- `runtime/src/primitives/shipped_rule_ids.txt`
+- `runtime/src/primitives/start_fix_rounds.rs`
+- `runtime/src/primitives/write_analysis.rs`
+- `runtime/src/primitives/write_review.rs`
+- `runtime/src/primitives/write_review/departure_waivers.rs`
+- `runtime/src/primitives/write_review/moved_scope.rs`
+- `runtime/src/primitives/write_review/project_record.rs`
+- `runtime/src/primitives/write_review/seed.rs`
+- `runtime/src/schema/config_keys.rs`
+- `runtime/src/schema/extensions.rs`
+- `runtime/src/schema/primitives.rs`
+- `runtime/src/schema/protocol.rs`
+- `runtime/src/schema/registry.rs`
+- `runtime/tests/check_unreviewed_code_cli.rs`
+- `runtime/tests/crlf_preservation.rs`
+- `runtime/tests/exec_subprocess.rs`
+- `runtime/tests/fix_rounds.rs`
+- `runtime/tests/golden/implement-basic.jsonl`
+- `runtime/tests/golden/specify-basic.jsonl`
+- `runtime/tests/mcp.rs`
+- `runtime/tests/measure_reopenings.rs`
+- `runtime/tests/mechanical_sweep_parity.rs`
+- `runtime/tests/merge_status_hook.rs`
+- `runtime/tests/result_sizes.rs`
+- `runtime/tests/review_command.rs`
+- `runtime/tests/walker.rs`
+- `scripts/audit/README.md`
+- `scripts/audit/adopter-shell-behavior.sh`
+- `scripts/audit/archive-contents.sh`
+- `scripts/audit/cross-doc-consistency.sh`
+- `scripts/audit/done-spec-criteria.sh`
+- `scripts/audit/rename-sweep-residue.sh`
+- `scripts/audit/run-all.sh`
+- `scripts/audit/ssot-invariants.sh`
+- `scripts/audit/sweep-target-manifest-parity.sh`
+- `scripts/check-release-tag.sh`
+- `scripts/lint-tool-coverage.sh`
+- `scripts/mutation/commit-counts.py`
+- `scripts/mutation/compare-and-set-066.py`
+- `scripts/mutation/criteria-in-review-066.py`
+- `scripts/mutation/departure-waivers.py`
+- `scripts/mutation/departures.py`
+- `scripts/mutation/exec-arguments.py`
+- `scripts/mutation/freshness-results-have-a-bounded-size.py`
+- `scripts/mutation/line-citation-strip-066.py`
+- `scripts/mutation/loop-inputs-screened.py`
+- `scripts/mutation/never-owed-084.py`
+- `scripts/mutation/owed-work-084.py`
+- `scripts/mutation/plan-edit-takes-no-back-edge.py`
+- `scripts/mutation/process-decisions-results-bounded.py`
+- `scripts/mutation/project-record-084.py`
+- `scripts/mutation/reopen-measure.py`
+- `scripts/mutation/review-022-task-41.py`
+- `scripts/mutation/review-022-task-42.py`
+- `scripts/mutation/review-022-task-46.py`
+- `scripts/mutation/review-departures-bounded.py`
+- `scripts/mutation/review-read-credit.py`
+- `scripts/mutation/reviews-follow-what-changed.py`
+- `scripts/mutation/routing-path-claims.py`
+- `scripts/mutation/scope-attribution.py`
+- `scripts/mutation/site-anchors-020.py`
+- `scripts/mutation/status-count-084.py`
+- `scripts/mutation/suffixed-task-number.py`
+- `scripts/mutation/unreviewed-code-084.py`
+- `scripts/mutation/waiver-notices-flatten.py`
+- `scripts/mutation/waivers-bounded.py`
+- `scripts/tests/test-archive-contents.sh`
+- `scripts/tests/test-audit-path-containment.sh`
+- `scripts/tests/test-check-release-tag.sh`
+- `scripts/tests/test-done-spec-owed-work.sh`
+- `scripts/tests/test-run-workflow-steps.sh`
+- `specs/000-slash-commands/review.md`
+- `specs/000-slash-commands/scenarios/criterion-route-after-draft.md`
+- `specs/000-slash-commands/scenarios/scenario-without-task-visibility.md`
+- `specs/008-security-rules/analysis.md`
+- `specs/008-security-rules/plan.md`
+- `specs/008-security-rules/review.md`
+- `specs/008-security-rules/scenarios/a-cache-partition-is-purged-when-the-session-ends.md`
+- `specs/008-security-rules/scenarios/a-statement-carries-one-obligation-keyword.md`
+- `specs/008-security-rules/scenarios/a-throwaway-credential-owes-no-revocation-path.md`
+- `specs/008-security-rules/scenarios/an-absent-origin-on-a-cookie-connection-is-flagged.md`
+- `specs/008-security-rules/scenarios/be-deps-005-flags-what-its-statement-requires.md`
+- `specs/008-security-rules/scenarios/rules-are-as-short-as-their-required-content.md`
+- `specs/008-security-rules/scenarios/security-rules-flag-what-their-sources-support.md`
+- `specs/008-security-rules/scenarios/the-tag-check-reads-every-entry-above-the-newest-version.md`
+- `specs/008-security-rules/spec.md`
+- `specs/008-security-rules/tasks.md`
+- `specs/010-agent-autonomy/plan.md`
+- `specs/011-brownfield-process/spec.md`
+- `specs/012-multi-agent-govern/review.md`
+- `specs/012-multi-agent-govern/spec.md`
+- `specs/013-text-first-artifacts/scenarios/criterion-identifiers.md`
+- `specs/014-reclarify-backedge/plan.md`
+- `specs/014-reclarify-backedge/scenarios/reopen-after-informal-edits.md`
+- `specs/014-reclarify-backedge/spec.md`
+- `specs/015-tarball-fetch/analysis.md`
+- `specs/015-tarball-fetch/plan.md`
+- `specs/015-tarball-fetch/review.md`
+- `specs/015-tarball-fetch/spec.md`
+- `specs/015-tarball-fetch/tasks.md`
+- `specs/016-cross-cutting-rules/spec.md`
+- `specs/017-derive-dont-ask/scenarios/a-path-list-commit-leaves-the-shared-index-current.md`
+- `specs/017-derive-dont-ask/spec.md`
+- `specs/017-derive-dont-ask/tasks.md`
+- `specs/018-adopter-owned-pre-commit/spec.md`
+- `specs/020-code-review/analysis.md`
+- `specs/020-code-review/data-model.md`
+- `specs/020-code-review/plan.md`
+- `specs/020-code-review/review.md`
+- `specs/020-code-review/scenarios/waiver-expiry.md`
+- `specs/020-code-review/scenarios/waiver-file-lists.md`
+- `specs/020-code-review/spec.md`
+- `specs/020-code-review/tasks.md`
+- `specs/021-runtime-boundary/review.md`
+- `specs/022-deterministic-runtime/analysis.md`
+- `specs/022-deterministic-runtime/data-model.md`
+- `specs/022-deterministic-runtime/plan.md`
+- `specs/022-deterministic-runtime/review.md`
+- `specs/022-deterministic-runtime/scenarios/ask-consolidation.md`
+- `specs/022-deterministic-runtime/scenarios/groom-command-acceleration.md`
+- `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
+- `specs/022-deterministic-runtime/scenarios/routing-ranks-by-claimed-path.md`
+- `specs/022-deterministic-runtime/scenarios/scenario-open-question-signal.md`
+- `specs/022-deterministic-runtime/scenarios/spec-side-parser-hardening.md`
+- `specs/022-deterministic-runtime/scenarios/specify-routes-before-scaffolding.md`
+- `specs/022-deterministic-runtime/spec.md`
+- `specs/022-deterministic-runtime/tasks.md`
 - `specs/023-govern-refinement/review.md`
+- `specs/023-govern-refinement/scenarios/living-specs.md`
+- `specs/025-rule-opt-out/review.md`
+- `specs/025-rule-opt-out/spec.md`
+- `specs/026-framework-self-audit/scenarios/family-23-sweep-target-manifest-parity.md`
+- `specs/026-framework-self-audit/scenarios/family-27-done-spec-unchecked-criteria.md`
+- `specs/026-framework-self-audit/spec.md`
+- `specs/030-cross-service-references/plan.md`
+- `specs/030-cross-service-references/spec.md`
+- `specs/035-groom-session-target/scenarios/confirmation-names-reopen.md`
+- `specs/035-groom-session-target/scenarios/reopen-done-spec-on-scenario.md`
+- `specs/041-task-pruning/data-model.md`
+- `specs/041-task-pruning/plan.md`
+- `specs/041-task-pruning/scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`
+- `specs/041-task-pruning/scenarios/a-suffixed-task-number-is-a-task.md`
+- `specs/041-task-pruning/scenarios/prune-all-walks-every-spec.md`
+- `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md`
+- `specs/041-task-pruning/scenarios/prune-walks-the-project-files.md`
+- `specs/041-task-pruning/spec.md`
+- `specs/046-scenario-open-question-visibility/plan.md`
+- `specs/046-scenario-open-question-visibility/spec.md`
+- `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md`
+- `specs/047-analyze-findings-durability/spec.md`
 - `specs/048-govern-acquired-runtime/review.md`
+- `specs/048-govern-acquired-runtime/spec.md`
+- `specs/049-rename-govern-to-ductus/plan.md`
+- `specs/049-rename-govern-to-ductus/review.md`
+- `specs/049-rename-govern-to-ductus/spec.md`
+- `specs/050-constitution/analysis.md`
+- `specs/050-constitution/plan.md`
+- `specs/050-constitution/review.md`
+- `specs/050-constitution/scenarios/a-canonical-source-is-pointed-at-not-copied.md`
+- `specs/050-constitution/scenarios/a-declared-cross-spec-impact-gates-done.md`
+- `specs/050-constitution/scenarios/a-primitive-is-probed-in-a-local-clone.md`
+- `specs/050-constitution/scenarios/a-retired-filename-leaves-a-decision-record.md`
+- `specs/050-constitution/spec.md`
+- `specs/050-constitution/tasks.md`
+- `specs/051-branch-scoped-spec-numbering/plan.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/a-pending-fold-never-holds-done.md`
+- `specs/051-branch-scoped-spec-numbering/scenarios/fold-target-checked-before-the-rewrite.md`
+- `specs/051-branch-scoped-spec-numbering/spec.md`
+- `specs/054-remove-supersession/plan.md`
+- `specs/054-remove-supersession/spec.md`
+- `specs/057-analyze-artifact-and-record-relocation/spec.md`
+- `specs/058-findings-route-at-discovery/analysis.md`
+- `specs/058-findings-route-at-discovery/data-model.md`
+- `specs/058-findings-route-at-discovery/plan.md`
+- `specs/058-findings-route-at-discovery/review.md`
+- `specs/058-findings-route-at-discovery/spec.md`
+- `specs/060-exec-analyze-assesses-each-loaded-rule/review.md`
+- `specs/062-concurrent-session-targets/review.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/plan.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/project-files-are-measured.md`
+- `specs/063-oversized-artifacts-warn-with-a-fix/spec.md`
+- `specs/067-analyze-and-audit-checks/data-model.md`
+- `specs/067-analyze-and-audit-checks/plan.md`
+- `specs/067-analyze-and-audit-checks/scenarios/a-none-list-item-is-no-open-question.md`
+- `specs/067-analyze-and-audit-checks/scenarios/disposition-drift-is-advisory.md`
+- `specs/067-analyze-and-audit-checks/spec.md`
+- `specs/069-accessibility-frontend-rules/plan.md`
+- `specs/069-accessibility-frontend-rules/review.md`
+- `specs/073-decided-rule-departures-are-recorded/analysis.md`
+- `specs/073-decided-rule-departures-are-recorded/data-model.md`
+- `specs/073-decided-rule-departures-are-recorded/plan.md`
+- `specs/073-decided-rule-departures-are-recorded/review.md`
+- `specs/073-decided-rule-departures-are-recorded/spec.md`
+- `specs/073-decided-rule-departures-are-recorded/tasks.md`
+- `specs/075-agents-md-holds-what-every-session-needs/plan.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/analysis.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/plan.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/review.md`
+- `specs/076-waived-and-deferred-findings-are-distinct-dispositions/spec.md`
+- `specs/077-security-cross-rules/analysis.md`
+- `specs/077-security-cross-rules/data-model.md`
+- `specs/077-security-cross-rules/plan.md`
+- `specs/077-security-cross-rules/review.md`
+- `specs/077-security-cross-rules/scenarios/url-pii-query-only-and-oauth-stricter-than-rfc-9700.md`
+- `specs/077-security-cross-rules/spec.md`
+- `specs/077-security-cross-rules/tasks.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/data-model.md`
+- `specs/078-review-fix-rounds-are-re-read-within-a-bound/spec.md`
+- `specs/079-review-and-analysis-work-converges/analysis.md`
+- `specs/079-review-and-analysis-work-converges/data-model.md`
+- `specs/079-review-and-analysis-work-converges/plan.md`
+- `specs/079-review-and-analysis-work-converges/review.md`
+- `specs/079-review-and-analysis-work-converges/spec.md`
+- `specs/079-review-and-analysis-work-converges/tasks.md`
+- `specs/080-deterministic-runtime-efficiency/analysis.md`
+- `specs/080-deterministic-runtime-efficiency/data-model.md`
+- `specs/080-deterministic-runtime-efficiency/plan.md`
+- `specs/080-deterministic-runtime-efficiency/scenarios/groom-derives-routing-candidates.md`
+- `specs/080-deterministic-runtime-efficiency/spec.md`
+- `specs/081-reviews-and-checks-follow-what-changed/plan.md`
+- `specs/081-reviews-and-checks-follow-what-changed/review.md`
+- `specs/081-reviews-and-checks-follow-what-changed/spec.md`
+- `specs/082-rule-assessments-converge-across-runs/plan.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/analysis.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/plan.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/review.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/spec.md`
+- `specs/083-commits-are-attributed-to-specs-without-a-subject-convention/tasks.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/analysis.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/data-model.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/plan.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/review.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/spec.md`
+- `specs/084-reopen-for-owed-code-review-every-code-change/tasks.md`
+- `specs/085-the-audit-record-gate-reads-records-through-the-runtime/spec.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/plan.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/spec.md`
+- `specs/086-review-records-hold-only-what-their-scope-judged/tasks.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/plan.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md`
+- `specs/087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/tasks.md`
+- `specs/088-rule-judgments-cost-only-what-changed/spec.md`
+- `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`
+- `specs/README.md`
+- `specs/inbox.md`
+- `specs/review.md`
+- `version`
 
 ## Unexamined governance
 
