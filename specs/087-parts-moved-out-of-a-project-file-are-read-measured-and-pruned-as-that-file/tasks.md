@@ -108,11 +108,11 @@ This task's mutations, and every later runtime task's, continue in `scripts/muta
 
 Task 3 made the shipped hook refuse a grown part, so the constitution's §text-first-artifacts sentence on the hook's refusal (*Write each artifact as short as its required content allows*) and `README.md`'s `[artifacts]` entry, which name a project file alone, change with this task's constitution edits.
 
-- [ ] `specs/075-agents-md-holds-what-every-session-needs/spec.md`: the routing row *A procedure for one kind of task* names `.ductus/docs/agents/` in place of `docs/`, plus a signpost
-- [ ] `framework/bootstrap/ductus.md`'s `ductus:memory-routing` line, and its §Project Configuration `read-size-bytes` comment, copied byte-identically to `framework/bootstrap/govern.md` (AC19)
-- [ ] `README.md`'s `[artifacts]` entry: `read-size-bytes` limits parts too
-- [ ] `framework/constitution.md`: the §spec-phase tree line, §drift-prevention's routing, *No dead references*' live artifacts, and the canonical-sources row (AC9, AC13); re-measure with `wc -c`, and cut a restatement in the same commit if it passes 50,000 bytes
-- [ ] Add the signpost in `specs/050-constitution/spec.md`
+- [x] `specs/075-agents-md-holds-what-every-session-needs/spec.md`: the routing row *A procedure for one kind of task* names `.ductus/docs/agents/` in place of `docs/`, plus a signpost
+- [x] `framework/bootstrap/ductus.md`'s `ductus:memory-routing` line, and its §Project Configuration `read-size-bytes` comment, copied byte-identically to `framework/bootstrap/govern.md` (AC19)
+- [x] `README.md`'s `[artifacts]` entry: `read-size-bytes` limits parts too
+- [x] `framework/constitution.md`: the §spec-phase tree line, §drift-prevention's routing, *No dead references*' live artifacts, and the canonical-sources row (AC9, AC13); re-measure with `wc -c`, and cut a restatement in the same commit if it passes 50,000 bytes
+- [x] Add the signpost in `specs/050-constitution/spec.md`
 
 - **Done when**: `scripts/lint-governing-size.sh` and audit Family 21 pass; the constitution and 075's table name the parts and `.ductus/docs/agents/` (AC9, AC13, AC19); the commit records each registry layout's impact (AC18).
 

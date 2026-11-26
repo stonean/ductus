@@ -54,11 +54,13 @@ Each records what is true now, never how it came to be, and is as short as the c
 | --- | --- | --- |
 | Architecture, system-wide constraints, deployment shape | `specs/system.md`, `specs/events.md`, `specs/errors.md` | `/plan`, `/implement`, `/review`, `/analyze` |
 | A decision about one feature | that spec's Resolved Questions, or a scenario | when the spec is worked |
-| A procedure for one kind of task | `docs/`, a README beside the code, or a skill | when the task comes up |
+| A procedure for one kind of task | a part under `.ductus/docs/agents/`, a README beside the code, or a skill | when the task comes up |
 | A trap in one file or module | a comment at the site, or a test | when the file is opened |
 | ductus behavior true for every adopter | upstream, reported to ductus | — |
 | A rule true across the organization's projects | the shared constitution registered under `[constitutions.*]` | every session |
 | How a lesson was learned | the commit that added it | never |
+
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed this table: a procedure leaving `AGENTS.md` goes to a part of it under `.ductus/docs/agents/` in place of `docs/`, measured against `[artifacts] read-size-bytes` and read when its pointer says, and each other project file may keep an index and move its sections into parts of its own.
 
 An entry that leaves `AGENTS.md` for an on-demand home may leave one pointer line naming the home and when to read it. A pointer counts toward the file's size like any other line.
 

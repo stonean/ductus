@@ -692,13 +692,14 @@ last_applied = "substitute-seed-placeholders"
 # file past it (specs 066, 078 and 080), and by /{project}:status's view,
 # which cuts each of its blocks past it and, on the model path, names a file
 # holding the whole view (spec 080); also by /{project}:analyze's measure of
-# the four project files and by the pre-commit hook's refusal to grow one
-# already over it (specs 063, 075). The size, in bytes, above
+# the four project files and their parts and by the pre-commit hook's refusal
+# to grow one already over it (specs 063, 075, 087). The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
 # scenario) may not be read in one call by an agent's file reader; the four
 # project files (AGENTS.md, and system.md, events.md and errors.md under the
 # spec root) are held to it too, AGENTS.md among them though it loads in every
-# session rather than through a file read. Each
+# session rather than through a file read, and so is each part a project file
+# moved under .ductus/docs/ (spec 087). Each
 # command warns on every artifact over it and names the fixes. A whole number
 # of bytes, at least 1; unset means 50000. Raise it for a host with a larger
 # read cap, lower it for a smaller one or for token-dense artifacts. Any other
@@ -974,7 +975,7 @@ On the runtime path both are `apply-manifest` `create` entries (§Instructions s
 1. Invoke `merge-managed-block` against `AGENTS.md` with `marker-style: "html-comment"` and `marker: "ductus:memory-routing"`, supplying exactly this one line:
 
    ```text
-   > **Where a learning goes** ([§drift-prevention](.ductus/constitution.md#drift-prevention)). Commit whatever would help a teammate, since an agent's per-user memory holds only personal facts and external pointers. Then file it by who it is true for: every project running the pipeline, the framework's constitution, which is upstream, so raise it with ductus rather than edit `.ductus/constitution.md`; your organization's projects, the shared constitution it registers; this project alone, this file only for what every session needs before acting, and otherwise where its work is read: architecture in `system.md`, `events.md` or `errors.md`, read before changing architecture, configuration or deployment; a feature's decision in its spec, read when the spec is worked; a procedure in `docs/` or a skill, read when the task comes up; a one-file trap in a comment or test there, read when the file is opened; how a lesson was learned in its commit.
+   > **Where a learning goes** ([§drift-prevention](.ductus/constitution.md#drift-prevention)). Commit whatever would help a teammate, since an agent's per-user memory holds only personal facts and external pointers. Then file it by who it is true for: every project running the pipeline, the framework's constitution, which is upstream, so raise it with ductus rather than edit `.ductus/constitution.md`; your organization's projects, the shared constitution it registers; this project alone, this file only for what every session needs before acting, and otherwise where its work is read: architecture in `system.md`, `events.md` or `errors.md`, read before changing architecture, configuration or deployment; a feature's decision in its spec, read when the spec is worked; a procedure in a part under `.ductus/docs/agents/` or a skill, read when the task comes up; a one-file trap in a comment or test there, read when the file is opened; how a lesson was learned in its commit.
    ```
 
 2. When `AGENTS.md` carries no `ductus:memory-routing` markers, the primitive appends the block at the end of the file and returns `action: inserted`, which it returns in no other case. Report that it was appended, so the operator can move it under the file's header. The project template ships the empty markers beneath its header.
