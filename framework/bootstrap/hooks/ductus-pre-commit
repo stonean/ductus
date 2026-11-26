@@ -39,13 +39,16 @@
 #
 #   4. ductus check-artifact-size --project-files --staged — refuses a commit
 #      that grows a project file (AGENTS.md, and system.md, events.md and
-#      errors.md under the spec root) already over `[artifacts]
-#      read-size-bytes`, or adds one over it, naming the file, its staged and
-#      HEAD sizes, the limit and `/prune --project`. A shrink, an unchanged
-#      file and a deletion pass, so a project already over the limit can still
-#      commit its way down (spec 075). It exits non-zero on a file it refused
-#      or could not read, for the same reason step 3 does, and is read-only, so
-#      it follows step 3 under the same ordering argument.
+#      errors.md under the spec root) or one of its parts (a markdown file
+#      directly under .ductus/docs/agents/, system/, events/ or errors/)
+#      already over `[artifacts] read-size-bytes`, or adds one over it, naming
+#      the file, its staged and HEAD sizes, the limit and its fix:
+#      `/prune --project` for a project file, a split into sibling parts for a
+#      part. A shrink, an unchanged file and a deletion pass, so a project
+#      already over the limit can still commit its way down (specs 075 and
+#      087). It exits non-zero on a file it refused or could not read, for the
+#      same reason step 3 does, and is read-only, so it follows step 3 under
+#      the same ordering argument.
 #
 # Before that it runs the acceptance-criterion labelling pass over each staged spec —
 # `ductus label-criteria`, which assigns the stable `AC{n}:` label a criterion
@@ -286,7 +289,7 @@ fi
 # and the fix guidance go to stderr, which is what the author needs to see.
 "$ductus_bin" check-corpus-links > /dev/null
 
-# Project-file growth, checked after the links for the same reason that check
-# is last: it only reads. stdout is the JSON result and is discarded; the
-# refused files and the `/prune --project` fix go to stderr.
+# Project-file and part growth, checked after the links for the same reason
+# that check is last: it only reads. stdout is the JSON result and is
+# discarded; the refused files and their fixes go to stderr.
 "$ductus_bin" check-artifact-size --project-files --staged > /dev/null

@@ -100,41 +100,30 @@ struct Measured {
 }
 
 /// Measure `args.feature`'s subject artifacts, the four project files, or
-/// both, against the configured read size: [`compute`], returned with
-/// `oversized`, `skipped` and `notices` inline while the result fits
-/// `[artifacts] read-size-bytes`, and past it with the three in the file
-/// `lists-file` names and only their counts inline (`bounded_lists::place`).
+/// both, against the configured read size: [`whole`], returned through
+/// [`bound`], with its lists inline while the result fits `[artifacts]
+/// read-size-bytes`, and past it in the file `lists-file` names and only their
+/// counts inline (`bounded_lists::place`).
 ///
 /// # Errors
 ///
-/// Every error [`compute`] returns, and those `bounded_lists::place` returns
-/// for a list file that cannot be written or a results directory that
-/// resolves outside the project. A file that cannot be written fails the
-/// call, so a result never names lists that are not on disk.
+/// Every error [`compute`] returns, and those [`bound`] returns.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
-    let measured = compute(args, repo)?;
-    let key = args.feature.as_deref().unwrap_or(PROJECT_FILES_KEY);
-    bounded(repo, key, measured)
+    bound(args, repo, whole(args, repo)?)
 }
 
-/// Bound `measured`'s lists to one read under `key`: inline while the result
-/// fits the read size, and past it in the file `lists-file` names, which
-/// holds the three, and the project half's `parts` and `part-findings` when
-/// the result counts them, each present even when empty, since the exec
-/// walker restores every list the result counts.
-fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSizeResult> {
-    let mut lists = serde_json::json!({
-        "oversized": measured.oversized,
-        "skipped": measured.skipped,
-        "notices": measured.notices,
-    });
-    if let Some(project) = &measured.project {
-        lists["parts"] = serde_json::json!(project.parts);
-        if let Some(findings) = &project.part_findings {
-            lists["part-findings"] = serde_json::json!(findings);
-        }
-    }
-    let mut result = CheckArtifactSizeResult {
+/// The result with every list inline, whatever its size: [`run`]'s before
+/// [`bound`] places it. The CLI names each refused or unmeasurable subject
+/// on stderr from it, so a blocked commit names every one even when the
+/// result moves its lists to a file, as `check-corpus-links` names each
+/// broken link.
+///
+/// # Errors
+///
+/// Every error [`compute`] returns.
+pub fn whole(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
+    let measured = compute(args, repo)?;
+    Ok(CheckArtifactSizeResult {
         threshold: measured.threshold,
         examined: measured.examined,
         form: ListsForm::Inline,
@@ -147,7 +136,43 @@ fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSi
         lists_file: None,
         spec: measured.spec,
         project: measured.project,
-    };
+    })
+}
+
+/// Bound `result`, a [`whole`] result of `args`, to one read: inline while it
+/// fits the read size, and past it with its lists in the file `lists-file`
+/// names under the feature, or [`PROJECT_FILES_KEY`] for a call naming none.
+/// The file holds `oversized`, `skipped` and `notices`, and the project half's
+/// `parts`, `part-findings` and `refused` when the result counts them, each
+/// present even when empty, since the exec walker restores every list the
+/// result counts.
+///
+/// # Errors
+///
+/// Those `bounded_lists::place` returns for a list file that cannot be
+/// written or a results directory that resolves outside the project. A file
+/// that cannot be written fails the call, so a result never names lists that
+/// are not on disk.
+pub fn bound(
+    args: &CheckArtifactSizeArgs,
+    repo: &Path,
+    mut result: CheckArtifactSizeResult,
+) -> Result<CheckArtifactSizeResult> {
+    let key = args.feature.as_deref().unwrap_or(PROJECT_FILES_KEY);
+    let mut lists = serde_json::json!({
+        "oversized": result.oversized,
+        "skipped": result.skipped,
+        "notices": result.notices,
+    });
+    if let Some(project) = &result.project {
+        lists["parts"] = serde_json::json!(project.parts);
+        if let Some(findings) = &project.part_findings {
+            lists["part-findings"] = serde_json::json!(findings);
+        }
+        if let Some(refused) = &project.refused {
+            lists["refused"] = serde_json::json!(refused);
+        }
+    }
     if let Some(file) = bounded_lists::place(repo, PRIMITIVE, key, &result, &lists)? {
         result.form = ListsForm::File;
         result.oversized = None;
@@ -156,6 +181,7 @@ fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSi
         if let Some(project) = &mut result.project {
             project.parts = None;
             project.part_findings = None;
+            project.refused = None;
         }
         result.lists_file = Some(file);
     }
@@ -312,12 +338,24 @@ fn project_half(
             ));
         }
     }
+    // Staged, every measured subject carries `refused`; without it none does.
+    let refused = staged.then(|| {
+        records
+            .iter()
+            .map(|record| (&record.path, record.refused))
+            .chain(parts.iter().map(|part| (&part.path, part.refused)))
+            .filter(|(_, refused)| *refused == Some(true))
+            .map(|(path, _)| path.clone())
+            .collect::<Vec<_>>()
+    });
     Ok(SizeProjectHalf {
         project_files: records,
         parts_count: parts.len(),
         parts: Some(parts),
         part_findings_count: part_findings.as_ref().map(Vec::len),
         part_findings,
+        refused_count: refused.as_ref().map(Vec::len),
+        refused,
     })
 }
 
@@ -2455,6 +2493,11 @@ mod tests {
         let result = compute(&project_args(None, false), tmp.path()).unwrap();
         assert_eq!(half(&result).part_findings.as_deref(), Some(&[][..]));
         assert_eq!(half(&result).part_findings_count, Some(0));
+        assert_eq!(
+            (&half(&result).refused, half(&result).refused_count),
+            (&None, None),
+            "nothing is refused unstaged"
+        );
 
         std::fs::write(
             tmp.path().join("specs/system.md"),
@@ -2587,6 +2630,33 @@ mod tests {
         );
     }
 
+    /// Staged, `refused` is bounded with the other lists and `refused-count`
+    /// stays inline, so the exit reads a count in either form.
+    #[test]
+    fn a_staged_file_form_result_holds_its_refused_list_in_the_file() {
+        let (_tmp, repository, project) = staged_project(&[("AGENTS.md", 150)]);
+        stage(&repository, &project, "AGENTS.md", 151);
+        stage(&repository, &project, ".ductus/docs/errors/auth.md", 101);
+        let bounded = run(&project_args(None, true), &project).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        let half = bounded.project.as_ref().unwrap();
+        assert_eq!((&half.refused, half.refused_count), (&None, Some(2)));
+        let lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(project.join(bounded.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            lists["refused"],
+            serde_json::json!(["AGENTS.md", ".ductus/docs/errors/auth.md"])
+        );
+        assert!(lists.get("part-findings").is_none(), "not computed staged");
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
     #[test]
     fn a_staged_part_is_measured_on_its_index_copy_against_its_head_copy() {
         let (_tmp, repository, project) =
@@ -2595,6 +2665,23 @@ mod tests {
             let result = compute(&project_args(None, true), project).unwrap();
             assert_eq!(half(&result).part_findings, None, "not computed staged");
             assert_eq!(half(&result).part_findings_count, None);
+            let refused: Vec<&String> = parts(&result)
+                .iter()
+                .filter(|p| p.refused == Some(true))
+                .map(|p| &p.path)
+                .collect();
+            assert_eq!(
+                half(&result)
+                    .refused
+                    .as_ref()
+                    .map(|r| r.iter().collect::<Vec<_>>()),
+                Some(refused),
+                "`refused` lists each refused part"
+            );
+            assert_eq!(
+                half(&result).refused_count,
+                half(&result).refused.as_ref().map(Vec::len)
+            );
             parts(&result)
                 .iter()
                 .map(|p| (p.path.clone(), p.bytes, p.head_bytes, p.refused, p.linked))

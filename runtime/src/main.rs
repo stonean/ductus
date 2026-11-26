@@ -25,9 +25,9 @@ use ductus::schema::primitives::{
     ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
     LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
     MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, ProjectSizeState, PrunePlanArgs, PruneProjectArgs,
-    PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs,
-    ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
+    ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
+    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
     ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
     RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
@@ -680,56 +680,71 @@ fn report_broken_links(result: &primitives::check_corpus_links::CorpusLinks) {
     }
 }
 
-/// Whether a staged `check-artifact-size` exits non-zero: a project file
-/// refused, or one that could not be measured. It reads `skipped-count`,
-/// which is inline in both forms, so a result whose lists moved to its list
-/// file past the read size never exits like one that measured everything.
+/// Whether a staged `check-artifact-size` exits non-zero: a project file or a
+/// part refused, or one that could not be measured. It reads `refused-count`
+/// and `skipped-count`, which are inline in both forms, so a result whose
+/// lists moved to its list file past the read size never exits like one that
+/// measured everything.
 fn size_check_blocks(result: &CheckArtifactSizeResult) -> bool {
     result.skipped_count > 0
-        || result.project.as_ref().is_some_and(|half| {
-            half.project_files
-                .iter()
-                .any(|file| file.refused == Some(true))
-        })
+        || result
+            .project
+            .as_ref()
+            .is_some_and(|half| half.refused_count.unwrap_or(0) > 0)
 }
 
-/// Name each refused project file's path, size and limit on stderr, with its
-/// one fix, so an author whose commit is stopped knows what to run. Each
-/// unmeasurable one is named too: the commit is blocked for it as well. Both
-/// are read from `project-files`, which stays inline in both forms: a staged
-/// call names no feature, so its `skipped` holds exactly the project files
-/// whose state is `unreadable`, each under `artifact-unreadable`.
-fn report_refused_project_files(result: &CheckArtifactSizeResult) {
+/// Name each refused project file and part on stderr, with its staged size,
+/// its `HEAD` copy's or that it has none, the limit and its one fix, so an
+/// author whose commit is stopped knows what to run, and each subject that
+/// could not be measured, for which the commit is blocked as well. Read from
+/// [`check_artifact_size::whole`](primitives::check_artifact_size::whole)'s
+/// result, before it is bounded, so every one is named whatever the form.
+fn report_refused_sizes(result: &CheckArtifactSizeResult) {
     let Some(half) = &result.project else {
         return;
     };
     let mut stderr = io::stderr().lock();
+    let head = |head_bytes: Option<u64>| {
+        head_bytes.map_or_else(
+            || "no HEAD copy".to_string(),
+            |head| format!("HEAD copy {head} bytes"),
+        )
+    };
     for file in &half.project_files {
         if file.refused == Some(true) {
-            let head = file.head_bytes.map_or_else(
-                || "no HEAD copy".to_string(),
-                |head| format!("HEAD copy {head} bytes"),
-            );
             let _ = writeln!(
                 stderr,
-                "check-artifact-size: {} is {} bytes staged ({head}), over the {}-byte read size \
+                "check-artifact-size: {} is {} bytes staged ({}), over the {}-byte read size \
                  ([artifacts] read-size-bytes). Run /prune --project to move its entries to their homes. \
                  `git commit --no-verify` bypasses this deliberately.",
                 file.path,
                 file.bytes.unwrap_or_default(),
+                head(file.head_bytes),
                 result.threshold.bytes
             );
         }
     }
-    for file in &half.project_files {
-        if file.state == ProjectSizeState::Unreadable {
+    for part in half.parts.iter().flatten() {
+        if part.refused == Some(true) {
             let _ = writeln!(
                 stderr,
-                "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
-                file.path,
-                primitives::check_artifact_size::UNREADABLE
+                "check-artifact-size: {} is {} bytes staged ({}), over the {}-byte read size \
+                 ([artifacts] read-size-bytes). Split it into sibling parts in its parts directory, \
+                 each named by a pointer in {}. `git commit --no-verify` bypasses this deliberately.",
+                part.path,
+                part.bytes.unwrap_or_default(),
+                head(part.head_bytes),
+                result.threshold.bytes,
+                part.project_file
             );
         }
+    }
+    for skipped in result.skipped.iter().flatten() {
+        let _ = writeln!(
+            stderr,
+            "check-artifact-size: {} could not be measured ({}), so its size was never checked.",
+            skipped.path, skipped.reason
+        );
     }
 }
 
@@ -1480,18 +1495,23 @@ fn main() -> ExitCode {
             emit_result_gated(outcome, unreviewed_code_blocks)
         }
         Command::CheckArtifactSize(args) => {
-            let outcome = primitives::check_artifact_size::run(&args, &repo);
             if args.staged {
                 // The hook is the one caller that reads an exit status: a
-                // commit that grows a project file past the limit is refused,
-                // and so is one the check could not measure, since a check
-                // that could not run must never exit like one that passed.
-                if let Ok(result) = &outcome {
-                    report_refused_project_files(result);
+                // commit that grows a project file or a part past the limit
+                // is refused, and so is one the check could not measure,
+                // since a check that could not run must never exit like one
+                // that passed. Each is named from the whole result, before it
+                // is bounded.
+                let whole = primitives::check_artifact_size::whole(&args, &repo);
+                if let Ok(result) = &whole {
+                    report_refused_sizes(result);
                 }
+                let outcome = whole.and_then(|result| {
+                    primitives::check_artifact_size::bound(&args, &repo, result)
+                });
                 emit_result_gated(outcome, size_check_blocks)
             } else {
-                emit_result(outcome)
+                emit_result(primitives::check_artifact_size::run(&args, &repo))
             }
         }
         Command::PruneTasks(args) => emit_result(primitives::prune_tasks::run(&args, &repo)),

@@ -7840,8 +7840,9 @@ pub struct CheckArtifactSizeArgs {
     #[serde(default)]
     #[arg(long)]
     pub project_files: bool,
-    /// Measure each project file's index copy against its `HEAD` copy, for
-    /// the pre-commit hook. Requires `project-files`; excludes `feature`.
+    /// Measure each project file's and each part's index copy against its
+    /// `HEAD` copy, for the pre-commit hook. Requires `project-files`;
+    /// excludes `feature`.
     #[serde(default)]
     #[arg(long)]
     pub staged: bool,
@@ -8069,6 +8070,15 @@ pub struct SizeProjectHalf {
     /// Entries in `part-findings`, in either form; absent under `staged`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub part_findings_count: Option<usize>,
+    /// Staged only: the path of each refused project file, then of each
+    /// refused part, in subject order. Empty when none is refused. Absent in
+    /// the file form, and without `staged`, where nothing is refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<Vec<String>>,
+    /// Staged only: entries in `refused`, in either form, which the CLI's
+    /// exit reads; absent without `staged`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused_count: Option<usize>,
 }
 
 /// One part's measurement (spec 087).
@@ -10139,6 +10149,8 @@ mod tests {
                     message: "unlinked".into(),
                 }]),
                 part_findings_count: Some(1),
+                refused: Some(vec!["AGENTS.md".into()]),
+                refused_count: Some(1),
             }),
         };
         // The project half carries its own keys and none of the spec half's.
@@ -10150,6 +10162,8 @@ mod tests {
         assert_eq!(value["parts"][0]["linked"], false);
         assert_eq!(value["part-findings"][0]["kind"], "unlinked-part");
         assert_eq!(value["part-findings-count"], 1);
+        assert_eq!(value["refused"][0], "AGENTS.md");
+        assert_eq!(value["refused-count"], 1);
         assert!(!value.as_object().unwrap().contains_key("feature"));
         assert_eq!(round_trip(&both), both);
     }

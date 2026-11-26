@@ -206,3 +206,142 @@ fn a_call_that_cannot_look_exits_1() {
     assert_eq!(code, Some(1), "{stderr}");
     assert!(stderr.contains("project-files"), "{stderr}");
 }
+
+// -- parts (spec 087, AC5) ---------------------------------------------------
+
+const PART: &str = ".ductus/docs/system/storage.md";
+
+/// Write `rel` with `bytes` of content and stage it.
+fn stage(repository: &Repository, dir: &Path, rel: &str, bytes: usize) {
+    let path = dir.join(rel);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, "x".repeat(bytes)).unwrap();
+    let mut index = repository.index().unwrap();
+    index.add_path(Path::new(rel)).unwrap();
+    index.write().unwrap();
+}
+
+/// Commit what is staged on top of `HEAD`.
+fn commit(repository: &Repository) {
+    let mut index = repository.index().unwrap();
+    let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+    let parent = repository.head().unwrap().peel_to_commit().unwrap();
+    let sig = Signature::now("Test", "test@example.com").unwrap();
+    repository
+        .commit(Some("HEAD"), &sig, &sig, "parts", &tree, &[&parent])
+        .unwrap();
+}
+
+/// A staged part over the read size with no `HEAD` copy, or larger than its
+/// `HEAD` copy, is refused, named on stderr with its path, staged size, limit
+/// and fix, in the file form (the fixture's 100-byte read size) and the
+/// inline one.
+#[test]
+fn a_refused_part_exits_1_and_names_its_path_size_limit_and_fix_in_either_form() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(&repository, tmp.path(), PART, 151);
+    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stderr}");
+    for named in [
+        PART,
+        "151 bytes staged",
+        "no HEAD copy",
+        "100-byte",
+        "sibling parts",
+    ] {
+        assert!(stderr.contains(named), "{named} not in: {stderr}");
+    }
+    let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(result["form"], "file", "{stdout}");
+    assert_eq!(result["refused-count"], 1, "{stdout}");
+
+    // Inline: a part committed over the limit, then grown.
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(&repository, tmp.path(), PART, 1600);
+    commit(&repository);
+    read_size(tmp.path(), 1500);
+    stage(&repository, tmp.path(), PART, 2000);
+    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(1), "{stderr}");
+    for named in [
+        PART,
+        "2000 bytes staged",
+        "HEAD copy 1600 bytes",
+        "1500-byte",
+    ] {
+        assert!(stderr.contains(named), "{named} not in: {stderr}");
+    }
+    let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(result["form"], "inline", "{stdout}");
+    assert_eq!(result["refused"], serde_json::json!([PART]), "{stdout}");
+}
+
+/// An over-limit part that shrinks or is left unchanged passes, and so does
+/// one deleted in the commit, whose index link is a finding of the next
+/// unstaged call, never a refusal.
+#[test]
+fn a_shrunk_unchanged_or_deleted_part_exits_0() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(&repository, tmp.path(), PART, 150);
+    commit(&repository);
+    let (code, _, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(0), "unchanged: {stderr}");
+    stage(&repository, tmp.path(), PART, 120);
+    let (code, _, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(0), "shrunk: {stderr}");
+    assert!(stderr.is_empty(), "{stderr}");
+    let mut index = repository.index().unwrap();
+    index.remove_path(Path::new(PART)).unwrap();
+    index.write().unwrap();
+    let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+    assert_eq!(code, Some(0), "deleted: {stderr}");
+    let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(result["parts-count"], 0, "{stdout}");
+}
+
+/// A staged part that cannot be measured, left in conflict with no stage-0
+/// entry, stops the commit and is named, in either form.
+#[test]
+fn an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), 10);
+    stage(&repository, tmp.path(), PART, 20);
+    let mut index = repository.index().unwrap();
+    let entry = index.get_path(Path::new(PART), 0).unwrap();
+    index.remove_path(Path::new(PART)).unwrap();
+    for stage in 1..=3_u16 {
+        let staged = git2::IndexEntry {
+            ctime: entry.ctime,
+            mtime: entry.mtime,
+            dev: entry.dev,
+            ino: entry.ino,
+            mode: entry.mode,
+            uid: entry.uid,
+            gid: entry.gid,
+            file_size: entry.file_size,
+            id: entry.id,
+            flags: (entry.flags & !0x3000) | (stage << 12),
+            flags_extended: entry.flags_extended,
+            path: entry.path.clone(),
+        };
+        index.add(&staged).unwrap();
+    }
+    index.write().unwrap();
+    for (bytes, form) in [(100, "file"), (100_000, "inline")] {
+        read_size(tmp.path(), bytes);
+        let (code, stdout, stderr) = run(tmp.path(), &["--project-files", "--staged"]);
+        assert_eq!(code, Some(1), "{form}: {stdout}");
+        assert!(
+            stderr.contains(&format!(
+                "{PART} could not be measured (artifact-unreadable)"
+            )),
+            "{form}: {stderr}"
+        );
+        let result: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        assert_eq!(result["form"], form, "{stdout}");
+        assert_eq!(result["refused-count"], 0, "{stdout}");
+    }
+}

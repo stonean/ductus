@@ -45,9 +45,9 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 ## 3. The staged check and the hook refuse a grown part
 
 - [x] Under `staged`, read the part set from the index's entries directly under each parts directory through `ProjectRepository::discover` and `to_git`, with `head-bytes` and `refused` per part; leave `part-findings` absent
-- [ ] Add the inline `refused-count`; have `runtime/src/main.rs` exit on it and name each refused part on stderr, reading `parts` from the lists file in the file form
-- [ ] `runtime/tests/check_artifact_size_cli.rs`: a staged part over the limit with no `HEAD` copy, or larger than it, exits 1 naming its path, size, limit and fix, in both forms; a shrunk or unchanged over-limit part exits 0; a deleted part passes
-- [ ] Create `runtime/tests/size_hook.rs`, which runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` (not `.githooks/`) over a fixture repository, as `runtime/tests/consolidate_hook.rs` does: a commit growing a part past the limit is refused, and one shrinking it passes, which covers AC5 including a project in a repository subdirectory
+- [x] Add the inline `refused-count`; have `runtime/src/main.rs` exit on it and name each refused part on stderr, reading `parts` from the lists file in the file form
+- [x] `runtime/tests/check_artifact_size_cli.rs`: a staged part over the limit with no `HEAD` copy, or larger than it, exits 1 naming its path, size, limit and fix, in both forms; a shrunk or unchanged over-limit part exits 0; a deleted part passes
+- [x] Create `runtime/tests/size_hook.rs`, which runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` (not `.githooks/`) over a fixture repository, as `runtime/tests/consolidate_hook.rs` does: a commit growing a part past the limit is refused, and one shrinking it passes, which covers AC5 including a project in a repository subdirectory
 
 - **Done when**: AC5's tests pass and are proven to fail without the refusal (AC10); the commit records each registry layout's impact (AC18).
 
@@ -101,6 +101,8 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); a `/prune --project` run over AC14's fixture shows the search, moves the file and re-points both links on confirmation, and writes nothing when declined (AC14); the same run ended after the move proposals reports each entry it did not judge as not examined, never as kept (AC21); the commit records each registry layout's impact (AC18).
 
 ## 9. The routing text and the constitution
+
+Task 3 made the shipped hook refuse a grown part, so the constitution's §text-first-artifacts sentence on the hook's refusal (*Write each artifact as short as its required content allows*) and `README.md`'s `[artifacts]` entry, which name a project file alone, change with this task's constitution edits.
 
 - [ ] `specs/075-agents-md-holds-what-every-session-needs/spec.md`: the routing row *A procedure for one kind of task* names `.ductus/docs/agents/` in place of `docs/`, plus a signpost
 - [ ] `framework/bootstrap/ductus.md`'s `ductus:memory-routing` line, and its §Project Configuration `read-size-bytes` comment, copied byte-identically to `framework/bootstrap/govern.md` (AC19)

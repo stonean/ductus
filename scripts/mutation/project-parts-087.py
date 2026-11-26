@@ -7,7 +7,9 @@ project file through `check-corpus-links`' link scan
 `check-artifact-size`'s project half
 (`runtime/src/primitives/check_artifact_size.rs`), which measures each part on
 disk and staged, reports one over the read size with its fix, and bounds the
-parts and their findings.
+parts, their findings and the refused list; and the staged CLI
+(`runtime/src/main.rs`), which exits on a refused part and names it, through
+the shipped hook (`runtime/tests/size_hook.rs`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/project-parts-087.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -244,5 +246,47 @@ MUTATIONS = [
         '        part_findings_count: part_findings.as_ref().map(Vec::len),',
         '        part_findings_count: part_findings.as_ref().and(None),',
         'check_artifact_size::tests::a_project_with_no_parts_keeps_every_earlier_key_and_value',
+    ),
+    (
+        'M33 the staged CLI does not exit on a refused part',
+        'src/main.rs',
+        '        || result\n            .project\n            .as_ref()\n            .is_some_and(|half| half.refused_count.unwrap_or(0) > 0)',
+        '        || false',
+        '--test check_artifact_size_cli a_refused_part_exits_1_and_names_its_path_size_limit_and_fix_in_either_form',
+    ),
+    (
+        'M34 the refused list leaves out the parts',
+        'src/primitives/check_artifact_size.rs',
+        '            .chain(parts.iter().map(|part| (&part.path, part.refused)))\n',
+        '',
+        'check_artifact_size::tests::a_staged_file_form_result_holds_its_refused_list_in_the_file',
+    ),
+    (
+        'M35 a refused part is not named on stderr',
+        'src/main.rs',
+        '    for part in half.parts.iter().flatten() {\n        if part.refused == Some(true) {',
+        '    for part in half.parts.iter().flatten() {\n        if false && part.refused == Some(true) {',
+        '--test check_artifact_size_cli a_refused_part_exits_1_and_names_its_path_size_limit_and_fix_in_either_form',
+    ),
+    (
+        'M36 the lists file does not hold the refused list',
+        'src/primitives/check_artifact_size.rs',
+        '            lists["refused"] = serde_json::json!(refused);\n',
+        '            let _ = refused;\n',
+        'check_artifact_size::tests::a_staged_file_form_result_holds_its_refused_list_in_the_file',
+    ),
+    (
+        'M37 the shipped hook lets a grown part through',
+        'src/main.rs',
+        '        || result\n            .project\n            .as_ref()\n            .is_some_and(|half| half.refused_count.unwrap_or(0) > 0)',
+        '        || false',
+        '--test size_hook',
+    ),
+    (
+        'M38 an unmeasurable part is not named on stderr',
+        'src/main.rs',
+        '    for skipped in result.skipped.iter().flatten() {',
+        '    for skipped in result.skipped.iter().flatten().filter(|s| !s.path.contains("/docs/")) {',
+        '--test check_artifact_size_cli an_unmeasurable_staged_part_exits_1_and_names_it_in_either_form',
     ),
 ]

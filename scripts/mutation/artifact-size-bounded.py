@@ -25,10 +25,13 @@ well, run by hand:
   `runtime/src/main.rs` reads `skipped` in place of `skipped_count`
   (`!result.skipped.as_ref().is_none_or(Vec::is_empty)`, the hook passing a
   file it could not measure once the lists move), and when
-  `report_refused_project_files` names the unreadable files from `skipped`
-  in place of `project-files` (`cargo test --locked --test
-  check_artifact_size_cli -- unmeasurable`). main.rs is the binary, which no
-  unit test run here compiles, so neither is a mutation below.
+  `report_refused_sizes` names the unreadable files from the bounded result
+  in place of the whole one, whose `skipped` the file form moves to its list
+  file (`cargo test --locked --test check_artifact_size_cli --
+  unmeasurable`). main.rs is the binary, which no unit test run here
+  compiles, so neither is a mutation below; spec 087's
+  `project-parts-087.py` anchors its own main.rs mutations on the
+  integration tests by `--test`.
 - `an_oversized_file_without_staged_is_a_finding_never_an_exit_status` in the
   same file fails under M9.
 """
@@ -88,7 +91,7 @@ MUTATIONS = [
     (
         'M8 the list file lacks notices',
         'src/primitives/check_artifact_size.rs',
-        '        "notices": measured.notices,\n',
+        '        "notices": result.notices,\n',
         '',
         'check_artifact_size::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),
