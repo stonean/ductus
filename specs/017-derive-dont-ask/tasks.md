@@ -1,5 +1,5 @@
 ---
-next-task: 49
+next-task: 51
 ---
 
 # 017 — Derive, Don't Ask Tasks
@@ -34,3 +34,18 @@ Landed on 2026-11-14 after 000's review record; with the real `markdownlint-cli2
 - [x] Correct `docs/developing-ductus.md` §Running a second session, whose account of a pathspec commit leaving the old generated copies staged in the main index, and its `git restore --staged` remedy, this behavior makes false; until this task lands, that account and remedy hold for every session in this tree
 
 - **Done when**: after `git commit -- <paths>` whose staged sources regenerate an output, `git diff --cached` names no carried output, the test case proves it in both directions, and `generators.yml`'s and `framework-checks.yml`'s steps pass locally
+
+### 49. The hook's runtime checks never write the commit's index (owner decision, 2026-11-25)
+
+- [ ] `.githooks/pre-commit` runs `cargo fmt --check`, `cargo clippy` and `cargo test` with `GIT_INDEX_FILE`, `GIT_DIR` and `GIT_WORK_TREE` unset, so a test that runs git in a fixture repository can never write the index of the commit in hand. Found 2026-11-25: a commit of 066's review from a linked worktree with `runtime/tests/golden/review-basic.jsonl` staged passed every runtime check, then held 7 fixture entries (`hooks/pre-push`, `specs/001-a/spec.md`, …) naming objects the repository lacks, and the hook's size check could not read it; inferred, not yet run: the tests inherit the hook's `GIT_INDEX_FILE`, which is absolute in a linked worktree
+- [ ] `scripts/tests/test-pre-commit-staging.sh` holds a case in which a commit from a linked worktree with a `runtime/` path staged keeps its index entries, the runtime checks stubbed, and it fails with the variables left set
+
+- **Done when**: a commit from a linked worktree with a `runtime/` path staged leaves its index entries as they were, the new case proves it and fails with the variables left set, and `framework-checks.yml`'s steps pass locally.
+
+### 50. A path-list commit carries every file the hook rewrites into the shared index (owner decision, 2026-11-25)
+
+- [ ] Widen `scenarios/a-path-list-commit-leaves-the-shared-index-current.md` from generated outputs to every file the hook rewrites, a markdown file `markdownlint-cli2 --fix` changed among them: task 48's `carry_to_shared` in `.githooks/pre-commit` filters to `$generated_outputs`, so a named markdown file `--fix` rewrote in `git commit -- <paths>` still leaves its pre-fix copy staged in the shared index (found by code reading while landing task 48, 2026-11-25)
+- [ ] `carry_to_shared` drops the generated-outputs filter; the starting-blob guard still leaves another session's staged entry as it was
+- [ ] `scripts/tests/test-pre-commit-staging.sh` holds a path-list case for a markdown file `--fix` rewrites, and it fails with the filter restored
+
+- **Done when**: after `git commit -- <paths>` naming a markdown file the hook's `--fix` rewrites, `git diff --cached` names no carried file, the case proves it in both directions, and `generators.yml`'s and `framework-checks.yml`'s steps pass locally.
