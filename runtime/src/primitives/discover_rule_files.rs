@@ -35,7 +35,7 @@ use crate::schema::config_keys::{self, UnknownKey};
 use crate::schema::paths;
 use crate::schema::primitives::{
     DiscoverRuleFilesArgs, DiscoverRuleFilesResult, ListsForm, LoadedRule, OtherHeading,
-    ReusableVerdict, RuleFileRules, RuleVerdictsBlock, UnreadableRuleFile,
+    RejudgedFile, ReusableVerdict, RuleFileRules, RuleVerdictsBlock, UnreadableRuleFile,
 };
 use crate::schema::severity::RuleSeverity;
 
@@ -237,6 +237,9 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
         lists["judge"] = serde_json::json!(&block.judge);
         lists["rejudge"] = serde_json::json!(&block.rejudge);
         lists["changed-sections"] = serde_json::json!(&block.changed_sections);
+        if let Some(rejudged) = &block.rejudged_files {
+            lists["rejudged-files"] = serde_json::json!(rejudged);
+        }
     }
     if let Some(file) = super::bounded_lists::place(
         repo,
@@ -255,6 +258,7 @@ fn bound(repo: &Path, result: &mut DiscoverRuleFilesResult, notices: Vec<String>
             block.judge = None;
             block.rejudge = None;
             block.changed_sections = None;
+            block.rejudged_files = None;
         }
         result.lists_file = Some(file);
     }
@@ -297,10 +301,8 @@ fn list_rules(
                 continue;
             }
         };
-        if index < selected
-            && let Some(name) = Path::new(&file).file_name().and_then(|name| name.to_str())
-        {
-            loaded.push(LoadedRuleFile::read(name, &content));
+        if index < selected {
+            loaded.push(LoadedRuleFile::read(&file, &content));
         }
         let rules = parse_rule_sections(&content)
             .into_iter()
@@ -368,7 +370,7 @@ fn verdicts_block(
             feature: feature.to_string(),
         });
     }
-    let standing = rule_verdicts::standing(&feature_dir, loaded);
+    let standing = rule_verdicts::standing(repo, &feature_dir, loaded);
     if let Some(rule_verdicts::NoReuse::RecordUnreadable(reason)) = &standing.no_reuse {
         notices.push(format!(
             "{feature}'s analysis.md carries no readable record ({}) — every rule is to be judged",
@@ -385,7 +387,17 @@ fn verdicts_block(
     let judge: Vec<String> = standing.judge().map(|rule| rule.id.clone()).collect();
     let rejudge: Vec<String> = standing.rejudge().map(|rule| rule.id.clone()).collect();
     let changed_sections: Vec<String> = standing.changed_sections().cloned().collect();
+    let rejudged_files: Vec<RejudgedFile> = standing
+        .rejudged_files()
+        .iter()
+        .map(|(file, why)| RejudgedFile {
+            file: file.clone(),
+            reason: why.code().to_string(),
+        })
+        .collect();
     Ok(RuleVerdictsBlock {
+        rejudged_files_count: (!rejudged_files.is_empty()).then_some(rejudged_files.len()),
+        rejudged_files: (!rejudged_files.is_empty()).then_some(rejudged_files),
         reason: standing.no_reuse.as_ref().map(|why| why.code().to_string()),
         reusable_count: reusable.len(),
         judge_count: judge.len(),
@@ -2010,9 +2022,42 @@ mod tests {
         assert_eq!(result.verdicts.unwrap().judge.unwrap(), ["TS-RULE-002"]);
     }
 
-    /// A rule edit judges the file's rules again over an unchanged spec.
+    /// A rule edit judges the file's rules again over an unchanged spec when
+    /// history cannot supply the copy the run judged, here a project in no
+    /// repository, and `rejudged-files` names the file and why (spec 088); a
+    /// call with no file judged whole carries neither key.
     #[test]
     fn an_edited_rule_file_is_listed_to_judge_again() {
+        let tmp = verdict_project();
+        record(&tmp, ALL_JUDGED, None);
+        let unchanged = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        let value = serde_json::to_value(unchanged.verdicts.unwrap()).unwrap();
+        assert!(
+            value.get("rejudged-files").is_none() && value.get("rejudged-files-count").is_none(),
+            "{value}"
+        );
+        std::fs::write(
+            tmp.path().join("framework/rules/quality-cross.md"),
+            VERDICT_RULES.replace("Look for constants.", "Look for named constants."),
+        )
+        .unwrap();
+        let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
+        let block = result.verdicts.unwrap();
+        assert_eq!(block.judge.unwrap(), ALL_JUDGED);
+        assert_eq!(block.rejudged_files_count, Some(1));
+        assert_eq!(
+            block.rejudged_files.unwrap(),
+            [RejudgedFile {
+                file: "quality-cross.md".into(),
+                reason: "history-unreadable".into()
+            }]
+        );
+    }
+
+    /// Past the read size `rejudged-files` moves to the file with the other
+    /// verdict lists, its count inline (spec 088).
+    #[test]
+    fn past_the_read_size_rejudged_files_moves_to_the_file() {
         let tmp = verdict_project();
         record(&tmp, ALL_JUDGED, None);
         std::fs::write(
@@ -2020,8 +2065,30 @@ mod tests {
             VERDICT_RULES.replace("Look for constants.", "Look for named constants."),
         )
         .unwrap();
+        std::fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 300\n",
+        )
+        .unwrap();
         let result = run(&with_feature(args(&[])), tmp.path()).unwrap();
-        assert_eq!(result.verdicts.unwrap().judge.unwrap(), ALL_JUDGED);
+        assert_eq!(result.form, ListsForm::File);
+        let block = result.verdicts.clone().unwrap();
+        assert_eq!(block.rejudged_files_count, Some(1));
+        assert!(block.rejudged_files.is_none());
+        let file = result.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(tmp.path().join(&file)).unwrap())
+                .unwrap();
+        assert_eq!(
+            lists["rejudged-files"],
+            serde_json::json!([{"file": "quality-cross.md", "reason": "history-unreadable"}])
+        );
+        crate::primitives::bounded_lists::assert_counts_name_the_file(
+            "discover-rule-files",
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 
     /// `feature` reads nothing without `all` and `rules`, which select the

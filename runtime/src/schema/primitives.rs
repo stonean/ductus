@@ -527,8 +527,10 @@ pub struct AnalyzeBlock {
     #[serde(default)]
     pub last_run: Option<String>,
     /// HEAD sha at the time of the run — **provenance, not the staleness
-    /// basis**. Read for exactly one thing: the mechanical-sweep rename
-    /// exemption, which genuinely needs two trees. Staleness itself is
+    /// basis**. Read for two things, each needing a second tree: the
+    /// mechanical-sweep rename exemption, and the copy of a changed rule file
+    /// the run judged, which stands in only when it digests as
+    /// [`Self::rule_digest`] says (spec 088). Staleness itself is
     /// [`Self::analyzed_digest`].
     #[serde(default)]
     pub analyzed_against: Option<String>,
@@ -897,6 +899,26 @@ pub struct RuleVerdictsBlock {
     /// does not name is unchanged. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub changed_sections: Option<Vec<String>>,
+    /// Entries in `rejudged-files`, in either form; absent at zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejudged_files_count: Option<usize>,
+    /// Each changed rule file whose copy at the record's `analyzed-against`
+    /// could not stand in for the text the run judged, so every rule of it
+    /// is in `judge` (spec 088). Absent when none is, and in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejudged_files: Option<Vec<RejudgedFile>>,
+}
+
+/// One entry of [`RuleVerdictsBlock::rejudged_files`] (spec 088).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RejudgedFile {
+    /// The rule file's basename, as the record's `rule-digest` keys it.
+    pub file: String,
+    /// Why its copy could not stand in: `no-analyzed-against`,
+    /// `commit-not-held`, `not-at-commit`, `judged-copy-differs` or
+    /// `history-unreadable`.
+    pub reason: String,
 }
 
 /// One current fired verdict in [`RuleVerdictsBlock::reusable`].

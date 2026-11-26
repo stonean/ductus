@@ -2717,6 +2717,17 @@ mod tests {
         rule_files: Option<&[&str]>,
         responses: &str,
     ) -> (WalkOutcome, Vec<Value>) {
+        walk_analyze_at(procedure, repo, rule_files, responses, "abc1234")
+    }
+
+    /// [`walk_analyze`] with the run's `analyzed-against` given.
+    fn walk_analyze_at(
+        procedure: &Procedure,
+        repo: &Path,
+        rule_files: Option<&[&str]>,
+        responses: &str,
+        analyzed_against: &str,
+    ) -> (WalkOutcome, Vec<Value>) {
         let mut context = Map::new();
         context.insert("feature".into(), Value::String("001-x".into()));
         context.insert("path".into(), Value::String("specs/001-x".into()));
@@ -2724,7 +2735,10 @@ mod tests {
             "analyzed-at".into(),
             Value::String("2026-09-27T00:00:00Z".into()),
         );
-        context.insert("analyzed-against".into(), Value::String("abc1234".into()));
+        context.insert(
+            "analyzed-against".into(),
+            Value::String(analyzed_against.into()),
+        );
         if let Some(files) = rule_files {
             context.insert(
                 "rule-files".into(),
@@ -3189,6 +3203,56 @@ mod tests {
             3,
             "the edited file's rules are judged again"
         );
+    }
+
+    /// Spec 088, AC2 through the walker: after one rule's edit, made since the
+    /// commit its record names, the walk asks about that rule and the rule
+    /// naming it alone, the decision `discover-rule-files` and
+    /// `write-analysis` share.
+    #[test]
+    fn an_exec_step_asks_about_an_edited_rule_and_its_namer_alone() {
+        let repo = analyze_repo(None);
+        let rules = repo.path().join("framework/rules/a-cross.md");
+        let text = "### TS-MUST-001\n\n> Specs MUST name their constants.\n\n**Verification:** Look.\n\n\
+                    ### TS-MUST-002\n\n> Specs MUST name an owner, as TS-MUST-001 asks.\n\n**Verification:** Look.\n\n\
+                    ### TS-MUST-003\n\n> Specs MUST name a cursor.\n\n**Verification:** Look.\n";
+        crate::primitives::git_fixture::write(&rules, text);
+        let repository = git2::Repository::init(repo.path()).unwrap();
+        let commit = crate::primitives::git_fixture::commit_all(&repository, "rules").to_string();
+        let files = ["framework/rules/a-cross.md"];
+        let must_only = analyze_procedure(vec![assess_tier(11, "MUST")]);
+        let pass = |n| llm_response(n, "{\"passed\":true}");
+        let (outcome, _) = walk_analyze_at(
+            &must_only,
+            repo.path(),
+            Some(&files),
+            &[pass(1), pass(2), pass(3)].concat(),
+            &commit,
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+
+        std::fs::write(
+            &rules,
+            text.replacen(
+                "**Verification:** Look.",
+                "**Verification:** Look closely.",
+                1,
+            ),
+        )
+        .unwrap();
+        let (outcome, envelopes) = walk_analyze_at(
+            &must_only,
+            repo.path(),
+            Some(&files),
+            &[pass(1), pass(2)].concat(),
+            &commit,
+        );
+        assert_eq!(outcome, WalkOutcome::Complete);
+        let asked: Vec<&str> = requests(&envelopes)
+            .iter()
+            .map(|r| r["request"]["rule"]["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(asked, ["TS-MUST-001", "TS-MUST-002"]);
     }
 
     /// A step with some current verdicts and some stale ones reuses the first

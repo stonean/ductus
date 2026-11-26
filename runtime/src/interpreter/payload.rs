@@ -1548,7 +1548,7 @@ pub(crate) fn load_rules(
         };
         if let Some(name) = Path::new(&rel).file_name().and_then(|name| name.to_str()) {
             loaded.files.push(name.to_string());
-            digested.push(rule_verdicts::LoadedRuleFile::read(name, &rule_file));
+            digested.push(rule_verdicts::LoadedRuleFile::read(&rel, &rule_file));
         }
         for section in parse_rule_sections(&rule_file) {
             let tier = section.tier();
@@ -1568,7 +1568,7 @@ pub(crate) fn load_rules(
     let feature_dir = feature_dir(context, repo)?;
     loaded.standing = feature_dir
         .as_ref()
-        .map(|feature_dir| rule_verdicts::standing(feature_dir, &digested));
+        .map(|feature_dir| rule_verdicts::standing(repo, feature_dir, &digested));
     // A spec the walk cannot read departs from nothing: the tally then counts
     // as it did before departures, and `write-analysis`, which reads the same
     // spec, refuses nothing it did not already.

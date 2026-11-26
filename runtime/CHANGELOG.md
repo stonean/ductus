@@ -141,6 +141,20 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Changed
 
+- **An edit to one rule re-judges that rule and the rules naming it, not its
+  whole file (spec 088, AC2; the agent's recommendations, adopted by the
+  operator, 2026-11-25 and 2026-11-26).** A stored verdict whose rule file
+  changed is compared rule by rule with the file's copy at the record's
+  `analyzed-against`, which stands in only when it digests as the record's
+  `rule-digest` entry says, so `discover-rule-files`, the exec walker and
+  `write-analysis` judge again only each rule whose ID, Statement or
+  Verification changed, each rule new to its file, and each loaded rule whose
+  Statement or Verification names one or a rule the file no longer holds.
+  When history cannot supply that copy, or it is not the text the run judged,
+  every rule of the file is judged as before, and `discover-rule-files`'
+  `verdicts` names it under the new `rejudged-files` with its `reason`
+  (`no-analyzed-against`, `commit-not-held`, `not-at-commit`,
+  `judged-copy-differs` or `history-unreadable`), absent when no file is.
 - **The adopter CI template's audit-record gate runs `check-audit-records`
   (spec 085, AC1 and AC4).** The step "Audit-record gate on done specs" in
   `framework/templates/ci/adopter-generators.yml` parsed each `spec.md`,

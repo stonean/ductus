@@ -12,8 +12,8 @@
 //! [`analyze_subjects::freshness_of`](crate::primitives::analyze_subjects)
 //! is for the completion gate and `/{project}:review`'s `analyze` row.
 //!
-//! A stored verdict is current while four things match (the plan's
-//! *A stored verdict is current while four things match*):
+//! A stored verdict is current while five things hold (082's plan names the
+//! first four, *A stored verdict is current while four things match*):
 //!
 //! 1. the design subjects, `spec.md`, `plan.md`, `data-model.md` and each
 //!    scenario, digest as the record's `analyzed-digest` entries for them say,
@@ -22,9 +22,15 @@
 //! 2. the set of rule files loaded now is the set the record's `rule-digest`
 //!    names, so a file added or removed makes no verdict reusable
 //!    (`BE-CACHE-002`);
-//! 3. the rule file the rule lives in digests as the record's `rule-digest`
-//!    entry for it says (a Statement or Verification edit moves it);
-//! 4. the rule was judged: the record's `unjudged-rules` does not list it.
+//! 3. the rule's own text, its ID, Statement and Verification, is the text
+//!    the run judged: its file digests as the record's `rule-digest` entry
+//!    says, or, compared rule by rule with its copy at the record's
+//!    `analyzed-against`, which stands in only when it digests as that entry
+//!    says, the rule reads as it did there (spec 088, [`CopyUnavailable`]
+//!    when it cannot stand in, and every rule of the file is stale);
+//! 4. no rule its Statement or Verification names changed so, or was removed
+//!    (spec 088);
+//! 5. the rule was judged: the record's `unjudged-rules` does not list it.
 //!
 //! A rule that did not fire has no verdict to be current, so a current rule is
 //! one of four things, [`Currency`]: not fired, fired (with its verdict),
@@ -32,14 +38,17 @@
 //! entry" as stale would judge every quiet rule on every run, and treating it
 //! as unjudged would name them all in `rule-assessments-not-checked`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path};
 
 use crate::primitives::analyze_subjects::{is_design_subject, section_digest, subject_digest};
 use crate::primitives::departures::{self, Attribution};
 use crate::primitives::resolve_anchor::heading_lines;
-use crate::primitives::rule_sections::{parse_rule_sections, rules_digest};
-use crate::primitives::{RecordLoad, Result, discover_rule_files, load_analyze_record, read_text};
+use crate::primitives::rule_sections::{named_rule_ids, parse_rule_sections, section_digests};
+use crate::primitives::{
+    ProjectRepository, RecordLoad, Result, blob_text, discover_rule_files, load_analyze_record,
+    read_text,
+};
 #[cfg(test)]
 use crate::schema::primitives::FindingTier;
 use crate::schema::primitives::{AnalyzeBlock, RuleVerdict};
@@ -56,37 +65,60 @@ pub(crate) struct AssessableRule {
     /// Whether its Statement carries both MUST and SHOULD, so a finding of it
     /// may be counted in either tier.
     pub(crate) mixed: bool,
+    /// The other rule IDs its Statement and Verification name, whose change
+    /// makes its verdict stale (spec 088).
+    pub(crate) names: BTreeSet<String>,
 }
 
-/// A rule file a run loaded: its basename, the digest of its rules' text and
-/// the assessable rules in heading order.
+/// A rule file a run loaded: its basename, its path, the digest of its rules'
+/// text, each rule's own digest and the assessable rules in heading order.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct LoadedRuleFile {
     /// The file's basename, the key of the record's `rule-digest`.
     pub(crate) name: String,
-    /// [`rules_digest`] of its content.
+    /// Its `/`-separated path from the project root, where history holds the
+    /// copy a run judged (spec 088).
+    pub(crate) path: String,
+    /// The digest of its rules' text, by [`section_digests`].
     pub(crate) digest: String,
+    /// Each rule's own text digested by ID, every rule section's, assessable
+    /// or not ([`section_digests`]).
+    pub(crate) texts: BTreeMap<String, String>,
     /// Its assessable rules, in heading order.
     pub(crate) rules: Vec<AssessableRule>,
 }
 
 impl LoadedRuleFile {
-    /// Read a rule file's `content` the way every reader of a rule does.
-    pub(crate) fn read(name: &str, content: &str) -> Self {
-        let rules = parse_rule_sections(content)
+    /// Read the rule file at `path`, from the project root, whose text is
+    /// `content`, the way every reader of a rule does.
+    pub(crate) fn read(path: &str, content: &str) -> Self {
+        let sections = parse_rule_sections(content);
+        let (digest, texts) = section_digests(&sections);
+        let rules = sections
             .into_iter()
             .filter_map(|section| match (section.tier(), &section.verification) {
-                (Some(tier), Some(_)) => Some(AssessableRule {
-                    mixed: section.carries_both_tiers(),
-                    id: section.id,
-                    tier,
-                }),
+                (Some(tier), Some(verification)) => {
+                    let mut names = named_rule_ids(&section.statement);
+                    names.extend(named_rule_ids(verification));
+                    names.remove(&section.id);
+                    Some(AssessableRule {
+                        mixed: section.carries_both_tiers(),
+                        id: section.id,
+                        tier,
+                        names,
+                    })
+                }
                 _ => None,
             })
             .collect();
         Self {
-            name: name.to_string(),
-            digest: rules_digest(content),
+            name: Path::new(path).file_name().map_or_else(
+                || path.to_string(),
+                |name| name.to_string_lossy().into_owned(),
+            ),
+            path: path.to_string(),
+            digest,
+            texts,
             rules,
         }
     }
@@ -113,12 +145,14 @@ pub(crate) struct Universe {
 /// be listed. An absent directory is an empty universe.
 pub(crate) fn load_universe(repo: &Path) -> Result<Universe> {
     let mut universe = Universe::default();
-    let (Some(dir), _) = discover_rule_files::resolve_rules_dir(repo)? else {
+    let (Some(dir), rel) = discover_rule_files::resolve_rules_dir(repo)? else {
         return Ok(universe);
     };
     for name in discover_rule_files::list_rule_files(&dir)? {
         match std::fs::read_to_string(dir.join(&name)) {
-            Ok(content) => universe.files.push(LoadedRuleFile::read(&name, &content)),
+            Ok(content) => universe
+                .files
+                .push(LoadedRuleFile::read(&format!("{rel}/{name}"), &content)),
             Err(_) => universe.unreadable += 1,
         }
     }
@@ -138,7 +172,7 @@ pub(crate) enum NoReuse {
     /// The rule files loaded now are not the set the record's `rule-digest`
     /// names: a file added or removed. A verdict is current only for the set
     /// it was judged under (`BE-CACHE-002`), so none is reusable; a file whose
-    /// content alone changed keeps the per-file rule.
+    /// content alone changed has its rules compared one by one (spec 088).
     RuleFilesChanged,
     /// The record does not parse. Distinct from holding no verdicts: the
     /// run judges every rule, and says why.
@@ -153,6 +187,41 @@ impl NoReuse {
             Self::SubjectsChanged => "subjects-changed",
             Self::RuleFilesChanged => "rule-files-changed",
             Self::RecordUnreadable(_) => "record-unreadable",
+        }
+    }
+}
+
+/// Why a changed rule file's copy at the record's `analyzed-against` cannot
+/// stand in for the text the run judged, so every rule of it is judged again
+/// (spec 088, AC2). The closed set `discover-rule-files` reports under
+/// `rejudged-files`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CopyUnavailable {
+    /// The record names no `analyzed-against`.
+    NoAnalyzedAgainst,
+    /// The repository holds no commit by that sha: a shallow clone, a commit
+    /// never fetched, or a sha that names none.
+    CommitNotHeld,
+    /// The commit's tree holds no such file at its path, or not as UTF-8.
+    NotAtCommit,
+    /// The copy there does not digest as the record's entry says: the run
+    /// read rule text that commit does not hold, as an analysis run before
+    /// its commit can.
+    JudgedCopyDiffers,
+    /// The project is in no repository, or git could not read the commit,
+    /// its tree or the blob.
+    HistoryUnreadable,
+}
+
+impl CopyUnavailable {
+    /// The reason as `discover-rule-files` reports it.
+    pub(crate) fn code(self) -> &'static str {
+        match self {
+            Self::NoAnalyzedAgainst => "no-analyzed-against",
+            Self::CommitNotHeld => "commit-not-held",
+            Self::NotAtCommit => "not-at-commit",
+            Self::JudgedCopyDiffers => "judged-copy-differs",
+            Self::HistoryUnreadable => "history-unreadable",
         }
     }
 }
@@ -270,9 +339,17 @@ pub(crate) struct Standing {
     /// The sections against the prior record's, when both sides can say
     /// (AC7); `None` for a record without `section-digest`, or none reusable.
     sections: Option<SectionDelta>,
+    /// Each changed rule file whose copy at the record's `analyzed-against`
+    /// could not stand in, with why, in load order (spec 088).
+    rejudged_files: Vec<(String, CopyUnavailable)>,
 }
 
 impl Standing {
+    /// Each changed rule file judged again whole, with why (spec 088).
+    pub(crate) fn rejudged_files(&self) -> &[(String, CopyUnavailable)] {
+        &self.rejudged_files
+    }
+
     /// Each assessable rule with where it stands, in file then heading order.
     pub(crate) fn rules(&self) -> &[(AssessableRule, Currency)] {
         &self.rules
@@ -336,12 +413,14 @@ impl Standing {
 }
 
 /// Where each assessable rule of `files` stands against `feature_dir`'s
-/// `analysis.md`.
+/// `analysis.md`, `project` being the project root, from which history is
+/// read for the copy of a changed rule file the run judged (spec 088).
 ///
 /// Never fails: a record that cannot be read is a [`NoReuse`] reason, so the
-/// caller judges everything and says why, and a design subject that cannot be
-/// read or reached is a changed one.
-pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing {
+/// caller judges everything and says why, a design subject that cannot be
+/// read or reached is a changed one, and a judged copy that cannot be read is
+/// a [`CopyUnavailable`] reason, its file judged again whole.
+pub(crate) fn standing(project: &Path, feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing {
     let mut rules: Vec<(AssessableRule, Currency)> = Vec::new();
     for rule in files.iter().flat_map(|file| &file.rules) {
         if !rules.iter().any(|(seen, _)| seen.id == rule.id) {
@@ -379,13 +458,16 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
     if loaded_now != judged_under {
         return unreusable(rules, NoReuse::RuleFilesChanged);
     }
-    // A rule is current when its own file is, so a rule defined in two files
-    // is current only when both are.
+    let edits = RuleEdits::between(project, &prior, files);
+    // A rule is current when its own text is, so a rule defined in two files
+    // is current only when both copies are, and when no rule it names changed.
     let mut currency: BTreeMap<&str, Currency> = BTreeMap::new();
     for file in files {
-        let file_current = prior.rule_digest.get(&file.name) == Some(&file.digest);
         for rule in &file.rules {
-            let here = if file_current && !prior.unjudged_rules.contains(&rule.id) {
+            let here = if edits.own_text_current(file, &rule.id)
+                && rule.names.is_disjoint(&edits.changed)
+                && !prior.unjudged_rules.contains(&rule.id)
+            {
                 let verdict = prior.rule_verdicts.get(&rule.id);
                 match &sections {
                     Some(delta) if changed => section_currency(delta, verdict),
@@ -409,7 +491,134 @@ pub(crate) fn standing(feature_dir: &Path, files: &[LoadedRuleFile]) -> Standing
         no_reuse: None,
         rules,
         sections,
+        rejudged_files: edits.rejudged_files,
     }
+}
+
+/// What the rule files changed since the prior record, rule by rule (spec
+/// 088, AC2): each changed file compared with its copy at the record's
+/// `analyzed-against`, behind the guard that the copy digests as the record's
+/// `rule-digest` entry says, since `analyzed-against` is a caller's argument
+/// and an analysis may run before its commit.
+struct RuleEdits {
+    /// Per changed file whose copy stood in, by name, its rules whose own
+    /// text changed or that it did not hold.
+    narrowed: BTreeMap<String, BTreeSet<String>>,
+    /// Every changed, added or removed rule's ID, and each rule of a file
+    /// judged again whole: what a naming rule is stale for.
+    changed: BTreeSet<String>,
+    /// Each file judged again whole, with why.
+    rejudged_files: Vec<(String, CopyUnavailable)>,
+}
+
+impl RuleEdits {
+    /// Compare each file of `files` whose digest differs from `prior`'s.
+    fn between(project: &Path, prior: &AnalyzeBlock, files: &[LoadedRuleFile]) -> Self {
+        let mut edits = Self {
+            narrowed: BTreeMap::new(),
+            changed: BTreeSet::new(),
+            rejudged_files: Vec::new(),
+        };
+        // Opened once, and only when some file changed.
+        let mut history = History::Unopened;
+        for file in files {
+            let Some(recorded) = prior.rule_digest.get(&file.name) else {
+                continue;
+            };
+            if *recorded == file.digest {
+                continue;
+            }
+            match judged_copy(project, prior, &mut history, file, recorded) {
+                Ok(judged) => {
+                    let edited: BTreeSet<String> = file
+                        .texts
+                        .iter()
+                        .filter(|(id, text)| judged.get(*id) != Some(*text))
+                        .map(|(id, _)| id.clone())
+                        .collect();
+                    edits.changed.extend(edited.iter().cloned());
+                    edits
+                        .changed
+                        .extend(judged.into_keys().filter(|id| !file.texts.contains_key(id)));
+                    edits.narrowed.insert(file.name.clone(), edited);
+                }
+                Err(why) => {
+                    edits.changed.extend(file.texts.keys().cloned());
+                    edits.rejudged_files.push((file.name.clone(), why));
+                }
+            }
+        }
+        edits
+    }
+
+    /// Whether `id`'s own text in `file` is the text the run judged.
+    fn own_text_current(&self, file: &LoadedRuleFile, id: &str) -> bool {
+        match self.narrowed.get(&file.name) {
+            Some(edited) => !edited.contains(id),
+            None => !self
+                .rejudged_files
+                .iter()
+                .any(|(name, _)| *name == file.name),
+        }
+    }
+}
+
+/// The repository a call reads judged copies from, opened when a file first
+/// needs one.
+enum History {
+    /// Not yet needed.
+    Unopened,
+    /// The project's repository.
+    Open(ProjectRepository),
+    /// The project is in no repository.
+    Unavailable,
+}
+
+/// Each rule's own text in `file`'s copy at `prior`'s `analyzed-against`,
+/// digested by ID, when that copy is the one the run judged: resolved as
+/// `exempt_renames` resolves the field (`revparse_single`, peeled to its
+/// commit), read as `ProjectRepository::read_at_head` reads one at `HEAD`,
+/// and digesting as `recorded`, the record's entry for the file, says.
+fn judged_copy(
+    project: &Path,
+    prior: &AnalyzeBlock,
+    history: &mut History,
+    file: &LoadedRuleFile,
+    recorded: &str,
+) -> std::result::Result<BTreeMap<String, String>, CopyUnavailable> {
+    let sha = prior
+        .analyzed_against
+        .as_deref()
+        .map(str::trim)
+        .filter(|sha| !sha.is_empty())
+        .ok_or(CopyUnavailable::NoAnalyzedAgainst)?;
+    if matches!(history, History::Unopened) {
+        *history = ProjectRepository::discover(project).map_or(History::Unavailable, History::Open);
+    }
+    let History::Open(project_repository) = &*history else {
+        return Err(CopyUnavailable::HistoryUnreadable);
+    };
+    let git = &project_repository.repository;
+    let commit = match git.revparse_single(sha) {
+        Ok(object) => object
+            .peel_to_commit()
+            .map_err(|_| CopyUnavailable::HistoryUnreadable)?,
+        Err(err) if err.code() == git2::ErrorCode::NotFound => {
+            return Err(CopyUnavailable::CommitNotHeld);
+        }
+        Err(_) => return Err(CopyUnavailable::HistoryUnreadable),
+    };
+    let tree = commit
+        .tree()
+        .map_err(|_| CopyUnavailable::HistoryUnreadable)?;
+    let text = blob_text(git, &tree, &project_repository.to_git(&file.path))
+        .map_err(|_| CopyUnavailable::HistoryUnreadable)?
+        .ok_or(CopyUnavailable::NotAtCommit)?;
+    let (digest, texts) = section_digests(&parse_rule_sections(&text));
+    if digest != recorded {
+        return Err(CopyUnavailable::JudgedCopyDiffers);
+    }
+    Ok(texts)
 }
 
 /// Where a judged rule stands once some section changed (AC7): a quiet,
@@ -447,6 +656,7 @@ fn unreusable(rules: Vec<(AssessableRule, Currency)>, why: NoReuse) -> Standing 
         no_reuse: Some(why),
         rules,
         sections: None,
+        rejudged_files: Vec::new(),
     }
 }
 
@@ -686,7 +896,7 @@ mod tests {
         let tmp = feature();
         let loaded = files(MUST_RULES, SHOULD_RULES);
         record(tmp.path(), &loaded, ONE_FIRED);
-        let standing = standing(tmp.path(), &loaded);
+        let standing = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, None);
         assert_eq!(
             states(&standing),
@@ -718,7 +928,7 @@ mod tests {
             let tmp = feature();
             record_before_sections(tmp.path(), &loaded, ONE_FIRED);
             fs::write(tmp.path().join(edited), "# Edited\n").unwrap();
-            let standing = standing(tmp.path(), &loaded);
+            let standing = standing(tmp.path(), tmp.path(), &loaded);
             assert_eq!(
                 standing.no_reuse,
                 Some(NoReuse::SubjectsChanged),
@@ -730,7 +940,7 @@ mod tests {
         record(tmp.path(), &loaded, ONE_FIRED);
         fs::write(tmp.path().join("tasks.md"), "# Tasks\n\n- [x] one\n").unwrap();
         fs::write(tmp.path().join("review.md"), "# Review\n").unwrap();
-        let standing = standing(tmp.path(), &loaded);
+        let standing = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, None);
         assert_eq!(standing.judge().count(), 0);
     }
@@ -745,7 +955,7 @@ mod tests {
         let tmp = feature();
         record(tmp.path(), &loaded, "");
         fs::write(tmp.path().join("data-model.md"), "# Data\n").unwrap();
-        let added = standing(tmp.path(), &loaded);
+        let added = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(added.no_reuse, None);
         assert_eq!(added.rejudge().count(), 3);
         assert_eq!(
@@ -756,7 +966,7 @@ mod tests {
         let tmp = feature();
         record(tmp.path(), &loaded, "");
         fs::remove_file(tmp.path().join("scenarios/s.md")).unwrap();
-        let removed = standing(tmp.path(), &loaded);
+        let removed = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(removed.rejudge().count(), 3);
         assert_eq!(
             removed.changed_sections().collect::<Vec<_>>(),
@@ -770,7 +980,7 @@ mod tests {
         let tmp = feature();
         record_before_sections(tmp.path(), &loaded, "");
         fs::remove_file(tmp.path().join("scenarios/s.md")).unwrap();
-        let standing = standing(tmp.path(), &loaded);
+        let standing = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, Some(NoReuse::SubjectsChanged));
         assert!(all_stale(&standing));
     }
@@ -812,7 +1022,7 @@ mod tests {
             "# Plan\n\n## Observability\n\nA.\n\n## Rollout\n\nC.\n",
         )
         .unwrap();
-        let standing = standing(tmp.path(), &loaded);
+        let standing = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, None);
         assert_eq!(
             standing.changed_sections().collect::<Vec<_>>(),
@@ -894,7 +1104,7 @@ mod tests {
             &MUST_RULES.replace("Check two.", "Check two, and three."),
             SHOULD_RULES,
         );
-        let standing = standing(tmp.path(), &edited);
+        let standing = standing(tmp.path(), tmp.path(), &edited);
         assert_eq!(standing.no_reuse, None);
         let stale: Vec<&str> = standing.judge().map(|r| r.id.as_str()).collect();
         assert_eq!(stale, ["TS-MUST-001", "TS-MUST-002"]);
@@ -912,7 +1122,7 @@ mod tests {
         let before = files(MUST_RULES, SHOULD_RULES);
         record(tmp.path(), &before, "unjudged-rules:\n  - TS-MUST-002\n");
         assert_eq!(
-            standing(tmp.path(), &before)
+            standing(tmp.path(), tmp.path(), &before)
                 .judge()
                 .map(|r| r.id.as_str())
                 .collect::<Vec<_>>(),
@@ -925,7 +1135,7 @@ mod tests {
             "### TS-NEW-001\n\n> A MUST e.\n\n**Verification:** Check four.\n",
         ));
         record(tmp.path(), &before, "");
-        let standing = standing(tmp.path(), &after);
+        let standing = standing(tmp.path(), tmp.path(), &after);
         assert_eq!(standing.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(
             standing.judge().map(|r| r.id.as_str()).collect::<Vec<_>>(),
@@ -943,14 +1153,14 @@ mod tests {
         let before = files(MUST_RULES, SHOULD_RULES);
         record(tmp.path(), &before, ONE_FIRED);
 
-        let same = standing(tmp.path(), &before);
+        let same = standing(tmp.path(), tmp.path(), &before);
         assert_eq!(same.no_reuse, None);
         assert_eq!(same.reusable().count(), 1);
         assert_eq!(same.judge().count(), 0);
 
         let mut added = before.clone();
         added.push(LoadedRuleFile::read("c-cross.md", "No rules here.\n"));
-        let added = standing(tmp.path(), &added);
+        let added = standing(tmp.path(), tmp.path(), &added);
         assert_eq!(added.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(
             added.no_reuse.as_ref().unwrap().code(),
@@ -959,7 +1169,7 @@ mod tests {
         assert_eq!(added.reusable().count(), 0);
         assert!(all_stale(&added));
 
-        let removed = standing(tmp.path(), &before[..1]);
+        let removed = standing(tmp.path(), tmp.path(), &before[..1]);
         assert_eq!(removed.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(removed.reusable().count(), 0);
         assert!(all_stale(&removed));
@@ -973,7 +1183,7 @@ mod tests {
         let before = files(MUST_RULES, SHOULD_RULES);
         record(tmp.path(), &before, ONE_FIRED);
         let only_should = vec![before[1].clone()];
-        let standing = standing(tmp.path(), &only_should);
+        let standing = standing(tmp.path(), tmp.path(), &only_should);
         assert_eq!(standing.no_reuse, Some(NoReuse::RuleFilesChanged));
         assert_eq!(standing.currency("TS-MUST-001"), None);
         assert_eq!(standing.reusable().count(), 0);
@@ -987,26 +1197,26 @@ mod tests {
     fn nothing_is_reusable_without_a_readable_record_carrying_a_digest() {
         let loaded = files(MUST_RULES, SHOULD_RULES);
         let tmp = feature();
-        let absent = standing(tmp.path(), &loaded);
+        let absent = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(absent.no_reuse, Some(NoReuse::NoPriorVerdicts));
         assert!(all_stale(&absent));
 
         record(tmp.path(), &[], "");
         assert_eq!(
-            standing(tmp.path(), &loaded).no_reuse,
+            standing(tmp.path(), tmp.path(), &loaded).no_reuse,
             Some(NoReuse::NoPriorVerdicts),
             "a record written before spec 082 has no rule-digest"
         );
 
         record(tmp.path(), &loaded, "rule-verdicts: [TS-MUST-001]\n");
-        let unreadable = standing(tmp.path(), &loaded);
+        let unreadable = standing(tmp.path(), tmp.path(), &loaded);
         assert!(
             matches!(unreadable.no_reuse, Some(NoReuse::RecordUnreadable(_))),
             "{:?}",
             unreadable.no_reuse
         );
         assert_eq!(unreadable.no_reuse.unwrap().code(), "record-unreadable");
-        assert!(all_stale(&standing(tmp.path(), &loaded)));
+        assert!(all_stale(&standing(tmp.path(), tmp.path(), &loaded)));
     }
 
     /// A design subject the record could not read, or the walk cannot reach
@@ -1017,17 +1227,17 @@ mod tests {
         let tmp = feature();
         record(tmp.path(), &loaded, "analyzed-unreadable:\n  - plan.md\n");
         assert_eq!(
-            standing(tmp.path(), &loaded).no_reuse,
+            standing(tmp.path(), tmp.path(), &loaded).no_reuse,
             Some(NoReuse::SubjectsChanged)
         );
         record(tmp.path(), &loaded, "analyzed-unreadable:\n  - scenarios\n");
         assert_eq!(
-            standing(tmp.path(), &loaded).no_reuse,
+            standing(tmp.path(), tmp.path(), &loaded).no_reuse,
             Some(NoReuse::SubjectsChanged),
             "a directory the walk could not reach hides its files"
         );
         record(tmp.path(), &loaded, "analyzed-unreadable:\n  - tasks.md\n");
-        assert_eq!(standing(tmp.path(), &loaded).no_reuse, None);
+        assert_eq!(standing(tmp.path(), tmp.path(), &loaded).no_reuse, None);
     }
 
     /// The universe is every rule file in the rule-file directory, and a file
@@ -1047,7 +1257,10 @@ mod tests {
         assert_eq!(names, ["a-cross.md", "b-backend.md"]);
         assert_eq!(universe.unreadable, 1);
         assert_eq!(universe.files[0].rules.len(), 2);
-        assert_eq!(universe.files[0].digest, rules_digest(MUST_RULES));
+        assert_eq!(
+            universe.files[0].digest,
+            crate::primitives::rule_sections::rules_digest(MUST_RULES)
+        );
     }
 
     /// A rule ID two files define is one rule, current only while both files
@@ -1061,7 +1274,7 @@ mod tests {
             LoadedRuleFile::read("b-cross.md", twice),
         ];
         record(tmp.path(), &before, "");
-        let same = standing(tmp.path(), &before);
+        let same = standing(tmp.path(), tmp.path(), &before);
         assert_eq!(same.rules().len(), 1);
         assert_eq!(same.currency("TS-MUST-001"), Some(&Currency::NotFired));
 
@@ -1072,7 +1285,7 @@ mod tests {
                 &twice.replace("Check one.", "Check one, two."),
             ),
         ];
-        let changed = standing(tmp.path(), &edited);
+        let changed = standing(tmp.path(), tmp.path(), &edited);
         assert_eq!(changed.rules().len(), 1);
         assert_eq!(changed.currency("TS-MUST-001"), Some(&Currency::Stale));
     }
@@ -1169,7 +1382,7 @@ mod tests {
             "# Plan\n\n## B\n\ny\n\n## A\n\nx\n\n",
         )
         .unwrap();
-        let standing = standing(tmp.path(), &loaded);
+        let standing = standing(tmp.path(), tmp.path(), &loaded);
         assert_eq!(standing.no_reuse, None);
         assert_eq!(standing.changed_sections().count(), 0);
         assert_eq!(standing.judge().count(), 0);
@@ -1208,5 +1421,330 @@ mod tests {
             contradiction(&Currency::Fired(finding.clone()), &addressed),
             None
         );
+    }
+
+    // -- rule-by-rule currency through history (spec 088, AC2) ------------
+
+    const M1: &str = "### TS-MUST-001\n\n> A MUST b.\n\n**Verification:** Check one.\n";
+    const M2: &str =
+        "### TS-MUST-002\n\n> A MUST c, as TS-MUST-001 asks.\n\n**Verification:** Check two.\n";
+    const M3: &str =
+        "### TS-MUST-003\n\n> A MUST d.\n\n**Verification:** Check three, as TS-MUST-002 does.\n";
+    const S1: &str =
+        "### TS-SHOULD-001\n\n> A SHOULD e, beside TS-MUST-001.\n\n**Verification:** Check four.\n";
+    const S2: &str = "### TS-SHOULD-002\n\n> A SHOULD f.\n\n**Verification:** Check five.\n";
+    const BOTH: [&str; 2] = ["a-cross.md", "b-cross.md"];
+
+    /// `TS-MUST-002` names `TS-MUST-001` in its own file and `TS-SHOULD-001`
+    /// names it from another; `TS-MUST-003` names it only through
+    /// `TS-MUST-002`.
+    fn named_a() -> String {
+        [M1, M2, M3].join("\n")
+    }
+
+    fn named_b() -> String {
+        [S1, S2].join("\n")
+    }
+
+    /// The rule files `rules` under `project`'s `specs/rules/` and the feature
+    /// `specs/001-x`, committed in `repository`: the feature directory and
+    /// the commit.
+    fn committed(
+        repository: &git2::Repository,
+        project: &Path,
+        rules: &[(&str, String)],
+    ) -> (std::path::PathBuf, git2::Oid) {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let feature = project.join("specs/001-x");
+        write(&feature.join("spec.md"), "# Spec\n\n## Goal\n");
+        write(&feature.join("plan.md"), "# Plan\n\n## Observability\n");
+        for (name, body) in rules {
+            write(&project.join("specs/rules").join(name), body);
+        }
+        (feature, commit_all(repository, "rules"))
+    }
+
+    /// The rule files `names` as they stand under `project`'s `specs/rules/`.
+    fn loaded_from(project: &Path, names: &[&str]) -> Vec<LoadedRuleFile> {
+        names
+            .iter()
+            .map(|name| {
+                let rel = format!("specs/rules/{name}");
+                LoadedRuleFile::read(&rel, &fs::read_to_string(project.join(&rel)).unwrap())
+            })
+            .collect()
+    }
+
+    fn edit(project: &Path, name: &str, body: &str) {
+        crate::primitives::git_fixture::write(&project.join("specs/rules").join(name), body);
+    }
+
+    fn judged_ids(standing: &Standing) -> Vec<&str> {
+        standing.judge().map(|rule| rule.id.as_str()).collect()
+    }
+
+    /// The record's `analyzed-against` line, as frontmatter text.
+    fn at(commit: impl std::fmt::Display) -> String {
+        format!("analyzed-against: {commit}\n")
+    }
+
+    /// A repository at a fresh temporary directory holding both files, with a
+    /// record of a run at that commit.
+    fn analyzed_project() -> (TempDir, git2::Repository, std::path::PathBuf) {
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let (feature, commit) = committed(
+            &repository,
+            tmp.path(),
+            &[("a-cross.md", named_a()), ("b-cross.md", named_b())],
+        );
+        record(&feature, &loaded_from(tmp.path(), &BOTH), &at(commit));
+        (tmp, repository, feature)
+    }
+
+    /// Spec 088, AC2: an edit to one rule's Verification judges that rule
+    /// and each rule naming it, in its own file and in another, and no
+    /// other: a rule naming it only through another keeps its verdict.
+    #[test]
+    fn an_edit_to_one_rule_judges_it_and_each_rule_naming_it_alone() {
+        let (tmp, _repository, feature) = analyzed_project();
+        edit(
+            tmp.path(),
+            "a-cross.md",
+            &named_a().replace("Check one.", "Check one, and two."),
+        );
+        let standing = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(standing.no_reuse, None);
+        assert_eq!(standing.rejudged_files(), []);
+        assert_eq!(
+            judged_ids(&standing),
+            ["TS-MUST-001", "TS-MUST-002", "TS-SHOULD-001"]
+        );
+        assert_eq!(standing.currency("TS-MUST-003"), Some(&Currency::NotFired));
+        assert_eq!(
+            standing.currency("TS-SHOULD-002"),
+            Some(&Currency::NotFired)
+        );
+    }
+
+    /// Spec 088, AC2: a rule its file no longer holds stales each rule naming
+    /// it, and a file whose copy history cannot supply is judged whole, each
+    /// rule naming one of its rules with it.
+    #[test]
+    fn a_removed_rule_or_a_file_judged_whole_judges_each_rule_naming_one() {
+        let (tmp, _repository, feature) = analyzed_project();
+        let original = loaded_from(tmp.path(), &BOTH);
+        edit(tmp.path(), "a-cross.md", &[M2, M3].join("\n"));
+        let removed = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(removed.rejudged_files(), []);
+        assert_eq!(judged_ids(&removed), ["TS-MUST-002", "TS-SHOULD-001"]);
+        assert_eq!(removed.currency("TS-MUST-003"), Some(&Currency::NotFired));
+
+        // A sha no commit of the repository has.
+        record(&feature, &original, &at("0".repeat(40)));
+        edit(
+            tmp.path(),
+            "a-cross.md",
+            &named_a().replace("Check one.", "Check one, and two."),
+        );
+        let whole = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(
+            whole.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::CommitNotHeld)]
+        );
+        assert_eq!(
+            judged_ids(&whole),
+            ["TS-MUST-001", "TS-MUST-002", "TS-MUST-003", "TS-SHOULD-001"]
+        );
+        assert_eq!(whole.currency("TS-SHOULD-002"), Some(&Currency::NotFired));
+    }
+
+    /// Spec 088, AC2: a shallow clone whose history stops after the
+    /// record's `analyzed-against` cannot supply the judged copy, so the
+    /// edited file is judged whole, naming why; the full repository judges
+    /// the edited rule and its namers alone.
+    #[test]
+    fn a_shallow_clone_past_analyzed_against_judges_the_whole_file() {
+        let tmp = tempdir().unwrap();
+        let origin = tmp.path().join("origin");
+        let repository = git2::Repository::init(&origin).unwrap();
+        let (feature, commit) = committed(
+            &repository,
+            &origin,
+            &[("a-cross.md", named_a()), ("b-cross.md", named_b())],
+        );
+        record(&feature, &loaded_from(&origin, &BOTH), &at(commit));
+        edit(
+            &origin,
+            "a-cross.md",
+            &named_a().replace("Check one.", "Check one, and two."),
+        );
+        crate::primitives::git_fixture::commit_all(&repository, "an edit");
+        let clone = tmp.path().join("clone");
+        let status = std::process::Command::new("git")
+            .args(["clone", "--quiet", "--depth", "1"])
+            .arg(format!("file://{}", origin.display()))
+            .arg(&clone)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        assert!(git2::Repository::open(&clone).unwrap().is_shallow());
+        let shallow = standing(
+            &clone,
+            &clone.join("specs/001-x"),
+            &loaded_from(&clone, &BOTH),
+        );
+        assert_eq!(
+            shallow.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::CommitNotHeld)]
+        );
+        assert_eq!(
+            judged_ids(&shallow),
+            ["TS-MUST-001", "TS-MUST-002", "TS-MUST-003", "TS-SHOULD-001"]
+        );
+        let full = standing(&origin, &feature, &loaded_from(&origin, &BOTH));
+        assert_eq!(
+            judged_ids(&full),
+            ["TS-MUST-001", "TS-MUST-002", "TS-SHOULD-001"]
+        );
+    }
+
+    /// Spec 088, AC2's guard: a run that judged rule text its
+    /// `analyzed-against` does not hold, an uncommitted edit since reverted,
+    /// leaves a copy at that commit that does not digest as the record says,
+    /// so the file is judged whole rather than carrying a verdict no run gave
+    /// the text that stands.
+    #[test]
+    fn a_copy_at_analyzed_against_that_is_not_the_text_judged_judges_the_whole_file() {
+        let (tmp, repository, feature) = analyzed_project();
+        let commit = repository.head().unwrap().target().unwrap();
+        let mut judged = loaded_from(tmp.path(), &BOTH);
+        judged[0] = LoadedRuleFile::read(
+            "specs/rules/a-cross.md",
+            &named_a().replace("Check two.", "Check two, uncommitted."),
+        );
+        record(&feature, &judged, &at(commit));
+        let standing = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(
+            standing.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::JudgedCopyDiffers)]
+        );
+        assert_eq!(
+            judged_ids(&standing),
+            ["TS-MUST-001", "TS-MUST-002", "TS-MUST-003", "TS-SHOULD-001"]
+        );
+    }
+
+    /// Spec 088's Edge Cases: a record naming no `analyzed-against`, a commit
+    /// that does not hold the file, and a project in no repository each judge
+    /// the changed file whole, naming why.
+    #[test]
+    fn a_copy_history_cannot_supply_is_named_with_its_reason() {
+        let (tmp, _repository, analyzed) = analyzed_project();
+        record(&analyzed, &loaded_from(tmp.path(), &BOTH), "");
+        edit(
+            tmp.path(),
+            "a-cross.md",
+            &named_a().replace("Check one.", "Check one, and two."),
+        );
+        let unnamed = standing(tmp.path(), &analyzed, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(
+            unnamed.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::NoAnalyzedAgainst)]
+        );
+
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let (one_file, commit) = committed(&repository, tmp.path(), &[("a-cross.md", named_a())]);
+        edit(tmp.path(), "b-cross.md", &named_b());
+        record(&one_file, &loaded_from(tmp.path(), &BOTH), &at(commit));
+        edit(
+            tmp.path(),
+            "b-cross.md",
+            &named_b().replace("Check five.", "Check six."),
+        );
+        let uncommitted = standing(tmp.path(), &one_file, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(
+            uncommitted.rejudged_files(),
+            [("b-cross.md".to_string(), CopyUnavailable::NotAtCommit)]
+        );
+        assert_eq!(judged_ids(&uncommitted), ["TS-SHOULD-001", "TS-SHOULD-002"]);
+
+        let tmp = feature();
+        record(tmp.path(), &files(MUST_RULES, SHOULD_RULES), &at("abc"));
+        let edited = files(
+            &MUST_RULES.replace("Check two.", "Check two, and three."),
+            SHOULD_RULES,
+        );
+        let unreadable = standing(tmp.path(), tmp.path(), &edited);
+        assert_eq!(
+            unreadable.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::HistoryUnreadable)]
+        );
+    }
+
+    /// Spec 088, AC2 and its Edge Cases: rules reordered keep every verdict,
+    /// and a rule moved in from another file is judged, as a rule new to its
+    /// file is.
+    #[test]
+    fn a_reorder_keeps_every_verdict_and_a_rule_moved_in_is_judged() {
+        let (tmp, _repository, feature) = analyzed_project();
+        edit(tmp.path(), "a-cross.md", &[M3, M1, M2].join("\n"));
+        let reordered = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(reordered.rejudged_files(), []);
+        assert_eq!(reordered.judge().count(), 0);
+
+        edit(tmp.path(), "a-cross.md", &[M1, M2, M3, S2].join("\n"));
+        edit(tmp.path(), "b-cross.md", S1);
+        let moved = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(moved.rejudged_files(), []);
+        assert_eq!(judged_ids(&moved), ["TS-SHOULD-002"]);
+    }
+
+    /// Spec 059's conversion: a project in a subdirectory of its repository
+    /// finds a rule file's copy under the project's place in the work tree.
+    #[test]
+    fn a_project_in_a_subdirectory_reads_its_rule_file_s_copy() {
+        let tmp = tempdir().unwrap();
+        let (repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        let (feature, commit) = committed(
+            &repository,
+            &project,
+            &[("a-cross.md", named_a()), ("b-cross.md", named_b())],
+        );
+        record(&feature, &loaded_from(&project, &BOTH), &at(commit));
+        edit(
+            &project,
+            "a-cross.md",
+            &named_a().replace("Check one.", "Check one, and two."),
+        );
+        let standing = standing(&project, &feature, &loaded_from(&project, &BOTH));
+        assert_eq!(standing.rejudged_files(), []);
+        assert_eq!(
+            judged_ids(&standing),
+            ["TS-MUST-001", "TS-MUST-002", "TS-SHOULD-001"]
+        );
+    }
+
+    /// A rule's names are the other rule IDs its Statement and Verification
+    /// hold, never its own, and prose outside both is not read.
+    #[test]
+    fn a_rule_s_names_are_the_other_ids_its_statement_and_verification_hold() {
+        let file = LoadedRuleFile::read(
+            "specs/rules/a-cross.md",
+            "### TS-MUST-009\n\n> A MUST b, as TS-MUST-001 and TS-MUST-009 say.\n\n\
+             **Verification:** Check, beside TS-SHOULD-002.\n\n**Rationale:** TS-MUST-003.\n",
+        );
+        assert_eq!(
+            file.rules[0]
+                .names
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["TS-MUST-001", "TS-SHOULD-002"]
+        );
+        assert_eq!(file.name, "a-cross.md");
+        assert_eq!(file.path, "specs/rules/a-cross.md");
     }
 }

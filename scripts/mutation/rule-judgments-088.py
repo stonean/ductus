@@ -1,6 +1,9 @@
 """Mutation list for spec 088: the counts `write-analysis` records of the
 rules its run judged and carried (`runtime/src/primitives/write_analysis.rs`,
-task 1). Each behavior is mutated once and killed by the test that names it.
+task 1), and a changed rule file judged rule by rule with the rules naming a
+changed one (`rule_verdicts.rs`, `discover_rule_files.rs` and the exec walker's
+`payload.rs`, task 2). Each
+behavior is mutated once and killed by the test that names it.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/rule-judgments-088.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -48,5 +51,110 @@ MUTATIONS = [
         '    let _ = writeln!(out, "rules-judged: {}", rules.judged);\n',
         '    if rules.judged > 0 {\n        let _ = writeln!(out, "rules-judged: {}", rules.judged);\n    }\n',
         'primitives::write_analysis::tests::a_carried_quiet_rule_counts_as_carried_and_no_rule_loaded_records_zero',
+    ),
+    (
+        'M6 a changed file whose copy stood in is judged whole',
+        'src/primitives/rule_verdicts.rs',
+        '                    edits.narrowed.insert(file.name.clone(), edited);\n',
+        '                    edits.rejudged_files.push((file.name.clone(), CopyUnavailable::HistoryUnreadable));\n',
+        'primitives::rule_verdicts::tests::an_edit_to_one_rule_judges_it_and_each_rule_naming_it_alone',
+    ),
+    (
+        'M7 a copy that is not the text judged stands in',
+        'src/primitives/rule_verdicts.rs',
+        '    if digest != recorded {\n',
+        '    if false && digest != recorded {\n',
+        'primitives::rule_verdicts::tests::a_copy_at_analyzed_against_that_is_not_the_text_judged_judges_the_whole_file',
+    ),
+    (
+        'M8 a rule naming a changed rule keeps its verdict',
+        'src/primitives/rule_verdicts.rs',
+        '                && rule.names.is_disjoint(&edits.changed)\n',
+        '',
+        'primitives::rule_verdicts::tests::an_edit_to_one_rule_judges_it_and_each_rule_naming_it_alone',
+    ),
+    (
+        'M9 a rule its file no longer holds stales no rule naming it',
+        'src/primitives/rule_verdicts.rs',
+        '                    edits\n                        .changed\n                        .extend(judged.into_keys().filter(|id| !file.texts.contains_key(id)));\n',
+        '',
+        'primitives::rule_verdicts::tests::a_removed_rule_or_a_file_judged_whole_judges_each_rule_naming_one',
+    ),
+    (
+        'M10 a file judged whole stales no rule naming one of its rules',
+        'src/primitives/rule_verdicts.rs',
+        '                    edits.changed.extend(file.texts.keys().cloned());\n',
+        '',
+        'primitives::rule_verdicts::tests::a_removed_rule_or_a_file_judged_whole_judges_each_rule_naming_one',
+    ),
+    (
+        'M11 a commit the repository does not hold reads as history unreadable',
+        'src/primitives/rule_verdicts.rs',
+        '        Err(err) if err.code() == git2::ErrorCode::NotFound => {\n',
+        '        Err(err) if false && err.code() == git2::ErrorCode::NotFound => {\n',
+        'primitives::rule_verdicts::tests::a_shallow_clone_past_analyzed_against_judges_the_whole_file',
+    ),
+    (
+        'M12 a record naming no analyzed-against is not named so',
+        'src/primitives/rule_verdicts.rs',
+        '        .ok_or(CopyUnavailable::NoAnalyzedAgainst)?;\n',
+        '        .unwrap_or("");\n',
+        'primitives::rule_verdicts::tests::a_copy_history_cannot_supply_is_named_with_its_reason',
+    ),
+    (
+        'M13 a file the commit lacks reads as history unreadable',
+        'src/primitives/rule_verdicts.rs',
+        '        .ok_or(CopyUnavailable::NotAtCommit)?;\n',
+        '        .ok_or(CopyUnavailable::HistoryUnreadable)?;\n',
+        'primitives::rule_verdicts::tests::a_copy_history_cannot_supply_is_named_with_its_reason',
+    ),
+    (
+        'M14 a rule new to its file keeps a verdict',
+        'src/primitives/rule_verdicts.rs',
+        '                        .filter(|(id, text)| judged.get(*id) != Some(*text))\n',
+        '                        .filter(|(id, text)| judged.get(*id).is_some_and(|old| old != *text))\n',
+        'primitives::rule_verdicts::tests::a_reorder_keeps_every_verdict_and_a_rule_moved_in_is_judged',
+    ),
+    (
+        'M15 the rules of a file judged whole read as current',
+        'src/primitives/rule_verdicts.rs',
+        '            None => !self\n                .rejudged_files\n                .iter()\n                .any(|(name, _)| *name == file.name),\n',
+        '            None => true,\n',
+        'primitives::rule_verdicts::tests::a_removed_rule_or_a_file_judged_whole_judges_each_rule_naming_one',
+    ),
+    (
+        'M16 the copy is read at the project path, not the work tree path',
+        'src/primitives/rule_verdicts.rs',
+        '    let text = blob_text(git, &tree, &project_repository.to_git(&file.path))\n',
+        '    let text = blob_text(git, &tree, &file.path)\n',
+        'primitives::rule_verdicts::tests::a_project_in_a_subdirectory_reads_its_rule_file_s_copy',
+    ),
+    (
+        'M17 discover-rule-files reports no rejudged file',
+        'src/primitives/discover_rule_files.rs',
+        '        rejudged_files: (!rejudged_files.is_empty()).then_some(rejudged_files),\n',
+        '        rejudged_files: None,\n',
+        'primitives::discover_rule_files::tests::an_edited_rule_file_is_listed_to_judge_again',
+    ),
+    (
+        'M18 past the read size rejudged-files stays inline',
+        'src/primitives/discover_rule_files.rs',
+        '            block.rejudged_files = None;\n',
+        '',
+        'primitives::discover_rule_files::tests::past_the_read_size_rejudged_files_moves_to_the_file',
+    ),
+    (
+        'M19 write-analysis lists a narrowed rule unjudged',
+        'src/primitives/write_analysis.rs',
+        '    let standing = rule_verdicts::standing(repo, feature_dir, &universe.files);\n',
+        '    let standing = rule_verdicts::standing(\n        std::path::Path::new("/nonexistent-088"),\n        feature_dir,\n        &universe.files,\n    );\n',
+        'primitives::write_analysis::tests::after_one_rule_s_edit_judging_it_carries_the_rest_of_its_file',
+    ),
+    (
+        'M20 the exec walker judges a changed file whole',
+        'src/interpreter/payload.rs',
+        '        .map(|feature_dir| rule_verdicts::standing(repo, feature_dir, &digested));\n',
+        '        .map(|feature_dir| rule_verdicts::standing(Path::new("/nonexistent-088"), feature_dir, &digested));\n',
+        'interpreter::tests::an_exec_step_asks_about_an_edited_rule_and_its_namer_alone',
     ),
 ]

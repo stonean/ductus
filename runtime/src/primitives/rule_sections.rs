@@ -95,24 +95,35 @@ fn statement_tokens(statement: &str) -> impl Iterator<Item = &str> {
     statement.split(|c: char| !c.is_ascii_alphanumeric())
 }
 
-/// A digest of what a rule file asks of a spec: each rule's ID, Statement
-/// and Verification, in heading order, from [`parse_rule_sections`], the one
-/// reading of what a rule is. A Rationale or any prose between rules moves
-/// nothing, and neither does a deprecation label; a Statement or Verification
-/// edit, a rule added, removed or reordered, moves it (spec 082).
+/// [`section_digests`]' file digest of `content`, the form the tests use.
+#[cfg(test)]
+pub(crate) fn rules_digest(content: &str) -> String {
+    section_digests(&parse_rule_sections(content)).0
+}
+
+/// A digest of what a rule file asks of a spec, over the sections
+/// [`parse_rule_sections`] parsed from it, the one reading of what a rule
+/// is: each rule's ID, Statement and Verification, in heading order. A
+/// Rationale or any prose between rules moves nothing, and neither does a
+/// deprecation label; a Statement or Verification edit, a rule added,
+/// removed or reordered, moves it (spec 082). Beside it, each rule's own text
+/// digested the same way, by its ID, sections sharing an ID digested together
+/// in order, so a rule whose digest is unchanged reads as it did (spec 088,
+/// AC2).
 ///
 /// Each field is length-prefixed, and a Verification's absence is its own
 /// byte, so no two different rule sets hash alike by running a boundary
 /// together. The digest of a file with no rule is the digest of nothing.
-pub(crate) fn rules_digest(content: &str) -> String {
+pub(crate) fn section_digests(
+    sections: &[RuleSection],
+) -> (String, std::collections::BTreeMap<String, String>) {
     use sha2::{Digest, Sha256};
 
-    let mut hasher = Sha256::new();
-    let mut field = |bytes: &[u8]| {
-        hasher.update((bytes.len() as u64).to_le_bytes());
-        hasher.update(bytes);
-    };
-    for section in parse_rule_sections(content) {
+    fn feed(hasher: &mut Sha256, section: &RuleSection) {
+        let mut field = |bytes: &[u8]| {
+            hasher.update((bytes.len() as u64).to_le_bytes());
+            hasher.update(bytes);
+        };
         field(section.id.as_bytes());
         field(section.statement.as_bytes());
         match &section.verification {
@@ -123,7 +134,32 @@ pub(crate) fn rules_digest(content: &str) -> String {
             None => field(b"0"),
         }
     }
-    crate::primitives::hex(&hasher.finalize())
+    let mut file = Sha256::new();
+    let mut by_rule: std::collections::BTreeMap<String, Sha256> = std::collections::BTreeMap::new();
+    for section in sections {
+        feed(&mut file, section);
+        feed(by_rule.entry(section.id.clone()).or_default(), section);
+    }
+    let rules = by_rule
+        .into_iter()
+        .map(|(id, hasher)| (id, crate::primitives::hex(&hasher.finalize())))
+        .collect();
+    (crate::primitives::hex(&file.finalize()), rules)
+}
+
+/// The rule-ID grammar a rule heading is read by: one statement of it, which
+/// [`heading_id_regex`] and [`named_rule_ids`] both build on.
+const RULE_ID: &str = r"[A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4}";
+
+/// Each rule ID `text` names, a token the rule-ID grammar matches, so a rule
+/// whose Statement or Verification names another is judged again when that
+/// one changes (spec 088).
+pub(crate) fn named_rule_ids(text: &str) -> std::collections::BTreeSet<String> {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(&format!(r"\b({RULE_ID})\b")).expect("hard-coded regex compiles"))
+        .captures_iter(text)
+        .map(|found| found[1].to_string())
+        .collect()
 }
 
 /// `### BE-AUTHN-001` — matches rule-ID headings inside a rule file. The
@@ -141,8 +177,7 @@ pub(crate) fn rules_digest(content: &str) -> String {
 pub(crate) fn heading_id_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
-        Regex::new(r"(?m)^#{2,4}\s+([A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4})\b")
-            .expect("hard-coded regex compiles")
+        Regex::new(&format!(r"(?m)^#{{2,4}}\s+({RULE_ID})\b")).expect("hard-coded regex compiles")
     })
 }
 

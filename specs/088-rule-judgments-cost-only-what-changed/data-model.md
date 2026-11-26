@@ -25,11 +25,11 @@ unjudged-rules:
 
 ## `discover-rule-files` with a `feature`: `rejudged-files`
 
-A loaded rule file whose digest differs from the record's `rule-digest` entry, the loaded set being the one that entry names, is compared rule by rule with its copy at the record's `analyzed-against` commit. A rule is current, subject to 082's other conditions, when that copy holds a rule of its ID whose Statement and Verification, the fields `rules_digest` hashes besides the ID, are the same. A rule whose text differs, or that the copy does not hold, is in `judge`. A file whose digest moved while no rule's text did, a reorder or a rule removed, keeps each remaining rule's verdict.
+A loaded rule file whose digest differs from the record's `rule-digest` entry, the loaded set being the one that entry names, is compared rule by rule with its copy at the record's `analyzed-against` commit. A rule is current, subject to 082's other conditions, when that copy holds a rule of its ID whose Statement and Verification, the fields `section_digests` hashes for it besides the ID, are the same. A rule whose text differs, or that the copy does not hold, is in `judge`. A file whose digest moved while no rule's text did, a reorder or a rule removed, keeps each remaining rule's verdict.
 
 A loaded rule in any file is in `judge` too when its Statement or Verification names a changed rule: one whose text differs, one new to its file, one its file held at `analyzed-against` and no longer holds, or any rule of a file listed under `rejudged-files`. A name is a token the rule-ID grammar matches that is such a rule's ID and not the naming rule's own; a rule naming one only through another is not judged for it.
 
-The copy stands in for the text the run judged only when its own `rules_digest` equals the record's entry. When it does not, or cannot be read, every rule of the file is in `judge`, and `verdicts` names the file under `rejudged-files`:
+The copy stands in for the text the run judged only when its own file digest, by `section_digests`, equals the record's entry. When it does not, or cannot be read, every rule of the file is in `judge`, and `verdicts` names the file under `rejudged-files`:
 
 ```json
 { "rejudged-files": [{ "file": "security-backend.md", "reason": "commit-not-held" }], "rejudged-files-count": 1 }

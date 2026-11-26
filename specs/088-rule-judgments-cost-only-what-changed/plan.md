@@ -35,19 +35,19 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 
 ### A changed rule file is compared rule by rule at `analyzed-against` (AC2)
 
-- **When.** Once the loaded rule-file set is the one the record's `rule-digest` names, for a file whose `rules_digest` differs from its entry. Until 088 every rule of such a file is `Stale`.
+- **When.** Once the loaded rule-file set is the one the record's `rule-digest` names, for a file whose digest, by `section_digests` (`runtime/src/primitives/rule_sections.rs`), differs from its entry. Until 088 every rule of such a file is `Stale`.
 - **The copy.** The file's text is read from the commit the record's `analyzed-against` names:
   - the repository opened by `ProjectRepository::discover` from the project root;
   - the sha resolved by `revparse_single` on the trimmed value, peeled to its commit, as `exempt_renames` (`runtime/src/primitives/analyze_subjects.rs`), that field's one reader before 088, resolves it;
   - the commit's tree read by `blob_text` at `to_git` of the file's project-relative path, as `ProjectRepository::read_at_head` reads one at `HEAD` (`runtime/src/primitives/mod.rs`).
 
   None of the three changes. Every one of the 79 records at `1ffaf951` holds a full 40-character sha, by the length of each record's `analyzed-against` value, the form `write-analysis` is given, and the fixtures use that form. A lookup that finds no such object is `commit-not-held`; any other failure is `history-unreadable`.
-- **The guard.** The copy stands in for the text the run judged only when its own `rules_digest` equals the record's entry for the file. Two facts make the guard necessary:
+- **The guard.** The copy stands in for the text the run judged only when its own file digest equals the record's entry for the file. Two facts make the guard necessary:
   - `analyzed-against` is a caller argument, written verbatim (`args.analyzed_against` in `write_analysis.rs`);
   - an analysis may run before its commit (§grounding, "An analysis record is judged by a digest of what it read, so it may precede its commit").
 
   So only the digest ties that commit's copy to what was judged. Without it, a run that judged uncommitted rule text, later reverted, would carry verdicts no run gave the text that stands.
-- **Per rule.** Both copies are parsed by `parse_rule_sections`. A rule's own text is the fields `rules_digest` hashes for it (`runtime/src/primitives/rule_sections.rs`): its ID, which is its whole heading, its Statement, and its Verification with whether it has one.
+- **Per rule.** Both copies are parsed by `parse_rule_sections`. A rule's own text is the fields `section_digests` hashes for it, the same ones its file digest hashes: its ID, which is its whole heading, its Statement, and its Verification with whether it has one.
   - A rule whose own text is unchanged stands as a rule of an unchanged file stands, subject to 082's other conditions: the sections, `unjudged-rules`, and both files for a rule two files define.
   - A rule whose own text changed, or whose ID the old copy lacks (a new rule, or one moved in from another file), is `Stale`.
   - A file whose digest moved while no rule's text did, a reorder or a removal, keeps every remaining rule's verdict, unless the next bullet holds for it.

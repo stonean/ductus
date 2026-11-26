@@ -887,7 +887,7 @@ fn derive_rule_fields(
     spec_content: &str,
 ) -> Result<DerivedRules> {
     let universe = rule_verdicts::load_universe(repo)?;
-    let standing = rule_verdicts::standing(feature_dir, &universe.files);
+    let standing = rule_verdicts::standing(repo, feature_dir, &universe.files);
     let entries = rule_verdicts::departure_entries(spec_content);
     check_new_verdicts(args, &standing, &entries)?;
     let judged: BTreeSet<&str> = args
@@ -3806,6 +3806,32 @@ mod tests {
         );
     }
 
+    /// Spec 088, AC2: after one rule's edit, committed after the record's
+    /// `analyzed-against`, a run judging that rule alone carries the other
+    /// rules of its file rather than listing them unjudged.
+    #[test]
+    fn after_one_rule_s_edit_judging_it_carries_the_rest_of_its_file() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_rules(&tmp, 3, 2);
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let commit = crate::primitives::git_fixture::commit_all(&repository, "rules");
+        let mut first = args();
+        first.analyzed_against = commit.to_string();
+        first.judged_rules = rule_ids(3, 2);
+        run(&first, tmp.path()).unwrap();
+        let rules = tmp.path().join("specs/rules/a-cross.md");
+        let edited = fs::read_to_string(&rules)
+            .unwrap()
+            .replace("Check 1.", "Check 1, and more.");
+        fs::write(&rules, edited).unwrap();
+        let mut second = args();
+        second.analyzed_against = commit.to_string();
+        second.judged_rules = vec!["TS-RULE-001".into()];
+        run(&second, tmp.path()).unwrap();
+        assert_eq!(written_record(&tmp).unjudged_rules, [] as [String; 0]);
+        assert_eq!(rule_counts(&tmp), (1, 4));
+    }
+
     /// Spec 082, AC1: a second run over an unchanged spec, told nothing,
     /// records the verdicts the first did: a fired finding and an addressed
     /// verdict are carried, a quiet rule stays quiet, and nothing is
@@ -4030,7 +4056,11 @@ mod tests {
 
     fn standing_of(tmp: &TempDir) -> rule_verdicts::Standing {
         let universe = rule_verdicts::load_universe(tmp.path()).unwrap();
-        rule_verdicts::standing(&tmp.path().join("specs/042-demo"), &universe.files)
+        rule_verdicts::standing(
+            tmp.path(),
+            &tmp.path().join("specs/042-demo"),
+            &universe.files,
+        )
     }
 
     /// Spec 082, AC7's fixture: an edit to one section of `plan.md` between

@@ -45,8 +45,8 @@ MUTATIONS = [
     (
         'M2 the rule-digest comparison is dropped',
         'src/primitives/rule_verdicts.rs',
-        'let file_current = prior.rule_digest.get(&file.name) == Some(&file.digest);',
-        'let file_current = true;',
+        '            if *recorded == file.digest {\n',
+        '            if true {\n',
         'rule_verdicts::tests::an_edited_rule_file_judges_its_own_rules_only write_analysis::tests::an_edited_rule_file_is_judged_again_over_an_unchanged_spec discover_rule_files::tests::an_edited_rule_file_is_listed_to_judge_again interpreter::tests::an_exec_walk_asks_again_about_a_rule_that_was_edited',
     ),
     (
