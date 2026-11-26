@@ -125,7 +125,7 @@ With `project-files`:
 
 ### This repository's procedure file moves
 
-`.ductus/docs/agents/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`, in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
+`docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md`, in 087's last task, by running `/ductus:prune --project` here (the agent's recommendation, adopted by the operator, 2026-11-24).
 
 - **Why in 087.** A real tree proves AC14's move before `done`, so a defect it finds lands in this spec. The tree holds 98 occurrences in 81 tracked files (`git grep -l` and `-c`, 2026-11-24): 69 specs, 7 scripts, 2 `runtime/src`, 1 workflow, `README.md` and `AGENTS.md`.
 - **The run is the move.** The walk stops after the move proposal (*Walk order*, above). Judging the rest of `AGENTS.md`'s entries is not part of this task.
@@ -189,7 +189,7 @@ Each test is proven to fail with its behavior removed (`QUAL-TEST-001`; **§Prov
 | `framework/migrations.toml` | Modify | Register the entry |
 | `framework/migrations/report-project-file-links-into-docs.md` | Create | Report project-file links into `docs/` |
 | `README.md` | Modify | `[artifacts]` limits parts; the moved file's path |
-| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `.ductus/docs/agents/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
+| `.ductus/docs/agents/developing-ductus.md` | Create | This repository's procedure part: `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` |
 | `AGENTS.md` | Modify | Pointer to the part; sweep targets |
 | `.github/workflows/framework-checks.yml` | Modify | The moved file's path |
 | `runtime/src/parser/mod.rs` | Modify | The moved file's path |

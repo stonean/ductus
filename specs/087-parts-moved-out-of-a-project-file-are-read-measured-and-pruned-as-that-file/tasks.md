@@ -144,12 +144,12 @@ Runs after every other task, from a session started after task 8's build is inst
 
 The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a preview lists `move-referrers`; then an apply names only the move, with the confirmed `referrers`. On the CLI it is `--move-json FILE`, the file in `$TMPDIR`. On 2026-11-26 no tracked file linked `developing-ductus.md` relative to another directory, and the file named its own path nowhere (`git grep`), so the literal search found every referrer and the moved file needed no self-mention fixed; check both again before the move.
 
-- [ ] Run `/ductus:prune --project` here, confirm the move `.ductus/docs/agents/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` with every referrer the search finds, this spec's own files included, and end the run after the move, before the entry walk
-- [ ] Commit the rename and substitution alone, as a mechanical sweep
-- [ ] In a commit of its own: add `.ductus/docs/` to `AGENTS.md`'s sweep-targets list; re-measure `AGENTS.md` against its 50,000-byte ceiling; restore each line of this spec's `spec.md` and `plan.md` that the substitution made `X → X`, or that records a measurement of the old path, to the old path in the `` ` → ` `` form or to non-path form
+- [x] Run `/ductus:prune --project` here, confirm the move `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` with every referrer the search finds, this spec's own files included, and end the run after the move, before the entry walk
+- [x] Commit the rename and substitution alone, as a mechanical sweep
+- [x] In a commit of its own: add `.ductus/docs/` to `AGENTS.md`'s sweep-targets list; re-measure `AGENTS.md` against its 50,000-byte ceiling; restore each line of this spec's `spec.md`, `plan.md` and `tasks.md` that the substitution made `X → X`, or that records a measurement of the old path, to the old path in the `` ` → ` `` form or to non-path form
 - [ ] Run `scripts/audit/run-all.sh` after the commits
 
-- **Done when**: the file is at its new path; every line `git grep -n '.ductus/docs/agents/developing-ductus.md'` lists records the move in the `` ` → ` `` form; the two commits' diffs hold no `X → X`; `check-corpus-links`, `scripts/lint-governing-size.sh` and the audit run pass; the sweep commit names each file the move wrote.
+- **Done when**: the file is at its new path; every line `git grep -n 'docs/developing-ductus[.]md'` lists records the move in the `` ` → ` `` form; the two commits' combined diff holds no `X → X` (both readings the agent's recommendation, adopted by the operator, 2026-11-26); `check-corpus-links`, `scripts/lint-governing-size.sh` and the audit run pass; the sweep commit names each file the move wrote.
 
 ## 13. `scripts/analyze/` follows step 15's and step 17's parts
 
