@@ -43,18 +43,18 @@ use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, BriefReReadArgs, BriefReReadResult,
     CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckArtifactsResult,
-    CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs, CheckCorpusLinksResult,
-    CheckDeparturesArgs, CheckDeparturesResult, CheckOrphanedReferencesArgs,
-    CheckOrphanedReferencesResult, CheckOwedWorkArgs, CheckOwedWorkResult, CheckPrescriptionsArgs,
-    CheckPrescriptionsResult, CheckPromotionCoverageArgs, CheckPromotionCoverageResult,
-    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
-    CheckStepReferencesArgs, CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckUnreviewedCodeArgs,
-    CheckUnreviewedCodeResult, CheckboxToggleResult, ComputeReviewScopeArgs,
-    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
-    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
-    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
-    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckAuditRecordsArgs, CheckAuditRecordsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
+    CheckCorpusLinksArgs, CheckCorpusLinksResult, CheckDeparturesArgs, CheckDeparturesResult,
+    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckOwedWorkArgs,
+    CheckOwedWorkResult, CheckPrescriptionsArgs, CheckPrescriptionsResult,
+    CheckPromotionCoverageArgs, CheckPromotionCoverageResult, CheckReviewGateArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
+    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult,
+    CheckboxToggleResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
+    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
+    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -1117,6 +1117,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckOwedWorkArgs>,
     ) -> Result<Json<CheckOwedWorkResult>, String> {
         primitives::check_owed_work::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-audit-records",
+        description = descriptions::CHECK_AUDIT_RECORDS
+    )]
+    async fn check_audit_records(
+        &self,
+        params: Parameters<CheckAuditRecordsArgs>,
+    ) -> Result<Json<CheckAuditRecordsResult>, String> {
+        primitives::check_audit_records::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

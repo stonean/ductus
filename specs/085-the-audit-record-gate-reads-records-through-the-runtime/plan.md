@@ -53,7 +53,7 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
 ### The report and the exit status
 
 - **The result.** The result carries the spec root, the examined, `done` and skipped counts, each exempt set with its count, its mark and whether it is over, the baseline's state, and the findings and skipped specs. Past the read size the lists move to its lists file, as `check-owed-work`'s do (`bounded_lists::place` with `ALL_SPECS`).
-- **The CLI's report.** As `check-unreviewed-code`'s CLI does (`unreviewed_code_lines` and `emit_result_gated` in `runtime/src/main.rs`), the CLI prints the whole answer on stderr before the result is bounded: one line per finding, with its path and message, then the counts line and one line per exempt set with its mark. That holds on a clean run too.
+- **The CLI's report.** As `check-unreviewed-code`'s CLI does (`unreviewed_code_lines` and `emit_result_gated` in `runtime/src/main.rs`), the CLI prints the whole answer on stderr before the result is bounded: one line per finding, with its path and message, then the counts line, one line per exempt set with its mark, and a line saying nothing was examined when no spec was, so the step can annotate that failure too. That holds on a clean run too.
 - **The exit status.** The CLI exits non-zero when any finding stands or when no spec was examined.
 
 ### The template's step runs the primitive
@@ -71,7 +71,7 @@ The primitive enumerates with `list_feature_dirs` and `list_untracked_specs` (`r
 
 ### Tests: the primitive and the step, each finding both ways
 
-- **The primitive's unit tests.** They hold each finding failing with its condition present and passing without it, the baseline's four states, an exempt set at and past its mark, an untracked spec, a link leaving the project, a spec root that cannot be listed, and the empty corpus. They run from the repository root and from a project in a subdirectory (`git_fixture::subdirectory_project`). Each behavior has a mutant its test turns red, listed in `scripts/mutation/audit-records-085.py`.
+- **The primitive's unit tests.** They hold each finding failing with its condition present and passing without it, each of the baseline's states the data model names, an exempt set at and past its mark, an untracked spec, a link leaving the project, a spec root that cannot be listed, and the empty corpus. They run from the repository root and from a project in a subdirectory (`git_fixture::subdirectory_project`). Each behavior has a mutant its test turns red, listed in `scripts/mutation/audit-records-085.py`.
 - **The step's test.** `scripts/tests/test-audit-record-gate.sh` copies the template, without its install step, into fixture repositories with this tree's release build on `PATH`, as `scripts/tests/test-done-spec-owed-work.sh` does. It runs the gate step through `scripts/run-workflow-steps.py`, from a project at the root and from one in a subdirectory, the copy setting the job's `working-directory`.
   - It asserts the step ran, never skipped.
   - It asserts each finding fails the step and is annotated on its file with the project's prefix.
@@ -92,6 +92,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 | --- | --- | --- |
 | `runtime/src/primitives/check_audit_records.rs` | Create | The primitive: walk, records, probe, baseline, findings |
 | `runtime/src/primitives/mod.rs` | Modify | Declare the module |
+| `runtime/src/primitives/bounded_lists.rs` | Modify | `IRREGULAR_COUNTS` rows for `examined-count` and `done-count`, counts of no list |
 | `runtime/src/schema/primitives.rs` | Modify | Its arguments and result types |
 | `runtime/src/schema/descriptions.rs` | Modify | `CHECK_AUDIT_RECORDS`, its one description |
 | `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` entry |
@@ -99,6 +100,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
 | `runtime/src/interpreter/mod.rs` | Modify | Its `dispatch_primitive` arm |
 | `runtime/src/main.rs` | Modify | Its `Command`, stderr report and exit rule |
 | `runtime/tests/result_sizes.rs` | Modify | Its measured `case` |
+| `runtime/tests/check_audit_records_cli.rs` | Create | The CLI's lines and exit status, from a run of the binary |
 | `framework/runtime-tools.txt` | Modify | The tool's line |
 | `framework/bootstrap/configure/claude.md` | Modify | Generated allow block (`scripts/gen-configure-mcp.sh`) |
 | `framework/templates/ci/adopter-generators.yml` | Modify | The gate step runs the primitive; the derive step's root extraction goes; header item 2 |
@@ -125,7 +127,7 @@ The measured figures go in the spec's body, where 089's Behavior puts them, besi
   - An untracked spec is skipped, as `check-owed-work` skips one. A CI checkout holds none.
   - A quoted `"null"` `last-run` is a string, as the gate reads it, where the step's parse stripped the quotes.
   - A blank `last-run` stays a finding.
-- **Where it is stricter.** A `spec.md` whose frontmatter names no `status` and a directory holding a link leaving the project are findings, and a spec root that cannot be listed is an error.
+- **Where it is stricter.** A `spec.md` whose frontmatter names no `status`, or does not parse as spec frontmatter (`frontmatter_status` reads it whole, so a list field holding a scalar is a finding), and a directory holding a link leaving the project are findings, and a spec root that cannot be listed is an error.
 
 ## Cross-spec impact
 

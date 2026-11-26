@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [057-analyze-artifact-and-record-relocation, 084-reopen-for-owed-code-review-every-code-change]
 cross-spec-impact: [057-analyze-artifact-and-record-relocation, 066-audit-records-and-the-completion-gate]
 next-criterion: 6

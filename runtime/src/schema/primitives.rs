@@ -6940,6 +6940,170 @@ pub struct CheckUnreviewedCodeResult {
     pub lists_file: Option<String>,
 }
 
+// -- check-audit-records (spec 085) ------------------------------------------
+
+/// Args for `check-audit-records`: none. Its subject is the corpus under the
+/// configured spec root. Read-only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckAuditRecordsArgs {}
+
+/// One of the two audit records a `done` spec carries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditRecordKind {
+    /// The review record, in `review.md`.
+    Review,
+    /// The analyze record, in `analysis.md`.
+    Analyze,
+}
+
+/// What `check-audit-records` made of `.ductus/audit-record-baseline.txt`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditBaselineState {
+    /// The file is not there: every mark is zero.
+    Absent,
+    /// The file was read and every known key's value is a whole number.
+    Read,
+    /// A known key's value is not a whole number: the marks before it stand,
+    /// and the rest are zero.
+    Malformed,
+    /// The file exists and could not be read as UTF-8 text: every mark is zero.
+    Unreadable,
+    /// The path is a link leaving the project, never read: every mark is zero.
+    OutsideProject,
+}
+
+/// The baseline file and its state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct AuditBaseline {
+    /// Its path from the project root.
+    pub path: String,
+    /// What reading it found.
+    pub state: AuditBaselineState,
+}
+
+/// One record's never-run set: the `done` specs without that record, held
+/// against its committed mark.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct AuditExemptSet {
+    /// The record the set lacks.
+    pub record: AuditRecordKind,
+    /// Its key in the baseline file: `review-exempt` or `analyze-exempt`.
+    pub key: String,
+    /// The `done` specs without the record.
+    pub count: usize,
+    /// The baseline's mark for it, zero when the file is absent or omits the key.
+    pub mark: usize,
+    /// Whether `count` is above `mark`.
+    pub over: bool,
+}
+
+/// What a `check-audit-records` finding is about.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditRecordFindingKind {
+    /// A feature directory that is, or holds, a link leaving the project.
+    OutsideProject,
+    /// A `spec.md` that cannot be read, or whose frontmatter does not parse or
+    /// names no `status`.
+    SpecUnreadable,
+    /// A `done` spec's record that exists and does not load.
+    RecordUnreadable,
+    /// A present record whose `last-run` is null, absent or blank.
+    NoLastRun,
+    /// A present record with no `blocking` key, or whose key could not be read.
+    NoBlocking,
+    /// A present record carrying `blocking: true`.
+    Blocking,
+    /// A known baseline key whose value is not a whole number.
+    BaselineMalformed,
+    /// A baseline file that exists and cannot be read.
+    BaselineUnreadable,
+    /// A baseline path that is a link leaving the project.
+    BaselineOutsideProject,
+    /// A `done` spec in an exempt set that is over its mark.
+    ExemptOverMark,
+}
+
+/// One finding, on the file it names.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct AuditRecordFinding {
+    /// What it is about.
+    pub kind: AuditRecordFindingKind,
+    /// The file or directory it is on, from the project root.
+    pub path: String,
+    /// What is wrong and the command that fixes it.
+    pub message: String,
+}
+
+/// Why `check-audit-records` did not examine a feature directory.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditRecordSkipReason {
+    /// Its `spec.md` is not tracked by git.
+    Untracked,
+    /// It holds no `spec.md`.
+    NoSpecFile,
+}
+
+/// A feature directory not examined, and why.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct AuditRecordSkip {
+    /// The feature directory name.
+    pub feature: String,
+    /// Why it was not examined.
+    pub reason: AuditRecordSkipReason,
+}
+
+/// Result of `check-audit-records`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckAuditRecordsResult {
+    /// The spec root walked, from the project root.
+    pub specs_root: String,
+    /// Specs whose `spec.md` frontmatter was read, whatever their status.
+    pub examined_count: usize,
+    /// Of those, the specs at `status: done`, whose records were read.
+    pub done_count: usize,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
+    /// Entries in `findings`, in either form.
+    pub findings_count: usize,
+    /// The baseline file and its state.
+    pub baseline: AuditBaseline,
+    /// The review record's never-run set, then the analyze record's.
+    pub exempt: Vec<AuditExemptSet>,
+    /// Each finding: the walk's in corpus order, then the baseline's, then one
+    /// per spec in an exempt set over its mark. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub findings: Option<Vec<AuditRecordFinding>>,
+    /// Each feature directory not examined. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<AuditRecordSkip>>,
+    /// The `done` specs with no `review.md`, in corpus order. Absent in the file
+    /// form; its count is the review set's `count`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review_exempt_specs: Option<Vec<String>>,
+    /// The `done` specs with no `analysis.md`, in corpus order. Absent in the
+    /// file form; its count is the analyze set's `count`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub analyze_exempt_specs: Option<Vec<String>>,
+    /// Where the four lists are: in this result, or past `[artifacts]
+    /// read-size-bytes` in the file `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding them whole, from the project root: a
+    /// JSON object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
 // -- measure-reopenings (spec 079) -------------------------------------------
 
 /// Args for `measure-reopenings`: whether reopenings stayed within the bound on

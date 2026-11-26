@@ -22,6 +22,7 @@ pub(crate) mod bounded_lists;
 pub mod brief_re_read;
 pub mod check_artifact_size;
 pub mod check_artifacts;
+pub mod check_audit_records;
 pub mod check_command_flags;
 pub mod check_corpus_links;
 pub mod check_departures;

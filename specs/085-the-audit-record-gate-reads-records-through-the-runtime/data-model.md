@@ -29,7 +29,7 @@ A spec root that is absent or cannot be listed fails the call with an error nami
 | `kind` | `path` | When |
 | --- | --- | --- |
 | `outside-project` | the feature directory | It is, or holds, a symbolic link leaving the project; nothing under it is read |
-| `spec-unreadable` | its `spec.md` | `spec.md` cannot be read, or its frontmatter does not parse or names no `status` |
+| `spec-unreadable` | its `spec.md` | `spec.md` cannot be read as UTF-8 text, or its frontmatter does not parse as spec frontmatter (a list field holding a scalar fails it too) or names no `status` |
 | `record-unreadable` | the record's file | A `done` spec's `review.md` or `analysis.md` exists and does not load (the loader's reason in `message`) |
 | `no-last-run` | the record's file | A present record's `last-run` is null, absent or blank |
 | `no-blocking` | the record's file | A present record has no `blocking` key, or its probe did not load |
@@ -47,7 +47,10 @@ The CLI prints the whole answer on stderr before the result is bounded, one line
 
 - `check-audit-records: finding: {path}: {message}` per finding, `path` project-relative;
 - `check-audit-records: examined {n} spec(s) under '{specs-root}'; {d} at done; {s} skipped`;
-- `check-audit-records:   {key}: {count} (baseline {mark})` per exempt set.
+- `check-audit-records:   {key}: {count} (baseline {mark})` per exempt set;
+- `check-audit-records: nothing examined: no spec under '{specs-root}' was read, which is not the same as passing` when `examined-count` is zero.
+
+Each path and message is shown as one line, a control character escaped.
 
 It exits non-zero when `findings-count` is above zero or `examined-count` is zero.
 

@@ -14,24 +14,25 @@ use ductus::schema::config_keys::display_text;
 use ductus::schema::descriptions;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, BriefReReadArgs,
-    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckCommandFlagsArgs,
-    CheckCorpusLinksArgs, CheckDeparturesArgs, CheckOrphanedReferencesArgs, CheckOwedWorkArgs,
-    CheckPrescriptionsArgs, CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
-    CheckStepReferencesArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs, CheckUnreviewedCodeArgs,
-    CheckUnreviewedCodeResult, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
-    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
-    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
-    ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
-    UnreviewedState, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    CheckArtifactSizeArgs, CheckArtifactSizeResult, CheckArtifactsArgs, CheckAuditRecordsArgs,
+    CheckAuditRecordsResult, CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckDeparturesArgs,
+    CheckOrphanedReferencesArgs, CheckOwedWorkArgs, CheckPrescriptionsArgs,
+    CheckPromotionCoverageArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, CheckUnreviewedCodeArgs, CheckUnreviewedCodeResult,
+    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveDependenciesResult,
+    DeriveReferencesArgs, DeriveReferencesResult, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MeasureReopeningsArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs, ProcessWaiversArgs,
+    PrunePlanArgs, PruneProjectArgs, PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs,
+    ReadSectionArgs, ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, UnreviewedPushMode, UnreviewedState, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -231,6 +232,8 @@ enum Command {
     CheckArtifactSize(CheckArtifactSizeArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_OWED_WORK), long_about = descriptions::CHECK_OWED_WORK)]
     CheckOwedWork(CheckOwedWorkArgs),
+    #[command(about = descriptions::summary(descriptions::CHECK_AUDIT_RECORDS), long_about = descriptions::CHECK_AUDIT_RECORDS)]
+    CheckAuditRecords(CheckAuditRecordsArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_UNREVIEWED_CODE), long_about = descriptions::CHECK_UNREVIEWED_CODE)]
     CheckUnreviewedCode(CheckUnreviewedCodeArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_TASKS), long_about = descriptions::PRUNE_TASKS)]
@@ -559,6 +562,51 @@ fn unreviewed_code_lines(
                 format!("{name}: `[review] unreviewed-push = \"warn\"`: reported, not blocked")
             }
         });
+    }
+    lines
+}
+
+/// Whether `check-audit-records` exits non-zero: a finding stands, or no spec was
+/// examined, which is no pass (`QUAL-CLAIM-001`). It reads the two counts, which
+/// both forms carry.
+fn audit_records_blocks(r: &CheckAuditRecordsResult) -> bool {
+    r.findings_count > 0 || r.examined_count == 0
+}
+
+/// The stderr report of `check-audit-records`, printed on every run, clean
+/// included: one line per finding with its path from the project root, the
+/// counts, one line per exempt set with its mark, and when no spec was examined
+/// a line saying so. Each path and message is shown as one line of text.
+fn audit_records_lines(found: &primitives::check_audit_records::AuditRecords) -> Vec<String> {
+    let name = "check-audit-records";
+    let root = display_text(&found.specs_root);
+    let mut lines: Vec<String> = found
+        .findings
+        .iter()
+        .map(|finding| {
+            format!(
+                "{name}: finding: {}: {}",
+                display_text(&finding.path),
+                display_text(&finding.message)
+            )
+        })
+        .collect();
+    lines.push(format!(
+        "{name}: examined {} spec(s) under '{root}'; {} at done; {} skipped",
+        found.examined,
+        found.done,
+        found.skipped.len()
+    ));
+    lines.extend(found.exempt.iter().map(|set| {
+        format!(
+            "{name}:   {}: {} (baseline {})",
+            set.key, set.count, set.mark
+        )
+    }));
+    if found.examined == 0 {
+        lines.push(format!(
+            "{name}: nothing examined: no spec under '{root}' was read, which is not the same as passing"
+        ));
     }
     lines
 }
@@ -1476,6 +1524,20 @@ fn main() -> ExitCode {
             emit_result(primitives::check_artifacts::run(&args, &repo))
         }
         Command::CheckOwedWork(args) => emit_result(primitives::check_owed_work::run(&args, &repo)),
+        Command::CheckAuditRecords(_args) => {
+            // The whole answer is reported before the result is bounded, so a
+            // finding the bound moves to a file is still named on stderr, where
+            // the CI step reads it (spec 085).
+            let found = primitives::check_audit_records::compute(&repo);
+            if let Ok(found) = &found {
+                for line in audit_records_lines(found) {
+                    warn(format_args!("{line}"));
+                }
+            }
+            let outcome =
+                found.and_then(|found| primitives::check_audit_records::bound(&repo, found));
+            emit_result_gated(outcome, audit_records_blocks)
+        }
         Command::CheckUnreviewedCode(args) => {
             // The whole answer is reported before the result is bounded, so a
             // path the bound moves to a file is still named on stderr, where a
@@ -1560,11 +1622,106 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{
-        Cli, cli_command, derive_dependencies_blocks, derive_references_blocks,
-        drop_target_for_a_project_review, refused_lines, seed_context, unreviewed_code_blocks,
-        unreviewed_code_lines, unwritable_lines,
+        Cli, audit_records_blocks, audit_records_lines, cli_command, derive_dependencies_blocks,
+        derive_references_blocks, drop_target_for_a_project_review, refused_lines, seed_context,
+        unreviewed_code_blocks, unreviewed_code_lines, unwritable_lines,
     };
     use ductus::schema::primitives::{DeriveDependenciesResult, DeriveReferencesResult, ListsForm};
+
+    /// A `check-audit-records` answer: `examined` specs, one finding when
+    /// `finding` holds its path and message, and a review set over its mark.
+    fn audit_records(
+        examined: usize,
+        finding: Option<(&str, &str)>,
+    ) -> ductus::primitives::check_audit_records::AuditRecords {
+        use ductus::schema::primitives::{
+            AuditBaseline, AuditBaselineState, AuditExemptSet, AuditRecordFinding,
+            AuditRecordFindingKind, AuditRecordKind,
+        };
+        let set = |record, key: &str, count, mark| AuditExemptSet {
+            record,
+            key: key.into(),
+            count,
+            mark,
+            over: count > mark,
+        };
+        ductus::primitives::check_audit_records::AuditRecords {
+            specs_root: "specs".into(),
+            examined,
+            done: examined.saturating_sub(1),
+            baseline: AuditBaseline {
+                path: ".ductus/audit-record-baseline.txt".into(),
+                state: AuditBaselineState::Read,
+            },
+            exempt: [
+                set(AuditRecordKind::Review, "review-exempt", 2, 1),
+                set(AuditRecordKind::Analyze, "analyze-exempt", 0, 3),
+            ],
+            findings: finding
+                .map(|(path, message)| AuditRecordFinding {
+                    kind: AuditRecordFindingKind::Blocking,
+                    path: path.into(),
+                    message: message.into(),
+                })
+                .into_iter()
+                .collect(),
+            skipped: Vec::new(),
+            review_exempt: Vec::new(),
+            analyze_exempt: Vec::new(),
+        }
+    }
+
+    /// `check-audit-records` exits non-zero on a finding and on a run that
+    /// examined no spec, in either form, and zero on a clean run (spec 085).
+    #[test]
+    fn audit_records_block_on_a_finding_and_on_nothing_examined() {
+        use ductus::primitives::check_audit_records::bound;
+        let tmp = tempfile::tempdir().unwrap();
+        for (found, blocks) in [
+            (audit_records(3, None), false),
+            (audit_records(3, Some(("specs/001-a/review.md", "m"))), true),
+            (audit_records(0, None), true),
+        ] {
+            let result = bound(tmp.path(), found).unwrap();
+            assert_eq!(result.form, ListsForm::Inline);
+            assert_eq!(audit_records_blocks(&result), blocks, "{result:?}");
+            let mut file_form = result.clone();
+            file_form.findings = None;
+            file_form.form = ListsForm::File;
+            assert_eq!(audit_records_blocks(&file_form), blocks, "{file_form:?}");
+        }
+    }
+
+    /// The report: one line per finding, the counts and one line per exempt set
+    /// on every run, and the nothing-examined line only when nothing was; each
+    /// path and message stays one line.
+    #[test]
+    fn the_audit_records_report_names_each_finding_and_the_counts() {
+        let lines = audit_records_lines(&audit_records(
+            3,
+            Some(("specs/001-a/review.md", "blocked\n::error::forged")),
+        ));
+        assert_eq!(
+            lines,
+            vec![
+                "check-audit-records: finding: specs/001-a/review.md: blocked\\u000A::error::forged",
+                "check-audit-records: examined 3 spec(s) under 'specs'; 2 at done; 0 skipped",
+                "check-audit-records:   review-exempt: 2 (baseline 1)",
+                "check-audit-records:   analyze-exempt: 0 (baseline 3)",
+            ]
+        );
+        let raw = audit_records_lines(&audit_records(1, Some(("specs/a\nb.md", "one\ntwo"))));
+        assert!(
+            raw.iter().all(|line| !line.contains('\n')),
+            "a line break is shown escaped: {raw:?}"
+        );
+        let nothing = audit_records_lines(&audit_records(0, None));
+        assert_eq!(
+            nothing.last().unwrap(),
+            "check-audit-records: nothing examined: no spec under 'specs' was read, which is not the same as passing"
+        );
+        assert_eq!(nothing.len(), 4);
+    }
 
     fn dependencies_result() -> DeriveDependenciesResult {
         DeriveDependenciesResult {

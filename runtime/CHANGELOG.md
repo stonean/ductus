@@ -113,6 +113,23 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   by `check-owed-work`'s test. A `no-in-progress-commit` entry carries none.
   `never-owed-count` counts the closed reopenings, counted or not, whose
   `held-owed-work` is false, and `dashboard`'s `reopenings` block carries it.
+- **`check-audit-records` reads every `done` spec's audit records (spec 085,
+  AC2 and AC3; the agent's recommendations, adopted by the operator,
+  2026-11-25).** It reads each `done` spec's `review.md` and `analysis.md`
+  through the loaders `check-review-gate` uses. An absent record joins that
+  record's exempt set. A record that does not load, or whose `last-run` is
+  null, absent or blank, is a finding, and so is one with no `blocking` key,
+  since absent is not `false`, or with `blocking: true`. Each exempt set is
+  held against its mark in `.ductus/audit-record-baseline.txt`, and a set over
+  its mark is a finding per spec in it. A malformed, unreadable or outward-linked
+  baseline is a finding too. A spec whose `spec.md` status cannot be read is a
+  finding, and so is a directory holding a link leaving the project; an
+  untracked spec, or a directory without a `spec.md`, is skipped with its
+  reason. A spec root that is absent or cannot be listed is an error. The
+  result reports the examined, `done` and skipped counts, each exempt set with
+  its mark, and the findings, bounded past the read size. The CLI prints one
+  stderr line per finding, the counts and each set's mark on every run. It
+  exits 1 on a finding, or when no spec was examined.
 
 ### Changed
 

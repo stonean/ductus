@@ -137,7 +137,8 @@ fn case(name: &str, ctx: &Context) -> Case {
     let head = ctx.head.as_str();
     let call = Case::Call;
     match name {
-        "check-command-flags"
+        "check-audit-records"
+        | "check-command-flags"
         | "check-corpus-links"
         | "check-orphaned-references"
         | "check-step-references"
