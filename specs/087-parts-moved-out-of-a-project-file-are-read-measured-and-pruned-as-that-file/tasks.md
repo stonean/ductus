@@ -118,10 +118,10 @@ Task 3 made the shipped hook refuse a grown part, so the constitution's §text-f
 
 ## 10. A shared constitution's parts
 
-- [ ] `resolve-constitutions`' measured entry: each `loaded` record's `parts` and `parts-count`, measured and worded as the document is, bounded through the lists file; the unmeasured function reads none (`runtime/src/primitives/resolve_constitutions.rs`, `runtime/src/schema/primitives.rs`, `RESOLVE_CONSTITUTIONS` in `runtime/src/schema/descriptions.rs`)
-- [ ] `framework/commands/target.md` step 4: each part's bytes beside its document, one over the limit named with its owning repository as the fix, and a skipped entry's parts as not measured
-- [ ] Unit tests: a fixture part one byte over the limit carries its warning naming the `repo`; a not-checked-out entry carries no parts; an exec `/analyze` over a registered constitution with an over-limit part records no finding for it (AC17)
-- [ ] `specs/055-shared-constitution/data-model.md` (a loaded record's parts, **Bound**, and its sentence that nothing else in the checkout is read), and in `specs/055-shared-constitution/spec.md` the departure reason and a signpost
+- [x] `resolve-constitutions`' measured entry: every `loaded` record's parts in one top-level `parts` list, each naming its `alias`, with `parts-count`, measured and worded as the document is, bounded through the lists file; the unmeasured function reads none (`runtime/src/primitives/resolve_constitutions.rs`, `runtime/src/schema/primitives.rs`, `RESOLVE_CONSTITUTIONS` in `runtime/src/schema/descriptions.rs`)
+- [x] `framework/commands/target.md` step 4: each part's bytes beside its document, one over the limit named with its owning repository as the fix, and a skipped entry's parts as not measured
+- [x] Unit tests: a fixture part one byte over the limit carries its warning naming the `repo`; a not-checked-out entry carries no parts; an exec `/analyze` over a registered constitution with an over-limit part records no finding for it (AC17)
+- [x] `specs/055-shared-constitution/data-model.md` (a loaded record's parts, **Bound**, and its sentence that nothing else in the checkout is read), and in `specs/055-shared-constitution/spec.md` the departure reason and a signpost
 
 - **Done when**: the tests pass and are proven to fail without their behavior (AC10); `/target` over the fixture reports the part's bytes, names the over-limit part with its repository, reports a not-checked-out entry's parts as not measured, and continues (AC16, AC17); the commit records each registry layout's impact (AC18).
 

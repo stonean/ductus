@@ -43,6 +43,8 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
   of documents in effect is exactly what the project's own config names.
 
 > **Signpost (022 task 12):** a `.ductus/config.toml` that does not parse halts every reader of it, and one whose `[paths] specs-root` is rejected halts every reader of the spec root, `write-review` and `write-analysis` included, each with an error naming the file, since the spec root their record goes under cannot be read from it. A config that parses but holds a malformed `[constitutions]` entry still records the run, the registry reported unreadable. [022 — Deterministic Runtime](../022-deterministic-runtime/spec.md) records the decision (its task 12, owner, 2026-11-10).
+>
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. The measured `resolve-constitutions` lists each loaded checkout's parts under `.ductus/docs/constitution/` in a top-level `parts` list, measured as the document is and bounded past the read size, and `/{project}:target` reports each beside its document, one over the limit named with its owning repository as the fix; no part is an `/{project}:analyze` finding. The departure reason under Applicable Rules names the directory.
 
 ## Non-Goals
 
@@ -75,7 +77,7 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
 ## Applicable Rules
 
 - departs: `BE-INPUT-004`
-  - reason: a registry `path` names a shared-constitution checkout outside the project by design, so no base directory exists to contain it; it is the operator's own configuration, and only the fixed `constitution.md` is joined to it
+  - reason: a registry `path` names a shared-constitution checkout outside the project by design, so no base directory exists to contain it; it is the operator's own configuration, and only the fixed `constitution.md` and `.ductus/docs/constitution/` are joined to it, that directory listed without following a link that leaves the checkout (spec 087)
 
 ## Open Questions
 

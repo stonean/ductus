@@ -22,9 +22,10 @@ description = "Acme engineering house rules"
 
 **A malformed entry halts resolution.** A missing, empty or malformed `repo` or `path`, or a malformed alias, halts `resolve-constitutions` with an error naming the alias, the field and `.ductus/config.toml`; a duplicate alias or an unparseable value is a TOML error naming the file and the location. `write-review` and `write-analysis`, which must still record their run, report the registry as unreadable instead (AC8), when the config file parses and its `[paths] specs-root` is valid; one that does not parse, or whose `specs-root` is rejected, halts them as it halts every reader of the spec root, naming the file, since the spec root their record goes under cannot be read from it (022's task 12). `/ductus` applies the same checks before it writes its imports block.
 
-The document read from a resolved checkout is `{path}/constitution.md`. Nothing else in
-the checkout is read — not its `rules/`, not its own `.ductus/config.toml` (see the
-spec's Edge Cases: registration is not transitive).
+The document read from a resolved checkout is `{path}/constitution.md`. Its parts, the
+markdown files directly under `{path}/.ductus/docs/constitution/`, are listed and measured,
+never read (spec 087). Nothing else in the checkout is read — not its `rules/`, not its own
+`.ductus/config.toml` (see the spec's Edge Cases: registration is not transitive).
 
 ## Resolution outcomes
 
@@ -53,6 +54,10 @@ and empty `skipped` — indistinguishable by design (AC1).
 | `examined` | integer | Total entries considered — the denominator for `loaded` |
 | `duplicate-paths` | array | Aliases sharing a checkout `path`, if any — `{path, aliases}` groups |
 | `threshold` | object | `{bytes, source}`: the read size each `loaded` document was measured against, `[artifacts] read-size-bytes` or the 50,000-byte default (`source` `config` or `default`). Present only when `examined` is above 0 |
+| `parts` | array | Every `loaded` record's parts (spec 087), in record order and then `scenario_name_cmp` order, each a part record (below). Present exactly when `threshold` is; absent in the file form |
+| `parts-count` | integer | Records in `parts`, in either form. Present exactly when `threshold` is |
+| `form` | string | `inline`, or `file` once the result serialized passes the read size. Present exactly when `threshold` is |
+| `lists-file` | string | In the file form, the file under `.ductus/results/resolve-constitutions/` holding `parts` whole, under the key `parts` |
 
 The `loaded` / `skipped` split is the `QUAL-CLAIM-001` shape: a caller cannot report a
 clean result over a source in `skipped` without dropping a field it was handed. What empty
@@ -67,6 +72,21 @@ Each `loaded` record also carries its measurement (scenario
 | `over-limit` | boolean | Whether `bytes` is over `threshold`; a document at it is not. Present exactly when `bytes` is |
 | `warning` | string | The runtime's wording: alias, size, limit, and the fix, a cut in the repository `repo` names. Present exactly when `over-limit` is true |
 
+A part record is one markdown file directly under `.ductus/docs/constitution/` in a loaded
+record's checkout, listed without following a link that leaves the checkout, or a directory
+or entry there that could not be listed. One top-level list holds every record's, so the
+bound reads it as it reads every growing list (the agent's recommendation, adopted by the
+operator, 2026-11-26). A `skipped` record has none, and nothing nested under the directory
+is reported, since nothing here judges another repository's tree:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `alias` | string | The record whose checkout holds it |
+| `path` | string | Its path, given as the record's `document` is |
+| `bytes` | integer | Its length on disk. Absent for a part that could not be opened or is a link leaving the checkout, and for a directory or entry that could not be listed: *not measured* |
+| `over-limit` | boolean | As the document's. Present exactly when `bytes` is |
+| `warning` | string | The alias, the part, its size, the limit and the fix, a split into sibling parts in the repository `repo` names. Present exactly when `over-limit` is true |
+
 **The primitive entry measures; `write-review`, `write-analysis` and `/ductus` do not.**
 The MCP tool, the CLI subcommand and `ductus exec` measure unless `unmeasured` is set, and
 a malformed `read-size-bytes` halts them once an entry is registered. The two record
@@ -75,7 +95,7 @@ the setting never halts any of the three. With nothing registered nothing new is
 `threshold`, and no halt (AC1).
 
 **Compatibility.** This reopening's change to the result is additive: `unmeasured` is a new
-optional argument, off by default; `threshold`, `bytes`, `over-limit` and `warning` appear
+optional argument, off by default; `threshold`, `bytes`, `over-limit` and `warning`, and since spec 087 `parts`, `parts-count`, `form` and `lists-file`, appear
 only on a measured call, so a caller written before them reads the same result. Two
 behaviors are new. A `description` over 100 characters, which the record carried whole
 before this reopening, arrives truncated. And a measured call halts on a
@@ -86,7 +106,9 @@ own config that `/{project}:target` shares with `/{project}:clarify`, `/{project
 **Bound.** The result holds one record per registered entry, the `duplicate-paths`
 groups over those entries, their count and, on a measured call, the threshold. Each record's
 free text is the operator's own alias, `repo` and `path`, the `document` path and `warning`
-built from them, and a `description` truncated to 100 characters, so its size is bounded by the project's own registry (`BE-PAYLOAD-001`).
+built from them, and a `description` truncated to 100 characters, so its size is bounded by the project's own registry (`BE-PAYLOAD-001`). The `parts` list is not: a checkout's
+directory sets its length, so past the read size it moves to the list file, as
+`check-artifact-size`'s lists do, with `parts-count` inline.
 
 ## Notes
 

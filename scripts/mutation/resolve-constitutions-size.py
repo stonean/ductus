@@ -26,15 +26,15 @@ MUTATIONS = [
     (
         'M1 the loaded documents are not measured',
         'src/primitives/resolve_constitutions.rs',
-        '    for record in &mut result.loaded {\n        measure(repo, record, threshold.bytes);\n    }\n',
+        '        measure(repo, record, threshold.bytes);\n',
         '',
         'resolve_constitutions::tests::a_constitution_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
     ),
     (
         'M2 a document at the limit is over it',
         'src/primitives/resolve_constitutions.rs',
-        '    let over = bytes > limit;',
-        '    let over = bytes >= limit;',
+        '    let over = bytes > limit;\n    let warning = over.then(|| over_limit_warning(',
+        '    let over = bytes >= limit;\n    let warning = over.then(|| over_limit_warning(',
         'resolve_constitutions::tests::a_constitution_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
     ),
     (
@@ -47,8 +47,8 @@ MUTATIONS = [
     (
         'M4 the warning names no owning repository as the fix',
         'src/primitives/resolve_constitutions.rs',
-        ['Fix: cut it in its own repository, {}; ', '        flatten_line(&record.repo),\n'],
-        ['Fix: cut it; ', ''],
+        ['Fix: cut it in its own repository, {}; ', '        flatten_line(document),\n        flatten_line(&record.repo),\n'],
+        ['Fix: cut it; ', '        flatten_line(document),\n'],
         'resolve_constitutions::tests::a_constitution_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
     ),
     (

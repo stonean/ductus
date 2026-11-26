@@ -6514,6 +6514,52 @@ pub struct ResolveConstitutionsResult {
     /// `write-review` and `write-analysis` run, which measures nothing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub threshold: Option<ReadSizeThreshold>,
+    /// Every `loaded` record's parts (spec 087): each markdown file directly
+    /// under `.ductus/docs/constitution/` in its checkout, in record order,
+    /// then in `scenario_name_cmp` order, measured as the document is, and
+    /// each directory or entry there that could not be listed, carrying no
+    /// size. A `skipped` record has none. Present exactly when `threshold`
+    /// is, and absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parts: Option<Vec<ConstitutionPart>>,
+    /// Records in `parts`, in either form. Present exactly when `threshold`
+    /// is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parts_count: Option<usize>,
+    /// Where `parts` is: in this result, or past the read size in the file
+    /// `lists-file` names. Present exactly when `threshold` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form: Option<ListsForm>,
+    /// In the file form, the file holding `parts` whole, from the project
+    /// root: a JSON object with the key `parts`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
+/// One part of a loaded shared constitution (spec 087), or a directory or
+/// entry under its parts directory that could not be listed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ConstitutionPart {
+    /// The alias of the record whose checkout holds it.
+    pub alias: String,
+    /// Its path, as the record's `document` is given: from the project root,
+    /// through the registered `path`.
+    pub path: String,
+    /// Its length on disk. Absent when it could not be opened, is a symbolic
+    /// link leaving its checkout, or is a directory or entry that could not
+    /// be listed: *not measured*, never under the limit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Whether `bytes` is over `threshold`; a part at it is not. Present
+    /// exactly when `bytes` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub over_limit: Option<bool>,
+    /// The runtime's wording: the alias, the part, its size, the limit and
+    /// the fix, a split in the repository the record's `repo` names. Present
+    /// exactly when `over-limit` is true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
 }
 
 // -- resolve-feature ----------------------------------------------------------

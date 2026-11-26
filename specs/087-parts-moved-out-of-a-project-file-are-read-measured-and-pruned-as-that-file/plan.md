@@ -104,7 +104,7 @@ With `project-files`:
 
 ### A shared constitution's parts (AC16, AC17)
 
-- **Measured.** `resolve-constitutions`' measured entry gives each `loaded` record `parts` and `parts-count`. Each part carries `path`, `bytes`, `over-limit` and `warning`, measured as the document is (`measure` and `over_limit_warning` in `runtime/src/primitives/resolve_constitutions.rs`). A part that cannot be opened carries no `bytes` and reads as not measured.
+- **Measured.** `resolve-constitutions`' measured entry lists every `loaded` record's parts in one top-level `parts` list, with `parts-count` inline in both forms, so the bounding, the exec walker's restore and its test helper read it as they read every bounded list (the agent's recommendation, adopted by the operator, 2026-11-26). Each part carries its record's `alias`, its `path`, `bytes`, `over-limit` and `warning`, measured as the document is (`measure` and `over_limit_warning` in `runtime/src/primitives/resolve_constitutions.rs`). A part that cannot be opened, and a directory that cannot be listed, carry no `bytes` and read as not measured.
 - **Skipped.** A `skipped` record carries no parts, and `/target` step 4 reports its parts as not measured along with it.
 - **Unmeasured callers.** The unmeasured function, which `write-review`, `write-analysis` and `/ductus` use, reads no part. So neither record nor the imports block changes, and `/analyze` records no part finding (AC17).
 - **Bound.** The parts lists are bounded as `check-artifact-size`'s are, because a checkout's directory sets their length, not the project's registry (`BE-PAYLOAD-001`). This changes 055's data model, **Bound**.

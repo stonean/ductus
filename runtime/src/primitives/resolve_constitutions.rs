@@ -34,7 +34,9 @@
 //! read-size-bytes` (scenario `target-reports-each-constitutions-size`).
 //! `write-review` and `write-analysis` call [`run`], so a malformed read size,
 //! which halts the measurement, never newly halts the two records that must
-//! be written whatever the config holds.
+//! be written whatever the config holds. The measured entry also lists and
+//! measures each loaded checkout's parts under `.ductus/docs/constitution/`
+//! (spec 087), in one `parts` list bounded as every growing list is.
 //!
 //! Schema is canonical in `specs/055-shared-constitution/data-model.md`.
 
@@ -42,14 +44,23 @@ use std::io::Write as _;
 use std::path::Path;
 
 use crate::primitives::check_artifact_size::resolve_threshold;
-use crate::primitives::{PrimitiveError, Result, flatten_line, read_text, rel_path, resolve_path};
+use crate::primitives::{
+    PrimitiveError, Result, bounded_lists, flatten_line, project_parts, read_text, rel_path,
+    resolve_path,
+};
 use crate::schema::config_keys;
 use crate::schema::constitutions::{Constitutions, ConstitutionsError};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ConstitutionOutcome, ConstitutionRecord, DuplicateConstitutionPath, ResolveConstitutionsArgs,
-    ResolveConstitutionsResult,
+    ConstitutionOutcome, ConstitutionPart, ConstitutionRecord, DuplicateConstitutionPath,
+    ListsForm, ResolveConstitutionsArgs, ResolveConstitutionsResult,
 };
+
+const PRIMITIVE: &str = "resolve-constitutions";
+
+/// The segment of `.ductus/results/resolve-constitutions/` its list file
+/// sits under: the result takes no feature.
+const LISTS_KEY: &str = "loaded";
 
 /// The document filename looked for inside a registered checkout. Fixed rather
 /// than configurable: a per-entry filename would let two projects registering
@@ -108,6 +119,10 @@ pub fn run(repo: &Path) -> Result<ResolveConstitutionsResult> {
         examined: registry.0.len(),
         duplicate_paths,
         threshold: None,
+        parts: None,
+        parts_count: None,
+        form: None,
+        lists_file: None,
     })
 }
 
@@ -127,7 +142,9 @@ pub fn run(repo: &Path) -> Result<ResolveConstitutionsResult> {
 /// [`run`]'s errors, and, when an entry is registered,
 /// [`PrimitiveError::InvalidReadSize`] / [`PrimitiveError::Toml`] for an
 /// invalid read size or a config that does not parse, as
-/// `check-artifact-size` reports them, from the one reader of that setting.
+/// `check-artifact-size` reports them, from the one reader of that setting;
+/// and [`PrimitiveError::Io`] or [`PrimitiveError::InvalidPath`] when the
+/// list file past the read size cannot be written (`bounded_lists::place`).
 pub fn run_measured(
     args: &ResolveConstitutionsArgs,
     repo: &Path,
@@ -138,11 +155,87 @@ pub fn run_measured(
     }
     let (threshold, notices) = resolve_threshold(repo)?;
     warn(&notices);
+    let mut parts = Vec::new();
     for record in &mut result.loaded {
         measure(repo, record, threshold.bytes);
+        parts.extend(record_parts(repo, record, threshold.bytes));
     }
     result.threshold = Some(threshold);
+    result.parts_count = Some(parts.len());
+    result.parts = Some(parts);
+    result.form = Some(ListsForm::Inline);
+    bound(repo, &mut result)?;
     Ok(result)
+}
+
+/// The parts of `record`'s checkout (spec 087): each markdown file directly
+/// under its `.ductus/docs/constitution/`, listed by the function that lists a
+/// project file's parts, with the checkout as the base a link may not leave,
+/// and measured as the document is. A part that is a symbolic link leaving
+/// the checkout is never opened, and a directory or entry that could not be
+/// listed is a part with no size: each reads as *not measured*, never as
+/// under the limit or as no part (`QUAL-CLAIM-001`). Nothing nested is
+/// reported, since no command here judges another repository's tree.
+fn record_parts(repo: &Path, record: &ConstitutionRecord, limit: u64) -> Vec<ConstitutionPart> {
+    let checkout = resolve_path(repo, &record.path);
+    let listing = project_parts::list_dir(&checkout, project_parts::CONSTITUTION_PARTS_DIR);
+    let unmeasured = |path: String| ConstitutionPart {
+        alias: record.alias.clone(),
+        path,
+        bytes: None,
+        over_limit: None,
+        warning: None,
+    };
+    let mut out = Vec::new();
+    for part in listing.parts {
+        let path = rel_path(&checkout.join(&part.path), repo);
+        let bytes = (!part.outside)
+            .then(|| length_on_disk(&checkout.join(&part.path)))
+            .flatten();
+        let Some(bytes) = bytes else {
+            out.push(unmeasured(path));
+            continue;
+        };
+        let over = bytes > limit;
+        let warning = over.then(|| part_warning(record, &path, bytes, limit));
+        out.push(ConstitutionPart {
+            alias: record.alias.clone(),
+            path,
+            bytes: Some(bytes),
+            over_limit: Some(over),
+            warning,
+        });
+    }
+    for unlisted in listing.unlisted {
+        out.push(unmeasured(rel_path(&checkout.join(unlisted), repo)));
+    }
+    out
+}
+
+/// The warning for a part over the limit: worded as a document's is, with
+/// the fix a part's, a split into sibling parts in the repository that owns
+/// it (spec 087, *Parts*).
+fn part_warning(record: &ConstitutionRecord, part: &str, bytes: u64, limit: u64) -> String {
+    format!(
+        "shared constitution `{}`'s part `{}` is {bytes} bytes, over the {limit}-byte read \
+         size, so an agent may not read it in one call. Fix: split it into sibling parts in \
+         its own repository, {}; nothing in this project can shorten it.",
+        record.alias,
+        flatten_line(part),
+        flatten_line(&record.repo),
+    )
+}
+
+/// Move `parts` to the file past the read size: a checkout's directory, not
+/// the project's registry, sets its length (`BE-PAYLOAD-001`).
+fn bound(repo: &Path, result: &mut ResolveConstitutionsResult) -> Result<()> {
+    let lists = serde_json::json!({ "parts": result.parts });
+    if let Some(file) = bounded_lists::place(repo, PRIMITIVE, LISTS_KEY, &result, &lists)? {
+        result.form = Some(ListsForm::File);
+        result.parts = None;
+        result.lists_file = Some(file);
+    }
+    Ok(())
 }
 
 /// Write each `[artifacts]` notice to stderr, the channel this primitive
@@ -958,5 +1051,164 @@ mod tests {
         assert!(crate::primitives::outward::refused(&load_constitutions(
             repo.path()
         )));
+    }
+
+    /// A registry of one checked-out constitution `acme` at `gov`, with a
+    /// read size of 2,000, past the result with a few parts and under it with
+    /// thirty, and one `gone` entry that is not checked out.
+    fn parted_registry() -> TempDir {
+        let dir = repo_with_config(Some(
+            "[artifacts]\nread-size-bytes = 2000\n\
+             [constitutions.acme]\nrepo = \"https://example.test/acme\"\npath = \"gov\"\n\
+             [constitutions.gone]\nrepo = \"https://example.test/gone\"\npath = \"missing\"\n",
+        ));
+        checkout_of_size(&dir, "gov", 10);
+        dir
+    }
+
+    fn write_part(dir: &TempDir, name: &str, bytes: usize) {
+        let parts = dir.path().join("gov/.ductus/docs/constitution");
+        fs::create_dir_all(&parts).unwrap();
+        fs::write(parts.join(name), "x".repeat(bytes)).unwrap();
+    }
+
+    /// Each part of a loaded constitution is measured as its document is: one
+    /// at the limit is not over it, one a byte over carries the warning naming
+    /// its repository as the fix, and a file there that is not markdown is no
+    /// part. The entry not checked out contributes none (spec 087, AC16).
+    #[test]
+    fn a_part_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix() {
+        let dir = parted_registry();
+        write_part(&dir, "at.md", 2000);
+        write_part(&dir, "over.md", 2001);
+        write_part(&dir, "notes.txt", 500);
+        let result = measured_in(&dir).unwrap();
+        assert_eq!(result.form, Some(ListsForm::Inline));
+        assert_eq!(result.parts_count, Some(2));
+        let parts = result.parts.clone().unwrap();
+        let summary: Vec<(&str, &str, Option<u64>, Option<bool>)> = parts
+            .iter()
+            .map(|p| (p.alias.as_str(), p.path.as_str(), p.bytes, p.over_limit))
+            .collect();
+        assert_eq!(
+            summary,
+            vec![
+                (
+                    "acme",
+                    "gov/.ductus/docs/constitution/at.md",
+                    Some(2000),
+                    Some(false)
+                ),
+                (
+                    "acme",
+                    "gov/.ductus/docs/constitution/over.md",
+                    Some(2001),
+                    Some(true)
+                ),
+            ]
+        );
+        assert_eq!(parts[0].warning, None);
+        assert_eq!(
+            parts[1].warning.as_deref(),
+            Some(
+                "shared constitution `acme`'s part `gov/.ductus/docs/constitution/over.md` is 2001 \
+                 bytes, over the 2000-byte read size, so an agent may not read it in one call. \
+                 Fix: split it into sibling parts in its own repository, \
+                 https://example.test/acme; nothing in this project can shorten it."
+            )
+        );
+        assert_eq!(
+            result.skipped.len(),
+            1,
+            "the entry not checked out is skipped"
+        );
+    }
+
+    /// A checkout with no parts directory, and a registry whose only entry is
+    /// not checked out, list no part, counted 0, never an absent list; an
+    /// unmeasured call lists none at all.
+    #[test]
+    fn a_checkout_without_parts_lists_none_and_an_unmeasured_call_reads_none() {
+        let dir = parted_registry();
+        let result = measured_in(&dir).unwrap();
+        assert_eq!(
+            (result.parts, result.parts_count),
+            (Some(Vec::new()), Some(0))
+        );
+        write_part(&dir, "a.md", 10);
+        let args = ResolveConstitutionsArgs { unmeasured: true };
+        let unmeasured = run_measured(&args, dir.path()).unwrap();
+        assert_eq!(
+            (&unmeasured.parts, unmeasured.parts_count, unmeasured.form),
+            (&None, None, None)
+        );
+        assert_eq!(unmeasured, run(dir.path()).unwrap());
+    }
+
+    /// A part that is a symbolic link leaving its checkout is never opened,
+    /// and a parts directory that is one is never listed: each is a part with
+    /// no size, *not measured*, never under the limit or no part
+    /// (`QUAL-CLAIM-001`).
+    #[cfg(unix)]
+    #[test]
+    fn an_outward_part_and_an_unlistable_directory_are_not_measured() {
+        let dir = parted_registry();
+        let outside = TempDir::new().unwrap();
+        fs::write(outside.path().join("x.md"), "x".repeat(500)).unwrap();
+        write_part(&dir, "in.md", 10);
+        std::os::unix::fs::symlink(
+            outside.path().join("x.md"),
+            dir.path().join("gov/.ductus/docs/constitution/out.md"),
+        )
+        .unwrap();
+        let parts = measured_in(&dir).unwrap().parts.unwrap();
+        let sizes: Vec<(&str, Option<u64>)> =
+            parts.iter().map(|p| (p.path.as_str(), p.bytes)).collect();
+        assert_eq!(
+            sizes,
+            vec![
+                ("gov/.ductus/docs/constitution/in.md", Some(10)),
+                ("gov/.ductus/docs/constitution/out.md", None),
+            ]
+        );
+
+        fs::remove_dir_all(dir.path().join("gov/.ductus/docs/constitution")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path(),
+            dir.path().join("gov/.ductus/docs/constitution"),
+        )
+        .unwrap();
+        let parts = measured_in(&dir).unwrap().parts.unwrap();
+        assert_eq!(parts.len(), 1, "{parts:?}");
+        assert_eq!(
+            (parts[0].path.as_str(), parts[0].bytes),
+            ("gov/.ductus/docs/constitution", None)
+        );
+    }
+
+    /// Past the read size the parts move to the file whole, `parts-count`
+    /// inline, and the file holds them under `parts` (`BE-PAYLOAD-001`).
+    #[test]
+    fn past_the_read_size_the_parts_are_in_the_file_with_their_count_inline() {
+        let dir = parted_registry();
+        for i in 0..30 {
+            write_part(&dir, &format!("part-{i:02}.md"), 10);
+        }
+        let result = measured_in(&dir).unwrap();
+        assert_eq!(result.form, Some(ListsForm::File));
+        assert_eq!(
+            (result.parts.as_ref(), result.parts_count),
+            (None, Some(30))
+        );
+        let file = result.lists_file.clone().unwrap();
+        let lists: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(dir.path().join(&file)).unwrap()).unwrap();
+        assert_eq!(lists["parts"].as_array().unwrap().len(), 30);
+        assert_eq!(lists["parts"][0]["alias"], "acme");
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&result).unwrap(),
+            &lists,
+        );
     }
 }

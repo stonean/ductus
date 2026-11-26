@@ -2357,6 +2357,44 @@ mod tests {
         assert!(linked.contains("\nadvisory: 0\n"), "{linked}");
     }
 
+    /// An exec `/analyze` records no finding for a shared constitution's part
+    /// (spec 087, AC17): a registered checkout whose part is past the read
+    /// size, and the project's own `.ductus/docs/constitution/`, the parts
+    /// directory a constitution keeps in its repository, each leave the
+    /// record's counts at zero, since nothing in this project can fix them.
+    #[test]
+    fn an_exec_analyze_records_no_finding_for_a_shared_constitutions_part() {
+        let repo = analyze_repo(None);
+        std::fs::create_dir_all(repo.path().join(".ductus")).unwrap();
+        std::fs::write(
+            repo.path().join(".ductus/config.toml"),
+            "[constitutions.acme]\nrepo = \"https://example.test/acme\"\npath = \"gov\"\n",
+        )
+        .unwrap();
+        let checkout = repo.path().join("gov");
+        std::fs::create_dir_all(checkout.join(".ductus/docs/constitution")).unwrap();
+        std::fs::write(checkout.join("constitution.md"), "# Acme\n").unwrap();
+        std::fs::write(
+            checkout.join(".ductus/docs/constitution/big.md"),
+            "x".repeat(50_001),
+        )
+        .unwrap();
+        let own = repo.path().join(".ductus/docs/constitution");
+        std::fs::create_dir_all(&own).unwrap();
+        std::fs::write(own.join("security.md"), "# Security\n").unwrap();
+        let procedure = analyze_procedure(vec![Step::Primitive {
+            number: StepNumber(vec![17]),
+            name: "check-artifact-size".into(),
+            prose: String::new(),
+            location: loc(),
+        }]);
+        let (outcome, envelopes) = walk_analyze(&procedure, repo.path(), None, "");
+        assert_eq!(outcome, WalkOutcome::Complete, "{envelopes:?}");
+        let record = analysis_text(repo.path());
+        assert!(record.contains("\nadvisory: 0\n"), "{record}");
+        assert!(record.contains("\nblocking-findings: 0\n"), "{record}");
+    }
+
     /// BE-PAYLOAD-001 under `ductus exec`: with `[artifacts] read-size-bytes`
     /// small, `check-artifact-size` returns `oversized` and `skipped` in a
     /// file, the walker restores them before the tally reads the result, and

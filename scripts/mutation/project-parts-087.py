@@ -14,7 +14,9 @@ the parts (`runtime/src/primitives/prune_project.rs`) and its move
 (`runtime/src/primitives/prune_project/moves.rs`): the candidates, the
 boundary-bounded referrer search, the apply's checks, and the multi-file
 commit it makes under one lock hold (`commit_if_unchanged`,
-`runtime/src/primitives/mod.rs`), with the CLI's `--move-json`.
+`runtime/src/primitives/mod.rs`), with the CLI's `--move-json`; and `resolve-constitutions`' measure of a
+shared constitution's parts (`runtime/src/primitives/resolve_constitutions.rs`)
+and `/analyze` recording no finding for one.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/project-parts-087.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -552,5 +554,54 @@ MUTATIONS = [
         '        args.move_file = Some(ductus::primitives::load_cli_json("move-json", path)?);',
         '        let _ = path;',
         '--bin ductus tests::a_json_flag_fills_its_argument_and_is_staging_bound',
+    ),
+    (
+        "M76 a loaded constitution's parts are not listed",
+        'src/primitives/resolve_constitutions.rs',
+        '        parts.extend(record_parts(repo, record, threshold.bytes));\n',
+        '',
+        'primitives::resolve_constitutions::tests::a_part_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
+    ),
+    (
+        "M77 a constitution's part over the limit carries no warning",
+        'src/primitives/resolve_constitutions.rs',
+        '        let warning = over.then(|| part_warning(record, &path, bytes, limit));',
+        '        let warning = over.then(String::new).filter(|_| false);',
+        'primitives::resolve_constitutions::tests::a_part_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
+    ),
+    (
+        "M78 a constitution's part at the limit is over it",
+        'src/primitives/resolve_constitutions.rs',
+        '        let over = bytes > limit;\n        let warning = over.then(|| part_warning(',
+        '        let over = bytes >= limit;\n        let warning = over.then(|| part_warning(',
+        'primitives::resolve_constitutions::tests::a_part_one_byte_over_the_limit_is_named_with_its_repository_as_the_fix',
+    ),
+    (
+        "M79 a constitution's part that is a link leaving its checkout is opened",
+        'src/primitives/resolve_constitutions.rs',
+        '        let bytes = (!part.outside)',
+        '        let bytes = true',
+        'primitives::resolve_constitutions::tests::an_outward_part_and_an_unlistable_directory_are_not_measured',
+    ),
+    (
+        'M80 an unlistable constitution parts directory reads as no part',
+        'src/primitives/resolve_constitutions.rs',
+        '    for unlisted in listing.unlisted {\n        out.push(unmeasured(rel_path(&checkout.join(unlisted), repo)));\n    }\n',
+        '',
+        'primitives::resolve_constitutions::tests::an_outward_part_and_an_unlistable_directory_are_not_measured',
+    ),
+    (
+        "M81 the file form keeps a constitution's parts inline",
+        'src/primitives/resolve_constitutions.rs',
+        '        result.parts = None;\n',
+        '',
+        'primitives::resolve_constitutions::tests::past_the_read_size_the_parts_are_in_the_file_with_their_count_inline',
+    ),
+    (
+        "M82 a project's own constitution parts directory is a stray-directory finding",
+        'src/primitives/project_parts.rs',
+        '        if KINDS.iter().any(|kind| parts_dir(*kind) == dir) || dir == CONSTITUTION_PARTS_DIR {',
+        '        if KINDS.iter().any(|kind| parts_dir(*kind) == dir) {',
+        'interpreter::tests::an_exec_analyze_records_no_finding_for_a_shared_constitutions_part',
     ),
 ]
