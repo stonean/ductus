@@ -66,7 +66,7 @@ A **part** is a markdown file directly under a project file's parts directory, a
 
 ## Acceptance Criteria
 
-- [ ] AC1: Over a fixture with an index `system.md` and one part, a runtime primitive's result lists the part under its project file with its state, and `framework/commands/plan.md`, `framework/reference/plan.md` and `framework/commands/analyze.md` direct the run to read every part that result lists before judging the plan against the file, and to name the parts it read.
+- [ ] AC1: Over a fixture with an index `system.md` and one part, a runtime primitive's result lists the part under its project file with its state, and `framework/commands/plan.md`, `framework/reference/plan.md` and `framework/commands/analyze.md` direct the run to read every part that result lists under the file before judging the plan against the file, and to name the parts it read.
 - [ ] AC2: Over that fixture with the part unreadable, the result gives the part a state distinct from a readable one, and `framework/reference/analyze.md` has the plan-against-`system.md` judgment recorded as unexamined for that part, never as no contradiction.
 - [ ] AC3: `framework/reference/implement.md` and `framework/reference/review.md` state that following `system.md` includes the parts its pointers name for the work in hand, and that the run says which parts it read.
 - [ ] AC4: `check-artifact-size` with `project-files` reports a part one byte over the threshold with its path, size, threshold and fix, and does not report a part at the threshold.

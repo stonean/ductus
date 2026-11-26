@@ -36,6 +36,8 @@ It runs in three places:
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 
 > **Signpost:** `[artifacts] read-size-bytes` also bounds tool results. 066, 078 and 079 bounded their own results by it, and [080](../080-deterministic-runtime-efficiency/spec.md) extended the bound to every primitive whose result grows with the corpus: past it, the result moves its lists to a JSON file under `.ductus/results/` and keeps their counts inline. The pipeline view `render-status` returns collapses its `done` rows to a count line, then cuts rows, next-action names and each other list to stay within it, and on the model path names the file holding the whole view.
+>
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed surfaces this spec owns. With `project-files`, `check-artifact-size` also measures each part of a project file, a markdown file directly under its directory in `.ductus/docs/`, reports one over the threshold with splitting it into sibling parts as its fix, refuses a staged part grown past it, and lists the parts' integrity findings in `part-findings`, which `/{project}:analyze` records as advisory. `/{project}:plan` and `/{project}:analyze` read the parts it lists before judging a plan against `system.md`.
 
 ## The warning names a fix
 

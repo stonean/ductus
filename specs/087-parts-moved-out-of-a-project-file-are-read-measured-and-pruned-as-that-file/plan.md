@@ -62,7 +62,7 @@ With `project-files`:
 
 **`/analyze`.**
 
-- Step 15 judges *the plan does not contradict `system.md`*. Before that judgment it invokes `check-artifact-size` with `project-files` and no feature, and reads every part the result lists. Step 17's call is unchanged.
+- Step 15 judges *the plan does not contradict `system.md`*. Before that judgment it invokes `check-artifact-size` with `project-files` and no feature, and reads every part the result lists under `system.md`, the parts the judgment is against (the agent's recommendation, adopted by the operator, 2026-11-25). Step 17's call is unchanged.
 - Step 15 already carries `audit:ignore-promotion`. Under `ductus exec` it records `integrity-not-checked` as before (`framework/reference/analyze.md` §Unexamined targets (informational)).
 - An `unreadable` part is not judged against. In `framework/reference/analyze.md`, §Plan consistency (blocking if plan exists), *How each runs*, records the judgment unexamined for that part, under `artifact-unreadable`. Step 17's skip of the same part already records that reason, so the part is counted once and no reason joins the closed set.
 - `framework/commands/analyze.md`'s Scope Boundaries names the parts beside the three files.

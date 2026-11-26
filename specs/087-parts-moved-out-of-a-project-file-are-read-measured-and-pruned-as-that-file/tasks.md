@@ -53,7 +53,7 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 4. `/analyze` reads parts and records the findings
 
-Tasks 1–3 landed the result this task reads: `check-artifact-size` with `project-files` carries `parts`, `parts-count`, `part-findings` and `part-findings-count` in its project half, and, staged only, `refused` and `refused-count` (063's `data-model.md`, *The project half*). An unreadable part, and a directory under `.ductus/docs/` that could not be listed, are in `skipped` under `artifact-unreadable`. This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M39.
+Tasks 1–3 landed the result this task reads: `check-artifact-size` with `project-files` carries `parts`, `parts-count`, `part-findings` and `part-findings-count` in its project half, and, staged only, `refused` and `refused-count` (063's `data-model.md`, *The project half*). An unreadable part, and a directory under `.ductus/docs/` that could not be listed, are in `skipped` under `artifact-unreadable`.
 
 - [x] `framework/commands/analyze.md`: Scope Boundaries name the parts; step 15 invokes `check-artifact-size` with `project-files` and no feature before judging the plan against `system.md`, reads every part listed and names them; step 17 records each `part-findings` entry as Advisory, family `project-parts`
 - [x] `framework/reference/analyze.md`: in §Plan consistency (blocking if plan exists), *How each runs*, the judgment covers the file and its parts, and an `unreadable` part is recorded unexamined once under `artifact-unreadable` (AC2); §Artifact size (advisory) states the findings and that none holds `done`
@@ -65,10 +65,10 @@ Tasks 1–3 landed the result this task reads: `check-artifact-size` with `proje
 
 ## 5. `/plan` reads parts
 
-- [ ] `framework/commands/plan.md`: Scope Boundaries name `specs/system.md` and its parts
-- [ ] `framework/reference/plan.md`: in §Cross-spec context checklist, *Always read* takes `system.md` and every part `check-artifact-size` with `project-files` lists under it, `events.md` and `errors.md` with their parts under their conditions, and the run names the parts it read; in §Create the plan step 3 and §Validation gate, the check covers the parts, and an `unreadable` part is reported unexamined in the gate prompt
-- [ ] Correct `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/project-files-are-measured.md`'s sentence that `/plan` keeps the feature-only call: step 8 does, and the read call is a second, `project-files`-only one
-- [ ] Add the signpost in `specs/063-oversized-artifacts-warn-with-a-fix/spec.md`
+- [x] `framework/commands/plan.md`: Scope Boundaries name `specs/system.md` and its parts
+- [x] `framework/reference/plan.md`: in §Cross-spec context checklist, *Always read* takes `system.md` and every part `check-artifact-size` with `project-files` lists under it, `events.md` and `errors.md` with their parts under their conditions, and the run names the parts it read; in §Create the plan step 3 and §Validation gate, the check covers the parts, and an `unreadable` part is reported unexamined in the gate prompt
+- [x] Correct `specs/063-oversized-artifacts-warn-with-a-fix/scenarios/project-files-are-measured.md`'s sentence that `/plan` keeps the feature-only call: step 8 does, and the read call is a second, `project-files`-only one
+- [x] Add the signpost in `specs/063-oversized-artifacts-warn-with-a-fix/spec.md`
 
 - **Done when**: the three command files (`plan.md`, its reference, `analyze.md`) direct the run to read every listed part before judging and to name them (AC1); the commit records each registry layout's impact (AC18).
 
@@ -81,6 +81,8 @@ Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; tas
 - **Done when**: both references state it (AC3); the commit records each registry layout's impact (AC18).
 
 ## 7. `prune-project` walks parts
+
+This task's mutations, and every later runtime task's, continue in `scripts/mutation/project-parts-087.py` from M40.
 
 - [ ] Add each `measured` part as a subject after the four files, segmented by its project file's grammar, with its record in the new `part-files` list (`files` stays the four project files); have `check_args` accept a part's path; add `part-findings`; bound `part-files` and `part-findings` with `entries` (`runtime/src/primitives/prune_project.rs`, `runtime/src/schema/primitives.rs`, `PRUNE_PROJECT` in `runtime/src/schema/descriptions.rs`)
 - [ ] Unit tests: a fixture index and part yield the part's entries, and an apply removes a part's entry; a part of `events.md` joins the literal search; past the read size the new lists are in the lists file with their counts inline; the AC8 fixture keeps every earlier key and value
@@ -143,3 +145,10 @@ Runs after every other task, from a session started after task 8's build is inst
 - [ ] Run `scripts/audit/run-all.sh` after the commits
 
 - **Done when**: the file is at its new path; every line `git grep -n 'docs/developing-ductus.md'` lists records the move in the `` ` → ` `` form; the two commits' diffs hold no `X → X`; `check-corpus-links`, `scripts/lint-governing-size.sh` and the audit run pass; the sweep commit names each file the move wrote.
+
+## 13. `scripts/analyze/` follows step 15's and step 17's parts
+
+- [ ] `scripts/analyze/split.py` and `scripts/analyze/briefs.py`: step 15's subjects take each `measured` part that `check-artifact-size` with `project-files` and no feature lists under `specs/system.md`, and `scripts/analyze/step15-brief.md` judges the plan against the file and those parts, naming an `unreadable` part as unexamined, never as no contradiction
+- [ ] `scripts/analyze/record.py` generates an Advisory `project-parts` finding from each `part-findings` entry of detection's `check-artifact-size` result, as `reference_findings` generates step 13's, and `scripts/analyze/detect.py`'s summary of that result shows `part-findings`
+
+- **Done when**: a run of `scripts/analyze/` over a fixture project with an index `system.md`, a linked part and an unlinked part lists the linked part among step 15's subjects and records the unlinked part as an Advisory `project-parts` finding; `framework-checks.yml`'s steps pass.

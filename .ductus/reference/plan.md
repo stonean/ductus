@@ -24,9 +24,9 @@ Before generating any artifacts, check the feature directory for existing plan f
 
 Before creating the plan, load only the cross-spec context this feature actually needs:
 
-- **Always read:** `specs/system.md` — architecture patterns and shared conventions.
-- **Read if the feature emits or consumes events:** `specs/events.md` — check for naming conflicts and reuse opportunities.
-- **Read if the feature introduces error codes:** `specs/errors.md` — check code ranges and format conventions.
+- **Always read:** `specs/system.md` and its parts — architecture patterns and shared conventions. Invoke `check-artifact-size` with `project-files` and no feature, read `parts` from the file its `lists-file` names when its `form` is `file`, read every part whose `project-file` is `system.md`'s path and whose `state` is `measured`, and name the parts read when presenting the plan (spec 087). A part listed `unreadable` is not read, and the validation gate reports it.
+- **Read if the feature emits or consumes events:** `specs/events.md` and each part the same result lists under it — check for naming conflicts and reuse opportunities.
+- **Read if the feature introduces error codes:** `specs/errors.md` and each part the same result lists under it — check code ranges and format conventions.
 - **Read if the feature has dependencies:** the spec file (not plan or tasks) of each dependency listed in this spec's frontmatter `dependencies` field — confirm `status` and understand the contracts this feature builds on.
 - **Read if the feature introduces or modifies domain entities or data structures:** `data-model.md` files from related specs — check for structural conflicts.
 - **Read to ground a decision (§grounding):** the specific existing source, schema, or interface a technical decision directly depends on — read narrowly, and cite what you read, as §grounding's *Cite what you consulted* says, in the decision's rationale. A claim about how existing code behaves that you did not read is an assumption and must be labeled one.
@@ -41,9 +41,9 @@ Before creating the plan, load only the cross-spec context this feature actually
    - **Data Model**: data structure definitions. Create `data-model.md` if the feature introduces or modifies domain entities or data structures.
    - **Trade-offs**: what was considered and rejected, known limitations.
 3. Cross-validate against the files loaded in the checklist above:
-   - Plan must not conflict with `specs/system.md`.
+   - Plan must not conflict with `specs/system.md` or a part of it.
    - Data model must be consistent with related specs.
-   - Event types must align with `specs/events.md`.
+   - Event types must align with `specs/events.md` and its parts.
 
 ## Create the task breakdown
 
@@ -63,9 +63,9 @@ Before proposing the status transition, run the readiness check. The substantive
 - Acceptance criteria are concrete and testable
 - All open questions are resolved
 - Data model exists if the feature introduces or modifies domain entities or data structures
-- Plan does not conflict with `system.md` or other feature specs
+- Plan does not conflict with `system.md`, a part of it, or other feature specs; a part listed `unreadable` is reported in the gate prompt as unexamined, never as no conflict
 - Data model is consistent with related specs
-- Event types align with `events.md`
+- Event types align with `events.md` and its parts
 - Tasks are ordered and each has a clear definition of done
 
 Markdownlint (`npx markdownlint-cli2` over the feature directory's `.md` files) runs as an **advisory** check — surface any violations for the user to resolve before `/ductus:implement`, but do not block the transition on them (this matches runtime step 11).
