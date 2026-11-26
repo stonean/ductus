@@ -170,9 +170,11 @@ every pass may return alongside its findings — see the Observations rules unde
 ### Reuse pass
 
 Identify logic that duplicates existing utilities or that should be extracted
-into shared code. Cross-reference with `specs/system.md` for established
-patterns and shared infrastructure. Severity is SHOULD unless the duplication
-contradicts an explicit MUST in `AGENTS.md` `Boundaries`.
+into shared code. Cross-reference with `specs/system.md`, and the parts its
+pointers name for the code under review (spec 087), for established patterns
+and shared infrastructure, and name the parts read in the Summary. Severity is
+SHOULD unless the duplication contradicts an explicit MUST in `AGENTS.md`
+`Boundaries`.
 
 ### Quality pass
 

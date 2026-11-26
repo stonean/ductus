@@ -76,7 +76,7 @@ Tasks 1–3 landed the result this task reads: `check-artifact-size` with `proje
 
 Blocked on 084's tasks 8 and 10, which edit `framework/reference/review.md`; task 1's wait covers them.
 
-- [ ] `framework/reference/implement.md` step 4 and `framework/reference/review.md`'s cross-reference with `specs/system.md`: the parts those files' pointers name for the work in hand, and the run says which parts it read
+- [x] `framework/reference/implement.md` step 4 and `framework/reference/review.md`'s cross-reference with `specs/system.md`: the parts those files' pointers name for the work in hand, and the run says which parts it read
 
 - **Done when**: both references state it (AC3); the commit records each registry layout's impact (AC18).
 
