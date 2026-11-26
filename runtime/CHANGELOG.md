@@ -133,6 +133,21 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Changed
 
+- **The adopter CI template's audit-record gate runs `check-audit-records`
+  (spec 085, AC1 and AC4).** The step "Audit-record gate on done specs" in
+  `framework/templates/ci/adopter-generators.yml` parsed each `spec.md`,
+  `review.md` and `analysis.md` frontmatter and the baseline file with inline
+  python. It now runs the primitive, prints its report and annotates each
+  finding on its file from the repository root, and a run that examined no
+  spec, or a check that failed, with an error of its own; its exit status is
+  the check's. The derive
+  step no longer resolves the spec root for it. A directory without a feature
+  name is no longer read, an untracked spec is skipped, a quoted `"null"`
+  `last-run` is a string, and a `spec.md` whose frontmatter names no
+  `status`, or does not parse as spec frontmatter, is a finding, as is a spec
+  directory holding a link leaving the project. The template's pinned runtime
+  predates the primitive, so the pin moves in the release that ships it.
+  Re-copy the template to pick it up.
 - **BREAKING: a review record the gate holds, whose passes read their scope,
   moves the next review's window to its `reviewed-against` (spec 079, AC5; the
   agent's recommendation, adopted by the operator, 2026-11-23).** Through 0.64.0

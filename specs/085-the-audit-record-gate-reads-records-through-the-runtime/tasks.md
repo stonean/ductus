@@ -14,8 +14,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on task 1: the step calls the primitive, and its test runs this tree's release build.
 
-- [ ] `framework/templates/ci/adopter-generators.yml`'s step "Audit-record gate on done specs" runs `ductus check-audit-records`, prints its report, maps each finding line to `::error file=` with `git rev-parse --show-prefix`, and exits with the CLI's status, holding no `${{ }}` expression; the derive step's spec-root extraction and output go; header item 2 says the step runs the primitive
-- [ ] `scripts/tests/test-audit-record-gate.sh` runs the step through `scripts/run-workflow-steps.py` from a project at the repository root and from one in a subdirectory, asserts the step ran rather than skipped, and proves each finding fails the step, annotated on its file with the project's prefix, and the clean corpus passes with its counts reported; `.github/workflows/framework-checks.yml` gains a step running it after the runtime build
+- [x] `framework/templates/ci/adopter-generators.yml`'s step "Audit-record gate on done specs" runs `ductus check-audit-records`, prints its report, maps each finding line to `::error file=` with `git rev-parse --show-prefix`, and exits with the CLI's status, holding no `${{ }}` expression; the derive step's spec-root extraction and output go; header item 2 says the step runs the primitive
+- [x] `scripts/tests/test-audit-record-gate.sh` runs the step through `scripts/run-workflow-steps.py` from a project at the repository root and from one in a subdirectory, asserts the step ran rather than skipped, and proves each finding fails the step, annotated on its file with the project's prefix, and the clean corpus passes with its counts reported; `.github/workflows/framework-checks.yml` gains a step running it after the runtime build
 
 - **Done when**: the test passes, fails with the step's exit status ignored, and fails with the prefix dropped; `framework-checks.yml`'s and `generators.yml`'s steps pass locally.
 
