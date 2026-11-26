@@ -29,6 +29,13 @@
 #      as they were (spec 017 task 46)
 #   I. a commit staging a generator source among 3,000 other names still carries
 #      the regenerated outputs (no SIGPIPE under pipefail in the hook's greps)
+#   J. a path-list commit (`git commit -- <paths>`, which git runs against a
+#      temporary index) of a generator source carries the regenerated outputs
+#      into the shared index too, so `git diff --cached` names none of them; an
+#      entry another session staged, an output among them, stays as it was
+#      (spec 017 task 48)
+#   K. a path-list commit carrying no generated output leaves the shared index
+#      untouched
 #
 # HOOK_UNDER_TEST overrides the hook (scripts/mutation-style proofs that a case
 # fails with a behavior removed). The runtime is ./runtime/target/release/ductus
@@ -291,6 +298,53 @@ else
   fail "I: the commit failed: $(cat "$CASE/commit.out")"
 fi
 check "I: the committed outputs agree with the committed sources" outputs_in_sync
+
+# J. a path-list commit of a generator source. Git hands the hook a temporary
+# index and renames the shared index over `index` afterwards, so an output the
+# hook wrote to the temporary index alone would come back staged as its
+# pre-commit blob. Another session has README.md and one of the affected outputs
+# staged in the shared index; both must survive the commit as they were.
+new_case j
+printf 'path-list-tool\n' >> "$R/framework/runtime-tools.txt"
+printf 'other session staged line\n' >> "$R/README.md"
+printf '\nOTHER SESSION STAGED OUTPUT\n' >> "$R/$CONFIGURE"
+g "$R" add -- README.md "$CONFIGURE"
+snap_idx_readme="$(g "$R" rev-parse :README.md)"
+snap_idx_conf="$(g "$R" rev-parse ":$CONFIGURE")"
+if commit "$R" "case j" -- framework/runtime-tools.txt; then
+  pass "J: the path-list commit succeeds"
+else
+  fail "J: the path-list commit failed: $(cat "$CASE/commit.out")"
+fi
+check "J: the commit carries the regenerated claude.md" \
+  head_has "$R" "$CLAUDE" "path-list-tool"
+check "J: the commit carries the regenerated configure.md, not the staged edit" \
+  bash -c 'git -C "$1" show "HEAD:$2" | grep -qF path-list-tool && ! git -C "$1" show "HEAD:$2" | grep -qF "OTHER SESSION STAGED OUTPUT"' _ "$R" "$CONFIGURE"
+check "J: the commit holds the source and its outputs, not README.md" \
+  bash -c '! git -C "$1" diff-tree --no-commit-id --name-only -r HEAD | grep -qx README.md' _ "$R"
+check "J: the committed outputs agree with the committed sources" outputs_in_sync
+check "J: the shared index names no carried output but the other session's" \
+  test "$(g "$R" diff --cached --name-only | sort | tr '\n' ' ')" = "$CONFIGURE README.md "
+check "J: claude.md is not staged against HEAD" \
+  g "$R" diff --cached --quiet -- "$CLAUDE"
+check "J: the other session's staged README.md is as it was" \
+  test "$(g "$R" rev-parse :README.md)" = "$snap_idx_readme"
+check "J: the other session's staged output is as it was" \
+  test "$(g "$R" rev-parse ":$CONFIGURE")" = "$snap_idx_conf"
+check "J: the carried outputs follow the commit in the working tree" \
+  test -z "$(g "$R" status --porcelain -- "$CLAUDE")"
+
+# K. a path-list commit carrying no generated output.
+new_case k
+printf 'a readme line\n' >> "$R/README.md"
+if commit "$R" "case k" -- README.md; then
+  pass "K: the path-list commit succeeds"
+else
+  fail "K: the path-list commit failed: $(cat "$CASE/commit.out")"
+fi
+check "K: the commit holds README.md and nothing else" \
+  test "$(committed_files "$R")" = "README.md"
+check "K: the shared index matches HEAD" g "$R" diff --cached --quiet
 
 # F. a markdown file staged in part.
 new_case f
