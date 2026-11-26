@@ -1,16 +1,16 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-11-22T22:44:17Z
-analyzed-against: 5d3202e59f2bf5620b91115bf0d5f7d8a19d9b69
+last-run: 2026-11-26T03:01:12Z
+analyzed-against: bc57ef9e9b8708bd6e67394cefb41ba81df6da56
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 9
 analyzed-digest:
-  data-model.md: a4b89982e6fed17a6b541167b615fdb99c8284d07f1ae745dec515b847c52234
-  plan.md: 9e3b34d2617e5297d2dc5ee55b38477e4d4e02a672bc8da9f8555df1f8b4f9f5
-  review.md: dcb19b0ec3483055cff7d0c1f32a4fa2562254e5c9f3a068d5b778a9b6b267f5
-  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: fc060f7f8dd91322a08ccf6d8e9a630c483c84c1725225088cf3e1937baba7ad
+  data-model.md: 2ff42cbfed5eea6f916e1cf916ef5c746afa7c9f4ed39161f759875b327cada5
+  plan.md: 65a994e68b5b076fa0ef4eb1e9b687802f1aa8524ad1802a27e4d8f65e7892a1
+  review.md: 901e1ff9a3339c7e99821bcc0cb5e78179167b7e71b213fc2b990161454e851a
+  scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md: 0816f5c6cd5c4a4d38da12d52352935b49c883592ecc524df8d5310fa7c50bfe
   scenarios/a-done-spec-has-no-transition-to-gate.md: adaf8b75ee0e15ca259cb8a0156e824af99a28c28aab876466798daa4e219e3a
   scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 918149e6f0137d420222d80b45c11ff0b415ed2af0349ea16da23457cf2bd589
@@ -20,32 +20,32 @@ analyzed-digest:
   scenarios/a-write-result-states-what-it-wrote.md: 71d4b19f014d1bc19335c9ec29af30fa4e782d57538db9167962cd7064f649de
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 39b59f38bb7b419b250d16d6ff6f3fec473959a3f9293706a6fcab931f6f232d
   scenarios/checkbox-state-is-outside-the-analysis-digest.md: ca9c4875ae8dec48c0c79edc74f3af3d4ee405601c6a8b1dee3c9a68f748834d
-  scenarios/criteria-are-verified-in-review.md: 46195c281734fabf5056a32817a48667b7d6465b7a2f3f8119f16c238637c8c7
+  scenarios/criteria-are-verified-in-review.md: 6208e0012abbd2f4ce372c80d40a571f8b5ae615aae136ddbc995accb7fab742
   scenarios/freshness-results-have-a-bounded-size.md: 0365689904e4ca8d3a11c14ce4411acbe95373560bf6ffa390a17afda8c832e0
   scenarios/only-gating-findings-hold-done.md: 27a6385fb7da6ccd6bf74303f92559b00998fe170248408e1df76bdf3a0b0f29
   scenarios/process-decisions-results-have-a-bounded-size.md: ef377a26ae73760cc642e3c8ca364ee8fb1d680b97f07d2bc18395de3c314013
-  scenarios/process-waivers-file-lists.md: 56e3a40a81a5ba596a24c43d6b1c34241e77514fedf9edabd142d83e6bb0020b
+  scenarios/process-waivers-file-lists.md: ae9414857f88794608b39b9abea16e76faa90a4ab21e5f325da80c27875719ae
   scenarios/process-waivers-notices-flatten-stored-text.md: a0fe96d2f894add12b9ed470dfdc011ce1383b1528871c8d68ec64bb85d64c03
   scenarios/record-paths-are-quoted-only-when-they-need-it.md: 729b1dccb47871d2a8f4fe1dc7e0cbe1449d92eb8c28004a1490859e88ff491d
   scenarios/review-base-includes-the-transition-commit.md: 10d6d341e7338ac19fc9f35c9d2f79960ebc73aca7bf5e702adad17924cd8518
-  scenarios/review-scope-includes-uncommitted-work.md: 9864ae8c8bb85d0ab1606b222b983f6fe449f89b21580af7b0a1c4e644e45bba
+  scenarios/review-scope-includes-uncommitted-work.md: 0e24e90807ac2080c3ec6f2f796fe779c5e1e64c15b6a9818645d681e0f4917c
   scenarios/review-scope-plan-affected-table-format.md: 501c1d9737e6d2b928318c02e1d13164817ba7c1054854cd599f14707caba767
   scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md: e33e76432da85f5cc661041515f0f3aae300ad9974065e5eadba696cc820748c
   scenarios/review-scope-union.md: 50722645d52601a9b8f0c799272f58923a7250623abc097ad38bb5a4ec62181e
-  scenarios/review-staleness-on-done-specs.md: e0c14689fc666e2658b2cf7f9891b0f00d717aee8bd3c871717d54ed7ff6900c
+  scenarios/review-staleness-on-done-specs.md: 9384e71288c352b8cdfb3b4b017eaee03653969b866240616e2ec1ed9165132e
   scenarios/scope-results-have-a-bounded-size.md: 99120b144942e06b365e220c30085592a02c477c548e6336f8c23400e1ee4c9d
   scenarios/the-committed-tree-horizon.md: 046b6a8dcef5f85bdb9083308311729911f5afa49f0351c0505bc558b5adb96b
   scenarios/the-cross-spec-impact-gate.md: f94b4a47110ad23eab638e824f87b4a50b926e3df6ae70fe18d0261a8377cb35
   scenarios/the-fix-round-loop-is-recorded-and-gated.md: 93e7c7087a46831527685c57c1385cc5b5f1d1c45a4bcdae5b94d49559c15024
   scenarios/write-analysis-and-the-second-gate.md: 0bf446e34a55a8da10f04327c86d0d872e081130545b21158f15e3f86444741c
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: fbadfa0f92e01d43dab4100990d748a30f50d32b37a376d8679b73a18078de0a
+  spec.md: 4a94ca811a45c308da1c1464cfea91d8d84b15252a3ee1fbae4733a111cf28c5
   tasks.md: 4d39b4175a270661f58c3679ce8b748c5981bf1b173fd1f43fa54fe6a210139b
 unexamined-by-reason:
   not-a-live-claim: 4
   root-absent: 5
 rule-digest:
-  accessibility-frontend.md: 4d7f5ac09d457c99774f5fc341222a464d2b461cb0467cd58a13dc31c928359b
+  accessibility-frontend.md: 20fb956e35bb749f061090adf631329bafe3e37662a4e47b0076b697784bbf50
   api-backend.md: 8e496f92a50b68b1ae8b1954e30a85dd142dc65d3b3882089f9c48560096d800
   concurrency-backend.md: 2650d82125bd67945fd327f7fb9f76c57ca10d165925733139afa3cd50562dd4
   configuration-cross.md: 050a5b8dd375fe4790f5d92753db27ae53ac730db1557cbee84b923b72499ca9
@@ -54,32 +54,32 @@ rule-digest:
   performance-frontend.md: 892bcab669f003264587558fe8234c3efcdfd835e93b38c9eeb07060f1e9e037
   quality-cross.md: fe166676f0783399c7c2fba6182c65784cd5c429b02d831911823cad1bf608a6
   reliability-backend.md: 26c045df79b6a99319bd7dfa09490b4a2d5ac742eee70a6b3ad0235d49093d2a
-  security-backend.md: f892282383d7377ded2e5fd1ee3e30421d0d6ad3f9bb1fd354ff0d9d114e807a
+  security-backend.md: c9d90cf6bfa6e4f5492e6d1a49e073fbee467ba08c7788bf6c7224ae8bd5d411
   security-cross.md: 26e287f06cdca2744d0972cbf7cf6a48f27d869526dd86c7c375ac4bdc0dadce
-  security-frontend.md: 5fddb21530faa805cb00f23c929e9402548ed0d6a0ed3e8e9a910561b74a45a3
+  security-frontend.md: 9a200916d11a5597a6860d1538840bf7d9aa573bddce953a0bef604379d1451b
 section-digest:
   "data-model.md": e3b0c44298fc1c14
   "data-model.md#066 — Audit Records and the Completion Gate Data Model": fd40e009bea15199
   "data-model.md#Cross-spec impact": aea1a17eb4c418d1
-  "data-model.md#Record freshness": 2ad3d71c143fe625
+  "data-model.md#Record freshness": 320b2b5bfb56e88a
   "data-model.md#`check-review-gate` — evaluate implement's pre-done review gate": 5cfdfb49da251c80
-  "data-model.md#`compute-review-scope` — the review's diff base and scope": e391733b4183a6c0
+  "data-model.md#`compute-review-scope` — the review's diff base and scope": bae244f2188211a7
   "data-model.md#`diff-cross-spec` — implement's cross-spec impact surface": c67c750644cce1b4
   "data-model.md#`process-decisions` — classify stored decisions before dispositions": 90968f759f8cd8ed
   "data-model.md#`process-waivers` — classify recorded waivers before the write": 78d49e79b86cd181
   "data-model.md#`write-analysis` — record that analyze ran": 866d9c05f12e498b
-  "data-model.md#`write-review` — observations and the review's denominator": 2375884522a6b5ec
+  "data-model.md#`write-review` — observations and the review's denominator": 539add1f9dc4bf73
   "plan.md": e3b0c44298fc1c14
   "plan.md#066 — Audit Records and the Completion Gate Plan": adf58d11fa4f1d72
-  "plan.md#A commit after the scope was resolved refuses the write (task 29)": d331380f18419441
-  "plan.md#A stripped line-number citation is a mechanical edit (AC6)": 17a39ca1adc7f5cb
+  "plan.md#A commit after the scope was resolved refuses the write (task 29)": 944ca4447838fa33
+  "plan.md#A stripped line-number citation is a mechanical edit (AC6)": ac747dce8448efd9
   "plan.md#A write result states what it wrote (task 30)": a75ee36ad04b3573
-  "plan.md#Affected Files": 925824b17eb802de
-  "plan.md#Criteria are judged in review, and the gate judges nothing (task 27)": 5cae7ad8947d3826
+  "plan.md#Affected Files": e7d5c412a5eb62cc
+  "plan.md#Criteria are judged in review, and the gate judges nothing (task 27)": 160865626351b6b7
   "plan.md#Data Model": c84d1eb9b86e1a97
-  "plan.md#Freshness paths go to a file past the read size": 77e34f507fa5a8c2
+  "plan.md#Freshness paths go to a file past the read size": 746cd34a1886a1e5
   "plan.md#One subject per spec, and the dependency runs one way": a2a24b7b545f74c0
-  "plan.md#Overview": 7fdd5540f50a4cb1
+  "plan.md#Overview": bf69dbdbe7653e2a
   "plan.md#Scenarios move with `git mv`": 03b1becf4b8c63c4
   "plan.md#Technical Decisions": ad85a1d406c0b799
   "plan.md#The data model states shapes and field meanings": 6ee4b37468f8dabe
@@ -91,7 +91,7 @@ section-digest:
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md": d616699402c1569d
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#A-commit-after-the-scope-was-resolved-refuses-the-write": 9a4c09f5601dceb6
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Behavior": 8cc9cffcf18a8ca3
-  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Context": 6df0f1936b290310
+  "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Context": 0277b8f60874beda
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Edge Cases": 80faa3dcf9e7b29a
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Open Questions": 9fc5979d590cdb97
   "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Resolved Questions": b5f7b98fb3491576
@@ -159,12 +159,12 @@ section-digest:
   "scenarios/checkbox-state-is-outside-the-analysis-digest.md#Open Questions": 20edda8881516e4e
   "scenarios/checkbox-state-is-outside-the-analysis-digest.md#Resolved Questions": e61b9bdf412aee1a
   "scenarios/criteria-are-verified-in-review.md": 8c91577236508071
-  "scenarios/criteria-are-verified-in-review.md#Behavior": 46a5d1e98b7f8225
+  "scenarios/criteria-are-verified-in-review.md#Behavior": a2cefcee543c61d0
   "scenarios/criteria-are-verified-in-review.md#Context": 53026e5804f5a6ea
   "scenarios/criteria-are-verified-in-review.md#Criteria-are-verified-in-review": b3c4f3934a84851b
   "scenarios/criteria-are-verified-in-review.md#Edge Cases": 53c92251e54431b6
   "scenarios/criteria-are-verified-in-review.md#Open Questions": 20edda8881516e4e
-  "scenarios/criteria-are-verified-in-review.md#Resolved Questions": 82e629ee105fdb06
+  "scenarios/criteria-are-verified-in-review.md#Resolved Questions": 3d0e6b797c20941d
   "scenarios/freshness-results-have-a-bounded-size.md": efe2423aa43c8f86
   "scenarios/freshness-results-have-a-bounded-size.md#Behavior": 33a9cd9cc99e123a
   "scenarios/freshness-results-have-a-bounded-size.md#Context": a6145cdbcc8a019d
@@ -187,7 +187,7 @@ section-digest:
   "scenarios/process-decisions-results-have-a-bounded-size.md#Process-decisions-results-have-a-bounded-size": e988abdbd2addc18
   "scenarios/process-decisions-results-have-a-bounded-size.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/process-waivers-file-lists.md": d616699402c1569d
-  "scenarios/process-waivers-file-lists.md#Behavior": a335d69576b48e3d
+  "scenarios/process-waivers-file-lists.md#Behavior": f565d960ffb64281
   "scenarios/process-waivers-file-lists.md#Context": f9d0812dd8913f75
   "scenarios/process-waivers-file-lists.md#Edge Cases": 9af11057ccfba85a
   "scenarios/process-waivers-file-lists.md#Open Questions": 9fc5979d590cdb97
@@ -215,9 +215,9 @@ section-digest:
   "scenarios/review-base-includes-the-transition-commit.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/review-base-includes-the-transition-commit.md#Review-base-includes-the-transition-commit": b02a0df3f29d2970
   "scenarios/review-scope-includes-uncommitted-work.md": d616699402c1569d
-  "scenarios/review-scope-includes-uncommitted-work.md#Behavior": edd22b5750353aad
+  "scenarios/review-scope-includes-uncommitted-work.md#Behavior": 16bcfcea3fd5567c
   "scenarios/review-scope-includes-uncommitted-work.md#Context": 6bacfa4400484141
-  "scenarios/review-scope-includes-uncommitted-work.md#Edge Cases": ffe3f7f0ece06c54
+  "scenarios/review-scope-includes-uncommitted-work.md#Edge Cases": 85549984fe6b76c4
   "scenarios/review-scope-includes-uncommitted-work.md#Open Questions": 9fc5979d590cdb97
   "scenarios/review-scope-includes-uncommitted-work.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/review-scope-includes-uncommitted-work.md#Review-scope-includes-uncommitted-work": 09556e38719d8e72
@@ -246,7 +246,7 @@ section-digest:
   "scenarios/review-staleness-on-done-specs.md": efe2423aa43c8f86
   "scenarios/review-staleness-on-done-specs.md#Behavior": e481d3bdd2e54f4e
   "scenarios/review-staleness-on-done-specs.md#Context": 6b5bec805c165799
-  "scenarios/review-staleness-on-done-specs.md#Edge Cases": f4661844bce3c13c
+  "scenarios/review-staleness-on-done-specs.md#Edge Cases": e2ced03163ca1500
   "scenarios/review-staleness-on-done-specs.md#Open Questions": 9fc5979d590cdb97
   "scenarios/review-staleness-on-done-specs.md#Resolved Questions": 33382d62e924964d
   "scenarios/review-staleness-on-done-specs.md#Review-staleness-on-done-specs": eecac4231fd377c3
@@ -292,8 +292,8 @@ section-digest:
   "scenarios/write-review-known-field-quoting.md#Resolved Questions": b5f7b98fb3491576
   "scenarios/write-review-known-field-quoting.md#Write-review-known-field-quoting": 0cff1e9d4376b359
   "spec.md": de1e5ccc3a99919d
-  "spec.md#066 — Audit Records and the Completion Gate": 7d32dac644f1e9f6
-  "spec.md#Acceptance Criteria": bb723f2b12911c5a
+  "spec.md#066 — Audit Records and the Completion Gate": af549b48b7a8fb55
+  "spec.md#Acceptance Criteria": 66a606b26b81f6f9
   "spec.md#Motivation": 693fe38e6ed04cc4
   "spec.md#Open Questions": 35737a7fd1b7cc55
   "spec.md#Record freshness": bc5b162aa9c3b739
@@ -302,27 +302,28 @@ section-digest:
   "spec.md#The completion gate": 741785d1c657b3c2
   "spec.md#The review record": 1a514d41efd4ea70
 rule-verdicts:
-  BE-COMPAT-001: {verdict: addressed, cite: "data-model.md#`process-waivers` — classify recorded waivers before the write"}
+  BE-COMPAT-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
   BE-COND-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   BE-ERR-002: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-ERR-004: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
-  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
+  BE-INPUT-001: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-INPUT-002: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   BE-INPUT-004: {verdict: addressed, cite: "plan.md#The gate contains each path it builds from a `cross-spec-impact:` slug"}
   BE-INPUT-008: {verdict: addressed, cite: "data-model.md#066 — Audit Records and the Completion Gate Data Model"}
   BE-LOCK-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-PAYLOAD-001: {verdict: addressed, cite: "data-model.md#`process-waivers` — classify recorded waivers before the write"}
-  BE-RACE-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-PAYLOAD-001: {verdict: addressed, cite: "plan.md#Freshness paths go to a file past the read size"}
+  BE-RACE-001: {verdict: addressed, cite: "scenarios/scope-results-have-a-bounded-size.md#Edge Cases"}
   BE-RACE-003: {verdict: addressed, cite: "scenarios/a-commit-after-the-scope-was-resolved-refuses-the-write.md#Edge Cases"}
   BE-TIMEOUT-001: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
-  BE-TXN-002: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
-  BE-TXN-004: {verdict: addressed, cite: "data-model.md#`write-review` — observations and the review's denominator"}
+  BE-TXN-002: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
+  BE-TXN-004: {verdict: addressed, cite: "plan.md#The two record writes are guarded (`BE-TXN-002`)"}
   CFG-CONST-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
   QUAL-CLAIM-001: {verdict: addressed, cite: "plan.md#A commit after the scope was resolved refuses the write (task 29)"}
+  QUAL-DELEG-001: {verdict: addressed, cite: "plan.md#A stripped line-number citation is a mechanical edit (AC6)"}
   QUAL-GROUND-001: {verdict: addressed, cite: "plan.md#The unexamined reasons are a closed set (AC2, task 26)"}
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 1
   deferred: 0
   waived: 1
   undispositioned: 0
@@ -338,7 +339,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 2 fixed, 0 deferred, 1 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 9 unexamined target(s). Dispositions: 1 fixed, 0 deferred, 1 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -350,7 +351,7 @@ decisions:
 
 ## Advisory findings
 
-- grounding — Technical Decisions, 'A commit after the scope was resolved refuses the write': 'an adopter's report against 0.61.0 found' a false credit states the defect's origin as fact with no citable artifact, and the repository keeps no adopter report. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
+- grounding — Technical Decisions, 'A commit after the scope was resolved refuses the write': states as fact that an adopter's report against 0.61.0 found a false credit (a commit mid-review joined a scope no pass read), citing only the scenario slug and no report, commit or run; low confidence, since the scenario may substantiate it. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **waived**: advisory and no chore: the figure comes from an adopter's report, recorded where the decision it motivated was made; this repository names no adopter and cannot open its tree (AGENTS.md), so no reachable artifact can be cited, and no behavior rests on it (decided by the rule)
 
 ## Deferred to other specs
 
@@ -367,5 +368,4 @@ decisions:
 
 ## Fixed in this run
 
-- grounding — Technical Decisions, 'A stripped line-number citation is a mechanical edit': the claim that classify-spec-edit 'already removes cross-service references' describes current behavior of that primitive with no citation to its code or a test. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
-- rule-assessment — BE-COMPAT-001: The section (with spec.md's 020 AC19 signpost and scenario process-waivers-file-lists) records a change to an existing primitive's contract, an anchor recorded before sites or past its covers count now expires, and 066 classifies it as neither additive nor breaking (BE-COMPAT-001 applies to runtime primitives per 022; 022's analogous text was fixed by classifying the change in place). — `specs/066-audit-records-and-the-completion-gate/data-model.md` — **fixed**
+- grounding — Technical Decisions, 'A stripped line-number citation is a mechanical edit': states that `classify-spec-edit` once read a criterion whose only change stripped citations as unchanged through the same `strips_to`, a claim about retired code, with no commit or file cited beyond spec 084's retirement; low confidence. — `specs/066-audit-records-and-the-completion-gate/plan.md` — **fixed** (decided by the rule)
