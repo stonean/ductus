@@ -129,6 +129,8 @@ Task 3 made the shipped hook refuse a grown part, so the constitution's §text-f
 
 Task 3 edited the shipped hook's step-4 comment and `framework/bootstrap/ductus-procedure.md` without a scratch-adopter run, which this task's three bootstrap runs, installing that hook, stand in for (the agent's recommendation, adopted by the operator, 2026-11-25): confirm in each run that the installed `.githooks/ductus-pre-commit` carries the parts wording.
 
+Task 8 put `move-candidates` on every `prune-project` call, a plain preview included (041's `data-model.md`, §`prune-project`, *The move*), so the migration reads that list and passes no `move`. A pointer binary from before 087's release carries no `move-candidates`, which is the third run's not-checked case.
+
 - [ ] `framework/migrations/project-file-links-into-docs.md`: run `prune-project` as a preview through the CLI at the pointer path Pre-flight acquired, never the session's MCP server, and report each `move-candidates` target under `docs/` with its project file and `/{project}:prune --project`, writing nothing; a result without `move-candidates` is reported as not checked, naming the command
 - [ ] Register it in `framework/migrations.toml`, with `introduced_in` read from `version` when this task runs
 - [ ] Three scratch-adopter bootstrap runs, per **§Exercising an installer change without a push** in `docs/developing-ductus.md`: one adopter whose `AGENTS.md` links a markdown file under `docs/`, one with no such link, and one whose pointer binary predates `move-candidates`
@@ -138,6 +140,8 @@ Task 3 edited the shipped hook's step-4 comment and `framework/bootstrap/ductus-
 ## 12. This repository's procedure file moves
 
 Runs after every other task, from a session started after task 8's build is installed: `mcp__ductus__*` serves the binary the session started with, so an earlier session's server lacks `move`.
+
+The move's contract is 041's `data-model.md`, *The move*: one `move` a call; a preview lists `move-referrers`; then an apply names only the move, with the confirmed `referrers`. On the CLI it is `--move-json FILE`, the file in `$TMPDIR`. On 2026-11-26 no tracked file linked `developing-ductus.md` relative to another directory, and the file named its own path nowhere (`git grep`), so the literal search found every referrer and the moved file needed no self-mention fixed; check both again before the move.
 
 - [ ] Run `/ductus:prune --project` here, confirm the move `docs/developing-ductus.md` → `.ductus/docs/agents/developing-ductus.md` with every referrer the search finds, this spec's own files included, and end the run after the move, before the entry walk
 - [ ] Commit the rename and substitution alone, as a mechanical sweep
@@ -154,6 +158,8 @@ Runs after every other task, from a session started after task 8's build is inst
 - **Done when**: a run of `scripts/analyze/` over a fixture project with an index `system.md`, a linked part and an unlinked part lists the linked part among step 15's subjects and records the unlinked part as an Advisory `project-parts` finding; `framework-checks.yml`'s steps pass.
 
 ## 14. 087's run cost and what it retires, for 089's AC4
+
+The commits of tasks 7, 8 and 10 (`5935e9cf`, `e7a71f5a`, `f8911594`) record the result sizes `scripts/measure-result-sizes.sh` measured and the descriptions' growth. Measure again at the commit this task runs on, and measure the move as a preview over this repository, which writes nothing, since task 12 makes the move after this task.
 
 - [ ] Measure one run of each thing 087 adds, after tasks 8–13: the `check-artifact-size` call with `project-files` and no feature that `/plan` and `/analyze` make (result bytes), the parts those commands then read (bytes loaded), and `prune-project`'s preview and move (result bytes and wall time) over this repository, stating each figure's method, units, population and commit
 - [ ] Write the figures into 087's `spec.md` body, with what 087 retires or why none, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`. Use a blockquote because 089 depends on 087, so an inline link would close a `dependencies:` cycle
