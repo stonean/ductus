@@ -103,6 +103,7 @@ pub(crate) mod rule_verdicts;
 pub mod run_generator;
 pub mod set_status;
 pub(crate) mod spec_links;
+pub(crate) mod spec_ownership;
 pub mod start_fix_rounds;
 pub(crate) mod tasks_counter;
 pub mod tool_loading;
