@@ -82,3 +82,10 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the refusal, `dropped` and `ownership`, the first review's scope, and `prune-review`
 
 - **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 086 and no new finding on the six, each swept spec's status is unchanged, and `scripts/audit/run-all.sh` exits 0 after the commit.
+
+## 8. 086's run cost and what it retires, for 089's AC4
+
+- [ ] Measure one run of each thing 086 adds, after tasks 1–7, at the commit this task runs on with its release build: `prune-review`'s preview for one feature and with `all` (result bytes, wall time) and its apply (wall time, timed only in `git clone --local` copies, never in this tree); the `spec_ownership` walk on 022, on a spec of fewer than 50 commits and over every spec; the time the walk adds to a first review's `compute-review-scope`, `write-review` and `check-review-gate`; the bytes `dropped`, `ownership` and their companions add to `process-decisions`', `process-waivers`' and `compute-review-scope`'s results; the growth of the four descriptions tasks 2 to 4 change, and `prune-review`'s own with its input schema, by `scripts/measure-result-sizes.sh`; and each new list's result at the default read size; stating each figure's method, units, population and commit
+- [ ] Write the figures into 086's `spec.md` body as a `## Cost` section, with what 086 retires or why none, decided from the code at that commit, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`, a blockquote so it adds no `dependencies:` edge
+
+- **Done when**: 086's `spec.md` states a run's cost in a measurable unit with its method, and what it retires or why none, beside a blockquoted signpost to 089; `derive-dependencies` reports 086's `dependencies:` unchanged and no cycle (089's AC4). Lands before 086's review (the agent's recommendation, adopted by the operator, 2026-11-26).
