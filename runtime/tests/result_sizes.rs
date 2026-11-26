@@ -75,11 +75,19 @@ enum Prep {
     /// `check-departures`' lists grow with a spec's entries, and a corpus that
     /// has none measures an empty result (BE-PAYLOAD-001).
     Departures,
+    /// [`PART_FILES`] parts of `system.md` that it does not link, under
+    /// `.ductus/docs/system/` (spec 087): `check-artifact-size`'s `parts` and
+    /// `part-findings` grow with a project's parts, and the corpus has none.
+    Parts,
 }
 
 /// How many departure entries [`Prep::Departures`] writes: enough that the
 /// result's three lists pass the default read size of 50,000 bytes.
 const DEPARTURE_ENTRIES: usize = 300;
+
+/// How many parts [`Prep::Parts`] writes: enough that `parts` and
+/// `part-findings` together pass the default read size of 50,000 bytes.
+const PART_FILES: usize = 200;
 
 /// The read size the growth columns are measured at: past any result here, so
 /// no bounded result moves its lists, and growth is a fact about what each
@@ -275,6 +283,11 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             json!({"feature": f}),
             Prep::Departures,
         )],
+        "check-artifact-size" => vec![(
+            "`project-files`, the project holding unlinked parts past the read size",
+            json!({"project-files": true}),
+            Prep::Parts,
+        )],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),
@@ -404,6 +417,7 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         Prep::Drift => drift_every_spec(copy.path()),
         Prep::Cycle => close_the_chain(copy.path()),
         Prep::Departures => write_departure_entries(copy.path()),
+        Prep::Parts => write_parts(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -472,6 +486,14 @@ fn write_departure_entries(root: &Path) {
         );
     }
     std::fs::write(&path, text).unwrap();
+}
+
+fn write_parts(root: &Path) {
+    let dir = root.join(".ductus/docs/system");
+    std::fs::create_dir_all(&dir).unwrap();
+    for i in 0..PART_FILES {
+        std::fs::write(dir.join(format!("part-{i:03}.md")), format!("# Part {i}\n")).unwrap();
+    }
 }
 
 /// Link spec 1 to the last spec, in its body and its frontmatter alike, so

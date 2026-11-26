@@ -24,27 +24,27 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has every other open spec's implementation follow it (owner, 2026-11-24). 084's task 17 also rewrites `check_artifact_size.rs`. Start once `check-review-gate` on 084 has passed and its status reads `done`.
 
-- [ ] Create `runtime/src/primitives/project_parts.rs`: the four parts directories keyed by `ProjectFileKind`, each directory's parts in `scenario_name_cmp` order, linkage from each project file's links, and the five integrity finding kinds, as the plan's *One definition of the part set* states
-- [ ] Make `link_targets`, `link_destination` and `lexical_join` in `runtime/src/primitives/check_corpus_links.rs` `pub(crate)`, and call them rather than copy them
-- [ ] Unit tests: a markdown file directly under each of the four directories is a part whether or not it is linked; a non-markdown file there is neither a part nor a finding; each of the five finding kinds fires on its fixture and not on a clean one; a part that is a link leaving the project is `unreadable` and never opened; a project with no `.ductus/docs/` yields no part and no finding
+- [x] Create `runtime/src/primitives/project_parts.rs`: the four parts directories keyed by `ProjectFileKind`, each directory's parts in `scenario_name_cmp` order, linkage from each project file's links, and the five integrity finding kinds, as the plan's *One definition of the part set* states
+- [x] Make `link_targets`, `link_destination` and `lexical_join` in `runtime/src/primitives/check_corpus_links.rs` `pub(crate)`, and call them rather than copy them
+- [x] Unit tests: a markdown file directly under each of the four directories is a part whether or not it is linked; a non-markdown file there is neither a part nor a finding; each of the five finding kinds fires on its fixture and not on a clean one; a part that is a link leaving the project is `unreadable` and never opened; a project with no `.ductus/docs/` yields no part and no finding
 
 - **Done when**: the module's unit tests pass, and each is proven to fail with its behavior removed (AC10).
 
 ## 2. `check-artifact-size` measures parts and lists the findings
 
-- [ ] Add `parts`, `part-findings` and their counts to the project half's result in the bounded set, the `project-part` kind and its split fix, and `examined` counting parts (`runtime/src/primitives/check_artifact_size.rs`, `runtime/src/schema/primitives.rs`)
-- [ ] Update `CHECK_ARTIFACT_SIZE` in `runtime/src/schema/descriptions.rs`
-- [ ] Unit tests for AC1 and AC2's runtime half: over a fixture index `system.md` and one part, the result lists the part under its project file with state `measured`, and with the part unreadable, with state `unreadable` and in `skipped`
-- [ ] Unit tests for AC4 (a part one byte over is reported with its path, size, threshold and fix; one at the threshold is not), AC6 and AC12 and AC20 (each integrity kind listed), AC11 (any markdown file directly under a parts directory is measured), and a stored waiver covering a part by the decided rule
-- [ ] AC8 fixture: four project files and no `.ductus/docs/`; a feature-only call is byte-identical to before, and a `project-files` call keeps every earlier key and value with `parts` and `part-findings` empty
-- [ ] Update `runtime/tests/result_sizes.rs` for the new lists
-- [ ] In `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`, add the new fields, kind and fix, and correct **Size**
+- [x] Add `parts`, `part-findings` and their counts to the project half's result in the bounded set, the `project-part` kind and its split fix, and `examined` counting parts (`runtime/src/primitives/check_artifact_size.rs`, `runtime/src/schema/primitives.rs`)
+- [x] Update `CHECK_ARTIFACT_SIZE` in `runtime/src/schema/descriptions.rs`
+- [x] Unit tests for AC1 and AC2's runtime half: over a fixture index `system.md` and one part, the result lists the part under its project file with state `measured`, and with the part unreadable, with state `unreadable` and in `skipped`
+- [x] Unit tests for AC4 (a part one byte over is reported with its path, size, threshold and fix; one at the threshold is not), AC6 and AC12 and AC20 (each integrity kind listed), AC11 (any markdown file directly under a parts directory is measured), and a stored waiver covering a part by the decided rule
+- [x] AC8 fixture: four project files and no `.ductus/docs/`; a feature-only call is byte-identical to before, and a `project-files` call keeps every earlier key and value with `parts` and `part-findings` empty
+- [x] Update `runtime/tests/result_sizes.rs` for the new lists
+- [x] In `specs/063-oversized-artifacts-warn-with-a-fix/data-model.md`, add the new fields, kind and fix, and correct **Size**
 
 - **Done when**: the tests pass and each is proven to fail without its behavior (AC10); 063's data model states the result a test run writes; the commit records each registry layout's impact (AC18).
 
 ## 3. The staged check and the hook refuse a grown part
 
-- [ ] Under `staged`, read the part set from the index's entries directly under each parts directory through `ProjectRepository::discover` and `to_git`, with `head-bytes` and `refused` per part; leave `part-findings` absent
+- [x] Under `staged`, read the part set from the index's entries directly under each parts directory through `ProjectRepository::discover` and `to_git`, with `head-bytes` and `refused` per part; leave `part-findings` absent
 - [ ] Add the inline `refused-count`; have `runtime/src/main.rs` exit on it and name each refused part on stderr, reading `parts` from the lists file in the file form
 - [ ] `runtime/tests/check_artifact_size_cli.rs`: a staged part over the limit with no `HEAD` copy, or larger than it, exits 1 naming its path, size, limit and fix, in both forms; a shrunk or unchanged over-limit part exits 0; a deleted part passes
 - [ ] Create `runtime/tests/size_hook.rs`, which runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` (not `.githooks/`) over a fixture repository, as `runtime/tests/consolidate_hook.rs` does: a commit growing a part past the limit is refused, and one shrinking it passes, which covers AC5 including a project in a repository subdirectory

@@ -7885,6 +7885,9 @@ pub enum ArtifactKind {
     /// One of the four project files: `AGENTS.md`, or `system.md`,
     /// `events.md` or `errors.md` under the spec root.
     ProjectFile,
+    /// A part of a project file: a `*.md` directly under its parts directory,
+    /// `.ductus/docs/{agents,system,events,errors}/` (spec 087).
+    ProjectPart,
 }
 
 /// A fix for an oversized artifact.
@@ -7902,6 +7905,9 @@ pub enum FixKind {
     /// Move a project file's entries to their homes, with the prune
     /// command's `--project` walk.
     PruneProject,
+    /// Split a part into sibling parts, each named by its project file:
+    /// parts do not nest (spec 087).
+    SplitPart,
 }
 
 /// One fix an oversized artifact's warning names.
@@ -7960,8 +7966,9 @@ pub enum DecisionsState {
 /// whichever half the call asked for and nothing of the other.
 ///
 /// Inline while it fits `[artifacts] read-size-bytes`, and past it with
-/// `oversized`, `skipped` and `notices` in the file `lists-file` names, each
-/// count inline in both forms (spec 063, BE-PAYLOAD-001).
+/// `oversized`, `skipped` and `notices`, and the project half's `parts` and
+/// `part-findings`, in the file `lists-file` names, each count inline in
+/// both forms (specs 063 and 087, BE-PAYLOAD-001).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckArtifactSizeResult {
@@ -7974,8 +7981,9 @@ pub struct CheckArtifactSizeResult {
     #[serde(default)]
     pub form: ListsForm,
     /// Subjects over the threshold, in subject order: the spec's, then the
-    /// project files'. Empty means none over it among the `examined`; it says
-    /// nothing about the `skipped`. Absent in the file form.
+    /// project files', then their parts'. Empty means none over it among the
+    /// `examined`; it says nothing about the `skipped`. Absent in the file
+    /// form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oversized: Option<Vec<OversizedArtifact>>,
     /// Entries in `oversized`, in either form.
@@ -7984,7 +7992,10 @@ pub struct CheckArtifactSizeResult {
     /// Subjects that exist but could not be measured: family
     /// `artifact-size`, reason `artifact-unreadable`. A spec subject that does
     /// not exist is never listed; an absent project file is reported in
-    /// `project-files` instead. Absent in the file form.
+    /// `project-files` instead. With `project-files`, an unreadable part is
+    /// listed, and so is a directory under `.ductus/docs/` that could not be
+    /// listed, so the parts it holds are unknown rather than none. Absent in
+    /// the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skipped: Option<Vec<SkippedTarget>>,
     /// Entries in `skipped`, in either form.
@@ -7999,8 +8010,9 @@ pub struct CheckArtifactSizeResult {
     #[serde(default)]
     pub notices_count: usize,
     /// In the file form, the file holding `oversized`, `skipped` and
-    /// `notices` whole, from the project root: a JSON object with the three
-    /// keys, each present even when empty.
+    /// `notices` whole, from the project root, and with `project-files` also
+    /// `parts` and, unless `staged`, `part-findings`: a JSON object with
+    /// those keys, each present even when empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
     /// The feature half; absent when no `feature` was named.
@@ -8035,6 +8047,59 @@ pub struct SizeProjectHalf {
     /// One record per project file, in subject order: `AGENTS.md`, then
     /// `system.md`, `events.md` and `errors.md` under the spec root.
     pub project_files: Vec<ProjectFileSize>,
+    /// One record per part of a project file (spec 087), by project file in
+    /// subject order, then by name as scenarios are ordered: on disk, every
+    /// `*.md` directly under `.ductus/docs/{agents,system,events,errors}/`,
+    /// linked or not; staged, every index entry there. Empty when there are
+    /// none. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parts: Option<Vec<PartSize>>,
+    /// Entries in `parts`, in either form.
+    #[serde(default)]
+    pub parts_count: usize,
+    /// The integrity findings over the parts and what sits beside them under
+    /// `.ductus/docs/`, sorted by path: a link to a missing part, a part its
+    /// project file does not link, a markdown file in a subdirectory of a
+    /// parts directory, a directory there other than the parts directories, and a
+    /// markdown file directly under `.ductus/docs/`. None holds `done` or
+    /// stops a commit. Absent in the file form, and under `staged`, where
+    /// they are not computed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_findings: Option<Vec<PartFinding>>,
+    /// Entries in `part-findings`, in either form; absent under `staged`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_findings_count: Option<usize>,
+}
+
+/// One part's measurement (spec 087).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PartSize {
+    /// Project-relative path.
+    pub path: String,
+    /// The project-relative path of the project file it is a part of.
+    pub project_file: String,
+    /// `measured`, or `unreadable` (also in `skipped`): a part is never
+    /// `absent`, since only what exists is listed.
+    pub state: ProjectSizeState,
+    /// Its length: on disk, or in the index when `staged`. Present exactly
+    /// when `state` is `measured`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Whether its project file links it. Absent under `staged`, where
+    /// linkage is not computed, and when its project file exists but could
+    /// not be read, so its links are unknown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linked: Option<bool>,
+    /// Staged mode only: the length of its `HEAD` copy; absent when `HEAD`
+    /// has none, or the repository has no commits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head_bytes: Option<u64>,
+    /// Staged mode only, for a measured part: whether the commit is refused,
+    /// because the staged copy is over the threshold and either has no `HEAD`
+    /// copy or is larger than it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<bool>,
 }
 
 /// Whether a project file was measured.
@@ -8073,6 +8138,41 @@ pub struct ProjectFileSize {
     /// copy or is larger than it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refused: Option<bool>,
+}
+
+/// What is wrong with a project file's parts, or with what sits beside them
+/// under `.ductus/docs/` (spec 087, *Integrity*). Each is reported, never
+/// clean, and none holds a spec's `done` or stops a commit.
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum PartFindingKind {
+    /// A project file's link resolves into a parts directory, to no file.
+    MissingPart,
+    /// A part its own project file does not link.
+    UnlinkedPart,
+    /// A markdown file in a subdirectory of a parts directory: parts do not
+    /// nest.
+    NestedFile,
+    /// A directory under `.ductus/docs/` other than the parts directories.
+    NotAPartsDirectory,
+    /// A markdown file directly under `.ductus/docs/`, which holds parts
+    /// directories alone.
+    NotAPart,
+}
+
+/// One integrity finding over the project files' parts.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PartFinding {
+    /// What is wrong.
+    pub kind: PartFindingKind,
+    /// The project-relative path it is about: the missing part, the unlinked
+    /// part, the nested file, the stray directory or the stray file.
+    pub path: String,
+    /// The finding, worded by the runtime, with its fix.
+    pub message: String,
 }
 
 // -- derive-routing-candidates -------------------------------------------------
@@ -10023,6 +10123,22 @@ mod tests {
                     head_bytes: Some(50_500),
                     refused: Some(true),
                 }],
+                parts: Some(vec![super::PartSize {
+                    path: ".ductus/docs/system/storage.md".into(),
+                    project_file: "specs/system.md".into(),
+                    state: ProjectSizeState::Measured,
+                    bytes: Some(10),
+                    linked: Some(false),
+                    head_bytes: None,
+                    refused: None,
+                }]),
+                parts_count: 1,
+                part_findings: Some(vec![super::PartFinding {
+                    kind: super::PartFindingKind::UnlinkedPart,
+                    path: ".ductus/docs/system/storage.md".into(),
+                    message: "unlinked".into(),
+                }]),
+                part_findings_count: Some(1),
             }),
         };
         // The project half carries its own keys and none of the spec half's.
@@ -10030,6 +10146,10 @@ mod tests {
         assert_eq!(value["project-files"][0]["state"], "measured");
         assert_eq!(value["project-files"][0]["head-bytes"], 50_500);
         assert_eq!(value["project-files"][0]["refused"], true);
+        assert_eq!(value["parts"][0]["project-file"], "specs/system.md");
+        assert_eq!(value["parts"][0]["linked"], false);
+        assert_eq!(value["part-findings"][0]["kind"], "unlinked-part");
+        assert_eq!(value["part-findings-count"], 1);
         assert!(!value.as_object().unwrap().contains_key("feature"));
         assert_eq!(round_trip(&both), both);
     }

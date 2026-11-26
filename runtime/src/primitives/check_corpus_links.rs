@@ -442,7 +442,7 @@ fn scan_file(
 /// discusses linking quotes link syntax constantly, always inside a span, and
 /// Family 26 reports seven false positives on this corpus without it — every
 /// one a doc correctly describing a link rather than making one.
-fn link_targets(line: &str) -> Vec<&str> {
+pub(crate) fn link_targets(line: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let spans = inline_code_spans(line);
     let mut cursor = 0;
@@ -493,6 +493,52 @@ fn link_destination(rest: &str) -> Option<&str> {
         .then_some(target)
 }
 
+/// What a link target names on the filesystem: [`link_file_part`]'s answer.
+pub(crate) enum LinkFilePart<'a> {
+    /// A bare fragment, a scheme-bearing target or an empty file part:
+    /// nothing on the filesystem answers for it.
+    Elsewhere,
+    /// A documentation shape (`*`, `NNN`, `{…}`), not a reference.
+    Shape,
+    /// The file part, with any fragment stripped.
+    File(&'a str),
+}
+
+/// The file part of a link `target`, or why it has none. Shared by every
+/// reader of a markdown link's target, so a fragment, a scheme and a shape
+/// are judged once (`project_parts` reads project files' links through it).
+pub(crate) fn link_file_part(target: &str) -> LinkFilePart<'_> {
+    // Scheme-bearing targets and bare fragments are out of scope: nothing on
+    // the filesystem answers for them.
+    if target.starts_with('#') || has_scheme(target) {
+        return LinkFilePart::Elsewhere;
+    }
+    // A fragment on a relative target is stripped and the file part checked.
+    let rel = target.split('#').next().unwrap_or("");
+    if rel.is_empty() {
+        return LinkFilePart::Elsewhere;
+    }
+    // A pattern is not a reference. A candidate containing `*` or `NNN` is
+    // documentation naming a shape, and testing it against the filesystem
+    // would manufacture findings out of prose.
+    if is_shape(rel) {
+        return LinkFilePart::Shape;
+    }
+    LinkFilePart::File(rel)
+}
+
+/// The directory a link's file part `rel` resolves against: the project root
+/// `repo` for a root-absolute target, else `here`, the citing file's own
+/// directory.
+///
+/// A markdown renderer resolves a root-absolute target against the
+/// repository root, which is the same directory only when the project is the
+/// repository's root; in a project in a subdirectory of its repository the
+/// two differ, and the runtime keeps the project's.
+pub(crate) fn link_base<'a>(rel: &str, here: &'a Path, repo: &'a Path) -> &'a Path {
+    if rel.starts_with('/') { repo } else { here }
+}
+
 /// Decide what one link target is, and record it when it is broken.
 fn classify(
     target: &str,
@@ -500,35 +546,21 @@ fn classify(
     (here, repo, containment): (&Path, &Path, &Containment),
     result: &mut CorpusLinks,
 ) {
-    // Scheme-bearing targets and bare fragments are out of scope: nothing on
-    // the filesystem answers for them.
-    if target.starts_with('#') || has_scheme(target) {
-        return;
-    }
-    // A fragment on a relative target is stripped and the file part checked.
-    let rel = target.split('#').next().unwrap_or("");
-    if rel.is_empty() {
-        return;
-    }
-    // A pattern is not a reference. A candidate containing `*` or `NNN` is
-    // documentation naming a shape, and testing it against the filesystem
-    // would manufacture findings out of prose.
-    if is_shape(rel) {
-        result.shapes_skipped += 1;
-        return;
-    }
-    // Resolution is **lexical**, against the citing file's own directory —
-    // except for a root-absolute target, which is resolved against the
-    // project root rather than the filesystem's. A markdown renderer resolves
-    // it against the repository root, which is the same directory only when
-    // the project is the repository's root; in a project in a subdirectory of
-    // its repository the two differ, and this check keeps the project's.
-    // Never canonicalized: canonicalization would make the result depend on
-    // symlinks, so the same corpus would answer differently in two checkouts.
-    // A target that leaves the base, lexically or through a link out of it, is
-    // reported and never probed (`BE-INPUT-004`): the answer would depend on
-    // what lies outside the checkout.
-    let base = if rel.starts_with('/') { repo } else { here };
+    let rel = match link_file_part(target) {
+        LinkFilePart::Elsewhere => return,
+        LinkFilePart::Shape => {
+            result.shapes_skipped += 1;
+            return;
+        }
+        LinkFilePart::File(rel) => rel,
+    };
+    // Resolution is **lexical**, against [`link_base`]. Never canonicalized:
+    // canonicalization would make the result depend on symlinks, so the same
+    // corpus would answer differently in two checkouts. A target that leaves
+    // the base, lexically or through a link out of it, is reported and never
+    // probed (`BE-INPUT-004`): the answer would depend on what lies outside
+    // the checkout.
+    let base = link_base(rel, here, repo);
     let target_path = lexical_join(base, rel);
     let reach = containment.judge(&target_path);
     if matches!(reach, Reach::Inside) && target_path.exists() {
@@ -679,7 +711,7 @@ fn is_shape(rel: &str) -> bool {
 /// `Path::join` alone leaves `..` in the path, and the filesystem would then
 /// resolve it through whatever symlinks it crosses. Doing it lexically is what
 /// makes the answer a property of the text rather than of the checkout.
-fn lexical_join(base: &Path, rel: &str) -> PathBuf {
+pub(crate) fn lexical_join(base: &Path, rel: &str) -> PathBuf {
     let mut out = base.to_path_buf();
     for component in Path::new(rel).components() {
         match component {

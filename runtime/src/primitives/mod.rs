@@ -74,6 +74,7 @@ pub(crate) mod owed_work;
 pub(crate) mod pipeline_view;
 pub mod process_decisions;
 pub mod process_waivers;
+pub(crate) mod project_parts;
 pub mod prune_plan;
 pub mod prune_project;
 pub mod prune_tasks;

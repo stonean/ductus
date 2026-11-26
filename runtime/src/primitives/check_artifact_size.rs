@@ -17,14 +17,18 @@
 //! 075) are a second subject set: `AGENTS.md` and the spec root's `system.md`,
 //! `events.md` and `errors.md`, against the same threshold. `staged` measures
 //! each one's index copy against its `HEAD` copy for the pre-commit hook.
+//! Each project file's **parts** (spec 087), the markdown files directly under
+//! its `.ductus/docs/` parts directory, are measured with them, as
+//! `project_parts` lists them, with the integrity findings over them.
 //!
 //! **Bounded** (BE-PAYLOAD-001). `oversized`, `skipped` and `notices` grow with
-//! a spec directory's scenario count, so [`run`] bounds them as
-//! `check-artifacts` bounds its lists (`bounded_lists::place`): inline while the
-//! result fits `[artifacts] read-size-bytes`, and past it in the file
-//! `lists-file` names, keyed by the feature, or by [`PROJECT_FILES_KEY`] for a
-//! call naming none, with each list's count inline in both forms. Writing that
-//! file is the primitive's only write.
+//! a spec directory's scenario count, and `parts` and `part-findings` with the
+//! project's parts, so [`run`] bounds them as `check-artifacts` bounds its
+//! lists (`bounded_lists::place`): inline while the result fits `[artifacts]
+//! read-size-bytes`, and past it in the file `lists-file` names, keyed by the
+//! feature, or by [`PROJECT_FILES_KEY`] for a call naming none, with each
+//! list's count inline in both forms. Writing that file is the primitive's
+//! only write.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -33,14 +37,15 @@ use crate::primitives::decisions::{RawDecision, read_decisions};
 use crate::primitives::prune_tasks::read_status;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, ProjectRepository, Result, bounded_lists, flatten_line,
-    read_text, rel_path, scenario_name_cmp,
+    project_parts, read_text, rel_path, scenario_name_cmp,
 };
 use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
-    FixKind, ListsForm, OversizedArtifact, ProjectFileKind, ProjectFileSize, ProjectSizeState,
-    ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget, ThresholdSource,
+    FixKind, ListsForm, OversizedArtifact, PartFinding, PartSize, ProjectFileKind, ProjectFileSize,
+    ProjectSizeState, ReadSizeThreshold, SizeProjectHalf, SizeSpecHalf, SkippedTarget,
+    ThresholdSource,
 };
 
 /// The finding family `/{project}:analyze` records an oversized artifact
@@ -112,16 +117,23 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
     bounded(repo, key, measured)
 }
 
-/// Bound `measured`'s three lists to one read under `key`: inline while the
-/// result fits the read size, and past it in the file `lists-file` names,
-/// which holds all three, each present even when empty, since the exec walker
-/// restores every list the result counts.
+/// Bound `measured`'s lists to one read under `key`: inline while the result
+/// fits the read size, and past it in the file `lists-file` names, which
+/// holds the three, and the project half's `parts` and `part-findings` when
+/// the result counts them, each present even when empty, since the exec
+/// walker restores every list the result counts.
 fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSizeResult> {
-    let lists = serde_json::json!({
+    let mut lists = serde_json::json!({
         "oversized": measured.oversized,
         "skipped": measured.skipped,
         "notices": measured.notices,
     });
+    if let Some(project) = &measured.project {
+        lists["parts"] = serde_json::json!(project.parts);
+        if let Some(findings) = &project.part_findings {
+            lists["part-findings"] = serde_json::json!(findings);
+        }
+    }
     let mut result = CheckArtifactSizeResult {
         threshold: measured.threshold,
         examined: measured.examined,
@@ -141,6 +153,10 @@ fn bounded(repo: &Path, key: &str, measured: Measured) -> Result<CheckArtifactSi
         result.oversized = None;
         result.skipped = None;
         result.notices = None;
+        if let Some(project) = &mut result.project {
+            project.parts = None;
+            project.part_findings = None;
+        }
         result.lists_file = Some(file);
     }
     Ok(result)
@@ -219,30 +235,14 @@ fn compute(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<Measured> {
     }
 
     let project = if args.project_files {
-        let records = measure_project_files(args.staged, repo, &root, threshold.bytes)?;
-        for record in &records {
-            match (record.state, record.bytes) {
-                (ProjectSizeState::Measured, Some(bytes)) => {
-                    examined += 1;
-                    let pages = bytes.div_ceil(threshold.bytes).max(1);
-                    if pages >= 2 {
-                        oversized.push(oversized_artifact(
-                            record.path.clone(),
-                            ArtifactKind::ProjectFile,
-                            bytes,
-                            pages,
-                            threshold.bytes,
-                            "",
-                        ));
-                    }
-                }
-                (ProjectSizeState::Unreadable, _) => skip(&mut skipped, record.path.clone()),
-                _ => {}
-            }
-        }
-        Some(SizeProjectHalf {
-            project_files: records,
-        })
+        Some(project_half(
+            args.staged,
+            (repo, &root),
+            threshold.bytes,
+            &mut examined,
+            &mut oversized,
+            &mut skipped,
+        )?)
     } else {
         None
     };
@@ -261,6 +261,63 @@ fn compute(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<Measured> {
         notices,
         spec,
         project,
+    })
+}
+
+/// The project half: the four project files and their parts, each measured,
+/// with every measured one counted in `examined` and every one over
+/// `threshold` appended to `oversized`, after the spec's subjects.
+fn project_half(
+    staged: bool,
+    (repo, root): (&Path, &str),
+    threshold: u64,
+    examined: &mut u32,
+    oversized: &mut Vec<OversizedArtifact>,
+    skipped: &mut Vec<SkippedTarget>,
+) -> Result<SizeProjectHalf> {
+    let records = measure_project_files(staged, repo, root, threshold)?;
+    for record in &records {
+        if record.state == ProjectSizeState::Unreadable {
+            skip(skipped, record.path.clone());
+        }
+    }
+    let (parts, part_findings) = if staged {
+        (staged_parts(repo, root, threshold, skipped)?, None)
+    } else {
+        let (parts, findings) = disk_parts(repo, root, skipped);
+        (parts, Some(findings))
+    };
+    let measured = records
+        .iter()
+        .map(|record| (&record.path, record.bytes, ArtifactKind::ProjectFile))
+        .chain(
+            parts
+                .iter()
+                .map(|part| (&part.path, part.bytes, ArtifactKind::ProjectPart)),
+        );
+    for (path, bytes, kind) in measured {
+        let Some(bytes) = bytes else {
+            continue;
+        };
+        *examined += 1;
+        let pages = bytes.div_ceil(threshold).max(1);
+        if pages >= 2 {
+            oversized.push(oversized_artifact(
+                path.clone(),
+                kind,
+                bytes,
+                pages,
+                threshold,
+                "",
+            ));
+        }
+    }
+    Ok(SizeProjectHalf {
+        project_files: records,
+        parts_count: parts.len(),
+        parts: Some(parts),
+        part_findings_count: part_findings.as_ref().map(Vec::len),
+        part_findings,
     })
 }
 
@@ -359,6 +416,115 @@ fn measure_project_files(
         records.push(entry);
     }
     Ok(records)
+}
+
+/// The parts on disk (`project_parts`), each measured, and the integrity
+/// findings over them. A part that is a link leaving the project is never
+/// opened, and it and every directory that could not be listed are recorded
+/// in `skipped`, so a part that could not be measured is unknown, never
+/// absent.
+fn disk_parts(
+    repo: &Path,
+    root: &str,
+    skipped: &mut Vec<SkippedTarget>,
+) -> (Vec<PartSize>, Vec<PartFinding>) {
+    let found = project_parts::project_parts(repo, root);
+    for dir in found.unlisted {
+        skip(skipped, dir);
+    }
+    let parts = found
+        .parts
+        .into_iter()
+        .map(|part| {
+            let bytes = if part.outside {
+                skip(skipped, part.path.clone());
+                None
+            } else {
+                measure(&repo.join(&part.path), &part.path, skipped)
+            };
+            part_size(part.path, part.project_file, bytes, part.linked)
+        })
+        .collect();
+    (parts, found.findings)
+}
+
+/// The parts the index holds: each entry directly under a parts directory
+/// that names a markdown file (`project_parts::part_of`), measured on its
+/// staged copy against its `HEAD` copy as a project file is. A part deleted
+/// in this commit is no entry, so it is never refused. An index that cannot
+/// be read records `.ductus/docs` in `skipped`: the parts it holds are
+/// unknown.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when the project's repository, or its `HEAD`,
+/// cannot be read, as for a project file.
+fn staged_parts(
+    repo: &Path,
+    root: &str,
+    threshold: u64,
+    skipped: &mut Vec<SkippedTarget>,
+) -> Result<Vec<PartSize>> {
+    let project = ProjectRepository::discover(repo)?;
+    let Ok(index) = project.repository.index() else {
+        skip(skipped, project_parts::DOCS_DIR.to_string());
+        return Ok(Vec::new());
+    };
+    let mut found: Vec<(usize, String)> = index
+        .iter()
+        .filter_map(|entry| {
+            let git_path = String::from_utf8_lossy(&entry.path).into_owned();
+            let rel = project.to_project(&git_path)?;
+            let kind = project_parts::part_of(rel)?;
+            let order = project_parts::KINDS.iter().position(|k| *k == kind)?;
+            Some((order, rel.to_string()))
+        })
+        .collect();
+    found.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| scenario_name_cmp(&a.1, &b.1)));
+    // A conflicted path is one entry per stage: one part.
+    found.dedup();
+    let subjects = project_subjects(root);
+    let mut parts = Vec::new();
+    for (order, rel) in found {
+        let project_file = subjects[order].1.clone();
+        let mut part = match staged_bytes(&project, &rel) {
+            Staged::Measured(bytes) => part_size(rel, project_file, Some(bytes), None),
+            // Listed by the index, yet no one staged copy is there to read.
+            Staged::Absent | Staged::Unreadable => {
+                skip(skipped, rel.clone());
+                part_size(rel, project_file, None, None)
+            }
+        };
+        if let Some(bytes) = part.bytes {
+            part.head_bytes = head_bytes(&project, &part.path)?;
+            part.refused =
+                Some(bytes > threshold && part.head_bytes.is_none_or(|head| bytes > head));
+        }
+        parts.push(part);
+    }
+    Ok(parts)
+}
+
+/// A part's record: `measured` with its `bytes`, or `unreadable` without.
+fn part_size(
+    path: String,
+    project_file: String,
+    bytes: Option<u64>,
+    linked: Option<bool>,
+) -> PartSize {
+    PartSize {
+        path,
+        project_file,
+        state: if bytes.is_some() {
+            ProjectSizeState::Measured
+        } else {
+            ProjectSizeState::Unreadable
+        },
+        bytes,
+        linked,
+        head_bytes: None,
+        refused: None,
+    }
 }
 
 /// A project file's copy in the index.
@@ -694,6 +860,11 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
         ArtifactKind::ProjectFile => vec![(
             FixKind::PruneProject,
             "move its entries to their homes with the prune command, run as prune --project",
+        )],
+        ArtifactKind::ProjectPart => vec![(
+            FixKind::SplitPart,
+            "split it into sibling parts in its parts directory, each named by a pointer in its \
+             project file, since parts do not nest",
         )],
     }
 }
@@ -2063,5 +2234,422 @@ mod tests {
         let agents = records.iter().find(|r| r.path == "AGENTS.md").unwrap();
         assert_eq!(agents.state, ProjectSizeState::Unreadable);
         assert_eq!(agents.bytes, None);
+    }
+
+    // -- parts (spec 087) ------------------------------------------------------
+
+    use crate::schema::primitives::PartFindingKind;
+
+    /// [`project_tree`] whose `system.md` is an index linking one part, the
+    /// part holding `bytes`.
+    fn indexed_tree(bytes: usize) -> TempDir {
+        let tmp = project_tree(1, 1);
+        std::fs::write(
+            tmp.path().join("specs/system.md"),
+            "[storage](../.ductus/docs/system/storage.md)\n",
+        )
+        .unwrap();
+        write_part(&tmp, ".ductus/docs/system/storage.md", bytes);
+        tmp
+    }
+
+    fn write_part(tmp: &TempDir, rel: &str, bytes: usize) {
+        let path = tmp.path().join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "x".repeat(bytes)).unwrap();
+    }
+
+    fn half(result: &Measured) -> &SizeProjectHalf {
+        result.project.as_ref().expect("a project half")
+    }
+
+    fn parts(result: &Measured) -> &[PartSize] {
+        half(result).parts.as_deref().expect("parts inline")
+    }
+
+    #[test]
+    fn a_part_is_listed_under_its_project_file_with_its_state() {
+        let tmp = indexed_tree(40);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(
+            parts(&result),
+            [PartSize {
+                path: ".ductus/docs/system/storage.md".into(),
+                project_file: "specs/system.md".into(),
+                state: ProjectSizeState::Measured,
+                bytes: Some(40),
+                linked: Some(true),
+                head_bytes: None,
+                refused: None,
+            }]
+        );
+        assert_eq!(half(&result).parts_count, 1);
+        assert_eq!(result.examined, 3, "AGENTS.md, system.md and its part");
+        assert_eq!(result.skipped, []);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_part_is_unreadable_and_skipped_never_clean() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = indexed_tree(40);
+        let part = tmp.path().join(".ductus/docs/system/storage.md");
+        std::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
+        if std::fs::File::open(&part).is_ok() {
+            std::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o644)).unwrap();
+            panic!("permissions do not bind (running as root?): no file can be made unreadable");
+        }
+        let result = compute(&project_args(None, false), tmp.path());
+        std::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let result = result.unwrap();
+        let listed = &parts(&result)[0];
+        assert_eq!(
+            (listed.state, listed.bytes),
+            (ProjectSizeState::Unreadable, None)
+        );
+        let skipped: Vec<(&str, &str)> = result
+            .skipped
+            .iter()
+            .map(|s| (s.reason.as_str(), s.path.as_str()))
+            .collect();
+        assert_eq!(
+            skipped,
+            [("artifact-unreadable", ".ductus/docs/system/storage.md")]
+        );
+        assert_eq!(result.examined, 2, "the part was not measured");
+    }
+
+    /// A part that is a link leaving the project is unreadable and never
+    /// opened, so its outside length is never reported (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn a_part_linked_outside_the_project_is_unreadable_not_measured() {
+        let tmp = indexed_tree(40);
+        let _outside = crate::primitives::outward::file(
+            tmp.path(),
+            ".ductus/docs/system/elsewhere.md",
+            &"x".repeat(500),
+        );
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        let elsewhere = parts(&result)
+            .iter()
+            .find(|part| part.path == ".ductus/docs/system/elsewhere.md")
+            .unwrap();
+        assert_eq!(
+            (elsewhere.state, elsewhere.bytes),
+            (ProjectSizeState::Unreadable, None)
+        );
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.path == ".ductus/docs/system/elsewhere.md"),
+            "{:?}",
+            result.skipped
+        );
+        assert_eq!(paths_of(&result), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn a_parts_directory_that_cannot_be_listed_is_skipped_never_empty() {
+        let tmp = indexed_tree(40);
+        let _outside = crate::primitives::outward::dir(tmp.path(), ".ductus/docs/errors", |dir| {
+            std::fs::write(dir.join("auth.md"), "x".repeat(500)).unwrap();
+        });
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        let skipped: Vec<&str> = result.skipped.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(skipped, [".ductus/docs/errors"]);
+        assert_eq!(
+            parts(&result).len(),
+            1,
+            "nothing is listed through the link"
+        );
+    }
+
+    #[test]
+    fn a_part_one_byte_over_is_reported_with_its_fix_and_one_at_the_threshold_is_not() {
+        let tmp = indexed_tree(101);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(paths_of(&result), [".ductus/docs/system/storage.md"]);
+        let part = &result.oversized[0];
+        assert_eq!(
+            (part.kind, part.bytes, part.pages),
+            (ArtifactKind::ProjectPart, 101, 2)
+        );
+        assert_eq!(fix_kinds(part), [FixKind::SplitPart]);
+        assert!(part.warning.contains("sibling parts"), "{}", part.warning);
+        assert!(
+            part.warning.contains("100-byte read size"),
+            "{}",
+            part.warning
+        );
+        assert!(!part.warning.contains("reopen"), "{}", part.warning);
+        assert_eq!(
+            part.message,
+            "`.ductus/docs/system/storage.md` is 101 bytes, 2 read pages at the 100-byte read size"
+        );
+
+        let tmp = indexed_tree(100);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(paths_of(&result), Vec::<&str>::new());
+        assert_eq!(parts(&result)[0].bytes, Some(100));
+    }
+
+    #[test]
+    fn a_stored_waiver_covers_a_part_until_it_grows_a_page() {
+        let tmp = indexed_tree(250);
+        let path = ".ductus/docs/system/storage.md";
+        record(&tmp, &[(&stored_key(path, 250, 3, 100), "waived")]);
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let part = result.oversized.iter().find(|o| o.path == path).unwrap();
+        assert!(part.decided, "{part:?}");
+        write_part(&tmp, path, 350);
+        let result = compute(&project_args(Some("001-a"), false), tmp.path()).unwrap();
+        let part = result.oversized.iter().find(|o| o.path == path).unwrap();
+        assert!(!part.decided, "grew into a fourth page");
+    }
+
+    #[test]
+    fn every_markdown_file_directly_under_a_parts_directory_is_measured_linked_or_not() {
+        let tmp = indexed_tree(10);
+        for (rel, bytes) in [
+            (".ductus/docs/agents/procedure.md", 11),
+            (".ductus/docs/system/unlinked.md", 12),
+            (".ductus/docs/events/orders.md", 13),
+            (".ductus/docs/errors/auth.md", 14),
+        ] {
+            write_part(&tmp, rel, bytes);
+        }
+        write_part(&tmp, ".ductus/docs/system/diagram.png", 500);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        let measured: Vec<(&str, &str, Option<u64>)> = parts(&result)
+            .iter()
+            .map(|p| (p.path.as_str(), p.project_file.as_str(), p.bytes))
+            .collect();
+        assert_eq!(
+            measured,
+            [
+                (".ductus/docs/agents/procedure.md", "AGENTS.md", Some(11)),
+                (
+                    ".ductus/docs/system/storage.md",
+                    "specs/system.md",
+                    Some(10)
+                ),
+                (
+                    ".ductus/docs/system/unlinked.md",
+                    "specs/system.md",
+                    Some(12)
+                ),
+                (".ductus/docs/events/orders.md", "specs/events.md", Some(13)),
+                (".ductus/docs/errors/auth.md", "specs/errors.md", Some(14)),
+            ]
+        );
+        assert_eq!(result.examined, 7, "two project files and five parts");
+        assert_eq!(paths_of(&result), Vec::<&str>::new(), "the png is no part");
+    }
+
+    #[test]
+    fn each_integrity_finding_is_listed_and_a_clean_project_lists_none() {
+        let tmp = indexed_tree(10);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(half(&result).part_findings.as_deref(), Some(&[][..]));
+        assert_eq!(half(&result).part_findings_count, Some(0));
+
+        std::fs::write(
+            tmp.path().join("specs/system.md"),
+            "[storage](../.ductus/docs/system/storage.md) [gone](../.ductus/docs/system/gone.md)\n",
+        )
+        .unwrap();
+        write_part(&tmp, ".ductus/docs/system/orphan.md", 10);
+        write_part(&tmp, ".ductus/docs/system/deeper/inner.md", 10);
+        write_part(&tmp, ".ductus/docs/sytem/storage.md", 10);
+        write_part(&tmp, ".ductus/docs/stray.md", 10);
+        let result = compute(&project_args(None, false), tmp.path()).unwrap();
+        let findings: Vec<(PartFindingKind, &str)> = half(&result)
+            .part_findings
+            .as_deref()
+            .unwrap()
+            .iter()
+            .map(|f| (f.kind, f.path.as_str()))
+            .collect();
+        assert_eq!(
+            findings,
+            [
+                (PartFindingKind::NotAPart, ".ductus/docs/stray.md"),
+                (
+                    PartFindingKind::NestedFile,
+                    ".ductus/docs/system/deeper/inner.md"
+                ),
+                (PartFindingKind::MissingPart, ".ductus/docs/system/gone.md"),
+                (
+                    PartFindingKind::UnlinkedPart,
+                    ".ductus/docs/system/orphan.md"
+                ),
+                (PartFindingKind::NotAPartsDirectory, ".ductus/docs/sytem"),
+            ]
+        );
+        assert_eq!(half(&result).part_findings_count, Some(5));
+        // A finding is advisory: nothing joins `oversized` or `skipped` for it.
+        assert_eq!(paths_of(&result), Vec::<&str>::new());
+        assert_eq!(result.skipped, []);
+    }
+
+    /// A project whose four project files name no parts gets every earlier
+    /// key and value (AC8): a feature-only call carries no parts at all, and
+    /// a `project-files` call adds the two lists, empty, and their counts, 0.
+    #[test]
+    fn a_project_with_no_parts_keeps_every_earlier_key_and_value() {
+        let tmp = project_tree(5, 6);
+        std::fs::write(tmp.path().join("specs/events.md"), "x").unwrap();
+        std::fs::write(tmp.path().join("specs/errors.md"), "xx").unwrap();
+        // A read size the results fit, so each carries its lists inline.
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 100000\n",
+        )
+        .unwrap();
+        let feature_only = serde_json::to_string(
+            &run(
+                &CheckArtifactSizeArgs {
+                    feature: Some("001-a".into()),
+                    ..Default::default()
+                },
+                tmp.path(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(!feature_only.contains("part"), "{feature_only}");
+        let project =
+            serde_json::to_value(run(&project_args(None, false), tmp.path()).unwrap()).unwrap();
+        assert_eq!(
+            project,
+            serde_json::json!({
+                "threshold": {"bytes": 100_000, "source": "config"},
+                "examined": 4,
+                "form": "inline",
+                "oversized": [],
+                "oversized-count": 0,
+                "skipped": [],
+                "skipped-count": 0,
+                "notices": [],
+                "notices-count": 0,
+                "project-files": [
+                    {"path": "AGENTS.md", "kind": "agents", "state": "measured", "bytes": 5},
+                    {"path": "specs/system.md", "kind": "system", "state": "measured", "bytes": 6},
+                    {"path": "specs/events.md", "kind": "events", "state": "measured", "bytes": 1},
+                    {"path": "specs/errors.md", "kind": "errors", "state": "measured", "bytes": 2},
+                ],
+                "parts": [],
+                "parts-count": 0,
+                "part-findings": [],
+                "part-findings-count": 0,
+            })
+        );
+    }
+
+    #[test]
+    fn a_file_form_project_call_holds_its_parts_and_findings_in_the_file() {
+        let tmp = indexed_tree(10);
+        write_part(&tmp, ".ductus/docs/stray.md", 10);
+        let whole = compute(&project_args(None, false), tmp.path()).unwrap();
+        std::fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 10\n",
+        )
+        .unwrap();
+        let bounded = run(&project_args(None, false), tmp.path()).unwrap();
+        assert_eq!(bounded.form, ListsForm::File);
+        let project = bounded.project.as_ref().unwrap();
+        assert_eq!((&project.parts, &project.part_findings), (&None, &None));
+        assert_eq!(
+            (project.parts_count, project.part_findings_count),
+            (1, Some(1))
+        );
+        let lists: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(bounded.lists_file.as_ref().unwrap()))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            lists["parts"],
+            serde_json::to_value(&half(&whole).parts).unwrap()
+        );
+        assert_eq!(
+            lists["part-findings"],
+            serde_json::to_value(&half(&whole).part_findings).unwrap()
+        );
+        bounded_lists::assert_counts_name_the_file(
+            PRIMITIVE,
+            &serde_json::to_value(&bounded).unwrap(),
+            &lists,
+        );
+    }
+
+    #[test]
+    fn a_staged_part_is_measured_on_its_index_copy_against_its_head_copy() {
+        let (_tmp, repository, project) =
+            staged_project(&[("AGENTS.md", 5), (".ductus/docs/system/storage.md", 150)]);
+        let staged = |project: &Path| {
+            let result = compute(&project_args(None, true), project).unwrap();
+            assert_eq!(half(&result).part_findings, None, "not computed staged");
+            assert_eq!(half(&result).part_findings_count, None);
+            parts(&result)
+                .iter()
+                .map(|p| (p.path.clone(), p.bytes, p.head_bytes, p.refused, p.linked))
+                .collect::<Vec<_>>()
+        };
+        let storage = ".ductus/docs/system/storage.md".to_string();
+        assert_eq!(
+            staged(&project),
+            [(storage.clone(), Some(150), Some(150), Some(false), None)]
+        );
+        stage(&repository, &project, ".ductus/docs/system/storage.md", 151);
+        assert_eq!(
+            staged(&project),
+            [(storage.clone(), Some(151), Some(150), Some(true), None)]
+        );
+        stage(&repository, &project, ".ductus/docs/system/storage.md", 120);
+        assert_eq!(
+            staged(&project),
+            [(storage.clone(), Some(120), Some(150), Some(false), None)]
+        );
+        // A new part over the limit has no HEAD copy, so it is refused.
+        stage(&repository, &project, ".ductus/docs/events/orders.md", 101);
+        let after = staged(&project);
+        assert_eq!(
+            after[1],
+            (
+                ".ductus/docs/events/orders.md".to_string(),
+                Some(101),
+                None,
+                Some(true),
+                None
+            )
+        );
+        // A non-markdown file and a nested one are no parts, staged or not.
+        stage(
+            &repository,
+            &project,
+            ".ductus/docs/system/diagram.png",
+            500,
+        );
+        stage(
+            &repository,
+            &project,
+            ".ductus/docs/system/deeper/inner.md",
+            500,
+        );
+        assert_eq!(staged(&project).len(), 2);
+        // A part deleted in the commit is no entry, so it is never refused.
+        let mut index = repository.index().unwrap();
+        index
+            .remove_path(&Path::new("proj").join(".ductus/docs/system/storage.md"))
+            .unwrap();
+        index.write().unwrap();
+        let after = staged(&project);
+        assert_eq!(after.len(), 1);
+        assert_eq!(after[0].0, ".ductus/docs/events/orders.md");
     }
 }
