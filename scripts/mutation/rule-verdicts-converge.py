@@ -1,6 +1,7 @@
 """Mutation list for spec 082: a stored rule verdict is reused while the design
-subjects and the rule's file are unchanged (`standing` in
-`runtime/src/primitives/rule_verdicts.rs`), `write-analysis` carries, derives
+subjects are unchanged and the rule's own text, and that of each rule it
+names, is the text the run judged (`standing` in
+`runtime/src/primitives/rule_verdicts.rs`; spec 088), `write-analysis` carries, derives
 and checks the rule fields (`derive_rule_fields` in `write_analysis.rs`), and
 the exec walker asks only about a rule whose verdict is not current
 (`split_reused` in `interpreter/mod.rs`).
@@ -8,7 +9,8 @@ the exec walker asks only about a rule whose verdict is not current
 Each mutation removes the behavior one unit test names, and its filter selects
 that test. By behavior: what makes a verdict current is held by M1 to M3 and
 M27 (AC1 by M1 to M3, M7 and M9; the rule-file set a record was judged under
-by M27; AC5 by M2; AC7 by M28 and M31 to M39); the derived unjudged list
+by M27; AC5 by M2, the per-file digest gate that opens spec 088's
+rule-by-rule comparison; AC7 by M28 and M31 to M39); the derived unjudged list
 by M5 and M10 (AC2); the
 contradiction note by M6 (AC3); the addressed citation by M4 and M40 (AC6, on the
 interactive and the exec path); carrying a verdict forward by M7; the tier

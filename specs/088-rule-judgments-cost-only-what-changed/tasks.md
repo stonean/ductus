@@ -59,14 +59,6 @@ Blocked on tasks 1 to 4: the cost is measured on the shipped code, at a commit a
 
 - **Done when**: the spec states each cost with its method, units and commit, and what it retires or why none.
 
-The judgments a rule-file commit owes are already measured, in the spec's Resolved Questions (`1ffaf951`, the 22 commits after `a3629a95`), so cite them there rather than measure again. Still to measure, at a pushed commit:
-
-- the two count lines' bytes in a record;
-- `discover-rule-files --all --rules --feature` wall time with a changed rule file;
-- the backfill's description and input schema bytes;
-- a backfill run's wall time over this corpus;
-- the tally of `rejudged-files` reasons over every feature.
-
 ## 7. Disposition out-of-spec finding: no check holds the claude seed to the CLI subcommands the migrations run
 
 - [x] `framework/bootstrap/ductus.md` §Permission Setup — the claude `settings_template` seeds one rule per CLI subcommand the bootstrap and its migrations run, and no `scripts/audit/` family compares it with the `.ductus/bin/ductus {subcommand}` calls `framework/migrations/*.md` spell, so a migration that adds a CLI call without its seed entry is reported by nothing (found adding 088's `backfill-section-digest` entry, task 4) — waived: AGENTS.md waives an observation about the pipeline's own machinery made in framework work unless it shows code breaking its contract, and this shows none: each of the five CLI subcommands the migrations run is seeded (checked at `08510de3`; the agent's recommendation, adopted by the operator, 2026-11-26)

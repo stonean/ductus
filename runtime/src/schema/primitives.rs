@@ -569,10 +569,12 @@ pub struct AnalyzeBlock {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unjudged_rules: Vec<String>,
     /// Each loaded rule file's basename and a digest of its rules' IDs,
-    /// Statements and Verifications (spec 082). A stored verdict is current
-    /// only while its file's digest matches. Empty means no rule file was
-    /// loaded or the record predates the field, which yields no reusable
-    /// verdict.
+    /// Statements and Verifications (spec 082). A file whose digest differs
+    /// is compared rule by rule with its copy at `analyzed-against`, so a
+    /// stored verdict is current while its rule's own text, and that of each
+    /// rule it names, is the text the run judged (spec 088). Empty means no
+    /// rule file was loaded or the record predates the field, which yields no
+    /// reusable verdict.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rule_digest: BTreeMap<String, String>,
     /// Each section of the design subjects and the first 16 hex characters

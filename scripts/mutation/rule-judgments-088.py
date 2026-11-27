@@ -249,4 +249,32 @@ MUTATIONS = [
         '',
         '--test crlf_preservation backfill_section_digest_preserves_crlf',
     ),
+    (
+        'M34 the project is read from its repository root, not its own',
+        'src/primitives/backfill_section_digest.rs',
+        '    let root = paths::Paths::load(repo)?.specs_root;\n',
+        '    let git_root = git2::Repository::discover(repo)\n        .ok()\n        .and_then(|found| found.workdir().map(Path::to_path_buf));\n    let repo = git_root.as_deref().unwrap_or(repo);\n    let root = paths::Paths::load(repo)?.specs_root;\n',
+        'primitives::backfill_section_digest::tests::a_project_in_a_subdirectory_is_backfilled',
+    ),
+    (
+        'M35 a feature holding a link leaving the project is read',
+        'src/primitives/backfill_section_digest.rs',
+        '        if let Err(error) = validate_feature_argument(repo, &root, &feature) {\n            unreadable.push(unread(error.to_string()));\n            continue;\n        }\n',
+        '',
+        'primitives::backfill_section_digest::tests::a_feature_holding_a_link_leaving_the_project_is_named_and_left',
+    ),
+    (
+        'M36 a file judged whole leaves a rule naming an undefined ID current',
+        'src/primitives/rule_verdicts.rs',
+        '        if !edits.rejudged_files.is_empty() {\n            let defined',
+        '        if false {\n            let defined',
+        'primitives::rule_verdicts::tests::a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines',
+    ),
+    (
+        'M37 a file judged whole stales each rule naming any ID, defined or not',
+        'src/primitives/rule_verdicts.rs',
+        '                .filter(|name| !defined.contains(name.as_str()))\n',
+        '                .filter(|_| true)\n',
+        'primitives::rule_verdicts::tests::a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines',
+    ),
 ]

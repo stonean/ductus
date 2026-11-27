@@ -51,11 +51,11 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
   - A rule whose own text is unchanged stands as a rule of an unchanged file stands, subject to 082's other conditions: the sections, `unjudged-rules`, and both files for a rule two files define.
   - A rule whose own text changed, or whose ID the old copy lacks (a new rule, or one moved in from another file), is `Stale`.
   - A file whose digest moved while no rule's text did, a reorder or a removal, keeps every remaining rule's verdict, unless the next bullet holds for it.
-- **The rules naming one.** A loaded rule is `Stale` when its Statement or Verification names a changed rule, in any loaded file (the operator's decision, 2026-11-26, in the spec's Resolved Questions). A changed rule here is one whose own text changed, one new to its file, one its file no longer holds, or any rule of a file whose copy cannot stand in.
+- **The rules naming one.** A loaded rule is `Stale` when its Statement or Verification names a changed rule, in any loaded file (the operator's decision, 2026-11-26, in the spec's Resolved Questions). A changed rule here is one whose own text changed, one new to its file, one its file no longer holds, or any rule of a file whose copy cannot stand in, and, while one cannot, any ID no loaded rule defines, since that file may have held it (the agent's recommendation, adopted by the operator, 2026-11-26, in the spec's Resolved Questions).
   - A name is a token matching the rule-ID grammar `rule_sections` reads headings by, other than the rule's own ID, that names a changed rule: a loaded one, or one the changed file held at `analyzed-against`.
   - Only direct names count: a rule naming one only through another reads that other's text, which did not change.
   - Each `AssessableRule` carries the names its Statement and Verification hold, taken when `LoadedRuleFile::read` parses the file, so the scan reads no further file.
-- **When the copy cannot stand in.** Every rule of the file is `Stale`, as before 088, and so is each rule naming one of them. `standing` names the file with one of the closed set of reasons in [data-model.md](data-model.md), and `discover-rule-files` reports it under `verdicts.rejudged-files`. A shallow clone that lacks the commit reads as `commit-not-held`.
+- **When the copy cannot stand in.** Every rule of the file is `Stale`, as before 088, and so is each rule naming one of them or an ID no loaded rule defines. `standing` names the file with one of the closed set of reasons in [data-model.md](data-model.md), and `discover-rule-files` reports it under `verdicts.rejudged-files`. A shallow clone that lacks the commit reads as `commit-not-held`.
 - **The stale texts.** Each text saying `analyzed-against` is read for one thing, which this makes two, or stating the per-file rule says what is now true:
   - `AnalyzeBlock::analyzed_against` (`runtime/src/schema/primitives.rs`), "Read for exactly one thing", and `analyze_subjects`' module doc and `exempt_renames`' doc;
   - point 3 of `rule_verdicts`' module doc, and `NoReuse::RuleFilesChanged`'s "keeps the per-file rule";
@@ -103,7 +103,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 - **AC2.** Git fixtures run two analyses, with a commit between them that edits one rule's Verification:
   - `judge` holds that rule and each rule naming it, in its own file and in another, alone, and `write-analysis` carries the other rules rather than listing them unjudged;
   - a rule naming an unedited rule, or the edited one only through another rule, keeps its verdict;
-  - each rule naming a rule of a whole-file re-judge, or one the edit removed, is judged;
+  - each rule naming a rule of a whole-file re-judge, or one the edit removed, is judged, and, while a file is judged whole, each rule naming an ID no loaded rule defines;
   - a shallow clone whose boundary lies past `analyzed-against` re-judges the whole file, naming `commit-not-held`;
   - `judged-copy-differs`, in both directions;
   - a record with no `analyzed-against`, and a file the commit's tree lacks, each named with its reason;
@@ -114,7 +114,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 - **AC3.**
   - A record matching as recorded gains the digest.
   - One matching at another status gains the digest of that status's text, equal to `section_digest` of the spec at that status.
-  - A stale one is untouched and named, and an unreadable one untouched.
+  - A stale one is untouched and named, and an unreadable one untouched, as is a feature holding a link leaving the project.
   - A second run writes nothing.
   - The written record, with the block removed, is byte-identical to the original.
   - A changed record is refused, and the CLI exits non-zero on it in either form.
@@ -132,7 +132,7 @@ Measured at a commit on `origin/main` once the code lands, in these units:
 - **AC1.** The two record lines' bytes, by `wc -c` over the records a run writes.
 - **AC2.**
   - Judgments owed per rule-file commit. Over the 22 commits that touched `framework/rules/` after `a3629a95`, 082's per-file rule owed 1,009, and the per-rule one with each rule naming a changed one 104. That figure was measured at `1ffaf951` by dumping `discover-rule-files --all --rules --verification` at each commit and its parent in a clone.
-  - The added read: one commit lookup and one blob read per changed rule file per call, timed by `/usr/bin/time -p`.
+  - The added read: one commit lookup and one blob read per changed rule file per call, by the median of repeated calls timed by `time.perf_counter` around each process, since `/usr/bin/time -p`'s 0.01 s cannot resolve it.
   - The tally of `rejudged-files` reasons over this corpus, since one dominant reason would be an AC2 defect, not a cost.
 - **AC3.**
   - The tool's description and input schema in bytes, by `scripts/measure-result-sizes.sh`.

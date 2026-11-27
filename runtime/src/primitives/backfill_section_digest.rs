@@ -430,6 +430,32 @@ mod tests {
         );
     }
 
+    /// `BE-INPUT-004`: a feature directory holding a file that is a link
+    /// leaving the project is named under `unreadable` with its reason and
+    /// never read, its record left as it was.
+    #[cfg(unix)]
+    #[test]
+    fn a_feature_holding_a_link_leaving_the_project_is_named_and_left() {
+        let (tmp, dir) = analyzed();
+        let before = text_of(&dir);
+        let outside = tempfile::tempdir().unwrap();
+        let target = outside.path().join("spec.md");
+        fs::write(&target, SPEC).unwrap();
+        fs::remove_file(dir.join("spec.md")).unwrap();
+        std::os::unix::fs::symlink(&target, dir.join("spec.md")).unwrap();
+        let result = backfill(tmp.path(), &[]);
+        let unreadable = result.unreadable.unwrap();
+        assert_eq!(unreadable.len(), 1);
+        assert_eq!(unreadable[0].feature, "042-demo");
+        assert!(
+            unreadable[0].reason.contains("outside"),
+            "{}",
+            unreadable[0].reason
+        );
+        assert_eq!(result.written_count, 0);
+        assert_eq!(text_of(&dir), before);
+    }
+
     /// `BE-TXN-002`: a record another writer changed between this call's read
     /// and its write is named under `refused` and left as that writer made
     /// it.

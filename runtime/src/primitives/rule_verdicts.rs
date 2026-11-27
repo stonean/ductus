@@ -28,8 +28,9 @@
 //!    `analyzed-against`, which stands in only when it digests as that entry
 //!    says, the rule reads as it did there (spec 088, [`CopyUnavailable`]
 //!    when it cannot stand in, and every rule of the file is stale);
-//! 4. no rule its Statement or Verification names changed so, or was removed
-//!    (spec 088);
+//! 4. no rule its Statement or Verification names changed so, or was removed,
+//!    and, while a file is judged whole, it names no ID that no loaded rule
+//!    defines, which that file may have held (spec 088);
 //! 5. the rule was judged: the record's `unjudged-rules` does not list it.
 //!
 //! A rule that did not fire has no verdict to be current, so a current rule is
@@ -504,8 +505,9 @@ struct RuleEdits {
     /// Per changed file whose copy stood in, by name, its rules whose own
     /// text changed or that it did not hold.
     narrowed: BTreeMap<String, BTreeSet<String>>,
-    /// Every changed, added or removed rule's ID, and each rule of a file
-    /// judged again whole: what a naming rule is stale for.
+    /// Every changed, added or removed rule's ID, each rule of a file judged
+    /// again whole and, while one is, each ID a loaded rule names that no
+    /// loaded rule defines: what a naming rule is stale for.
     changed: BTreeSet<String>,
     /// Each file judged again whole, with why.
     rejudged_files: Vec<(String, CopyUnavailable)>,
@@ -547,6 +549,23 @@ impl RuleEdits {
                     edits.rejudged_files.push((file.name.clone(), why));
                 }
             }
+        }
+        // A file judged whole cannot say which rules it held, so a name no
+        // loaded rule defines may be one it no longer holds: that name is
+        // changed too, and each rule naming it stale (spec 088, AC2).
+        if !edits.rejudged_files.is_empty() {
+            let defined: BTreeSet<&str> = files
+                .iter()
+                .flat_map(|file| file.texts.keys().map(String::as_str))
+                .collect();
+            let undefined: Vec<String> = files
+                .iter()
+                .flat_map(|file| &file.rules)
+                .flat_map(|rule| &rule.names)
+                .filter(|name| !defined.contains(name.as_str()))
+                .cloned()
+                .collect();
+            edits.changed.extend(undefined);
         }
         edits
     }
@@ -1565,6 +1584,58 @@ mod tests {
             ["TS-MUST-001", "TS-MUST-002", "TS-MUST-003", "TS-SHOULD-001"]
         );
         assert_eq!(whole.currency("TS-SHOULD-002"), Some(&Currency::NotFired));
+    }
+
+    /// Spec 088, AC2: a file judged whole cannot say which rules it held, so
+    /// a rule in another file naming an ID no loaded rule defines, one the
+    /// file may no longer hold, is judged with it, and a rule naming a defined
+    /// rule nothing changed is not; while every changed file's copy stands
+    /// in, such a name stales nothing.
+    #[test]
+    fn a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines() {
+        const S3: &str = "### TS-SHOULD-003\n\n> A SHOULD g, beside TS-MUST-099.\n\n**Verification:** Check six.\n";
+        const S4: &str = "### TS-SHOULD-004\n\n> A SHOULD h, beside TS-SHOULD-002.\n\n**Verification:** Check seven.\n";
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let (feature, commit) = committed(
+            &repository,
+            tmp.path(),
+            &[
+                ("a-cross.md", named_a()),
+                ("b-cross.md", [S1, S2, S3, S4].join("\n")),
+            ],
+        );
+        let original = loaded_from(tmp.path(), &BOTH);
+        record(&feature, &original, &at(commit));
+        edit(tmp.path(), "a-cross.md", &[M2, M3].join("\n"));
+        let narrowed = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(narrowed.rejudged_files(), []);
+        assert_eq!(judged_ids(&narrowed), ["TS-MUST-002", "TS-SHOULD-001"]);
+        assert_eq!(
+            narrowed.currency("TS-SHOULD-003"),
+            Some(&Currency::NotFired)
+        );
+
+        // A sha no commit of the repository has: nothing says `TS-MUST-001`
+        // was `a-cross.md`'s, so `TS-SHOULD-001`, naming it, is judged, and so
+        // is `TS-SHOULD-003`, naming an ID no rule file ever held.
+        record(&feature, &original, &at("0".repeat(40)));
+        let whole = standing(tmp.path(), &feature, &loaded_from(tmp.path(), &BOTH));
+        assert_eq!(
+            whole.rejudged_files(),
+            [("a-cross.md".to_string(), CopyUnavailable::CommitNotHeld)]
+        );
+        assert_eq!(
+            judged_ids(&whole),
+            [
+                "TS-MUST-002",
+                "TS-MUST-003",
+                "TS-SHOULD-001",
+                "TS-SHOULD-003"
+            ]
+        );
+        assert_eq!(whole.currency("TS-SHOULD-002"), Some(&Currency::NotFired));
+        assert_eq!(whole.currency("TS-SHOULD-004"), Some(&Currency::NotFired));
     }
 
     /// Spec 088, AC2: a shallow clone whose history stops after the

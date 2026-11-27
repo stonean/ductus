@@ -27,7 +27,7 @@ unjudged-rules:
 
 A loaded rule file whose digest differs from the record's `rule-digest` entry, the loaded set being the one that entry names, is compared rule by rule with its copy at the record's `analyzed-against` commit. A rule is current, subject to 082's other conditions, when that copy holds a rule of its ID whose Statement and Verification, the fields `section_digests` hashes for it besides the ID, are the same. A rule whose text differs, or that the copy does not hold, is in `judge`. A file whose digest moved while no rule's text did, a reorder or a rule removed, keeps each remaining rule's verdict.
 
-A loaded rule in any file is in `judge` too when its Statement or Verification names a changed rule: one whose text differs, one new to its file, one its file held at `analyzed-against` and no longer holds, or any rule of a file listed under `rejudged-files`. A name is a token the rule-ID grammar matches that is such a rule's ID and not the naming rule's own; a rule naming one only through another is not judged for it.
+A loaded rule in any file is in `judge` too when its Statement or Verification names a changed rule: one whose text differs, one new to its file, one its file held at `analyzed-against` and no longer holds, or any rule of a file listed under `rejudged-files`, and, while one is listed, any ID no loaded rule defines, since that file may have held it. A name is a token the rule-ID grammar matches that is such a rule's ID, or such an ID, and not the naming rule's own; a rule naming one only through another is not judged for it.
 
 The copy stands in for the text the run judged only when its own file digest, by `section_digests`, equals the record's entry. When it does not, or cannot be read, every rule of the file is in `judge`, and `verdicts` names the file under `rejudged-files`:
 
@@ -50,7 +50,7 @@ The copy stands in for the text the run judged only when its own file digest, by
 One argument, `pinned`: a list of paths from the project root, the project's `[pinned] files`, which the caller reads and passes, as it does to `apply-manifest`; CLI `--pinned`, repeatable. It walks every feature directory under the configured spec root by `list_feature_dirs`, and for each one holding an `analysis.md`:
 
 - **Pinned.** A record whose path `pinned` names is named under `pinned` in the result and left untouched.
-- **Read.** By `load_analyze_record`'s parse: a record that does not parse, or a feature directory or record that is a link leaving the project, is named under `unreadable` with its reason and left untouched; one carrying `section-digest` is counted under `has-section-digest`; one whose design subjects hold no section is counted under `no-design-subject`.
+- **Read.** By `load_analyze_record`'s parse: a record that does not parse, or a feature directory, or a file in it, that is a link leaving the project, is named under `unreadable` with its reason and left untouched; one carrying `section-digest` is counted under `has-section-digest`; one whose design subjects hold no section is counted under `no-design-subject`.
 - **Match.** The record matches when its `analyzed-digest` entries for the design subjects equal their digests as they stand, or with `spec.md`'s `status:` value set to another of the lifecycle statuses, tried in their canonical order. `matched-at` names the status of the `spec.md` text that matched, absent when `spec.md` names none, which is then tried as it stands alone.
 - **Write.** A matching record gains the `section-digest` of that text, rendered as `write-analysis` renders the field, in the record's own line ending, and placed before its frontmatter's closing fence, every other byte as it was. A record that matches at no status is named under `unmatched` and untouched.
 - **Guard.** The record is read again under the project-wide lock just before the rename, and one another writer changed since it was read is named under `refused` and left as that writer made it.
@@ -61,7 +61,7 @@ One argument, `pinned`: a list of paths from the project root, the project's `[p
   "written": [{ "feature": "002-project-scaffolding", "matched-at": "in-progress" }], "written-count": 13,
   "unmatched": ["060-exec-analyze-assesses-each-loaded-rule"], "unmatched-count": 36,
   "has-section-digest": 30, "no-design-subject": 0,
-  "unreadable-count": 0, "refused-count": 0, "form": "inline"
+  "pinned-count": 0, "unreadable-count": 0, "refused-count": 0, "form": "inline"
 }
 ```
 
