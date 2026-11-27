@@ -287,12 +287,11 @@ auditable place.
   `scripts/audit/lib.sh` enumerates the corpus with it — and every such call
   pinned the caller's session and would consume its notices unseen.
 - **Exec seed:** `runtime/src/main.rs`'s `run_exec` seeds from the core's peek when
-  the process has a record of its own, and otherwise from the shared default
-  read leniently as before this spec, so `ductus exec` from an agent's shell
-  tool carries that agent's identity (AC23). **Superseded in part by 022's task
-  12** (2026-11-10): the shared default is read strictly too, so one that does
-  not parse halts the walk with an error naming the file. The retarget exceptions in
-  `runtime/src/interpreter/mod.rs`'s `merge_primitive_result` are unchanged, because they govern
+  the process has a record of its own, and otherwise from the shared default,
+  so `ductus exec` from an agent's shell tool carries that agent's identity
+  (AC23). The shared default is read strictly, so one that does not parse
+  halts the walk with an error naming the file. The retarget exceptions in
+  `runtime/src/interpreter/mod.rs`'s `merge_primitive_result` govern
   which keys a walk may overwrite, not where the seed came from.
 
 Every list a session tool returns — `write-session`'s `peers`, `expired`,
@@ -346,9 +345,7 @@ cover:
 
 - per-process targets, identity resolution, and the shared default with pin
   on first resolution (AC10);
-- worktrees kept for isolating edits (AC25); the note on git's
-  one-branch-per-worktree limit was dropped by `050-constitution`'s cut to
-  one read;
+- worktrees kept for isolating edits (AC25);
 - the two open bounds: unidentified processes collide, and mixed agent CLIs
   share one `cli-config-dir` (AC25).
 

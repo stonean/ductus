@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-029 added a `command -v ductus`-equivalent binary probe to two places per agent: the bootstrap permission **seed** (the `settings_template` blob in the §Agent Registry table of `framework/bootstrap/ductus.md`, 029 Task 5) and the agent's steady-state permission set (`framework/bootstrap/configure/{key}.md`, 029 Task 6). This family first guarded that pairing. `048-govern-acquired-runtime` then replaced the probe with a filesystem check on the ductus-owned store, `~/.ductus/bin/ductus --version` (`framework/bootstrap/ductus.md` §ductus runtime detection), which the Claude seed grants and no configure file does. The `command -v` entry stays in the seeds, but no step runs it (§Permission Setup there), so a check on it passed without testing the probe.
+Detection's binary probe is the filesystem check on the ductus-owned store, `~/.ductus/bin/ductus --version` (`framework/bootstrap/ductus.md` §ductus runtime detection). The Claude bootstrap permission **seed** (the `settings_template` blob in the §Agent Registry table of `framework/bootstrap/ductus.md`) grants it, and no configure file does: `framework/bootstrap/configure/{key}.md` holds the steady-state pipeline's permission set, which runs no probe. The seed's `command -v` entry stays, but no step runs it (§Permission Setup there), so a check on it would pass without testing the probe.
 
 The probe runs on every `/ductus` run that finds no `ductus` tool, after `framework/bootstrap/ductus.md` §Permission Setup has seeded. A seed that grants the runtime CLI but drops the probe therefore prompts for it on every such run, and nothing else reports that.
 

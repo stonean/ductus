@@ -44,7 +44,7 @@ Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break
 last_applied = "substitute-seed-placeholders"
 ```
 
-An absent section reads as "no migrations applied". A greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run. Since task 16 a first adoption does the same, which Pre-flight Checks decides from finding no signal an earlier run leaves (scenario `a-first-adoption-runs-no-migration`).
+An absent section reads as "no migrations applied". A greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run. A first adoption does the same, which Pre-flight Checks decides from finding no signal an earlier run leaves (scenario `a-first-adoption-runs-no-migration`).
 
 Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md` (`framework/bootstrap/ductus-procedure.md` §Stale-reference behavior).
 
@@ -141,7 +141,7 @@ When the release reaches an entry's `sunset_after` (current ductus ≥ `sunset_a
 
 ### Family 10 design (`scripts/audit/migration-coverage.sh`)
 
-Shell script under the existing `scripts/audit/` directory. Follows the contract `scripts/audit/README.md` §Contract gives every family: stdout findings, exit 0/1, read-only. The sketch below shows the first three checks; the script's header states every one. 10d (task 15) holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17); 10f (task 19) fails an `id` two entries share:
+Shell script under the existing `scripts/audit/` directory. Follows the contract `scripts/audit/README.md` §Contract gives every family: stdout findings, exit 0/1, read-only. The sketch below shows the first three checks; the script's header states every one. 10d holds each entry to sort after every entry added before it, reading the registry's git history; 10e fails an active entry past its `sunset_after` against the repository's `version` (owner, 2026-11-17); 10f fails an `id` two entries share:
 
 ```bash
 # 10a no-orphan-procedure-files

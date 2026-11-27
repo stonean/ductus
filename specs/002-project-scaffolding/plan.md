@@ -6,18 +6,9 @@ title: "002-project-scaffolding — plan"
 
 ## Overview
 
-Create three new template files in the existing `framework/templates/project/` directory: `project-readme.md`, `gitignore`, and `claude-md.md`. They are project-level files for adopting projects. `/ductus` installs two of them (`framework/bootstrap/ductus.md`, Shared files with conflict handling): it merges the `.gitignore` template as a managed `# ductus` block and copies `CLAUDE.md` when one is absent. Nothing installed the README template once 003 retired `/ductus:init`, which copied it, on 2026-09-15, so 003's task 6 deleted it on 2026-11-12.
+Two template files in the `framework/templates/project/` directory, `gitignore` and `claude-md.md`, are project-level files for adopting projects. `/ductus` installs both (`framework/bootstrap/ductus.md`, Shared files with conflict handling): it merges the `.gitignore` template as a managed `# ductus` block and copies `CLAUDE.md` when one is absent.
 
 ## Technical Decisions
-
-### README template derived from an adopter project
-
-The project README template is based on an adopter project's `README.md` structure, generalized:
-
-- Project-specific content (Go, PostgreSQL, NATS, Docker commands) replaced with `{project}` placeholders and generic sections
-- Feature table format preserved — it's the standard from the constitution's numbering convention
-- Slash command references use `/{project}:*` pattern
-- Getting Started section references `/{project}:configure` and `/{project}:status` as decided during clarification
 
 ### Gitignore stays minimal
 
@@ -33,7 +24,6 @@ The template is deliberately minimal: two imports, `@.ductus/constitution.md` th
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/templates/project/project-readme.md` | Create, then deleted by 003 task 6 | Project README with quick start, getting started, docs, feature table, pipeline, slash commands; retired 2026-11-12, since nothing installed it |
 | `framework/templates/project/gitignore` | Create | Minimal .gitignore for secrets, claude settings, IDE, OS files |
 | `framework/templates/project/claude-md.md` | Create | CLAUDE.md importing `@.ductus/constitution.md` and `@AGENTS.md`, with the shared-constitution managed block |
 | `framework/migrations.toml` | Modify | `claude-md-import-syntax` registry entry |
@@ -49,13 +39,9 @@ The template is deliberately minimal: two imports, `@.ductus/constitution.md` th
 
 ## Trade-offs
 
-### Considered: naming the README template `readme.md`
-
-Rejected. Using `project-readme.md` avoids confusion — `readme.md` could be mistaken for the `ductus` project's own README. The `project-` prefix makes it clear this is a template for adopting projects.
-
 ### Considered: including `{description}` placeholder in templates
 
-Rejected for these templates, which use only `{project}`; the README template's description line is a hint the adopter fills in. The bootstrap later took the other path for the `AGENTS.md` template, substituting `{One-line project description.}` from the project inputs (`framework/bootstrap/ductus.md`, Shared files with conflict handling).
+Rejected for these templates, which use only `{project}`. The `AGENTS.md` template takes the other path, substituting `{One-line project description.}` from the project inputs (`framework/bootstrap/ductus.md`, Shared files with conflict handling).
 
 ## Open Questions Resolved
 

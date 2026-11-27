@@ -23,7 +23,7 @@ section: "Behavior"
   - Nothing is written outside the project.
 - **Every-adopter entries.** One that the installed framework (`.ductus/constitution.md`, `.ductus/reference/`, the runtime) already states becomes a pointer to that section. One no longer true at the installed version is deleted with its reason. One still true stays as one line, and the run's report carries a drafted upstream report with the project's names removed. Prune files nothing upstream.
 - **Scope.** Reading source for the search, and writing a confirmed entry into its home (a code comment included), widen the command's Scope Boundaries, which state both.
-- **Plan sections.** Step 8 routes a plan section's project-only knowledge by the same definitions, and no longer names `AGENTS.md` as its default home.
+- **Plan sections.** Step 9 routes a plan section's project-only knowledge by the same definitions, which send it to `AGENTS.md` only when every session needs it.
 - **Tests.** Runtime tests cover segmentation, digests, stale refusal, home creation and the literal search. A recorded `claude -p` run of `/{project}:prune --project` over a fixture project shows the proposals 075's AC6, AC11 and AC12 describe. Each test fails with its behavior removed.
 
 ## Edge Cases

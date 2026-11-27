@@ -22,7 +22,7 @@ Observed: an adopting project reported findings sent to the wrong spec on the ev
 
 **Groom's Step 2 names the evidence.** A spec's name, or a task already filed in it, is no evidence that the spec owns the code; a plan claiming the path is. Code no plan claims routes to a new spec through `/{project}:specify`'s procedure, or to an external work item, never to the nearest-named spec. The rule is stated in the decision tree, which review, analyze and implement already walk, not in the constitution.
 
-**The sibling records follow.** 022's data model names the `path-claim` source among the primitive's sources in precedence order, and `specify-routes-before-scaffolding`'s 2026-10-16 resolution is marked superseded in part by this scenario's.
+**The sibling records follow.** 022's data model names the `path-claim` source among the primitive's sources in precedence order, and `specify-routes-before-scaffolding`'s 2026-10-16 resolution states this ranking as its exception.
 
 ## Edge Cases
 

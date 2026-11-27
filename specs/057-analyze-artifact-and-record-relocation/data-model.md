@@ -4,11 +4,10 @@ The two audit records, at their new homes. Field shapes are carried over from
 `runtime/src/schema/primitives.rs` — `ReviewBlock` and `AnalyzeBlock`
 — with the changes each table's Notes section names.
 
-> **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> Both records dropped `captured-issues` and gained a `dispositions:` map and a
-> `decisions:` list, and `analysis.md`'s `## Captured issues` section became
-> `## Fixed in this run`. The rows and the skeleton below show the records as
-> they ship; 058's data model owns the shapes of the two new fields.
+> `captured-issues` is a field of neither record: the inbox is not a destination.
+> Both records carry a `dispositions:` map and a `decisions:` list, whose shapes
+> [058's data model](../058-findings-route-at-discovery/data-model.md) owns, and
+> `analysis.md`'s last section is `## Fixed in this run`.
 
 ## Review record — `specs/{feature}/review.md` frontmatter
 
@@ -21,7 +20,6 @@ The two audit records, at their new homes. Field shapes are carried over from
 | `must-violations` | u32 | both (identical) | |
 | `should-violations` | u32 | both (identical) | |
 | `low-confidence` | u32 | both (identical) | |
-| `captured-issues` | u32 | `review.md` | Report-only field. **Removed by 058**, with the inbox write it counted. |
 | `examined` | u32 | both (identical) | |
 | `scope` | u32 | both (identical) | |
 | `skipped-passes` | list of strings | `review.md` | Report-only field. |
@@ -32,7 +30,7 @@ The two audit records, at their new homes. Field shapes are carried over from
 | `decisions` | list | 058 | As [058's data model](../058-findings-route-at-discovery/data-model.md) and [076's](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md) define its entries. |
 
 **Notes.** Six fields were byte-identical across the two records and collapse to
-one. Five existed on exactly one side and are carried, not dropped — that is the
+one. Four existed on exactly one side and are carried, not dropped — that is the
 whole of AC12. Absence of the file is the never-reviewed state (AC5); the file
 is never written empty to signal it.
 
@@ -50,7 +48,6 @@ is never written empty to signal it.
 | `advisory` | u32 | Recorded, never gated on. |
 | `unexamined` | u32 | The field that makes a clean run honest: clean-with-nothing-skipped and clean-with-something-skipped are two states. |
 | `unexamined-by-reason` | map reason → count | |
-| `captured-issues` | integer | Findings this run appended to the inbox. **Removed by 058**: the inbox is no longer a destination. The pair it formed with the tier counts is what `dispositions` now provides. |
 | `blocking` | bool | Derived. |
 | `dispositions` | map `fixed`/`deferred`/`waived`/`undispositioned` → u32 | Added by 058. What the run did with its findings, in every tier; `undispositioned` is derived as the live tier total less the live findings deferred or waived. Always written. |
 | `decisions` | list | Added by 058. Stored deferred and waived finding decisions, keyed `{family} — {message}`. Omitted when empty. |
@@ -83,12 +80,8 @@ trusting the caller not to send one. A checkbox is what would make this a
 triage queue, and a finding is decided in the run that finds it (058).
 
 Each tier section lists its live findings, each beside its disposition, because
-since 058 `write-analysis` receives every finding with its tier. As 057
-delivered it, the writer received only per-tier counts plus one list of captured
-inbox bullets that recorded no tier, so the tier sections carried counts and a
-sixth section, for captured issues, carried the text. 058 replaced that section
-with `## Fixed in this run`, which lists the findings a run fixed and the
-re-check no longer produced.
+`write-analysis` receives every finding with its tier. `## Fixed in this run`
+lists the findings a run fixed and the re-check no longer produced.
 
 ## `relocate-audit-records` result
 

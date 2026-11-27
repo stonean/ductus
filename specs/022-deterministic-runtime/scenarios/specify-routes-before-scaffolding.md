@@ -55,10 +55,8 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md). 
   ownership, or fall back to this candidate anyway — `resolve-constitutions`,
   `resolve-references` and `enforce-manifest` would still be offered 022.
 
-  So the candidate stays a lexical hint, and which spec owns the primitive
-  stays with the operator at the `routeInboxItem` judgment, where `AGENTS.md`'s
-  routing entry names the runtime's three homes: 022, 066 and 067.
-
-  Superseded in part on 2026-11-23 by `routing-ranks-by-claimed-path`'s
-  resolution: a plan claiming a path the work names is now offered first,
-  still as history rather than ownership, and ownership stays the operator's.
+  So the candidate stays a lexical hint, except that a plan claiming a path
+  the work names is offered first (`routing-ranks-by-claimed-path`), still as
+  history rather than ownership. Which spec owns the primitive stays with the
+  operator at the `routeInboxItem` judgment, where `AGENTS.md`'s routing entry
+  names the runtime's three homes: 022, 066 and 067.

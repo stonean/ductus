@@ -10,44 +10,13 @@ next-criterion: 20
 
 Adds `/ductus:review`, a verb-named slash command that audits implementation code against the framework's rules across five dimensions (reuse, quality, security, efficiency, simplicity), writes a `review.md` artifact alongside the spec, and gates the `in-progress → done` transition via three reinforcing mechanisms.
 
-> **Superseded in part by [057 — Analyze artifact and record relocation](../057-analyze-artifact-and-record-relocation/spec.md), which moved the record this spec's gate reads and changed the mechanism of the third gate.**
+> **Signpost:** [057 — Analyze artifact and record relocation](../057-analyze-artifact-and-record-relocation/spec.md) gave the run record one home, `review.md`'s frontmatter. `spec.md` carries no `review:` block and the spec template ships without one; a residual block is a **Blocking** validation finding. The schema is declared in the constitution's [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) → **Audit records**, which is canonical for it, and this spec's `data-model.md` records the shape for `review.md` alone.
 >
-> **The record has one home, and it is `review.md`.** 020 put the run record in
-> *two* places — a `review:` block in the spec's frontmatter that the gates read,
-> and `review.md`'s own frontmatter that a person read — with the same facts in
-> both. 057 merged them into `review.md`'s frontmatter, removed the block from
-> `spec.md` and from the spec template, and made a residual block a **Blocking**
-> validation finding rather than an open-schema extra. The record's *fields* are
-> unchanged in substance and gained the three that had lived only in `review.md`
-> (`diff-base`, `captured-issues`, `skipped-passes`; 058 has since replaced
-> `captured-issues` with a `dispositions:` map); the one rename is
-> `reviewed-at` → `last-run`, so the pair that used to be spelled two ways for
-> one instant is spelled once. The schema is now declared in the constitution's
-> [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) → **Audit records**, which is canonical for it; this spec's
-> `data-model.md` records the same shape for `review.md` alone and no longer has
-> a second table to keep in agreement.
->
-> **The CI gate's predicate changed, and this is the part that was a defect
-> rather than a relocation.** AC5's third mechanism — the shipped CI step in
-> `framework/templates/ci/adopter-generators.yml` — skipped a spec whose
-> frontmatter carried no `review:` block, on the reasoning that such a spec
-> predated `/ductus:review`. The relocation makes that predicate true of *every*
-> spec, so the step would have gone green over a whole corpus while checking
-> nothing — the check-that-cannot-run shape §design-principles names. 057
-> replaced it with a committed high-water mark (`.ductus/audit-record-baseline.txt`)
-> in the ratchet form Family 37 already used, and extended the step to the
-> analyze record in `analysis.md` beside the review one. The same vacuity had
-> reached audit Family 19 and `mechanical_sweep_parity`, both re-pointed in the
-> same change. `/{project}` does not install CI files, so an adopter's copy is
-> detected and reported by the migration procedure rather than rewritten
-> (`framework/migrations/audit-record-relocate.md`, step 5).
->
-> **Audit Family 31 is gone.** It reconciled the two copies of the record, which
-> is a check with no subject once there is one copy; AC15 is annotated below.
+> AC5's third mechanism, the shipped CI step in `framework/templates/ci/adopter-generators.yml`, reads the review record from `review.md` and the analyze record from `analysis.md`, and bounds the specs it exempts for having no record with a committed high-water mark, so the step cannot go green over a corpus while checking nothing. `/{project}` does not install CI files, so an adopter's copy is detected and reported by the migration procedure rather than rewritten (`framework/migrations/audit-record-relocate.md`, step 5).
 >
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed the review this spec delivered. Its default window starts where the spec's last review ended, its scope holds the spec's own change and names what it leaves out, a run decides a non-gating observation by rule, and a reopening that changed no code owes no review (081 counts the spec root and `.ductus/` as artifacts, so a scenario or data-model edit owes an analysis only). `compute-review-scope` and `write-review` state the rules.
 >
-> **Signpost:** [081](../081-reviews-and-checks-follow-what-changed/spec.md) made the review record state what its passes did not read: `unread`, which step 11 of `framework/commands/review.md` passes and `data-model.md`'s record table lists. From it `compute-review-scope` credited a commit naming no spec and touching no spec directory as read in every other window, until spec 084 moved such a commit's code out of every open spec's scope; `unread` still names what the spec's next review reads again.
+> **Signpost:** [081](../081-reviews-and-checks-follow-what-changed/spec.md) made the review record state what its passes did not read: `unread`, which step 11 of `framework/commands/review.md` passes and `data-model.md`'s record table lists. `unread` names what the spec's next review reads again. A commit naming no spec and touching no spec directory is no spec's: its code is reviewed under the project record (spec 084).
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) added `--project`, a review of the code no spec claims recorded in `{specs-root}/review.md`, which `--all` now includes, and gave the review one status write on the spec it reviews: `done → in-progress` once it unticks a criterion or defers a finding to that spec's own work, read from `check-owed-work`. On a `done` spec a ticked criterion judged not met changes only once the owner, or an invocation told to decide, says which side is correct.
 >
@@ -82,22 +51,22 @@ should remove.
 - [x] AC1: `/ductus:review` exists as a verb-named slash command in the same shape as `/ductus:analyze`, distributed through the standard `framework/commands/` → `.claude/commands/ductus/` regeneration pipeline.
 - [x] AC2: Running `/ductus:review` against an `in-progress` target produces `specs/NNN-feature/review.md` with findings categorized into MUST, SHOULD, and low-confidence sections.
 - [x] AC3: The command loads `framework/rules/security-backend.md` and `framework/rules/security-frontend.md` as authoritative security criteria. The five-dimension review model (security, reuse, quality, efficiency, simplicity) is applied to every targeted feature.
-- [x] AC4: Spec frontmatter gains a `review:` block populated by the command: `last-run`, `must-violations`, `should-violations`, `blocking`, optional `waivers`. **Relocated by 057**: the record is `review.md`'s own frontmatter and `spec.md` carries no block — a residual one is a Blocking validation finding. The five fields, their meanings and the lazy-population rule are unchanged; the file they land in is not, and the template ships without the block, so a newly created spec opens with `status` and `dependencies` alone.
-- [x] AC5: **Blocking gate**: a spec whose review record reports `blocking: true` cannot reach `done`. **Relocated by 057**: all three mechanisms read the record from `review.md` rather than from a `review:` block in `spec.md`, and each gained the same third state — an artifact that exists but carries no parseable record is **undeterminable**, never never-reviewed.
+- [x] AC4: `review.md`'s own frontmatter holds the run record `/ductus:review` populates: `last-run`, `must-violations`, `should-violations`, `blocking`, optional `waivers`. It is created lazily, by a spec's first review. `spec.md` carries no block — a residual one is a Blocking validation finding — and the template ships without one, so a newly created spec opens with `status` and `dependencies` alone.
+- [x] AC5: **Blocking gate**: a spec whose review record reports `blocking: true` cannot reach `done`. All three mechanisms read the record from `review.md`, and each treats an artifact that exists but carries no parseable record as **undeterminable**, never never-reviewed.
   - `/ductus:implement` halts before marking `done` and emits the blocking message.
-  - `/ductus:analyze` reports a violation when a spec at `status: done` has `blocking: true` or a missing `last-run` in `review.md`. Its grandfather rule is keyed on the **artifact's** absence; keyed on the block's, as it was, it would exempt every spec in a migrated corpus.
-  - The shipped CI template includes a check that fails PRs in the same conditions. **Its predicate changed** — see the signpost above: the block-presence skip was replaced by a committed high-water mark, because the relocation made that skip true of every spec.
+  - `/ductus:analyze` reports a violation when a spec at `status: done` has `blocking: true` or a missing `last-run` in `review.md`. Its grandfather rule is keyed on the **artifact's** absence, never on a block's, which would exempt every spec in a migrated corpus.
+  - The shipped CI template includes a check that fails PRs in the same conditions, and holds the specs it exempts for having no record to a committed high-water mark (see the signpost above).
 - [x] AC6: Re-running `/ductus:review` against unchanged code produces identical `review.md` content modulo timestamp and SHA fields (idempotency invariant).
 - [x] AC7: `--fix` applies only conservative auto-fixes per the scope rules in the command file. Behavior-changing fixes are never auto-applied.
-- [x] AC8: Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in spec frontmatter, and expire automatically when the file location or rule ID they were attached to changes. **Relocated by 057**: the `waivers` list is recorded in `review.md`'s frontmatter. It stays open-schema — `write-review`'s waiver parser (`RawWaiverFull` in `runtime/src/primitives/write_review.rs`) keeps its `#[serde(flatten)]` extras, so an organization's custom waiver fields survive the move and every re-render — and the expiry rule is untouched.
-- [x] AC9: Exit code is `0` when not blocking, `1` when blocking — for CI use. **Never held as a process exit status**: `write-review`'s result carries it as `exit-code`, while the CLI and `ductus exec` exit 0 once the record is written, and CI gates on the committed record's `blocking` instead (AC5's CI check; owner decision, 2026-11-19).
-- [x] AC10: The README slash commands table lists `/ductus:review` under **Pipeline (advance state)** with a one-line purpose. **Delivered as a table row (`30e1fbaa`), then reformatted by `1ffcef35`** (2026-08-30): the README's Commands section is a list, which names `/review` under **Pipeline — advance state** with a one-line purpose.
+- [x] AC8: Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in `review.md`'s frontmatter `waivers` list, and expire automatically when the file location or rule ID they were attached to changes. The list is open-schema — `write-review`'s waiver parser (`RawWaiverFull` in `runtime/src/primitives/write_review.rs`) keeps its `#[serde(flatten)]` extras, so an organization's custom waiver fields survive every re-render.
+- [x] AC9: `write-review`'s result carries `exit-code`, `0` when not blocking and `1` when blocking; the CLI and `ductus exec` exit 0 once the record is written, and CI gates on the committed record's `blocking` instead (AC5's CI check; owner decision, 2026-11-19).
+- [x] AC10: The README's Commands section lists `/ductus:review` under **Pipeline — advance state** with a one-line purpose.
 - [x] AC11: **Tech-stack alignment gate**: before running review passes, `/ductus:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.ductus/config.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
 - [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, site, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 - [x] AC14: **Flag parsing is specified and surfaced**: the command body documents how `$ARGUMENTS` is parsed for every flag in the Flags table, and `argument-hint` names each of them, so no flag is documented without being surfaced. A `--since` with no value and an unrecognized flag are each reported to the operator rather than silently absorbed. `/audit` holds `argument-hint` and the Flags table in agreement, so a flag added later cannot reopen the gap without a finding.
-- [x] AC15: **A clean review states what it read**: `review.md` and the spec's `review:` block both record `examined` — how many in-scope files the passes read — against a `scope` the primitive derives itself, so a review that examined its scope and found nothing is distinguishable from one whose passes never ran. The two are byte-identical without it: same counts, same digest, same `blocking: false`. An unstated `examined` is recorded as absent rather than as zero. **Half superseded by 057.** The `examined`/`scope` half holds exactly and is unchanged — both now live in `review.md` alone, which is what the criterion's first clause asked for once the second home was removed. The enforcement half is gone: `/{project}:audit` Family 31 reported `examined: 0` over a non-empty scope and an absent `examined` on a record carrying a scope as distinct findings, and 057 retired the family with the reconciliation check it was built on. **Nothing reads `examined` now; it is read at the completion gate by a person.** That is a real loss and is recorded rather than smoothed — but the family could not have carried this claim far anyway, since one `/{project}:review` call wrote both sides from the same values, so it never compared two independent observations. This cannot prove the passes ran — an overstated numerator is as available as an omitted one — and it is not claimed to; it makes the claim explicit and checkable, which is the bar `QUAL-CLAIM-001` sets and the one `write-analysis`'s `unexamined` already cleared.
-- [x] AC16: A host that can start a subagent runs review's five passes and the criteria step's judging, steps 3 to 7.2 of `framework/commands/review.md`, in one fresh subagent briefed as `framework/reference/review.md` §Passes in a subagent states, and continues at step 7.3 with only the findings, observations, criterion verdicts and coverage it returns, so the rule files and in-scope files never enter its own context; a read the subagent reports short is named in the Summary and kept out of `examined`. A host that cannot start one runs them itself, and `ductus exec` asks for each pass in turn, then for the criteria. **Widened by 066's task 27** (scenario `criteria-are-verified-in-review`), which added the criteria step.
+- [x] AC15: **A clean review states what it read**: `review.md` records `examined` — how many in-scope files the passes read — against a `scope` the primitive derives itself, so a review that examined its scope and found nothing is distinguishable from one whose passes never ran. An unstated `examined` is recorded as absent rather than as zero. Nothing checks `examined` against `scope`; a person reads both at the completion gate. This cannot prove the passes ran — an overstated numerator is as available as an omitted one — and it is not claimed to; it makes the claim explicit and checkable, which is the bar `QUAL-CLAIM-001` sets and the one `write-analysis`'s `unexamined` already cleared.
+- [x] AC16: A host that can start a subagent runs review's five passes and the criteria step's judging, steps 3 to 7.2 of `framework/commands/review.md`, in one fresh subagent briefed as `framework/reference/review.md` §Passes in a subagent states, and continues at step 7.3 with only the findings, observations, criterion verdicts and coverage it returns, so the rule files and in-scope files never enter its own context; a read the subagent reports short is named in the Summary and kept out of `examined`. A host that cannot start one runs them itself, and `ductus exec` asks for each pass in turn, then for the criteria.
 - [x] AC17: `/{project}:review` does not load a rule file whose header names `/{project}:analyze` and not `/{project}:review` among the enforcers of its rules: `discover-rule-files` leaves each such file out of a review's selection, with a notice naming it as judged by analysis, and keeps one whose header names neither, and a fixture rule file of each kind proves both.
 - [x] AC18: A pass's finding, an observation or a reviewer's claim is recorded only when its trigger is shown possible in the project, from its code, configuration, history or deployment shape, as well as its mechanism being checked against the tree. A case shown only by building it is a false positive, recorded nowhere and fixed in no round, and `framework/reference/review.md` §Run review passes says so.
 - [x] AC19: A stored waiver or violation deferral covers only the findings at its `(rule, file, site)` anchor, up to the number it covers: a finding of its rule at another site in the same file, more findings at its site than it covers, and any finding under an anchor recorded without a site each count and are reported for a new decision with the notice the scenario `waiver-expiry` gives; `--waive` and `--defer` refuse a finding that names no site; and a fixture of each case fails with its guard removed.
@@ -117,46 +86,41 @@ should remove.
 | `framework/commands/review.md` | **create** — full command file (see [Embedded artifacts](#embedded-artifacts)) | update |
 | `framework/commands/implement.md` | edit — add blocking check before `status: done` transition | update |
 | `framework/commands/analyze.md` | edit — add review-drift check, integrate with `--fix` | update |
-| `framework/templates/spec/spec.md` | edit — add `review:` block to frontmatter schema | update |
-| `framework/templates/ci/adopter-generators.yml` | edit — add review-blocking check | update |
+| `framework/templates/spec/spec.md` | carries no `review:` block: the record is `review.md`'s | update |
+| `framework/templates/ci/adopter-generators.yml` | edit — add the audit-record check, reading `review.md` and `analysis.md` | update |
 | `framework/constitution.md` | edit — reference the review gate in the pipeline section | update |
 | `README.md` | edit — add `/ductus:review` row to Pipeline commands table; document waivers | update |
 | `scripts/regenerate-commands.sh` (or equivalent) | run after edits to regenerate `.claude/commands/ductus/review.md` | n/a |
 | `.claude/commands/ductus/review.md` | regenerated output | derived |
 
-The template row and the CI row record what 020 changed, not what those
-files hold now: 057 removed the `review:` block from `framework/templates/spec/spec.md`
-and replaced the CI step's block-presence predicate.
-
 ## Tasks
 
 1. Create `framework/commands/review.md` from the embedded artifact below.
 2. Edit `framework/commands/implement.md`: before any logic that writes
-   `status: done`, read the target spec's `review.blocking`. If `true` (or
-   `review.last-run` is missing entirely), halt with the message specified
-   in the [Blocking message](#blocking-message) section below and exit
-   without modifying status.
+   `status: done`, read the review record's `blocking`. If `true` (or
+   `last-run` is missing entirely), halt with the message
+   [Blocking message](#blocking-message) names and exit without modifying
+   status.
 3. Edit `framework/commands/analyze.md`: extend the audit to flag any spec
-   at `status: done` with `review.blocking: true` or missing `review.last-run`
+   at `status: done` whose review record has `blocking: true` or no `last-run`
    as a validation failure. Wire `--fix` to revert affected specs from
    `done` → `in-progress` and emit a notice (never silent).
-4. Edit `framework/templates/spec/spec.md` frontmatter
-   to include the `review:` block schema (see [Frontmatter schema](#frontmatter-schema)).
-5. Edit `framework/templates/ci/adopter-generators.yml` to add a step that
-   exits non-zero if any `specs/*/spec.md` has `status: done` with
-   `review.blocking: true` or missing `review.last-run`.
-6. Edit `framework/constitution.md` pipeline section: add `/ductus:review`
+4. Edit `framework/templates/ci/adopter-generators.yml` to add a step that
+   exits non-zero if any spec at `status: done` has a review record in
+   `review.md` with `blocking: true` or no `last-run` (see
+   [Frontmatter schema](#frontmatter-schema)).
+5. Edit `framework/constitution.md` pipeline section: add `/ductus:review`
    between `/ductus:implement` and the `done` transition, with a sentence
    explaining the blocking gate.
-7. Edit `README.md`: add the `/ductus:review` row to the Pipeline (advance
+6. Edit `README.md`: add the `/ductus:review` row to the Pipeline (advance
    state) table; add a short Waivers subsection under Slash Commands; update
    any pipeline diagrams.
-8. Run the regeneration script to produce `.claude/commands/ductus/review.md`.
-9. Run `/ductus:analyze --all` against the ductus repo itself to confirm
+7. Run the regeneration script to produce `.claude/commands/ductus/review.md`.
+8. Run `/ductus:analyze --all` against the ductus repo itself to confirm
    nothing in ductus's own specs broke.
-10. Add a scenario at `specs/020-code-review/scenarios/waiver-expiry.md`
-    capturing the waiver auto-expiry behavior — this is the subtlest
-    requirement and warrants a focused scenario.
+9. Add a scenario at `specs/020-code-review/scenarios/waiver-expiry.md`
+   capturing the waiver auto-expiry behavior — this is the subtlest
+   requirement and warrants a focused scenario.
 
 ## Open questions
 
@@ -175,19 +139,13 @@ and replaced the CI step's block-presence predicate.
   PR-merge time, where the waiver and the unfixed finding land in the diff
   and human code review applies org policy. Adopters whose policy does
   require two-author waivers can layer fields like `co-waived-by` onto the
-  `review.waivers` entries — the §text-first-artifacts open-schema rule
+  `waivers` entries — the §text-first-artifacts open-schema rule
   guarantees `/ductus:review` and `/ductus:analyze` will not error on unknown
   fields — and gate them in their own CI.
 - **Stack detection source** — `/ductus:review` continues to read `AGENTS.md`
   `Tech Stack` to choose between `security-backend.md` and
   `security-frontend.md`. `AGENTS.md` `Tech Stack` *is* the canonical sink
-  for tech-stack metadata — there is no separate surface to point at. No
-  change to the draft. **Premise corrected 2026-09-15:** this rested on
-  spec 004 writing that section during `/ductus:init`. That command was
-  retired and `004-tech-stack-selection` was retired with it, since every
-  criterion it carried described init's questionnaire. The conclusion is
-  unaffected — the section is still what `/ductus:review` reads, and it is
-  still the only tech-stack surface.
+  for tech-stack metadata — there is no separate surface to point at. It is the only tech-stack surface.
 - **Quality-pass confidence threshold** — fixed as a `high` or `low` tier per finding (a numeric threshold of 80 when this was decided); not exposed via
   `.ductus/config.toml`. The threshold is an opinion about LLM calibration, not
   about project domain — adopters have no meaningful information to tune it,
@@ -201,23 +159,19 @@ and replaced the CI step's block-presence predicate.
 - **`--all` scope** — `--all` reviews every feature whose status is
   `in-progress` or `done`. Excluding `done` would make the blocking gate
   retroactively blind to new MUST rules added after a feature shipped: the
-  `/ductus:analyze` drift check then fired only when `review.blocking` was
-  already `true` or `review.last-run` was missing, so rules introduced after
-  the last review never re-flipped the flag on shipped code. The §drift-prevention
-  "done specs are frozen archaeology" rule this argued against — deleted since,
-  by 023's `living-specs` scenario — applied to the spec body, never to the
-  code the spec describes; that code keeps living and should stay compliant
-  with current rules. Single-target `/ductus:review` already accepts
+  `/ductus:analyze` drift check fires only when the review record's `blocking`
+  is already `true` or its `last-run` is missing, so rules introduced after
+  the last review never re-flip the flag on shipped code. A `done` spec's body
+  is a living document (§spec-lifecycle), and the code it describes keeps
+  living too, so it should stay compliant with current rules. Single-target `/ductus:review` already accepts
   `done` (step 1 of `framework/commands/review.md` halts only when status is
   *not* in `{in-progress, done}`);
   `--all` simply enumerates the same set the gate already permits.
 
 ## Frontmatter schema
 
-**Relocated by 057 — this record is `review.md`'s frontmatter, not the spec's.**
-As 020 delivered it, the block below was added to `spec.md`; the example is kept
-because the field set is what this spec specified, and it is re-rooted rather
-than restated. The canonical declaration is
+This record is `review.md`'s frontmatter, never the spec's. The example shows
+its field set. The canonical declaration is
 [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) → **Audit records**, which is where the schema ships to adopters; the shape
 `/ductus:review` writes is recorded field-by-field in
 [data-model.md](data-model.md).
@@ -226,9 +180,8 @@ than restated. The canonical declaration is
 
 ```yaml
 ---
-spec: 020-code-review                 # the feature slug, added by the merge
+spec: 020-code-review                 # the feature slug
 last-run: 2026-05-10T14:32:00Z        # ISO 8601, set by /ductus:review
-                                      # spelled reviewed-at until 057
 reviewed-against: <sha>               # HEAD sha at review time; provenance only
 must-violations: 0                    # count after waivers applied
 should-violations: 3
@@ -243,86 +196,36 @@ waivers:                              # optional, omitted when empty
 ---
 ```
 
-The merged record also carried the fields that had lived only on `review.md`'s
-side — `diff-base`, `captured-issues`, `skipped-passes` — plus `examined`,
-`scope` and `reviewed-digest`, which 022 added later. No field was dropped in
-the merge; where both copies carried a key, the spec block's value won, because
-it was the copy every gate actually read (057's `data-model.md`, the
-`relocate-audit-records` result's `disagreements`).
-
-> **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> `captured-issues` is gone, with the inbox write it counted. Each observation
-> is fixed, routed, or discarded with its reason in the run that finds it, and
-> the record counts those outcomes in a `dispositions:` map (`fixed`, `routed`,
-> `discarded`, `undispositioned`) and stores each routed or discarded decision
-> in a `decisions:` list beside `waivers:`. The pre-done gate blocks an
-> `in-progress` spec while the record has no map at all; an undecided
-> observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`), a broken contract apart since 079. [data-model.md](data-model.md) records both fields.
+> **Signpost:** [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md) set how a run treats its observations. Each is fixed, deferred or waived with its reason in the run that finds it, and the record counts those outcomes in a `dispositions:` map (`fixed`, `deferred`, `waived`, `undispositioned`) and stores each deferred or waived decision in a `decisions:` list beside `waivers:`. The pre-done gate blocks an `in-progress` spec while the record has no map at all; an undecided observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`), a broken contract apart (079). [data-model.md](data-model.md) records both fields.
 >
-> **Changed by [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
-> A MUST or SHOULD violation is fixed, waived or deferred. A waiver means it
+> **Signpost:** [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md)
+> sets the violation dispositions. A MUST or SHOULD violation is fixed, waived or deferred. A waiver means it
 > will not be fixed, with its reason, and names no future work, so a waiver
 > carries no ticket. `/ductus:review --defer <rule-id>` defers it to its work —
 > `--target` (with `--task`), `--work-item`, or both — stored under
-> `decisions:` keyed `rule {rule-id} at {file}`, by site since AC19
-> (`` rule {rule-id} at {file} in `{site}` ``). A violation its deferral releases
+> `decisions:` keyed by site (`` rule {rule-id} at {file} in `{site}` ``, AC19). A violation its deferral releases
 > leaves the counts and renders under **Deferred findings**; any other stays
-> counted, carries `gating: true`, and still holds `done`. The `dispositions:` map counts
-> `deferred` and `waived` where it counted `routed` and `discarded`.
+> counted, carries `gating: true`, and still holds `done`.
 > [data-model.md](data-model.md) records both.
 >
-> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md) added the criteria step's verdicts to the record, `criteria-judged`, `criteria-met`, `criteria-not-met` and `criteria-verdicts`, and a not-met criterion sets `blocking`, so `blocking` is no longer `must-violations > 0` alone. [data-model.md](data-model.md) records the fields.
+> **Signpost:** [066 — Audit Records and the Completion Gate](../066-audit-records-and-the-completion-gate/spec.md) added the criteria step's verdicts to the record, `criteria-judged`, `criteria-met`, `criteria-not-met` and `criteria-verdicts`, and a not-met criterion sets `blocking`, so `blocking` is `must-violations > 0` or a not-met criterion. [data-model.md](data-model.md) records the fields.
 
-When any waiver's `file` no longer exists or `rule` is no longer triggered
-at that location, the waiver is dropped on the next `/ductus:review` run and
-the underlying finding re-blocks if it's still present elsewhere. Since AC19 a
-waiver `--waive` records lists `anchors:`, each a `{file, site, covers}`, in
-place of `file`, and an entry holding `file` and no `anchors`, a departure
+When an anchored `file` no longer exists or its `rule` is no longer triggered
+at that location, the waiver's anchor is dropped on the next `/ductus:review` run and
+the underlying finding re-blocks if it's still present elsewhere. A
+waiver `--waive` records lists `anchors:`, each a `{file, site, covers}` (AC19), and an entry holding `file` and no `anchors`, a departure
 waiver's aside, was recorded before sites and expires on its spec's next review
 (the scenario `waiver-expiry`; data-model.md records the shape).
 
 ## Blocking message
 
-> **These are the texts 020 specified, not the texts emitted today**, and the
-> divergence predates 057 — 022 rewrote both when the gate became
-> `check-review-gate`. The live texts are the primitives', canonical for command
-> behavior: the blocked message of `check-review-gate`, which step 11 of
-> `framework/commands/implement.md` halts with, and the `review-state-drift`
-> findings of `check-artifacts`, which `/ductus:analyze` reports (**Review state
-> drift** in `framework/reference/analyze.md`). The quotes
-> below are annotated rather than restated so this spec keeps the record of what
-> it asked for.
-
-Emitted by `/ductus:implement` when it would otherwise mark a spec `done`:
-
-```text
-blocked: spec NNN has N MUST violation(s) — see specs/NNN-feature/review.md
-
-resolve the violations and re-run /ductus:review,
-or run /ductus:review --waive <rule-id> --reason "..." for each waivable finding.
-```
-
-Emitted by `/ductus:analyze` when it detects drift:
-
-```text
-review-drift: spec NNN at status=done with review.blocking=true
-  → revert to in-progress and re-run /ductus:review (use --fix to revert)
-```
-
-Emitted by `/ductus:review` when tech-stack alignment fails (missing/empty
-`AGENTS.md` `Tech Stack` section, or documented stack inconsistent with
-implementation):
-
-```text
-blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsistent with code in scope}
-
-  expected: <stack inferred from scope, e.g., "TypeScript + React frontend">
-  documented: <AGENTS.md Tech Stack contents, or "(empty)">
-
-reconcile AGENTS.md Tech Stack with the implementation, then re-run /ductus:review.
-to skip this check on future runs after manual reconciliation, add
-[review] tech-stack-verified = true to .ductus/config.toml.
-```
+The live texts are the primitives', canonical for command behavior: the
+blocked message of `check-review-gate`, which step 11 of
+`framework/commands/implement.md` halts with, and the `review-state-drift`
+findings of `check-artifacts`, which `/ductus:analyze` reports (**Review state
+drift** in `framework/reference/analyze.md`). The text `/ductus:review` emits
+when tech-stack alignment fails is in
+`framework/reference/review.md` §Blocking message.
 
 ---
 

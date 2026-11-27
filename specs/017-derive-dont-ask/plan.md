@@ -12,7 +12,7 @@ The work is intentionally additive in mechanism (add generators and hooks) and s
 
 ### Single canonical constitution at `framework/constitution.md`
 
-Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. `/ductus`'s install-time remap (`framework/constitution.md` → `constitution.md` at the adopter root) was unchanged by this spec; spec 044 later moved the adopter's copy to `.ductus/constitution.md` (`AGENTS.md` §Project Structure). The AGENTS.md "mirror constitutions" instruction is removed.
+Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. In adopter installs the constitution lands at `.ductus/constitution.md` (`AGENTS.md` §Project Structure). The AGENTS.md "mirror constitutions" instruction is removed.
 
 Alternative considered: generator with section markers — rejected because the historical divergence between the two files was zero at decision time — they coexist from `7de12166`, neither changes between it and Q2's commit `7e390d3c` (`git log 7de12166..7e390d3c -- constitution.md framework/constitution.md` is empty), and they compare equal there (spec Q2) — so the discipline trap was guarding nothing. Pre-emptive scaffolding for hypothetical divergence violates the "don't design for hypothetical future requirements" guidance in the system prompt.
 
@@ -51,15 +51,14 @@ Alternatives considered. A scratch `git worktree add --detach --no-checkout`: re
 
 Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit`, an adopter-owned stub, and `framework/bootstrap/hooks/ductus-pre-commit`, which the stub calls, ship with the framework. The shipped hook runs only adopter-relevant derivations — `ductus derive-dependencies` and `derive-references`. Slot is extensible.
 
-`/ductus` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts as below. **Superseded in part by `018-adopter-owned-pre-commit`**: `.githooks/pre-commit` is now an adopter-owned `create`-strategy stub with no sentinel, and the sentinel and the `update` strategy belong to `.githooks/ductus-pre-commit` (this spec's `data-model.md`, *Post-018*).
+`/ductus` has a "Hook installation" section after **Per-Agent Scaffolding**. On every run it detects state and acts as below. `.githooks/pre-commit` is an adopter-owned `create`-strategy stub that carries no sentinel; `.githooks/ductus-pre-commit` is ductus-owned, `update` strategy, and carries the sentinel (this spec's `data-model.md`, *Hook sentinel comment*).
 
 | Detected state | Action |
 | --- | --- |
-| `core.hooksPath` unset and `.githooks/pre-commit` absent | Install both, set `core.hooksPath .githooks`, report installed |
-| `.githooks/pre-commit` exists from a prior `/ductus` run (detected by a sentinel comment in the file) | Overwrite (`update` strategy, pinnable via `.ductus/config.toml`) |
-| `core.hooksPath` points elsewhere, OR `.githooks/pre-commit` exists without the sentinel comment, OR husky/lefthook/`.pre-commit-config.yaml` detected | Skip install; report a warning with a manual integration snippet; continue |
+| `core.hooksPath` unset or already the project's hooks directory, and no third-party hook system detected | Place the hook files (outer `create`, inner `update`), wire `core.hooksPath`, report installed |
+| `core.hooksPath` points elsewhere, OR husky/lefthook/`.pre-commit-config.yaml` detected, OR no non-comment line of `.githooks/pre-commit` names `ductus-pre-commit` | Skip wiring; report a warning with a manual integration snippet; continue |
 
-The sentinel comment is a single line near the top of the shipped hook (e.g., `# managed-by: ductus`) that the detection logic looks for to distinguish a ductus-installed hook from a hand-rolled one. The same sentinel survives `/ductus` updates because it's part of the shipped file.
+The sentinel is the `# managed-by: ductus` line 2 of the shipped inner hook, which tells a reader the file is ductus-owned and rewritten on every run. No `/ductus` step reads it: the Shared Files manifest's row decides each hook file's strategy, and an existing `.githooks/pre-commit` is told apart by whether a non-comment line of it names `ductus-pre-commit`.
 
 ### Generated artifacts use marker comments
 

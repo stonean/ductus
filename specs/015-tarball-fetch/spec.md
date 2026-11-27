@@ -72,14 +72,14 @@ The leftover directory is for inspection only — the next `/ductus` run creates
 
 ### Permission bootstrap
 
-The agent registry's `settings_template` allowed `Bash(curl *)` and `Bash(ls *)` (Claude) when this was written; 022's task 18 question 2 has since dropped `Bash(curl *)`. The tarball flow needs two additional commands plus, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
+The tarball flow needs `mktemp` and, on Claude, pre-allowed `Read` globs that cover any `ductus-*` temp directory. There is no `tar` allow, since `tar` runs any command (022's task 18, question 2), and no `rm` addition — the temp directory is left for the OS to sweep (see **Cleanup** above).
 
 Update each registry row's `settings_template`:
 
-- **Claude:** add `Bash(tar *)` (since dropped by 022's task 18 question 2, since it can run any command), `Bash(mktemp *)` (since narrowed by 022's task 18 to the exact command a step runs, `Bash(mktemp -d -t ductus-XXXXXX)`, with `framework/bootstrap/ductus.md` §Permission Setup retiring the broad form), and six `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, with both single-leading-slash and double-leading-slash forms (see "Why both leading-slash forms" below):
-  - `Read(/private/var/folders/**/T/ductus-*/**)` and `Read(//private/var/folders/**/T/ductus-*/**)` (macOS canonical path)
-  - `Read(/var/folders/**/T/ductus-*/**)` and `Read(//var/folders/**/T/ductus-*/**)` (macOS non-canonical, defensive)
-  - `Read(/tmp/ductus-*/**)` and `Read(//tmp/ductus-*/**)` (Linux)
+- **Claude:** add `Bash(mktemp -d -t ductus-XXXXXX)`, the exact command a step runs (`framework/bootstrap/ductus.md` §Permission Setup retires the broad `Bash(mktemp *)`), and three `Read(...)` globs covering both macOS temp roots and Linux `/tmp`, in the double-leading-slash form (see "Why the double-leading-slash form" below):
+  - `Read(//private/var/folders/**/T/ductus-*/**)` (macOS canonical path)
+  - `Read(//var/folders/**/T/ductus-*/**)` (macOS non-canonical, defensive)
+  - `Read(//tmp/ductus-*/**)` (Linux)
 
 The merge logic in **Permission Setup** is unchanged — entries are added if missing, never reordered or deduplicated. Existing adopters get the new entries on their next routine `/ductus` re-run, before any `tar`, `mktemp`, or extracted-archive read is performed.
 
@@ -89,17 +89,11 @@ Claude Code's permission system records a `Read(...)` allow with the **exact abs
 
 Pre-allowing the globs at bootstrap solves this in a small fixed set of entries — future Read calls against any `ductus-*` temp path match the glob and skip the prompt. The entries are scoped to `ductus-*` directories under known temp roots, so they cannot grant Read on unrelated files.
 
-#### Why both leading-slash forms
+#### Why the double-leading-slash form
 
-Empirically, Claude Code's permission rule matcher treats `/private/...` and `//private/...` as **different** prefixes — the matcher is literal, not normalized. Some agent code paths invoke `Read` with a double-leading-slash path (POSIX-permitted, macOS-equivalent to a single slash), and the resulting permission prompt records the path with the double slash preserved. A single-slash glob does not match a double-slash request, so the prompt fires anyway and a per-path entry is added. Including both forms in the bootstrap is the simplest way to cover the observed variation without depending on which path-normalization branch the agent takes on a given run.
+Claude Code anchors a permission pattern as its documentation says: "A pattern like `/Users/alice/file` isn't an absolute path. The single leading slash anchors at the settings source, not the filesystem root. Use `//Users/alice/file` for absolute paths" (code.claude.com/docs/en/permissions). A single-slash rule in `.claude/settings.local.json` therefore names a path under the project, not the temp directory, so the seed carries the three `//` forms alone and `framework/bootstrap/ductus.md` §Permission Setup retires the single-slash ones.
 
-> **Signpost ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)):** the empirical reading above is overtaken by Claude Code's
-> documented anchoring: "A pattern like `/Users/alice/file` isn't an absolute path. The single leading
-> slash anchors at the settings source, not the filesystem root. Use `//Users/alice/file` for absolute
-> paths" (code.claude.com/docs/en/permissions). A single-slash rule in `.claude/settings.local.json`
-> therefore names a path under the project, not the temp directory, so since 022's task 18 the seed
-> carries only the three `//` forms and `framework/bootstrap/ductus.md` §Permission Setup retires the three
-> single-slash ones.
+> **Signpost ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)):** 022's task 18 settled the anchoring above, so the seed carries only the three `//` forms.
 
 #### One-time cleanup of stale per-run entries
 
@@ -109,12 +103,12 @@ Adopters who ran the tarball flow before this fix shipped will already have seve
 
 Before this spec, the integrity check that re-fetches `ductus.md` on a corrupted write re-ran `curl`. With a tarball, re-fetch means reading the same file again from the extracted archive — no second network call. The check itself is unchanged; it just operates on the local source.
 
-The self-update notice (shown when the installed `ductus.md` differs from the fetched version) continues to fire. The comparison has since moved ahead of the archive: `framework/bootstrap/ductus.md` §Self-update check fetches the bootstrap on its own in pre-flight, at the same resolved ref as the archive, so the copy it compares against is the one the archive carries for that ref.
+The self-update notice (shown when the installed `ductus.md` differs from the fetched version) continues to fire. The comparison runs ahead of the archive: `framework/bootstrap/ductus.md` §Self-update check fetches the bootstrap on its own in pre-flight, at the same resolved ref as the archive, so the copy it compares against is the one the archive carries for that ref.
 
 ## Tradeoffs
 
 - **One archive failure vs. many per-file warnings.** Under the per-file flow a single 404 on `framework/templates/project/inbox.md` produced a warning and the rest of the manifest proceeded. With a tarball, that file would simply not exist in the extract, producing the same per-entry warning. The genuine new failure mode is the archive itself failing — and that's a clean abort, since partial scaffolding from a missing archive is impossible.
-- **New permissions.** For Claude, two `Bash` additions (`tar`, `mktemp`; 022's task 18 has since dropped `tar` and narrowed `mktemp` to the exact command, as AC7 records) plus six `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), with both single-leading-slash and double-leading-slash forms because Claude Code's permission matcher treats them as distinct prefixes (see **Permission bootstrap → Why both leading-slash forms**, whose signpost records that the seed now keeps the three `//` forms alone). Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
+- **New permissions.** For Claude, one `Bash` addition, the exact `Bash(mktemp -d -t ductus-XXXXXX)` (no `tar`, as AC7 records), plus three `Read(...)` globs covering `ductus-*` temp paths under macOS (`/private/var/folders/**/T/`, `/var/folders/**/T/`) and Linux (`/tmp/`), in the double-leading-slash form because Claude Code anchors a single-slash pattern at the settings source (see **Permission bootstrap → Why the double-leading-slash form**). Cost is one-time per adopter, applied on the same `/ductus` run that introduces the change. No `rm` allow is needed because the temp directory is left for the OS to sweep.
 - **Bytes over the wire.** The archive carries only the files a run reads (AC14): 78 files and 403,618 bytes compressed for `main` at `d56ff370`, fetched from `codeload.github.com` on 2026-11-23. Untrimmed, it was the whole repository, 1,424 files and 6,096,062 bytes compressed at `ductus-v0.64.0` (`git archive --format=tar.gz` of the tag, which matched codeload's own 3,523,152 bytes at `ductus-v0.59.11` to within 0.06%). Against per-file fetches the design saves round-trips and tool-call invocations, and perceived run time.
 - **Loss of partial progress.** Under the per-file flow a network failure mid-fetch produced ~10 successful files plus warnings on the rest; with a tarball, a network failure produces zero files and a clean abort. Both outcomes leave the project in a recoverable state — re-run resumes idempotently.
 - **Pinning at a ref.** When this spec shipped, every fetch was hardcoded to `main` and the tarball URL pointed at `main` too. A `.ductus/config.toml` `[source] ref` option overriding the ref was named as a natural follow-up and left out of scope — see **Resolved Questions**. **Adopted by 061**, which resolves the ref per run and defaults it to the latest release rather than `main`.
@@ -122,12 +116,12 @@ The self-update notice (shown when the installed `ductus.md` differs from the fe
 ## Acceptance Criteria
 
 - [x] AC1: `framework/bootstrap/ductus.md`'s **File Fetching** section is replaced with the archive-fetch + extract + local-path-resolution flow above
-- [x] AC2: A successful `/ductus` run on a single-agent project issues exactly one `curl` against the `ductus` repo (plus per-language gitignore fetches, which remain unchanged) — **superseded in part.** The framework is still one archive download, which is what this criterion delivered. But pre-flight has since added small fetches of its own ahead of it: the runtime version pin (048), the self-update bootstrap (007's `ductus-self-update-precheck`), and since 061 the latest-release redirect and, when a migration has been applied, one or two registry reads for the migration floor. Annotated rather than rewritten because the claim was overtaken by later behavior, not renamed
+- [x] AC2: A successful `/ductus` run on a single-agent project downloads the framework as one archive, which is one `curl` against the `ductus` repo (plus per-language gitignore fetches, which remain unchanged). Pre-flight makes small fetches of its own ahead of it: the runtime version pin (048), the self-update bootstrap (007's `ductus-self-update-precheck`), the latest-release redirect (061) and, when a migration has been applied, one or two registry reads for the migration floor (061).
 - [x] AC3: All existing manifest strategies (`update`, `create`, `skip`, `merge`, `pinned`) behave identically to today, sourcing files from the extracted archive
 - [x] AC4: A failed archive fetch produces a clean abort with a clear error message and no partial scaffolding
 - [x] AC5: A missing source file within the archive produces a per-entry warning and the remaining manifest continues
 - [x] AC6: The temp directory path is logged in the run summary (and on abort, in the error message); `/ductus` does not delete it
-- [x] AC7: Each agent's `settings_template` in the registry adds `tar` and `mktemp` allow entries, applied via the existing **Permission Setup** merge; no `rm` allow is added. **Superseded in part:** 022's task 18 dropped `Bash(tar *)` from Claude's seed, since `tar` runs any command, and narrowed `Bash(mktemp *)` to the exact `Bash(mktemp -d -t ductus-XXXXXX)`, so Claude's carries that `mktemp` entry and no `tar`; Pi, registered since by `064-pi-host-support` (`2c55c608`), has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither
+- [x] AC7: Claude's `settings_template` in the registry adds the exact `Bash(mktemp -d -t ductus-XXXXXX)` allow entry and no `tar` entry, since `tar` runs any command, applied via the existing **Permission Setup** merge; no `rm` allow is added. Pi has no permission-gating settings, so its `settings_template` is `{}` by design and carries neither.
 - [x] AC8: The Claude `settings_template` also adds `Read(...)` globs for `ductus-*` temp paths under both macOS temp roots and Linux `/tmp`, so per-run `Read(...)` entries do not accumulate across `/ductus` invocations
 - [x] AC9: The **Post-Write Integrity Check** for `ductus.md` works against the local source — no additional `curl`
 - [x] AC10: The self-update notice continues to fire when the installed `ductus.md` differs from the archive's copy

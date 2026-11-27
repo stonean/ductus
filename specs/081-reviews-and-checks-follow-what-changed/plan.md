@@ -16,7 +16,7 @@ A single function in `runtime/src/primitives/mod.rs`, `is_project_artifact(path,
 
 `paths_owing_a_review` (`runtime/src/primitives/compute_review_scope.rs`) keeps a path when it is in scope, or is a deletion that is this spec's, and is not a project artifact. The `is_review_contract(own) && !contracts_current` branch goes, so a spec's own scenarios and data model never owe a review. Paths the record at `HEAD` leaves open still owe one. `owes_a_review`, in the same file, owes one for such a path, for a record `holds_done_until_reviewed` (`runtime/src/primitives/check_review_gate.rs`) holds and for a spec with no review record, and has no clause for a stale digest (`RecordFreshness::Stale`); 066's task 27 adds a criterion no review judged met.
 
-`contracts_against_digest` (`compute_review_scope.rs`) stays. A contract changed since the review is still put in the scope of a review that runs, so a review owed for code reads the contracts that changed beside it. `reviewed-digest` therefore keeps a reader and stays in the record schema, `reviewed-against` keeps the rename exemption inside `review_freshness` (`runtime/src/primitives/analyze_subjects.rs`) as a reader and gains the credit for a read below, and no adopter's record changes shape.
+`contracts_against_digest` (`compute_review_scope.rs`) stays. A contract changed since the review is still put in the scope of a review that runs, so a review owed for code reads the contracts that changed beside it. `reviewed-digest` therefore keeps a reader and stays in the record schema, `reviewed-against` keeps the rename exemption inside `review_freshness` (`runtime/src/primitives/analyze_subjects.rs`) as a reader, and no adopter's record changes shape.
 
 ### Attribution
 
@@ -26,17 +26,13 @@ A single function in `runtime/src/primitives/mod.rs`, `is_project_artifact(path,
 | --- | --- |
 | names this spec | every path outside the other claimants' directories |
 | names other specs, and touched this spec's directory | the paths in this spec's directory |
-| names no spec | what 079's rule gives it, unchanged: every path when no spec claims the commit or this spec claims it alone, and otherwise its directory, its plan's paths and the paths no claimant's plan lists |
+| names no spec | what 079's rule gives it, unchanged: every path when this spec claims it alone, and otherwise its directory, its plan's paths and the paths no claimant's plan lists; nothing when it touches no spec directory, since no spec claims it |
 
-Anything else goes to `excluded` as a path alone, as now. A commit naming no spec stays 079's because the pipeline prescribes no subject convention; since spec 084 one that also touches no spec directory leaves every open spec's scope. An adopter's code commit usually names none, and plans are not exhaustive, so narrowing it would leave unplanned code unreviewed (spec, Resolved Questions). Uncommitted work stays in scope, but for a path another open spec's plan holds (spec 084, AC23). Fix rounds (`runtime/src/primitives/fix_rounds.rs`) and `diff-cross-spec` (`runtime/src/primitives/diff_cross_spec.rs`) read commits through `commit_attribution`'s `Attributor`, and `attribute_window`'s one caller is `compute-review-scope`, so they are unchanged.
+Anything else goes to `excluded` as a path alone, as now. A commit naming no spec stays 079's because the pipeline prescribes no subject convention; one that also touches no spec directory leaves every open spec's scope for the project record's review (spec 084). An adopter's code commit usually names none, and plans are not exhaustive, so narrowing it to the specs whose plan lists a path would leave unplanned code unreviewed (spec, Resolved Questions). Uncommitted work stays in scope, but for a path another open spec's plan holds (spec 084, AC23). Fix rounds (`runtime/src/primitives/fix_rounds.rs`) and `diff-cross-spec` (`runtime/src/primitives/diff_cross_spec.rs`) read commits through `commit_attribution`'s `Attributor`, and `attribute_window`'s one caller is `compute-review-scope`, so they are unchanged.
 
-### Credit for a read
+### `unread`
 
-Spec 084 removed this credit with the rule it served: code no spec claims leaves every open spec's scope for the project record's review, so the paragraphs below describe what 081 delivered and 084 retired. `unread` stays, read by the spec's own next review.
-
-A commit with no claimant, one whose subject names no spec and that touches no spec directory, is in every open spec's window, so every review whose window holds it has its paths in scope. `attribute_window` gives such a path to this spec only when no review record committed in the window credits it. A record credits a path when its window, `diff-base` to `reviewed-against`, holds the commit (the commit is `reviewed-against` or its ancestor, and neither `diff-base` nor an ancestor of it), and the record states `unread` without the path, no skipped pass, no budget stop and no open fix-round loop. A credited path goes to `window.others`, so `split_changes` (`compute_review_scope.rs`) lists it in `excluded`, `paths_owing_a_review` sees no code, and the gate follows with no change of its own. A path some other commit in the window gives this spec stays, since the credit covers one commit's change, not the file.
-
-Records are read from the commits in `base..HEAD` that change a spec's `review.md`, one parse per such commit. A record written before the reading commit lies outside that walk, and could not hold a commit after it anyway. A record with no `unread` credits nothing: before this change no record said which entries it read, and an absent claim is not *read everything*. `unread` lists scope entries as `compute-review-scope` returns them; `write-review` resolves the scope it already derives for `scope` and refuses an entry outside it. A record's scope can omit a path another record credited, so a credit can rest on a record that did not open the file itself; it still rests on a read, since the first credit in that chain did.
+`write-review` records `unread`, the scope entries the run's passes did not read, whenever the run states it. `unread` lists scope entries as `compute-review-scope` returns them; `write-review` resolves the scope it already derives for `scope` and refuses an entry outside it. A run that states nothing writes no `unread`.
 
 ### The gate
 
@@ -87,7 +83,7 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 | --- | --- | --- |
 | `runtime/src/primitives/mod.rs` | Modify | `is_project_artifact` |
 | `runtime/src/primitives/commit_attribution.rs` | Modify | `CommitClaims::named` |
-| `runtime/src/primitives/compute_review_scope.rs` | Modify | Owed rule, attribution, the credit for a read, tests |
+| `runtime/src/primitives/compute_review_scope.rs` | Modify | Owed rule, attribution, tests |
 | `runtime/src/primitives/write_review.rs` | Modify | `unread`: resolve, refuse, render, tests |
 | `runtime/src/primitives/check_review_gate.rs` | Modify | Remove check 6 and its notice, tests |
 | `runtime/src/primitives/check_review_freshness.rs` | Delete | Retired primitive |
@@ -99,7 +95,7 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 | `framework/runtime-tools.txt`, `framework/bootstrap/configure/claude.md` | Modify | Tool list, retired allow entry, regenerated block |
 | `framework/constitution.md` | Modify | Division and check selection; `unread` in the review record's table |
 | `framework/commands/review.md` | Modify | Step 11 passes `unread` |
-| `scripts/mutation/review-read-credit.py` | Create | Mutants for the credit and `unread` |
+| `scripts/mutation/review-read-credit.py` | Create | Mutants for `unread` |
 | `specs/020-code-review/data-model.md` | Modify | The `unread` row |
 | `framework/reference/review.md`, `framework/reference/implement.md`, `framework/reference/fold.md`, `framework/reference/audit.md` | Modify | Prose |
 | `scripts/audit/review-freshness.sh`, `scripts/mutation/family-19-calls-the-runtime.py` | Delete | Retired family |
@@ -124,13 +120,11 @@ The tools' input and output schemas are generated from their `Args` and `Result`
 
 ## Cross-spec impact
 
-The statuses below are those of `6158d7df`, where the reopening started (`git show 6158d7df:specs/NNN-<slug>/spec.md`).
-
-- **079.** AC4's annotation, AC6 and the Resolved Questions on scenario edits and attribution change. The rule then in force counted that as a reopen of 079, a rule spec 084 has since replaced, which then owed an analysis and, under this rule, no review.
-- **066.** Its data model and scenarios list the gate's checks and `blocked-by` values; it is `in-progress`.
-- **026.** Its criteria and scenarios describe Family 19; it is `in-progress`.
-- **047.** Scenario `analyze-record-freshness` stated the review staleness check in the present tense; scenario `analyze-run-durability`'s Family 19 row is a past-tense record and stays. It was `done`, so the rule then in force counted the edit as a reopen, a rule spec 084 has since replaced, and it owed an analysis.
+- **079.** AC4's annotation, AC6 and the Resolved Questions on scenario edits and attribution change.
+- **066.** Its data model and scenarios list the gate's checks and `blocked-by` values.
+- **026.** Its criteria and scenarios describe Family 19.
+- **047.** Scenario `analyze-record-freshness` stated the review staleness check in the present tense; scenario `analyze-run-durability`'s Family 19 row is a past-tense record and stays.
 - **050.** It owns the constitution's content and gains the back-link.
-- **020.** Its data model's record table gains the `unread` row, back-linking here; it is `in-progress`.
+- **020.** Its data model's record table gains the `unread` row, back-linking here.
 
 Each affected spec links back here, which discharges 081's `cross-spec-impact:`, and 047 joins that list.

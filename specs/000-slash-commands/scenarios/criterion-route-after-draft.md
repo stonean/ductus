@@ -61,31 +61,16 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
   no lifecycle change is needed, because the edge already exists.** Resolved
   2026-08-17.
 
-  The question was posed on the belief that *"§spec-lifecycle defines the `done`
-  back-edge as scenario-triggered"*. It does not. §spec-lifecycle states that
-  **three** back-edges exist, and the third is *"Backward via meaningful body
-  edit — `done` → `in-progress` when any artifact under `specs/{feature}/` is
-  edited meaningfully… Anything else — **new scope**, changed semantics,
-  factual corrections, restructuring — is a meaningful edit and triggers the
-  back-edge **via the same `/amend` flow used for scenarios**."*
+  The question was posed on the belief that §spec-lifecycle defines the `done`
+  back-edge as scenario-triggered. It does not: its back-edge via owed code
+  reopens a `done` spec exactly while its `tasks.md` holds an unchecked box or
+  its `spec.md` an unticked criterion. A new acceptance criterion is an
+  unticked criterion, so the edge already applies and the criterion route
+  reopens the spec once `check-owed-work` reports it; it adds no second
+  trigger.
 
-  A new acceptance criterion is a body edit, it is new scope, and it is none of
-  the three enumerated mechanical exemptions. The edge therefore already
-  applies; the criterion route uses it rather than adding a second trigger.
-  Exemption **(c)** makes the boundary explicit in the other direction: assigning
-  an `AC{n}` *label* is mechanical *"because an identifier names a requirement
-  without stating one"*, so the constitution had already separated a criterion's
-  label from its text.
-
-  Refusing was additionally ruled out by what followed from it then: nothing
-  detected an unchecked criterion on a `done` spec — `check-artifacts`'
-  criterion families covered path existence and labels, not verification
-  state — so a refused criterion would have been recorded somewhere no gate
-  read. Reopening routed it into `/{project}:implement`'s criterion-verification
-  step, then the gate that verified criteria. Since 066's
-  `criteria-are-verified-in-review`, `/{project}:review`'s criteria step judges
-  every criterion and `check-artifacts` reports a `done` spec holding an
-  unticked criterion as drifted, so the reopen still routes the criterion to
-  its judge.
-
-  Superseded in part (spec 084): §spec-lifecycle now has two back-edges, to `draft` on a new open question and to `in-progress` while code is owed. The derivation above from a third back-edge, *Backward via meaningful body edit*, no longer holds; a new criterion still reopens a `done` spec, because it is an unticked criterion, and the criterion route reopens it once `check-owed-work` reports it.
+  Refusing was additionally ruled out by what followed from it: a refused
+  criterion would have been recorded somewhere no gate read. A reopened spec
+  routes the criterion to its judge instead: `/{project}:review`'s criteria
+  step judges every criterion, and `check-artifacts` reports a `done` spec
+  holding an unticked criterion as drifted.

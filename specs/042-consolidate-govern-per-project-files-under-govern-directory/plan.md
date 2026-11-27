@@ -52,7 +52,7 @@ Migration marker: `last_applied` advances only after the whole procedure complet
 
 ### gitignore supersession
 
-The shipped template `framework/templates/project/gitignore` changes its session entry to `/.ductus/session.toml`; because `/ductus` rewrites the framework-managed gitignore block on every run (`merge-managed-block`), adopters pick up the superseded entry automatically — no per-adopter migration logic needed. ductus's own `.gitignore` carries the session-ignore line *outside* the managed block (anchored `/.govern.session.toml`, `.gitignore:9`); that is fixed by hand in the dogfooding step to `/.ductus/session.toml`. Root-anchoring is retained deliberately so the tracked fixture session files at `runtime/tests/fixtures/*/.ductus/session.toml` stay tracked (the anchored ignore matches only the repo-root file).
+The shipped template `framework/templates/project/gitignore` changes its session entry to `/.ductus/session.toml`; because `/ductus` rewrites the framework-managed gitignore block on every run (`merge-managed-block`), adopters pick up the new entry automatically — no per-adopter migration logic needed. ductus's own `.gitignore` carries the session-ignore line *outside* the managed block, hand-maintained and anchored as `/.ductus/session.toml`. Root-anchoring is retained deliberately so the tracked fixture session files at `runtime/tests/fixtures/*/.ductus/session.toml` stay tracked (the anchored ignore matches only the repo-root file).
 
 ### Config/session doc + canonical-source updates
 

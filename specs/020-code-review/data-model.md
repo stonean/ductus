@@ -4,22 +4,15 @@ status: draft
 
 # 020 — `/ductus:review` Data Model
 
-Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative shapes; the spec body and `framework/commands/review.md` reference these. (The spec's embedded copy of that command source was replaced by a pointer on 2026-09-13 — the live source is the authority for command behavior, per §drift-prevention's canonical-sources rule.)
+Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative shapes; the spec body and `framework/commands/review.md` reference these. The live command source is the authority for command behavior (§drift-prevention's canonical-sources rule).
 
-> **This document had two tables for one record until 057, and that is the drift it produced.**
-> As 020 delivered it, the run record lived both in a `review:` block in `spec.md`
-> frontmatter and in `review.md`'s own frontmatter, and both were recorded below.
-> They fell behind in *different* ways — the block's table was missing `examined`,
-> `scope` and `reviewed-digest`, and `review.md`'s was missing `captured-issues`,
-> `examined` and `scope` — so the document designated authoritative contradicted
-> 020's own AC15, and nothing reported it. `057-analyze-artifact-and-record-relocation`
-> merged the two into `review.md` alone. One table remains, below; the schema's
+> The run record has one home, `review.md`'s frontmatter, and one table below records it. The schema's
 > canonical declaration is [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
 > **Audit records**, and this table records what `/ductus:review` writes.
 
 ## Waiver record
 
-One entry per waiver judgment: one rule, waived at one or more anchors for one reason, each anchor a file, a site in it and the number of findings it covers ([waiver-expiry](scenarios/waiver-expiry.md)). Lives under `waivers` in `review.md`'s frontmatter — in spec frontmatter, under `review.waivers`, before 057 relocated the record. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
+One entry per waiver judgment: one rule, waived at one or more anchors for one reason, each anchor a file, a site in it and the number of findings it covers ([waiver-expiry](scenarios/waiver-expiry.md)). Lives under `waivers` in `review.md`'s frontmatter. The list itself is open-schema — adopters MAY add fields like `co-waived-by`, `approved-by-team`. A waiver names no future work, so a violation that will be fixed later is deferred instead, with its work-item ID on the deferral ([076's data model](../076-waived-and-deferred-findings-are-distinct-dispositions/data-model.md)).
 
 ```yaml
 - rule: BE-AUTHN-007
@@ -55,7 +48,7 @@ One entry per waiver judgment: one rule, waived at one or more anchors for one r
 
 ### Expiry rule
 
-A waiver anchor expires (it is dropped from `review.md`'s frontmatter on the next `/ductus:review` run — from the spec's, before 057 — and the entry with its last anchor) when **any** of the following holds:
+A waiver anchor expires (it is dropped from `review.md`'s frontmatter on the next `/ductus:review` run, and the entry with its last anchor) when **any** of the following holds:
 
 - The anchored path no longer exists in the repository (renamed or deleted).
 - The named `rule` no longer fires at that site (rule removed, or the violating code was fixed or moved out of it), in a run whose scope holds the file; a run that did not read the file retains the anchor.
@@ -70,12 +63,10 @@ Written to `specs/NNN-feature/review.md` — one review artifact per spec, regar
 
 ### Frontmatter
 
-The run record, and since 057 the **only** copy of it. The example shows a
+The run record, held nowhere else. The example shows a
 subset: the table below lists every field, and `write-review` fixes the order.
 
-> **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> `captured-issues` is gone: observations are no longer written to the inbox,
-> so the run has nothing to count there. The record carries a `dispositions:`
+> Observations are not written to the inbox. The record carries a `dispositions:`
 > map counting what the run did with its observations, and a `decisions:` list
 > storing each deferred or waived one beside `waivers:`. The shapes of both are
 > recorded in [058's data model](../058-findings-route-at-discovery/data-model.md).
@@ -116,7 +107,7 @@ decisions:                           # omitted entirely when empty
 | --- | --- | --- | --- |
 | `spec` | string | yes | Feature slug — matches the parent directory. |
 | `scenario` | string | no | Written only when the run was scenario-targeted; absent otherwise. |
-| `last-run` | ISO 8601 timestamp or null | yes | Set on each run. Spelled `reviewed-at` here until 057; the spec block called the same instant `last-run`, and one home leaves one spelling. Null only on a record that has never run. |
+| `last-run` | ISO 8601 timestamp or null | yes | Set on each run. Null only on a record that has never run. |
 | `reviewed-against` | string (Git SHA) | yes | HEAD SHA at review time. **Provenance, never the staleness basis** — read for two things: the mechanical-sweep rename exemption, and the end of the record's window (`diff-base` to `reviewed-against`), where `compute-review-scope` starts the next window of a record the gate holds (079). |
 | `diff-base` | string (Git SHA) | yes | The window's start `compute-review-scope` resolved (`base-source` names which), or the value passed to `--since=<ref>`. |
 | `must-violations` | integer ≥ 0 | yes | Count after waivers and releasing deferrals (076). |
@@ -128,8 +119,8 @@ decisions:                           # omitted entirely when empty
 | `skipped-passes` | list of strings | yes | Empty when no flag restricts dimensions. Permitted values: `security`, `reuse`, `quality`, `efficiency`, `simplicity`. |
 | `reviewed-digest` | map of path → sha256 | yes | Per-path digest of the spec's **durable contracts** (`scenarios/*.md` and `data-model.md`) as the run read them. What freshness is computed from. Always written, empty map included — *digest taken over a spec with no durable contracts* must stay distinct from *pre-digest record*, which reports freshness as undeterminable rather than current. Added by 022. |
 | `reviewed-unreadable` | list of strings | no | Durable contracts that exist but could not be read, recorded rather than digested as empty. Omitted when none. |
-| `blocking` | boolean | yes | MUST equal `must-violations > 0`, or since 066's task 27 `criteria-not-met` holding a criterion. Derived by `write-review`, never accepted from the caller. Read by `/ductus:implement`, `/ductus:analyze`, the CI template. |
-| `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. Replaced `captured-issues` in 058; 076 renamed `routed` and `discarded`, still read from an older record. |
+| `blocking` | boolean | yes | MUST equal `must-violations > 0`, or `criteria-not-met` holding a criterion. Derived by `write-review`, never accepted from the caller. Read by `/ductus:implement`, `/ductus:analyze`, the CI template. |
+| `dispositions` | map: `fixed`, `deferred`, `waived`, `undispositioned` → integer ≥ 0 | yes | What the run did with its **observations**; MUST and SHOULD violations keep their own counts. Derived by `write-review` from each observation's disposition, and always written with all four counts. A record without it predates dispositions, and the pre-done gate blocks an `in-progress` spec on it. A record that counts `routed` or `discarded` is read as `deferred` or `waived`. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema above is open per §text-first-artifacts. |
 | `fix-rounds`, `re-reads`, `diff-checked`, `not-re-read`, `budget-stop`, `round-waivers` | integers, a boolean, a list | no | The fix-round loop's outcome, derived by `write-review` and absent when the run stated nothing about its fixes. Defined in [078's data model](../078-review-fix-rounds-are-re-read-within-a-bound/data-model.md). |
 | `criteria-judged`, `criteria-met`, `criteria-not-met`, `criteria-verdicts` | integer, integer, list, list | no | The criteria step's verdicts, defined in [066's data model](../066-audit-records-and-the-completion-gate/data-model.md) and absent when the run judged no criterion. |
@@ -137,7 +128,7 @@ decisions:                           # omitted entirely when empty
 | `decisions` | list of decision records | no | Stored deferred and waived observation decisions, keyed on the observation's rendered line, and deferred MUST and SHOULD violations, keyed `` rule {rule-id} at {file} in `{site}` `` with `covers`, the number of findings at that anchor, lowered and never raised (AC19; a key with no backticked site was recorded before sites and expires on the next review); each with `outcome`, a deferral's work (`target`, `task`, `work-item`) and optional `reason`, or a waiver's `reason`, `decided-at`, and `decided-by`, and `gating: true` on a violation's deferral that releases nothing, and `contract-break: true` on a decision on a broken contract (079). A violation's `decision-key` is its own key or refused (AC19). Omitted entirely when empty. Open-schema like `waivers`. Added by 058; violations and work references by 076. |
 
 **Validation severity** (per [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) →
-**Audit records**, which has declared both records since 057):
+**Audit records**, which declares both records):
 
 - **Hard fail** — a `review.md` that exists but carries no parseable record. The artifact's *absence* is the never-reviewed state and is not a defect; its presence without a readable record is undeterminable, and the two must never render alike.
 - **Blocking** — a `done` spec with `blocking: true` or a missing `last-run`; and a `review:` or `analyze:` block still present in a spec's frontmatter, which the open-schema rule deliberately does not cover.
@@ -158,7 +149,7 @@ defect rather than a clean result.
 | `## Waived findings` | Always (empty when none) |
 | `## Deferred findings` | Always (empty when none). MUST and SHOULD violations their deferral releases (076), each with its work; they leave the counts. Added by 076 |
 | `## Acceptance criteria` | Only when the run judged criteria: each judged criterion, met or not met, with its note. Added by 066's task 27 |
-| `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058, which also removed the section 047 had added beside this one to list inbox captures |
+| `## Observations` | Always (empty when none). Reviewer observations that map to no loaded rule, each rendered beside its disposition: fixed, deferred with its work, waived with its reason, or undispositioned. Nothing is written to the inbox. Added by 022; dispositions by 058 |
 | `## Skipped passes` | Always (empty when none) |
 | `## Excluded from scope` | Always (`*None.*` when none). The paths the scope and the fix rounds left out, as `ductus write-review --help` states. Added by 079 |
 | `## Unexamined governance` | Always (empty when none). Added by 055 |
@@ -182,7 +173,7 @@ Findings under **Waived findings** include an additional `**Waived**: <reason fr
 
 ### Idempotency invariant
 
-For a given `(code-in-scope, loaded-rules, spec-acceptance-criteria, scenarios, waivers)` input set, the body of `review.md` is byte-identical across runs. Only `last-run` (spelled `reviewed-at` before 057) and `reviewed-against` in the frontmatter are permitted to differ. This is the basis of acceptance criterion 6.
+For a given `(code-in-scope, loaded-rules, spec-acceptance-criteria, scenarios, waivers)` input set, the body of `review.md` is byte-identical across runs. Only `last-run` and `reviewed-against` in the frontmatter are permitted to differ. This is the basis of acceptance criterion 6.
 
 ## `.ductus/config.toml [review]` section
 

@@ -8,8 +8,7 @@ section: "Check Families"
 
 `/audit` runs the families `scripts/audit/run-all.sh` registers.
 [`framework/reference/audit.md`](../../../framework/reference/audit.md), the
-command's markdown-only reference (in `framework/commands/audit.md` until
-[071](../../071-command-reference-split/spec.md) moved it), enumerates the families for the maintainer who reads the
+command's markdown-only reference, enumerates the families for the maintainer who reads the
 command. Nothing held
 the two together.
 
@@ -77,9 +76,8 @@ name anywhere in the README, one way only).
   entry names 042 and 049; Family 28's own entry names Families 24, 25 and 26
   and the spent Family 3). Only the enumerated `(Family N …)` entries count,
   so the extraction is anchored to that form rather than to any mention of the
-  digits. The header, whose prose names Families 3 and 28 too, stayed in
-  `framework/commands/audit.md` with the boundary section when 071 moved the
-  list, outside this family's subject.
+  digits. The command file `framework/commands/audit.md`, whose prose names
+  Families 3 and 28 too, is outside this family's subject.
 - **The generated copy is not a second subject.** `.ductus/reference/audit.md`
   is generator output; auditing it would report the generator rather than a
   defect. The source is the subject, and the generator's own sync is already

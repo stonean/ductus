@@ -8,7 +8,7 @@ section: "Frontmatter, dependency, anchor and rule checks"
 
 Spec 022 declares the `traverse-deps` primitive (spec.md) as "verify spec dependencies exist as directories and have compatible status." Before this scenario the primitive checked (a) existence of each declared dependency directory and (b) status compatibility along single edges, but not the dep graph's acyclicity. `/{project}:analyze` consumes `traverse-deps` (analyze.md's step 3, "Invoke `traverse-deps`") and inherited that gap — a graph with a cycle passed `traverse-deps` and `/{project}:analyze` reported no finding.
 
-The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive-dont-ask/scenarios/detect-dependency-cycles.md) — the generator, since replaced by the `derive-dependencies` primitive, fails when its generated graph has a cycle, blocking the commit. That covers the common case (cycle introduced during normal author flow). It does *not* cover:
+The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive-dont-ask/scenarios/detect-dependency-cycles.md) — the `derive-dependencies` primitive fails when its derived graph has a cycle, blocking the commit. That covers the common case (cycle introduced during normal author flow). It does *not* cover:
 
 - adopter projects on an older shipped generator (an adopter who has not yet re-run `/ductus` since the cycle-detection fix landed was still on the older copy);
 - projects where the pre-commit hook was skipped or never installed;

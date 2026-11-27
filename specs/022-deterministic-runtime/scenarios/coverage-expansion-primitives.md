@@ -20,17 +20,17 @@ The 2026-07-11 coverage review found ~22 of 100 parsed command steps are determi
 New primitives, each wired at every site per `.ductus/docs/agents/developing-ductus.md` §Adding or removing a runtime primitive (schema Args/Result, primitive module + `mod.rs`, MCP server + `TOOL_NAMES`, `PRIMITIVE_NAMES`, interpreter dispatch, CLI enum, `runtime-tools.txt`, data-model entry, regenerated configure permission blocks):
 
 - `remove-inbox-item` — dedup-aware removal of one bullet from `specs/inbox.md` (the complement of `append-inbox`, same atomic-write contract); groom step 9 invokes it.
-- `diff-cross-spec` (or a mode on `derive-boundary`) — the `git diff` from the window it reports as `window-base` (spec 079) filtered to paths outside `specs/{feature}/`, plus the inbox-window additions; implement steps 7/13 and the review captured-issues section invoke it. **058 removed the inbox-window half**: `diff-cross-spec` returns the cross-spec paths alone, and the review has no captured-issues section.
-- `check-review-gate` — evaluates the review record plus the feature-dir markdown lint into a verdict and the canonical blocked message (the spec's `review:` block as delivered here, `review.md`'s frontmatter since spec 057); implement's completion gate invokes it, replacing both the hand-walked branch and the raw `npx markdownlint-cli2` call (which becomes `lint-markdown`).
+- `diff-cross-spec` — the `git diff` from the window it reports as `window-base` (spec 079) filtered to paths outside `specs/{feature}/`; implement steps 7 and 10 invoke it. It returns the cross-spec paths alone, and the review has no captured-issues section.
+- `check-review-gate` — evaluates the review record plus the feature-dir markdown lint into a verdict and the canonical blocked message (the record in `review.md`'s frontmatter); implement's completion gate invokes it, replacing both the hand-walked branch and the raw `npx markdownlint-cli2` call (which becomes `lint-markdown`).
 - `append-question` — the question route's write for amend (`ductus append-question --help`); amend's question route invokes it.
 - `create-plan-artifacts` — copies the plan/tasks/data-model templates and reports pre-existing files (mirroring `create-feature`, atomic and mode-preserving); plan.md invokes it.
-- The pipeline view is pre-rendered for the host to restyle (preamble + table + counts/callouts + references), absorbing status.md's rendering steps — `dashboard`'s `rendered-markdown` field here, `render-status`'s result since spec 080, which absorbed the non-done prompt too.
+- The pipeline view is pre-rendered for the host to restyle (preamble + table + counts/callouts + references), absorbing status.md's rendering steps — `render-status`'s result (spec 080), which also absorbs the non-done prompt.
 
 ## Edge Cases
 
 - Each rewritten step names its primitive; without the server the command stops and says so (spec 079).
-- The rendered view is returned data the host may restyle, never stdout printing — `render-status`'s result since spec 080, as the `dashboard` field was — so it stays inside the runtime boundary. The exception is 080's `ductus hook`, whose block response, printed on stdout, the host shows as is.
-- `remove-inbox-item` reports a not-found removal as a domain outcome (no error), mirroring `append-inbox`'s `deduped` (a field 058 later removed with the dedup guard).
+- The rendered view is returned data the host may restyle, never stdout printing — `render-status`'s result (spec 080) — so it stays inside the runtime boundary. The exception is 080's `ductus hook`, whose block response, printed on stdout, the host shows as is.
+- `remove-inbox-item` reports a not-found removal as a domain outcome (no error).
 - `append-question`'s dedup uses the same normalized-whitespace comparison amend already specifies.
 
 ## Open Questions
@@ -39,5 +39,5 @@ New primitives, each wired at every site per `.ductus/docs/agents/developing-duc
 
 ## Resolved Questions
 
-- `diff-cross-spec` as its own primitive versus a mode on `derive-boundary`? **Own primitive, shared walk.** The two results share only the diff base — boundary globs versus sibling-spec paths + inbox bullet lines — so a mode would be a result-shape union for no gain; the expensive piece (the first-commit revwalk) is shared as the `pub(crate)` `first_commit_for_prefix` helper instead. `/ductus:review`'s captured-issues section stays on `compute-review-scope`, whose window starts at the in-progress transition (review wants the current work window, not the feature's whole history); `diff-cross-spec` diffs against the working tree so implement's per-task summary sees uncommitted captures. (058 later removed both inbox windows, and the section with them.)
+- `diff-cross-spec` as its own primitive versus a mode on `derive-boundary`? **Own primitive, shared walk.** The two results share only the diff base — boundary globs versus sibling-spec paths — so a mode would be a result-shape union for no gain; the expensive piece (the first-commit revwalk) is shared as the `pub(crate)` `first_commit_for_prefix` helper instead. `diff-cross-spec` diffs against the working tree so implement's per-task summary sees uncommitted captures.
 - All six in one pass, or an interpreter loop/conditional scenario first? **Incremental, no new construct needed.** The six landed one primitive per commit (remove-inbox-item, create-plan-artifacts, check-review-gate, append-question, diff-cross-spec, the dashboard `rendered-markdown` field). Per-step conditionals stayed host judgment on primitive results — the `check-stuck` precedent: the walker dispatches and merges; the host halts, prompts, or re-invokes (e.g. `create-plan-artifacts` with `overwrite: true` on the confirmed replace branch). No interpreter loop/conditional construct was required.

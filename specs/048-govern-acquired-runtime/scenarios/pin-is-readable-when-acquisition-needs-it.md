@@ -41,8 +41,8 @@ The pin is on disk before anything reads it, and the temp directory exists
 before anything writes to it.
 
 - **`{tempdir}` is created in the Pre-flight Phase preamble**, before either
-  check, because the *first* check needs it. The self-update check no longer
-  creates it and says so, so the two do not race to own it. One `mktemp` for
+  check, because the *first* check needs it. The self-update check does not
+  create it and says so, so the two do not race to own it. One `mktemp` for
   the whole run, reused by the later archive fetch exactly as before.
 - **The pin is fetched in pre-flight** from
   `raw.githubusercontent.com/stonean/ductus/{raw-ref}/version` into
@@ -56,12 +56,6 @@ before anything writes to it.
 Pre-flight's small-fetch property is preserved. What that phase avoids is the
 archive's multi-hundred-KB cost, not a `curl`; a one-line file does not
 approach it.
-
-`{staging-dir}` is retired from the procedure in the same change. It appeared
-only in these acquisition steps, was never defined in
-`framework/bootstrap/ductus.md` §Derived values, and named the directory
-the rest of the document calls `{tempdir}` — an undefined placeholder in the
-one procedure a first-run adopter executes.
 
 ## Edge Cases
 

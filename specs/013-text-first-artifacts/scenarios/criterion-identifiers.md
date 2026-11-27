@@ -88,7 +88,7 @@ Going-forward-only was rejected because the assignment rule makes it actively mi
 
 It also breaks the audit. A missing-label check cannot distinguish "unlabelled because it predates the convention" from "unlabelled because someone hand-edited and the hook did not run", so the check would need a per-spec grandfather date — the kind of exemption state [046 — Scenario open-question visibility](../../046-scenario-open-question-visibility/spec.md) refused for scenario questions, on the grounds that a sanctioned hiding place is worse than the gap it papers over.
 
-The sweep itself is arithmetic — number in body order from `AC1:`, inserting the label after the checkbox without altering the criterion's own text — so it qualifies as a uniform mechanical edit under §spec-lifecycle and the `done` specs it touches stay `done`. It is performed by the labelling pass above, not by hand. Superseded in part (spec 084): the mechanical-sweep rule now lives in §drift-prevention and no longer names label assignment; the specs stay `done` because a label owes no code, so a reopen is decided by `check-owed-work`, never by an edit's class.
+The sweep itself is arithmetic — number in body order from `AC1:`, inserting the label after the checkbox without altering the criterion's own text — so the `done` specs it touches stay `done`: a label owes no code, and a reopen is decided by `check-owed-work`, never by an edit's class. It is performed by the labelling pass above, not by hand.
 
 Two properties the sweep must preserve:
 

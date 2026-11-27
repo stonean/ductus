@@ -6,13 +6,13 @@ section: "Consolidation"
 
 ## Context
 
-Two commands remove a feature directory, and they answer the stranded-session question differently.
+Two commands remove a feature directory, and they answered the stranded-session question differently.
 
-`/{project}:fold` re-targets the session at the upstream spec as its last step, and says why: "the targeted directory no longer exists after step 12, so leaving the session pointing at it would strand every follow-on command on a path that is gone."
+`/{project}:fold` re-targeted the session at the upstream spec as its last step, and said why: "the targeted directory no longer exists after step 12, so leaving the session pointing at it would strand every follow-on command on a path that is gone."
 
-`/{project}:consolidate` deliberately does not. Its report step names the stranded target and directs the operator to `/{project}:target`, on the reasoning that consolidating a spec asserts its *content* belongs with the target, not that the operator's next *work* does.
+`/{project}:consolidate` deliberately did not. Its report step named the stranded target and directed the operator to `/{project}:target`, on the reasoning that consolidating a spec asserts its *content* belongs with the target, not that the operator's next *work* does.
 
-Each is locally defensible. Together they are two answers to one problem, and nothing records which is the framework's position — so the next command that removes a directory has no precedent to follow, only a coin to flip. That is the shape §drift-prevention exists to catch: a decision made twice, differently, with neither instance knowing about the other.
+Each was locally defensible. Together they were two answers to one problem, and nothing recorded which was the framework's position — so the next command that removes a directory had no precedent to follow, only a coin to flip. That is the shape §drift-prevention exists to catch: a decision made twice, differently, with neither instance knowing about the other.
 
 The asymmetry may also be real rather than accidental. Fold's target is *where the content went*, so re-targeting follows the operator's attention. Consolidation's target is a spec that already existed and that the operator may have no interest in — re-targeting there is a guess about intent. If that distinction is the answer, it is worth writing down; if it is a rationalization, the two should converge.
 

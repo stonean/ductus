@@ -232,7 +232,7 @@ The table below is filled while the cut is made. The lead column is abridged to 
 
 ### Size target
 
-The ceiling is 50,000 bytes, and the guide measures 46,731 bytes at `1ebc2a20`, leaving room for the next few lessons. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit had been exercised once. The landing is above the 45,000 first aimed at because the two security-derived entries (*a destination check judges where a write lands* and *an exact allow rule bounds the command text*) keep their full text, about 650 bytes over the cap. Each enumerates refusals a later check must reproduce, and the cap would have dropped four of them.
+The ceiling is 39,000 bytes (the `AGENTS.md` row of `scripts/lint-governing-size.sh`'s `CEILINGS`, held below the 50,000-byte read size by 089), leaving room for the next few lessons. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit had been exercised once. The guide measured 46,731 bytes at `1ebc2a20`, above the 45,000 first aimed at because the two security-derived entries (*a destination check judges where a write lands* and *an exact allow rule bounds the command text*) keep their full text, about 650 bytes over the cap. Each enumerates refusals a later check must reproduce, and the cap would have dropped four of them.
 
 ### Fan-out for classification
 

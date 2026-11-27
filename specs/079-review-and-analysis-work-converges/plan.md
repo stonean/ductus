@@ -4,7 +4,7 @@ Implements [079 — Review and analysis work converges](spec.md).
 
 ## Overview
 
-A shared commit-attribution helper gives the review window, scope, fix rounds and `diff-cross-spec` one answer to whose change a commit is. A new primitive decides from history what a person used to judge: `measure-reopenings` reports the outcome. `classify-spec-edit`, added here to say whether an edit reopens, is retired (spec 084). The review and analyze commands stop asking about non-gating observations. Each primitive gets one compiled description, the constitution makes the binary the source of its rules, and the references shrink last, so the cuts cannot hold up the changes that end the cycle.
+A shared commit-attribution helper gives the review window, scope, fix rounds and `diff-cross-spec` one answer to whose change a commit is. A new primitive decides from history what a person used to judge: `measure-reopenings` reports the outcome. The review and analyze commands stop asking about non-gating observations. Each primitive gets one compiled description, the constitution makes the binary the source of its rules, and the references shrink last, so the cuts cannot hold up the changes that end the cycle.
 
 `specs/events.md` and `specs/errors.md` do not exist in this repository (`git ls-files specs/events.md specs/errors.md` lists neither), and `specs/system.md` states only the runtime's network facts, which this plan touches nowhere, so there is nothing to conflict with there. This spec declares no dependencies.
 
@@ -54,7 +54,7 @@ Steps 10 of `framework/commands/review.md` and 19 of `framework/commands/analyze
 
 ### What reopens
 
-A `done` spec reopens by its state, never an edit's diff (spec 084): it is `in-progress` while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, by one test of what `tasks.md` owes, a line's text under any heading (`unchecked_lines` in `runtime/src/primitives/read_tasks.rs`, behind `runtime/src/primitives/owed_work.rs`), which `check-owed-work`, `prune-plan`'s `reopen-required`, `measure-reopenings`' `waiting`, the gate and `check-artifacts` share. `classify-spec-edit` and the correction class this spec added are retired; `check_artifact_size.rs`'s `OnDone` hints keep following the diff-based rule until spec 084's task 17.
+A `done` spec reopens by its state, never an edit's diff (spec 084): it is `in-progress` while its `tasks.md` holds an unchecked box or its `spec.md` an unticked criterion, by one test of what `tasks.md` owes, a line's text under any heading (`unchecked_lines` in `runtime/src/primitives/read_tasks.rs`, behind `runtime/src/primitives/owed_work.rs`), which `check-owed-work`, `prune-plan`'s `reopen-required`, `measure-reopenings`' `waiting`, the gate and `check-artifacts` share. `check_artifact_size.rs`'s `DONE_RULE` hint states the same rule.
 
 The mechanical-sweep rule stays (`mechanical_sweep.rs`, §drift-prevention), read by the analysis record's freshness and the review record's digest, and decides no reopen. A `done` spec holding an unticked criterion or an unchecked box reports `review-state-drift` from `check-artifacts`, reusing that family so no closed set grows, `--fix` reverts it, and the gate blocks `done` over an unchecked box (owner, 2026-11-06).
 
@@ -79,7 +79,7 @@ A run whose last write still carries `fix-rounds-open` counts as leaving a gatin
 Four edits, net-negative together, since it held 49,936 of 50,000 bytes by `wc -c` at `7b49fc80` (the spec's Motivation):
 
 - §runtime-boundary's host integration and eligibility criterion 3: the binary is the source of a primitive's rules, and the server is required, so a command stops without it (AC21; owner, 2026-11-06).
-- §spec-lifecycle's third back-edge and its shared test: a correction reopens nothing (AC15). Spec 084 replaced both with the owed-work state rule.
+- §spec-lifecycle's third back-edge and its shared test: a `done` spec reopens by the owed-work state rule, and a correction reopens nothing (AC15).
 - §brownfield-inbox's Finding dispositions: "each gating write is confirmed first", and "Scope decides the destination" narrowed to `/{project}:implement` (AC2, AC17); 067's AC6 later added an analysis's operator-confirmed design edit to what reaches the operator (2026-11-21).
 - The audit-record field list gains the three fields, and §drift-prevention's table gains a row for a primitive's behavior (AC9, AC14).
 
@@ -108,7 +108,7 @@ AC10, AC11 and AC16 landed with their decisions. The window and `--since` entrie
 `BE-COMPAT-001` asks a plan to classify a change to a primitive's interface or result. This spec's narrowings and removals are **breaking**, and what it only adds is additive:
 
 - Breaking: `diff-cross-spec`'s `window-base` replaces `first-commit`, and its `cross-spec-paths` narrows to the spec's own commits; `compute-review-scope`'s `scope` narrows, another spec's paths moving to `excluded`; `brief-re-read`'s `paths` narrows to a round's non-exempt paths; `check-review-gate`'s `blocked-by` gains `fix-round-loop-open`, `review-owed` and `unchecked-task`, in a closed set (`ReviewGateBlock` in `runtime/src/schema/primitives.rs`); and `write-review` and `write-analysis` refuse while `tasks.md` holds an unchecked box.
-- Additive: the result fields and arguments `data-model.md` adds, and the two new primitives, `measure-reopenings` and `classify-spec-edit`, the second retired by spec 084.
+- Additive: the result fields and arguments `data-model.md` adds, and the new primitive, `measure-reopenings`.
 
 The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that release already owes (071's plan), with their consumers in the same release (§runtime-boundary).
 
@@ -134,7 +134,6 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/src/primitives/decisions.rs` | Modify | `decided-by: rule`; a person's stored decision wins |
 | `runtime/src/primitives/diff_cross_spec.rs` | Modify | Window and own commits |
 | `runtime/src/primitives/derive_boundary.rs` | Modify | Doc comment no longer claims a shared window |
-| `runtime/src/primitives/classify_spec_edit.rs` | Create | Correction or reopen, from the diff; removed by spec 084 |
 | `runtime/src/primitives/measure_reopenings.rs` | Create | The outcome, from history |
 | `runtime/src/primitives/dashboard.rs` | Modify | The counts `/{project}:status` renders |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | `OnDone` hints follow the reopen rule; removed by spec 084 |
@@ -164,12 +163,12 @@ The runtime is pre-1.0, so these ship in a minor bump, 0.60.0, which that releas
 | `runtime/tests/common/mod.rs` | Modify | One path to the release binary, following its build |
 | `runtime/tests/{parity,exec_subprocess,manifest_cli_args,concurrent_sessions}.rs` | Modify | Use it |
 | `runtime/tests/golden/implement-basic.jsonl` | Modify | Its fixture's commit shas move with `implement.md` |
-| `framework/runtime-tools.txt` | Modify | Two new tools, `classify-spec-edit` since removed (spec 084) |
+| `framework/runtime-tools.txt` | Modify | One new tool, `measure-reopenings` |
 | `framework/constitution.md` | Modify | The four edits |
 | `framework/commands/review.md` | Modify | Window, scope, rule-decided dispositions, open mark |
 | `framework/commands/analyze.md` | Modify | Rule-decided dispositions |
 | `framework/commands/implement.md` | Modify | `diff-cross-spec`, `review-owed` |
-| `framework/commands/amend.md` | Modify | Reconcile called `classify-spec-edit`; it reads `check-owed-work` since spec 084 |
+| `framework/commands/amend.md` | Modify | Reconcile reads `check-owed-work` |
 | `framework/commands/status.md` | Modify | The counts |
 | `framework/commands/help.md` | Modify | A corrected fact stays `done` |
 | `framework/commands/*.md` | Modify | The host-integration pointer |
@@ -232,7 +231,7 @@ The spec's `cross-spec-impact:` lists what each owes, discharged by a blockquote
 | `050-constitution` | The constitution's four edits, under its size ceiling |
 | `051-branch-scoped-spec-numbering` | What the review after a fold reads, which its AC24 requires |
 | `058-findings-route-at-discovery` | Dispositions; its task 5 waits for this |
-| `063-oversized-artifacts-warn-with-a-fix` | Which trims `check-artifact-size`'s warning says reopen a `done` spec, read as `classify-spec-edit` read the result until spec 084 retired it |
+| `063-oversized-artifacts-warn-with-a-fix` | Which trims `check-artifact-size`'s warning says reopen a `done` spec, read by the owed-work rule (spec 084's AC18) |
 | `067-analyze-and-audit-checks` | A condition added to review-state drift |
 | `066-audit-records-and-the-completion-gate` | Records, gate, scope; its tasks 17–21 rebase on this |
 | `076-waived-and-deferred-findings-are-distinct-dispositions` | Dispositions; its data model held a false canonicality claim |

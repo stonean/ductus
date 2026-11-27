@@ -64,7 +64,7 @@ The section is comment-prompt only. The body is an HTML comment listing example 
 
 ### 008 signpost: top-of-file note, body untouched
 
-008's spec is `done`. Under the constitution's frozen-archaeology rule, in force when this plan was written, the body is not rewritten. (023's `living-specs` scenario later removed that rule; the signpost decision stands on its own merits.) The signpost is a quoted note inserted between the frontmatter and the H1, of the form:
+008's spec is `done`, and its body is not rewritten: the signpost is the only mutation. The signpost is a quoted note inserted between the frontmatter and the H1, of the form:
 
 > **Signpost:** 008 defines the *security instance* of the general rules tier later formalized in [016 — Cross-Cutting Rules](../016-cross-cutting-rules/spec.md). The rule-file format, ID conventions, and validate enforcement defined here remain authoritative for security rules and serve as the canonical reference for any future rule file. See [§rules](../../framework/constitution.md) in the constitution for the general framing.
 

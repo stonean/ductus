@@ -18,8 +18,6 @@ That would be cosmetic if the scope rule ignored it, but the rule then was *whic
 
 ## Behavior
 
-The captured-issues half of this scenario was removed by 058: neither `compute-review-scope` nor `diff-cross-spec` computes an inbox window any longer.
-
 **A table ends at a non-table line.** `parse_affected_files` resets its header state when it leaves a table, so a section holding several tables parses each one correctly and no header row is ever emitted as a path.
 
 **A qualified cell yields its backticked path.** When a first cell contains a backticked span, that span is the path; the surrounding prose is dropped. A cell with no backticks falls back to its trimmed text, unchanged.

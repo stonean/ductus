@@ -16,15 +16,12 @@ that `/{project}:review` already writes, and each command's run record moves out
 of `spec.md` frontmatter into the artifact that owns it — one home per record
 instead of two.
 
-> **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> Findings no longer route through the inbox. Each one is fixed, routed, or
-> discarded in the run that finds it, and both records dropped
-> `captured-issues` for a `dispositions:` map and a `decisions:` list.
-> `analysis.md`'s skeleton replaced its captured-issues section with
-> `## Fixed in this run`, and each tier section now lists its findings. It is
-> still not a triage surface: AC13 holds, and the deciding happens in the run.
-> AC12, AC14, the Motivation's routing claim, and the first Resolved Question
-> are annotated in place.
+> **Signpost:** [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md)
+> sets how findings are handled: each is fixed, deferred or waived in the run
+> that finds it, and both records carry a `dispositions:` map and a `decisions:`
+> list. `analysis.md`'s skeleton ends in `## Fixed in this run`, and each tier
+> section lists its findings. It is still not a triage surface: AC13 holds, and
+> the deciding happens in the run.
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md)
 > added two steps to the shipped CI template after its audit-record gate
@@ -106,12 +103,10 @@ families — resolves the record from its owning artifact.
 
 **The merge drops no field.** The two review records were not identical
 supersets: `blocking` and `waivers` existed only in `spec.md`'s block, while
-`diff-base`, `captured-issues`, and `skipped-passes` existed only in
-`review.md`. The relocated record is the union of both sides, with the
+`diff-base` and `skipped-passes` existed only in `review.md`. The relocated record is the union of both sides, with the
 timestamp keyed by meaning rather than name — `last-run` and `reviewed-at` were
-always the same instant spelled two ways. 058 has since replaced
-`captured-issues` with a `dispositions:` map, once the inbox stopped being a
-destination.
+always the same instant spelled two ways. The observation count `review.md`
+held as `captured-issues` is the record's `dispositions:` map.
 
 **A reconciliation check becomes unnecessary.** With one copy of the record,
 `check-review-agreement` and the audit family over it have no subject left to
@@ -190,18 +185,18 @@ backfilling.
 - [x] AC9: `/{project}:audit`'s exempt-population family counts the same population from the relocated records, and its committed high-water mark is reconciled in the same change rather than left measuring a field that no longer exists.
 - [x] AC10: A migration relocates every existing spec's records with values intact, invents no record for a spec that has none, and leaves `spec.md` with no residual block.
 - [x] AC11: Full markdown lint passes across the migrated corpus.
-- [x] AC12: The relocated review record carries every field from both former sides — `blocking` and `waivers` from the `spec.md` block, `diff-base`, `captured-issues`, and `skipped-passes` from `review.md`, and one timestamp for the pair spelled `last-run` / `reviewed-at` — so the merge drops no field. **Changed by 058**: the merge still dropped no field, and `captured-issues` has since been replaced by a `dispositions:` map, beside a new `decisions:` list.
+- [x] AC12: The relocated review record carries every field from both former sides that the record still has — `blocking` and `waivers` from the `spec.md` block, `diff-base` and `skipped-passes` from `review.md`, and one timestamp for the pair spelled `last-run` — so the merge drops no field. The observation count `review.md` held as `captured-issues` is the `dispositions:` map, beside a `decisions:` list.
 - [x] AC13: `analysis.md`'s body carries no `- [ ]` checkbox items in any section, checked mechanically rather than by review, so the report cannot become a second triage surface.
-- [x] AC14: Each analyze run overwrites `analysis.md` against a fixed section skeleton — Summary, hard failures, blocking findings, advisory findings, unexamined targets with their reasons, and captured issues — and never appends to a previous run's content. The sixth section is where the findings' text lands: the tier sections carry counts, because per-tier counts are all the writer receives, while the captured bullets record `family — message — path` without recording which tier produced them. **Superseded in part by 058**: the run still overwrites a fixed skeleton, but its sixth section is `## Fixed in this run`, and the tier sections list the findings, each with its disposition, because `write-analysis` now receives every finding with its tier. **Changed by 076**: a `## Deferred to other specs` section, between the advisory findings and the unexamined targets, lists the gating findings a deferral releases. **Changed by 073**: a `## Waived rules` section follows it when a rule was waived. **Changed by 082**: a `## Contradictions` section follows that; `docs/analyze.md` holds the section order.
+- [x] AC14: Each analyze run overwrites `analysis.md` against a fixed section skeleton and never appends to a previous run's content. The skeleton is Summary, hard failures, blocking findings, advisory findings, `## Deferred to other specs` (the gating findings a deferral releases), `## Waived rules` (when a rule was waived), `## Contradictions`, unexamined targets with their reasons, and `## Fixed in this run`; the tier sections list the findings, each with its disposition, because `write-analysis` receives every finding with its tier. `docs/analyze.md` holds the section order.
 - [x] AC15: `check-review-agreement` and the audit family built on it are removed, and the never-reviewed and never-analyzed cases its `single_sided` count distinguished remain distinguishable through AC5.
 - [x] AC16: The change adds one `framework/migrations.toml` entry with its `framework/migrations/{id}.md` procedure file, and 027's audit family — which fails a convention removal carrying no registry entry — passes against it.
 - [x] AC17: The shipped CI template step reads the record from `review.md` and `analysis.md` and bounds its exempt set with a committed high-water mark; no predicate in the step is satisfiable by every spec in a migrated corpus.
 - [x] AC18: The migration procedure detects an adopter CI file still carrying the pre-relocation block-presence check and tells the adopter to re-copy the template, since `/{project}` does not install CI files.
-- [x] AC19: Every analyze run that records writes `analysis.md` — including a clean run and an empty scope — so an absent file means never-analyzed rather than nothing-to-report, and the never-run signal AC5 depends on stays sound. **Changed by 079**: `write-analysis` refuses while the spec's `tasks.md` holds an unchecked box, so a run stopped there records nothing, and the absent file still means the analysis has not run.
+- [x] AC19: Every analyze run that records writes `analysis.md` — including a clean run and an empty scope — so an absent file means never-analyzed rather than nothing-to-report, and the never-run signal AC5 depends on stays sound. `write-analysis` refuses while the spec's `tasks.md` holds an unchecked box, so a run stopped there records nothing, and the absent file still means the analysis has not run.
 - [x] AC20: The migration is idempotent: re-running it over a partially migrated corpus completes the remainder and leaves already-migrated specs byte-identical, so an interrupted run is resumable rather than corrupting.
 - [x] AC21: The constitution's **Frontmatter Schema** section declares the review and analyze records at their new homes — the owning artifact, each field, and its type — instead of leaving them under the Open-schema rule, and the runtime is updated to match that declaration rather than the reverse (§runtime-boundary principle 4).
 - [x] AC22: `docs/analyze.md` documents the record field-by-field at `analysis.md` and describes the artifact's fixed skeleton; `docs/slash-commands.md`, `docs/shared-constitution.md`, and `README.md` carry no statement placing either record in `spec.md` frontmatter.
-- [x] AC23: Every framework command file that names the blocks — `review.md`, `analyze.md`, `implement.md`, `audit.md`, `consolidate.md` — is updated in both its runtime steps and its markdown-only reference, so the two paths describe one location.
+- [x] AC23: Every framework command file that names the blocks — `review.md`, `analyze.md`, `implement.md`, `audit.md`, `consolidate.md` — is updated, so each describes the records' new location.
 - [x] AC24: The generated per-agent command mirrors match their updated sources, and the command-parity audit passes.
 - [x] AC25: `AGENTS.md` and the spec template's frontmatter guidance carry no statement placing either record in `spec.md` frontmatter.
 - [x] AC26: A repo-wide search for the pre-relocation shape — a `review:` or `analyze:` block addressed as `spec.md` frontmatter — returns no hit that states it as current, outside the records of the relocation: this spec, its migration procedure, the adopter CI template's comments, `runtime/CHANGELOG.md`, and the annotations other specs carry. The documentation sweep is verified mechanically rather than asserted.
@@ -216,8 +211,7 @@ backfilling.
 
 ## Resolved Questions
 
-- **Should `analysis.md` hold the findings' content as well as the record, or the record alone?** **Resolved: a prose report body, carrying no checkboxes.** `analysis.md` mirrors `review.md` — the frontmatter record plus a narrative body naming what the run examined, what it skipped and why, and the findings it produced. The line that keeps 047's objection satisfied is mechanical rather than editorial: **the body carries no `- [ ]` items**. A checkbox list is a triage queue, and a second triage queue is exactly what 047 rejected; the same findings stated in prose are a report. Routing stays with the inbox, which `/{project}:groom` walks and this artifact does not.
-  - **Changed by `058-findings-route-at-discovery`.** Routing no longer goes through the inbox: each finding is fixed, routed, or discarded in the run that finds it, and the body lists each one beside its disposition. The no-checkbox line holds unchanged, so the report is still not a triage queue.
+- **Should `analysis.md` hold the findings' content as well as the record, or the record alone?** **Resolved: a prose report body, carrying no checkboxes.** `analysis.md` mirrors `review.md` — the frontmatter record plus a narrative body naming what the run examined, what it skipped and why, and the findings it produced. The line that keeps 047's objection satisfied is mechanical rather than editorial: **the body carries no `- [ ]` items**. A checkbox list is a triage queue, and a second triage queue is exactly what 047 rejected; the same findings stated in prose are a report. Each finding is fixed, deferred or waived in the run that finds it, and the body lists each one beside its disposition.
 - **`analyze.md` or `analysis.md`?** **Resolved: `analysis.md`, with the frontmatter key left as `analyze:`.** The runtime already pairs `write-review` with `write-analysis` (`runtime/src/primitives/write_analysis.rs`), and `review.md` is the *noun* of its command rather than the verb — so the noun form is what both precedents point at, and it is the name 047 used when it discussed the artifact, which keeps that cross-reference legible. Renaming the frontmatter key to `analysis:` in the same change was considered and declined: it would widen a relocation into a key rename across every spec, for consistency that costs more than it returns.
 - **Is `analysis.md` overwritten per run, or does it accumulate run history?** **Resolved: overwritten, against a fixed skeleton.** `write-review` "renders the fixed report skeleton" on every run (`runtime/src/primitives/write_review.rs`), so `review.md` always describes the current run and git carries the history. `analysis.md` takes the same shape, so the two artifacts stay symmetric and neither grows without bound on a command operators re-run freely.
 - **Does the migration belong in this repo as a one-shot, or in the [027 bootstrap migration registry](../027-bootstrap-migration-registry/spec.md)?** **Resolved: one registry entry, covering both.** Removing the `review:` and `analyze:` blocks from `spec.md` is a convention removal, and 027's `/{project}:audit` family **fails** when a removed convention has no registry entry — so a one-shot is not an available shape, it is a shipped audit failure. The change adds an entry to `framework/migrations.toml` with its procedure file under `framework/migrations/{id}.md`; adopters receive it on their next `/{project}` run, tracked by `[migrations].last_applied`, and this repo — which runs the framework on itself — is migrated by the same entry rather than by a second code path that could disagree with it.

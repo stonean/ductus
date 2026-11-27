@@ -10,8 +10,8 @@ next-criterion: 16
 A spec states once that it deliberately departs from a rule, and both `/{project}:analyze` and `/{project}:review` read that decision, so an accepted departure is recorded — what was accepted, by whom, when and why — and is never indistinguishable from a rule the spec satisfies.
 
 > **Signpost from [076 — Waived and deferred findings are distinct dispositions](../076-waived-and-deferred-findings-are-distinct-dispositions/spec.md).**
-> *Waived* now names every decision not to address a finding, at any tier,
-> replacing *discarded*, and *deferred* replaces *routed*. Whether a gating
+> *Waived* names every decision not to address a finding, at any tier, and
+> *deferred* names routing it to other work. Whether a gating
 > analyze finding can be waived stays this spec's question; 076 lets one be
 > deferred, releasing `done` only for work on another spec.
 

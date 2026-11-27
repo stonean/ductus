@@ -10,7 +10,7 @@ Fixing the canonical set stops new adopters getting a bad entry. It does nothing
 
 Two removals are in flight. Task 21 dropped seven `Bash(git -C * <sub> *)` allow entries because the leading wildcard spans inserted options and both `-c` and `--exec-path` run arbitrary commands. The sibling scenario `configure-inert-write-path-entries` drops two `Write(.ductus/*.toml)` entries that grant nothing. In both cases the source is now correct — and `merge-permissions` installs and dedups but, by design, never removes a non-canonical entry an adopter owns. So an adopter configured before either change keeps the entries indefinitely, and Claude Code warns about all nine at every session start.
 
-`configure-permission-pattern-safety` named that outcome and accepted it: *"`/ductus:configure` does not retroactively strip an unsafe pattern already present in an adopter's `settings.local.json` … Adopters configured before this change keep the seven rules until they remove them, and their host's startup warning is what surfaces it."* **That decision is superseded here.** Seven of the nine approve arbitrary execution with no prompt; leaving them installed and putting the repair on the adopter leaves a security hole open until someone reads a warning and acts on it.
+Seven of the nine approve arbitrary execution with no prompt; leaving them installed, with the host's startup warning the sole remedy, puts the repair on the adopter and leaves a security hole open until someone reads a warning and acts on it.
 
 The obvious owner is the migration registry — `framework/bootstrap/ductus-procedure.md` §Pre-run Migrations is literally "adopter-side cleanup for conventions removed since the adopter's last `/ductus` run." It does not work here, for two independent reasons:
 

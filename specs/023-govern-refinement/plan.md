@@ -91,8 +91,8 @@ Three additions to `framework/commands/amend.md`:
 Pure rename with no behavior change. The command's frontmatter `parity:` block stays unchanged under the new filename — the runtime parser is name-agnostic and primitive names (`gov-rt:validate-frontmatter`, etc.) are not touched. Rationale: §4's: the command audits artifacts against each other, the role GitHub Spec Kit gives `/analyze`, so the rename closes a naming divergence, and nothing else about the command changes. Three categories of work:
 
 1. **File rename** — `git mv framework/commands/validate.md framework/commands/analyze.md`. Update the H1 from "# Validate" to "# Analyze".
-2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/analyze.md` (the renamed `validate.md` itself), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`.
-3. **Frozen-archaeology accommodation** — planned as: done specs under `specs/NNN-*/` retain their `/ductus:validate` references, with a single "Past Renames" note in `specs/README.md` mapping old to new without per-spec signposts. This accommodation was reversed by this spec's own [`living-specs`](scenarios/living-specs.md) follow-on scenario, which deleted the frozen-archaeology carve-out from `framework/constitution.md` §drift-prevention: done spec bodies are live artifacts and were swept with everything else. the Past Renames note was deleted with it — see AC23 — and rename history lives in git log.
+2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/analyze.md` (the renamed `validate.md` itself), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`.
+3. **Done specs** — done specs under `specs/NNN-*/` are live artifacts, swept with everything else (the `living-specs` follow-on scenario), so their `/ductus:validate` references were replaced with the rest. `specs/README.md` carries no "Past Renames" note (AC23), and rename history lives in git log.
 
 The rename lands in Phase B between `/elaborate` deletion (task 12) and the help-tables generator update (task 13). The help-tables generator must be updated in the same commit as the rename or pre-commit hooks will fail (the script tries to read `validate.md` which no longer exists).
 
@@ -110,7 +110,7 @@ The rename ships alongside a description tightening on both commands so `/help` 
 `scripts/gen-help-tables.sh` currently builds five tables. The `elaborate_table` lists `/amend` and `/elaborate`; the `brownfield_table` lists `/capture`, `/log`, `/groom`. Changes:
 
 - Rename marker `commands-elaborate` → `commands-refine` in the generator and in `framework/commands/help.md`.
-- Drop the `/elaborate` row from the refine table; this spec left it a single-row table with `/amend` only, and it has since grown to four rows (the spec's Help category collapse question).
+- Drop the `/elaborate` row from the refine table, which keeps `/amend` and the rows `scripts/gen-help-tables.sh` lists (the spec's Help category collapse question).
 - Drop the `/capture` row from the brownfield table.
 - Rename the surrounding heading in `help.md` from "Elaborate (add precision)" to "Refine".
 
@@ -118,9 +118,9 @@ Rationale: §2 and §3 delete `capture.md` and `elaborate.md` rather than alias 
 
 The script's existing splice logic handles marker renames without code changes — the markers are data, not hardcoded structure. The five table-build invocations in the script update inline.
 
-### Migration check in `/ductus` bootstrap
+### Adopter migration
 
-Delivered as a prose step in `framework/bootstrap/ductus.md`, run after the archive fetch and before the manifest apply, that offered to rename each `specs/*/spec-and-plan.md` to `spec.md`. `027-bootstrap-migration-registry` has since replaced it with the `spec-and-plan-sunset` entry in `framework/migrations.toml`, which 027's review then archived (`c061c1f0`), as AC11 records. No primitive was added for it, since shell `find` and host file operations covered the rename.
+The `spec-and-plan.md` rename is not a pipeline step and no primitive does it: the `/ductus` migration registry offered it until its sunset, and its recipe is under Archived migrations in the repository `CHANGELOG.md`.
 
 The changelog entry accompanying the paired runtime and framework release documents the rename for adopters who upgrade without re-running `/ductus`.
 

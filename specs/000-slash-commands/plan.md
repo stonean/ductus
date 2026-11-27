@@ -77,7 +77,7 @@ Rejected. Each command needs enough instruction detail that a single file would 
 
 ### Considered: using a different placeholder syntax (e.g., `{{project}}`, `$PROJECT`)
 
-Rejected. `{project}` is simple and readable in markdown. The decision rested on a second premise as well — that curly braces are not used in the constitution or template content — and that one no longer holds: the brace form became the corpus-wide placeholder convention, so the constitution and `framework/templates/spec/spec.md` both carry them. The decision stands on that consistency rather than on the scarcity it was argued from.
+Rejected. `{project}` is simple and readable in markdown. The brace form is the corpus-wide placeholder convention, so the constitution and `framework/templates/spec/spec.md` both carry it.
 
 ## Open Questions Resolved
 

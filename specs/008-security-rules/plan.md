@@ -101,21 +101,19 @@ Each edge case maps directly to a checkbox in that section's check list, so viol
 ### Brownfield audit lives in ductus, not `/{project}:analyze`
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> The audit reports each gap under its spec and writes nothing, where it first
-> wrote each to `specs/inbox.md`. The trigger and the per-rule logic are
-> unchanged, and the contract is `spec.md` §Brownfield Adoption. Since 056 split
-> the bootstrap, the section lives in
+> The audit reports each gap under its spec and writes nothing. The contract is
+> `spec.md` §Brownfield Adoption, and the section lives in
 > `framework/bootstrap/ductus-procedure.md` §Security Audit (brownfield).
 
 When `/ductus` lands rule files in a project with existing feature spec directories, in either numbering form constitution §numbering defines, it runs a one-time audit and reports each gap under the spec it belongs to, writing nothing, so `/{project}:analyze` finds and dispositions each gap when that spec is next worked on. This follows 011's brownfield process, each spec gaining precision as it is worked on, rather than introducing baseline files or suppression mechanisms.
 
-`framework/bootstrap/ductus.md` gains a new top-level section, **Security audit (brownfield)**, slotted after **Shared Files** (where the manifest deposits the rule files) and before **Per-Agent Scaffolding**. The section's logic:
+`framework/bootstrap/ductus-procedure.md` holds a top-level section, **Security Audit (brownfield)**, which `framework/bootstrap/ductus.md` runs at step 4c, directly after the **Shared Files** pass that deposits the rule files. The section's logic:
 
 1. Detect the trigger: at least one of `specs/rules/security-backend.md`, `specs/rules/security-frontend.md` or, since spec 077, `specs/rules/security-cross.md` was newly created (not updated) by the manifest pass, AND at least one feature spec directory exists, in either numbering form constitution §numbering defines.
 2. Load the newly created security rule file(s) using the same integrity checks `/{project}:analyze` uses. If a file fails to load, report and skip the audit for that file.
 3. Iterate the rules, applying each to each existing feature spec — its `spec.md`, `plan.md`, `data-model.md` and scenarios read together, with a cross-spec file the spec or the Verification refers to — as `/{project}:analyze` applies it: produce one finding when its Verification trigger fires against the spec and the spec does not include the commitment or holds a case the rule flags, unless the rule sets that gap aside or names it as another rule's, in its **Not flagged:** clause or elsewhere, a load condition there judged against the rule files under `specs/rules/` after the manifest pass, as `/{project}:analyze` judges it (since spec 077). A case yielded to a rule in a non-security rule file the manifest pass newly created is reported under that rule's ID, its file loaded with the same integrity checks and the rule applied to that case alone, as `/{project}:analyze` applies it (since spec 077).
 4. Report each finding under the spec it belongs to, as `{Rule ID}: {affected artifact path} does not address — {one-line summary}` (`spec.md` §Finding format). The audit writes no file.
-5. The post-scaffolding output reports how many gaps were found and in how many specs and lists each finding under its spec, and is omitted when there are none (AC27, as 058 superseded it).
+5. The post-scaffolding output reports how many gaps were found and in how many specs and lists each finding under its spec, and is omitted when there are none (AC27).
 
 Audit logic mirrors the command's per-rule check logic. Both call into the same Verification-evaluation pattern; the difference is the output: the audit reports at adoption and writes nothing, where `/{project}:analyze` records its findings in the spec's `analysis.md`. For implementation, the analyze prompt and the ductus audit section can share a written description of the per-rule check (referenced rather than duplicated) — the rule-evaluation procedure lives in one place, both consumers reference it.
 
@@ -127,7 +125,7 @@ Trade-off: ductus gains complexity from this audit step, but the alternative, ad
 
 ### Data model formalizes rule entry schema
 
-Like the workflow registry spec 005 introduced (since retired by `043-workflows-sunset`), the rule entry is structured data even though it lives in markdown. `data-model.md` documents the required fields, ID format, category enum, and Verification phrasing conventions. This is the contract validate relies on; future rule writers consult it to keep the rule files internally consistent.
+The rule entry is structured data even though it lives in markdown. `data-model.md` documents the required fields, ID format, category enum, and Verification phrasing conventions. This is the contract validate relies on; future rule writers consult it to keep the rule files internally consistent.
 
 ## Affected Files
 
@@ -135,9 +133,8 @@ Like the workflow registry spec 005 introduced (since retired by `043-workflows-
 | --- | --- | --- |
 | `framework/rules/security-backend.md` | Create | Starter set of backend security rules |
 | `framework/rules/security-frontend.md` | Create | Starter set of frontend security rules |
-| `framework/bootstrap/ductus.md` | Modify | Add 2 rows to the **`ductus`-owned shared files (strategy: update)** manifest table mapping `framework/rules/security-{backend,frontend}.md` → `specs/rules/security-{backend,frontend}.md`. Add a new **Security audit (brownfield)** section after **Shared Files** and before **Per-Agent Scaffolding**, plus an audit-summary line in **Post-Scaffolding Output**. |
+| `framework/bootstrap/ductus.md` | Modify | Add 2 rows to the **`ductus`-owned shared files (strategy: update)** manifest table mapping `framework/rules/security-{backend,frontend}.md` → `specs/rules/security-{backend,frontend}.md`. The **Security Audit (brownfield)** section, in `framework/bootstrap/ductus-procedure.md`, runs directly after **Shared Files**, with an audit-summary line in **Post-Scaffolding Output** there. |
 | `framework/commands/analyze.md` | Modify | Add **Security rules** check section codifying the 7 edge cases and the contextual matching rule |
-| `framework/constitution.md` | Modify | Append the rule-files reference to the "Secure" principle, which `050-constitution` later removed |
 | `specs/008-security-rules/data-model.md` | Create | Schema for rule entries (fields, ID format, category enum, Verification phrasing convention) |
 
 ## Trade-offs

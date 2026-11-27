@@ -7,7 +7,7 @@ Implements [050 — Constitution](spec.md).
 Three pieces of work over two files. Classify every rule-bearing `AGENTS.md`
 entry, move the universal ones into `framework/constitution.md` leaving pointers
 behind, and add two rules that were learned here but belong to every adopter —
-criterion verification and the mechanical-edit test (since replaced by spec 084's owed-code rule).
+criterion verification and the statement that an edit changing no claim leaves a `done` spec `done`, since a `done` spec reopens only for owed code.
 
 The work is almost entirely prose, and the risk is not that it breaks but that
 it drifts: two copies of a rule, a promoted rule that still names this
@@ -88,14 +88,12 @@ claim about their contents is false is invisible to it. Both halves were
 observed here on 2026-08-17. Adopters run the same pipeline and inherit the same
 blind spot.
 
-**The mechanical-edit test** (AC13) settled whether an edit that changes no
-claim reopens a `done` spec; the `045` chore held in `specs/inbox.md` waited on
-it until task 7. Spec 084 replaced it: §spec-lifecycle reopens a `done` spec
-only while code is owed (its `tasks.md` holds an unchecked box or its
-`spec.md` an unticked criterion), so no edit's diff decides a reopen. The
-mechanical-sweep rule that remains, two cases read by the analysis record's
-freshness and the review record's digest, is in §drift-prevention's *No dead
-references in live artifacts* bullet.
+**An edit that changes no claim leaves a `done` spec `done`** (AC13):
+§spec-lifecycle reopens a `done` spec only while code is owed (its `tasks.md`
+holds an unchecked box or its `spec.md` an unticked criterion), so no edit's
+diff decides a reopen. Which sweeps are mechanical, and so read as no change by
+both audit records, is §drift-prevention's *No dead references in live
+artifacts* bullet.
 
 ### The version pin does not move
 
@@ -110,10 +108,11 @@ every adopter fetches assets that do not exist (`framework/bootstrap/ductus.md`
 and its **Failure** aborts on an unpublished asset). The constitution reaches
 adopters by the **Shared Files** manifest row copying
 `framework/constitution.md` to `.ductus/constitution.md`
-(`framework/bootstrap/ductus.md`), which tracks `main` — so no bump, and no
-tag. (Since 061 the archive is the latest release's by default, so such a change
-reaches default-source adopters at the next release; see the spec's Resolved
-Question.)
+(`framework/bootstrap/ductus.md`), so committing one needs no bump and no
+tag. The archive is the latest release's by default
+(`061-updates-track-the-latest-release-tag`), so such a change reaches
+default-source adopters at the next release, as the spec's Resolved Question
+states.
 
 ### Verification is the audit, not a reading
 
@@ -167,9 +166,9 @@ Three kinds of change, by destination:
 
 - **Moved to the command that applies it**, with the constitution keeping a pointer. The review window, coverage and record-age rules (§implement-phase's `examined`, review-window, pre-coverage-record, empty-diff-base, durable-contract and write-time-denominator bullets, 3,475 bytes) went to `framework/reference/review.md` §Window and coverage; the rule that the criteria-path count cannot be measured on an `in-progress` spec went to `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory); the analyze record's per-field meanings to that file's §Record fields; and removing an inbox item by its text to `framework/reference/groom.md` §Inbox upkeep, whose decision tree already held the chore-and-blocked-item rules. So did the rest of what one command applies: the review record's field meanings, with `scope`'s definition now in `framework/reference/review.md` §Window and coverage; the homes a routed finding lands in, the Groom decision tree's; the disposition task's shape, `framework/reference/implement.md`'s; and `/{project}:groom`'s referral of an item no spec covers to `/{project}:specify`, `framework/reference/groom.md`'s. Moving the mechanics alone could not reach one read, as the scenario's measurement warned: they came to about 6 KB.
 - **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, a second statement of markdown-by-default, the rule-ID prefix repeated under *Lifecycle*, the closing gloss on the third eligibility criterion, the no-code-without-a-spec sentence §pipeline-boundaries states, the `(spec NNN)` pointers into a corpus an adopter does not have, and glosses, examples and reasons the rule beside them does not need.
-- **Compressed in place**: every other section, each rule kept but one. §drift-prevention's host rules file, which had supplied the agent-specific routing that applies both questions, now carries that routing as a pointer. The five runtime principles are byte-identical, as the Guiding Principles' two lists were until AC25 removed them. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule, the non-scope list and the forward pointer to spec 022 all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers are byte-identical and in order, as every heading and every bold span were until AC25 removed the two lists' headings and bold principle names.
+- **Compressed in place**: every other section, each rule kept but one. §drift-prevention's host rules file, which had supplied the agent-specific routing that applies both questions, now carries that routing as a pointer. The five runtime principles are byte-identical, as the Guiding Principles' two lists were until AC25 removed them. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule and the non-scope list all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers are byte-identical and in order, as every heading and every bold span were until AC25 removed the two lists' headings and bold principle names.
 
-**A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge: 021 AC9, 062 AC25 and 064 AC12 are annotated as superseded in part, and 064's D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done` are corrected. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place, and spent `done`-spec tasks keep their wording, except two notes in 041's and 058's whose 53,813-byte ceiling figure was replaced.
+**A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge, each corrected where it lives: 021's AC9, 062's AC25 and 064's AC12 and D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done`. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place.
 
 **The constitution is imported at startup.** This repository's `CLAUDE.md` imports `@framework/constitution.md` and the template `@.ductus/constitution.md`, each above `@AGENTS.md`, where the template carried it before 072. The method 072 used for AC6 proved the import loads. On 2026-10-27, `claude -p` with every tool disallowed was asked for two sentences only the constitution holds, the second its last line. With `@AGENTS.md` alone it answered `NOT IN CONTEXT`; with the import it quoted both verbatim. Neither run made a tool call, and they took 35,092 and 51,823 input tokens. An adopter's `CLAUDE.md` reaches the same line through two migrations. `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line. `constitution-import`, ordered after it on the `id` tie-break, adds the line where nothing imports the constitution. That includes a `--ref=main` adopter whose `last_applied` is already `claude-md-import-syntax`, whom no edit to that migration would reach. `/{project}:target` still reads the constitution where no import loaded it: on an `AGENTS.md`-layout host, or on one that does not resolve `@path`.
 
@@ -207,7 +206,7 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 ### A superseded requirement is never kept
 
-§drift-prevention's Decision resolution states it after its bold closing sentence (AC27): the change that supersedes a requirement removes it from every artifact stating it, a checked task's text included. The rule is the owner's (2026-11-27), and its home in the constitution, since it is true for every project, the agent's recommendation, adopted by the operator, 2026-11-27. It lands within the 49,000-byte ceiling by cutting the retired-filename bullet's sentence reserving annotation for a criterion whose behavior was superseded, which stated the opposite, and whose other half *No dead references* states by counting `done` bodies among live artifacts: the constitution went from 48,955 to 48,974 bytes (`wc -c`). The scenario `a-retired-filename-leaves-a-decision-record` stops reserving annotation and stops leaving a `plan.md` or `tasks.md` occurrence as written. Two sweeps, the owner's choice, bring this repository's corpus to the rule: `/ductus:prune --all`'s `tasks.md` reduction drops every spec's spent task sections and keeps pending ones, leaving its `plan.md` and `review.md` reductions, which AC27 does not reach, unapplied (task 55; the agent's recommendation, adopted by the operator, 2026-11-27), and each ticked criterion carrying a note that it was superseded, in any wording, is rewritten to the requirement that holds now, or deleted where its behavior is gone (task 56; the wording the agent's recommendation, adopted by the operator, 2026-11-27).
+§drift-prevention's Decision resolution states it after its bold closing sentence (AC27): the change that supersedes a requirement removes it from every artifact stating it, a checked task's text included. The rule is the owner's (2026-11-27), and its home in the constitution, since it is true for every project, the agent's recommendation, adopted by the operator, 2026-11-27. It lands within the 49,000-byte ceiling by cutting the retired-filename bullet's sentence reserving annotation for a criterion whose behavior was superseded, which stated the opposite, and whose other half *No dead references* states by counting `done` bodies among live artifacts: the constitution went from 48,955 to 48,974 bytes (`wc -c`). The scenario `a-retired-filename-leaves-a-decision-record` stops reserving annotation and stops leaving a `plan.md` or `tasks.md` occurrence as written. Two sweeps, the owner's choice, bring this repository's corpus to the rule: `/ductus:prune --all`'s `tasks.md` reduction drops every spec's spent task sections and keeps pending ones, leaving its `plan.md` and `review.md` reductions, which AC27 does not reach, unapplied (task 55; the agent's recommendation, adopted by the operator, 2026-11-27), and each ticked criterion carrying a note that it was superseded, in any wording, is rewritten to the requirement that holds now, or deleted where its behavior is gone (task 56; the wording the agent's recommendation, adopted by the operator, 2026-11-27). Every other such note, in a spec body, a Resolved Question, a scenario, a plan, a data model or a research file, is rewritten the same way in the same pass. A signpost keeps its pointer and any link that discharges a `cross-spec-impact:`, and a record of what happened stays (task 57). A criterion annotated as never true is corrected to what holds, as `AGENTS.md`'s *ever true* bullet now says. Each of these was the agent's recommendation, adopted by the operator, 2026-11-27.
 
 ## Classification
 
@@ -507,14 +506,14 @@ The cut to one read moved these universal rules' canonical text out of the const
 §grounding's *Cite what you consulted* drops "bare" and names the forms a citation takes, and bars a line number in a spec, plan, data model, research file, scenario or task list, so `path:line` no longer reads as allowed there (AC24). A chat report or a review finding's line range is outside that list (owner decision, 2026-11-18). `067-analyze-and-audit-checks`' `line-number-citations` family enforces it, and removing a line suffix is a mechanical sweep, which §drift-prevention's *No dead references in live artifacts* bullet names (spec 084; `066-audit-records-and-the-completion-gate` first classified it). The plan command and the plan and clarify references point at the bullet instead of restating it.
 
 - **This repository's sweep splits by what a citation's line already names** (owner decisions, 2026-11-17). Where it names the symbol, heading or phrase, the suffix is stripped, in a commit holding nothing else. Otherwise the citation is rewritten by hand to name what it pointed at in the commit that wrote it, read with `git blame` and `git show`, and so is each prose line reference.
-- **Each `done` spec a rewrite reopens**, as `classify-spec-edit` judged it, moved to `in-progress` with `set-status` and closed again after its own analysis. Superseded in part (spec 084): `classify-spec-edit` is retired, and a rewrite reopens a `done` spec only when it leaves an unchecked box or an unticked criterion.
+- **Each `done` spec a rewrite reopens**, only where the rewrite leaves an unchecked box or an unticked criterion, is moved to `in-progress` with `set-status` and closed again after its own analysis.
 - **An adopter's citations are not edited** (owner decision, 2026-11-17). The check reports one when its spec's analysis next runs, which neither the shipped CI template nor the hook does on its own, so no migration and no strip primitive ships.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, the mechanical-edit test in §spec-lifecycle (since replaced, spec 084), and a §drift-prevention canonical-sources row naming this spec |
+| `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, §spec-lifecycle's statement that an edit changing no claim leaves a `done` spec `done` (AC13), and a §drift-prevention canonical-sources row naming this spec |
 | `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
 | `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §cost-levers' example cut to fit the ceiling (task 53) |
 | `AGENTS.md` | Modify | 40dea24c's restatement of the filter removed, and the bullet it displaced restored (task 53) |
@@ -524,12 +523,12 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `specs/` | Modify | The sweep: no spec artifact carries a line-number citation (task 49) |
 | `AGENTS.md` | Modify | Each promoted entry rewritten to a pointer; project-only entries untouched |
 | `specs/050-constitution/plan.md` | Modify | Carries the classification table — the audit trail AC1 requires |
-| `specs/inbox.md` | Modify | The held `045` chore is resolved against the new mechanical-edit test and removed |
-| `specs/045-decision-state-drift-detection/spec.md` | Modify | The one-word sweep-residue repair the chore describes, once the test licenses it |
+| `specs/inbox.md` | Modify | The held `045` chore is resolved and removed |
+| `specs/045-decision-state-drift-detection/spec.md` | Modify | The one-word sweep-residue repair the chore described |
 | `framework/reference/review.md` | Modify | §Window and coverage receives the review-window and coverage rules |
 | `framework/reference/analyze.md` | Modify | The in-progress measurement rule, and §Record fields for the analyze record's field meanings |
 | `framework/reference/groom.md` | Modify | §Inbox upkeep receives the remove-by-text rule |
-| `framework/commands/groom.md` | Modify | Step 8 points at `framework/reference/groom.md` §Inbox upkeep instead of quoting a constitution sentence that no longer exists |
+| `framework/commands/groom.md` | Modify | Step 9 points at `framework/reference/groom.md` §Inbox upkeep |
 | `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the 50,000-byte read size |
 | `scripts/tests/test-lint-governing-size.sh` | Modify | Check H holds both ceilings to `DEFAULT_READ_SIZE_BYTES` |
 | `CLAUDE.md` | Modify | Imports `@framework/constitution.md` above `@AGENTS.md` |

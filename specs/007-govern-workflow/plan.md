@@ -69,12 +69,6 @@ The project name and the spec-root name become path components of what the run w
 
 ## Trade-offs
 
-### Considered: single ductus file with CLI prompt
-
-A single `ductus.md` that asks "Which CLI are you using?" at runtime. Rejected because the user already chose their CLI by installing the file into a specific directory. A prompt adds friction and the file can't know which directory it was placed in.
-
-**Adopted, not rejected — [012-multi-agent-govern](../012-multi-agent-govern/spec.md) reversed this.** The shipped installer is exactly the option this section turned down: one `framework/bootstrap/ductus.md` carrying an Agent Registry, selecting the agent at runtime via a first-run prompt (and `--add-agent` afterwards). The premise did not survive the change it was reasoning about: once there is a single file at a single URL, the user no longer "already chose their CLI by installing the file into a specific directory", so the argument against the prompt dissolved with the two-file model that supported it. Recorded here rather than deleted because it is the decision 007 actually made; left un-swept would read as a live objection to the design that won — the drift `AGENTS.md` §Gotchas records as invisible to every check, since the option's name never changed and the prose carries none of the tokens an identifier sweep greps for.
-
 ### Considered: keeping `.claude/` hardcoded in command templates, substituting only in ductus
 
 The ductus command could do `.claude/` → another CLI's directory replacement at copy time without changing the source templates. Rejected because it's fragile — any new `.claude/` reference in a template would silently break adoption on the other CLI. The `{cli-config-dir}` placeholder makes the abstraction explicit and grep-able.

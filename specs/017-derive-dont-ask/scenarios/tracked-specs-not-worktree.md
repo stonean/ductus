@@ -4,16 +4,13 @@ section: "Generators and Hooks"
 
 # Tracked-specs-not-worktree
 
-> **Superseded mechanism (022):** the shell generators this scenario names no longer exist.
-> [067-analyze-and-audit-checks](../../067-analyze-and-audit-checks/spec.md)'s `adopter-generator-promotion`
-> replaced the dependency derivation with the `derive-dependencies` and `derive-references` runtime
-> primitives, which carry the requirements below across unchanged, and `gen-readme-table.sh` was retired
-> with the generated README table (AC10). The behaviour below still binds — read each script name as the
-> primitive that took it over.
+> **Note:** The derivations this scenario governs are the `derive-dependencies` and
+> `derive-references` runtime primitives
+> ([067-analyze-and-audit-checks](../../067-analyze-and-audit-checks/spec.md)'s `adopter-generator-promotion`).
 
 ## Context
 
-`specs/017-derive-dont-ask/spec.md` §Generators and Hooks / AC12 specify the ductus-repo and adopter pre-commit hooks as: *"Runs all generators unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong."* The implementation enumerated specs with a **worktree glob** (`specs/[0-9][0-9][0-9]-*/spec.md`) inside both `gen-spec-deps.sh` and `gen-readme-table.sh`, and the hooks then force-`git add`ed every matched `spec.md` plus `README.md`.
+`specs/017-derive-dont-ask/spec.md` §Generators and Hooks / AC12 specified the ductus-repo and adopter pre-commit hooks as: *"Runs all generators unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong."* The implementation enumerated specs with a **worktree glob** (`specs/[0-9][0-9][0-9]-*/spec.md`) inside both `gen-spec-deps.sh` and `gen-readme-table.sh`, and the hooks then force-`git add`ed every matched `spec.md` plus `README.md`.
 
 That conflates *what is in the worktree* with *what is being committed*. An untracked, in-progress draft — e.g. a `/specify` spec the author created but has not yet `git add`ed — sits in the worktree. So any commit, on any unrelated change, would: rewrite the draft's frontmatter, regenerate the README to list it, force-`git add` the draft (`A`) and the README, and commit both. A half-written draft with a malformed or circular link would additionally fail `gen-spec-deps.sh`'s cycle check under `set -e` and **block the unrelated commit entirely**.
 
@@ -21,14 +18,14 @@ This is the precise failure the spec exists to prevent. 017's governing principl
 
 ## Behavior
 
-- Both generators (`gen-spec-deps.sh`, `gen-readme-table.sh`) MUST enumerate the feature-spec set from the **git index** (`git ls-files`), not a worktree glob. A spec that is tracked or staged is processed; an untracked draft is not — it is never rewritten, never enters the README table, and never enters the dependency/cycle graph.
-- The pre-commit hooks (`.githooks/pre-commit` and the shipped `framework/bootstrap/hooks/ductus-pre-commit`) MUST stage only spec files **already part of the commit** (`git diff --cached`). A generator's derived `dependencies:` rewrite on an already-staged spec is captured; untracked drafts and unstaged edits to other tracked specs are not swept in.
+- `derive-dependencies` and `derive-references` MUST enumerate the feature-spec set from the **git index**, not a worktree glob. A spec that is tracked or staged is processed; an untracked draft is not — it is never rewritten and never enters the dependency/cycle graph, and the result names it in `untracked-skipped`.
+- The pre-commit hooks (`.githooks/pre-commit` and the shipped `framework/bootstrap/hooks/ductus-pre-commit`) MUST stage only spec files **already part of the commit** (`git diff --cached`). A derivation's `dependencies:` rewrite on an already-staged spec is captured; untracked drafts and unstaged edits to other tracked specs are not swept in.
 - A brand-new spec is processed and staged on the commit that first `git add`s it (it is in the index from that point) — the common "create a spec, then commit it" flow is unchanged.
-- Outside a git repo (no index to consult), the generators fall back to the worktree glob. This path is exercised by the existing `gen-spec-deps` fixture tests, which run against plain temp dirs.
-- A fixture under the `gen-spec-deps` test surface covers the core invariant: in a git repo with one tracked spec and one untracked draft (both carrying body links), the tracked spec's `dependencies:` are derived and the untracked draft is left byte-for-byte untouched.
+- Outside a git repo (no index to consult), the primitives fall back to walking the worktree (`list_tracked_specs` in `runtime/src/primitives/mod.rs`). This path is exercised by the golden fixtures in `runtime/tests/derive_dependencies_golden.rs`, which run against plain temp dirs.
+- `untracked_specs_are_never_rewritten_and_are_reported` in `runtime/tests/derive_dependencies_golden.rs` covers the core invariant: in a git repo with one tracked spec and one untracked draft (both carrying body links), the tracked spec's `dependencies:` are derived and the untracked draft is left byte-for-byte untouched.
 
 ## Edge Cases
 
-- **Unstaged edits to a tracked spec while committing something else**: the generator still rewrites that spec's `dependencies:` in the worktree (it is tracked), but the hook does not stage it (it is not in `git diff --cached`). The regenerated line stays unstaged with the author's other unstaged edits — the commit's scope is respected.
-- **CI / fresh checkout**: every spec is tracked, so the index scope and the old worktree glob are identical — AC10/AC11's "fresh checkout produces no diff" invariant is preserved.
-- **`git rm`'d spec**: removed from the index, so it drops out of the README table and dep graph on the same commit, matching the deletion.
+- **Unstaged edits to a tracked spec while committing something else**: the derivation still rewrites that spec's `dependencies:` in the worktree (it is tracked), but the hook does not stage it (it is not in `git diff --cached`). The regenerated line stays unstaged with the author's other unstaged edits — the commit's scope is respected.
+- **CI / fresh checkout**: every spec is tracked, so the index scope and the old worktree glob are identical — AC11's "fresh checkout produces no diff" invariant is preserved.
+- **`git rm`'d spec**: removed from the index, so it drops out of the dep graph on the same commit, matching the deletion.

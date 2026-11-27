@@ -167,7 +167,7 @@ The exception is what makes this mechanical rather than a judgment call, and it 
 
 Everything else in a spec body describes the project as it *is*, and specs are living documents representing current state. Leaving them would have 50 specs describing a project by a name it no longer has.
 
-The rule is therefore: sweep every occurrence except those naming a published version, tag, or asset. Because the exception is a determinable class rather than a per-occurrence decision, every change in the resulting diff is still the same substitution — which is what [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) case (a) requires, so the `done` specs the sweep touches stay `done`. Superseded in part (spec 084): the mechanical-sweep rule now lives in §drift-prevention, and a `done` spec stays `done` because the substitution leaves no owed work.
+The rule is therefore: sweep every occurrence except those naming a published version, tag, or asset. Because the exception is a determinable class rather than a per-occurrence decision, every change in the resulting diff is still the same substitution — a mechanical sweep per [§drift-prevention](../../framework/constitution.md#drift-prevention), so the `done` specs the sweep touches stay `done`, because the substitution leaves no owed work.
 
 **What happens to the crates.io crate, and does the version series continue?**
 

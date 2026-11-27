@@ -16,7 +16,7 @@ The user-visible gap: closing out a spec leaves the session pointer dangling, an
 
 `/ductus:target` accepts a `--clear` flag (mutually exclusive with a feature argument). When set:
 
-- Clear the target block from `.ductus/session.toml`. **Superseded by `022-deterministic-runtime`'s `cli-config-dir-per-contributor` scenario**, which made the clear preserve a recorded `cli-config-dir`: the file is rewritten to hold only that key when one is present, and left empty when none is. As delivered this bullet said "delete the file" unconditionally. The reset state is the same either way — no `feature` remains, so the `dashboard` primitive's documented no-target state, a result with no `session-target`, is what the clear reaches, and there's no separate empty-session format to invent.
+- Clear the target block from `.ductus/session.toml`, preserving a recorded `cli-config-dir`: the file is rewritten to hold only that key when one is present, and left empty when none is (`022-deterministic-runtime`'s `cli-config-dir-per-contributor` scenario). The reset state is the same either way — no `feature` remains, so the `dashboard` primitive's documented no-target state, a result with no `session-target`, is what the clear reaches, and there's no separate empty-session format to invent.
 - Emit a one-line confirmation: `Session cleared. Run /ductus:target to set a new target.`
 - Exit 0.
 

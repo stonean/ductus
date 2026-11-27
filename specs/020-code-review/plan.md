@@ -8,9 +8,9 @@ Implements [020 — `/ductus:review` code review command with blocking gate](spe
 
 ## Overview
 
-`/ductus:review` ships as a markdown slash-command file (`framework/commands/review.md`) following the same shape as `/ductus:analyze`, `/ductus:plan`, and the other pipeline commands. Its passes and criteria step are the agent's judgment against the loaded rules; its deterministic steps call runtime primitives, which AC17 to AC19 changed (Affected Files). The blocking gate is enforced by three lightweight, mutually reinforcing edits to `framework/commands/implement.md`, `framework/commands/analyze.md`, and `framework/templates/ci/adopter-generators.yml`. Templates and the constitution are updated alongside so newly-created specs ship with the `review:` frontmatter block and the gate is documented in the pipeline section. (057 removed that block from the template again — see the §Frontmatter `review:` block ships in templates decision below.) The scenario file at `scenarios/waiver-expiry.md` captures the subtlest behavior (waiver expiry, anchored at a rule, file and site since AC19) at the situational tier.
+`/ductus:review` ships as a markdown slash-command file (`framework/commands/review.md`) following the same shape as `/ductus:analyze`, `/ductus:plan`, and the other pipeline commands. Its passes and criteria step are the agent's judgment against the loaded rules; its deterministic steps call runtime primitives, which AC17 to AC19 changed (Affected Files). The blocking gate is enforced by three lightweight, mutually reinforcing edits to `framework/commands/implement.md`, `framework/commands/analyze.md`, and `framework/templates/ci/adopter-generators.yml`. The constitution is updated alongside so the gate is documented in the pipeline section; the spec template carries no review block, since the record is `review.md`'s (§The review record is `review.md`'s and is created lazily). The scenario file at `scenarios/waiver-expiry.md` captures the subtlest behavior (waiver expiry, anchored at a rule, file and site since AC19) at the situational tier.
 
-The clarify pass added three behaviors that this plan must propagate: tech-stack alignment as a hard pre-flight gate (with `.ductus/config.toml [review] tech-stack-verified` opt-out), an empty-scope short-circuit, and cross-pass dedupe. These all live in `framework/commands/review.md`, the canonical source; the plan's job is to ensure each shipped file picks them up correctly. (This sentence said *the embedded artifact in the spec* until 2026-09-13, when that frozen copy, a 561-line section, was replaced by a pointer (`fc70afc6`) for having drifted more than half behind — the inversion §drift-prevention's canonical-sources rule forbids.)
+The clarify pass added three behaviors that this plan must propagate: tech-stack alignment as a hard pre-flight gate (with `.ductus/config.toml [review] tech-stack-verified` opt-out), an empty-scope short-circuit, and cross-pass dedupe. These all live in `framework/commands/review.md`, the canonical source; the plan's job is to ensure each shipped file picks them up correctly.
 
 ## Technical Decisions
 
@@ -26,7 +26,7 @@ The gate fires in three places — `/ductus:implement` halt, `/ductus:analyze` d
 - **`/ductus:analyze` drift check** catches the desync case (`spec.md` says `done` but the review record reports `blocking: true`, or its `last-run` is missing entirely on a `done` spec).
 - **CI template** catches the bypass case (someone edited frontmatter directly to set `done` without running either of the above).
 
-Each mechanism is small and reads the same record — the spec's `review:` block as planned here, `review.md`'s frontmatter since 057 — and adding a fourth would not strengthen the gate while multiplying maintenance. That all three read **one** record is what made the relocation a single change rather than three; it is also why the block-presence predicate two of them had grown went vacuous in all of them at once.
+Each mechanism is small and reads the same record, `review.md`'s frontmatter, and adding a fourth would not strengthen the gate while multiplying maintenance. That all three read **one** record makes a change to the record one change rather than three.
 
 ### Tech-stack alignment is an agent judgment, not a parser
 
@@ -36,34 +36,19 @@ The alignment check (added during clarify) reads `AGENTS.md` `Tech Stack` and th
 
 `.ductus/config.toml` is shared adopter-side state, not a schema owned by any one spec. The new `[review]` section with `tech-stack-verified = true` is documented in `framework/commands/review.md`'s **Inputs** (Config), and in the installer's §Project Configuration (`framework/bootstrap/ductus.md`), the canonical inventory of configuration-file keys that `configuration-cross.md` `CFG-ENV-002` requires, which states its purpose and that an absent key means `false`. No signpost or edit on spec 019 is required: a configuration change is cross-spec impact only when it modifies a key another spec documented (`framework/constitution.md` §Cross-Spec Impact).
 
-### Frontmatter `review:` block ships in templates
+### The review record is `review.md`'s and is created lazily
 
-**Reversed by 057: the templates ship no block, and the record is `review.md`'s.**
-The decision below is recorded as taken. Its lazy-population half survives and
-its template half does not: a spec now opens with `status` and `dependencies`
-alone, the record is created on first review by `/ductus:review` writing
-`review.md`, and the never-reviewed state is the **artifact's absence** rather
-than a null inside a block every spec carries. That substitution is what made
-the block's presence a safe thing to remove — and what made keying any check on
-its *absence* unsafe, which is the defect 057 found in the CI template, in audit
-Family 19 and in `mechanical_sweep_parity`.
-
-The block is added to `framework/templates/spec/spec.md` so every newly-created spec ships with the field shapes pre-populated to safe defaults (`last-run: null`, `must-violations: 0`, `blocking: false`). Existing specs in adopter projects will not have the block until `/ductus:review` runs on them; this is intentional — the field is created lazily on first review, and `/ductus:analyze`'s drift check tolerates `review.last-run: null` until the spec reaches `status: done`.
+The templates ship no review block: a spec opens with `status` and `dependencies` alone, and `/ductus:review` creates `review.md`, which holds the record, on a spec's first review. The never-reviewed state is the **artifact's absence**, not a null inside a block every spec carries, so a check keyed on a block's absence would be vacuous over every spec: the grandfather rule and the CI template key on the artifact. `/ductus:analyze`'s drift check exempts a `done` spec that has no `review.md`.
 
 ### Idempotency invariant is a property of inputs, not state
 
-`review.md` is regenerated wholesale on every run from (code in scope) + (loaded rules) + (spec acceptance criteria + scenarios). The only fields permitted to vary across identical-input runs are the timestamp and HEAD SHA — `reviewed-at` and `reviewed-against` as planned here, `last-run` and `reviewed-against` since 057 renamed the first. Waivers are part of the input set — they are read from the review record (spec frontmatter as planned, `review.md` since 057) and produce identical `Waived findings` sections across runs as long as the anchor is intact. This makes the AC-6 idempotency check deterministic for a CI snapshot test.
+`review.md` is regenerated wholesale on every run from (code in scope) + (loaded rules) + (spec acceptance criteria + scenarios). The only fields permitted to vary across identical-input runs are the timestamp and HEAD SHA, `last-run` and `reviewed-against`. Waivers are part of the input set — they are read from the review record in `review.md` and produce identical `Waived findings` sections across runs as long as the anchor is intact. This makes the AC-6 idempotency check deterministic for a CI snapshot test.
 
 ### CI template stays minimal
 
-**Still minimal; the predicate changed in 057.** The step reads the review record
-from `review.md` and the analyze record from `analysis.md`, and bounds its exempt
-set with a committed high-water mark instead of skipping a spec that carries no
-`review:` block — a skip the relocation made true of every spec, which would have
-left the step green over a whole corpus while checking nothing. The reasoning
-below for *not* invoking `/{project}:review` in CI is unaffected.
+The step calls `ductus check-audit-records`, which reads the review record from `review.md` and the analyze record from `analysis.md`, and bounds the specs it exempts for having no record with a committed high-water mark, so the step cannot stay green over a whole corpus while checking nothing.
 
-`framework/templates/ci/adopter-generators.yml` only checks frontmatter state on `done` specs (`review.blocking: true` or `review.last-run` missing → fail). It does **not** invoke `/ductus:review` itself in CI. Reason: `/ductus:review` is an interactive AI-assisted command; running it in CI would require an AI runtime and a stable API budget. Adopters who want CI-side review run the command locally (or via a pre-merge agent run) and commit the resulting `review.md` and frontmatter. The CI template's job is the bypass-detection backstop, not the primary gate.
+`framework/templates/ci/adopter-generators.yml` only checks record state on `done` specs (`blocking: true` or `last-run` missing → fail). It does **not** invoke `/ductus:review` itself in CI. Reason: `/ductus:review` is an interactive AI-assisted command; running it in CI would require an AI runtime and a stable API budget. Adopters who want CI-side review run the command locally (or via a pre-merge agent run) and commit the resulting `review.md`. The CI template's job is the bypass-detection backstop, not the primary gate.
 
 ### Waiver-expiry warrants a scenario file
 
@@ -77,7 +62,7 @@ The runtime half's `process-waivers` result is bounded (BE-PAYLOAD-001): its `ap
 
 ### A review leaves out a rule file its header gives to analysis (AC17)
 
-`discover-rule-files`' review selection, after the `[[review.disabled-rule-files]]` filter, drops each file whose header, its text before the first `##` heading, names `/{project}:analyze` and not `/{project}:review` (`leave_to_analysis` and `header_leaves_to_analysis` in `runtime/src/primitives/discover_rule_files.rs`), and names each in a notice, `rule file {name} is judged by analysis alone: …`. A command matches as shipped, `{project}` literal, or as an adopter's install wrote it, `/<name>:`, since `apply-manifest` substitutes `{project}` in rule files. The header and not the first paragraph is read, because `accessibility-frontend.md` names its enforcer in its third. So analysis alone judges such a file's rules and the two audits cannot disagree on one (the scenario `every-loaded-rule-file-has-a-pass`, Resolved Questions, superseded in part 2026-11-21). A header naming neither command, as a project's own rule file may, keeps the file in the selection for the quality pass, since dropping it would stop reviewing that file silently (owner, 2026-11-21). A file that cannot be read stays selected and `list_rules` names it unreadable, so a read failure is never an omission. `all`, the selection `/{project}:analyze` and `check-departures` use, runs no header test. **Compatibility** (`BE-COMPAT-001`): a review's selection that held a file now leaves it out, which narrows `discover-rule-files`' result, so the change is **breaking** within major version zero, a minor bump as the Versioning of these schemas section of 022's data model states, and `runtime/CHANGELOG.md` marks it so at 0.62.0. Rejected: reading only the paragraph after the H1, which misses `accessibility-frontend.md`; and a list of file names, which a project's own analyze-only file would not be in.
+`discover-rule-files`' review selection, after the `[[review.disabled-rule-files]]` filter, drops each file whose header, its text before the first `##` heading, names `/{project}:analyze` and not `/{project}:review` (`leave_to_analysis` and `header_leaves_to_analysis` in `runtime/src/primitives/discover_rule_files.rs`), and names each in a notice, `rule file {name} is judged by analysis alone: …`. A command matches as shipped, `{project}` literal, or as an adopter's install wrote it, `/<name>:`, since `apply-manifest` substitutes `{project}` in rule files. The header and not the first paragraph is read, because `accessibility-frontend.md` names its enforcer in its third. So analysis alone judges such a file's rules and the two audits cannot disagree on one (the scenario `every-loaded-rule-file-has-a-pass`, Resolved Questions). A header naming neither command, as a project's own rule file may, keeps the file in the selection for the quality pass, since dropping it would stop reviewing that file silently (owner, 2026-11-21). A file that cannot be read stays selected and `list_rules` names it unreadable, so a read failure is never an omission. `all`, the selection `/{project}:analyze` and `check-departures` use, runs no header test. **Compatibility** (`BE-COMPAT-001`): a review's selection that held a file now leaves it out, which narrows `discover-rule-files`' result, so the change is **breaking** within major version zero, a minor bump as the Versioning of these schemas section of 022's data model states, and `runtime/CHANGELOG.md` marks it so at 0.62.0. Rejected: reading only the paragraph after the H1, which misses `accessibility-frontend.md`; and a list of file names, which a project's own analyze-only file would not be in.
 
 ### A finding needs a trigger the project can reach (AC18)
 
@@ -101,7 +86,7 @@ The anchor stays a deterministic string match: matching by the finding's descrip
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/commands/review.md` | Create | Source for `/ductus:review`, and **the canonical content** — the spec body points at it rather than embedding it. The original plan had this inverted, naming the spec's embedded copy as canonical; that inversion is what produced a snapshot, a 561-line section, which then drifted more than half behind, and it was corrected on 2026-09-13 (`fc70afc6`) |
+| `framework/commands/review.md` | Create | Source for `/ductus:review`, and **the canonical content** — the spec body points at it rather than embedding it. |
 | `framework/reference/review.md` | Edit | The command's reference: the passes, the rule-file-to-pass mapping, the Not-flagged routing, waivers, deferrals and the fix-round loop |
 | `runtime/src/interpreter/payload.rs`, `runtime/src/interpreter/mod.rs`, `runtime/src/schema/extensions.rs` | Edit | `performReview` names its pass and carries that pass's rule files, `loaded-rule-files` and `passes-run` |
 | `runtime/src/primitives/discover_rule_files.rs`, `runtime/src/schema/descriptions.rs` | Edit | A review's selection leaves out a file whose header names analyze alone (AC17), and `DISCOVER_RULE_FILES` says so |
@@ -112,15 +97,14 @@ The anchor stays a deterministic string match: matching by the finding's descrip
 | `framework/rules/security-frontend.md` | Edit | Its header says review reports a defect under the owner a **Not flagged:** clause names |
 | `framework/bootstrap/ductus.md` | Edit | §Project Configuration lists `[review] tech-stack-verified` with its purpose and its default, the inventory `CFG-ENV-002` requires |
 | `framework/bootstrap/govern.md` | Edit | Byte-identical mirror of `ductus.md` (audit Family 21) |
-| `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when `review.blocking: true` or `review.last-run` missing) |
+| `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when the review record's `blocking` is `true` or its `last-run` is missing) |
 | `framework/commands/analyze.md` | Edit | Add review-drift check on `done` specs; integrate `--fix` to revert to `in-progress` with notice |
-| `framework/templates/spec/spec.md` | Edit | Add `review:` block to frontmatter schema (removed again by 057) |
-| `framework/templates/ci/adopter-generators.yml` | Edit | Add a step that fails when any `done` spec has `review.blocking: true` or missing `review.last-run` (predicate replaced by 057 — see the CI-template decision above) |
+| `framework/templates/ci/adopter-generators.yml` | Edit | Add a step that fails, through `ductus check-audit-records`, when any `done` spec's review record has `blocking: true` or no `last-run` |
 | `framework/constitution.md` | Edit | Reference the review gate in the pipeline section between `/ductus:implement` and `done` |
 | `README.md` | Edit | Add `/ductus:review` row to Pipeline (advance state) table; add Waivers subsection; update pipeline diagrams |
 | `.claude/commands/ductus/review.md` | Generated | Produced by the regeneration script — not hand-edited |
 | `specs/020-code-review/scenarios/waiver-expiry.md` | Create | Scenario capturing the rule/file-anchored waiver auto-expiry behavior |
-| `specs/020-code-review/data-model.md` | Create | Consolidate the data structures introduced (frontmatter block, review.md, waiver records, .ductus/config.toml section) |
+| `specs/020-code-review/data-model.md` | Create | Consolidate the data structures introduced (review.md, waiver records, .ductus/config.toml section) |
 
 ## Trade-offs
 
@@ -137,5 +121,5 @@ The anchor stays a deterministic string match: matching by the finding's descrip
 
 - The agent-judgment tech-stack alignment will occasionally misfire on polyglot or vendored repos. Bypass via `.ductus/config.toml [review] tech-stack-verified = true` is the documented path; documented in the blocking-error message.
 - `/ductus:review`'s output quality is the agent's output quality. There is no deterministic linter substitute. Mitigated by the loaded rule files being the authoritative source — the agent's judgment is bounded by the rules, not free-form.
-- Existing `done` specs in adopter projects (pre-`/ductus:review`) carry no review record at all — no `review:` block as planned here, no `review.md` since 057. As planned here, the first `/ductus:analyze` run after adoption flagged them, for adopters to re-review or waive. Since 057 the grandfather rule exempts each one (`framework/reference/analyze.md` §Review state drift (blocking)), so analyze reports none of them, and an adopter who wants one reviewed runs `/ductus:review` on it. **What changed with the relocation is that this population is now *bounded* rather than merely tolerated:** the grandfather rule keys on `review.md`'s absence, and the CI step holds the exempt set against a committed high-water mark, so the set can shrink but not grow.
-- The CI gate parses the record's frontmatter in the workflow step rather than calling the runtime (in `python3` since the step was rewritten; awk, as planned here, before that). The `v2` this bullet anticipated has landed as [§runtime-boundary](../../framework/constitution.md#runtime-boundary) and the `ductus` binary — and **the workflow's earlier step already invokes it** (`.ductus/bin/ductus derive-dependencies --write`), so availability is not what keeps this step inline. The reason is that no primitive answers this step's question. `check-review-gate` evaluates the `in-progress → done` *transition* and stops at its first check when a spec is already `done`, which is every spec this step examines: it blocks such a spec as `already-done` and checks nothing else (`ductus check-review-gate --help`), so pointing the gate at them would report every spec blocked whatever its records hold. The two are complements — the gate holds a spec out of `done`, this step catches one that got there anyway — so §runtime-boundary principle 3's bar is not met here: there is no primitive this declines to call.
+- Existing `done` specs in adopter projects (pre-`/ductus:review`) carry no review record at all, no `review.md`. The grandfather rule exempts each one (`framework/reference/analyze.md` §Review state drift (blocking)), so analyze reports none of them, and an adopter who wants one reviewed runs `/ductus:review` on it. This population is *bounded*: the grandfather rule keys on `review.md`'s absence, and the CI step holds the exempt set against a committed high-water mark, so the set can shrink but not grow.
+- The CI gate reads the records through `ductus check-audit-records`, which parses them as the completion gate does, so the step parses no frontmatter of its own. `check-review-gate` is not the primitive to call there: it evaluates the `in-progress → done` *transition* and stops at its first check when a spec is already `done`, which is every spec this step examines: it blocks such a spec as `already-done` and checks nothing else (`ductus check-review-gate --help`). The two are complements — the gate holds a spec out of `done`, this step catches one that got there anyway.

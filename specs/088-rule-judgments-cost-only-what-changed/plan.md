@@ -185,7 +185,7 @@ It retires no primitive, check or record field. The counts hold what no field he
 | `specs/*/analysis.md` | Modify | This corpus's records the backfill writes |
 | `specs/088-rule-judgments-cost-only-what-changed/spec.md` | Modify | The cost and what it retires, beside a signpost to 089 |
 | `specs/082-rule-assessments-converge-across-runs/data-model.md` | Modify | Relations and the `verdicts` section state the per-rule rule and point here |
-| `specs/082-rule-assessments-converge-across-runs/spec.md` | Modify | The per-file Resolved Question annotated as superseded; a signpost back-linking 088 |
+| `specs/082-rule-assessments-converge-across-runs/spec.md` | Modify | The per-file Resolved Question states the per-rule currency rule; a signpost back-linking 088 |
 | `specs/082-rule-assessments-converge-across-runs/plan.md` | Modify | Its Trade-offs: a rule edit judges a whole file's rules only when the copy cannot stand in |
 | `specs/047-analyze-findings-durability/scenarios/analyze-record-freshness.md` | Modify | Its one read of `analyzed-against` is freshness's |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | `write-analysis`' rule assessments gain the two counts; the `*-against` paragraph names the rule-file copy |
@@ -215,7 +215,7 @@ It retires no primitive, check or record field. The counts hold what no field he
 - **066** owns the record's schema and `write-analysis`' contract. Its data model's rule-assessment bullet under `write-analysis` gains the two counts by [data-model.md](data-model.md), in task 1, and its paragraph on the `*-against` fields names the rule-file copy as a second read of `analyzed-against`, in task 5. Nothing binds the written keys to that bullet or to the constitution's row (no test under `runtime/tests` or `scripts/audit` names them). A signpost in 066's `spec.md` discharges it (task 5).
 - **082** owns verdict currency and `discover-rule-files`' `verdicts` (AGENTS.md: "a feature-specific primitive lives with its feature").
   - Its data model's Relations ("a verdict is current while its rule's `rule-digest` entry matches the file") and its `discover-rule-files` section state the per-rule rule and point here for `rejudged-files`.
-  - Its Resolved Question keeping the hash "per rule file, so a rule an upgrade edits is judged again with the rest of its file" is annotated as superseded by spec 088, named in prose: a link there would induce an edge from 082 to 088, a cycle with 088's own dependency on 082.
+  - Its Resolved Question keeping the hash "per rule file, so a rule an upgrade edits is judged again with the rest of its file" states the per-rule currency rule that holds, with spec 088 named in prose: a link there would induce an edge from 082 to 088, a cycle with 088's own dependency on 082.
   - Its plan's Trade-offs on the per-file hash say a rule edit judges a whole file's rules only when the copy cannot stand in (task 5).
   - These land in the change that makes the per-file rule false (task 2), and a signpost in its `spec.md` discharges it (task 5). They change a data model, a plan and prose only, so 082 stays `done`.
 - **047** owes nothing. Its scenario `analyze-record-freshness` names the rename exemption as freshness's one read of `analyzed-against` (task 5), and a scenario's text edit leaves 047 `done` (§spec-lifecycle).

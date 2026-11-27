@@ -12,7 +12,7 @@ The failure is silent at every stage that could catch it. The caller cannot see 
 
 Observed 2026-08-14: `append-task` invoked with checkbox-prefixed body items wrote six doubled checkboxes into `specs/022-deterministic-runtime/tasks.md`, caught by eye after the write.
 
-The same shape has a second form in `append-inbox`'s `dedup-prefix`. `has_bullet_with_prefix` compares the prefix against `bullet_text`-extracted content, which has the marker already stripped — so a marker-bearing prefix matches nothing, the dedup guard silently no-ops, and re-running an audit appends duplicates. That is the guard `/{project}:analyze`'s finding capture depends on for idempotence.
+The same shape had a second form in `append-inbox`'s dedup prefix: it was compared against `bullet_text`-extracted content, which has the marker already stripped, so a marker-bearing prefix matched nothing and the dedup guard silently no-oped.
 
 ## Behavior
 
@@ -22,7 +22,7 @@ Each append primitive strips **one** leading list marker from caller-supplied bu
 
 **One marker, never more.** The observed failure is a single doubling. Looping would eat legitimate content from text that genuinely begins with a dash, trading a visible defect for a silent one.
 
-**Applied before dedup, not after.** In `append-question` and `append-inbox` the normalized form is what gets compared *and* what gets written, so an entry can never be stored in one form and matched in another. `append-inbox`'s `dedup-prefix` is normalized the same way, which is what makes a marker-bearing prefix match the bullets it names. **Changed by 058**: `append-inbox` no longer takes `dedup-prefix`, whose only callers 058 removed, so this rule now governs `append-question` alone; `append-inbox` still strips a caller-supplied marker from `text`.
+**Applied before dedup, not after.** In `append-question` the normalized form is what gets compared *and* what gets written, so an entry can never be stored in one form and matched in another. `append-inbox` strips a caller-supplied marker from `text`.
 
 **The contract is documented at the argument.** Each affected parameter's schema description states that the primitive renders the marker and that a caller-supplied one is stripped — the argument description is where a caller looks, and an undocumented normalization is its own surprise.
 

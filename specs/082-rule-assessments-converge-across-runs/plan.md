@@ -144,11 +144,11 @@ The four fields cost the Analyze record row of `framework/constitution.md` about
 
 ## Open Questions Resolved
 
-The Resolved Questions are applied as written, each superseded part as it is superseded. The one on which subjects a verdict's digest covers names no storage for the rule-text hash, which `rule-digest` supplies, and the size estimate in the one on where the verdicts live gains the `finding` message and the digest (both under Trade-offs).
+The Resolved Questions are applied as written. The one on which subjects a verdict's digest covers names no storage for the rule-text hash, which `rule-digest` supplies, and the size estimate in the one on where the verdicts live gains the `finding` message and the digest (both under Trade-offs).
 
 ## Cross-spec impact
 
 - [050](../050-constitution/spec.md) owns the constitution's contents; the audit-record row gains the four fields. Discharged by a signpost in its `spec.md` linking back here.
 - [060](../060-exec-analyze-assesses-each-loaded-rule/spec.md) owns the exec walker's per-rule requests, which now skip current rules and send `addressed-by`. Discharged by a signpost in its `spec.md`.
-- [066](../066-audit-records-and-the-completion-gate/spec.md) owns the record's schema and `write-analysis`' contract; its data model gains the fields and arguments, and since AC7 points here for the currency and contradiction rules it restated, an edit the rule then in force counted as a reopen of 066, a rule spec 084 has since replaced. Discharged by a signpost in its `spec.md`.
-- [022](../022-deterministic-runtime/spec.md) owns the `assessSpecQuality` response and `discover-rule-files` shapes in its data model, which this plan changes. 082's `cross-spec-impact:` lists it, and task 10 made the data-model sync and the back-link there. Since AC7 its data model points here for the `verdicts` block, whose fields it had enumerated, an edit the rule then in force counted as a reopen of 022, a rule spec 084 has since replaced.
+- [066](../066-audit-records-and-the-completion-gate/spec.md) owns the record's schema and `write-analysis`' contract; its data model gains the fields and arguments, and points here for the currency and contradiction rules it restated. Discharged by a signpost in its `spec.md`.
+- [022](../022-deterministic-runtime/spec.md) owns the `assessSpecQuality` response and `discover-rule-files` shapes in its data model, which this plan changes. 082's `cross-spec-impact:` lists it, and task 10 made the data-model sync and the back-link there. Its data model points here for the `verdicts` block, whose fields it had enumerated.

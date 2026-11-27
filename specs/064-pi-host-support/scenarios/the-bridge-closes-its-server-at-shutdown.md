@@ -23,7 +23,7 @@ Decided by the owner on 2026-11-16, over a waiver: no 064 criterion names print 
 - **A call in flight at shutdown** settles with the shutdown's error rather than waiting out its timeout.
 - **A shutdown with no child running** (the runtime never started, or died and no call has respawned it) finds nothing to stop and does nothing; one before any tool call still stops the child load spawned.
 - **A call queued behind the one in flight** fails with the same error, and respawns nothing; a call issued after the shutdown respawns the runtime.
-- **pi exiting without `session_shutdown`**: the unreferenced child no longer holds the process, and it stops at its stdin's end of file.
+- **pi exiting without `session_shutdown`**: the unreferenced child does not hold the process, and it stops at its stdin's end of file.
 
 ## Open Questions
 

@@ -34,4 +34,4 @@ A pending fold is therefore not in the category of an unresolved scenario questi
 
 ## Resolved Questions
 
-- **Does a fold into a `done` upstream spec still reopen it?** Yes, by operator decision on 2026-09-29. The reopen is the upstream spec's back-edge, not the staging spec's gate: the upstream spec gains content, so its recorded review has to see it. Dropping the reopen as well would treat fold-back as filing only, and was declined. Superseded in part (spec 084): the reopen now follows owed work, so a body-edit fold that adds no unchecked box or unticked criterion leaves the upstream spec `done`.
+- **Does a fold into a `done` upstream spec still reopen it?** Only when the fold leaves owed work (spec 084). The reopen is the upstream spec's back-edge, not the staging spec's gate: the upstream spec gains content, so its recorded review has to see it. Dropping the reopen outright would treat fold-back as filing only, and the operator declined that on 2026-09-29. A body-edit fold that adds no unchecked box or unticked criterion leaves the upstream spec `done`.

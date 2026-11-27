@@ -18,7 +18,7 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 ### Counting in the window walk
 
-`attribute_window` counts each commit its walk visits as examined. It counts one as unclaimed when `CommitClaims::claimants` is empty and `CommitClaims::paths` is not, before its paths are placed. When this was built `WindowClaims::take_unclaimed` then decided a credit, which spec 084 removed: an unclaimed commit's paths go to `excluded`. A clean merge has no paths, since `Attributor::own_paths` keeps only what a merge changed itself, so it is examined and never unclaimed. The counts travel on `WindowClaims` into `ReviewScope` as an `Option`. It is `None` on the branch of `compute` that skips `attribute_window` because `diff_base` is empty, and `Some` with zeros for a window that walks no commit, such as a `HEAD` base.
+`attribute_window` counts each commit its walk visits as examined. It counts one as unclaimed when `CommitClaims::claimants` is empty and `CommitClaims::paths` is not, before its paths are placed. An unclaimed commit's paths go to `excluded`. A clean merge has no paths, since `Attributor::own_paths` keeps only what a merge changed itself, so it is examined and never unclaimed. The counts travel on `WindowClaims` into `ReviewScope` as an `Option`. It is `None` on the branch of `compute` that skips `attribute_window` because `diff_base` is empty, and `Some` with zeros for a window that walks no commit, such as a `HEAD` base.
 
 ### Result fields
 
@@ -57,4 +57,4 @@ Why the tick decides: `attribute_window` in `runtime/src/primitives/compute_revi
 
 ## Cross-spec impact
 
-- **066 — Audit Records and the Completion Gate** owes the data-model sync above. The rule then in force counted the data-model edit as a reopen (`done → in-progress`), a rule spec 084 has since replaced, and because the change is confined to artifacts it owed an analysis and no review (081). Its signpost discharges 083's `cross-spec-impact:` entry.
+- **066 — Audit Records and the Completion Gate** owes the data-model sync above. An edit to a data model leaves a `done` spec `done` (spec 084), and because the change is confined to artifacts it owes an analysis and no review (081). Its signpost discharges 083's `cross-spec-impact:` entry.

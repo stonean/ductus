@@ -16,9 +16,9 @@ The governing constraint throughout: the three-digit convention is enforced in e
 
 ## Technical Decisions
 
-### One directory-form parse, replacing the boolean predicate
+### One directory-form parse, not a boolean predicate
 
-`is_feature_slug` (`runtime/src/primitives/mod.rs`) is a byte scan asserting three ASCII digits then `-`, and `feature_number` parses the first three bytes independently of it. Both are replaced by a single `parse_feature_dir(name) -> Option<FeatureForm>` returning either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` becomes `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
+A single `parse_feature_dir(name) -> Option<FeatureForm>` (`runtime/src/primitives/mod.rs`) returns either `Sequential { number }` or `BranchScoped { identifier, n }`; `is_feature_slug` is `parse_feature_dir(name).is_some()`, and the callers that want a sequential number ask the parsed form for one.
 
 Two consequences are the point of doing it this way rather than adding a second predicate:
 

@@ -85,7 +85,7 @@ Promotion is a user decision, not automated. The framework provides the pattern;
 
 When an item does not map to any existing spec, `/{project}:groom` tells the user to run `/specify` to initialize a spec first, then come back to process the item. The commands stay decoupled.
 
-An item that names a requirement gap does not remain standalone — the spec or scenario is its permanent home. A **chore** is the exception the framework added later: project maintenance belonging to no feature has no spec home, so it stays an inbox checkbox and is resolved by being *done*, then removed. The brownfield backlog drains toward empty as adoption completes, but the file persists — capturing incidental findings is an ongoing role, not a migration phase ([§brownfield-inbox](../../framework/constitution.md#brownfield-inbox)).
+An item that names a requirement gap does not remain standalone — the spec or scenario is its permanent home. A **chore** is the exception: project maintenance belonging to no feature has no spec home, so it stays an inbox checkbox and is resolved by being *done*, then removed. The brownfield backlog drains toward empty as adoption completes, but the file persists — capturing incidental findings is an ongoing role, not a migration phase ([§brownfield-inbox](../../framework/constitution.md#brownfield-inbox)).
 
 ### Rename from triage
 
@@ -94,7 +94,7 @@ This spec renames `triage` to `inbox` throughout the framework:
 - `specs/triage.md` → `specs/inbox.md`
 - `templates/triage.md` → `templates/inbox.md` (now `framework/templates/project/inbox.md`)
 - `/triage` command → `/{project}:groom` command
-- All references in the constitution, README, and other commands (plus `sdd-context.md`, an artifact the framework/ reorganization has since removed)
+- All references in the constitution, README, and other commands
 
 The term "inbox" describes the artifact's purpose (a temporary holding area) without implying a process methodology. Items should not stay there — the name communicates that naturally.
 
@@ -130,15 +130,14 @@ For this spec specifically: 006-bug-workflow gets a signpost noting that `triage
 - [x] AC7: Brownfield skeleton specs pass validation at `draft` status without requiring comprehensive acceptance criteria
 - [x] AC8: Bug fixes on a brownfield spec add either an acceptance criterion or a scenario
 - [x] AC9: Enhancements to a brownfield spec follow the normal pipeline (spec change before implementation)
-- [x] AC10: Inbox items migrate to acceptance criteria or scenarios — never remain standalone. Delivered as written; the framework later added the **chore** route, under which an item with no feature home deliberately *does* remain an inbox checkbox until it is done and removed (§bug-handling's durability test). The claim holds for requirement gaps, which is what this spec's inbox carried, and no longer holds universally.
+- [x] AC10: An inbox item that names a requirement gap migrates to acceptance criteria or a scenario and does not remain standalone; a chore, which has no feature home, stays an inbox checkbox until it is done and removed (§bug-handling's durability test).
 - [x] AC11: `/{project}:groom` directs user to `/specify` when an item has no matching spec
 - [x] AC12: Scenario promotion pattern is documented in `constitution.md`
-- [x] AC13: `triage` is renamed to `inbox` across all framework artifacts (templates, commands, constitution, `sdd-context.md`, README)
+- [x] AC13: `triage` is renamed to `inbox` across all framework artifacts (templates, commands, constitution, README)
 - [x] AC14: 006-bug-workflow spec includes a signpost noting the `triage` → `inbox` rename by this spec
 - [x] AC15: 007-govern-workflow spec includes a signpost noting the ductus command gains a triage → inbox migration and brownfield-initialization handling by this spec
 - [x] AC16: Cross-spec impact pattern is documented in `constitution.md`
 - [x] AC17: The brownfield process is documented in `constitution.md` under brownfield adoption
-- [x] AC18: `sdd-context.md` is updated to reflect the brownfield process. Delivered as written; `sdd-context.md` was removed by the framework/ reorganization (`3fc76b7`) and has no successor — the brownfield process is documented in the constitution (§brownfield-process, AC17) and `README.md` (AC19). The claim was superseded rather than renamed, so it is annotated rather than swept.
 - [x] AC19: `README.md` brownfield section references the process
 
 ## Open Questions
@@ -150,8 +149,8 @@ For this spec specifically: 006-bug-workflow gets a signpost noting that `triage
 - **Visual indicator for brownfield specs:** No. A brownfield spec and a greenfield spec are the same artifact. The `draft` status already communicates incompleteness. The process converges to the same outcome regardless of origin.
 - **Validate relaxation for brownfield:** No special treatment. Validate already scales checks to the spec's current status. A `draft` spec is not expected to have comprehensive criteria. Validate applies uniformly.
 - **Automatic advancement to clarified:** No. Explicit user action, always. This is an existing pipeline boundary. The user runs `/clarify` when ready.
-- **Automatic brownfield detection in `/specify`:** Originally superseded by a dedicated capture command; later (per [023](../023-govern-refinement/spec.md)) folded back as input-driven detection — richness of the description selects the brownfield vs greenfield outcome without the user picking a mode.
-- **Dedicated capture command vs. modal `/specify`:** Originally yes (dedicated), on the grounds that the workflows were different enough to justify separation. Reversed in [023](../023-govern-refinement/spec.md): the two are the same artifact with two verbs, so `/specify` covers both and the brownfield/greenfield split is input-driven.
+- **Automatic brownfield detection in `/specify`:** Yes, input-driven — the richness of the description selects the brownfield vs greenfield outcome without the user picking a mode.
+- **Dedicated capture command vs. modal `/specify`:** One `/specify` (per [023](../023-govern-refinement/spec.md)): the two are the same artifact with two verbs, so `/specify` covers both and the brownfield/greenfield split is input-driven.
 - **What brownfield initialization asks for:** Freeform. The user describes the feature in their own words. No guided checklist. The command suggests starting broad — decomposition happens through scenarios over time.
 - **Code reading during capture:** No. The spec captures intended behavior as understood by the user. Existing code is referenced during `/implement` for task context, not during spec creation.
 - **Template:** Standard `spec.md`. The output is indistinguishable from any other spec. The command provides brownfield framing; the artifact is the same.

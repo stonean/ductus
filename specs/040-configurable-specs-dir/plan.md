@@ -10,7 +10,7 @@ Introduce one operator-set `.ductus/config.toml` key — `[paths] specs-root`, d
 2. **Bootstrap and commands (markdown)** — `/ductus` gains the init-time prompt, validation, and notices; command bodies resolve the root in executable path references while illustrative prose keeps `specs/` as the documented default.
 3. **Generators (`scripts/`)** — the tree-walking generators and lints resolve the configured root before walking. (Retired since: 067's `adopter-generator-promotion` replaced both shipped generators with runtime primitives — see the section below.)
 
-The load-bearing invariant is **default-`specs` everywhere**: an adopter who never sets the key sees byte-for-byte identical behavior, so existing fixtures, golden tests, and the markdown-only opt-in CI all keep passing unchanged. (The opt-in CI job named here was retired by 048 — the constitution's §runtime-boundary now states an **acquisition** invariant in its place, exercised by `.github/workflows/runtime-acquisition.yml`.)
+The load-bearing invariant is **default-`specs` everywhere**: an adopter who never sets the key sees byte-for-byte identical behavior, so existing fixtures and golden tests keep passing unchanged.
 
 ## Technical Decisions
 

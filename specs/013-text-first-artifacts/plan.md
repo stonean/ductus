@@ -22,7 +22,6 @@ Example (specs):
 ---
 status: clarified
 dependencies: [000-slash-commands, 007-govern-workflow]
-tags: [format, migration]
 ---
 ```
 
@@ -30,8 +29,7 @@ Example (scenarios):
 
 ```yaml
 ---
-spec-ref: 000-slash-commands — Command Set / implement
-tags: [format]
+section: "Command Set / implement"
 ---
 ```
 
@@ -72,20 +70,14 @@ Idempotency falls out of the `---`-check on re-run. The clean-tree precheck make
 
 This repo has no `/ductus`. The work is a manual implementation task: convert each `specs/NNN-*/spec.md` and each scenario file under `specs/*/scenarios/` to frontmatter format. The conversion is mechanical, the agent does it once per file, lint passes confirm correctness.
 
-### Tag prompt UX in `/ductus:specify`
-
-`/ductus:specify` reads `specs/*/spec.md` frontmatter to collect the union of existing `tags`. At creation time, prompt: *"Tags for this spec? Existing tags in this repo: \[cli, bootstrap, process, ...\]. Enter one or more (or skip)."* Author input either selects from suggestions, adds new tags, or skips (writes `tags: []`). This implements Q2's reinforcement model without enforcing non-empty tags.
-
-### Missing-tags advisory in `/ductus:clarify`
-
-At the `draft → clarified` transition, after all open questions are resolved and before the validation gate, check whether `tags` is empty. If so, surface as one of the validation findings with severity advisory: *"Tags are empty. Adding tags helps cross-cutting graph views. Add some, or proceed without."* The advisory does not block the transition.
-
 ### Analyze strict/advisory split
 
 Per Q4. The analyze command's instructions document the severity per check:
 
 - Hard fail: missing/invalid `status`, missing/invalid `dependencies`, malformed YAML, no frontmatter block on a spec or scenario file.
-- Advisory: empty `tags`, unknown fields (informational), checkbox mismatches (existing), cross-spec reference issues (existing).
+- Hard fail also on a scenario file with neither `section` nor the legacy `spec-ref`.
+- Informational: unknown fields. Stale fields, `tags` among them, produce no findings.
+- Advisory: checkbox mismatches (existing), cross-spec reference issues (existing).
 
 ### Order of operations
 
@@ -106,14 +98,14 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/constitution.md` | Modify | Add `§text-first-artifacts` section: principle, schema table, starter tag vocabulary, scope note |
-| `framework/templates/spec/spec.md` | Modify | Replace `**Status:**` / `**Dependencies:**` with YAML frontmatter; include `tags: []` |
-| `framework/templates/spec/scenario.md` | Modify | Replace bold-prefix `**spec-ref:**` with YAML frontmatter `spec-ref` |
-| `framework/commands/specify.md` | Modify | Write frontmatter on creation; add tag prompt with sibling-spec autocomplete |
-| `framework/commands/clarify.md` | Modify | Read frontmatter status; write status on advance; advisory for empty `tags` at draft→clarified |
+| `framework/constitution.md` | Modify | Add `§text-first-artifacts` section: principle, schema table, scope note |
+| `framework/templates/spec/spec.md` | Modify | Replace `**Status:**` / `**Dependencies:**` with YAML frontmatter |
+| `framework/templates/spec/scenario.md` | Modify | Replace bold-prefix `**spec-ref:**` with YAML frontmatter (`section`) |
+| `framework/commands/specify.md` | Modify | Write frontmatter on creation |
+| `framework/commands/clarify.md` | Modify | Read frontmatter status; write status on advance |
 | `framework/commands/plan.md` | Modify | Read frontmatter status; write status on advance |
 | `framework/commands/implement.md` | Modify | Read frontmatter status; write status on advance |
-| `framework/commands/status.md` | Modify | Parse frontmatter for status, dependencies, tags in dashboard |
+| `framework/commands/status.md` | Modify | Parse frontmatter for status and dependencies in dashboard |
 | `framework/commands/target.md` | Modify | Read frontmatter status when displaying target detail |
 | `framework/commands/analyze.md` | Modify | Implement strict/advisory split per data-model schema |
 | `framework/commands/groom.md` | Audit/Modify | Update only if it reads spec metadata for routing |
@@ -135,7 +127,7 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `specs/011-brownfield-process/spec.md` | Migrate | Self-migration |
 | `specs/012-multi-agent-govern/spec.md` | Migrate | Self-migration |
 | `specs/013-text-first-artifacts/spec.md` | Migrate | Self-migration (this spec itself, last so the migration process can be exercised on a known-good source) |
-| `README.md` | Modify | Add "Viewing artifacts" section documenting `npx quartz` as recommended viewer |
+| `README.md` | Modify | Add "Viewing artifacts" section listing the viewers that work |
 | `specs/README.md` | No change | Cross-cutting decisions doc; no spec metadata |
 
 ## Trade-offs
@@ -152,7 +144,6 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 
 ### Known limitations
 
-- **Tag fragmentation risk.** Free-form tags can drift (`cli` vs. `commands` vs. `slash-commands`). The starter vocabulary in the constitution and the sibling-spec autocomplete in `/ductus:specify` mitigate but don't enforce. Accepted because rigid taxonomy adds ceremony without proportional value.
 - **Single-commit migration diff.** Adopters with many specs see one large diff when `/ductus` runs the migration. Accepted because ordinary git review tools show one large diff well enough (an assumption, not measured), atomicity is a feature, and the alternative (multi-commit migration) requires the bootstrap to make multiple commits in the user's repo, which is out of scope for governance.
 - **Scenario non-spec-ref metadata is preserved as-is.** Migration converts `**spec-ref:**` to frontmatter but leaves any other bold-prefix patterns in scenario bodies untouched (there are no other recognized scenario fields today). If projects have invented scenario metadata conventions, those stay in body prose unchanged.
 - **No automated test for ductus.md migration.** The migration step is markdown instructions executed by the agent, not code. Verification is manual: run on a test fixture (a copy of a brownfield project's `specs/`) and confirm the diff. Tracked as a task.
@@ -162,10 +153,10 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 All eight resolved during `/ductus:clarify`. Resolutions of record live in `spec.md`'s **Resolved Questions** section. Summary:
 
 - **Schema location and format** — markdown table in constitution; defer JSON Schema.
-- **Required vs. optional fields** — required: `status`, `dependencies`. Tags optional with three reinforcement points.
+- **Required vs. optional fields** — required: `status`, `dependencies` (a scenario's: `section`). No placeholder field an author must remember to fill.
 - **Field naming for dependencies** — flat list of slugs; defer object form.
 - **Validation strictness** — hard fail on required-field violations; advisory on rest.
 - **Migration scope for non-spec artifacts** — schema covers specs and scenarios only.
-- **Quartz recommendation scope** — this repo's README only; one-line tip in the bootstrap's post-run output (`ductus-procedure.md` since 056).
+- **Viewer recommendation scope** — this repo's README only, recommending none; a tool-neutral tip in the bootstrap's post-run output (`ductus-procedure.md` since 056).
 - **Code-location-index scenario interaction** — scenario stays parked under 000; resolutions derive from 013.
 - **Migration safety net** — rely on git; clean-tree precheck scoped to `specs/`.

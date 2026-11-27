@@ -117,11 +117,7 @@ corpus, which is the drift the canonical-source map exists to prevent.
 - **Full-walk mode is unchanged.** Without `--staged` every tracked spec is
   both enumerated and written, so `unwritten` is always empty there — the same
   invariant `derive-dependencies` has.
-- **`--staged` scoping still bounds `unparseable`,** whose own scenario notes
-  that an unparseable spec outside the staged set cannot appear. That note is
-  written against the old enumeration and no longer holds for this primitive:
-  with the full walk, an unparseable tracked spec is reported whether or not it
-  is staged. The sibling scenario's edge case is updated to say so.
+- **`--staged` scoping does not bound `unparseable`.** With the full walk, an unparseable tracked spec is reported whether or not it is staged, as in the sibling scenario [derive-unparseable-frontmatter-is-reported](derive-unparseable-frontmatter-is-reported.md).
 - **The full walk costs the pre-commit hook one extra corpus read, and it was
   measured rather than assumed.** The hook runs both derive primitives, so
   after this change every commit reads every tracked spec twice instead of once

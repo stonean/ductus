@@ -14,7 +14,7 @@ State A version-checks the store, not the pointer, so on Windows a pin bump leav
 - every later session's MCP server;
 - the pre-commit hook.
 
-No later run notices, because the store reports the pin. AC13's "resolves to the store on every supported platform" was never true on Windows.
+No later run notices, because the store reports the pin.
 
 ## Behavior
 

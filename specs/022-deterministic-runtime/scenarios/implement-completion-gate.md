@@ -4,21 +4,19 @@ section: "Follow-on scenarios"
 
 # Implement-completion-gate
 
-> **Changed by 066's task 27** (scenario `criteria-are-verified-in-review`): the criteria steps below moved to `/ductus:review`, whose criteria step judges every criterion and ticks or unticks each; `/ductus:implement`'s completion gate now tallies tasks, checks cross-spec impact, runs `check-review-gate`, which blocks `unticked-criterion`, and asks before `set-status`.
-
 ## Context
 
 `/ductus:implement`'s numbered procedure covers the per-task loop, but the entire completion gate exists only as markdown-only prose with no numbered steps and no primitives: the all-tasks-complete tally, the all-acceptance-criteria tally, scenario-task completeness, the `review.last-run`/`review.blocking` gate reads and halt messages, the cross-spec `git diff` filter, and the final in-progress→done `set-status`. The LLM re-walks all of it on every run that reaches completion — the last minutes-long mechanical stretch on the pipeline's hottest command — and it orphans `mark-criterion`, which is fully wired and tested but referenced by zero command prose (the 2026-07-11 coverage review's top finding).
 
 ## Behavior
 
-The completion gate becomes numbered, parseable steps in `/ductus:implement`'s Instructions: `read-tasks` tallies task completion; the spec's criteria are read via `read-spec`; each criterion's verification stays semantic — the typed `verifyCriteria` extension point (`<!-- llm:verifyCriteria -->`, now `/ductus:review`'s criteria step 7.2), where the LLM judges whether each criterion is met — but each passing criterion is flipped with `mark-criterion`; the review gate is the `check-review-gate` primitive (step 11; `coverage-expansion-primitives`), which reads the review record from `review.md` and halts with its canonical blocked message when the spec is unreviewed or blocking; the final transition invokes `set-status` (in-progress → done) only after the user-approval gate. `mark-criterion` gains its first real consumer.
+The completion gate is numbered, parseable steps in `/ductus:implement`'s Instructions: `read-tasks` tallies task completion (step 9); `diff-cross-spec` reports the cross-spec impact (step 10); the review gate is the `check-review-gate` primitive (step 11; `coverage-expansion-primitives`), which reads the review record from `review.md` and halts with its canonical blocked message when the spec is unreviewed or blocking or a criterion stands unticked; the final transition invokes `set-status` (in-progress → done, step 13) only after the user-approval gate (step 12). Criteria verification is `/ductus:review`'s criteria step: the typed `verifyCriteria` extension point (`<!-- llm:verifyCriteria -->`) judges whether each criterion is met, and `mark-criterion` flips each verdict.
 
 ## Edge Cases
 
 - The cross-spec `git diff` filter is owned by the `diff-cross-spec` primitive (`coverage-expansion-primitives`), invoked at steps 7 and 10.
-- A criterion that fails verification is left unchecked and reported — never batch-marked, matching the existing prose rule.
-- When `tasks.md` still has unchecked tasks, the gate stops before criteria verification, exactly as the prose does today.
+- A criterion that fails verification is unticked by `/ductus:review` and reported — never batch-marked.
+- When `tasks.md` still has unchecked tasks, the gate stops before the review gate (step 9).
 
 ## Open Questions
 

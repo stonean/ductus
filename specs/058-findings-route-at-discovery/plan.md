@@ -182,14 +182,12 @@ Rationale: the inbox is the one destination the pre-`done` gate never reads (the
 
 ### `write-analysis` receives the findings, because capture was its only source of finding text
 
-Today the writer receives per-tier counts plus the captured inbox bullets. The
-bullets are the only finding text it sees, which is why `## Captured issues`
-exists: see the 057 data model,
+No captured inbox bullets supply finding text, so the writer is given the
+findings itself, beside the per-tier counts; see the 057 data model,
 [057 — analyze artifact and record relocation](../057-analyze-artifact-and-record-relocation/spec.md).
-With capture gone, the writer has to be given the findings.
 
-- `WriteAnalysisArgs.captured_issues` (`primitives.rs`) is replaced by
-  `findings`, a list of `AnalysisFinding`. Each entry carries `tier` (an
+- `WriteAnalysisArgs.findings` (`primitives.rs`) is a list of
+  `AnalysisFinding`. Each entry carries `tier` (an
   `AnalysisTier`), `family`, `message`, `path`, `live`, and a `Disposition`
   shaped as above. The list covers both passes: findings fixed in the run
   (`live: false`, gone from the re-check) and live findings from the
@@ -285,34 +283,30 @@ description (the `description` attribute of `check-review-gate` in `runtime/src/
 
 ### A new `disposition-drift` family, rather than a new condition inside analyze-state drift
 
-When this was decided, `check-artifacts` carried an `analyze-state-drift`
-family (`check_analyze_drift`) that emitted every analyze-record condition
-under that one name. `--fix` never reverted on that family. Its only triggers
-were review-state drift and scenario open questions. Task 42 later removed that
-family. `/{project}:analyze` now judges analyze-state drift after step 21, from
-the record it has just written, and `--fix` still does not revert on it
-(`runtime/src/primitives/check_artifacts.rs`, module doc;
-`framework/commands/analyze.md`, §Analyze state drift).
+`check-artifacts` carries a `disposition-drift` family and no
+`analyze-state-drift` family. `/{project}:analyze` judges analyze-state drift
+after step 21, from the record it has just written, and `--fix` does not
+revert on it (`runtime/src/primitives/check_artifacts.rs`, module doc;
+`framework/reference/analyze.md` §Analyze state drift (blocking)).
 
-Adding the undispositioned condition to that family would have left the host
-distinguishing conditions by message text. A separate `disposition-drift`
-family instead gives `--fix` a family key to trigger on:
+The undispositioned condition is a family of its own rather than a condition
+inside one that emits every analyze-record condition under a single name,
+which would leave the host distinguishing conditions by message text. A
+separate family gives the report and the stored decisions a family key:
 
 - It applies at `done` only.
 - It reads `review.md` only. `analysis.md` is judged by `/{project}:analyze`
   after it writes that record, from the record it wrote, because a finding
   read from the record a run is about to replace could never clear (scenario
   `analysis-drift-judges-the-record-it-writes`).
-- It is `Advisory`. It was `Blocking` until scenario
-  `findings-cost-in-proportion-to-risk`, when the findings it counts stopped
-  holding `done`.
+- It is `Advisory`, since the findings it counts do not hold `done` (scenario
+  `findings-cost-in-proportion-to-risk`).
 - A record without a map produces nothing: it predates the field, and a
   backfilled map would assert dispositions nobody made
   (`check_disposition_drift` in `check_artifacts.rs`).
 
-`--fix` reverted on it through the host's guarded `set-status` until that
-scenario, and no longer does, so the family key now serves the report and
-the stored decisions only. `analyze.md` gains a markdown-only "Disposition drift" section, and the stale family-order
+`--fix` does not revert on it, so the family key serves the report and the
+stored decisions only. `analyze.md` gains a markdown-only "Disposition drift" section, and the stale family-order
 doc on `CheckArtifactsResult.findings` is corrected in passing.
 
 ### `append-task` gains an opt-in title dedup, so disposition tasks stay idempotent
@@ -403,13 +397,11 @@ removed.
 - **§bug-handling** says a chore found by a run is fixed in that run,
   and a chore logged by hand lives in the inbox until it is done.
 - **§brownfield-inbox:**
-  - The opening of §brownfield-inbox ("A `specs/inbox.md` file is the project's capture queue" through "the incidental-capture role is ongoing") is rewritten to describe manual capture, which also resolves the
-    contradiction between "Items are recorded with `/log` (manual) or captured automatically" ("leaves it in place") and "When an item routes to a chore, fix it";
-  - `#### Automatic issue capture` is replaced by
-    `#### Finding dispositions`, the three-disposition rule with the scope
+  - The opening of §brownfield-inbox ("A `specs/inbox.md` file is the project's capture queue" through "the incidental-capture role is ongoing") describes manual capture, and "When an item routes to a chore, fix it" is the
+    only rule for a chore;
+  - `#### Finding dispositions` holds the three-disposition rule with the scope
     tiers, the disposition task, persisted decisions, and the gate.
-- **The Frontmatter Schema rows** replace `captured-issues`
-  with `dispositions` and `decisions`.
+- **The Frontmatter Schema rows** declare `dispositions` and `decisions`.
 - **§pipeline-boundaries** kept "an inbox item" as a destination,
   but named `/{project}:log` as its only producer; since `050-constitution`'s
   cut to one read, §brownfield-inbox names it.
@@ -488,7 +480,7 @@ keeps blockquote lines (`check_review_gate.rs`, the doc above
 | --- | --- | --- | --- |
 | 008 | Adoption audit no longer writes the inbox | `spec.md` | review (record shape only) + analyze |
 | 020 | `captured-issues`, Captured issues and Observations rows | `data-model.md`, `spec.md` | review + analyze |
-| 022 | Three superseded scenarios; inbox fields in the data model | `scenarios/*.md`, `data-model.md`, `spec.md` | review + analyze |
+| 022 | The review-observations, inbox-row and captured-record scenarios; inbox fields in the data model | `scenarios/*.md`, `data-model.md`, `spec.md` | review + analyze |
 | 047 | Its premise, that analyze findings persist to the inbox | `spec.md` | review (record shape only) + analyze |
 | 050 | The `findings-route-by-scope` edge cases | `scenarios/findings-route-by-scope.md`, `spec.md` | review + analyze |
 | 054 | AC10's `check-artifacts` family count (added by task 42, which moved `analyze-state-drift` out) | `spec.md` | review + analyze |

@@ -17,8 +17,7 @@ rather than incidental:
 - `runtime/src/primitives/check_artifacts.rs` — `NON_ASSERTION_MARKERS`, the
   implementation;
 - `framework/reference/analyze.md` — the adopter-facing restatement, in
-  `/{project}:analyze`'s markdown-only reference (in `framework/commands/analyze.md`
-  until [071](../../071-command-reference-split/spec.md) moved it). This one **cannot** be replaced by a pointer: it
+  `/{project}:analyze`'s markdown-only reference. This one **cannot** be replaced by a pointer: it
   ships to adopter projects as `.ductus/reference/analyze.md`, and they have no
   copy of 045's data-model;
 - `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`

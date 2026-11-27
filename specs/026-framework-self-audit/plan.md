@@ -6,7 +6,7 @@ Implements [026 — Framework self-audit](spec.md).
 
 `/audit` ships as a slash command at `framework/commands/audit.md` (NOT scaffolded into adopters). The command orchestrates a check-zero precondition pass over the project's generators and lints, then walks the family checks — those the spec defines, and every family `scripts/audit/run-all.sh` registers since. No count is stated: Family 28 holds the registry, the command's enumeration, and `scripts/audit/README.md` §Scripts in agreement, and a number in prose is the copy nothing updates. Each family check is implemented as a focused shell script under `scripts/audit/{family}.sh`, invoked from the command procedure via the runtime's existing `run-generator` primitive.
 
-**As it runs:** the command has one step, `run-generator` over `scripts/audit/run-all.sh`, which runs check-zero and then every family it registers; `framework/reference/audit.md` enumerates the families. The host runs that step through the CLI, since the `ductus exec` walker binds no `script` for it, so the step names the primitive unbackticked and the parser reads `audit.md` as legacy prose, which `runtime/legacy-prose-commands.txt` lists as host-run (022 task 45, `0a14c63b`). The procedure shape and the per-family designs below are recorded as planned.
+**As it runs:** the command has one step, `run-generator` over `scripts/audit/run-all.sh`, which runs check-zero and then every family it registers; `framework/reference/audit.md` enumerates the families. The host runs that step through the CLI, since the `ductus exec` walker binds no `script` for it, so the step names the primitive unbackticked and the parser reads `audit.md` as legacy prose, which `runtime/legacy-prose-commands.txt` lists as host-run (022 task 45, `0a14c63b`).
 
 Per [Q2's resolution](spec.md#resolved-questions), v1 uses shell-first orchestration with the runtime as the invocation mechanism. 026 adds one primitive, `check-step-references`, because Family 34 parses markdown structure, which §runtime-boundary keeps out of shell pipelines; `scripts/audit/step-reference-integrity.sh` is its entry point, and every other family delegates to primitives that already existed. The pattern is intentional: when a check pattern proves common enough across multiple commands, it graduates to a runtime primitive in a follow-on. Inventing primitives for `/audit` alone would overengineer ahead of data.
 
@@ -62,12 +62,12 @@ Each family check is one shell script. The contract:
 
 Rationale: the four columns let the maintainer route a finding quickly, and a binary exit code is all CI needs to gate on (the spec's Resolved Question *Severity levels*); a family only surfaces drift while the maintainer makes each call (the spec's Output section), so it writes nothing; and the same tree gives the same rows, so CI's verdict and a maintainer's local run agree.
 
-The scripts, with implementation notes. **Recorded as planned; each family's behavior as it runs is its criterion's annotation in `spec.md`:** Family 1 AC3, Family 2 AC4 (the installer half retired, the permission half comparing the generated MCP set with `framework/runtime-tools.txt`), Family 4 AC6, Family 5 AC7, Family 6 AC8 (a stub that detects nothing, and says so), Family 7 AC9 and Family 8 AC10 (a hardcoded catalog that judges no tense).
+The scripts, with implementation notes. Each family's behavior as it runs is its criterion's in `spec.md`: Family 1 AC3, Family 2 AC4 (the generated MCP allow block's markers, stray grants and an empty extraction), Family 4 AC6, Family 5 AC7, Family 6 AC8 (a stub that detects nothing, and says so), Family 7 AC9 and Family 8 AC10 (a hardcoded catalog that judges no tense).
 
 **`scripts/audit/cross-doc-consistency.sh`** (Family 1)
 Two sub-checks composed in one script:
 
-- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle and `README.md` (the adopter README template was a subject until spec 003 task 6 retired it). Verify both visit the same five states in the same order; finding per divergence.
+- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle and `README.md`. Verify both visit the same five states in the same order; finding per divergence.
 - 1c back-edge wording: extract the back-edge sentences from §spec-lifecycle, then compare against the references in `framework/commands/amend.md` and `framework/commands/target.md`'s Status→next-action table.
 
 **`scripts/audit/manifest-parity.sh`** (Family 2)
@@ -82,15 +82,13 @@ One sub-check:
 Parse `framework/commands/analyze.md` for blocking-check sections (`### Spec integrity (blocking)`, `### Artifact completeness (blocking)`, etc.). Each check names fields it requires (`status`, `dependencies`, `Acceptance criteria`, etc.). Verify each named field appears in the corresponding template under `framework/templates/spec/`. Finding per missing template element.
 
 **`scripts/audit/ssot-invariants.sh`** (Family 6)
-Maintain a curated list of normative rules whose text should appear in one canonical location. v1 list:
+A registered stub: the script's header holds the curated list of normative rules whose text should appear in one canonical location, and it detects nothing. Every run writes `ssot-invariants: skipped — detection not implemented (026 AC8); 0 rules examined` to stderr and exits 0. The list:
 
 - Open-question counting rule (counts top-level list items or `**Bold-prefix**` headings in `## Open Questions`).
 - Status state machine: `draft → clarified → planned → in-progress → done`.
 - Back-edge ownership: `/amend` owns the back-edges.
 
-For each rule, the script grep's all framework artifacts for the canonical text plus known paraphrases. If the canonical text appears in more than one file (or paraphrases appear that should reference the canonical), surface as a finding suggesting the duplicate location reference the canonical one.
-
-The curated list grows as drift surfaces. New entries land here, not in framework files themselves — the script is the source of truth for which rules are SSOT-tracked.
+The textual-duplicate detection needs a concrete duplicate to write its pattern against, so it is not implemented (*Known limitation: SSOT curated list grows by author discipline*, below). The curated list grows in the script's header as drift surfaces, not in framework files — the header is the source of truth for which rules are SSOT-tracked.
 
 **`scripts/audit/sibling-coupling.sh`** (Family 7)
 Walk every `specs/NNN-*/spec.md`. For each non-`done` spec, parse:
@@ -103,11 +101,11 @@ For each pair `(A, B)` where A and B inline-link each other AND share at least o
 Identifying "second-drafted spec": the spec with the higher NNN prefix. (A sequential spec's directory name starts with its `NNN-` number, per the constitution's Numbering Convention, and a branch-scoped one carries no such number; the rule is mechanically derivable from the directory name.)
 
 **`scripts/audit/introducing-drift.sh`** (Family 8)
-Use `git log --all --pretty=format:"%H %s" -- framework/commands/ scripts/` to build a rename-history catalog. Parse commit messages for rename indicators (`renamed from X to Y`, `X → Y`, etc.). Build the set of old-name tokens (`/capture`, `/elaborate`, `/validate`, etc.).
+The rename catalog is a literal `RENAMED_TOKENS` list in the script (`/capture`, `/elaborate`, `/validate`, etc.), not derived from git history.
 
-For each `done` spec's body, grep for each old-name token in code-span form (`` `/capture` ``). For each match, check the surrounding sentence for current-tense or imperative verbs (`is`, `provides`, `exposes`, `creates`, `runs`). If found, surface as a finding with the affected sentence and a past-tense rewrite suggestion (`was`, `provided`, `exposed`, `created`, `ran`).
+For each `done` spec's body, grep for each old-name token in code-span form (`` `/capture` ``), skipping blockquote lines and any file carrying the file-scope ignore marker. Each match is a finding with the affected line and a past-tense rewrite suggestion; the script judges no tense.
 
-Heuristic by design — false positives expected on first runs. The maintainer accepts or dismisses each per-spec via a small `/ductus:amend` cycle on the affected spec.
+False positives are expected. The maintainer accepts or dismisses each per-spec via a small `/ductus:amend` cycle on the affected spec.
 
 ### Every family contains the paths it did not write as a literal
 
@@ -123,22 +121,9 @@ The test is `scripts/tests/test-audit-path-containment.sh`: a case per family pu
 
 ### `/audit`'s command procedure shape
 
-`framework/commands/audit.md` was planned to follow the parseable conventions established by spec 022. **Superseded:** its one step runs `run-all.sh`, which the host runs through the CLI, so the parser reads the file as legacy prose (`0a14c63b`), as the Overview's note says; the shape below is the one planned.
+`framework/commands/audit.md` has one step, `run-generator` over `scripts/audit/run-all.sh`, which the host runs through the CLI, so the parser reads the file as legacy prose (`runtime/legacy-prose-commands.txt`, as the Overview's note says). `run-all.sh` runs `scripts/audit/check-zero.sh` first and halts on its findings, then runs every registered family and exits `1` when any produced findings.
 
-```markdown
-## Instructions
-
-1. Invoke `run-generator` against `scripts/audit/check-zero.sh`. If it
-   reports drift, emit a check-zero finding to stdout and halt with exit 1.
-2. Invoke `run-generator` against `scripts/audit/cross-doc-consistency.sh`;
-   stream its stdout to /audit's stdout under the family header.
-3. Invoke `run-generator` against `scripts/audit/manifest-parity.sh`; …
-… (one numbered step per family check) …
-9. Invoke `run-generator` against `scripts/audit/introducing-drift.sh`; …
-10. Exit 0 if no family check produced findings; otherwise exit 1.
-```
-
-The `run-generator` primitive's existing contract (drift detection on non-zero exit) extends cleanly to `/audit`: a family script with findings exits non-zero, the primitive surfaces it as drift, `/audit` aggregates across all families.
+The `run-generator` primitive's existing contract (drift detection on non-zero exit) fits `/audit`: a family script with findings exits non-zero, the primitive surfaces it as drift, and `run-all.sh` aggregates across all families.
 
 ### CI integration
 
@@ -169,8 +154,8 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `framework/commands/audit.md` | Create | New slash command — orchestrator for the family checks plus the check-zero precondition pass; parseable as delivered, legacy prose since `0a14c63b` |
 | `.claude/commands/ductus/audit.md` | Generate | Regenerated by `scripts/gen-claude-commands.sh` (the pre-commit hook handles this) |
 | `scripts/audit/check-zero.sh` | Create | Orchestrates the 9 generator/lint scripts as the precondition pass |
-| `scripts/audit/cross-doc-consistency.sh` | Create | Family 1 — README spec-status table, pipeline diagrams, back-edge wording (the table check retired with `gen-readme-table.sh`, AC3) |
-| `scripts/audit/manifest-parity.sh` | Create | Family 2 — installer file list parity, permission-set parity with normalization (the installer half retired, AC4) |
+| `scripts/audit/cross-doc-consistency.sh` | Create | Family 1 — pipeline diagrams, back-edge wording |
+| `scripts/audit/manifest-parity.sh` | Create | Family 2 — the generated MCP allow block's markers, stray grants and extraction in `framework/bootstrap/configure/claude.md` |
 | `scripts/audit/adopter-shell-behavior.sh` | Create | Family 22 — the shipped adopter hook and generators run against a generated adopter-shaped fixture |
 | `scripts/audit/placeholder-roundtrip.sh` | Create | Family 4 — hardcoded token detection in `framework/commands/*.md` |
 | `scripts/audit/template-alignment.sh` | Create | Family 5 — `analyze.md` blocking checks ↔ template scaffolding |
@@ -180,7 +165,7 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `scripts/tests/test-audit-path-containment.sh` | Modify | A case per family that contains the paths it did not write as a literal, each failing with its family's check removed |
 | `.github/workflows/framework-checks.yml` | Modify | Add `/audit` step after existing lint steps |
 | `.github/workflows/runtime-release.yml` | Modify | Add `/audit` pre-tag gate before release matrix fires |
-| `runtime/legacy-prose-commands.txt` | Modify | Remove `framework/commands/audit.md` from the legacy allowlist — the command shipped parseable; 022 task 45 (`0a14c63b`) listed it again, as host-run |
+| `runtime/legacy-prose-commands.txt` | Modify | Lists `framework/commands/audit.md` as host-run (022 task 45) |
 | `specs/026-framework-self-audit/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `planned → in-progress` and `→ done` during implementation |
 
 The runtime write boundary that `/ductus:implement` derives from git history will include the above plus any incidental files (CHANGELOG entries).

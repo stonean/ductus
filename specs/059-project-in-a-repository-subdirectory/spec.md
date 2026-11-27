@@ -57,7 +57,7 @@ The prose-claim sweep during implementation found the same defect in two command
 - [x] AC8: `check-corpus-links --scope repository` in a subdirectory project examines the tracked markdown files under the project root, names each one project-relative, and leaves out files outside the project
 - [x] AC9: In a subdirectory project, `/ductus` sets `core.hooksPath` to the project's `.githooks` directory named from the work tree, recognizes that value as already wired on a later run, and `framework/bootstrap/hooks/ductus-pre-commit` runs its passes from the project root rather than from `git rev-parse --show-toplevel`
 - [x] AC10: `framework/templates/ci/adopter-generators.yml` carries a commented `defaults.run.working-directory` that a project in a subdirectory sets to its path, so every step runs from the project root
-- [x] AC11: Every git instruction in `framework/commands/` whose output a host parses for paths names them from the project root: **superseded in part:** `implement.md`'s markdown-only cross-spec check, which ran `git diff --name-only --relative`, is gone, since `diff-cross-spec` owns that filter. `amend.md`'s reconcile pass parses `git status --porcelain`, whose shape no user setting changes, and names each path from the project root by dropping whatever precedes the feature's directory
+- [x] AC11: Every git instruction in `framework/commands/` whose output a host parses for paths names them from the project root: `implement.md` parses no git output, since `diff-cross-spec` owns the cross-spec filter. `amend.md`'s reconcile pass parses `git status --porcelain`, whose shape no user setting changes, and names each path from the project root by dropping whatever precedes the feature's directory
 
 ## Open Questions
 

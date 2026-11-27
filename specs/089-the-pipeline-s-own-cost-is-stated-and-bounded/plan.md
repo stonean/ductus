@@ -60,7 +60,7 @@ An entry true for every adopter that the constitution does not state stays as on
 
 It needs at least 1,156 bytes out: 49,911, plus 244 for AC1's bullet, less 49,000. The cut ends at 48,999 (`wc -c`):
 
-- **Pointed at `framework/reference/implement.md`.** §brownfield-inbox's two `/implement` bullets, *In `/{project}:implement`, scope decides the destination* (315 bytes) and *Record, do not derail* (107), become one pointer to the reference's *Walk through tasks* step 5. That step already states both, so the reference does not change. 050's AC15 says §brownfield-inbox states the tiers, so AC15 gains a *Superseded in part by 089* note, which owes 050 one review (the agent's recommendation, adopted by the operator, 2026-11-27). 050's scenario `findings-route-by-scope` signpost and `AGENTS.md`'s entry on a finding made during implementation are re-pointed, and 050's plan gains that entry's row under *Relocated to a command reference*.
+- **Pointed at `framework/reference/implement.md`.** §brownfield-inbox's two `/implement` bullets, *In `/{project}:implement`, scope decides the destination* (315 bytes) and *Record, do not derail* (107), become one pointer to the reference's *Walk through tasks* step 5. That step already states both, so the reference does not change. 050's AC15 says §brownfield-inbox states the tiers, so AC15 is edited to state the tiers' home as the reference's step, which owes 050 one review (the agent's recommendation, adopted by the operator, 2026-11-27). 050's scenario `findings-route-by-scope` signpost and `AGENTS.md`'s entry on a finding made during implementation are re-pointed, and 050's plan gains that entry's row under *Relocated to a command reference*.
 - **Copies of a primitive's rules cut to a pointer.**
   - *An anchor reference resolves by line*, to `resolve-anchor`.
   - *Detect, decide, re-check, record*, to the analyze reference's *Finding dispositions*, whose order bullet task 3 keeps.
@@ -164,7 +164,7 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 | `.githooks/pre-commit`, `.github/workflows/framework-checks.yml` | Modify | Comments name the governed set |
 | `.ductus/reference/*.md`, `.claude/commands/ductus/*.md`, `.pi/prompts/*.md` | Regenerate | Generator outputs of the reference and command edits |
 | `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md` | Modify | `## Cost`; `cross-spec-impact:` gains 063, 066, 067 and 079 |
-| `specs/{050,063,066,067,072,075,079}-*/spec.md` | Modify | Blockquoted signposts to 089; 050's AC15 note; 079's AC18 note |
+| `specs/{050,063,066,067,072,075,079}-*/spec.md` | Modify | Blockquoted signposts to 089; 050's AC15 edit; 079's AC18 edit |
 | `specs/050-constitution/plan.md` | Modify | §Classification follows task 1's moves and task 2's re-pointed entry (Family 38) |
 | `specs/050-constitution/scenarios/findings-route-by-scope.md` | Modify | Its signpost names the implement reference as the moved bullet's home |
 | `specs/060-exec-analyze-assesses-each-loaded-rule/tasks.md` | Modify | Task 15 states its cost (AC1) |
@@ -181,13 +181,13 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 
 Each discharge is a blockquoted signpost back-linking 089, a blockquote so it adds no `dependencies:` edge and closes no cycle (089 links 050 and 072).
 
-- **050** owns the constitution's content: the cost bullet, the lowered ceiling, and the two `/implement` bullets now a pointer to the implement reference. AC15's note leaves 050 `done`, owing nothing, as 084's rule has it for an edit that does not reopen (owner, 2026-11-23): `compute-review-scope` reads it `review-owed`, so 050's next reopening's review judges the note's text.
+- **050** owns the constitution's content: the cost bullet, the lowered ceiling, and the two `/implement` bullets now a pointer to the implement reference. AC15's edit leaves 050 `done`, owing nothing, as 084's rule has it for an edit that does not reopen (owner, 2026-11-23): `compute-review-scope` reads it `review-owed`, so 050's next reopening's review judges AC15's text.
 - **072** owns the lint: the lowered ceilings and the two glob rows. Its AC1 and AC10 still hold, since a lower ceiling still keeps each file at most 50,000 bytes and no higher than its size when the check was added.
 - **075**: `AGENTS.md`'s ceiling is below the read size and its cut ran through `/prune --project`. Its question on each file's limit says 50,000 bytes was this repository's `AGENTS.md` figure until 089 set 39,000.
 - **079** (added to `cross-spec-impact:`): 089 holds each reference to the read size, which 079's Resolved Question on AC18 rejected (2026-11-16) before the copies were measured.
   - That question gets a signpost, and so does *Can a reference stop stating a primitive's rules?*, whose dropped-not-moved route the analyze cut reversed.
-  - AC18's "later specs' requirements may grow them past it" gets a *Superseded in part* note, worded as the answer 086 task 7 records for 084's correction rule says, or asked of the owner if none is recorded yet.
-  - The note leaves 079 `done`, owing nothing, as 084's rule has it for an edit that does not reopen (owner, 2026-11-23). `compute-review-scope` reads it `review-owed`, so 079's next reopening's review judges it. It lands with or after 086 task 7's notes on 079's AC6 and AC24, so that one review covers all three.
+  - AC18 states the reference ceiling as `scripts/lint-governing-size.sh` holds it and no longer says later specs' requirements may grow the references past it.
+  - The edit leaves 079 `done`, owing nothing, as 084's rule has it for an edit that does not reopen (owner, 2026-11-23). `compute-review-scope` reads it `review-owed`, so 079's next reopening's review judges it.
 - **063, 066, 067** (added to `cross-spec-impact:`): own `check-artifact-size`, `write-analysis` and `check-artifacts`, whose descriptions take the moved rules. No behavior changes.
 - **The other lane.** 066 is its spec, and 086 task 7 edits 079's spec. So the other lane is told, through `SendMessage`, before this lane edits either and once the edit lands.
 - **060** gets a checkbox on its task 15 rather than a declaration. The cost statement is 060's own work, so a declaration would hold 089's `done` on another spec's task.

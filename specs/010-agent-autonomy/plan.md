@@ -6,46 +6,17 @@ title: "010-agent-autonomy — plan"
 
 ## Overview
 
-Land six small, independent `ductus` changes:
+Land five small, independent `ductus` changes:
 
-1. `[simple]` task tier marker (template + plan command) — dropped since by `017-derive-dont-ask`
-2. Stuck detection in `/ductus:implement` (no new artifact — reads `git log` and `tasks.md`)
-3. `--auto` flag on `/ductus:implement`
-4. "Skills" index section in the `AGENTS.md` project template
-5. Cost-conscious cross-reference paragraph in the constitution
-6. Concurrent-features note (single-target sessions; point at `git worktree` and platform isolation) — the single target was since replaced by per-process targets (`062-concurrent-session-targets`)
+1. Stuck detection in `/ductus:implement` (no new artifact — reads `git log` and `tasks.md`)
+2. `--auto` flag on `/ductus:implement`
+3. "Skills" index section in the `AGENTS.md` project template
+4. Cost-levers cross-reference paragraph in the constitution
+5. Concurrent-features note (one session target per agent process, per `062-concurrent-session-targets`; point at `git worktree` and platform isolation)
 
 The work is almost entirely prompt and prose — no application code, no new schemas, no events, no error codes, no data model. The risk is in getting the command-file parity right so `framework/commands/*.md` and `.claude/commands/ductus/*.md` stay in sync via `scripts/gen-claude-commands.sh`.
 
 ## Technical Decisions
-
-### `[simple]` marker placement
-
-**Dropped by `017-derive-dont-ask`**, with the proposal step below: neither exists under `framework/` today. This section and the next record the design as it shipped.
-
-The marker is an inline tag on a task header, e.g.:
-
-```markdown
-## 1. Update registry trigger field [simple]
-```
-
-Header placement (vs. checkbox-line placement) chosen because:
-
-- `tasks.md` already uses `## N. Title` headers as the canonical task identifier — the marker rides on the durable identifier, not on a sub-checkbox.
-- Easy to spot when scanning the file and grep-friendly (`rg '\[simple\]'`).
-- Survives the existing template structure with no schema change.
-
-Conventions:
-
-- A task header MAY end with `[simple]`. No marker = default tier (whatever the adopter's platform config maps to "standard").
-- Only one tier defined: `[simple]`. `[complex]` was declined in the spec.
-- Markers live on individual task headers, not on the file as a whole — different tasks in the same feature can have different tiers.
-
-### `/ductus:plan` proposes markers; user has final say
-
-`/ductus:plan` already produces `tasks.md` from the plan. New step: after generating the task list, scan each task and append `[simple]` to the header if it judges the task trivial (single small file, no logic, no schema change, no new behavior). The summary surfaced to the user before status transition lists which tasks were marked. The user adds, removes, or accepts markers before approving the transition.
-
-This mirrors how the lightweight-track decision works: the agent proposes from heuristics, the user confirms.
 
 ### Stuck-detection algorithm
 
@@ -85,24 +56,21 @@ Auto-mode commit policy: commit, do not push. Push is a hard-to-reverse, externa
 
 The session file is unchanged — autonomy is not session state.
 
-### Cost-conscious cross-reference: location
+### Cost-levers cross-reference: location
 
-`### Cost levers` is a short subsection of `## Guiding Principles` in `framework/constitution.md`, where it followed the `### Business` principles list until `050-constitution` removed that list. A subsection was preferred over inlining a paragraph under the bullet because:
+`### Cost levers` is a short subsection of `## Guiding Principles` in `framework/constitution.md`. A named subsection is greppable and gets its own anchor for cross-references.
 
-- The `Cost-conscious` line was a one-line bullet in a structured list; a multi-sentence paragraph would have broken the list's visual rhythm.
-- A named subsection (`### Cost levers`) is greppable and gets its own anchor for cross-references.
-
-Content: one paragraph naming `ductus`'s existing levers (lightweight track, `[simple]` marker, stuck detection, default-off autonomy — the first two since removed, by `023-govern-refinement` and `017-derive-dont-ask`) and pointing at the adopter's platform tooling for runtime cost controls (Claude Code's `/cost`, Anthropic usage dashboard, Cursor's request limits). No commitment to a specific platform — just examples. Paragraph stays short (4–6 sentences) so it reads as guidance, not a manual.
+Content: one paragraph naming `ductus`'s cost levers (stuck detection, default-off autonomy) and saying token budgets are the AI platform's, which is where runtime cost controls live. No commitment to a specific platform. Paragraph stays short so it reads as guidance, not a manual.
 
 ### Concurrent-features note: location
 
 Add a new short subsection `### Concurrent Features` under `## Pipeline Boundaries` in the constitution. A subsection there is preferred over a note in the AGENTS.md template because:
 
-- "Single-target sessions" is a constitutional property of the pipeline, not an adopter-customizable choice — it belongs with the other pipeline rules.
+- One session target per agent process is a constitutional property of the pipeline, not an adopter-customizable choice — it belongs with the other pipeline rules.
 - Pipeline Boundaries is already where serial-by-design rules live (the bullet list).
 - AGENTS.md is the adopter's project-level operating doc; constitutional invariants are out of scope for it.
 
-Content: one paragraph stating that the session file holds a single target by design, and that concurrent work on independent features uses two independent sessions in two terminals, with isolation provided by `git worktree` and platform features (Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration, etc.). 3–5 sentences. `062-concurrent-session-targets` later replaced the single target with one target per agent process, and rewrote §concurrent-features to say so; `git worktree` remains its answer for isolating edits.
+Content: one paragraph stating that each agent process holds its own session target, and that `git worktree` and platform features (Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration, etc.) remain the answer for isolating edits (`062-concurrent-session-targets`, §concurrent-features). 3–5 sentences.
 
 ### Skills index in `AGENTS.md` template
 
@@ -130,7 +98,7 @@ Empty-by-default ensures backwards-compatibility for projects that don't decompo
 
 ### Command file parity
 
-Two of 010's deliverables touch `framework/commands/*.md`: `plan.md` (proposes `[simple]` markers) and `implement.md` (stuck detection + `--auto`). Per `CLAUDE.md`, never edit `.claude/commands/ductus/*.md` directly — always edit the source under `framework/commands/` and run `./scripts/gen-claude-commands.sh`. The implementation runs the generator after editing the sources; tasks.md includes the generator step explicitly.
+One of 010's deliverables touches `framework/commands/*.md`: `implement.md` (stuck detection + `--auto`). Per `CLAUDE.md`, never edit `.claude/commands/ductus/*.md` directly — always edit the source under `framework/commands/` and run `./scripts/gen-claude-commands.sh`. The implementation runs the generator after editing the sources; tasks.md includes the generator step explicitly.
 
 `framework/bootstrap/configure/claude.md` is the source for `.claude/commands/ductus/configure.md`; the generator writes the configure file from the bootstrap source. It is edited at the source location and the generator picks it up.
 
@@ -140,19 +108,16 @@ Explicit non-goals to keep the scope tight:
 
 - No new file format, no new artifact type, no schema change. Everything rides on existing markdown conventions.
 - No platform-specific shipping (no Claude Code skills directory, no Cursor rules directory). `ductus` documents the pattern only.
-- No execution log, no per-task token tracking, no budget files, no `[complex]` tier — all explicitly declined in the spec.
-- No multi-target session, no `--feature` flag on commands, no worktree management — declined in the spec. (062 later gave each agent process its own target; one process still holds one.)
+- No execution log, no per-task token tracking, no budget files, no complexity routing — all explicitly declined in the spec.
+- No multi-target session within one process, no `--feature` flag on commands, no worktree management — declined in the spec. Each agent process holds its own target (062); one process holds one.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/templates/spec/tasks.md` | Modify | Document optional `[simple]` task header marker |
-| `framework/commands/plan.md` | Modify | Add step proposing `[simple]` markers on trivial tasks |
 | `framework/commands/implement.md` | Modify | Add stuck-detection step; accept `--auto` flag with documented gates |
 | `framework/templates/project/agents.md` | Modify | Insert optional `## Skills` index section (empty by default) |
 | `framework/constitution.md` | Modify | Add `### Cost levers` subsection and `### Concurrent Features` subsection |
-| `.claude/commands/ductus/plan.md` | Regenerate | Output of `gen-claude-commands.sh` after editing source |
 | `.claude/commands/ductus/implement.md` | Regenerate | Output of `gen-claude-commands.sh` after editing source |
 
 ## Trade-offs
@@ -175,10 +140,10 @@ An empty section with an HTML-comment guide adds slight visual weight to AGENTS.
 
 ### Concurrent-features note in constitution, not AGENTS.md template
 
-Pipe-and-pull on this one: AGENTS.md is the adopter's customizable doc, but single-target sessions were a constitutional invariant of `ductus` (062 since made the invariant one target per process). Putting the note in the constitution communicates the invariant correctly; putting it in AGENTS.md would imply it's an adopter choice (it isn't). Adopters can still reference the constitutional section from their own docs.
+Pipe-and-pull on this one: AGENTS.md is the adopter's customizable doc, but one session target per agent process is a constitutional invariant of `ductus`. Putting the note in the constitution communicates the invariant correctly; putting it in AGENTS.md would imply it's an adopter choice (it isn't). Adopters can still reference the constitutional section from their own docs.
 
 ## Open Questions Resolved
 
 All open questions were resolved during clarification. See `spec.md` "Resolved Questions" section.
 
-The plan-time decisions made above (locations for the cost-conscious paragraph and concurrent-features note; stuck-detection threshold of 3; auto-mode commit-but-don't-push; `[simple]` marker on task headers) are not new open questions — they are implementation-detail choices that the spec deliberately left to planning.
+The plan-time decisions made above (locations for the cost-conscious paragraph and concurrent-features note; stuck-detection threshold of 3; auto-mode commit-but-don't-push) are not new open questions — they are implementation-detail choices that the spec deliberately left to planning.

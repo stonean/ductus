@@ -105,7 +105,7 @@ This feature produces the following changes to the framework:
 - **New command:** `/ductus:groom` — reviews `specs/inbox.md`, walks each item through the decision tree, migrates items to the appropriate spec or scenario, and removes resolved items from the inbox
 - **Updated command:** `/ductus:help` — documents `/ductus:amend`, `/ductus:groom`, scenario conventions, and bug workflow
 - **Updated command:** `/ductus:status` — displays scenario counts per spec in the pipeline dashboard
-- **Updated command:** `/ductus:next` — suggested `/ductus:amend` as a next action when appropriate (e.g., bug reported, spec is `in-progress`). Delivered as written; `/ductus:next` was later retired outright, so this artifact no longer exists. Next-action guidance now lives in `/ductus:status`'s Next Action column and `/ductus:target`'s Status → next action table.
+- **Updated command:** `/ductus:target` — its Status → next action table points a `done` spec at `/ductus:amend` to record new work
 - **Updated command:** `/ductus:analyze` — checks that scenario-linked tasks are complete during validation
 - **Updated document:** `README.md` — documents bug workflow and scenario convention
 
@@ -126,7 +126,7 @@ This feature produces the following changes to the framework:
 - [x] AC13: `/ductus:amend` follows the decision tree — checks for existing spec before creating a scenario
 - [x] AC14: `/ductus:amend` appends a task to the parent spec's `tasks.md` referencing the new scenario
 - [x] AC15: `/ductus:status` displays scenario counts per spec in the pipeline dashboard
-- [x] AC16: `/ductus:next` suggests `/ductus:amend` as a next action when context warrants it. Delivered as written; the command was later retired, so the behaviour this asserts no longer has a subject. Unlike the renames swept elsewhere in this spec, the claim itself stopped holding rather than its name moving, which is what annotation is for — next-action guidance is now `/ductus:status`'s Next Action column.
+- [x] AC16: `/ductus:target`'s Status → next action table points a `done` spec at `/ductus:amend` to record new work.
 - [x] AC17: `/ductus:analyze` checks that scenario-linked tasks in `tasks.md` are complete
 - [x] AC18: `README.md` documents the bug workflow and scenario conventions
 - [x] AC19: All new and modified markdown files pass `npx markdownlint-cli2`

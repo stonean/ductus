@@ -6,7 +6,7 @@ section: "Acceptance Criteria"
 
 ## Context
 
-`configuration-cross.md` `CFG-ENV-008` (MUST, added 2026-10-19) requires a configuration value that is present but malformed to fail fast, naming the setting and the value, rather than being skipped or replaced by a default. This spec's AC4 skips a malformed `[[review.disabled-rule-files]]` entry — one missing `file` or `reason`, or whose `reason` is under the minimum length — with a warning and continues. The owner decided on 2026-10-19 that the rule stands and `ductus` changes to comply.
+`configuration-cross.md` `CFG-ENV-008` (MUST, added 2026-10-19) requires a configuration value that is present but malformed to fail fast, naming the setting and the value, rather than being skipped or replaced by a default. This spec's AC4 therefore halts on a malformed `[[review.disabled-rule-files]]` entry — one missing `file` or `reason`, or whose `reason` is under the minimum length — rather than skipping it with a warning (owner, 2026-10-19).
 
 ## Behavior
 

@@ -206,7 +206,7 @@ The fixture repo is the integration substrate. Per-primitive unit tests under ea
 
 ### Per-command parity testing: golden envelope streams
 
-Each of the six initial-release commands (`/ductus:status`, `/ductus:target`, `/ductus:analyze`, `/ductus:implement`, `/ductus:plan`, `/ductus:specify`), `/ductus:review`, and the bootstrap stand-in, runs end-to-end under `ductus exec` against its fixture. Its envelope stream is compared byte for byte against `runtime/tests/golden/<fixture>.jsonl` by `runtime/tests/parity.rs`, after `{{runtime-version}}` in the golden is replaced by the binary's version. No LLM-driven capture is taken and no per-command bound is applied, because `048-govern-acquired-runtime` retired the prose-walked path such a capture would record.
+Each of the six initial-release commands (`/ductus:status`, `/ductus:target`, `/ductus:analyze`, `/ductus:implement`, `/ductus:plan`, `/ductus:specify`), `/ductus:review`, and the bootstrap stand-in, runs end-to-end under `ductus exec` against its fixture. Its envelope stream is compared byte for byte against `runtime/tests/golden/<fixture>.jsonl` by `runtime/tests/parity.rs`, after `{{runtime-version}}` in the golden is replaced by the binary's version. No LLM-driven capture is compared and no per-command bound applies.
 
 The `parity:` frontmatter key is gone from every shipped command and from `framework/bootstrap/ductus.md`. `apply-manifest`'s frontmatter check (`SHIPPED_FRONTMATTER_KEYS` in `runtime/src/primitives/host_config.rs`) still accepts it, so a newer binary at a project's `[runtime] path` can apply an older release's archive that carries it. `runtime/tests/parity/` holds only `cross-service/expected.txt`, `030`'s recorded capture, which `runtime/tests/cross_service.rs` reads.
 
@@ -284,11 +284,11 @@ The runtime section is `## The runtime` in the root `README.md`. It says what th
 
 The "Next steps" list in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output ends with a line saying the runtime is already acquired and wired by the run, pointing at the README's runtime section for how it is pinned and upgraded.
 
-Per the spec's install-policy resolution, no slash command may detect-and-warn about a missing binary.
+Per the spec's *Install policy* section, no slash command may detect-and-warn about a missing binary.
 
 ### This repository's generator scripts stay bash
 
-The `gen-*.sh` scripts under `scripts/` that build this repository's own artifacts (`gen-claude-commands.sh`, `gen-help-tables.sh`, `gen-configure-mcp.sh`) are not wrapped or replaced by the runtime; the pre-commit hook calls them directly. The two frontmatter derivations were the exception: `derive-dependencies` and `derive-references` replaced the adopter-facing generator scripts (067's scenario `adopter-generator-promotion`). The runtime's `run-generator` primitive invokes a generator with `--dry-run` for procedure use and surfaces drift as a finding — `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — but the pre-commit path never goes through it.
+The `gen-*.sh` scripts under `scripts/` that build this repository's own artifacts (`gen-claude-commands.sh`, `gen-help-tables.sh`, `gen-configure-mcp.sh`) are not wrapped or replaced by the runtime; the pre-commit hook calls them directly. The two frontmatter derivations are the exception: they are the primitives `derive-dependencies` and `derive-references`, not scripts (067's scenario `adopter-generator-promotion`). The runtime's `run-generator` primitive invokes a generator with `--dry-run` for procedure use and surfaces drift as a finding — `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — but the pre-commit path never goes through it.
 
 Rationale: the three build this repository's own generated files and ship to no adopter (`framework/bootstrap/ductus.md` installs none of them and the shipped `ductus-pre-commit` calls none), while the runtime ships to every adopter, so a primitive for them would put this repository's build in every adopter's binary and MCP surface. §runtime-boundary's runtime runs the deterministic portions of pipeline commands, and these are no pipeline command's portion.
 
@@ -312,7 +312,7 @@ Already resolved in the spec; concrete mapping. A value of its own goes only to 
   - `2` — parse error.
   - `3` — gate-confirm denied (clean denial, not an error per spec; mapped to `complete` with a `confirmed: false` payload — exit `0`. This code is reserved but unused for now; documented for forward compatibility).
   - `64-78` — `sysexits.h` ranges for I/O, permission, OS errors (`EX__BASE` 64 to `EX__MAX` 78, as the macOS SDK's `usr/include/sysexits.h` defines them).
-- Exit codes `128+` — signal-killed (no terminal message; bash reports "128+n if the command is terminated by signal n", `man bash`, Exit Status). Host fallback applies. The one exception is 141, `STDOUT_CLOSED_EXIT`: the runtime's own quiet exit when the reader of its stdout has gone (see **A closed stdout is a quiet exit**), not a crash.
+- Exit codes `128+` — signal-killed (no terminal message; bash reports "128+n if the command is terminated by signal n", `man bash`, Exit Status). The host surfaces a notice and the command halts. The one exception is 141, `STDOUT_CLOSED_EXIT`: the runtime's own quiet exit when the reader of its stdout has gone (see **A closed stdout is a quiet exit**), not a crash.
 
 ### `fetch-archive` transport
 

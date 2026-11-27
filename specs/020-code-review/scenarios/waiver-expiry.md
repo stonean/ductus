@@ -16,7 +16,7 @@ A finding's **site** is the narrowest named unit enclosing it that a pass can na
 
 ## Behavior
 
-For each waiver in the review record's `waivers` list at the start of every `/ductus:review` run, before counting findings into `must-violations` (`review.waivers` in spec frontmatter until `057-analyze-artifact-and-record-relocation` moved the record into `review.md`). Each rule applies per anchor: a waiver listing several anchors ([waiver-file-lists](waiver-file-lists.md)) is that many anchors, so where a rule below drops the waiver, it drops that anchor, and the waiver goes with its last one.
+For each waiver in the review record's `waivers` list at the start of every `/ductus:review` run, before counting findings into `must-violations`. Each rule applies per anchor: a waiver listing several anchors ([waiver-file-lists](waiver-file-lists.md)) is that many anchors, so where a rule below drops the waiver, it drops that anchor, and the waiver goes with its last one.
 
 Each anchor also records how many findings it **covers**: the number firing at it when the waiver was decided, never raised by a later write, and lowered to the number a run applied it to when that is fewer.
 

@@ -202,14 +202,14 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `specs/022-deterministic-runtime/scenarios/parser-walker-conventions.md` | Modify | The gate step named, not numbered |
 | `specs/022-deterministic-runtime/data-model.md` | Modify | prune's step numbers |
 | `specs/041-task-pruning/data-model.md` | Modify | `prune-review`; the write guard's primitives |
-| `specs/041-task-pruning/spec.md` | Modify | Body prose on `review.md`; AC9 note; signpost; AC15's step number |
+| `specs/041-task-pruning/spec.md` | Modify | Body prose on `review.md`; AC9's text; signpost; AC15's step number |
 | `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md` | Modify | The `review.md` row; prune's step numbers |
 | `specs/041-task-pruning/plan.md` | Modify | prune's step numbers |
 | `specs/075-agents-md-holds-what-every-session-needs/spec.md` | Modify | prune's step numbers |
 | `specs/075-agents-md-holds-what-every-session-needs/plan.md` | Modify | prune's step numbers |
 | `specs/084-reopen-for-owed-code-review-every-code-change/plan.md` | Modify | prune's step numbers |
-| `specs/079-review-and-analysis-work-converges/spec.md` | Modify | AC24 and AC6 notes; the stored-finding edge case; signpost |
-| `specs/058-findings-route-at-discovery/spec.md` | Modify | AC32 note; signpost |
+| `specs/079-review-and-analysis-work-converges/spec.md` | Modify | AC24's and AC6's text; the stored-finding edge case; signpost |
+| `specs/058-findings-route-at-discovery/spec.md` | Modify | AC32's text; signpost |
 | `specs/020-code-review/spec.md` | Modify | Signpost |
 | `specs/020-code-review/scenarios/waiver-expiry.md` | Modify | Rule 4 names the drop |
 | `specs/084-reopen-for-owed-code-review-every-code-change/spec.md` | Modify | Signpost |
@@ -247,13 +247,13 @@ This spec adds no `data-model.md`: each shape belongs to its primitive's owner, 
 | 020 | `/{project}:review` steps 8 and 9 pass and show dropped entries | Signpost |
 | 022 | Scenario `review-runtime-acceleration` states a first review's scope; its data model and two scenarios cite prune's step numbers | Each sentence corrected where it stands; nothing owed |
 | 075 | Its spec and plan cite prune's step numbers | Corrected where they stand; nothing owed |
-| 041 | `/{project}:prune` writes `review.md` through `prune-review`; AC9's "nothing to prune" | Signpost; data model; body prose; scenario row; AC9 note |
-| 058 | AC32: an unevaluated source's decision is dropped when its file does not belong | AC32 note; signpost |
+| 041 | `/{project}:prune` writes `review.md` through `prune-review`; AC9's "nothing to prune" | Signpost; data model; body prose; scenario row; AC9's own text |
+| 058 | AC32: an unevaluated source's decision is dropped when its file does not belong | AC32's text; signpost |
 | 066 | `write-review`'s refusal; `process-decisions`, `process-waivers` and `compute-review-scope` fields; a first review's scope | Signpost; data model; scenario `review-base-includes-the-transition-commit` |
-| 079 | AC24's retention, AC6's scope list, the edge case *A stored finding the run did not read*, `modified-since`'s accounting | Notes; edge case; data model; signpost |
-| 084 | The project record's review refuses out-of-scope outcomes and inherits no feature decision; AC23's exclusion yields to a first review's owned files; its plan cites prune's step number | Signpost; an AC23 note if the owner asks for one (task 7) |
+| 079 | AC24's retention, AC6's scope list, the edge case *A stored finding the run did not read*, `modified-since`'s accounting | AC24's and AC6's own text; edge case; data model; signpost |
+| 084 | The project record's review refuses out-of-scope outcomes and inherits no feature decision; AC23's exclusion yields to a first review's owned files; its plan cites prune's step number | Signpost |
 
-- **Notes.** Each note on a ticked criterion reads "Superseded in part (spec 086)", as 084's did. The ticked criterion stays ticked and its spec stays `done` (§spec-lifecycle).
+- **Criteria.** A criterion 086 changes states what holds now in its own text, with no note on it (§drift-prevention's Decision resolution). The ticked criterion stays ticked and its spec stays `done` (§spec-lifecycle).
 - **Signposts.** Each signpost is a blockquote, which adds no `dependencies:` edge (`derive-dependencies`) and no owed work.
 - **Frontmatter.** 086's `cross-spec-impact:` gains 020 and 058.
 - **Not impacted.**

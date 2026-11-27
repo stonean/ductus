@@ -8,7 +8,7 @@ section: "Follow-on scenarios"
 
 [`/audit`](../../../framework/commands/audit.md) ships in v1 soft-launch mode: the PR workflow's step (h) and [`.github/workflows/runtime-release.yml`](../../../.github/workflows/runtime-release.yml)'s `audit` job both run the audit with `continue-on-error: true` so v1 advisories from Families 4, 8, and 9 do not block PRs or releases while the framework drift is being resolved. Spec 026 §Q4 commits to flipping `continue-on-error: false` once the three families exit 0.
 
-The PR workflow was `.github/workflows/markdown-only-pipeline.yml` when this scenario was written; `048-govern-acquired-runtime` removed it and the audit step now lives in `.github/workflows/framework-checks.yml`. It is named without a link here because the file no longer exists — a link would resolve to nothing.
+The PR workflow's audit step is `(h) Framework self-audit` in `.github/workflows/framework-checks.yml`.
 
 Origin: spec 026 Phase D CI integration, 2026-05-18. Captured via the inbox.
 

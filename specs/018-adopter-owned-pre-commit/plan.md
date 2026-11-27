@@ -4,7 +4,7 @@ Implements [018 — Adopter-Owned Pre-Commit](spec.md).
 
 ## Overview
 
-Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus-procedure.md` §Hook Installation plus `framework/bootstrap/ductus.md` §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the detection ladder's precondition for a wired outcome, which skips wiring a `.githooks/pre-commit` that does not invoke the inner hook; the migration this plan shipped was retired on 2026-11-18 (**§Migration** in `specs/018-adopter-owned-pre-commit/spec.md`). No data model, no event contracts, no error codes.
+Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus-procedure.md` §Hook Installation plus `framework/bootstrap/ductus.md` §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the detection ladder's precondition for a wired outcome, which skips wiring a `.githooks/pre-commit` that does not invoke the inner hook. No data model, no event contracts, no error codes.
 
 ## Technical Decisions
 
@@ -18,13 +18,11 @@ The new `framework/bootstrap/hooks/pre-commit` is written from scratch as the ad
 
 ### Hook Installation rewrite
 
-Three substantive edits to the section, each motivated by the spec:
+Two substantive edits to the section, each motivated by the spec:
 
-1. **Detection ladder collapses from 7 items to 4.** Spec 059 later added a fifth case, rewiring the `.githooks` value a pre-059 run wrote from a project in a repository subdirectory, so **§Hook Installation** in `framework/bootstrap/ductus-procedure.md` now has five. Items 2–5 (third-party hook systems) merge into a single "any third-party hook system detected" branch with the same skip-and-warn behavior. The old item 6 (sentinel-detected ductus-installed file) is removed entirely — under the new model, `.githooks/pre-commit` is never ductus-managed, so detecting it as such is meaningless. The old items 1 and 7 collapse to the new items 1 and 4 (already-wired vs. fresh-install).
+1. **Detection ladder.** **§Hook Installation** in `framework/bootstrap/ductus-procedure.md` has five cases: already wired, the `.githooks` value a pre-059 run wrote from a project in a repository subdirectory (rewired), a custom hooks path, a third-party hook system, and no conflicts (fresh install). Every third-party hook system (`.husky/`, `.pre-commit-config.yaml`, `lefthook.yml`, `lefthook-local.yml`) is one branch with skip-and-warn behavior. No case detects `.githooks/pre-commit` by sentinel — under this model it is never ductus-managed, so its presence says nothing about ductus.
 
-2. **No migration subsection.** The one this plan added to `framework/bootstrap/ductus-procedure.md` §Hook Installation was retired on 2026-11-18 (`spec.md` §Migration).
-
-3. **Inline `core.hooksPath` + `chmod +x`.** `framework/bootstrap/hooks/install.sh` is deleted; its two actions move into `framework/bootstrap/ductus-procedure.md`'s §Hook Installation section's fresh-install path: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit`. Both are idempotent on re-runs.
+2. **Inline `core.hooksPath` + `chmod +x`.** `framework/bootstrap/hooks/install.sh` is deleted; its two actions move into `framework/bootstrap/ductus-procedure.md`'s §Hook Installation section's fresh-install path: `git config core.hooksPath {P}.githooks` (`.githooks` at the repository root) and `chmod +x` on the hook files. Both are idempotent on re-runs.
 
 ### Manual integration snippet path change
 
@@ -69,6 +67,6 @@ The CI workflow at `.github/workflows/` (if present) is not touched — CI runs 
 ## Trade-offs
 
 - **Two files for adopters to inspect.** When debugging a failed pre-commit, the adopter has to know the wiring goes outer → inner. Mitigated by the comment blocks on each file naming the ownership boundary, and by the manual-integration snippet pointing at the inner file as the public entry point.
-- **No migration from a spec-017 hook.** The one this plan built was retired on 2026-11-18 (`spec.md` §Migration): no release shipped a spec-017 hook on its own, and a project that still holds one gets the skip report of `framework/bootstrap/ductus-procedure.md` §Hook Installation, with the manual integration snippet.
+- **No migration from a spec-017 hook.** No release shipped a spec-017 hook on its own (`spec.md` §Migration), and a project that still holds one gets the skip report of `framework/bootstrap/ductus-procedure.md` §Hook Installation, with the manual integration snippet.
 - **`install.sh` deletion drops a (theoretical) manual reinstall path.** Adopters who deleted their hooks and don't want to re-run `/ductus` would have lost a single command (`bash framework/bootstrap/hooks/install.sh`). The replacement is two commands (`git config core.hooksPath .githooks; chmod +x .githooks/*`). This is fine on an assumption: that no adopter re-runs `install.sh` standalone. An adopter's history is out of reach from this repository, so it cannot be checked here, and no report has named the path.
 - **The outer file's `set -euo pipefail` propagates the inner file's failures unchanged.** A failing generator in the inner file still aborts the commit, which is the desired behavior. The trade-off this avoids: trying to make the outer file "smart" about partial failures (e.g., letting the adopter's checks run even when ductus's checks fail). Out of scope and would invert the ownership model.

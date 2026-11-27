@@ -60,7 +60,7 @@ Each records what is true now, never how it came to be, and is as short as the c
 | A rule true across the organization's projects | the shared constitution registered under `[constitutions.*]` | every session |
 | How a lesson was learned | the commit that added it | never |
 
-> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed this table: a procedure leaving `AGENTS.md` goes to a part of it under `.ductus/docs/agents/` in place of `docs/`, measured against `[artifacts] read-size-bytes` and read when its pointer says, and each other project file may keep an index and move its sections into parts of its own.
+> **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) owns the parts: a procedure leaving `AGENTS.md` goes to a part of it under `.ductus/docs/agents/`, measured against `[artifacts] read-size-bytes` and read when its pointer says, and each other project file may keep an index and move its sections into parts of its own.
 >
 > **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) cut this repository's `AGENTS.md` through `/ductus:prune --project`, moving 29 entries into `.ductus/docs/agents/developing-ductus.md`, and `scripts/lint-governing-size.sh` now holds it to 39,000 bytes, below the read size.
 
@@ -68,7 +68,7 @@ An entry that leaves `AGENTS.md` for an on-demand home may leave one pointer lin
 
 ## Surfaces
 
-- **The constitution** states the `AGENTS.md` test and the homes in its routing, and its §spec-phase tree defines the other three files; `050-constitution` owns that text, and this spec declares the impact. Its scenario `artifacts-are-as-short-as-their-required-content` says existing artifacts are not swept, which stops holding for the four project files once `/prune` walks them.
+- **The constitution** states the `AGENTS.md` test and the homes in its routing, and its §spec-phase tree defines the other three files; `050-constitution` owns that text, and this spec declares the impact. Its scenario `artifacts-are-as-short-as-their-required-content` says existing artifacts are not swept, except the four project files, which `/prune --project` walks.
 - **The `ductus:memory-routing` block** carries them, naming each home and when to read it — before changing architecture, configuration or deployment, `specs/system.md` — so every existing adopter receives them on its next `/ductus` run and a session that runs no pipeline command still meets them.
 - **The templates' headers** point at those definitions — `AGENTS.md`'s at the constitution's test, the other three at its §spec-phase tree — and reach new adoptions only, since `AGENTS.md` installs with the `skip` strategy and the other three with `create`. The `AGENTS.md` template's Project Structure section drops the copy of the spec directory tree that the constitution's §spec-phase states.
 - **`/prune`** reduces the four files; `041-task-pruning` owns it, and this spec declares the impact.

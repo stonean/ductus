@@ -24,7 +24,7 @@ Two changes, both anchored on `.ductus/config.toml` as the source of truth:
 
 Together these make the inputs **asked at most once**:
 
-- A pre-flight abort performs **no input prompts at all** — collection is downstream of the abort. `048-govern-acquired-runtime`'s scenario `state-b-continues-in-session` has since narrowed which writes abort: a stale-`ductus.md` rewrite still does, because the run must not proceed on instructions it has just replaced, while State-B wiring does not abort at all. The property this bullet protects is unchanged either way — an aborting run asks nothing, because §Collect Project Inputs sits past the abort point.
+- A pre-flight abort performs **no input prompts at all** — collection is downstream of the abort. Only a stale-`ductus.md` rewrite aborts, because the run must not proceed on instructions it has just replaced; State-B wiring does not abort (`048-govern-acquired-runtime`'s scenario `state-b-continues-in-session`). An aborting run asks nothing, because §Collect Project Inputs sits past the abort point.
 - The first scaffolding session prompts for whatever `.ductus/config.toml` does not yet carry, then persists it.
 - Every later run — the post-restart session, and all routine update runs — reads the answers back from `.ductus/config.toml` and prompts for nothing.
 
@@ -33,7 +33,7 @@ The §Pre-flight abort "everything past this point is skipped" list in `framewor
 ## Edge Cases
 
 - **Inputs supplied via `$ARGUMENTS`.** Used directly; `.ductus/config.toml` is still written so future runs need neither the flag nor a prompt.
-- **A run that does not abort.** The run flows straight through pre-flight into §Collect Project Inputs and scaffolds in the same session — inputs resolved once, just slightly later in the procedure. This was State A or State C when the scenario was written; `048-govern-acquired-runtime` retired State C and stopped State B aborting, so it is now every run except a stale-`ductus.md` rewrite.
+- **A run that does not abort.** The run flows straight through pre-flight into §Collect Project Inputs and scaffolds in the same session — inputs resolved once, just slightly later in the procedure. That is every run except a stale-`ductus.md` rewrite.
 - **User wants to change an answer.** Edit the `[project]` value (or `[host] project`) in `.ductus/config.toml`; the next `/ductus` reads the new value and re-runs the corresponding scaffold step. This is the documented way to change an input, replacing a re-prompt.
 - **`.ductus/config.toml` absent or `[project]` missing.** Treated as "not yet collected" — prompt, then write. A malformed `.ductus/config.toml` still aborts per `framework/bootstrap/ductus.md` §Project Configuration before this step relies on it.
 - **Agent-selection prompts are unaffected.** `framework/bootstrap/ductus.md` §Agent Selection still runs before pre-flight (it needs only `$ARGUMENTS` flags and on-disk config-dir detection). First-run auto-detect does not prompt; `--add-agent` does, and is out of scope here.

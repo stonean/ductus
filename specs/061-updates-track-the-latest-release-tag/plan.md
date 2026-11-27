@@ -153,7 +153,7 @@ The corrections, from the 2026-09-28 sweep:
 - **003**: `curl-sh-installer` scenario's `install.sh` fetch bullet and its "It fetches `framework/bootstrap/ductus.md` from `main`" bullet.
 - **007**: `ductus-self-update-precheck`'s bullet comparing the extracted `ductus.md` against the installed one.
 - **015**: spec's `refs/heads/main` codeload URL, its redirect explanation, the `{tempdir}/ductus-main/` framework-root step, the fetch-failure abort and the `{tempdir}/ductus-main/{source-path}` step. Its Resolved Question deferring ref pinning is marked adopted (§drift-prevention, Decision resolution).
-- **023**: the read-fallback Resolved Question's premise, noted as superseded. The decision itself stands.
+- **023**: the read-fallback Resolved Question's premise, which a signpost back to 061 corrects. The decision itself stands on its other grounds.
 - **026**: `family-36-self-url-resolution`'s "`main` URLs are resolved" bullet.
 - **029**: `archive-fetch-direct-codeload`'s opening paragraph ("029's State B wires ductus"), its `curl` command on the `codeload.github.com` URL and its "The direct URL returns the archive with no redirect" paragraph.
 - **048**:

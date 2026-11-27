@@ -19,7 +19,7 @@ An absent field means an older record or a `ductus exec` run, which has no loop;
 | --- | --- | --- |
 | `base-source` | as `ductus compute-review-scope --help` lists them | Where the window starts, `held-review` at a held record's `reviewed-against` and `reopen-past-partial-review` at the reopen because every run recorded did not read its scope (AC5); spec 084 added `reached-done` |
 | `excluded`, `excluded-count` | list of paths, integer | As `ductus compute-review-scope --help` states; the list joins the bounded lists |
-| `review-owed` | boolean | As `ductus compute-review-scope --help` states, narrowed by spec 081 so a scenario or data-model edit owes an analysis alone; true with no review record naming a run |
+| `review-owed` | boolean | As `ductus compute-review-scope --help` states: a scenario or data-model edit owes an analysis alone; true with no review record naming a run |
 
 `modified-since` keeps its meaning, every path changed since the base, so `scope` plus `excluded` plus `deleted` accounts for it, apart from a plan entry and a file the spec's commits changed on a first review (spec 086), a path the last record, or a held record the window starts at, lists as open, an entry the last record, or the record the window starts at, lists in `unread`, a contract its digest says changed and what a fold brings, which need not have changed in the window.
 

@@ -14,7 +14,7 @@ No `data-model.md` is created here. The only vocabulary this spec adds, one unex
 
 ### One rule-section parser, sharing check-rule-ids' heading grammar
 
-Two parsers read rule files today, and they disagree on what a rule is. `check-rule-ids` recognizes a rule by `heading_id_regex`, `^#{2,4}\s+([A-Z]{2,5}-[A-Z][A-Z0-9]+-\d{3,4})\b` (`runtime/src/primitives/check_rule_ids.rs`). The walker's `extract_rule_verification` and `first_rule_with_verification` treat any level-3 heading's text as a rule ID (`runtime/src/interpreter/payload.rs`). Enumerating every rule would add a third reading, so both walker functions are replaced by one module, and it takes the heading grammar from `check-rule-ids` rather than restating it. The set of rules the walk asks about is then the set of IDs `check-rule-ids` knows.
+`check-rule-ids` and the exec `/{project}:analyze` walker read rule files through one module, so they agree on what a rule is. A rule is a heading, at level two to four, carrying a rule ID: `heading_id_regex` in `runtime/src/primitives/rule_sections.rs`, which `check-rule-ids` and the walker both take the grammar from rather than restating it. The set of rules the walk asks about is the set of IDs `check-rule-ids` knows, and no walker function treats an arbitrary level-3 heading as a rule.
 
 `runtime/src/primitives/rule_sections.rs`, registered `pub(crate)` in `runtime/src/primitives/mod.rs` beside `spec_links` and `decisions`:
 
@@ -77,7 +77,7 @@ A step that asks about no rule emits a progress envelope saying so, rather than 
 
 ### The tally takes the tier from the rule it asked about
 
-`AnalyzeTally::assessed` reads a request back to learn what it asked, and returns `Assessed::Nothing` for a request carrying no Verification (`runtime/src/interpreter/analyze_tally.rs`). No request is built without a rule now, so `record_assessment` takes the asked rule's tier directly. `Assessed` and its `Nothing` arm are removed, along with the test for a verdict on no rule (`an_assessment_of_no_rule_is_unexamined_whatever_the_host_answers`). That case is replaced by the per-step record above. A failure still counts in the finding's own tier first, and in the asked rule's tier when the host returned no finding (`record_assessment`). A mixed rule's SHOULD-only failure therefore still lands in advisory when the host reports it so.
+No request is built without a rule, so `AnalyzeTally::record_assessment` takes the asked rule's tier directly and reads no request back to learn what it asked (`runtime/src/interpreter/analyze_tally.rs`). A failure counts in the finding's own tier first, and in the asked rule's tier when the host returned no finding (`record_assessment`). A mixed rule's SHOULD-only failure therefore lands in advisory when the host reports it so.
 
 Two tally methods are added: one records a loaded rule set's gaps, and one records a step that asked about no rule because none is loaded.
 

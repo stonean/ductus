@@ -7,7 +7,7 @@ Implements [021 — Runtime Boundary](spec.md).
 Three distinct deliverables:
 
 1. **Constitutional amendment** to `framework/constitution.md` — three edits: the opening paragraph of §text-first-artifacts, a new §runtime-boundary subsection at the end of §text-first-artifacts, and a row added to the §drift-prevention canonical sources table.
-2. **CI workflow** — `.github/workflows/framework-checks.yml`, which runs the deterministic checks the spec's invariant named on every pull request and every push to `main`. As shipped it opened with the opt-in invariant's own step, asserting no runtime binary on `PATH`, as the tripwire for a PR that introduced a silent runtime dependency. 048 removed that step when it replaced the opt-in invariant with the acquisition invariant, and the workflow's other checks stand.
+2. **CI workflow** — `.github/workflows/framework-checks.yml`, which runs the deterministic checks on every pull request and every push to `main`.
 3. **Runtime-tools manifest + tool-coverage lint script** — a small bash/grep script under `scripts/` plus a manifest file (initially empty) under `framework/`. The manifest enumerates runtime tools by canonical name; the lint scans `framework/commands/*.md` for references to any tool in the manifest and verifies each command naming one carries the constitution's §runtime-host-integration pointer.
 
 The amendment text is fully drafted in the spec body; this plan's job is to specify *where* in the constitution it lands, *how* the CI workflow is structured, and *how* the tool-coverage lint operates concretely.
@@ -22,8 +22,8 @@ The amendment text is fully drafted in the spec body; this plan's job is to spec
 
 The amendment is three edits, performed in this order so that each commit (or each diff in a single commit) leaves the document well-formed:
 
-1. **Opening paragraph of §text-first-artifacts** — replace the "no bootstrap tooling beyond the AI agent" clause with the two-clause version that distinguishes the artifacts (standalone) from the pipeline that reads them, which requires the runtime, with a forward reference to §runtime-boundary. As shipped, the second clause called the runtime optional and opt-in; 048 made it required.
-2. **New §runtime-boundary subsection** — append at the end of §text-first-artifacts, after the existing "Validation Severity" subsection. Body composes the five principles (RFC 2119 MUST/MUST NOT), three eligibility criteria, the CI invariant (the opt-in invariant as shipped, the acquisition invariant since 048), versioning rule, non-scope (RFC 2119 MUST NOT), and the one-line forward pointer to spec 022. Anchor marker `<!-- §runtime-boundary -->` placed above the subsection heading per existing convention.
+1. **Opening paragraph of §text-first-artifacts** — replace the "no bootstrap tooling beyond the AI agent" clause with the two-clause version that distinguishes the artifacts (standalone) from the pipeline that reads them, which requires the runtime, with a forward reference to §runtime-boundary.
+2. **New §runtime-boundary subsection** — append at the end of §text-first-artifacts, after the existing "Validation Severity" subsection. Body composes the five principles (RFC 2119 MUST/MUST NOT), three eligibility criteria, the acquisition invariant, versioning rule, and non-scope (RFC 2119 MUST NOT). Anchor marker `<!-- §runtime-boundary -->` placed above the subsection heading per existing convention.
 3. **Row added to §drift-prevention canonical sources table** — single new row whose Fact column reads "Runtime contract / boundary" and whose Canonical-source column points at `framework/constitution.md` §runtime-boundary.
 
 The opening-paragraph edit is performed first so that the forward reference to §runtime-boundary, which it introduces, resolves to a section that exists by the time the subsection is added in step 2. In a single PR this ordering is academic; if the work were split across commits, this is the safe order.

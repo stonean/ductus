@@ -20,7 +20,7 @@ The investigation has two parts:
 
 1. **Confirm the platform mechanism.** Verify that Claude Code reads a `description:` field from YAML frontmatter at the top of a slash command markdown file and renders it in autocomplete. (This is the de facto convention for custom commands; confirm against current Claude Code behavior before committing to it.) If `description:` is not the field, identify the correct one.
 
-2. **Apply it framework-wide.** Add a `description:` field to every command source under `framework/commands/*.md` (and `framework/bootstrap/configure/claude.md`). The description should be a single short sentence — concrete enough to disambiguate from sibling commands, short enough to fit alongside the command name. Re-run `scripts/gen-claude-commands.sh` so the generated `.claude/commands/ductus/*.md` files inherit the field. (A hand-maintained `init.md` in that directory needed the same field applied by hand; it was retired on 2026-09-15 and the directory is now wholly generated.)
+2. **Apply it framework-wide.** Add a `description:` field to every command source under `framework/commands/*.md` (and `framework/bootstrap/configure/claude.md`). The description should be a single short sentence — concrete enough to disambiguate from sibling commands, short enough to fit alongside the command name. Re-run `scripts/gen-claude-commands.sh` so the generated `.claude/commands/ductus/*.md` files inherit the field.
 
 The autocomplete summaries should match the existing one-line descriptions already present below each command's `# Name` heading (e.g., `Specify` → "Create a new feature spec."), so there is one source of truth per command.
 

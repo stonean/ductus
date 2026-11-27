@@ -51,17 +51,12 @@ Adopter-reported. A project with a non-default spec root hits this on `/log`,
 Every command file that **acts on** a spec-root path resolves it, by one of two
 means, chosen per site rather than applied uniformly:
 
-- **The blanket note**, where the command's own prose is the instruction the
-  host follows: the `specify.md` **Spec-root resolution.** note verbatim, placed once near the top of
-  the Instructions section. This covers the markdown-only path, which is where
-  most of these sites live. **Superseded by the sibling scenario.**
-  [`spec-root-rule-stated-once`](spec-root-rule-stated-once.md) found that
-  propagating this note to six command files reproduced the very duplication
-  AC11 set out to avoid, and deleted all six. The mechanism is now a **pointer**:
-  each command's `Reference:` line cites `§spec-phase (spec-root resolution)`, and
-  the constitution's §spec-phase block carries the substitution rule imperatively
-  so it reaches commands added later. The requirement below is unchanged — a command
-  that acts on a spec-root path still resolves it — only the carrier moved.
+- **The pointer**, where the command's own prose is the instruction the
+  host follows: each command's `Reference:` line cites
+  `§spec-phase (spec-root resolution)`, and the constitution's §spec-phase block
+  carries the substitution rule imperatively so it reaches commands added later
+  (sibling scenario [`spec-root-rule-stated-once`](spec-root-rule-stated-once.md)).
+  This covers the markdown-only path, which is where most of these sites live.
 - **An explicit resolution step**, where a literal is passed as an *argument* —
   to `lint-markdown`, to `git`, or to a file tool. A note cannot change what
   string is passed, so these are rewritten to name the resolved root
@@ -81,10 +76,11 @@ re-rendered so the shipped artifacts match their sources.
 
 ## Edge Cases
 
-- **A note is not a substitute for a literal argument.** A command carrying the
-  blanket note can still be wrong if a step passes `specs/inbox.md` to a
-  primitive: the note tells the host how to read paths, not what string to send.
-  Both sites in `log.md` are this shape, which is why the fix is two-part.
+- **A pointer is not a substitute for a literal argument.** A command citing the
+  pointer can still be wrong if a step passes `specs/inbox.md` to a
+  primitive: the pointer tells the host how to read paths, not what string to send.
+  Both sites in `log.md` are this shape, which is why each is rewritten to name
+  the resolved root.
 - **`{feature}` placeholders are not the defect.** `specs/{feature}/tasks.md` is
   wrong only in its `specs/` segment; the brace placeholder is already
   resolved by the caller and must be left alone.

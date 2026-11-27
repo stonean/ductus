@@ -146,10 +146,9 @@ Rules with a **runtime or infrastructure dimension** (e.g., "TLS must be enabled
 ## Brownfield Adoption
 
 > **Changed by [058 — Findings route at discovery](../058-findings-route-at-discovery/spec.md).**
-> The audit no longer writes to `specs/inbox.md`. It reports each finding
-> under the spec it belongs to and writes nothing, and `/{project}:analyze`
-> dispositions each gap when it next runs on that spec. The trigger and the
-> audit logic are unchanged. AC22, AC25, AC26, and AC27 are annotated in place.
+> The audit reports each finding under the spec it belongs to and writes
+> nothing, and `/{project}:analyze` dispositions each gap when it next runs on
+> that spec. AC22, AC25, AC26, and AC27 state it.
 
 When `/ductus` installs the security rule files in a project that already has feature specs, the adopter inherits a backlog: existing specs were written before these rules existed and almost certainly do not address all of them. To avoid dumping that backlog directly on `/{project}:analyze` (where it would block the next pipeline gate on every legacy spec at once), the audit reports it at adoption and writes nothing. Each gap names its spec, and `/{project}:analyze` finds it again, and dispositions it, when that spec is next worked on.
 
@@ -263,16 +262,16 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 ### Brownfield Adoption
 
-- [x] AC22: On a ductus run where a security rule file is newly created AND the spec root holds at least one feature spec directory (either numbering form per §numbering), ductus audits the existing specs against the rule and writes one inbox item per finding to `specs/inbox.md` — **Superseded by 058**: the audit still runs on this trigger, and it reports each finding under its spec instead of writing an inbox item. Nothing is written.
+- [x] AC22: On a ductus run where a security rule file is newly created AND the spec root holds at least one feature spec directory (either numbering form per §numbering), ductus audits the existing specs against the rule and reports each finding under its spec. Nothing is written
 - [x] AC23: On a greenfield run (no existing feature spec directories in the spec root), the audit is silently skipped
 - [x] AC24: On a routine re-run (rule files already present), the audit is silently skipped
-- [x] AC25: Inbox items follow the format `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}` — **Superseded by 058**: no inbox item is written. Each reported finding keeps this format without its leading checkbox.
-- [x] AC26: Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger) — **Superseded by 058**: the audit writes nothing, so a re-trigger reports again the gaps the re-installed file's rules find and duplicates nothing. There is no inbox content to deduplicate against.
-- [x] AC27: Ductus's post-scaffolding output reports the count of new audit items added (omitted when zero) — **Superseded by 058**: no item is added. The output reports how many gaps were found and in how many specs, lists each finding under its spec, and is still omitted when there are none.
+- [x] AC25: Each reported finding follows the format `{Rule ID}: {affected artifact path} does not address — {one-line summary}`
+- [x] AC26: The audit writes nothing, so a re-trigger reports again the gaps the re-installed file's rules find and duplicates nothing
+- [x] AC27: Ductus's post-scaffolding output reports how many gaps were found and in how many specs and lists each finding under its spec, and is omitted when there are none
 
 ### Constitution Reference
 
-- [x] AC28: The "Secure" principle references the security rule files (`specs/rules/security-*.md`) — **superseded by `050-constitution`** (its AC25), which removed the Technology list and the Secure principle with it; the constitution's §rules names where a rule file lives
+- [x] AC28: The constitution's §rules names where a rule file lives (`specs/rules/{rule-set}.md`), which covers the security rule files (`specs/rules/security-*.md`)
 
 ## Open Questions
 

@@ -84,7 +84,7 @@ This drops the "depend on author diligence" failure mode for files inside `frame
 | `framework/constitution.md` | Edit | Add §rules `#### Filename suffix` subsection; update two `configuration.md` refs |
 | `framework/commands/review.md` | Edit | Rewrite the Behavior section's step 5 + Load rules for suffix discovery; add `loading rule files:` notice; rewrite Notes for adopters |
 | `framework/commands/analyze.md` | Edit | Apply shared suffix discovery; remove the closed list of `specs/security-backend.md`, `specs/security-frontend.md` and `specs/configuration.md`; clarify "no stack filtering" |
-| `framework/commands/implement.md` | Edit | Update §Scope Boundaries' `framework/rules/configuration.md` reference |
+| `framework/commands/implement.md` | Edit | Point §Scope Boundaries' configuration-rules reference at `framework/rules/configuration-cross.md` |
 | `framework/commands/groom.md` | Edit | Update `specs/configuration.md` reference in the "If a loaded rule file already covers the domain" bullet |
 | `framework/bootstrap/ductus.md` | Edit | Update bootstrap map source/destination; add one-pass migration for `specs/configuration.md` → `specs/rules/configuration-cross.md` |
 | `specs/README.md` | Edit | Name the rename among those recorded in git history (AC4) |
