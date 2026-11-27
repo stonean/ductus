@@ -51,6 +51,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 4. A first review reads what the spec's commits changed
 
+Tasks 1 to 3 landed as `1718c8c1`, `96e2e2dc` and `63817dcb`. Call `spec_ownership::of_spec` in `compute`'s first-review branch, mapping its error to `not-examined` as `LazyOwnership::resolve` does, and reuse `OwnershipState` (`runtime/src/schema/primitives.rs`) for the result's `ownership`. A first review's owned files can move the exec goldens (`runtime/tests/golden/*-basic.jsonl`): re-bless each alone and read its diff, as tasks 2 and 3 did for `review-basic.jsonl`. Every `write-review` test that records an outcome runs through `run_in_scope` in `runtime/src/primitives/write_review.rs`, whose window a wider first-review scope can change.
+
 - [ ] In `compute`'s branch for a record naming no run, add each owned path on disk, not leaving the project and not deleted, and remove it from `excluded`; add `ownership` and `ownership-reason` to the result on a first review
 - [ ] `COMPUTE_REVIEW_SCOPE`; `framework/reference/review.md` §Window and coverage; 066's data model
 - [ ] Fixtures: a file a commit attributed to the spec changed, absent from the plan, joins a first review's scope; a cut history gives the plan entries alone with `ownership: not-examined`; a later review's result carries no `ownership`
@@ -58,6 +60,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 - **Done when**: AC6 holds, each fixture proven to fail with its behavior removed, and `runtime/tests/golden/` changes only where a re-bless the commit reads moves it.
 
 ## 5. `prune-review`
+
+`spec_ownership::of_specs` is the `all` walk. Once this task calls it, nothing in `runtime/src/primitives/spec_ownership.rs` is dead, so the module's `cfg_attr(not(test), expect(dead_code))` fails as an unfulfilled expectation: remove the attribute in this task's commit.
 
 - [ ] Create `runtime/src/primitives/prune_review.rs`, with `feature` or `all`, preview and `apply` with the previewed digest, as the plan's `prune-review` decision states: `drops`, `rewrites`, skips and refusals, the text splice and its re-parse check, `ReadSnapshot::write_if_unchanged`
 - [ ] Register it at the seven sites **§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md` names, with its argument type, `PRUNE_REVIEW`, `framework/runtime-tools.txt`'s line, and `scripts/gen-configure-mcp.sh` re-run
@@ -68,6 +72,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 6. `/prune` runs it
 
+This task's Done when runs `/ductus:prune`, which calls `prune-review` through the MCP server, and a running session keeps the binary it started with. After task 5 lands: `cargo build --release --locked` in `runtime/`, `scripts/gen-claude-commands.sh`, then restart the session.
+
 - [ ] `framework/commands/prune.md`: `prune-review` in the preview, render, its own confirm and apply step after the plan sections, "nothing to prune" needing no drop or rewrite, the `review.md` row, Scope Boundaries, description and `ToolSearch` line; `--project` does not run it
 - [ ] `scripts/gen-help-tables.sh`'s prune entry if its description changes, then `scripts/gen-help-tables.sh` and `scripts/gen-claude-commands.sh` re-run, and any golden the edit moves re-blessed alone and read
 - [ ] Read `docs/slash-commands.md`'s prune entry whole and correct any sentence saying prune never writes `review.md`
@@ -75,6 +81,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 - **Done when**: a `/ductus:prune` run over a fixture spec whose record holds an entry on a file that does not belong shows the drop, writes it on confirmation and nothing when declined, and the commit records each registry layout's impact (`claude-style`, `pi`).
 
 ## 7. The owners' specs
+
+Task 3 already swept 020's scenario `waiver-expiry` rule 4 for the drop (`63817dcb`), and task 2 renamed the departure test 073's `review.md` cited (`96e2e2dc`); 020's signpost is still owed here.
 
 - [ ] Ask the owner once whether the notes on 079's AC24 and AC6, 058's AC32 and 041's AC9 may each read "Superseded in part (spec 086)" with the spec staying `done` (084's correction rule), and record the answer in the commit
 - [ ] 079: AC24 and AC6 notes, and the edge case *A stored finding the run did not read*; 058: AC32 note; 041: AC9 note, its body sentence that prune never writes `review.md`, and the `review.md` row of its scenario `prune-reduces-the-spec-directory`
@@ -84,6 +92,8 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 - **Done when**: `check-artifacts` reports no undischarged `cross-spec-impact:` entry on 086 and no new finding on the six, each swept spec's status is unchanged, and `scripts/audit/run-all.sh` exits 0 after the commit.
 
 ## 8. 086's run cost and what it retires, for 089's AC4
+
+Measure as **§Measuring a run's cost** in `.ductus/docs/agents/developing-ductus.md` says. Task 1's walk times are in the plan's *One spec, cheaply* and `1718c8c1`'s message; task 3's commit (`63817dcb`) records the classifiers' sizes from `scripts/measure-result-sizes.sh`'s two `Unowned` modes.
 
 - [ ] Measure one run of each thing 086 adds, after tasks 1–7, at the commit this task runs on with its release build: `prune-review`'s preview for one feature and with `all` (result bytes, wall time) and its apply (wall time, timed only in `git clone --local` copies, never in this tree); the `spec_ownership` walk on 022, on a spec of fewer than 50 commits and over every spec; the time the walk adds to a first review's `compute-review-scope`, `write-review` and `check-review-gate`; the bytes `dropped`, `ownership` and their companions add to `process-decisions`', `process-waivers`' and `compute-review-scope`'s results; the growth of the four descriptions tasks 2 to 4 change, and `prune-review`'s own with its input schema, by `scripts/measure-result-sizes.sh`; and each new list's result at the default read size; stating each figure's method, units, population and commit
 - [ ] Write the figures into 086's `spec.md` body as a `## Cost` section, with what 086 retires or why none, decided from the code at that commit, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`, a blockquote so it adds no `dependencies:` edge
