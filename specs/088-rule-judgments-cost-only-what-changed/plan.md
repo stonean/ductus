@@ -31,7 +31,7 @@ Three changes, two of them through 082's one currency decision, `rule_verdicts::
 - the exec walker's skip (`runtime/src/interpreter/payload.rs`);
 - `write-analysis`' carry (`derive_rule_fields` in `runtime/src/primitives/write_analysis.rs`).
 
-Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting each rule still `Stale` that the host did not judge into `unjudged-rules`, which holds `done` at the gate's `unjudged-rules` check. `LoadedRuleFile` gains the file's path from the project root, set where each caller builds one, and `standing` takes the project root.
+Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting each rule still `Stale` that the host did not judge into `unjudged-rules`, which holds `done` at the gate's `unjudged-rules` check (`unjudged_rules_block` in `runtime/src/primitives/check_review_gate.rs`). `LoadedRuleFile` gains the file's path from the project root, set where each caller builds one, and `standing` takes the project root.
 
 ### A changed rule file is compared rule by rule at `analyzed-against` (AC2)
 
@@ -77,7 +77,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 ### The backfill is one corpus-wide primitive (AC3)
 
 - **The walk.** `backfill-section-digest` walks `list_feature_dirs`, the corpus form `check-audit-records` uses. Its outcomes per record are those [data-model.md](data-model.md) names.
-- **Pinned records.** Its one argument, `pinned`, lists the paths from the project root that the project pins, and a record named there is reported and left untouched. A pinned file is opted out of framework writes, and the migration is one: both backfill precedents, `framework/migrations/criterion-label-backfill.md` and `framework/migrations/audit-record-relocate.md`, skip a pinned spec. The runtime holds no reader of `[pinned] files`, which the host reads and passes to `apply-manifest` and `enforce-manifest` (`framework/bootstrap/ductus.md`, the walker context's pinned-list), so the procedure passes it here the same way.
+- **Pinned records.** Its one argument, `pinned`, lists the paths from the project root that the project pins, and a record named there is reported and left untouched. A pinned file is opted out of framework writes, and the migration is one: both backfill precedents, `framework/migrations/criterion-label-backfill.md` and `framework/migrations/audit-record-relocate.md`, skip a pinned spec. The runtime holds no reader of `[pinned] files` (its one mention in `runtime/src/schema/config_keys.rs` lists the key as known, by `git grep -n pinned -- runtime/src` at `812b7a89`), which the host reads and passes to `apply-manifest` and `enforce-manifest` (`framework/bootstrap/ductus.md`, the walker context's pinned-list), so the procedure passes it here the same way.
 - **The match.** A record matches as it stands by `design_subjects_match` (`rule_verdicts.rs`). Failing that, it tries each other status of `ALLOWED_STATUSES` in order, digesting the design subjects with `spec.md`'s text replaced by the splice `set-status` writes (`split_frontmatter_with_offset` and `locate_status_field`, `runtime/src/primitives/set_status.rs`).
 - **One digest path.** `analyze_subjects` exposes its per-file hash and `section_digest` with `spec.md`'s text supplied by the caller. So the backfill and every reader digest the same text the same way, never by a second copy of the walk (`QUAL-DELEG-001`).
 - **The write.** The `section-digest:` block comes from the one renderer `write-analysis` uses, moved out of `render_rule_fields`, and is spliced before the frontmatter's closing fence. It is guarded as `set-status` writes: `guarded::read_required`, then `write_guarded`, refused when the file changed since it was read.
@@ -85,7 +85,7 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 
 ### The migration and this repository's records
 
-- **The entry.** `framework/migrations/section-digest-backfill.md` is registered in `framework/migrations.toml` at `introduced_in` 0.65.0, the release after the `0.64.0` that `version` names, where 084's entry and 087's sit.
+- **The entry.** `framework/migrations/section-digest-backfill.md` is registered in `framework/migrations.toml` at `introduced_in` 0.65.0, the release after the `0.64.0` that the repository-root `version` file names, where 084's entry and 087's sit.
   - Its id sorts after `report-project-file-links-into-docs` on the tie-break. A `--ref=main` adopter whose `last_applied` is that entry still runs it, as that entry's registry comment says for its own predecessor.
   - It declares no `sunset_after`. Its `target_paths` are `specs/*/analysis.md`.
 - **The procedure.**
@@ -96,6 +96,13 @@ Narrowing `discover-rule-files` alone would leave `derive_rule_fields` putting e
 - **The seed.** The claude row's `settings_template` gains `Bash(.ductus/bin/ductus backfill-section-digest *)` and its `.exe` twin, in `framework/bootstrap/ductus.md`, its byte-identical copy `framework/bootstrap/govern.md` and `install.sh`'s copy, since `framework/bootstrap/ductus.md` §Permission Setup seeds one rule per CLI subcommand the bootstrap and its migrations run (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **Exercised.** A scratch-adopter bootstrap run exercises the entry, as AGENTS.md requires for a change under `framework/migrations/` (`.ductus/docs/agents/developing-ductus.md`, Exercising an installer change).
 - **This repository.** A task runs the primitive over this corpus and commits the records it writes, as `framework/migrations/criterion-label-backfill.md` records that this repository was swept when its primitive landed.
+
+### Primitive interface changes, classified under `BE-COMPAT-001`
+
+Within major version zero (the repository-root `version` file reads 0.64.0), every change is additive (the agent's recommendation, adopted by the operator, 2026-11-26):
+
+- **Additive.** `write-analysis` writes `rules-judged` and `rules-carried` on every record and takes neither as an argument; `discover-rule-files`' `verdicts` gains `rejudged-files` and `rejudged-files-count`, absent when no file is judged whole; and `backfill-section-digest` is a new tool and CLI command.
+- **No field narrows or goes.** `verdicts.judge` keeps its meaning, the assessable rules with no current stored verdict. What makes a verdict current narrows, so for the same inputs it can list fewer rules, and the exec walker and `write-analysis` decide currency by the same `standing`.
 
 ### Tests: each behavior fails with its condition removed
 
@@ -193,11 +200,11 @@ It retires no primitive, check or record field. The counts hold what no field he
 - **Rejected: a rule's own text alone.** Over the 22 commits above it would have owed 59 judgments, against 104 with the rules naming a changed one. But it keeps the verdict of a rule whose Verification rests on a changed rule's content, which 4 of the first 12 names in `framework/rules/accessibility-frontend.md` do (the spec's Resolved Questions).
 - **Known limitation: only a direct name counts.** A rule naming another only through a third is not judged again. The third's own text, which the first reads, did not change.
 - **Rejected: trusting the copy at `analyzed-against` without the digest guard.** It saves no read, and it carries verdicts over rule text no run judged whenever an analysis ran before its commit.
-- **Rejected: narrowing in `discover-rule-files` alone.** `write-analysis` would then list each narrowed rule the host did not judge as unjudged, and the gate blocks `done` on that list.
+- **Rejected: narrowing in `discover-rule-files` alone.** `write-analysis` would then list each narrowed rule the host did not judge as unjudged, and the gate blocks `done` on that list (`unjudged_rules_block` in `runtime/src/primitives/check_review_gate.rs`).
 - **Rejected: a backfill per feature.** A per-feature primitive, as `relocate-audit-records` is, costs a migration one call per spec, 79 records in this corpus, where one corpus call reports the same outcomes.
 - **Rejected: a backfill mode on `write-analysis`.** It records a run and refuses to record before every task is done (spec 079), and a backfill is no run.
-- **Rejected: ignoring `[pinned] files`.** `write-analysis` does not read it, but it writes a run, while the backfill is a migration's framework write, which both backfill precedents keep off a pinned file.
-- **Rejected: the runtime reading `[pinned] files` itself.** No primitive reads it, and the host already passes it to the manifest primitives, so a second reader would be a copy of that read.
+- **Rejected: ignoring `[pinned] files`.** `write-analysis` does not read it (*Pinned records* above), but it writes a run, while the backfill is a migration's framework write, which both backfill precedents keep off a pinned file.
+- **Rejected: the runtime reading `[pinned] files` itself.** No primitive reads it (*Pinned records* above), and the host already passes it to the manifest primitives, so a second reader would be a copy of that read.
 - **Known limitation: a record matches only when `spec.md`'s `status:` alone moved.** Any other edit since its analysis leaves the record to gain the digest at its spec's next analysis: 36 of the 49 records without one at `1ffaf951`.
 - **Rejected: a third count splitting full judgments from narrowed ones.** AC1 records two counts, and the narrowed share is what 088's Motivation derived from the reuse rule (2,402 of 11,364 judgments).
 
