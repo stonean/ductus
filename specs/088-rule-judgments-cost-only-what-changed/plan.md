@@ -153,6 +153,7 @@ It retires no primitive, check or record field. The counts hold what no field he
 | --- | --- | --- |
 | `runtime/src/primitives/rule_verdicts.rs` | Modify | `standing` takes the project root; the copy at `analyzed-against`, its guard, the per-rule comparison and the reasons; `LoadedRuleFile`'s path; module doc; a fallback test's doc comment |
 | `runtime/src/primitives/rule_sections.rs` | Modify | `section_digests`, the file digest and each rule's own from one parse, and `named_rule_ids` |
+| `runtime/src/primitives/check_rule_ids.rs` | Modify | `shipped_rule_ids` is `pub(crate)`, read by `RuleEdits::between` in `rule_verdicts.rs` |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | Its `LoadedRuleFile` paths; `verdicts.rejudged-files`, bounded |
 | `runtime/src/interpreter/payload.rs` | Modify | Its `standing` call |
 | `runtime/src/primitives/write_analysis.rs` | Modify | The two counts; the `section-digest` renderer moved out for the backfill; its `standing` call; a fallback test's doc comment |
