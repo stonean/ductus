@@ -114,6 +114,42 @@ Coverage:
   AU. combine.py carries each scenario finding, and record.py writes it as
      an Advisory scenario-consistency finding keyed by its scenario and check,
      and refuses while a scenario reader's hand-back is missing
+  AV. check.py, combine.py and record.py refuse a rule file edited or removed
+     after split.py rendered the shares, once detection is re-run, and a
+     manifest with no rule-file-digest map
+  BT. record.py refuses a loaded rule file edited after the split whose
+     rules are all reusable, so no share holds it
+  AW. split.py refuses a judged or rejudged rule whose tier is neither must
+     nor should, and lets an unjudged one be
+  AX. record.py records a MUST-tier rule finding Blocking and a SHOULD-tier
+     one Advisory, in the counts it passes write-analysis, and exits 2 on a
+     tier of neither
+  AY. split.py exits 2 on a result whose selected is absent or no list
+  AZ. record.py refuses a settled verdict that is a finding with no at, a
+     waiver with no departure entry, of an unknown kind, an addressed with no
+     cite, or no object
+  BA. record.py refuses a settled rule the run did not judge
+  BB. record.py refuses a settled verdict whose cite resolves to no heading
+  BC. check.py fails a departure's rule answered addressed or a finding
+  BD. check.py fails a rule answered both judged and unjudged
+  BE. check.py fails answers for rules outside the cell's share
+  BF. check.py names a design subject removed after the split
+  BG. check.py fails a scenario finding outside the reader's group
+  BH. check.py fails a scenario judgment outside the reader's group
+  BI. check.py fails a scenario finding with an empty message
+  BJ. record.py counts a referrer check-orphaned-references could not read
+     unexamined, which sets restricted
+  BK. record.py counts the citations a check-rule-ids that examined none
+     leaves unchecked unexamined, which sets restricted
+  BL. combine.py records a fired departure's rule as waived
+  BM. split.py notes a share larger than --share-bytes
+  BN. briefs.py names the share's lines past 2,000 characters
+  BO. briefs.py names a subject's lines past 2,000 characters
+  BP. split.py refuses when a rule file could not be read
+  BQ. record.py refuses a primitive's non-zero exit that carries a result
+  BR. split.py records the loaded rule files, and briefs.py names them
+  BS. check.py fails a hand-back that is not a JSON object, never with a
+     traceback
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty, and its
@@ -121,6 +157,8 @@ Coverage:
      step 15's subjects, and the unlinked one is a project-parts finding;
      its one scenario has a reader, whose finding the record holds as a
      scenario-consistency finding
+     the manifest lists the loaded rule files, and every tier it holds is
+     must or should, one at least must
 
 ANALYZE_SCRIPTS, when set, names the directory of scripts to run, so a
 mutant can be run against these cases. Usage:
@@ -155,6 +193,9 @@ if name == "resolve-anchor" and "--path" in sys.argv and \
     print("not json"); sys.exit(1)
 if name in open(os.path.join(d, "slow")).read().split():
     time.sleep(5)
+if name in open(os.path.join(d, "failing")).read().split():
+    p = os.path.join(d, name + ".json")
+    print(open(p).read() if os.path.isfile(p) else "{}"); sys.exit(3)
 if name == "read-section" and os.path.exists(os.path.join(d, "no-not-found")):
     print(json.dumps({"sections-count": 0, "form": "inline"})); sys.exit(0)
 if name == "read-section":
@@ -233,9 +274,11 @@ class Project:
         for n in ("one", "two", "three"):
             self.write(f"specs/{F}/scenarios/{n}.md", f"# {n}\n\n## Behavior\n\n" + "x" * scenario_bytes + "\n")
         self.write(".ductus/constitution.md", "# Constitution\n")
+        for rf in RULES["rule-files"]:
+            self.write(rf["file"], f"# {rf['file']}\n")
         self.write("stub/ductus", STUB)
         os.chmod(os.path.join(self.stub, "ductus"), 0o755)
-        for n in ("broken", "slow", "missing-headings", "broken-paths"):
+        for n in ("broken", "slow", "failing", "missing-headings", "broken-paths"):
             self.write(f"stub/{n}", "")
         self.answer("process-decisions", {"matched": [], "expired": [], "lapsed": []})
         self.answer("discover-rule-files", {"rules-dir": "rules", "selected": RULES["selected"],
@@ -1012,6 +1055,258 @@ def au(p, name):
            comb.stdout + comb.stderr + r.stdout + r.stderr + gone.stderr + json.dumps([found, wa]))
 
 
+def edit_reader(p, fn):
+    """Rewrite the first scenario reader's output through fn."""
+    out_path = p.manifest()["scenario-readers"][0]["out"]
+    with open(out_path) as f:
+        out = json.load(f)
+    fn(out)
+    with open(out_path, "w") as f:
+        json.dump(out, f)
+
+
+def captured(p, name):
+    try:
+        with open(os.path.join(p.stub, f"captured-{name}")) as f:
+            return json.load(f)
+    except OSError:
+        return None
+
+
+def av(p, name):
+    p.split()
+    p.all_hand_backs()
+    p.write("plan.json", json.dumps({"findings": []}))
+    rule = "rules/a-backend.md"
+    p.write(rule, "# rules/a-backend.md\n\nAn edit after the judges read the share.\n")
+    p.run("detect.py", F)  # detection is current again: only the shares predate the edit
+    edited = {s: p.run(s, F, *extra) for s, extra in (("check.py", ()), ("combine.py", ()),
+                                                      ("record.py", (p.plan,)))}
+    p.write(rule, f"# {rule}\n")
+    p.run("detect.py", F)
+    restored = [p.run("check.py", F), p.run("combine.py", F), p.run("record.py", F, p.plan)]
+    os.remove(os.path.join(p.root, rule))
+    p.run("detect.py", F)
+    gone = p.run("check.py", F)
+    m = p.manifest()
+    del m["rule-file-digest"]
+    with open(os.path.join(p.work, "manifest.json"), "w") as f:
+        json.dump(m, f)
+    old = p.run("check.py", F)
+    check_(name, all(r.returncode == 1 and rule in r.stderr and "has changed" in r.stderr
+                     and "split.py" in r.stderr and "Traceback" not in r.stderr for r in edited.values())
+           and all(r.returncode == 0 for r in restored)
+           and gone.returncode == 1 and f"{rule} is gone" in gone.stderr
+           and old.returncode == 2 and "rule-file-digest" in old.stderr,
+           json.dumps({k: (v.returncode, v.stderr[-200:]) for k, v in edited.items()})
+           + "".join(r.stderr[-200:] for r in restored) + gone.stderr + old.stderr)
+
+
+def bt(p, name):
+    # RD-001 is the only rule of d-cross.md and is reusable: no share holds the file.
+    rules = json.loads(json.dumps(RULES))
+    rules["selected"] = RULES["selected"] + ["d-cross.md"]
+    rules["rule-files"].append({"file": "rules/d-cross.md", "other-headings": [], "rules": [
+        {"id": "RD-001", "heading": "### RD-001", "tier": "should", "statement": "S", "verification": "V"}]})
+    rules["verdicts"]["reusable"].append({"id": "RD-001", "verdict": "finding", "tier": "should",
+                                          "at": "spec.md#Motivation", "message": "carried over"})
+    p.write("rules.json", json.dumps(rules))
+    p.write("rules/d-cross.md", "# rules/d-cross.md\n")
+    p.answer("discover-rule-files", {"rules-dir": "rules", "selected": rules["selected"], "notices": []})
+    p.run("detect.py", F)
+    p.split()
+    p.all_hand_backs()
+    p.write("plan.json", json.dumps({"findings": []}))
+    p.write("rules/d-cross.md", "# rules/d-cross.md\n\nEdited after the split.\n")
+    p.run("detect.py", F)
+    r = p.run("record.py", F, p.plan, "--write")
+    check_(name, "rules/d-cross.md" in p.manifest()["rule-file-digest"]
+           and r.returncode == 1 and "rules/d-cross.md has changed" in r.stderr and not p.calls("write-analysis"),
+           r.stdout + r.stderr)
+
+
+def aw(p, name):
+    bad = []
+    for label, rejudge, rid, tier in (("judged", False, "RA-001", "may"), ("no tier", False, "RB-001", None),
+                                      ("rejudged", True, "RA-002", "may")):
+        if rejudge:
+            rejudging(p)
+        else:
+            p.write("rules.json", json.dumps(RULES))
+        rules = json.load(open(os.path.join(p.base, "rules.json")))
+        for rf in rules["rule-files"]:
+            for r in rf["rules"]:
+                if r["id"] == rid:
+                    r["tier"] = tier
+        p.write("rules.json", json.dumps(rules))
+        r = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
+        if not (r.returncode == 1 and f"{rid} has tier {tier!r}" in r.stderr and "Traceback" not in r.stderr):
+            bad.append(f"{label}: exit {r.returncode} {r.stderr[-200:]}")
+    rules = json.loads(json.dumps(RULES))
+    rules["rule-files"][2]["rules"][1]["tier"] = None  # RC-002 is reusable, judged by nobody
+    p.write("rules.json", json.dumps(rules))
+    r = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
+    check_(name, not bad and r.returncode == 0, "; ".join(bad) + r.stderr)
+
+
+def ax(p, name):
+    p.split()
+    p.all_hand_backs({"A": {"RA-001": FND, "RA-002": FND}})
+    p.write("plan.json", json.dumps({"findings": []}))
+    r = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    tiers = {x["message"]: x["tier"] for x in captured(p, "findings-json") or [] if x["family"] == "rule-assessment"}
+    m = p.manifest()
+    m["shares"]["A"]["tiers"]["RA-001"] = "may"
+    with open(os.path.join(p.work, "manifest.json"), "w") as f:
+        json.dump(m, f)
+    calls = len(p.calls("write-analysis"))
+    odd = p.run("record.py", F, p.plan, "--write")
+    check_(name, r.returncode == 0
+           and tiers == {"RA-001: not covered": "blocking", "RA-002: not covered": "advisory",
+                         "RC-002: a reused finding": "advisory"}
+           and wa[wa.index("--blocking-findings") + 1] == "1" and wa[wa.index("--advisory") + 1] == "2"
+           and odd.returncode == 2 and "RA-001 has tier 'may'" in odd.stderr and "Traceback" not in odd.stderr
+           and len(p.calls("write-analysis")) == calls,
+           r.stdout + r.stderr + json.dumps([tiers, wa]) + odd.stderr)
+
+
+def ay(p, name):
+    bad = []
+    for label, value in (("absent", None), ("a string", "a-backend.md")):
+        rules = json.loads(json.dumps(RULES))
+        if value is None:
+            del rules["selected"]
+        else:
+            rules["selected"] = value
+        p.write("rules.json", json.dumps(rules))
+        r = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
+        if not (r.returncode == 2 and "no selected list" in r.stderr and "Traceback" not in r.stderr):
+            bad.append(f"{label}: exit {r.returncode} {r.stderr[-200:]}")
+    check_(name, not bad, "; ".join(bad))
+
+
+def az(p, name):
+    record_setup(p)
+    bad = []
+    for label, value, needle in (
+            ("a finding with no at", {"verdict": "finding", "message": "m"}, "RA-001: a finding needs an at and a message"),
+            ("a waiver with no departure entry", {"verdict": "waived"}, "RA-001: waived, but the spec holds no departure"),
+            ("an unknown verdict", {"verdict": "bogus"}, "RA-001: verdict 'bogus' is none of"),
+            ("an addressed with no cite", {"verdict": "addressed"}, "RA-001: addressed with no cite"),
+            ("a verdict that is no object", "finding", "RA-001: a verdict is an object")):
+        p.write("plan.json", json.dumps({"findings": [], "settled": {"RA-001": value}}))
+        r = p.run("record.py", F, p.plan, "--write")
+        if not (r.returncode == 1 and f"settled {needle}" in r.stderr and "Traceback" not in r.stderr
+                and not p.calls("write-analysis")):
+            bad.append(f"{label}: exit {r.returncode} {r.stderr[-200:]}")
+    p.write("plan.json", json.dumps({"findings": [], "settled": {"RA-001": {**FND, "message": "settled"}}}))
+    good = p.run("record.py", F, p.plan, "--write")
+    check_(name, not bad and good.returncode == 0 and p.calls("write-analysis"),
+           "; ".join(bad) + good.stderr)
+
+
+def ba(p, name):
+    record_setup(p)
+    p.write("plan.json", json.dumps({"findings": [], "settled": {"RA-001": None, "RZ-9": None}}))
+    r = p.run("record.py", F, p.plan)
+    check_(name, r.returncode == 1 and "settled names RZ-9, which this run did not judge" in r.stderr, r.stderr)
+
+
+def bb(p, name):
+    record_setup(p)
+    p.write("stub/missing-headings", "Gone\n")
+    p.write("plan.json", json.dumps({"findings": [], "settled": {"RA-001": {**FND, "at": "plan.md#Gone"}}}))
+    r = p.run("record.py", F, p.plan)
+    check_(name, r.returncode == 1 and "verdicts cite headings that do not resolve" in r.stderr
+           and "plan.md#Gone" in r.stderr, r.stdout + r.stderr)
+
+
+def bc(p, name):
+    p.split()
+    p.all_hand_backs()
+    bad = []
+    for v in ({"verdict": "addressed", "cite": "plan.md#Design"}, FND):
+        p.hand_back(cell_a(p), {"RB-001": v})
+        r = p.run("check.py", F)
+        if not (r.returncode == 1 and "RB-001: " + v["verdict"] + ", but its departure entry makes a fired one waived"
+                in r.stdout):
+            bad.append(f"{v['verdict']}: exit {r.returncode} {r.stdout[-200:]}")
+    check_(name, not bad, "; ".join(bad))
+
+
+def bj_bk(result, value, entry):
+    def run(p, name):
+        record_setup(p)
+        p.det(result, value)
+        r = p.run("record.py", F, p.plan, "--write")
+        wa = (p.calls("write-analysis") or [[]])[0]
+        pd = (p.calls("process-decisions") or [[]])[0]
+        check_(name, r.returncode == 0 and entry in wa and "--restricted" in pd, r.stdout + r.stderr + json.dumps(wa))
+    return run
+
+
+def bl(p, name):
+    p.split()
+    p.all_hand_backs({"A": {"RB-001": {"verdict": "waived"}}})
+    r = p.run("combine.py", F)
+    out = json.load(open(os.path.join(p.work, "merged.json"))) if r.returncode == 0 else {}
+    check_(name, r.returncode == 0 and out["verdicts"].get("RB-001") == {"verdict": "waived"}, r.stdout + r.stderr)
+
+
+def bm(p, name):
+    p.split("--share-bytes", "100")
+    notes = p.manifest()["notes"]
+    check_(name, any("over --share-bytes 100" in n and "a rule file is larger than a share" in n for n in notes),
+           json.dumps(notes))
+
+
+def bn(p, name):
+    rules = json.loads(json.dumps(RULES))
+    rules["rule-files"][0]["rules"][1]["statement"] = "L" * 2500
+    p.write("rules.json", json.dumps(rules))
+    p.split()
+    r = p.run("briefs.py", F)
+    brief = open(p.manifest()["cells"][0]["brief"]).read()
+    check_(name, r.returncode == 0 and p.manifest()["shares"]["A"]["long-lines"]
+           and "Lines of the share past 2,000 characters" in brief, r.stderr + brief[-600:])
+
+
+def bo(p, name):
+    p.write(f"specs/{F}/plan.md", "# Plan\n\n## Design\n\n" + "y" * 2500 + "\n")
+    p.run("detect.py", F)
+    p.split()
+    r = p.run("briefs.py", F)
+    brief = open(p.manifest()["cells"][0]["brief"]).read()
+    check_(name, r.returncode == 0 and "These lines run past 2,000 characters" in brief
+           and f"`specs/{F}/plan.md` line 5" in brief, r.stderr + brief[-600:])
+
+
+def bp(p, name):
+    rules = json.loads(json.dumps(RULES))
+    rules["unreadable"] = ["rules/gone-backend.md"]
+    p.write("rules.json", json.dumps(rules))
+    r = p.run("split.py", F, "--rules-json", os.path.join(p.base, "rules.json"))
+    check_(name, r.returncode == 1 and "rule files could not be read" in r.stderr and "gone-backend" in r.stderr,
+           r.stderr)
+
+
+def bq(p, name):
+    record_setup(p)
+    p.write("stub/failing", "process-decisions")
+    r = p.run("record.py", F, p.plan, "--write")
+    check_(name, r.returncode == 1 and "process-decisions exited 3" in r.stderr and not p.calls("write-analysis"),
+           r.stdout + r.stderr)
+
+
+def br(p, name):
+    p.split()
+    r = p.run("briefs.py", F)
+    brief = open(p.manifest()["cells"][0]["brief"]).read()
+    check_(name, r.returncode == 0 and p.manifest()["loaded"] == RULES["selected"]
+           and "`a-backend.md`, `b-cross.md`, `c-frontend.md`" in brief, r.stderr + brief[-600:])
+
+
 def z(name):
     """detect.py through record.py --write against the real release binary,
     in a fixture project holding one rule file and an unfolded staging spec."""
@@ -1098,6 +1393,7 @@ def z(name):
         record = os.path.join(root, "specs", F, "analysis.md")
         text = open(record).read() if os.path.isfile(record) else ""
         first = m["shares"]["A"]["ids"][0] if m["shares"] else None
+        tiers = {t for s in m["shares"].values() for t in s["tiers"].values()}
         good = (all(x.returncode == 0 for x in steps) and "feat.1-staging" in steps[0].stdout
                 and len(m["judge"]) > 0 and sum(len(s["ids"]) for s in m["shares"].values()) == len(m["judge"])
                 and "last-run:" in text and f"{first}:" in text and "plan.md#One decision" in text
@@ -1105,7 +1401,8 @@ def z(name):
                 and s15.get("system-parts") == [".ductus/docs/system/linked.md", ".ductus/docs/system/unlinked.md"]
                 and "project-parts" in text and ".ductus/docs/system/unlinked.md" in text
                 and [r["subjects"] for r in m["scenario-readers"]] == [["scenarios/edge.md"]]
-                and "scenario-consistency" in text and "its Context names no situation" in text)
+                and "scenario-consistency" in text and "its Context names no situation" in text
+                and m["loaded"] and "must" in tiers and tiers <= {"must", "should"})
         check_(name, good, "".join(f"[{i} exit {x.returncode}] {x.stdout[-600:]}{x.stderr[-600:]}"
                                    for i, x in enumerate(steps)))
     finally:
@@ -1171,6 +1468,49 @@ def main():
     case("AS. split.py and briefs.py give the scenarios their readers", as_)
     case("AT. check.py holds each scenario reader to every scenario of its group", at)
     case("AU. record.py writes each scenario reader's finding as Advisory", au)
+    case("AV. a rule file edited or removed after the split stops check, combine and record", av)
+    case("BT. a loaded rule file with only reusable rules, edited after the split, stops record.py", bt)
+    case("AW. split.py refuses a judged or rejudged rule whose tier is neither must nor should", aw)
+    case("AX. record.py records a MUST-tier finding Blocking and a SHOULD-tier one Advisory", ax)
+    case("AY. split.py exits 2 on a result with no selected list", ay)
+    case("AZ. record.py refuses a settled verdict that fails the checks a cell's does", az)
+    case("BA. record.py refuses a settled rule the run did not judge", ba)
+    case("BB. record.py refuses a settled verdict whose cite resolves to no heading", bb)
+    case("BC. check.py fails a departure's rule answered addressed or a finding", bc)
+    case("BD. check.py fails a rule answered both judged and unjudged", failing_check(
+        lambda p: p.hand_back(cell_a(p), extra={"unjudged": [{"id": "RA-001", "reason": "r"}]}),
+        "both judged and unjudged"))
+    case("BE. check.py fails answers for rules outside the cell's share", failing_check(
+        lambda p: p.hand_back(cell_a(p), extra={"judged": p.manifest()["shares"]["A"]["ids"] + ["RZ-9"]}),
+        "answers for rules outside the share"))
+    case("BF. check.py names a design subject removed after the split", failing_check(
+        lambda p: os.remove(os.path.join(p.root, "specs", F, "scenarios", "two.md")),
+        "scenarios/two.md was removed since split.py ran"))
+    case("BG. check.py fails a scenario finding outside the reader's group", failing_check(
+        lambda p: edit_reader(p, lambda o: o["findings"].append(
+            {"path": "scenarios/nine.md", "check": "context", "message": "m"})),
+        "a finding at scenarios/nine.md, outside this reader's group"))
+    case("BH. check.py fails a scenario judgment outside the reader's group", failing_check(
+        lambda p: edit_reader(p, lambda o: o["judged"].append("scenarios/nine.md")),
+        "judgments of scenarios outside this reader's group"))
+    case("BI. check.py fails a scenario finding with an empty message", failing_check(
+        lambda p: edit_reader(p, lambda o: o["findings"].append(
+            {"path": "scenarios/one.md", "check": "context", "message": "  "})),
+        "scenarios/one.md: a finding needs a message"))
+    case("BJ. record.py records a referrer it could not read as unexamined and restricted", bj_bk(
+        "check-orphaned-references", {"skipped": [{"path": "specs/x.md", "reason": "unreadable"}]},
+        "referrer-unreadable=1"))
+    case("BK. record.py records citations no rule check examined as unexamined and restricted", bj_bk(
+        "check-rule-ids", {"examined": 0, "citations-count": 2}, "rule-citations-not-checked=2"))
+    case("BL. combine.py records a fired departure's rule as waived", bl)
+    case("BM. split.py notes a share larger than --share-bytes", bm)
+    case("BN. briefs.py names the share's lines past 2,000 characters", bn)
+    case("BO. briefs.py names a subject's lines past 2,000 characters", bo)
+    case("BP. split.py refuses when a rule file could not be read", bp)
+    case("BQ. a primitive's non-zero exit with a result is refused, not read", bq)
+    case("BR. split.py records the loaded rule files and briefs.py names them", br)
+    case("BS. check.py fails a hand-back that is not a JSON object, never with a traceback", failing_check(
+        lambda p: open(p.manifest()["cells"][0]["out"], "w").write("[1]"), "output is not a JSON object"))
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)

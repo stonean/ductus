@@ -40,6 +40,7 @@ DEFAULT_SHARE_BYTES = 135_000
 DEFAULT_CELL_BYTES = 480_000
 MIN_BUDGET_BYTES = 1
 CORE_SUBJECTS = ("spec.md", "plan.md", "data-model.md")
+VERDICT_KINDS = ("addressed", "finding", "waived")
 # framework/reference/analyze.md, Unexamined targets: the reasons excluded by
 # construction. Every other reason is a target the run could not read, which
 # sets process-decisions' restricted.
@@ -144,9 +145,6 @@ def valid_feature(feature):
     if not os.path.isfile(os.path.join(d, "spec.md")):
         raise Unreadable(f"{d}/spec.md does not exist; run from the project root")
     return d
-
-
-feature_dir = valid_feature
 
 
 def work_dir(feature):
@@ -316,19 +314,62 @@ def unresolved_cites(feature, cites):
     return sorted(bad)
 
 
+def departure_rules(m):
+    """The rules the spec's departure entries waive, from the manifest."""
+    return {e.get("rule") for e in m.get("departures") or []}
+
+
+def verdict_problem(rid, v, departures):
+    """What is wrong with the rule's verdict v, or None when it is well
+    formed: a known kind, waived only for a rule with a departure entry and a
+    departure's rule never addressed or a finding, addressed with a cite, a
+    finding with an at and a message. check.py applies it to each cell's
+    verdict and record.py to each of the plan's settled ones."""
+    if not isinstance(v, dict):
+        return f"{rid}: a verdict is an object, or null for not fired"
+    kind = v.get("verdict")
+    if kind not in VERDICT_KINDS:
+        return f"{rid}: verdict {kind!r} is none of {VERDICT_KINDS}"
+    if kind == "waived" and rid not in departures:
+        return f"{rid}: waived, but the spec holds no departure entry for it"
+    if kind != "waived" and rid in departures:
+        return f"{rid}: {kind}, but its departure entry makes a fired one waived"
+    if kind == "addressed" and not v.get("cite"):
+        return f"{rid}: addressed with no cite"
+    if kind == "finding" and not (v.get("at") and v.get("message")):
+        return f"{rid}: a finding needs an at and a message"
+    return None
+
+
 def manifest_path(feature):
     return os.path.join(work_dir(feature), "manifest.json")
 
 
 def load_manifest(feature):
-    """The cells manifest, refusing one with no scenario-readers list: a
-    manifest split.py wrote before the scenario readers would otherwise read
-    as a spec with no scenario to judge."""
+    """The cells manifest, refusing one with no scenario-readers list or no
+    rule-file-digest map: a manifest split.py wrote before the scenario
+    readers would otherwise read as a spec with no scenario to judge, and one
+    written before the digests could not say the rule files are unchanged."""
     p = manifest_path(feature)
     if not os.path.isfile(p):
         raise Unreadable(f"{p} does not exist; run scripts/analyze/split.py {feature} first")
     m = read_json(p)
-    if not isinstance(m, dict) or not isinstance(m.get("scenario-readers"), list):
-        raise Unreadable(f"{p} has no scenario-readers list; run scripts/analyze/split.py {feature} "
-                         "and briefs.py again")
+    if not isinstance(m, dict) or not isinstance(m.get("scenario-readers"), list) \
+            or not isinstance(m.get("rule-file-digest"), dict):
+        raise Unreadable(f"{p} has no scenario-readers list or no rule-file-digest map; run "
+                         f"scripts/analyze/split.py {feature} and briefs.py again")
     return m
+
+
+def check_rule_files_current(feature, m):
+    """Refuse when a loaded rule file has changed, or is gone, since split.py
+    ran: the judges read the shares, so a verdict recorded against the file as
+    it stands now would be a judgment of text nobody read, and a file whose
+    rules are all reusable is digested too, since record.py carries its
+    verdicts over and write-analysis would digest the edited text for them."""
+    for f, then in sorted(m["rule-file-digest"].items()):
+        now = sha256(f)
+        if now != then:
+            raise Refused(f"{f} {'is gone or unreadable' if now is None else 'has changed'} since split.py "
+                          f"ran, and the verdicts judged or carried over rest on it; run scripts/analyze/detect.py {feature} "
+                          "and split.py again, then briefs.py and the judges")

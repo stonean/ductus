@@ -14,7 +14,8 @@ PLAN.json holds what the host decided:
    "settled": {RULE: verdict or null},
                             the host's verdict for each rule the cells left
                             unsettled (null for not fired), and any it
-                            overrides, each printed
+                            overrides, each printed and held to what check.py
+                            holds a cell's verdict to
    "dispositions": {KEY: disposition},
                             a disposition for a generated finding, by its key
    "malformed-headings": [...],
@@ -25,11 +26,14 @@ PLAN.json holds what the host decided:
                             targets the host could not judge, beside those
                             the run's results name
 
-The hand-backs are checked and merged again here, as check.py and
-combine.py do, so what is recorded is what the judges wrote. Each fired
+The rule files, hand-backs and settled verdicts are checked and merged
+again here, as check.py and combine.py do, so what is recorded is what the
+judges wrote of the rules as split.py loaded them, carried-over
+verdicts included. Each fired
 rule's finding, and each verdicts.reusable finding, is written as
 `rule-assessment — RULE: message`, in the Blocking tier for a MUST-tier
-rule and the Advisory tier otherwise; a finding of a rule judged against
+rule and the Advisory tier for a SHOULD-tier one, and a tier of neither is
+unreadable; a finding of a rule judged against
 the changed sections alone, placed at a section verdicts.changed-sections
 does not name, is passed only as its verdict, which write-analysis records
 as a contradiction counted in no tier (spec 082, AC7). Each broken cross-service reference
@@ -44,13 +48,15 @@ process-decisions' restricted, so a stored decision is retained rather than
 expired. A finding a stored decision matches takes its stored outcome.
 decided-by is the repository's `git config user.email`.
 
-Without --write it prints the record it would write and the write-analysis
-call; with --write it makes the call.
+Without --write it prints the summary line and one line for each finding;
+with --write it also makes the write-analysis call.
 
-Exit status: 0 written, or the dry run printed; 1 refused: a hand-back
-fails its check, a rule is unsettled, a reported malformed heading is not
-in the plan, detection predates an edit or a commit, two findings share a key,
-no decided-by, or write-analysis refused; 2 an input could not be read.
+Exit status: 0 written, or the dry run printed; 1 refused: a rule file
+changed since split.py, a hand-back fails its check, a rule is unsettled, a
+settled entry names a rule not judged or is malformed, a reported malformed
+heading is not in the plan, detection predates an edit or a commit, two
+findings share a key, no decided-by, or write-analysis refused; 2 an input
+could not be read, or a rule's tier is neither must nor should.
 """
 
 import collections
@@ -69,9 +75,15 @@ def key(f):
     return f.get("decision-key") or f"{f['family']} — {f['message']}"
 
 
+FINDING_TIERS = {"must": "blocking", "should": "advisory"}
+
+
 def rule_finding(feature, rid, v, tier):
+    if tier not in FINDING_TIERS:
+        raise lib.Unreadable(f"{rid} has tier {tier!r}, which is none of {sorted(FINDING_TIERS)}, "
+                             "so its finding has no tier to record in")
     path = v["at"].partition("#")[0]
-    return {"tier": "blocking" if tier == "must" else "advisory", "family": "rule-assessment",
+    return {"tier": FINDING_TIERS[tier], "family": "rule-assessment",
             "message": f"{rid}: {v['message']}", "path": f"specs/{feature}/{path}", "live": True}
 
 
@@ -191,6 +203,7 @@ def run(argv):
     w = lib.work_dir(feature)
     det = os.path.join(w, "det")
     m = lib.load_manifest(feature)
+    lib.check_rule_files_current(feature, m)
     plan = lib.read_json(plan_path)
     if not isinstance(plan, dict):
         raise lib.Unreadable(f"{plan_path} is not a JSON object")
@@ -210,12 +223,16 @@ def run(argv):
     tiers_of = {rid: t for s in m["shares"].values() for rid, t in s["tiers"].items()}
     verdicts = dict(merged["verdicts"])
     settled = plan.get("settled") or {}
+    departures = lib.departure_rules(m)
     left = sorted(set(merged["unsettled"]) - set(settled))
     if left:
         raise lib.Refused(f"unsettled rules the plan's settled map does not name: {left}")
     for rid, v in settled.items():
         if rid not in merged["judged"]:
             raise lib.Refused(f"settled names {rid}, which this run did not judge")
+        problem = lib.verdict_problem(rid, v, departures) if v is not None else None
+        if problem:
+            raise lib.Refused(f"settled {problem}")
         print(f"settled {rid}: {v} (cells: {merged['unsettled'].get(rid) or merged['verdicts'].get(rid)})")
         if v is None:
             verdicts.pop(rid, None)
@@ -227,8 +244,6 @@ def run(argv):
     bad = lib.unresolved_cites(feature, refs)
     if bad:
         raise lib.Refused(f"verdicts cite headings that do not resolve: {bad}")
-    if set(merged["judged"]) | set(merged["unjudged"]) != set(m["judge"]) | set(m.get("rejudge") or []):
-        raise lib.Refused("judged and unjudged rules do not cover verdicts.judge and verdicts.rejudge")
 
     findings = [dict(f) for f in plan.get("findings") or []]
     for rid, v in sorted(verdicts.items()):

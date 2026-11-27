@@ -34,10 +34,14 @@ one for each of the fewest groups balanced by bytes that keep each within
 Needs detect.py's results, current for the feature as it stands, whose
 check-departures entries the briefs name. Prints discover-rule-files'
 notice lines. Writes <work>/manifest.json and <work>/share-<X>.md beside it.
+The manifest holds the sha256 of each loaded rule file, one with only
+reusable rules included since record.py carries its verdicts over, which
+check.py, combine.py and record.py compare with the file as it stands then.
 
-Exit status: 0 written; 1 refused (a judged rule in no loaded file, a rule
-file that could not be read, detection older than an edit or a commit); 2 an input
-could not be read.
+Exit status: 0 written; 1 refused (a judged rule in no loaded file, a judged
+rule whose tier is neither must nor should, a rule file that could not be
+read, detection older than an edit or a commit); 2 an input could not be
+read, discover-rule-files' selected list included.
 """
 
 import math
@@ -154,7 +158,7 @@ def run(argv):
         args[rest[0]] = rest[1]
         rest = rest[2:]
     share_bytes, cell_bytes = budget_flag(args, "--share-bytes"), budget_flag(args, "--cell-bytes")
-    d = lib.feature_dir(feature)
+    d = lib.valid_feature(feature)
     w = lib.work_dir(feature)
     lib.check_detection_current(feature, os.path.join(w, "det"))
     departures_path = os.path.join(w, "det", "check-departures.json")
@@ -178,6 +182,10 @@ def run(argv):
                     "changed-sections": found.get("changed-sections") or []}
     if not isinstance(verdicts, dict) or "judge" not in verdicts:
         raise lib.Unreadable("discover-rule-files returned no verdicts.judge; pass --feature with --all and --rules")
+    selected = found.get("selected")
+    if not isinstance(selected, list):
+        raise lib.Unreadable("discover-rule-files returned no selected list, so the judges cannot be told "
+                             "which rule files are loaded")
     if found.get("unreadable"):
         raise lib.Refused(f"rule files could not be read: {found['unreadable']}; their rules are "
                           "neither judged nor reusable, so the run cannot cover them")
@@ -187,9 +195,14 @@ def run(argv):
     rejudge = set(verdicts.get("rejudge") or [])
     asked = judge | rejudge
     rules_dir = found.get("rules-dir") or ""
+    loaded_files = [s if "/" in s else f"{rules_dir}/{s}" for s in selected]
     files, placed = [], set()
     for rf in found.get("rule-files") or []:
         rules = [r for r in rf.get("rules") or [] if r.get("id") in asked]
+        for r in rules:
+            if r.get("tier") not in ("must", "should"):
+                raise lib.Refused(f"{r['id']} has tier {r.get('tier')!r}, which is neither must nor "
+                                  "should, so its finding would have no tier to be recorded in")
         placed |= {r["id"] for r in rules}
         if rules:
             text = render_file(rf["file"], rules, rf.get("other-headings") or [])
@@ -259,7 +272,8 @@ def run(argv):
     manifest = {
         "feature": feature, "status": status, "head": head, "run": run_id,
         "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "work": w,
-        "rules-dir": rules_dir, "loaded": [os.path.basename(s) for s in found.get("selected") or []],
+        "rules-dir": rules_dir, "loaded": [os.path.basename(s) for s in selected],
+        "rule-file-digest": {p: lib.sha256(p) for p in loaded_files},
         "judge": sorted(judge), "rejudge": sorted(rejudge),
         "changed-sections": verdicts.get("changed-sections") or [],
         "reusable": verdicts.get("reusable") or [],

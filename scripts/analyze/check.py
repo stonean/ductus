@@ -6,7 +6,10 @@ judging in a subagent).
 
 usage: python3 -I scripts/analyze/check.py FEATURE
 
-For each cell in the manifest it checks that:
+It refuses at once, before reading any hand-back, when a loaded rule file
+has changed or is gone since split.py ran, since what the judges judged is
+then not the rule as it stands. For each
+cell in the manifest it checks that:
 
 - the output file exists, parses, and was written after the manifest;
 - its fields have the shapes the brief asks for;
@@ -38,8 +41,9 @@ record.py refuses them until the plan file names each. Writes
 <work>/check.json.
 
 Exit status: 0 when every hand-back passes; 1 naming each failure, so the
-host asks that judge to finish (SendMessage) and runs this again; 2 when
-the manifest cannot be read.
+host asks that judge to finish (SendMessage) and runs this again, or naming
+the rule file that changed, which needs detect.py, split.py, briefs.py and
+the judges again; 2 when the manifest cannot be read.
 """
 
 import calendar
@@ -52,7 +56,6 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import analyze_lib as lib  # noqa: E402
 
-KINDS = ("addressed", "finding", "waived")
 INTEGRITY = ("code-block", "rationale", "system", "contract")
 SCENARIO_CHECKS = ("context", "behavior")
 
@@ -140,7 +143,7 @@ def check(feature, m):
     notes by cell, a cell with no problem holding []; outputs by cell; the
     cites that resolve to no heading; each cell's malformed headings; and
     the integrity items step 15 left unchecked."""
-    d = lib.feature_dir(feature)
+    d = lib.valid_feature(feature)
     created = calendar.timegm(time.strptime(m["created"], "%Y-%m-%dT%H:%M:%SZ"))
     problems, outs, notes, malformed = {}, {}, {}, {}
     now = dict(lib.design_subjects(feature))
@@ -154,7 +157,7 @@ def check(feature, m):
     if problems.get("subjects"):
         problems["subjects"].append("re-run split.py and briefs.py, then re-judge "
                                     "(.ductus/docs/agents/developing-ductus.md, Sizing an analysis's judges)")
-    departures = {e.get("rule") for e in m.get("departures") or []}
+    departures = lib.departure_rules(m)
     cites = {}
     for c in m["cells"]:
         cell = c["cell"]
@@ -177,16 +180,9 @@ def check(feature, m):
             kind = v.get("verdict")
             if rid not in judged:
                 ps.append(f"{rid}: a verdict for a rule not in judged")
-            if kind not in KINDS:
-                ps.append(f"{rid}: verdict {kind!r} is none of {KINDS}")
-            elif kind == "waived" and rid not in departures:
-                ps.append(f"{rid}: waived, but the spec holds no departure entry for it")
-            elif kind != "waived" and rid in departures:
-                ps.append(f"{rid}: {kind}, but its departure entry makes a fired one waived")
-            elif kind == "addressed" and not v.get("cite"):
-                ps.append(f"{rid}: addressed with no cite")
-            elif kind == "finding" and not (v.get("at") and v.get("message")):
-                ps.append(f"{rid}: a finding needs an at and a message")
+            problem = lib.verdict_problem(rid, v, departures)
+            if problem:
+                ps.append(problem)
             ref = v.get("cite") if kind == "addressed" else v.get("at") if kind == "finding" else None
             if ref:
                 cites.setdefault(ref, []).append((cell, rid))
@@ -263,6 +259,7 @@ def run(argv):
         raise lib.Unreadable("usage: check.py FEATURE")
     feature = argv[0]
     m = lib.load_manifest(feature)
+    lib.check_rule_files_current(feature, m)
     result = check(feature, m)
     lib.write_json(os.path.join(lib.work_dir(feature), "check.json"),
                    {k: result[k] for k in ("problems", "notes", "malformed", "unchecked")})
@@ -277,7 +274,7 @@ def run(argv):
         else:
             kinds = [v.get("verdict") for v in (o.get("verdicts") or {}).values()]
             counts = {"judged": len(o.get("judged") or []), "unjudged": len(o.get("unjudged") or []),
-                      **{k: kinds.count(k) for k in KINDS}}
+                      **{k: kinds.count(k) for k in lib.VERDICT_KINDS}}
         print(f"{c}: {'FAIL' if problems.get(c) else 'ok'} {counts}")
         for p in problems.get(c) or []:
             print(f"   {p}")

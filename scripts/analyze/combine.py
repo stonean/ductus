@@ -5,7 +5,7 @@ analysis's judges).
 
 usage: python3 -I scripts/analyze/combine.py FEATURE
 
-Runs check.py's checks first and refuses on any failure, step 15's and
+Refuses when a loaded rule file has changed or is gone since split.py ran. Runs check.py's checks and refuses on any failure, step 15's and
 the scenario readers' included. Then, for each rule, over the cells of its
 share, one per scenario group:
 
@@ -27,7 +27,8 @@ and each scenario reader's findings beside the rules. record.py merges the
 hand-backs again itself, so a merged.json older than them is never recorded.
 
 Exit status: 0 written, unsettled rules or not, each one printed; 1 when a
-hand-back fails its check; 2 when the manifest cannot be read.
+rule file changed since split.py or a hand-back fails its check; 2 when the
+manifest cannot be read.
 """
 
 import os
@@ -39,8 +40,8 @@ import analyze_lib as lib  # noqa: E402
 import check as checker  # noqa: E402
 
 
-def merge(m, outs, unresolved=()):
-    departures = {e.get("rule") for e in m.get("departures") or []}
+def merge(m, outs, unresolved):
+    departures = lib.departure_rules(m)
     judged, unjudged, verdicts, unsettled, mixed = [], {}, {}, {}, {}
     for letter, share in m["shares"].items():
         cells = [c["cell"] for c in m["cells"] if c["share"] == letter]
@@ -83,6 +84,7 @@ def run(argv):
         raise lib.Unreadable("usage: combine.py FEATURE")
     feature = argv[0]
     m = lib.load_manifest(feature)
+    lib.check_rule_files_current(feature, m)
     result = checker.check(feature, m)
     failed = sorted(checker.failures(result))
     if failed:
