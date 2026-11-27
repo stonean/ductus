@@ -26,6 +26,14 @@ A spec that adds a check, an audit-record field or a primitive states what a run
 - A new command file or reference file is held to the read size from its first commit, with no ceiling row to add.
 - A spec that adds a check, field or primitive and retires none states why none, which satisfies the rule; one stating neither cost nor retirement is deferred.
 
+## Cost
+
+Measured on a Darwin arm64 machine, in `git clone --local` copies of this repository: the lint at `54f697d7`, the commit that lowers the ceilings, against the lint as it stood at `b6475ca2`, which no commit changed before `54f697d7`. Wall times are `/usr/bin/time -p`'s, whose resolution is 0.01 s, over 10 consecutive runs each.
+
+- **The size lint, on every commit (the hook) and every CI run (step (o)).** `scripts/lint-governing-size.sh` spawns 8 git processes a run, against 4 before. The count comes from a `git` shim first on `PATH` that logs each call. Each single-file row is one `ls-files --error-unmatch` and one `cat-file -s`. Each glob row is one `ls-files -s` and one `cat-file --batch-check`, however many files it matches: 30 at `54f697d7`. Wall time is a median 0.08 s a run, range 0.08 to 0.08, against 0.02 s, range 0.02 to 0.03.
+- **What each `/analyze` run reads.** Each run loads the descriptions of `check-artifacts`, `check-artifact-size` and `write-analysis`, which grew 3,018 bytes from `d963a791`: 2,369, 248 and 401. Those are the UTF-8 bytes of each constant's string, as `wc -c` counts them. `framework/reference/analyze.md` shrank by 19,639 bytes. A run reads that file by section, so what it saves depends on the sections it reads.
+- **What it retires.** No check, field or primitive. It widens an existing check's subject, the lint's, to the command and reference files, and adds no new check.
+
 ## Acceptance Criteria
 
 - [ ] AC1: `framework/constitution.md` §design-principles states that a spec adding a check, an audit-record field or a primitive states what a run of it costs in a measurable unit, and which existing check, field or primitive it retires, or why none.

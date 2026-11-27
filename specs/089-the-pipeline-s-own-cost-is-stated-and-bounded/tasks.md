@@ -207,8 +207,8 @@ Blocked on tasks 1, 2, 3 and 5: this is the commit AC3 names, so every governed 
 
 ## 7. 089 states its own cost
 
-- [ ] Measure the lint's run at task 6's commit: git processes spawned per run and wall time over 10 runs (`time`), stating the method
-- [ ] 089's `spec.md`: a `## Cost` section with those figures, the bytes each `/analyze` run now reads from the grown descriptions (their `wc -c` growth from `d963a791`), and that it retires no check, field or primitive, since it widens an existing check's subject
+- [x] Measure the lint's run at task 6's commit: git processes spawned per run and wall time over 10 runs (`time`), stating the method
+- [x] 089's `spec.md`: a `## Cost` section with those figures, the bytes each `/analyze` run now reads from the grown descriptions (their `wc -c` growth from `d963a791`), and that it retires no check, field or primitive, since it widens an existing check's subject
 
 - **Done when**: 089's `spec.md` carries the `## Cost` section with its method and units.
 
