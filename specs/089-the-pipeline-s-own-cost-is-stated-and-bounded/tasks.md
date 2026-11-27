@@ -60,7 +60,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. The review reference is cut
 
-Lands after 086 task 4's edit to §Window and coverage reaches `origin/main`, or once the other lane agrees to rebase onto the cut: tell it through `SendMessage` before starting and when the cut lands.
+Lands after 086 task 4's edit to §Window and coverage reaches `origin/main`. The other lane (`ductus-2-f9`) asked for that order and messages when it lands; tell it through `SendMessage` when the cut starts and when it lands. Task 4 adds about 820 bytes to three of that section's bullets: "A review reads its own spec's change, and the record names the rest", the empty-diff-base bullet, and "`scope` counts entries, not files". That puts the projection near 49,350. The last two bullets are ones the plan keeps verbatim, so re-read them after the rebase. `COMPUTE_REVIEW_SCOPE` states task 4's new rule, so its added text may reduce to a pointer.
 
 - [ ] Cut the copies the plan's *The review reference cuts copies only* names, keeping §Blocking semantics' heading with one pointer line, one line on attribution and the artifact set in §Window and coverage, and every pinned span and heading verbatim
 - [ ] If the result is over 50,000 bytes for any reason, move the four spans the plan names into `discover-rule-files`' and `process-waivers`' descriptions, with a `runtime/CHANGELOG.md` line, and run task 3's runtime checks
@@ -72,7 +72,7 @@ Lands after 086 task 4's edit to §Window and coverage reaches `origin/main`, or
 
 Blocked on tasks 1, 2, 3 and 5: this is the commit AC3 names, so every governed file fits before it.
 
-- [ ] `scripts/lint-governing-size.sh`: compute `AGENTS.md`'s and the constitution's ceilings as ⌈size ÷ 1,000⌉ × 1,000 at this commit's index; add the `framework/commands/*.md` and `framework/reference/*.md` rows at 50,000, enumerated with `':(glob)'` pathspecs, and a glob matching no indexed file fails with its own message
+- [ ] `scripts/lint-governing-size.sh`: write `AGENTS.md`'s and the constitution's ceilings into `CEILINGS` as literals, each ⌈size ÷ 1,000⌉ × 1,000 of the file as this commit stages it, never derived when the script runs; add the `framework/commands/*.md` and `framework/reference/*.md` rows at 50,000, enumerated with `':(glob)'` pathspecs, and a glob matching no indexed file fails with its own message
 - [ ] `scripts/tests/test-lint-governing-size.sh`: seed every case's tree with one small command and reference file and case A with every indexed one; for each row, one byte over fails naming file, size, ceiling and fix, and exactly at passes; a command file no row names is governed; an empty glob fails; H re-aimed as the plan says; each case shown to fail with its row removed
 - [ ] The header and table comments in the script, `.githooks/pre-commit`'s and `framework-checks.yml` step (o)'s name the governed set and 089
 - [ ] Prose-claim sweep for "both ceilings", "50,000" beside `AGENTS.md` or the constitution, and the lint's governed set, in the live-artifact set (`scripts/stale-literals.sh`, and a meaning search of `.ductus/docs/`, `docs/`, `README.md`, `framework/`)
