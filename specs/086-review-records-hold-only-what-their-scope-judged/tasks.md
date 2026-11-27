@@ -63,6 +63,32 @@ Tasks 1 to 3 landed as `1718c8c1`, `96e2e2dc` and `63817dcb`. Call `spec_ownersh
 
 `spec_ownership::of_specs` is the `all` walk. Once this task calls it, nothing in `runtime/src/primitives/spec_ownership.rs` is dead, so the module's `cfg_attr(not(test), expect(dead_code))` fails as an unfulfilled expectation: remove the attribute in this task's commit.
 
+Decided while implementing, for the plan's `prune-review` decision when this lands. A walk is preview-only and refused with `apply`, as `prune-plan`'s is. An apply names one feature and the `digest` its preview reported: the sha256 of the record as read and of the drops and rewrites derived from it, so a commit that changes what belongs also refuses it, as `changed-since-read`. That makes `/prune --all`'s apply one single-spec ownership walk per record it writes, which is the owner's call and not yet asked. Ask once, with both costs measured by the built CLI: those walks summed over the records a corpus preview lists, against one walk applying with a digest per record. A record whose lists will not splice line by line, such as one written in flow style, is refused with a new `UnsplicableRecord` error; a walk skips it with reason `unsplicable`. The walk's skip reasons are a type of its own, so `SkipReason`, which `prune-tasks` and `prune-plan` share, does not widen.
+
+A dropped deferral changes no gate verdict. `check-review-gate` blocks on the record's stored `must-violations` and `should-violations`, and reads `decisions:` only for its "held by deferral" message suffix; `check-audit-records` reads neither list.
+
+The splice follows how `write-review` renders a record:
+
+- Each list is a `{key}:` line at column 0 with each item opening with a dash at two spaces, continuation lines at four spaces and sub-items at six, and an empty list's key is omitted.
+- The frontmatter text stops before the newline the closing fence holds, so a removal reaching its last line drops one newline.
+- An old Excluded from scope line is ``- `{path}` — {spec}, {spec}`` (`render_excluded` in `git show 64946fe7^:runtime/src/primitives/write_review.rs`).
+
+Read waiver anchors through `process_waivers::read_anchors`, made to return the list it read them from, so prune judges the anchors a run would; that moves anchors in other specs' mutation lists, so run `run.py --check` over every list.
+
+Tests owed beyond the list below:
+
+- a CRLF record, in `runtime/tests/crlf_preservation.rs`;
+- a list emptied losing its key;
+- a removal at the frontmatter's last line;
+- a waiver losing some of its anchors;
+- a flow-style list refused;
+- the digest refusing an apply after a commit changed what belongs;
+- the in-window change, through a `summarize_between` seam as `prune-plan` has;
+- one walk, counted by a test-only `spec_ownership::WALKS`;
+- `runtime/tests/result_sizes.rs`' case, and a round-trip test per result shape.
+
+Every test must be named by a killing mutant in a new `scripts/mutation/prune-review-086.py` (**§Proving a test fails** in `.ductus/docs/agents/developing-ductus.md`).
+
 - [ ] Create `runtime/src/primitives/prune_review.rs`, with `feature` or `all`, preview and `apply` with the previewed digest, as the plan's `prune-review` decision states: `drops`, `rewrites`, skips and refusals, the text splice and its re-parse check, `ReadSnapshot::write_if_unchanged`
 - [ ] Register it at the seven sites **§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md` names, with its argument type, `PRUNE_REVIEW`, `framework/runtime-tools.txt`'s line, and `scripts/gen-configure-mcp.sh` re-run
 - [ ] Tests: a record's entries on files that do not belong are dropped and claimant lines rewritten, every other byte unchanged; a record with nothing to drop or rewrite is not written; a fix-round line is not rewritten; `fix-rounds-open: true` is skipped; an unparseable record or `decisions:` list is refused naming the file, and skipped in the `all` walk; a record changed since the read is refused; `all` makes one ownership walk; `{specs-root}/review.md` is not walked
