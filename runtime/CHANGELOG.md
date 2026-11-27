@@ -239,6 +239,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   copy, so the shipped pre-commit hook refuses a commit that stages one.
   Breaking for a consumer that matched every kind, and for such a commit,
   which passed before.
+- **A ticked criterion a mechanical sweep alone changed keeps its review
+  verdict (spec 066 task 32; the agent's recommendation, adopted by the
+  operator, 2026-11-27).** `compute-review-scope` no longer names in
+  `criteria-owing`, or reads `review-owed: true` for, a labelled criterion
+  whose text at the commit finishing the review run that judged it carried a
+  verdict, whose text on disk is its text at `HEAD`, and which the sweep index
+  of the window between the two commits respells, the rule the analysis
+  record's freshness and the review record's digest apply. A criterion with
+  no label, a run the history does not finish, a history cut short and an
+  edit on disk still owe a review. A spec whose criterion only a path sweep
+  changed reads `review-owed: false` again without a review.
 - **`check-artifacts`, `check-artifact-size` and `write-analysis` state the
   rules `framework/reference/analyze.md` held (spec 089; the agent's
   recommendation, adopted by the operator, 2026-11-27).** `check-artifacts`'

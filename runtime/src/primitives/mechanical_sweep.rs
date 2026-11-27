@@ -42,12 +42,15 @@
 //! flag would make correctness depend on an author remembering to set it,
 //! which `framework/constitution.md` §design-principles rules out.
 //!
-//! The rule has one implementation, read by two callers, both through
+//! The rule has one implementation, read by three callers. Two read it through
 //! `analyze_subjects::exempt_renames`: the analysis record's freshness
 //! (`analyze_subjects::freshness_of`, at `check-review-gate`) and the review
 //! record's digest (`analyze_subjects::review_freshness`, called from
 //! `compute_review_scope::contracts_against_digest`), whose changed contracts
-//! join the scope of a review that runs. Until spec 081 it also decided the review's own staleness, at the
+//! join the scope of a review that runs. The third reads it a text at a time,
+//! through [`SweepIndex::respells`]: the review record's criterion verdicts
+//! (`criterion_verdicts::owing_in`, 066 task 32), so a ticked criterion a sweep
+//! alone changed keeps its verdict. Until spec 081 it also decided the review's own staleness, at the
 //! gate and at release through Family 19 and `check-review-freshness`; until
 //! 2026-11-04 Family 19 carried a Python copy of this rule.
 //!
@@ -93,6 +96,10 @@ type Pair = (String, String);
 pub struct SweepIndex {
     per_file: BTreeMap<String, Option<BTreeSet<Pair>>>,
     repo_wide: BTreeSet<Pair>,
+    /// Whether the window's diff was read whole. [`respells`](SweepIndex::respells)
+    /// reads no path, so it needs this to tell a window with no rewrites from one
+    /// it could not read.
+    read: bool,
 }
 
 impl SweepIndex {
@@ -114,6 +121,7 @@ impl SweepIndex {
         Self {
             per_file: BTreeMap::new(),
             repo_wide: BTreeSet::new(),
+            read: false,
         }
     }
 
@@ -229,7 +237,27 @@ impl SweepIndex {
         Self {
             per_file,
             repo_wide,
+            read: true,
         }
+    }
+
+    /// Whether `new` is `old` respelled by this window's sweep alone: the rule
+    /// [`changed_beyond_spelling`](SweepIndex::changed_beyond_spelling) applies
+    /// to a file's changed lines, applied to one text. Its tokens pair one for
+    /// one, a removed line-number citation is no rewrite, and each rewrite is
+    /// repo-wide or follows from one. The review record's criterion verdicts
+    /// read it, a criterion's text at a time (066 task 32). An index whose diff
+    /// could not be read vouches for nothing.
+    #[must_use]
+    pub fn respells(&self, old: &str, new: &str) -> bool {
+        if !self.read {
+            return false;
+        }
+        pair_run(&[old], &[new]).is_some_and(|pairs| {
+            pairs
+                .iter()
+                .all(|pair| self.repo_wide.contains(pair) || self.explained_by(pair))
+        })
     }
 
     /// Whether `path` differs from the base by more than a repo-wide rename.
@@ -593,7 +621,35 @@ mod tests {
                 .iter()
                 .map(|(a, b)| ((*a).to_string(), (*b).to_string()))
                 .collect(),
+            read: true,
         }
+    }
+
+    /// One text is respelled by the window's sweep alone when its tokens pair one
+    /// for one and each rewrite is repo-wide or follows from one, or its only change
+    /// strips a line-number citation; a rewrite in one file, a token added and an
+    /// index that could not be read are not (066 task 32).
+    #[test]
+    fn a_text_is_respelled_only_by_a_repo_wide_rewrite() {
+        let idx = index(
+            &[],
+            &[(
+                "docs/developing-ductus.md",
+                ".ductus/docs/agents/developing-ductus.md",
+            )],
+        );
+        let before = "`docs/developing-ductus.md`'s procedure names the reference file.";
+        let swept =
+            "`.ductus/docs/agents/developing-ductus.md`'s procedure names the reference file.";
+        assert!(idx.respells(before, swept));
+        assert!(!idx.respells(
+            before,
+            "`docs/developing-ductus.md`'s procedure names the manifest file."
+        ));
+        assert!(!idx.respells(before, "`.ductus/docs/agents/developing-ductus.md`'s procedure names the reference file and row."));
+        assert!(idx.respells("See `a.md:12` for it.", "See `a.md` for it."));
+        assert!(!SweepIndex::unreadable().respells(before, swept));
+        assert!(!SweepIndex::unreadable().respells("See `a.md:12` for it.", "See `a.md` for it."));
     }
 
     #[test]

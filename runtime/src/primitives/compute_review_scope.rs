@@ -300,8 +300,7 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         .filter(|record| record.last_run.is_some());
     // A stale digest no longer holds the record: a changed contract owes an
     // analysis, and a review only for code (spec 081) or a criterion (066 task 27).
-    let criteria_owing =
-        super::criterion_verdicts::owing_in(&feature_dir.join("spec.md"), record.as_present())?;
+    let criteria_owing = super::criterion_verdicts::owing_in(repo, &rel_dir, record.as_present())?;
     let review_owed = owes_a_review(run, &owed_by, &criteria_owing);
 
     Ok(ReviewScope {
@@ -4811,6 +4810,168 @@ mod tests {
         )
         .unwrap();
         assert_eq!(file["criteria-owing"], serde_json::json!(["AC1"]));
+    }
+
+    /// The criterion a review judged met, before a sweep respells its path.
+    const JUDGED: &str = "`docs/a.md` names the reference file.";
+    /// [`JUDGED`] as the sweep `docs/a.md` → `docs/b/a.md` leaves it.
+    const SWEPT: &str = "`docs/b/a.md` names the reference file.";
+
+    /// 001-x `done`, its AC1 reading `judged` and judged met as [`JUDGED`] by a run
+    /// whose record is committed with it, beside 002-y and 003-z naming `docs/a.md`;
+    /// then one commit writing each of `after`, a path from the project root and its
+    /// new text, the spec's own criterion by `after_ac1` (066 task 32).
+    fn judged_then(judged: &str, after_ac1: &str, after: &[(&str, &str)]) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let with = |criterion: &str| {
+            format!(
+                "{}\n## Acceptance Criteria\n\n- [x] AC1: {criterion}\n",
+                spec("done")
+            )
+        };
+        write(&tmp.path().join("specs/001-x/spec.md"), &with(judged));
+        for other in ["specs/002-y/spec.md", "specs/003-z/spec.md"] {
+            write(
+                &tmp.path().join(other),
+                &format!("{}\nSee `docs/a.md`.\n", spec("done")),
+            );
+        }
+        let verdict = verdicts_for(&[(&format!("AC1: {JUDGED}"), Some("AC1"))]);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(&format!("{DISPOSITIONS}{verdict}"), "2026-10-01T00:00:00Z"),
+        );
+        commit_all(&repo, "review(001)");
+        write(&tmp.path().join("specs/001-x/spec.md"), &with(after_ac1));
+        for (path, text) in after {
+            write(&tmp.path().join(path), text);
+        }
+        commit_all(&repo, "docs: a sweep");
+        tmp
+    }
+
+    /// The other two specs as the sweep `docs/a.md` → `docs/b/a.md` leaves them.
+    fn swept_elsewhere() -> Vec<(&'static str, String)> {
+        ["specs/002-y/spec.md", "specs/003-z/spec.md"]
+            .into_iter()
+            .map(|path| (path, format!("{}\nSee `docs/b/a.md`.\n", spec("done"))))
+            .collect()
+    }
+
+    /// A ticked criterion whose text a repo-wide sweep alone changed since the run that
+    /// judged it keeps its verdict, so a window of artifacts owes no review; one
+    /// reworded by a rewrite no other file carries owes one, and so does one whose
+    /// sweep left its judged text unjudged (066 task 32).
+    #[test]
+    fn a_criterion_a_sweep_alone_changed_keeps_its_verdict() {
+        let others = swept_elsewhere();
+        let after: Vec<(&str, &str)> = others.iter().map(|(p, t)| (*p, t.as_str())).collect();
+        let swept = x(&judged_then(JUDGED, SWEPT, &after));
+        assert_eq!(swept.criteria_owing, Vec::<String>::new());
+        assert!(!swept.review_owed, "{:?}", swept.owed_by);
+
+        // Same token count, but `reference` → `manifest` is rewritten in this file alone.
+        let reworded = x(&judged_then(
+            JUDGED,
+            "`docs/a.md` names the manifest file.",
+            &after,
+        ));
+        assert_eq!(reworded.criteria_owing, ["AC1"]);
+        assert!(reworded.review_owed);
+
+        // The text the run judged is not the one its record holds a verdict for.
+        let unjudged = x(&judged_then(
+            "`docs/a.md` names the reference files.",
+            "`docs/b/a.md` names the reference files.",
+            &after,
+        ));
+        assert_eq!(unjudged.criteria_owing, ["AC1"]);
+    }
+
+    /// A sweep's exemption is earned from what was committed: an edit left uncommitted
+    /// over a committed sweep, a criterion with no label to find its judged text by,
+    /// and a run whose record was never committed each owe a review (066 task 32).
+    #[test]
+    fn a_criterion_owes_a_review_where_the_sweep_cannot_vouch_for_it() {
+        let others = swept_elsewhere();
+        let after: Vec<(&str, &str)> = others.iter().map(|(p, t)| (*p, t.as_str())).collect();
+
+        // The sweep committed elsewhere, its rewrite of AC1 left on disk alone.
+        let tmp = judged_then(JUDGED, JUDGED, &after);
+        let spec_path = spec_path_of(&tmp);
+        let committed = fs::read_to_string(&spec_path).unwrap();
+        write(&spec_path, &committed.replace(JUDGED, SWEPT));
+        assert_eq!(x(&tmp).criteria_owing, ["AC1"]);
+
+        let tmp = judged_then(JUDGED, SWEPT, &after);
+        let unlabelled = fs::read_to_string(spec_path_of(&tmp))
+            .unwrap()
+            .replace("- [x] AC1: ", "- [x] ");
+        write(&spec_path_of(&tmp), &unlabelled);
+        let repo = Repository::open(tmp.path()).unwrap();
+        commit_all(&repo, "docs: the label goes");
+        assert_eq!(x(&tmp).criteria_owing, ["#0"]);
+
+        // The record on disk only: no commit finishes the run that judged AC1.
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let with = |criterion: &str| {
+            format!(
+                "{}\n## Acceptance Criteria\n\n- [x] AC1: {criterion}\n",
+                spec("done")
+            )
+        };
+        write(&tmp.path().join("specs/001-x/spec.md"), &with(JUDGED));
+        for (path, _) in &after {
+            write(
+                &tmp.path().join(path),
+                &format!("{}\nSee `docs/a.md`.\n", spec("done")),
+            );
+        }
+        commit_all(&repo, "chore: seed");
+        write(&tmp.path().join("specs/001-x/spec.md"), &with(SWEPT));
+        for (path, text) in &after {
+            write(&tmp.path().join(path), text);
+        }
+        commit_all(&repo, "docs: a sweep");
+        let verdict = verdicts_for(&[(&format!("AC1: {JUDGED}"), Some("AC1"))]);
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            &record(&format!("{DISPOSITIONS}{verdict}"), "2026-10-01T00:00:00Z"),
+        );
+        assert_eq!(x(&tmp).criteria_owing, ["AC1"]);
+    }
+
+    /// A history cut short, as in a shallow clone, cannot say which run judged a
+    /// criterion, so a swept one owes a review rather than nothing (066 task 32).
+    #[test]
+    fn a_history_cut_short_leaves_a_swept_criterion_owing() {
+        let others = swept_elsewhere();
+        let after: Vec<(&str, &str)> = others.iter().map(|(p, t)| (*p, t.as_str())).collect();
+        let tmp = judged_then(JUDGED, SWEPT, &after);
+        let record = load_review_record(&tmp.path().join("specs/001-x"));
+        let full = super::super::criterion_verdicts::owing_in(
+            tmp.path(),
+            "specs/001-x",
+            record.as_present(),
+        )
+        .unwrap();
+        assert_eq!(full, Vec::<String>::new());
+        let repo = Repository::open(tmp.path()).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap().id();
+        fs::write(tmp.path().join(".git/shallow"), format!("{head}\n")).unwrap();
+        let cut = super::super::criterion_verdicts::owing_in(
+            tmp.path(),
+            "specs/001-x",
+            record.as_present(),
+        )
+        .unwrap();
+        assert_eq!(cut, ["AC1"]);
+    }
+
+    fn spec_path_of(tmp: &tempfile::TempDir) -> std::path::PathBuf {
+        tmp.path().join("specs/001-x/spec.md")
     }
 
     /// A spec reopened by `edit`, with a review record carrying `fields`.

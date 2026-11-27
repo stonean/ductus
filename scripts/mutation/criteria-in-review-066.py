@@ -103,8 +103,8 @@ MUTATIONS = [
     (
         'M13 a spec.md that cannot be read owes nothing',
         'src/primitives/criterion_verdicts.rs',
-        '    let text = super::read_text(spec_path)?;\n',
-        '    let Ok(text) = super::read_text(spec_path) else {\n        return Ok(Vec::new());\n    };\n',
+        '    let text = super::read_text(&spec_path)?;\n',
+        '    let Ok(text) = super::read_text(&spec_path) else {\n        return Ok(Vec::new());\n    };\n',
         'primitives::criterion_verdicts::tests::an_unreadable_spec_is_an_error_not_a_spec_owing_nothing',
     ),
     (
