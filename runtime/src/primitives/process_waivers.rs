@@ -229,7 +229,7 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
     let mut entries: Option<Vec<departures::Entry>> = None;
 
     for (index, waiver) in waivers.iter().enumerate() {
-        let located = read_anchors(waiver);
+        let located = read_anchors(waiver).map(|(_, located)| located);
         if let Some(field) = first_missing_field(waiver, located.is_some()) {
             classified.notices.push(format!(
                 "malformed waiver at review.waivers[{index}]: missing '{field}'"
@@ -495,14 +495,35 @@ struct Located<'a> {
     kind: Kind<'a>,
 }
 
-/// The entry's anchors, or `None` when it names no usable one. A departure waiver holding a
-/// usable `file` is read by it, one anchor per path covering every site, whatever else it
-/// holds, as `write-review` refreshes it; one holding none is a scoped entry's, read from
-/// its `anchors`, each a non-blank file and site and no count, and malformed when any is
-/// blank or there is none. Any other entry holding `anchors` is read from them alone, and
-/// one holding a blank or unusable anchor, or none, is malformed; otherwise a usable
-/// `file` is one anchor per path, recorded before sites.
-fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
+/// Which list of a stored waiver its anchors are read from: `prune-review` removes a dropped
+/// anchor's item from it (spec 086).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AnchorList {
+    /// The `anchors:` list, one anchor per item.
+    Anchors,
+    /// The `file` value, one anchor per path.
+    File,
+}
+
+/// A well-formed waiver's anchors' files, one per item of the list they are read from and in
+/// its order, as this classifier reads them, so `prune-review` judges the anchors a run
+/// would. `None` for a malformed waiver, which survives every run.
+pub(crate) fn anchor_files(waiver: &RawWaiver) -> Option<(AnchorList, Vec<&str>)> {
+    let (list, located) = read_anchors(waiver)?;
+    first_missing_field(waiver, true)
+        .is_none()
+        .then(|| (list, located.iter().map(|anchor| anchor.file).collect()))
+}
+
+/// The entry's anchors and the list they are read from, or `None` when it names no usable
+/// one. A departure waiver holding a usable `file` is read by it, one anchor per path
+/// covering every site, whatever else it holds, as `write-review` refreshes it; one holding
+/// none is a scoped entry's, read from its `anchors`, each a non-blank file and site and no
+/// count, and malformed when any is blank or there is none. Any other entry holding
+/// `anchors` is read from them alone, and one holding a blank or unusable anchor, or none,
+/// is malformed; otherwise a usable `file` is one anchor per path, recorded before sites.
+/// Each anchor is one item of its list, in order.
+fn read_anchors(waiver: &RawWaiver) -> Option<(AnchorList, Vec<Located<'_>>)> {
     let departure = waiver.departure == Some(true);
     let usable_file = waiver.file.as_ref().is_some_and(|paths| !paths.is_blank());
     if departure && !usable_file {
@@ -520,13 +541,15 @@ fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
                     },
                 })
             })
-            .collect();
+            .collect::<Option<Vec<_>>>()
+            .map(|located| (AnchorList::Anchors, located));
     }
     if !departure && let Some(anchors) = &waiver.anchors {
         if anchors_unusable(anchors) {
             return None;
         }
-        return Some(
+        return Some((
+            AnchorList::Anchors,
             anchors
                 .iter()
                 .filter_map(StoredAnchor::usable)
@@ -535,10 +558,11 @@ fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
                     kind: Kind::Site { site, covers },
                 })
                 .collect(),
-        );
+        ));
     }
     let paths = waiver.file.as_ref().filter(|paths| !paths.is_blank())?;
-    Some(
+    Some((
+        AnchorList::File,
         paths
             .as_slice()
             .iter()
@@ -551,13 +575,13 @@ fn read_anchors(waiver: &RawWaiver) -> Option<Vec<Located<'_>>> {
                 },
             })
             .collect(),
-    )
+    ))
 }
 
 /// One waiver entry, parsed loosely so a malformed entry (missing field) is a
 /// reportable warning rather than a whole-frontmatter parse failure.
 #[derive(Deserialize)]
-struct RawWaiver {
+pub(crate) struct RawWaiver {
     #[serde(default)]
     rule: Option<String>,
     #[serde(default)]
@@ -573,6 +597,13 @@ struct RawWaiver {
     /// Set by `write-review` on a waiver derived from a departure entry.
     #[serde(default)]
     departure: Option<bool>,
+}
+
+impl RawWaiver {
+    /// The waiver's rule, as stored.
+    pub(crate) fn rule(&self) -> Option<&str> {
+        self.rule.as_deref()
+    }
 }
 
 #[cfg(test)]

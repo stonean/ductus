@@ -890,10 +890,19 @@ impl RunScope {
     pub(crate) fn why_unread(&self, path: &str, repo: &Path) -> Option<String> {
         match self {
             Self::Unreadable => Some("this run's scope could not be read".to_string()),
-            Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())
+            Self::Known { .. } => (!self.holds(path) && still_on_disk(repo, path))
                 .then(|| format!("this run did not read `{path}`")),
         }
     }
+}
+
+/// Whether `path`, from the project root, names something on disk, a link counting as
+/// itself wherever it points: a stored entry on such a file says nothing about its finding
+/// while the file is there, and its finding is over once it is gone. [`RunScope::why_unread`]
+/// and `prune-review` share it, so a prune drops what an unrestricted review would (spec
+/// 086, AC4).
+pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {
+    repo.join(path).symlink_metadata().is_ok()
 }
 
 /// The `last-run` a pre-057 `spec.md` states in its `review:` frontmatter block,

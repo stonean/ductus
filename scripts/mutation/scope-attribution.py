@@ -1183,15 +1183,15 @@ MUTATIONS = [
     (
         'M179 a file the run read reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())',
-        'Self::Known { .. } => (repo.join(path).symlink_metadata().is_ok())',
+        'Self::Known { .. } => (!self.holds(path) && still_on_disk(repo, path))',
+        'Self::Known { .. } => (still_on_disk(repo, path))',
         'process_decisions::tests::a_silent_decision_on_a_file_the_run_read_expires',
     ),
     (
         'M180 a file gone from disk reads as unread',
         'src/primitives/compute_review_scope.rs',
-        'Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())',
-        'Self::Known { .. } => (!self.holds(path))',
+        'Self::Known { .. } => (!self.holds(path) && still_on_disk(repo, path))',
+        'Self::Known { .. } => (!self.holds(path) && { let _ = repo; true })',
         'process_decisions::tests::a_silent_decision_on_a_file_gone_from_disk_expires',
     ),
     (

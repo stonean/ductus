@@ -65,18 +65,18 @@ use crate::schema::primitives::{
     MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult,
     MergeStatusHookArgs, MergeStatusHookResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
-    PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
-    PruneTasksResult, ReadReReadArgs, ReadReReadResult, ReadSectionArgs, ReadSectionResult,
-    ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs,
-    RelocateAuditRecordsResult, RemoveInboxItemArgs, RemoveInboxItemResult, RenderHelpArgs,
-    RenderHelpResult, RenderStatusArgs, RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult,
-    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
-    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
-    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult,
-    StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult,
-    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneReviewArgs,
+    PruneReviewResult, PruneTasksArgs, PruneTasksResult, ReadReReadArgs, ReadReReadResult,
+    ReadSectionArgs, ReadSectionResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs,
+    ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult, RemoveInboxItemArgs,
+    RemoveInboxItemResult, RenderHelpArgs, RenderHelpResult, RenderStatusArgs, RenderStatusResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult,
+    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
+    ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs, RetargetSessionsResult,
+    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
+    SetStatusArgs, SetStatusResult, StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
+    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -850,6 +850,19 @@ impl GovRuntimeServer {
         params: Parameters<PrunePlanArgs>,
     ) -> Result<Json<PrunePlanResult>, String> {
         primitives::prune_plan::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "prune-review",
+        description = descriptions::PRUNE_REVIEW
+    )]
+    async fn prune_review(
+        &self,
+        params: Parameters<PruneReviewArgs>,
+    ) -> Result<Json<PruneReviewResult>, String> {
+        primitives::prune_review::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

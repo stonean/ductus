@@ -98,6 +98,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__prune-tasks`
    - `mcp__ductus__prune-plan`
    - `mcp__ductus__prune-project`
+   - `mcp__ductus__prune-review`
    - `mcp__ductus__dashboard`
    - `mcp__ductus__render-status`
    - `mcp__ductus__render-help`

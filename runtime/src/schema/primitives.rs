@@ -5582,6 +5582,189 @@ pub struct PrunePlanResult {
     pub lists_file: Option<String>,
 }
 
+// -- prune-review ------------------------------------------------------------
+
+/// Args for `prune-review`. Reports what a feature's `review.md` holds that its next
+/// unrestricted review would not carry, and on `apply` removes it — or, with `all`, does
+/// so for every feature's from one walk of the history (spec 086). See
+/// `specs/041-task-pruning/data-model.md` §`prune-review`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneReviewArgs {
+    /// Feature directory name under the spec root. Exactly one of `feature` and `all` is
+    /// given.
+    #[serde(default)]
+    #[arg(long)]
+    pub feature: Option<String>,
+    /// Every feature's `review.md` instead of one, from one walk of the history.
+    #[serde(default)]
+    #[arg(long)]
+    pub all: bool,
+    /// Write the drops and rewrites the preview reported. When false (the default) the
+    /// primitive is a pure preview and writes nothing.
+    #[serde(default)]
+    #[arg(long)]
+    pub apply: bool,
+    /// The `digest` one feature's preview reported, which its apply requires and compares
+    /// with the edits it derives again, refusing when they differ. Refused with `all`.
+    #[serde(default)]
+    #[arg(long)]
+    pub digest: Option<String>,
+    /// Under `all`, each record's `digest` from the walk's preview, keyed by its feature:
+    /// an applying walk writes a record only when its edits are still the ones its digest
+    /// names, and leaves one it holds no digest for unwritten. Refused with `feature`. On
+    /// the CLI, `--digests-json FILE`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[arg(skip)]
+    pub digests: BTreeMap<String, String>,
+    /// CLI-only: path to a JSON file, read from a staging directory, holding the
+    /// `digests` argument as the MCP tool takes it.
+    // `#[serde(skip)]` keeps it out of the MCP schema, as
+    // `PruneProjectArgs::replace_json` is.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub digests_json: Option<String>,
+}
+
+/// Which list of a review record an entry is dropped from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReviewRecordList {
+    /// `decisions:`.
+    Decisions,
+    /// `waivers:`.
+    Waivers,
+}
+
+/// One stored decision, or one waiver anchor, `prune-review` drops: on a file still on
+/// disk that does not belong to the spec.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReviewRecordDrop {
+    /// The list it is dropped from.
+    pub list: ReviewRecordList,
+    /// A decision's key, or a waiver's rule.
+    pub entry: String,
+    /// The file it is anchored to.
+    pub file: String,
+}
+
+/// One feature's `prune-review` summary. Compact: no entry's text beyond its key, rule
+/// and file.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneReviewSummary {
+    /// Repo-relative path to the review record.
+    pub path: String,
+    /// The feature has no `review.md`: nothing was examined and nothing is written.
+    pub missing: bool,
+    /// The record carries `fix-rounds-open: true`, so it is left as it is for the run
+    /// that holds it, and nothing is examined or written.
+    pub fix_rounds_open: bool,
+    /// Each decision and waiver anchor dropped. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub drops: Option<Vec<ReviewRecordDrop>>,
+    /// Entries in `drops`, in either form.
+    pub drops_count: usize,
+    /// How many `## Excluded from scope` lines still name the specs that claimed their
+    /// path, each rewritten as the path alone. A count, never a list: the record's text,
+    /// which the digest covers, decides them.
+    pub rewrites_count: usize,
+    /// Lowercase-hex sha256 of the record as read and of the drops derived from it,
+    /// which an apply passes back; absent when nothing was examined.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<String>,
+    /// Whether the spec's files could be told: `not-examined`, as in a shallow clone,
+    /// drops nothing, and `ownership-reason` says why. Absent when nothing was examined.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership: Option<OwnershipState>,
+    /// Why ownership was not examined, present only then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership_reason: Option<String>,
+    /// Whether the record was written: `false` on a preview, and on an apply with
+    /// nothing to drop or rewrite.
+    pub applied: bool,
+    /// Size of the record as read.
+    pub size_before: SizeSummary,
+    /// Size with the drops and rewrites made: on an apply, the size written.
+    pub size_after: SizeSummary,
+}
+
+/// Why a `prune-review` walk passed over a feature.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReviewSkipReason {
+    /// The feature has no `review.md`.
+    NoReviewRecord,
+    /// The record carries `fix-rounds-open: true`, held for its run.
+    FixRoundsOpen,
+    /// The record, or its `decisions:` or `waivers:` list, could not be read.
+    RecordUnreadable,
+    /// The record is, or lies under, a link leaving the project: never read or written.
+    OutsideProject,
+    /// The record could not be pruned without rewriting what it does not drop.
+    Unsplicable,
+    /// An applying walk's edits for the record are not those its digest names, or the
+    /// record changed between the read and the write: it was not written, and the other
+    /// writer's change stands (`BE-TXN-002`). A preview reads it as it now is.
+    ChangedSinceRead,
+}
+
+/// A feature a `prune-review` walk passed over, and why.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReviewSkipped {
+    /// Feature directory name.
+    pub feature: String,
+    /// Why it was passed over.
+    pub reason: ReviewSkipReason,
+    /// The error, for a record that could not be read or pruned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+/// A `prune-review` walk over every feature under the spec root, in corpus order.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneReviewWalk {
+    /// Feature directories walked, skipped ones and ones with nothing to prune
+    /// included.
+    pub examined: u32,
+    /// Each feature with a drop, a rewrite, or ownership not examined, in corpus order,
+    /// `applied` on each an applying walk wrote. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub features: Option<Vec<PruneWalkEntry<PruneReviewSummary>>>,
+    /// Entries in `features`, in either form.
+    pub features_count: usize,
+    /// Each feature passed over, with the reason. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped: Option<Vec<ReviewSkipped>>,
+    /// Entries in `skipped`, in either form.
+    pub skipped_count: usize,
+}
+
+/// Result for `prune-review`: one feature's summary at the top level, or under `all` the
+/// walk, the halves sharing no key, and `form` and `lists-file` the result's own.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneReviewResult {
+    /// The named feature's summary; absent under `all`.
+    #[serde(flatten)]
+    pub summary: Option<PruneReviewSummary>,
+    /// Every feature's preview; absent when one feature was named.
+    #[serde(flatten)]
+    pub walk: Option<PruneReviewWalk>,
+    /// Where the half's lists are (`drops` and `rewrites`; under `all`, `features` and
+    /// `skipped`): in this result, or past `[artifacts] read-size-bytes` in the file
+    /// `lists-file` names.
+    #[serde(default)]
+    pub form: ListsForm,
+    /// In the file form, the file holding the lists whole, from the project root: a JSON
+    /// object with their keys.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lists_file: Option<String>,
+}
+
 // -- prune-project -----------------------------------------------------------
 
 /// Args for `prune-project`. Segments the four project files — `AGENTS.md`

@@ -26,9 +26,9 @@ use ductus::schema::primitives::{
     ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
     LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MeasureReopeningsArgs,
     MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
-    ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneReviewArgs,
+    PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs,
+    ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
     ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
     RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
@@ -244,6 +244,8 @@ enum Command {
     PrunePlan(PrunePlanArgs),
     #[command(about = descriptions::summary(descriptions::PRUNE_PROJECT), long_about = descriptions::PRUNE_PROJECT)]
     PruneProject(PruneProjectArgs),
+    #[command(about = descriptions::summary(descriptions::PRUNE_REVIEW), long_about = descriptions::PRUNE_REVIEW)]
+    PruneReview(PruneReviewArgs),
     #[command(about = descriptions::summary(descriptions::GATE_CONFIRM), long_about = descriptions::GATE_CONFIRM)]
     GateConfirm(GateConfirmArgs),
     #[command(about = descriptions::summary(descriptions::DASHBOARD), long_about = descriptions::DASHBOARD)]
@@ -1608,6 +1610,14 @@ fn main() -> ExitCode {
         }
         Command::PruneTasks(args) => emit_result(primitives::prune_tasks::run(&args, &repo)),
         Command::PrunePlan(args) => emit_result(primitives::prune_plan::run(&args, &repo)),
+        Command::PruneReview(mut args) => match hydrate_field(
+            "digests-json",
+            args.digests_json.as_ref(),
+            &mut args.digests,
+        ) {
+            Ok(()) => emit_result(primitives::prune_review::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
         Command::PruneProject(mut args) => match hydrate_prune_project(&mut args) {
             Ok(()) => emit_result(primitives::prune_project::run(&args, &repo)),
             Err(err) => emit_result::<(), String>(Err(err)),

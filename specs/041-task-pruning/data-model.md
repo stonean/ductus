@@ -241,7 +241,7 @@ Result for one feature (a **compact summary — never the file body**):
 
 ### The write guard
 
-Every apply of the three primitives is a read-modify-write, so each guards the
+Every apply of the four primitives is a read-modify-write, so each guards the
 window between its read and its rename (`BE-TXN-002`) by a compare before
 persist: it keeps what it read, and the write reads the file again under one
 project-wide advisory lock and renames the result over it only when the two
@@ -259,12 +259,12 @@ that window and does not close it. The helper, its strategy and its bounds are
 
 What a refusal reports:
 
-- **A single file** — `prune-tasks` for one feature and `prune-plan` — fails
-  the call with the `changed-since-read` operational error naming the file; no
-  result summary is returned and nothing is written.
-- **A `prune-tasks` walk** (`all` with `apply`) writes every other spec and
+- **A single file** — `prune-tasks` and `prune-review` for one feature, and
+  `prune-plan` — fails the call with the `changed-since-read` operational error
+  naming the file; no result summary is returned and nothing is written.
+- **A `prune-tasks` or `prune-review` walk** (`all` with `apply`) writes every other spec and
   lists each refused spec in `skipped` with reason `changed-since-read`, so its
-  `features` (the lines whose `applied` is `true`) and its `skipped` say what it
+  `features` (the entries whose `applied` is `true`) and its `skipped` say what it
   wrote and what it refused.
 - **`prune-project`**, which rewrites the four project files and their parts, goes on past a refused
   file and reports `written` (the files rewritten) and `refused` (the files
@@ -557,6 +557,39 @@ section count is `sections-examined`, and why `form` and `lists-file` belong
 to the result, declared after the halves so they stay last on the wire, and
 to neither half. A result deserializes back through its type with both
 intact, in either form.
+
+## `prune-review`
+
+The deterministic half of `/{project}:prune`'s review-record step (spec 086, AC3 and AC5). It reads a feature's `review.md`, never `{specs-root}/review.md`, which has no spec, and judges each entry by 086's ownership walk, made once per call. The rules are `ductus prune-review --help`'s; the shape:
+
+```json
+{ "feature": "041-task-pruning", "apply": true, "digest": "5be1…" }
+{ "all": true, "apply": true, "digests": { "041-task-pruning": "5be1…" } }
+```
+
+```json
+{
+  "path": "specs/041-task-pruning/review.md", "missing": false, "fix-rounds-open": false,
+  "drops": [ { "list": "decisions", "entry": "bug: … — `src/x.rs`", "file": "src/x.rs" },
+             { "list": "waivers", "entry": "SEC-BE-014", "file": "src/x.rs" } ],
+  "drops-count": 2, "rewrites-count": 31, "digest": "5be1…",
+  "ownership": "examined", "applied": false,
+  "size-before": { "lines": 900, "bytes": 61234 },
+  "size-after":  { "lines": 860, "bytes": 52010 },
+  "form": "inline"
+}
+```
+
+- `drops` — each decision by its key and each waiver anchor by its rule, on a file still on disk that does not belong to the spec. An entry on a deleted file is left for the next unrestricted review to expire (AC4), a malformed entry survives, and a waiver whose anchors all drop goes whole.
+- `rewrites-count` — the `## Excluded from scope` lines still naming their path's claimants, each rewritten as the path alone. A count, never a list, since the digest covers the record and nothing reads the paths (086's plan).
+- `digest` — the sha256 of the record as read and of `drops`, so a commit that changes what belongs refuses an apply as a change to the record does.
+- `ownership` — `not-examined`, with `ownership-reason`, drops nothing; rewrites still apply.
+
+A walk takes the shape in *Walking every spec*: `features` lists each record with a drop, a rewrite or ownership not examined, as the summary above, and `skipped` gives `no-review-record`, `fix-rounds-open`, `record-unreadable`, `outside-project`, `unsplicable` and, under `apply`, `changed-since-read`, with the error as `detail`. An applying walk writes each record whose edits are still those its `digests` entry names, skips one whose edits differ, leaves unwritten one it holds no digest for, and refuses a key naming no feature directory before it writes.
+
+The edit removes and rewrites lines, never re-serializing, and is read back: any difference beyond the drops, in any field or either list, is the `unsplicable-record` error, as a list in flow style gives. A record that does not parse is refused, held by `fix-rounds-open: true` or not.
+
+Operational errors: `feature-not-found`; `missing-argument` (neither `feature` nor `all`, or an apply without its `digest` or `digests`); `invalid-argument` (both; a digest without `apply`; `digest` with `all` or `digests` with `feature`; a `digests` key naming no feature); `invalid-path`; `missing-frontmatter`, `unclosed-frontmatter` or `yaml`; `unsplicable-record`; `changed-since-read`; and `invalid-read-size` or `toml`, read before any write.
 
 ## `prune-project`
 

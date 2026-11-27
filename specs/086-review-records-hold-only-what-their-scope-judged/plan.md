@@ -104,19 +104,20 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 
 ### `prune-review` reduces a record between reviews (AC3, AC5)
 
-- **A new primitive.** `prune-tasks` and `prune-plan` each own one file, and their results already carry two flattened halves (**§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md`). A third file's half on either would mislead by name. It costs the seven registration sites that section counts, an argument type in `runtime/src/schema/primitives.rs`, a description, `framework/runtime-tools.txt`'s line, and each layout's allow entry, which `scripts/gen-configure-mcp.sh` regenerates.
+- **A new primitive.** `prune-tasks` and `prune-plan` each own one file, and their results already carry two flattened halves (**§Adding or removing a runtime primitive** in `.ductus/docs/agents/developing-ductus.md`). A third file's half on either would mislead by name. It costs the seven registration sites that section counts, an argument type in `runtime/src/schema/primitives.rs`, a description, `framework/runtime-tools.txt`'s line, and the `claude-style` layout's allow entry, which `scripts/gen-configure-mcp.sh` regenerates; pi's bridge lists the server's tools when it loads, so it takes no entry.
 - **Preview.** `feature`, or `all` for every feature's `review.md`, with `{specs-root}/review.md` excluded since it has no spec. With `all` there is one ownership walk. For each record it lists:
-  - `drops`: each `decisions:` entry, by `key_anchor`, and each waiver anchor, by its `file`, on a file that does not belong. A deleted file's entry is not dropped here, and it expires at the next unrestricted review (AC4).
-  - `rewrites`: each `## Excluded from scope` line of the form ``- `{path}` — {claimants}`` whose tail is a comma-separated list every token of which `parse_feature_dir` reads, as written before `64946fe7`. A line ending `— left out of fix round {n}` is not rewritten.
-  - The record's digest, and `ownership`.
+  - `drops`: each `decisions:` entry, by `key_anchor`, and each waiver anchor, read by `process_waivers::anchor_files` as the classifier reads it, on a file that does not belong. A malformed entry is never judged. The on-disk test is the one a review's run applies (`still_on_disk`, which `RunScope::why_unread` calls), so a prune drops what an unrestricted review would: a deleted file's entry is not dropped here, and it expires at the next unrestricted review (AC4).
+  - `rewrites-count`: each `## Excluded from scope` line, outside fenced blocks and HTML comments, of the form ``- `{path}` — {claimants}`` whose tail is a comma-separated list every token of which `parse_feature_dir` reads, as written before `64946fe7`. A line ending `— left out of fix round {n}` is not rewritten. A count, never a list: over this repository at `c0cdd75e` the 10,640 paths were 546,974 of the walk's 688,549 compact bytes, and nothing reads them, since the digest covers the record (the agent's recommendation, adopted by the operator, 2026-11-26).
+  - The record's digest, the sha256 of the record as read and of its drops, so a commit that changes what belongs refuses an apply as a change to the record does; and `ownership`.
 - **Skips and refusals.**
   - A record carrying `fix-rounds-open: true` is skipped with reason `fix-rounds-open`.
-  - A record `load_review_record` reads as `Unreadable`, or whose `decisions:` list `read_decisions` refuses, is refused naming the file. That is an error for one `feature`, and a `skipped` entry with its reason in the `all` walk, which goes on.
+  - A record whose frontmatter does not parse as a review record, or whose `decisions:` or `waivers:` list does not, is refused naming the file, held by `fix-rounds-open: true` or not. A record behind a link leaving the project is refused as an invalid path. A record whose lists will not splice line by line, as one in flow style, is refused with `UnsplicableRecord`. Each is an error for one `feature`, and a `skipped` entry in the `all` walk, which goes on, with reason `record-unreadable`, `outside-project` or `unsplicable` and the error as `detail`. The walk's skip reasons are a type of their own, so `SkipReason`, which `prune-tasks` and `prune-plan` share, does not widen.
   - Ownership not examined drops nothing, and the record is reported with its reason.
 - **Apply.** `apply` with the previewed digest re-derives the same edits from a fresh `ReadSnapshot` read. It refuses when the digest differs, and writes with `write_if_unchanged`, so a concurrent review's write is refused rather than lost (`BE-TXN-002`; 041's data model, *The write guard*).
+- **An applying walk.** `all` with `apply` takes `digests`, each listed record's digest keyed by its feature (on the CLI `--digests-json FILE`), and makes one ownership walk. It writes each record whose edits its digest still names. One whose edits differ, or that changed before its write, is skipped as `changed-since-read` and the others are written, as `prune-tasks`' walk does. One it holds no digest for is listed unwritten, and a key naming no feature directory refuses the call before any write (the agent's recommendation, adopted by the operator, 2026-11-26).
 - **Byte-identical elsewhere.**
   - The edit splices text: it removes each dropped list item's lines from the frontmatter, and a waiver whose every anchor is dropped goes whole. It also replaces each rewritten line.
-  - It then parses the result and compares it with the original record less the dropped entries. On any difference it refuses as an internal error and writes nothing.
+  - It then reads the result back against the original record less the drops: every other frontmatter field compared as a YAML value, an open-schema field included, and both lists through their readers. On any difference it refuses with `UnsplicableRecord` and writes nothing.
   - A record with nothing to drop or rewrite is not written.
 - **Status.** A `review.md` edit owes no work, so the spec's status is unchanged. Its analysis goes stale, and no gate reads that on a `done` spec (086's Resolved Questions).
 
@@ -151,13 +152,13 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `runtime/src/primitives/spec_ownership.rs` | Create | The files a spec owns; one walk for many specs |
-| `runtime/src/primitives/mod.rs` | Modify | Declare the two modules |
-| `runtime/src/primitives/compute_review_scope.rs` | Modify | `RunScope` from a resolved scope; owned files on a first review; `ownership` |
+| `runtime/src/primitives/mod.rs` | Modify | Declare the two modules; `recorded_list_in`; `UnsplicableRecord` |
+| `runtime/src/primitives/compute_review_scope.rs` | Modify | `RunScope` from a resolved scope; owned files on a first review; `ownership`; `still_on_disk` |
 | `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope; its tests' window |
 | `runtime/src/primitives/write_review/departure_waivers.rs` | Modify | A departure's tests where an outcome outside the scope is refused |
 | `runtime/src/primitives/write_review/project_record.rs` | Modify | The project record refuses the same way |
 | `runtime/src/primitives/process_decisions.rs` | Modify | `dropped`, `ownership`, the new retained class |
-| `runtime/src/primitives/process_waivers.rs` | Modify | `dropped`, `ownership` |
+| `runtime/src/primitives/process_waivers.rs` | Modify | `dropped`, `ownership`; `anchor_files` |
 | `runtime/src/primitives/prune_review.rs` | Create | The record reduction |
 | `runtime/src/schema/primitives.rs` | Modify | New fields and `prune-review`'s argument and result types |
 | `runtime/src/schema/descriptions.rs` | Modify | Five descriptions |
@@ -166,6 +167,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/interpreter/mod.rs` | Modify | Its dispatch arm; the exec review tests' window |
 | `runtime/src/main.rs` | Modify | Its command |
 | `runtime/tests/result_sizes.rs` | Modify | Cases for the new lists and the primitive |
+| `runtime/tests/crlf_preservation.rs` | Modify | `prune-review` keeps CRLF |
 | `runtime/tests/mcp.rs` | Modify | The MCP write's window; a read size above a first review's file form |
 | `runtime/tests/walker.rs` | Modify | The exec waiver tests' window |
 | `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the review command's edit and a first review's scope |
@@ -175,14 +177,14 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `scripts/mutation/first-review-scope-086.py` | Create | The first review's owned files' mutants |
 | `scripts/mutation/outcomes-outside-the-scope-086.py` | Create | The refusal's mutants |
 | `scripts/mutation/project-record-084.py` | Modify | An anchor `RunScope::of` moved |
-| `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal and `RunScope::of` moved |
+| `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal, `RunScope::of` and `still_on_disk` moved |
 | `scripts/mutation/review-drops-unowned-086.py` | Create | The classifiers' drop's mutants |
+| `scripts/mutation/prune-review-086.py` | Create | `prune-review`'s mutants |
 | `scripts/mutation/process-decisions-results-bounded.py` | Modify | An anchor the `dropped` list moved |
 | `scripts/mutation/process-decisions-retained.py` | Modify | Anchors the drop moved |
 | `scripts/mutation/waivers-bounded.py` | Modify | An anchor the `dropped` list moved |
 | `framework/runtime-tools.txt` | Modify | List `prune-review` |
 | `framework/bootstrap/configure/claude.md` | Modify | Regenerated allow entry |
-| `framework/bootstrap/configure/pi.md` | Modify | Regenerated allow entry |
 | `framework/commands/review.md` | Modify | Steps 8 and 9 pass and show `dropped`; step 10 sorts out outcomes outside the scope |
 | `framework/reference/review.md` | Modify | Window and coverage; per-run waiver processing; the passes' brief |
 | `framework/commands/prune.md` | Modify | The review-record step, table row, scope, description |
@@ -215,6 +217,7 @@ This spec adds no `data-model.md`: each shape belongs to its primitive's owner, 
 - **Rejected: a commit's whole paths for every claimant.** This is the method 086's counts used. It gives a multi-spec commit's every path to each spec that claims it, which a review's scope does not, so a decision would be kept on a file its spec's review never reads.
 - **Rejected: a walk cut at each spec directory's first commit.** It is shorter for a young spec. A shared walk would then need an ancestry test per commit and spec to keep one definition.
 - **Rejected: one walk per spec in `prune-review --all`.** It covers 301,702 commits against 5,066 (above).
+- **Rejected: a preview-only walk, each record applied alone.** At `c0cdd75e`, with task 5's code uncommitted, in a `git clone --local` copy with the release build: the walk's preview took 8.0 to 8.2 s over 83 specs (three runs) and listed 61 records, while applying those 61 one at a time took 33.9 s summed (median 0.46 s, 022 the slowest at 2.66 s), one ownership walk and one call each. The applying walk costs one walk, a `digests` argument and a skip reason.
 - **Rejected: extending `prune-plan` or `prune-tasks`.** It saves seven registration sites, and gives a primitive named for one file a write to another.
 - **Rejected: re-serializing the frontmatter after a drop.** That is simpler, but it changes quoting and order in fields the spec requires byte-identical (AC5).
 - **Rejected: membership by literal scope entry in the refusal.** It refuses a finding on a file a first review's plan pattern names.

@@ -197,6 +197,7 @@ fn case(name: &str, ctx: &Context) -> Case {
         | "label-criteria"
         | "process-waivers"
         | "prune-plan"
+        | "prune-review"
         | "prune-tasks"
         | "read-spec"
         | "read-tasks"
@@ -342,6 +343,21 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
             json!({"feature": f}),
             Prep::Unowned,
         )],
+        // `drops` grows with a record's entries on files no spec owns, and a walk's
+        // `features` with the specs holding such a record (spec 086).
+        "prune-review" => vec![
+            ("`all`", json!({"all": true}), Prep::None),
+            (
+                "the subject's record holding entries on files no spec owns past the read size",
+                json!({"feature": f}),
+                Prep::Unowned,
+            ),
+            (
+                "`all`, the subject's record holding entries on files no spec owns",
+                json!({"all": true}),
+                Prep::Unowned,
+            ),
+        ],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),

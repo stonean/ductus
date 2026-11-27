@@ -79,6 +79,7 @@ pub mod process_waivers;
 pub(crate) mod project_parts;
 pub mod prune_plan;
 pub mod prune_project;
+pub mod prune_review;
 pub mod prune_tasks;
 pub mod read_deprecation_labels;
 pub mod read_re_read;
@@ -144,6 +145,19 @@ pub enum PrimitiveError {
     ChangedSinceRead {
         /// The file, as the caller named it (project-relative).
         path: PathBuf,
+    },
+    /// `prune-review` could not remove entries from a review record line by line without
+    /// changing any other byte, as a list written in flow style or a hand edit leaves it
+    /// (spec 086, AC5). Nothing was written.
+    #[error(
+        "{path} cannot be pruned without rewriting what it does not drop: {reason}; \
+         nothing was written, and the spec's next review rewrites the record whole"
+    )]
+    UnsplicableRecord {
+        /// The record, project-relative.
+        path: PathBuf,
+        /// What the splice met.
+        reason: String,
     },
     /// A relocation that wrote some of its files was refused on the next: the
     /// refused file changed since the primitive read it
@@ -1078,6 +1092,21 @@ pub(crate) fn read_recorded_list<T: serde::de::DeserializeOwned>(
         Err(PrimitiveError::MissingFrontmatter { .. }) => return Ok(Vec::new()),
         Err(other) => return Err(other),
     };
+    recorded_list_in(fm_text, &path, key)
+}
+
+/// The list stored under `key` in the frontmatter text `fm_text` of the record at `path`,
+/// as [`read_recorded_list`] reads it, for a caller holding the text it read: an absent key
+/// is an empty list, and a value that will not deserialize into it is an error.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Yaml`] naming `path` when the frontmatter or the list will not parse.
+pub(crate) fn recorded_list_in<T: serde::de::DeserializeOwned>(
+    fm_text: &str,
+    path: &Path,
+    key: &str,
+) -> Result<Vec<T>> {
     serde::de::DeserializeSeed::deserialize(
         KeyedList::<T> {
             key,
@@ -1086,7 +1115,7 @@ pub(crate) fn read_recorded_list<T: serde::de::DeserializeOwned>(
         serde_norway::Deserializer::from_str(fm_text),
     )
     .map_err(|source| PrimitiveError::Yaml {
-        path: path.clone(),
+        path: path.to_path_buf(),
         source,
     })
 }

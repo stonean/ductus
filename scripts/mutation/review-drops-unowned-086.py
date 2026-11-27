@@ -51,8 +51,8 @@ MUTATIONS = [
     (
         'M5 a deleted file reads as unread, so its decision reaches the ownership test',
         'src/primitives/compute_review_scope.rs',
-        '            Self::Known { .. } => (!self.holds(path) && repo.join(path).symlink_metadata().is_ok())',
-        '            Self::Known { .. } => (!self.holds(path) && { let _ = repo; true })',
+        '            Self::Known { .. } => (!self.holds(path) && still_on_disk(repo, path))',
+        '            Self::Known { .. } => (!self.holds(path) && { let _ = (repo, still_on_disk); true })',
         'primitives::process_decisions::tests::a_silent_decision_on_a_deleted_file_expires_and_is_not_dropped',
     ),
     (

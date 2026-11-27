@@ -16,14 +16,6 @@
 //! A history the walk cannot read whole, as in a shallow clone, and a directory
 //! [`parse_feature_dir`] does not recognize are not examined, and never read as
 //! owning nothing (`QUAL-CLAIM-001`).
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "spec 086's tasks 3 to 5 call it; once they do the expectation fails, and \
-                  this attribute goes in that change"
-    )
-)]
 
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -122,15 +114,32 @@ impl<'a> LazyOwnership<'a> {
     }
 
     fn resolve(&self) -> Ownership {
-        let specs_root = match paths::Paths::load(self.repo) {
-            Ok(layout) => layout.specs_root,
-            Err(error) => return not_examined("the project's configuration", &error),
-        };
-        let project = match ProjectRepository::discover(self.repo) {
-            Ok(project) => project,
-            Err(error) => return not_examined("the repository", &error),
-        };
-        of_spec_or_why(&project, self.repo, &specs_root, self.feature)
+        match paths::Paths::load(self.repo) {
+            Ok(layout) => of_spec_at(self.repo, &layout.specs_root, self.feature),
+            Err(error) => not_examined("the project's configuration", &error),
+        }
+    }
+}
+
+/// [`of_spec_or_why`] for the project at `repo`, a repository that cannot be opened not
+/// examined.
+pub(crate) fn of_spec_at(repo: &Path, specs_root: &str, feature: &str) -> Ownership {
+    match ProjectRepository::discover(repo) {
+        Ok(project) => of_spec_or_why(&project, repo, specs_root, feature),
+        Err(error) => not_examined("the repository", &error),
+    }
+}
+
+/// [`of_specs_or_why`] for the project at `repo`, a repository that cannot be opened not
+/// examined for every spec asked about.
+pub(crate) fn of_specs_at(
+    repo: &Path,
+    specs_root: &str,
+    features: &[&str],
+) -> BTreeMap<String, Ownership> {
+    match ProjectRepository::discover(repo) {
+        Ok(project) => of_specs_or_why(&project, repo, specs_root, features),
+        Err(error) => every_not_examined(features, &unread("the repository", &error)),
     }
 }
 
@@ -146,11 +155,43 @@ pub(crate) fn of_spec_or_why(
         .unwrap_or_else(|error| not_examined("the history", &error))
 }
 
+/// [`of_specs`], with a history that could not be read reported as not examined for every
+/// spec asked about, never as specs owning nothing.
+pub(crate) fn of_specs_or_why(
+    project: &ProjectRepository,
+    repo: &Path,
+    specs_root: &str,
+    features: &[&str],
+) -> BTreeMap<String, Ownership> {
+    of_specs(project, repo, specs_root, features)
+        .unwrap_or_else(|error| every_not_examined(features, &unread("the history", &error)))
+}
+
+/// Each of `features` not examined, for `reason`.
+fn every_not_examined(features: &[&str], reason: &str) -> BTreeMap<String, Ownership> {
+    features
+        .iter()
+        .map(|feature| {
+            (
+                (*feature).to_string(),
+                Ownership::NotExamined {
+                    reason: reason.to_string(),
+                },
+            )
+        })
+        .collect()
+}
+
 /// Not examined, because `what` could not be read.
 fn not_examined(what: &str, error: &dyn std::fmt::Display) -> Ownership {
     Ownership::NotExamined {
-        reason: format!("{what} could not be read ({error})"),
+        reason: unread(what, error),
     }
+}
+
+/// Why ownership was not examined when `what` could not be read.
+fn unread(what: &str, error: &dyn std::fmt::Display) -> String {
+    format!("{what} could not be read ({error})")
 }
 
 /// What the spec directory `feature`, under `specs_root`, owns: [`of_specs`] for
@@ -247,6 +288,8 @@ fn walk(
     changed: &mut [BTreeSet<String>],
 ) -> Result<Option<String>> {
     let repository = &project.repository;
+    #[cfg(test)]
+    WALKS.with(|walks| walks.set(walks.get() + 1));
     let head = match repository.head() {
         Ok(head) => head.peel_to_commit()?.id(),
         Err(err) if err.code() == git2::ErrorCode::UnbornBranch => return Ok(None),
@@ -285,6 +328,13 @@ fn walk(
         }
     }
     Ok(None)
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many history walks this thread has made, so a test can see that one call walks
+    /// once whatever the number of specs it asks about.
+    pub(crate) static WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// The first eight hex digits of `oid`, as a commit is named in a message.

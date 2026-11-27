@@ -27,8 +27,8 @@ use std::path::Path;
 use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, BackfillSectionDigestArgs,
-    InvalidateReviewArgs, PruneTasksArgs, RemoveInboxItemArgs, RewriteSpecLinksArgs,
-    WriteAnalysisArgs, WriteReviewArgs,
+    InvalidateReviewArgs, PruneReviewArgs, PruneTasksArgs, RemoveInboxItemArgs,
+    RewriteSpecLinksArgs, WriteAnalysisArgs, WriteReviewArgs,
 };
 
 /// Every `\n` in `text` is preceded by `\r` — i.e. the file is uniformly CRLF
@@ -256,6 +256,79 @@ fn prune_tasks_reset_preserves_crlf() {
     assert!(
         after.contains("<!--"),
         "no template guidance comment: {after}"
+    );
+}
+
+/// Commit every file in `repository`'s work tree with `message`.
+fn commit_all(repository: &git2::Repository, message: &str) {
+    let mut index = repository.index().unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+    let sig = git2::Signature::now("Fixture", "fixture@example.com").unwrap();
+    let parents: Vec<git2::Commit> = repository
+        .head()
+        .ok()
+        .and_then(|head| head.peel_to_commit().ok())
+        .into_iter()
+        .collect();
+    let parents: Vec<&git2::Commit> = parents.iter().collect();
+    repository
+        .commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+        .unwrap();
+}
+
+/// `prune-review` splices lines out of a record's frontmatter and rewrites a line of its
+/// body (spec 086): both halves keep CRLF, a removal at the frontmatter's last line,
+/// whose newline the closing fence holds, included.
+#[test]
+fn prune_review_preserves_crlf() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    let repository = git2::Repository::init(repo).unwrap();
+    fs::create_dir_all(repo.join("src")).unwrap();
+    fs::write(repo.join("src/foreign.rs"), "fn f() {}\n").unwrap();
+    commit_all(&repository, "chore: code no spec claims");
+    write_crlf(&repo.join("specs/050-alpha/spec.md"), SPEC);
+    commit_all(&repository, "chore: seed");
+    let record = repo.join("specs/050-alpha/review.md");
+    write_crlf(
+        &record,
+        "---\nspec: 050-alpha\nlast-run: 2026-08-01T00:00:00Z\nblocking: false\ndecisions:\n  \
+         - key: \"bug: a finding — `src/foreign.rs`\"\n    outcome: waived\n    reason: why\n    \
+         decided-at: 2026-08-01T00:00:00Z\n    decided-by: dev@example.com\nwaivers:\n  \
+         - rule: SEC-BE-014\n    anchors:\n      - file: src/foreign.rs\n        site: s\n        \
+         covers: 1\n    reason: why\n    waived-at: 2026-08-01T00:00:00Z\n    \
+         waived-by: dev@example.com\n---\n\n# Review — 050-alpha\n\n## Excluded from scope\n\n\
+         - `src/a.rs` — 050-alpha\n- `src/b.rs`\n",
+    );
+    let args = |apply: bool, digest: Option<String>| PruneReviewArgs {
+        feature: Some("050-alpha".into()),
+        apply,
+        digest,
+        ..PruneReviewArgs::default()
+    };
+    let preview = primitives::prune_review::run(&args(false, None), repo)
+        .unwrap()
+        .summary
+        .unwrap();
+    assert_eq!((preview.drops_count, preview.rewrites_count), (2, 1));
+
+    let applied = primitives::prune_review::run(&args(true, preview.digest), repo)
+        .unwrap()
+        .summary
+        .unwrap();
+    assert!(applied.applied);
+    assert_crlf(&record, "prune-review");
+    // Both halves were rewritten, so the endings checked above are the edited file's.
+    let after = read(&record);
+    assert!(!after.contains("src/foreign.rs"), "{after}");
+    assert!(after.contains("blocking: false\r\n---\r\n"), "{after}");
+    assert!(
+        after.contains("- `src/a.rs`\r\n- `src/b.rs`\r\n"),
+        "{after}"
     );
 }
 

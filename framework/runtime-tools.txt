@@ -67,6 +67,7 @@ label-criteria
 prune-tasks
 prune-plan
 prune-project
+prune-review
 dashboard
 render-status
 render-help
