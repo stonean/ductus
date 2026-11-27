@@ -188,9 +188,9 @@ The provenance tags inside these spans come to about 335 bytes. The fallback spa
 
 The file is projected near 48,500, plus task 4's 820.
 
-- [ ] Cut the copies the plan's *The review reference cuts copies only* names, keeping §Blocking semantics' heading with one pointer line, one line on attribution and the artifact set in §Window and coverage, and every pinned span and heading verbatim
-- [ ] If the result is over 50,000 bytes for any reason, move the four spans the plan names into `discover-rule-files`' and `process-waivers`' descriptions, with a `runtime/CHANGELOG.md` line, and run task 3's runtime checks
-- [ ] `scripts/gen-claude-commands.sh`; `cargo test` for `review_reference_names_the_rule_file_mapping` and `check_step_references`
+- [x] Cut the copies the plan's *The review reference cuts copies only* names, keeping §Blocking semantics' heading with one pointer line, one line on attribution and the artifact set in §Window and coverage, and every pinned span and heading verbatim
+- [x] If the result is over 50,000 bytes for any reason, move the four spans the plan names into `discover-rule-files`' and `process-waivers`' descriptions, with a `runtime/CHANGELOG.md` line, and run task 3's runtime checks
+- [x] `scripts/gen-claude-commands.sh`; `cargo test` for `review_reference_names_the_rule_file_mapping` and `check_step_references`
 
 - **Done when**: `framework/reference/review.md` is at most 50,000 bytes by `wc -c`, every heading a command, `framework/constitution.md`, `AGENTS.md` or another reference points at still exists, and each criterion the plan lists as pinning this file still holds.
 
@@ -219,3 +219,9 @@ Blocked on 086 task 8, the other lane's: it writes 086's `## Cost` section.
 - [ ] Confirm each of 085, 086, 087 and 088 carries a `## Cost` section with a measurable unit and its method, what it retires or why none, and a blockquoted signpost to 089, and that each `## Cost` commit precedes its spec's `status(…): … → done` commit
 
 - **Done when**: all four confirmations hold by `git log` and each spec's text.
+
+## 9. Disposition out-of-spec finding: 060's plan says its review window starts after the reopen's first commit
+
+- [ ] `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — its line on reviewing 022 says the window "is measured after the reopen's first commit, as the review reference's (`framework/reference/review.md`) §Window and coverage requires"; since 084's AC7 a review window starts where the spec's last review ended (`compute-review-scope`), so the claim has been stale since 084, found by task 5's draft
+
+- **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task

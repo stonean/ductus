@@ -40,7 +40,7 @@ Bytes are by `wc -c`, or by a Python split on headings outside fences summing to
 | `AGENTS.md` | 49,820 | 32,400 to 37,000 | 49,000 | the cut's size rounded up to the next 1,000 |
 | `framework/constitution.md` | 49,911 | about 48,700 to 49,000 | 49,000 | the cut's size rounded up to the next 1,000 |
 | `framework/reference/analyze.md` | 69,387 | 49,748 (cut) | 50,000 | 50,000 |
-| `framework/reference/review.md` | 65,138 | about 48,500, plus 086 task 4's addition | 50,000 | 50,000 |
+| `framework/reference/review.md` | 65,138 | 49,256 (cut, from 65,740 after 086 task 4) | 50,000 | 50,000 |
 | `framework/reference/implement.md` | 14,055 | 14,055 (unchanged) | 50,000 | 50,000 |
 
 A ceiling is computed from the file's size at the commit that sets it: ⌈size ÷ 1,000⌉ × 1,000. AC2 holds each governing ceiling below 50,000, so each governing document must end at or under 49,000.
@@ -117,7 +117,7 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
 
 ### The review reference cuts copies only
 
-- **Out** (about 16,600 net), all text the inventory found that a description, the constitution or `framework/commands/review.md` already states, with no description growing.
+- **Out**: the reference goes from 65,740 to 49,256 bytes. Everything cut is text that a description, the constitution or `framework/commands/review.md` already states, and no description grows. Kept, against the inventory: the finding-shape block and the `fix-rounds` entry shapes, which only argument-schema doc comments state; the exempt-path sentence, which 058's scenario `findings-cost-in-proportion-to-risk` places in *Fix-round loop*; and the two bold pointers that are the only step references reaching *Run review passes* and *Record the run in `review.md`*.
 - **Blocking semantics** keeps its heading and a one-line pointer to §spec-lifecycle's gate, evaluated by `check-review-gate`. So `framework/commands/review.md`'s pointer at that section, `check_step_references`' exempt list and 071's scenario `reference-sections-are-reached-by-a-step` stay true.
 - **Kept verbatim.**
   - Text the ticked criteria of 020 (AC16, AC18), 024 (AC8), 071 (AC13), 073 (AC14), 076 (AC6, AC16), 081 (AC4, AC11) and 087 (AC3) name.
