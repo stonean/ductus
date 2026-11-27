@@ -112,7 +112,7 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '                finding.rule == entry.rule\n                    && in_scope(&finding.file)\n',
         '                finding.rule == entry.rule\n',
-        'departure_waivers::a_violation_outside_the_review_scope',
+        'departure_waivers::a_violation_on_a_path_the_window_carries_in_is_accepted_and_still_counts',
     ),
     (
         'M17 a stored departure waiver is not refreshed from its entry',
@@ -289,6 +289,6 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '                    && !entry_decides(entry, finding)\n                    && departures.in_scope(args, file)',
         '                    && !entry_decides(entry, finding)',
-        'departure_waivers::the_rule_firing_in_a_covered_file_outside_the_scope',
+        'departure_waivers::the_rule_firing_in_a_covered_file_the_window_carries_in_is_no_notice',
     ),
 ]

@@ -1415,6 +1415,102 @@ fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
     assert_eq!(waivers(tmp.path()), [] as [Value; 0]);
 }
 
+/// Commit a full review's record that left `src/out.rs` unread, then a later run's record,
+/// at `HEAD`, that skipped a pass and left nothing unread. The window still starts where the
+/// full review ended, so the default window carries `src/out.rs` in from the record it
+/// starts at, while the scope resolved from that same base as `--since` reads only the
+/// record at `HEAD` (spec 079, AC30). `src/a.rs` changes in the window. Returns the base.
+fn carried_by_the_window_start(dir: &Path, repository: &Repository) -> String {
+    let record = |last_run: &str, extra: &str| {
+        format!(
+            "---\nspec: {FEATURE}\nlast-run: {last_run}\nmust-violations: 0\n\
+             should-violations: 0\nblocking: false\ndispositions:\n  fixed: 0\n  deferred: 0\n  \
+             waived: 0\n  undispositioned: 0\n{extra}---\n\n# Review — {FEATURE}\n"
+        )
+    };
+    let rel = format!("specs/{FEATURE}/review.md");
+    write(
+        dir,
+        &rel,
+        &record("2026-11-10T00:00:00Z", "unread:\n  - src/out.rs\n"),
+    );
+    commit(repository, "review(001): a run that left src/out.rs unread");
+    write(dir, "src/a.rs", "fn g() {}\n");
+    write(
+        dir,
+        &rel,
+        &record(
+            "2026-11-11T00:00:00Z",
+            "skipped-passes:\n  - quality\nunread: []\n",
+        ),
+    );
+    commit(repository, "review(001): a run that skipped a pass");
+    let scope = crate::primitives::compute_review_scope::compute(
+        &crate::schema::primitives::ComputeReviewScopeArgs {
+            feature: FEATURE.to_string(),
+            since: None,
+        },
+        dir,
+    )
+    .unwrap();
+    assert!(
+        scope.scope.iter().any(|path| path == "src/out.rs"),
+        "the default window carries src/out.rs in: {:?}",
+        scope.scope
+    );
+    scope.diff_base
+}
+
+/// A finding on a path the run's own window carries in, one the record the window starts
+/// at left unread, is the run's to record, so `write-review` accepts it (spec 086, AC1). A
+/// departure entry does not waive it: the entry decides only in the scope resolved from the
+/// diff base as `--since`, which leaves out what that record handed on, so the finding stays
+/// counted while the one in the window is waived (spec 020's `waiver-expiry`; 086's plan,
+/// *Departures are unchanged*).
+#[test]
+fn a_violation_on_a_path_the_window_carries_in_is_accepted_and_still_counts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(tmp.path(), MUST_ENTRY);
+    let base = carried_by_the_window_start(tmp.path(), &repository);
+    let findings = [
+        finding(MUST_RULE, "must", "src/a.rs"),
+        finding(MUST_RULE, "must", "src/out.rs"),
+    ];
+    let (_, written) = run_review(tmp.path(), &findings, T1, &json!({"diff-base": base}));
+    assert_eq!(written.must_violations, 1, "{written:?}");
+    assert!(written.blocking);
+    assert_eq!(written.waived, 1, "{written:?}");
+    let stored = waivers(tmp.path());
+    assert_eq!(stored.len(), 1, "{stored:?}");
+    assert_eq!(files_of(&stored[0]), ["src/a.rs"]);
+}
+
+/// Spec 073's Edge Cases: the rule firing, at a site the entry does not cover, in a covered
+/// file the run's own window carries in is no notice, since the entry's scope does not hold
+/// that file; the finding is accepted and stays counted (spec 086, AC1).
+#[test]
+fn the_rule_firing_in_a_covered_file_the_window_carries_in_is_no_notice() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repository = fixture(
+        tmp.path(),
+        "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/out.rs` in `walk`\n",
+    );
+    let base = carried_by_the_window_start(tmp.path(), &repository);
+    let (_, written) = run_review(
+        tmp.path(),
+        &[at_site("src/out.rs", Some("other"))],
+        T1,
+        &json!({"diff-base": base}),
+    );
+    assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
+    assert_eq!(
+        (written.waived, written.must_violations),
+        (0, 1),
+        "{written:?}"
+    );
+    assert_eq!(waivers(tmp.path()), [] as [Value; 0]);
+}
+
 /// Spec 073's Edge Cases and `BE-INPUT-004`: a covered file reached through a symbolic
 /// link leaving the project is named and never probed, so the notice is the same whether
 /// or not the link's target holds the file.

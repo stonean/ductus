@@ -74,7 +74,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
   - A gating one (a MUST or SHOULD violation, or a broken contract) is fixed in the run when the fix is mechanical. Otherwise it is deferred to the home **§Groom decision tree** in `.ductus/reference/groom.md` chooses, put to the operator one at a time. `spec_ownership` names the specs whose files they are.
   - Any other outcome is named in the run's report and recorded nowhere.
   - **§Passes in a subagent** in `framework/reference/review.md` tells the passes to mark each outcome on a file outside the scope as such, so the host sorts the hand-back before step 11 rather than meeting the refusal there.
-- **Departures are unchanged.** `Departures::in_scope` resolves `compute` with `--since` the diff base. That scope is the one AC1 tests, less what the run's own window carries in (open findings, unread entries; spec 079), so its filter still excludes a finding on a carried path. 073 is not impacted.
+- **Departures are unchanged.** `Departures::in_scope` resolves `compute` with `--since` the diff base. When the diff base is the default window's own start, the scope AC1 tests is that window's, which also holds what the record the window starts at hands on (its unread entries, and a held record's open findings; spec 079, AC30), and the `--since` scope leaves that out, so the departure's filter still excludes a finding there. What the record at `HEAD` leaves open or unread is in both, and with any other base the two scopes are one. 073 is not impacted.
 
 ### Review drops what does not belong (AC2, AC3, AC4)
 
@@ -155,7 +155,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/primitives/mod.rs` | Modify | Declare the two modules; `recorded_list_in`; `UnsplicableRecord` |
 | `runtime/src/primitives/compute_review_scope.rs` | Modify | `RunScope` from a resolved scope; owned files on a first review; `ownership`; `still_on_disk` |
 | `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope; its tests' window |
-| `runtime/src/primitives/write_review/departure_waivers.rs` | Modify | A departure's tests where an outcome outside the scope is refused |
+| `runtime/src/primitives/write_review/departure_waivers.rs` | Modify | A departure's tests where an outcome outside the scope is refused, and on a path the window carries in |
 | `runtime/src/primitives/write_review/project_record.rs` | Modify | The project record refuses the same way |
 | `runtime/src/primitives/process_decisions.rs` | Modify | `dropped`, `ownership`, the new retained class |
 | `runtime/src/primitives/process_waivers.rs` | Modify | `dropped`, `ownership`; `anchor_files` |
@@ -179,6 +179,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `scripts/mutation/project-record-084.py` | Modify | An anchor `RunScope::of` moved |
 | `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal, `RunScope::of` and `still_on_disk` moved |
 | `scripts/mutation/review-drops-unowned-086.py` | Create | The classifiers' drop's mutants |
+| `scripts/mutation/departure-waivers.py` | Modify | M16 and M41 named by the carried-path tests |
 | `scripts/mutation/prune-review-086.py` | Create | `prune-review`'s mutants |
 | `scripts/mutation/process-decisions-results-bounded.py` | Modify | An anchor the `dropped` list moved |
 | `scripts/mutation/process-decisions-retained.py` | Modify | Anchors the drop moved |
