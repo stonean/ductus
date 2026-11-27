@@ -113,7 +113,7 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
   - The managed roots under *Project-level consistency*, which `check-orphaned-references`' description does not name.
   - *Line-number citations*' scope line, which 067's AC5 says the reference states.
   - *Finding dispositions*' order line, which the constitution's *Detect, decide, re-check, record* points at.
-- **Its cost.** Every `/analyze` run loads all three descriptions (the generated `.claude/commands/ductus/analyze.md`'s `select:` line), so a run reads 3,018 more bytes. No golden holds a description, and `runtime/tests/mcp.rs`' description test compares each tool's text with its subcommand's `long_about`, which share the constant. The 4,096-character bound there applies to `/target`'s always-loaded tools, none of these three.
+- **Its cost.** Every `/analyze` run loads all three descriptions (the generated `.claude/commands/ductus/analyze.md`'s `select:` line), so a run reads 3,018 more bytes. No golden holds a description (`grep -rlF` of each constant's opening under `runtime/tests/golden/` finds none), and `runtime/tests/mcp.rs`' description test compares each tool's text with its subcommand's `long_about`, which share the constant. The 4,096-character bound there applies to `/target`'s always-loaded tools, none of these three (`the_tools_targets_steps_name_are_always_loaded_and_no_other_is`, over the tools carrying `ALWAYS_LOAD_META` in `runtime/src/mcp/server.rs`).
 
 ### The review reference cuts copies only
 
@@ -139,7 +139,7 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
   - Two cases are new: a command file the table never names is governed from its first commit, and a glob matching no indexed file fails.
   - Case H now asserts that the glob rows equal `DEFAULT_READ_SIZE_BYTES` and that each governing ceiling is below it and a multiple of 1,000.
   - Each case is shown to fail with its row removed (`QUAL-TEST-001`).
-- **Where it runs.** The hook and `framework-checks.yml` already run both scripts on every commit and push, with no path filter.
+- **Where it runs.** `.githooks/pre-commit` runs the lint, last, on every commit, and `framework-checks.yml` step (o) runs the lint and its test on every push, under that workflow's *No `paths:` filter* comment.
 
 ### 089 states its own cost
 
