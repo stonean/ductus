@@ -169,7 +169,7 @@ fi
 # H. the glob rows copy a runtime constant, and each governing ceiling sits
 # below it at a whole thousand, as spec 089 sets them.
 RUNTIME_SRC="$REPO_ROOT/runtime/src/primitives/check_artifact_size.rs"
-runtime_default="$(grep -o 'DEFAULT_READ_SIZE_BYTES: u64 = [0-9_]*' "$RUNTIME_SRC" 2>/dev/null | head -n 1 | sed 's/.*= //; s/_//g')"
+runtime_default="$(grep -o 'DEFAULT_READ_SIZE_BYTES: u64 = [0-9_]*' "$RUNTIME_SRC" 2>/dev/null | head -n 1 | sed 's/.*= //; s/_//g' || true)"
 if [ -z "$runtime_default" ]; then
   fail "H: DEFAULT_READ_SIZE_BYTES not found in $RUNTIME_SRC — nothing to compare the ceilings with"
 elif [ "$runtime_default" != "$COMMANDS_CEILING" ] || [ "$runtime_default" != "$REFERENCE_CEILING" ]; then

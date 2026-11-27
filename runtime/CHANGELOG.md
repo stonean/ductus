@@ -211,7 +211,8 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   link-adjacent drift scans, exempts and reports, and the scope, candidate
   grammar and skips of both path families. It also says a line-number
   citation in an HTML comment is read. `check-artifact-size`'s says bytes are
-  a proxy and which values are refused, and `write-analysis`' names the two
+  a proxy, which values are refused, and that none has a maximum, and
+  `write-analysis`' names the two
   constitution reasons it adds itself. The reference keeps a pointer, and
   no behavior changes.
 - **An edit to one rule re-judges that rule and the rules naming it, not its

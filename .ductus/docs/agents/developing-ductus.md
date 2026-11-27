@@ -62,7 +62,7 @@ Gate the commit on every check's exit status, mutants included, in one script: a
    - a test fixture copying a contract string the change narrowed;
    - a reader still dropping what the change's rule says to report.
 
-   A re-read finds such slips one round at a time, and each costs the round's budget, so do these three things first, for an artifact-only change too:
+   A re-read finds such slips one round at a time, and each costs the round's budget, so do these first, for an artifact-only change too:
    - **Every literal the diff removes or replaces** is listed with each remaining hit in the live-artifact set AGENTS.md lists by `scripts/stale-literals.sh BASE`.
      - BASE is the commit the change starts from: `HEAD` before a commit, a fix round's base before its brief.
      - It covers backticked spans and multi-digit figures. Search by hand for any other literal the diff replaces, passing the paths as an array, since zsh does not split an unquoted one.

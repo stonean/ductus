@@ -18,14 +18,14 @@ Implements [089 — The pipeline's own cost is stated and bounded](spec.md).
 - **AC1.** A §design-principles bullet states the cost rule. It lands in the commit that cuts the constitution, since the constitution sat 89 bytes under its 50,000-byte ceiling.
 - **AC3.** Four files are cut to fit, in this order: `AGENTS.md`, whose entries can route into a part; the constitution, whose rules can move into a reference; then `framework/reference/analyze.md` and `framework/reference/review.md`.
 - **AC2.** `scripts/lint-governing-size.sh` then gains its lowered ceilings and two glob rows, all in the commit where every governed file already fits.
-- **AC4.** Closes once 086 states its cost, since 085, 087 and 088 already do.
+- **AC4.** 085, 086, 087 and 088 each state their cost, which task 8 confirms.
 
 ## Technical Decisions
 
 ### The cost rule is a §design-principles bullet (AC1)
 
 - **Placement.** Beside *Use what a task needs*, so the section's preamble makes it a hard filter (spec, Resolved Questions). It reads, in substance: a spec that adds a check, an audit-record field or a primitive states what a run of it costs, in a unit it can measure (model turns, bytes loaded, commits or wall time), and which check, field or primitive it retires, or why none.
-- **Who it binds.** It binds every spec not `done` when it lands (spec, Resolved Questions). At planning those are 060, 066, 086 and 089 (`status:` of every `specs/*/spec.md`, 2026-11-27):
+- **Who it binds.** It binds every spec not `done` when it lands (spec, Resolved Questions). When it landed those were 060, 066, 086 and 089 (`status:` of every `specs/*/spec.md` at `24ca810b`):
   - **086** is AC4's, and is its task 8.
   - **089** adds ceilings on 30 files to a check, so it states its own cost.
   - **060**'s task 15 adds a judgment to `scripts/analyze/`, so it is bound once this lands, which its task 15's own ordering puts before it.
@@ -33,12 +33,12 @@ Implements [089 — The pipeline's own cost is stated and bounded](spec.md).
 
 ### The byte ledger, cut in feeding order (AC3)
 
-Bytes are by `wc -c`, or by a Python split on headings outside fences summing to `wc -c`, at `d963a791`. A reference's figures come from an inventory that read each file whole: 386 of 386 lines and 838 of 838. Each section's bytes were classed by route against the compiled descriptions in `runtime/src/schema/descriptions.rs` and the command files. `AGENTS.md`'s and the constitution's come from the 2026-11-25 inventory in the spec's Resolved Questions, which no cut has verified.
+Bytes are by `wc -c`, or by a Python split on headings outside fences summing to `wc -c`, at `d963a791`. A reference's figures come from an inventory that read each file whole: 386 of 386 lines and 838 of 838. Each section's bytes were classed by route against the compiled descriptions in `runtime/src/schema/descriptions.rs` and the command files. `AGENTS.md`'s and the constitution's ends are their cuts' sizes, at `4a4ab858` and `24ca810b`.
 
-| File | Now | End (estimated) | Must end at or under | Ceiling |
+| File | Now | End | Must end at or under | Ceiling |
 | --- | --- | --- | --- | --- |
-| `AGENTS.md` | 49,820 | 32,400 to 37,000 | 49,000 | the cut's size rounded up to the next 1,000 |
-| `framework/constitution.md` | 49,911 | about 48,700 to 49,000 | 49,000 | the cut's size rounded up to the next 1,000 |
+| `AGENTS.md` | 49,820 | 38,673 (cut) | 49,000 | 39,000, the cut's size rounded up to the next 1,000 |
+| `framework/constitution.md` | 49,911 | 48,999 (cut) | 49,000 | 49,000, the cut's size rounded up to the next 1,000 |
 | `framework/reference/analyze.md` | 69,387 | 49,748 (cut) | 50,000 | 50,000 |
 | `framework/reference/review.md` | 65,138 | 49,256 (cut, from 65,740 after 086 task 4) | 50,000 | 50,000 |
 | `framework/reference/implement.md` | 14,055 | 14,055 (unchanged) | 50,000 | 50,000 |
@@ -176,9 +176,6 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 - **Removing *Blocking semantics*' heading.** It would save about 100 bytes more, at the cost of an edit to `check_step_references`' test, to `framework/commands/review.md` and to 071's scenario.
 - **Moving Family 18's lists and *Record fields*.** These are 1,970 bytes the cut does not need. The move would re-aim `marker-list-parity.sh` at a Rust string, reword 071's ticked AC10, and amend the constitution's audit-records subsection, "Field semantics: each command's reference".
 - **A ratchet test holding each governing ceiling to its file's rounded size.** AC2 sets the ceiling at the cut, and a ratchet would fail an unrelated commit that shrank a file by 1,000 bytes.
-- **Known limitations.**
-  - `AGENTS.md`'s and the constitution's end sizes are estimates until the cuts run; their ceilings are computed from the result, not the estimate.
-  - 089's AC4 closes only after the other lane's 086 task 8.
 
 ## Cross-spec impact
 
@@ -186,9 +183,9 @@ Each discharge is a blockquoted signpost back-linking 089, a blockquote so it ad
 
 - **050** owns the constitution's content: the cost bullet, the lowered ceiling, and the two `/implement` bullets now a pointer to the implement reference. AC15's note owes 050 one review, before the release tag.
 - **072** owns the lint: the lowered ceilings and the two glob rows. Its AC1 and AC10 still hold, since a lower ceiling still keeps each file at most 50,000 bytes and no higher than its size when the check was added.
-- **075**: `AGENTS.md`'s ceiling is below the read size and its cut ran through `/prune --project`.
+- **075**: `AGENTS.md`'s ceiling is below the read size and its cut ran through `/prune --project`. Its question on each file's limit says 50,000 bytes was this repository's `AGENTS.md` figure until 089 set 39,000.
 - **079** (added to `cross-spec-impact:`): 089 holds each reference to the read size, which 079's Resolved Question on AC18 rejected (2026-11-16) before the copies were measured.
-  - That question gets a signpost.
+  - That question gets a signpost, and so does *Can a reference stop stating a primitive's rules?*, whose dropped-not-moved route the analyze cut reversed.
   - AC18's "later specs' requirements may grow them past it" gets a *Superseded in part* note, worded as the answer 086 task 7 records for 084's correction rule says, or asked of the owner if none is recorded yet.
   - A reworded ticked criterion owes a review, so the note costs one review of 079 (`compute-review-scope` reads it `review-owed`). It lands with or after 086 task 7's notes on 079's AC6 and AC24, so one review of 079 covers all three. That review is owed before the release tag, as every open spec's is.
 - **063, 066, 067** (added to `cross-spec-impact:`): own `check-artifact-size`, `write-analysis` and `check-artifacts`, whose descriptions take the moved rules. No behavior changes.
