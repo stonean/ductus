@@ -23,7 +23,7 @@
 //! Two step shapes gate, and step type decides which rule applies:
 //!
 //! - A `Step::Primitive` whose name is `gate-confirm` IS a blocking gate
-//!   by virtue of the primitive — phrase or no phrase (prune.md step 6's
+//!   by virtue of the primitive — phrase or no phrase (prune.md step 7's
 //!   shape). The walker emits the `gate-confirm` envelope itself and
 //!   awaits the `gate-response`; it does not dispatch through
 //!   [`dispatch_primitive`].
@@ -879,7 +879,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             // A gate exists to authorize the writes after it, so a confirmed
             // one binds `apply` for every later primitive. Without it, a
             // primitive that previews unless told to apply — `prune-tasks` at
-            // prune.md step 7 — would preview a second time, and the walk
+            // prune.md step 8 — would preview a second time, and the walk
             // would complete having written nothing.
             self.gate_confirmed = true;
             Ok(None)

@@ -65,7 +65,7 @@ AC1's test and homes go in §drift-prevention *Shared knowledge stays in git*, a
 | `framework/templates/project/events.md` | Modify | Header pointer |
 | `framework/templates/project/errors.md` | Modify | Header pointer |
 | `framework/bootstrap/hooks/ductus-pre-commit` | Modify | Staged size step and its capability probe |
-| `framework/commands/prune.md` | Modify | `--project` walk; step 8 routing (041's task) |
+| `framework/commands/prune.md` | Modify | `--project` walk; step 9 routing (041's task) |
 | `framework/reference/prune.md` | Modify | Markdown-only project-file walk (041's task) |
 | `framework/commands/analyze.md` | Modify | Step 17 passes `project-files` (063's task) |
 | `framework/reference/analyze.md` | Modify | §Artifact size (advisory) covers the project files (063's task) |
@@ -109,6 +109,6 @@ This spec adds no `data-model.md`: each shape belongs to the primitive's owner. 
 | Spec | Owes | Discharged by |
 | --- | --- | --- |
 | `063-oversized-artifacts-warn-with-a-fix` | Project subject set, staged mode, `/analyze` advisory | Its scenario back-linking this spec, and its task |
-| `041-task-pruning` | `/prune --project`, `prune-project`, step 8 routing | Its scenario back-linking this spec, and its task |
+| `041-task-pruning` | `/prune --project`, `prune-project`, step 9 routing | Its scenario back-linking this spec, and its task |
 | `055-shared-constitution` | `/target`'s size report | Its scenario back-linking this spec, and its task |
 | `050-constitution` | AC1 and AC13 text with an offsetting cut; its succinctness scenario's sweep rule | Its scenario back-linking this spec, and its task |

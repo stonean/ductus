@@ -100,9 +100,9 @@ Every test must be named by a killing mutant in a new `scripts/mutation/prune-re
 
 This task's Done when runs `/ductus:prune`, which calls `prune-review` through the MCP server, and a running session keeps the binary it started with. After task 5 lands: `cargo build --release --locked` in `runtime/`, `scripts/gen-claude-commands.sh`, then restart the session.
 
-- [ ] `framework/commands/prune.md`: `prune-review` in the preview, render, its own confirm and apply step after the plan sections, "nothing to prune" needing no drop or rewrite, the `review.md` row, Scope Boundaries, description and `ToolSearch` line; `--project` does not run it
-- [ ] `scripts/gen-help-tables.sh`'s prune entry if its description changes, then `scripts/gen-help-tables.sh` and `scripts/gen-claude-commands.sh` re-run, and any golden the edit moves re-blessed alone and read
-- [ ] Read `docs/slash-commands.md`'s prune entry whole and correct any sentence saying prune never writes `review.md`
+- [x] `framework/commands/prune.md`: `prune-review` in the preview, render, its own confirm and apply step after the plan sections, "nothing to prune" needing no drop or rewrite, the `review.md` row, Scope Boundaries, description and `ToolSearch` line; `--project` does not run it
+- [x] `scripts/gen-help-tables.sh`'s prune entry if its description changes, then `scripts/gen-help-tables.sh` and `scripts/gen-claude-commands.sh` re-run, and any golden the edit moves re-blessed alone and read
+- [x] Read `docs/slash-commands.md`'s prune entry whole and correct any sentence saying prune never writes `review.md`
 
 - **Done when**: a `/ductus:prune` run over a fixture spec whose record holds an entry on a file that does not belong shows the drop, writes it on confirmation and nothing when declined, and the commit records each registry layout's impact (`claude-style`, `pi`).
 

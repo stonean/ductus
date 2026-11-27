@@ -317,7 +317,7 @@ named that `check-owed-work` no longer reports owed, such as a `--reset` that
 removed the unchecked boxes it came from, is not performed. A spec the run
 wrote nothing to keeps its status. A declined section is skipped
 for that run, and the prompt names a fold under a design-record heading as the lasting keep.
-The write surface is `tasks.md`, `plan.md`, the home `prune.md` step 8 routes
+The write surface is `tasks.md`, `plan.md`, the home `prune.md` step 9 routes
 moved project-only knowledge to, and status through `set-status`; knowledge that holds more widely is named
 for the operator to route where §drift-prevention's *Shared knowledge stays
 in git* sends it, and never written by prune. A missing `tasks.md`

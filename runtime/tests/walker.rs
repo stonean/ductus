@@ -854,7 +854,7 @@ fn file_form_process_waivers_reaches_write_review_whole() {
 
 /// Gate convention, primitive shape: a `gate-confirm` primitive step IS a
 /// blocking gate by virtue of the primitive — no "ask the user to
-/// approve" phrase required (prune.md step 6's shape). Denial is a clean
+/// approve" phrase required (prune.md step 7's shape). Denial is a clean
 /// `complete` with `confirmed: false`, and later steps never run.
 #[test]
 fn gate_confirm_primitive_step_blocks_without_the_phrase() {
@@ -1001,7 +1001,7 @@ fn prune_command_gate_blocks_on_the_exec_path() {
     .unwrap();
     let procedure = ductus::parser::parse(&source, "prune").expect("prune.md parses");
 
-    // Step numbers follow the document (1..10) and step 6 is the gate.
+    // Step numbers follow the document (1..12) and step 7 is the gate.
     let numbers: Vec<Vec<u32>> = procedure
         .steps
         .iter()
@@ -1011,15 +1011,16 @@ fn prune_command_gate_blocks_on_the_exec_path() {
             | Step::Prose { number, .. } => number.0.clone(),
         })
         .collect();
-    assert_eq!(numbers, (1..=10).map(|n| vec![n]).collect::<Vec<_>>());
-    match &procedure.steps[5] {
+    assert_eq!(numbers, (1..=12).map(|n| vec![n]).collect::<Vec<_>>());
+    match &procedure.steps[6] {
         Step::Primitive { name, .. } => assert_eq!(name, "gate-confirm"),
-        other => panic!("prune.md step 6 must be the gate-confirm primitive, got {other:?}"),
+        other => panic!("prune.md step 7 must be the gate-confirm primitive, got {other:?}"),
     }
 
     // Walk against a throwaway repo: preview (step 2) reads tasks.md, the
-    // plan preview (step 3) finds no plan, the gate (step 6) blocks, and
-    // denial stops before the apply (step 7).
+    // plan preview (step 3) finds no plan, the review-record preview (step 4)
+    // finds no record, the gate (step 7) blocks, and denial stops before the
+    // apply (step 8).
     let tmp = tempfile::tempdir().unwrap();
     let feature_dir = tmp.path().join("specs/001-basic");
     std::fs::create_dir_all(&feature_dir).unwrap();
@@ -1058,10 +1059,12 @@ fn prune_command_gate_blocks_on_the_exec_path() {
         .collect();
     // progress(step-1 resolve-session, spec 062), progress(step-2
     // prune-tasks preview), progress(step-3 prune-plan preview),
-    // gate-confirm(step-6), progress(denied), complete(confirmed: false).
+    // progress(step-4 prune-review preview, spec 086), gate-confirm(step-7),
+    // progress(denied), complete(confirmed: false).
     assert_eq!(
         types,
         vec![
+            "progress",
             "progress",
             "progress",
             "progress",
@@ -1076,8 +1079,10 @@ fn prune_command_gate_blocks_on_the_exec_path() {
     assert_eq!(envelopes[1]["step"], "2");
     assert_eq!(envelopes[2]["primitive"], "prune-plan");
     assert_eq!(envelopes[2]["step"], "3");
-    assert_eq!(envelopes[3]["gate"], "step-6");
-    assert_eq!(envelopes[5]["result"]["confirmed"], false);
+    assert_eq!(envelopes[3]["primitive"], "prune-review");
+    assert_eq!(envelopes[3]["step"], "4");
+    assert_eq!(envelopes[4]["gate"], "step-7");
+    assert_eq!(envelopes[6]["result"]["confirmed"], false);
 
     // The denied gate wrote nothing. A confirmed one writes (below), so this
     // can fail.
@@ -1085,9 +1090,9 @@ fn prune_command_gate_blocks_on_the_exec_path() {
     assert_eq!(after, tasks_body, "tasks.md must be untouched after denial");
 }
 
-/// A confirmed gate authorizes the write after it: prune.md step 7 runs
+/// A confirmed gate authorizes the write after it: prune.md step 8 runs
 /// `prune-tasks` with `apply`, so the spent section goes and the pending one
-/// stays. Before the walker bound `apply` at a confirmed gate, step 7
+/// stays. Before the walker bound `apply` at a confirmed gate, step 8
 /// previewed a second time and the walk completed having written nothing.
 #[test]
 fn prune_command_applies_after_a_confirmed_gate() {
