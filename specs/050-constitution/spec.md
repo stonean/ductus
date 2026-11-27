@@ -24,6 +24,8 @@ it, how it is structured, and what reaches adopters through it.
 > **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) amended the constitution. §spec-phase's tree names a project file's parts under `.ductus/docs/{file}/` and the file as their index; §drift-prevention's routing sends architecture to a project file or a part of one and a procedure to a part of `AGENTS.md` in `.ductus/docs/agents/`, and *No dead references* counts project files and their parts as live artifacts; the canonical-sources table names 087 for a project file's index and parts.
 >
 > **Signpost:** [088 — Rule judgments cost only what changed](../088-rule-judgments-cost-only-what-changed/spec.md) added two fields to the analyze record row of §text-first-artifacts, `rules-judged` and `rules-carried`, the loaded rules a run judged and the stored verdicts it carried.
+>
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) amended the constitution. §design-principles gained the cost bullet: a spec that adds a check, an audit-record field or a primitive states what a run of it costs, in a measurable unit, and which existing one it retires, or why none. §brownfield-inbox's two `/{project}:implement` bullets became a pointer to the implement reference (AC15's note), and `scripts/lint-governing-size.sh` now holds the constitution to 49,000 bytes, the size its cut reached rounded up to the next 1,000.
 
 ## Ownership
 

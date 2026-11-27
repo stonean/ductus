@@ -42,6 +42,8 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 > **Signpost:** [085 — The audit-record gate reads records through the runtime](../085-the-audit-record-gate-reads-records-through-the-runtime/spec.md) gave the records' loaders a corpus caller, `check-audit-records`, which the shipped CI template's audit-record gate runs. `load_record` split into its read and parse halves, `read_record` and `parse_record`, which it composes, so that caller reads each record file once and parses its text into the record and a `blocking` probe; the loaders and their callers are unchanged.
 >
 > **Signpost:** [088 — Rule judgments cost only what changed](../088-rule-judgments-cost-only-what-changed/spec.md) added `rules-judged` and `rules-carried` to the analyze record, which `write-analysis` writes on every record, and narrowed which stored verdicts it carries: a rule file whose digest moved is compared rule by rule at the record's `analyzed-against`. Its `backfill-section-digest` writes `section-digest` outside a run, into a record still current that carries none. Its data model carries the shapes, and [data-model.md](data-model.md)'s `write-analysis` rule-assessment bullet points there.
+>
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) moved the analyze reference's account of the two constitution reasons `write-analysis` adds itself, `constitution-unresolved` and `constitution-registry-unreadable`, into `write-analysis`' description. No behavior changed.
 
 ## Motivation
 

@@ -58,6 +58,8 @@ The fixes a warning names depend on where it fires and on the spec's status:
 - **No warning names a command that does not exist.** No command splits a spec ([/consolidate](../052-spec-supersession-and-consolidation/spec.md) only merges), so a split is described as the manual route it is: create the new spec with `/specify`, move the content into it, and link it from the original.
 
 > **Signpost:** [079](../079-review-and-analysis-work-converges/spec.md) changed which trims reopen a `done` spec: the warning reads a trim as `classify-spec-edit` would, so a `spec.md` trim reopens it only when it changes a criterion or an open question, and a `data-model.md` trim, which edits a contract, always does. Superseded (spec 084): the warning names no per-fix reopen, and states once that a fix reopens a `done` spec only if it leaves an unchecked box or an unticked criterion.
+>
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) moved two rules the analyze reference held into `check-artifact-size`'s description: bytes are a proxy, and a zero or non-numeric read size is refused. No behavior changed. `scripts/lint-governing-size.sh` also holds each `framework/commands/*.md` and `framework/reference/*.md` file to this check's default read size.
 
 ## A waiver re-fires on growth
 

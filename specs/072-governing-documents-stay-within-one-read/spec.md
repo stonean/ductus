@@ -9,6 +9,8 @@ next-criterion: 12
 
 The documents that govern how an agent works in this repository are bounded. `AGENTS.md` is small enough to be read whole in one call and `CLAUDE.md` actually loads it; the constitution, which `050-constitution` cut to one read, can no longer grow past it. Each has an exit: a lesson added past a ceiling retires another in the same change, so the rulebook cannot grow without bound.
 
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) lowered `scripts/lint-governing-size.sh`'s ceilings to 39,000 bytes for `AGENTS.md` and 49,000 for the constitution, each the size its cut reached rounded up to the next 1,000. It added `framework/commands/*.md` and `framework/reference/*.md` rows at the 50,000-byte read size, each enumerated from the index, so a new file is governed from its first commit. A lower ceiling still keeps each file at most 50,000 bytes, so AC1 and AC10 hold.
+
 ## Motivation
 
 Development had slowed, and the cause was compounding process cost rather than any slow component. Every lesson or finding became a permanent rule, check or re-review obligation, and nothing was retired, so each task had to pass a larger review than the last one, and passing it produced new findings. The measurements, taken 2026-10-26 from `git log` and the files on disk:

@@ -120,12 +120,12 @@ The headings `scripts/audit/template-alignment.sh` enumerates must stay verbatim
 
 ## 4. The affected specs link back, and 060 is told
 
-- [ ] 089's `cross-spec-impact:` gains 063, 066, 067 and 079
-- [ ] A blockquoted signpost to 089 in 050, 063, 067, 072 and 075, each naming what 089 changed there, as the plan's *Cross-spec impact* says
+- [x] 089's `cross-spec-impact:` gains 063, 066, 067 and 079
+- [x] A blockquoted signpost to 089 in 050, 063, 067, 072 and 075, each naming what 089 changed there, as the plan's *Cross-spec impact* says
 - [ ] Tell the other lane through `SendMessage`, before editing 066's or 079's spec and again once landed, and tell it that once task 6 lands the hook refuses any commit leaving a command or reference file over 50,000
 - [ ] 066's signpost; 079's signpost beside its Resolved Question on AC18, and its AC18 note, worded per the answer 086 task 7 recorded (asked of the owner if none is recorded) and landed with or after 086 task 7's notes, so one review of 079 covers AC6, AC18 and AC24
-- [ ] Append to 060's task 15 a checkbox: state in 060's `spec.md` what a run of the scenario judgment costs and what it retires, or why none, beside a blockquoted signpost to 089 (089's AC1)
-- [ ] `derive-dependencies` reports no drift and no cycle
+- [x] Append to 060's task 15 a checkbox: state in 060's `spec.md` what a run of the scenario judgment costs and what it retires, or why none, beside a blockquoted signpost to 089 (089's AC1)
+- [x] `derive-dependencies` reports no drift and no cycle
 
 - **Done when**: every spec in 089's `cross-spec-impact:` links back to 089, 060's task 15 carries the checkbox, and `derive-dependencies` reports every affected spec's `dependencies:` unchanged and no cycle. The review of 079 the note owes runs before the release tag. So does the review of 050 that task 2's AC15 note owes (`compute-review-scope` reads 050 `review-owed`).
 

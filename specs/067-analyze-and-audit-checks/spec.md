@@ -43,6 +43,8 @@ The runtime primitives that check a spec corpus without judging it: the artifact
 `check-corpus-links` reports every relative markdown link in the spec corpus, or the tracked repository, that resolves to nothing. `check-orphaned-references` reports the adopter-owned files that point at a ductus-managed path a migration has moved.
 
 > **Signpost:** [051 — Branch-scoped spec numbering](../051-branch-scoped-spec-numbering/spec.md) widened the scanner this check shares with `rewrite-spec-links` (2026-10-28, its task 30): a managed path behind a prefix that names the project root from the referrer (`./specs/…`, `/specs/…` in a root markdown file, `../specs/…` from the spec root's `system.md`) is now a reference, as `data-model.md` §`check-orphaned-references` states.
+>
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) moved the analyze reference's account of `check-artifacts`' placeholder tokens, plan-title link, link-adjacent scan, both path families' candidate grammar and skips, and the reading of an HTML comment for line-number citations into `check-artifacts`' description. The reference keeps a pointer for each section, and no behavior changed.
 
 ## Audit checks
 

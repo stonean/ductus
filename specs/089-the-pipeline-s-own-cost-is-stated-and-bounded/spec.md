@@ -1,7 +1,7 @@
 ---
 status: in-progress
 dependencies: [050-constitution, 072-governing-documents-stay-within-one-read, 087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file]
-cross-spec-impact: [050-constitution, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs]
+cross-spec-impact: [050-constitution, 063-oversized-artifacts-warn-with-a-fix, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 072-governing-documents-stay-within-one-read, 075-agents-md-holds-what-every-session-needs, 079-review-and-analysis-work-converges]
 next-criterion: 5
 ---
 

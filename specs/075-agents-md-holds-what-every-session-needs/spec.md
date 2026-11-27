@@ -61,6 +61,8 @@ Each records what is true now, never how it came to be, and is as short as the c
 | How a lesson was learned | the commit that added it | never |
 
 > **Signpost:** [087](../087-parts-moved-out-of-a-project-file-are-read-measured-and-pruned-as-that-file/spec.md) changed this table: a procedure leaving `AGENTS.md` goes to a part of it under `.ductus/docs/agents/` in place of `docs/`, measured against `[artifacts] read-size-bytes` and read when its pointer says, and each other project file may keep an index and move its sections into parts of its own.
+>
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) cut this repository's `AGENTS.md` through `/ductus:prune --project`, moving 29 entries into `.ductus/docs/agents/developing-ductus.md`, and `scripts/lint-governing-size.sh` now holds it to 39,000 bytes, below the read size.
 
 An entry that leaves `AGENTS.md` for an on-demand home may leave one pointer line naming the home and when to read it. A pointer counts toward the file's size like any other line.
 

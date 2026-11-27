@@ -18,5 +18,6 @@ Worked once 088 and 089 are `done` and before the release tag (the owner's decis
 
 - [ ] `scripts/analyze/` briefs the host's judgment of each scenario's Context and Behavior that `framework/reference/analyze.md` §Scenario consistency (advisory) asks for, each scenario read whole, as the step-15 reader's brief does for its items; `check.py` holds that read account to every scenario, and `record.py` records each finding as an Advisory `scenario-consistency` finding
 - [ ] `scenarios/rule-judging-runs-from-repo-scripts.md`'s Behavior names that brief among the judgments the scripts brief, and `scripts/tests/test-analyze-scripts.py` fails when it is removed
+- [ ] State in 060's `spec.md` what a run of the scenario judgment costs, in a measurable unit, and what it retires, or why none, beside a blockquoted signpost to 089 (089's AC1)
 
 - **Done when**: an analysis of a spec with scenarios run from `scripts/analyze/` records a judgment of every scenario's Context and Behavior, proven by a test that fails without it
