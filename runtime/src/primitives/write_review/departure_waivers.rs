@@ -1390,11 +1390,11 @@ fn a_covered_site_where_the_rule_does_not_fire_is_no_notice() {
 }
 
 /// Spec 073's Edge Cases: the rule firing in a covered file the tree holds but the run's
-/// scope does not is no notice, and nothing is waived there, since the run did not read
-/// that file. The finding is not the run's to record (spec 086, AC1): `write-review`
-/// refuses it, and the run the host makes without it names no notice.
+/// scope does not is not the run's to record, since the run did not read that file:
+/// `write-review` refuses it, writing nothing (spec 086, AC1). The rule firing in a covered
+/// file the run's own window carries in, which the run does record, is the case below.
 #[test]
-fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
+fn the_rule_firing_in_a_covered_file_outside_the_scope_is_refused() {
     let tmp = tempfile::tempdir().unwrap();
     fixture(
         tmp.path(),
@@ -1405,14 +1405,6 @@ fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
         err.contains("`src/out.rs` is not in the run's scope"),
         "{err}"
     );
-    let (_, written) = run_review(tmp.path(), &[], T1, &json!({}));
-    assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
-    assert_eq!(
-        (written.waived, written.must_violations),
-        (0, 0),
-        "{written:?}"
-    );
-    assert_eq!(waivers(tmp.path()), [] as [Value; 0]);
 }
 
 /// Commit a full review's record that left `src/out.rs` unread, then a later run's record,

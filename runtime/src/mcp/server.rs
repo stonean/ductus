@@ -287,7 +287,10 @@ fn strip_numeric_formats(value: &mut Value) {
 /// full-history `libgit2` revwalk that is likewise
 /// CPU-bound and unbounded in a large adopter repo, so they route here too,
 /// as do `check-review-gate`, which shells out to the markdown linter and
-/// reads history for its rename exemption, `dashboard` and `render-status`,
+/// reads history for its rename exemption, `write-review`, `process-waivers`
+/// and `process-decisions`, which resolve a review's scope and may walk the
+/// history for what a spec owns (spec 086), `prune-review`, which walks it
+/// once for every record, `dashboard` and `render-status`,
 /// which blame the inbox for its oldest item, measure reopenings and walk the
 /// history for unreviewed code,
 /// `merge-status-hook`, which waits on `claude --version` under its probe
@@ -708,9 +711,8 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<ProcessWaiversArgs>,
     ) -> Result<Json<ProcessWaiversResult>, String> {
-        primitives::process_waivers::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::process_waivers::run(&params.0, repo.as_path())).await
     }
 
     #[tool(
@@ -721,9 +723,9 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<ProcessDecisionsArgs>,
     ) -> Result<Json<ProcessDecisionsResult>, String> {
-        primitives::process_decisions::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::process_decisions::run(&params.0, repo.as_path()))
+            .await
     }
 
     #[tool(
@@ -797,9 +799,8 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<WriteReviewArgs>,
     ) -> Result<Json<WriteReviewResult>, String> {
-        primitives::write_review::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::write_review::run(&params.0, repo.as_path())).await
     }
 
     #[tool(
@@ -862,9 +863,8 @@ impl GovRuntimeServer {
         &self,
         params: Parameters<PruneReviewArgs>,
     ) -> Result<Json<PruneReviewResult>, String> {
-        primitives::prune_review::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
+        let repo = Arc::clone(&self.repo);
+        dispatch_blocking(move || primitives::prune_review::run(&params.0, repo.as_path())).await
     }
 
     #[tool(

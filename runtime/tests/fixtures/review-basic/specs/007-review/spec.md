@@ -8,7 +8,8 @@ tags: []
 
 A minimal fixture for the `/ductus:review` exec parity test. Drives the
 `compute-review-scope → discover-rule-files → performReview ×5 →
-process-waivers → write-review` pipeline against a single-commit repo.
+process-waivers → write-review` pipeline against a repo whose harness and
+spec directory land in separate commits.
 
 ## Motivation
 

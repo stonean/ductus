@@ -924,11 +924,13 @@ fn the_corpus_scales_every_dimension() {
     assert_eq!(walk.count(), 3);
 }
 
-/// The parts and move cases each carry what they are named for: on a corpus
-/// read at a size past every result, each mode's result is larger than the
-/// plain call's by more than a few records, so a prep that builds nothing, or
+/// The parts, move and unowned cases each carry what they are named for: on a
+/// corpus read at a size past every result, each mode's result is larger than
+/// the plain call's by more than a few records, so a prep that builds nothing, or
 /// a mode that names no move, measures an empty list and fails here, in
 /// `cargo test`, rather than reading as a bounded result in the table.
+/// `prune-review`'s `all` row grows with the corpus alone, so only its
+/// unowned rows are held to it (spec 086).
 #[test]
 fn the_parts_and_move_modes_each_grow_their_result_past_the_plain_call() {
     let size = CorpusSize {
@@ -944,9 +946,18 @@ fn the_parts_and_move_modes_each_grow_their_result_past_the_plain_call() {
         Outcome::Errored(text) => panic!("the call errored: {text}"),
         Outcome::NotMeasured(reason) => panic!("not measured: {reason}"),
     };
-    for name in ["check-artifact-size", "prune-project"] {
+    for name in [
+        "check-artifact-size",
+        "prune-project",
+        "process-decisions",
+        "process-waivers",
+        "prune-review",
+    ] {
         let plain = chars(&run_case(template.path(), name, &ctx));
-        let moded = modes(name, &ctx);
+        let moded: Vec<_> = modes(name, &ctx)
+            .into_iter()
+            .filter(|(_, _, prep)| name != "prune-review" || matches!(prep, Prep::Unowned))
+            .collect();
         assert!(!moded.is_empty(), "{name} has no mode");
         for (label, args, prep) in moded {
             let grown = chars(&call_on_copy(template.path(), name, &args, prep));

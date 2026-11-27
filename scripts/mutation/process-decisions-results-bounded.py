@@ -70,4 +70,18 @@ MUTATIONS = [
         '        lapsed_count: 0,\n',
         'process_decisions::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),
+    (
+        'M8 dropped stays inline in the file form',
+        'src/primitives/process_decisions.rs',
+        '        result.dropped = None;\n',
+        '',
+        'process_decisions::tests::a_dropped_decision_moves_to_the_file_past_the_read_size',
+    ),
+    (
+        'M9 the list file drops the dropped decisions',
+        'src/primitives/process_decisions.rs',
+        '        "dropped": &classified.dropped,',
+        '        "dropped": Vec::<u8>::new(),',
+        'process_decisions::tests::a_dropped_decision_moves_to_the_file_past_the_read_size',
+    ),
 ]

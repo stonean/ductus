@@ -985,11 +985,12 @@ fn primitive_step_with_gate_phrase_keeps_its_dispatch() {
 }
 
 /// End-to-end coverage for prune.md's confirmation gate on the exec path:
-/// the shipped command file parses with document step numbers 1..10, step 6
+/// the shipped command file parses with document step numbers 1..12, step 7
 /// is a `gate-confirm` primitive (no phrase), and walking the procedure
 /// blocks there — a denied gate leaves tasks.md untouched. The plan preview
-/// at step 3 dispatches with the walker's feature binding, and the fixture's
-/// missing plan does not halt the walk, which goes on to the gate.
+/// at step 3 and the review-record preview at step 4 dispatch with the walker's
+/// feature binding, and the fixture's missing plan and record do not halt the
+/// walk, which goes on to the gate.
 #[test]
 fn prune_command_gate_blocks_on_the_exec_path() {
     let source = std::fs::read_to_string(

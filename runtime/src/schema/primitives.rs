@@ -5754,8 +5754,8 @@ pub struct PruneReviewResult {
     /// Every feature's preview; absent when one feature was named.
     #[serde(flatten)]
     pub walk: Option<PruneReviewWalk>,
-    /// Where the half's lists are (`drops` and `rewrites`; under `all`, `features` and
-    /// `skipped`): in this result, or past `[artifacts] read-size-bytes` in the file
+    /// Where the half's lists are (`drops`; under `all`, `features` and `skipped`): in
+    /// this result, or past `[artifacts] read-size-bytes` in the file
     /// `lists-file` names.
     #[serde(default)]
     pub form: ListsForm,

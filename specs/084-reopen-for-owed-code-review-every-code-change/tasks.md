@@ -25,7 +25,7 @@ Model: opus, with fable as advisor (owner, 2026-11-24).
 - [x] `framework/commands/groom.md` steps 3 and 7 and its Scope line, and `framework/reference/groom.md` §Reopening a `done` spec, the same; its step 6 calls it before it writes `in-progress`
 - [x] A ticked criterion amend would change on a `done` spec, disagreeing with the code, is asked of the owner first (AC3)
 - [x] `framework/commands/fold.md` step 9 reopens a `done` upstream spec only when `check-owed-work` reports owed work, step 10 resets its review only when it is `in-progress` after step 9, step 5's consent names the reopen as conditional, and `framework/reference/fold.md` §Reopening a `done` upstream spec says so
-- [x] `framework/commands/prune.md` step 9 decides on `check-owed-work` for the tree the run left; `prune-plan`'s `reopen-required` stays the preview's prediction
+- [x] `framework/commands/prune.md` step 11 decides on `check-owed-work` for the tree the run left; `prune-plan`'s `reopen-required` stays the preview's prediction
 - [x] A deferral to a `done` spec reopens it only when `check-owed-work` reports owed work: `framework/commands/analyze.md` step 19, `framework/commands/review.md` step 10, `framework/reference/implement.md`'s disposition task, and `framework/reference/analyze.md` §Finding dispositions
 - [x] `/ductus:analyze --fix` no longer reverts a `done` spec for a scenario's open question: `framework/commands/analyze.md`'s description and report step, `framework/reference/analyze.md` §Scenario open questions and `docs/analyze.md`; the finding and the gate's block stay
 - [x] Remove `classify_spec_edit.rs` and its seven registration sites, its schema types, `framework/runtime-tools.txt`'s line, and regenerate `framework/bootstrap/configure/*.md`

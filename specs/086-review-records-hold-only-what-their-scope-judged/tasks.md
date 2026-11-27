@@ -128,7 +128,7 @@ Measure as **§Measuring a run's cost** in `.ductus/docs/agents/developing-ductu
 
 ## 9. The departure's scope filter is tested again
 
-`scripts/mutation/departure-waivers.py` M16 and M41 survive since `96e2e2dc` (re-run at `d963a791`): with `write-review` refusing every outcome outside the run's scope (AC1), `a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived` and `the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice` in `runtime/src/primitives/write_review/departure_waivers.rs` no longer reach `Departures::in_scope`, which still decides a finding on a path the run's own window carries in and a scope given `--since` its diff base does not hold (the plan's *Departures are unchanged*).
+`scripts/mutation/departure-waivers.py` M16 and M41 survive since `96e2e2dc` (re-run at `d963a791`): with `write-review` refusing every outcome outside the run's scope (AC1), `a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived` and `the_rule_firing_in_a_covered_file_outside_the_scope_is_refused` in `runtime/src/primitives/write_review/departure_waivers.rs` no longer reach `Departures::in_scope`, which still decides a finding on a path the run's own window carries in and a scope given `--since` its diff base does not hold (the plan's *Departures are unchanged*).
 
 - [x] Tests: a finding on such a carried path (spec 079's `unread` or `open-findings` from the record the window starts at) is accepted, stays counted and is not waived by a departure entry, and the rule firing there in a covered file gives no notice
 

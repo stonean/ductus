@@ -458,7 +458,7 @@ operator may merge those sharing a rule, reason and author by hand.
 
 Waived findings drop out of the `must-violations` and `should-violations` counts
 and appear in `review.md` under the **Waived findings** section. `process-waivers`'
-description states what one run applies, expires and retains per `(rule, file, site)`
+description states what one run applies, expires, retains and drops per `(rule, file, site)`
 anchor (spec 020's scenario `waiver-expiry`). Line numbers are not part of the
 anchor, so code moving within its site does not expire the waiver. An anchor's
 path is matched literally: a pattern such as `src/**/*.ts` names a path that
@@ -560,7 +560,8 @@ For a violation:
 
 A deferral retires when its finding stops firing or its named work is complete
 (`lapsed`, in `process-decisions`' description), and the violation then needs a
-fix, a waiver, or a new deferral. A new `--defer` naming other work than a
+fix, a waiver, or a new deferral. A review also drops one that did not fire on a
+file the spec does not own (spec 086). A new `--defer` naming other work than a
 standing deferral replaces it as a new decision. A finding holds one disposition
 across runs through step 11's drop lists, and `write-review` refuses one that
 carries both. A departure entry decides over a deferral of its rule's violations

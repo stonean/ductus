@@ -81,7 +81,7 @@ use crate::schema::primitives::{
     FiredFinding, ListsForm, ProcessWaiversArgs, ProcessWaiversResult, WaiverRef,
 };
 
-/// What [`compute`] classifies, whole: the four lists of [`ProcessWaiversResult`] before
+/// What [`compute`] classifies, whole: the five lists of [`ProcessWaiversResult`] before
 /// [`run`] decides where they go.
 #[derive(Debug)]
 pub(crate) struct Classified {
@@ -332,7 +332,7 @@ struct Pass<'a> {
 impl Pass<'_> {
     /// Place one anchor that is not a duplicate, not recorded before sites and not a
     /// departure waiver whose entry is gone: apply it, expire it for a count it does not
-    /// cover, or, when it does not fire, retain or expire it.
+    /// cover, or, when it does not fire, retain, drop or expire it.
     fn place(&self, kind: Kind<'_>, anchor: WaiverRef, shown: &Shown<'_>, out: &mut Classified) {
         let Shown { rule, at, reason } = shown;
         let file_exists = self.repo.join(&anchor.file).exists();
@@ -1036,6 +1036,14 @@ mod tests {
             "{:?}",
             result.notices
         );
+        // The unread scope is the whole reason: ownership is never asked, so the notice
+        // names no ownership test and nothing is dropped (spec 086).
+        assert!(
+            !result.notices[0].contains("whether it belongs"),
+            "{:?}",
+            result.notices
+        );
+        assert_eq!(result.dropped, [] as [WaiverRef; 0]);
     }
 
     #[test]
@@ -1636,7 +1644,36 @@ mod tests {
         .unwrap();
     }
 
-    /// Past `[artifacts] read-size-bytes` the four lists leave the result for the one file
+    /// A dropped anchor moves to the file with the other lists past the read size, so the
+    /// host passes each to `write-review` from there (spec 086).
+    #[test]
+    fn a_dropped_waiver_moves_to_the_file_past_the_read_size() {
+        let tmp = setup_unclaimed_first(
+            "001-x",
+            &list_waiver(&["src/foreign.ts"]),
+            &["src/foreign.ts"],
+            &[],
+            &[],
+        );
+        read_size(tmp.path(), "10");
+        let out = super::run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(out.form, ListsForm::File, "{out:?}");
+        assert_eq!((out.dropped.as_ref(), out.dropped_count), (None, 1));
+        let wire = serde_json::to_value(&out).unwrap();
+        assert!(wire.get("dropped").is_none(), "{wire}");
+        let listed: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(out.lists_file.as_ref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            listed["dropped"].as_array().map(Vec::len),
+            Some(1),
+            "{listed}"
+        );
+        assert_eq!(listed["dropped"][0]["file"], "src/foreign.ts");
+    }
+
+    /// Past `[artifacts] read-size-bytes` the five lists leave the result for the one file
     /// `lists-file` names, each count stays inline in both forms, and a result exactly at the
     /// size fits. A result with every list empty reads no setting.
     #[test]

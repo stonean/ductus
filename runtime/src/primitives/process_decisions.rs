@@ -189,7 +189,8 @@ impl Classified {
 
     /// Place `decision`, whose key did not fire, on `path`, which the run's scope does not
     /// hold, `why` saying so: retained when the scope could not be read, when ownership is
-    /// not asked, as on a restricted or `since` run, or when the file belongs to the spec;
+    /// not asked, as on a run given `since` (a restricted run never reaches here), or when
+    /// the file belongs to the spec;
     /// dropped when it does not; and retained naming why when its ownership was not
     /// examined (spec 086).
     fn place_unread(
@@ -1506,6 +1507,28 @@ mod tests {
         assert_eq!(own.len(), whole.retained.len());
         rest.extend(summary.map(str::to_string));
         (rest, own)
+    }
+
+    /// A dropped decision moves to the file with the other lists past the read size, so
+    /// the host passes each to the writer from there (spec 086).
+    #[test]
+    fn a_dropped_decision_moves_to_the_file_past_the_read_size() {
+        let foreign = "bug: a finding — `src/foreign.rs`";
+        let tmp = windowed_after(&["src/foreign.rs"], &[foreign]);
+        read_size(&tmp, 10);
+        let out = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(out.form, ListsForm::File, "{out:?}");
+        assert_eq!((out.dropped.as_ref(), out.dropped_count), (None, 1));
+        let listed: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join(out.lists_file.as_deref().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            listed["dropped"].as_array().map(Vec::len),
+            Some(1),
+            "{listed}"
+        );
+        assert_eq!(listed["dropped"][0]["key"], foreign);
     }
 
     /// A result that fits is inline, with its counts. Past `[artifacts]

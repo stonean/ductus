@@ -1,5 +1,5 @@
 """Mutation list for 073's task 14: `process-waivers`' `applied`, `expired`,
-`retained` and `notices` are inline while the result fits `[artifacts]
+`retained`, `dropped` (spec 086) and `notices` are inline while the result fits `[artifacts]
 read-size-bytes`, and past it leave the result for the one file `lists-file`
 names, with each count inline in both forms (BE-PAYLOAD-001;
 `runtime/src/primitives/process_waivers.rs`, through `bounded_lists.rs`, whose
@@ -144,5 +144,19 @@ MUTATIONS = [
         '        &result,\n        &lists,\n    )? {',
         '        &lists,\n        &lists,\n    )? {',
         'process_waivers::tests::the_lists_past_the_read_size',
+    ),
+    (
+        'M18 dropped stays inline in the file form',
+        'src/primitives/process_waivers.rs',
+        '        result.dropped = None;\n',
+        '',
+        'process_waivers::tests::a_dropped_waiver_moves_to_the_file_past_the_read_size',
+    ),
+    (
+        'M19 the list file drops the dropped anchors',
+        'src/primitives/process_waivers.rs',
+        '        "dropped": &classified.dropped,',
+        '        "dropped": Vec::<u8>::new(),',
+        'process_waivers::tests::a_dropped_waiver_moves_to_the_file_past_the_read_size',
     ),
 ]

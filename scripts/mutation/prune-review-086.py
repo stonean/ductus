@@ -505,4 +505,11 @@ MUTATIONS = [
         '        Err(error) => not_examined("the history", &error),',
         'primitives::prune_review::tests::a_project_with_no_repository_drops_nothing_and_says_why',
     ),
+    (
+        'M70 the unowned prep builds nothing, and its rows read as bounded results',
+        'tests/result_sizes.rs',
+        '    for i in 0..UNOWNED_ENTRIES {',
+        '    for i in 0..0 {',
+        '--test result_sizes the_parts_and_move_modes_each_grow_their_result_past_the_plain_call',
+    ),
 ]

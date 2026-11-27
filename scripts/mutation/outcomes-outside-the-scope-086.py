@@ -72,7 +72,7 @@ MUTATIONS = [
         'src/primitives/write_review.rs',
         '    refuse_outcomes_outside_the_scope(args, &run_scope, false)?;\n',
         '    let _ = run_scope;\n',
-        'primitives::write_review::tests::an_outcome_on_a_file_outside_the_scope_is_refused_writing_nothing primitives::write_review::departure_waivers::a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived primitives::write_review::departure_waivers::the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice',
+        'primitives::write_review::tests::an_outcome_on_a_file_outside_the_scope_is_refused_writing_nothing primitives::write_review::departure_waivers::a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived primitives::write_review::departure_waivers::the_rule_firing_in_a_covered_file_outside_the_scope_is_refused',
     ),
     (
         'M9 the project record records an outcome outside its scope',

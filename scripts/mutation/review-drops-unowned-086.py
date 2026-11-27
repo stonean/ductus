@@ -97,4 +97,11 @@ MUTATIONS = [
         '        dropped_count: 0,',
         'primitives::process_waivers::tests::a_waiver_on_a_file_that_does_not_belong_is_dropped_and_named',
     ),
+    (
+        "M12 a waiver is judged by ownership when the run's scope cannot be read",
+        'src/primitives/process_waivers.rs',
+        '                .filter(|_| known)',
+        '                .filter(|_| true)',
+        'primitives::process_waivers::tests::a_scope_that_cannot_be_read_retains_and_says_so',
+    ),
 ]
