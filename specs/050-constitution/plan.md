@@ -205,6 +205,10 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 §design-principles' last bullet carries it (AC26), the owner's rule from 015's archive trim, generic to every adopter (owner, 2026-11-23). Its bound against over-cutting points at §text-first-artifacts' required content rather than restating it. It lands within the 50,000-byte ceiling by dropping §cost-levers' `/cost` example, which `010-agent-autonomy` AC11 does not need, since the section still says token budgets are the AI platform's, and `AGENTS.md` keeps no copy, so 40dea24c's bullet goes and the bullet it displaced, which survey DP1 keys, returns.
 
+### A superseded requirement is never kept
+
+§drift-prevention's Decision resolution states it after its bold closing sentence (AC27): the change that supersedes a requirement removes it from every artifact stating it, a checked task's text included. The rule is the owner's (2026-11-27), and its home in the constitution, since it is true for every project, the agent's recommendation, adopted by the operator, 2026-11-27. It lands within the 49,000-byte ceiling by cutting the retired-filename bullet's sentence reserving annotation for a criterion whose behavior was superseded, which stated the opposite, and whose other half *No dead references* states by counting `done` bodies among live artifacts: the constitution went from 48,955 to 48,974 bytes (`wc -c`). The scenario `a-retired-filename-leaves-a-decision-record` stops reserving annotation and stops leaving a `plan.md` or `tasks.md` occurrence as written. Two sweeps, the owner's choice, bring this repository's corpus to the rule: `/ductus:prune --all`'s `tasks.md` reduction drops every spec's spent task sections and keeps pending ones, leaving its `plan.md` and `review.md` reductions, which AC27 does not reach, unapplied (task 55; the agent's recommendation, adopted by the operator, 2026-11-27), and each ticked criterion carrying a note that it was superseded, in any wording, is rewritten to the requirement that holds now, or deleted where its behavior is gone (task 56; the wording the agent's recommendation, adopted by the operator, 2026-11-27).
+
 ## Classification
 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
@@ -514,6 +518,9 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
 | `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §cost-levers' example cut to fit the ceiling (task 53) |
 | `AGENTS.md` | Modify | 40dea24c's restatement of the filter removed, and the bullet it displaced restored (task 53) |
+| `framework/constitution.md` | Modify | Decision resolution states that a superseded requirement is never kept, and the retired-filename bullet drops its annotation sentence (task 54) |
+| `specs/*/tasks.md` | Modify | Every spent task section pruned, pending tasks kept (task 55) |
+| `specs/*/spec.md` | Modify | Each ticked criterion carrying a Superseded note rewritten to the requirement that holds, or deleted (task 56) |
 | `specs/` | Modify | The sweep: no spec artifact carries a line-number citation (task 49) |
 | `AGENTS.md` | Modify | Each promoted entry rewritten to a pointer; project-only entries untouched |
 | `specs/050-constitution/plan.md` | Modify | Carries the classification table — the audit trail AC1 requires |

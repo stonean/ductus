@@ -423,7 +423,7 @@ For every kind of fact described in multiple places, one location is authoritati
 When document B describes content authored in document A, B back-links to A — a relative link, an anchor reference (`§anchor`), or a section name. Changing A includes auditing every back-link to A.
 
 - **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), project files and their parts, rules, command sources, scripts, CI, docs, README. The sweep is kept apart from unrelated edits, and **mechanical** when each change is one token substitution, uniform across those artifacts, mapping a deprecated label to its current one, or a citation's line number removed; both audit records read such a sweep as no change. **Keep the sweep's own target list current**.
-- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
+- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
 - **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.
@@ -434,7 +434,7 @@ When document B describes content authored in document A, B back-links to A — 
 
 ### Decision resolution
 
-Closing an open question, shipping a scenario, advancing a status, or adopting a rejected option obliges correcting, in the same change, every artifact that described the prior state. **A resolution is not complete while a sibling artifact still describes the prior state**.
+Closing an open question, shipping a scenario, advancing a status, or adopting a rejected option obliges correcting, in the same change, every artifact that described the prior state. **A resolution is not complete while a sibling artifact still describes the prior state**. **The change that supersedes a requirement removes it from every artifact stating it**, a checked task's text included: one left anywhere is dead code or a dead link.
 
 ### Template-rule alignment
 
