@@ -120,6 +120,8 @@ The headings `scripts/audit/template-alignment.sh` enumerates must stay verbatim
 
 ## 4. The affected specs link back, and 060 is told
 
+Lands after 086 task 7 reaches `origin/main`. The other lane (`ductus-2-f9`) messages when it does. The owner chose the form for 086 task 7's notes (2026-11-27): each affected criterion stays ticked and gains an appended **Superseded in part (spec 086).** with one sentence saying what changed, as 084's notes do. So 079's AC18 gains, at its end: "**Superseded in part (spec 089).** Neither reference may grow past the read size any longer: since 089, `scripts/lint-governing-size.sh` holds each `framework/reference/*.md` file to it, and 089 cut both to fit." Rebase onto 086 task 7 first, re-read AC18 as it then stands, tell the other lane before and after the edit, and run 079's review afterwards, which the reworded criterion owes.
+
 - [x] 089's `cross-spec-impact:` gains 063, 066, 067 and 079
 - [x] A blockquoted signpost to 089 in 050, 063, 067, 072 and 075, each naming what 089 changed there, as the plan's *Cross-spec impact* says
 - [ ] Tell the other lane through `SendMessage`, before editing 066's or 079's spec and again once landed, and tell it that once task 6 lands the hook refuses any commit leaving a command or reference file over 50,000
