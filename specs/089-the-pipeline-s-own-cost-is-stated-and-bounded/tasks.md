@@ -22,9 +22,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. `AGENTS.md` is cut by `/ductus:prune --project`
 
-- [ ] Run `/ductus:prune --project` over `AGENTS.md` and its part, confirming each move with the owner, routed as the plan's *`AGENTS.md` is cut by `/ductus:prune --project`* says; promote no entry into the constitution
-- [ ] Where a lesson leaves because a check reports it, the check's message or a comment at its site names the fix in the same commit (072)
-- [ ] Record `AGENTS.md`'s size after the cut (`wc -c`) and each part's, and name for the owner any entry true for every adopter that prune drafted an upstream report for
+- [x] Run `/ductus:prune --project` over `AGENTS.md` and its part, confirming each move with the owner, routed as the plan's *`AGENTS.md` is cut by `/ductus:prune --project`* says; promote no entry into the constitution
+- [x] Where a lesson leaves because a check reports it, the check's message or a comment at its site names the fix in the same commit (072)
+- [x] Record `AGENTS.md`'s size after the cut (`wc -c`) and each part's, and name for the owner any entry true for every adopter that prune drafted an upstream report for
 
 - **Done when**: every `AGENTS.md` entry has been judged by the walk, `AGENTS.md` is at most 49,000 bytes by `wc -c`, each part is at most 50,000 (`check-artifact-size` with `project-files` reports no oversized part and no part finding), and the commit message records `AGENTS.md`'s size and the routes taken.
 

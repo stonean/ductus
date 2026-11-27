@@ -22,9 +22,21 @@ A new command wires into five places outside `framework/commands/`, and two of t
 
 A command with a reference takes two more ([071](../../../specs/071-command-reference-split/spec.md)): the reference itself at `framework/reference/<name>.md`, never under `framework/commands/`, where every file is a command, and its row in `framework/bootstrap/ductus.md` §Shared Files, `framework/reference/<name>.md` → `.ductus/reference/<name>.md`, which Family 16 fails a reference without. The command's steps then name its sections in the pair form **§Heading** in `.ductus/reference/<name>.md`.
 
+The command generator substitutes `{project}` → `ductus` and `{cli-config-dir}` → `.claude`, and writes `framework/bootstrap/configure/claude.md` as `configure.md` in the `ductus` command directory; the values are `PROJECT` and `CONFIG_DIR` in `scripts/gen-claude-commands.sh`.
+
+## Editing a command's steps
+
+- **Backtick a primitive in an `## Instructions` step only when the walker can actually supply its arguments.** `ductus exec` dispatches each backticked `PRIMITIVE_NAMES` token with no per-step arguments. Leave a per-item primitive unbackticked and precede its step with `<!-- audit:ignore-promotion -->`.
+- `<!-- audit:ignore-promotion -->` silences the framework self-audit's Family-9 (primitive-promotion) check for a prose-only `## Instructions` step, but `ductus exec` still dispatches a backticked primitive there; to cite one undispatched, drop the backticks or move it out of the steps.
+- **An `assessSpecQuality` step's prose chooses the tier of rules the exec walker asks about, so a `-tier` word added to that prose can change what the step covers.** `severity_from_step_prose` (`payload.rs`) takes the first `must-tier`/`should-tier`/`info-tier`. In `framework/commands/analyze.md` steps 11-12 write `a MUST or SHOULD keyword`; grep for `-tier`.
+- **Two extension points fan out in the exec walker, so neither is a stand-in for "one request, one response" in a test.** `assessSpecQuality` asks per loaded tier rule; `askClarifyQuestion` per `open-questions` entry, or once if keyless (use that). Rule fixtures need a heading like `TS-MUST-001` and an RFC 2119 keyword.
+- **Never write a literal `ductus-vX.Y.Z` into a `framework/commands/*.md` prose line — `BLESS` will template it into a time bomb.** `BLESS=1` in `runtime/tests/parity.rs` rewrites the current version to `{{runtime-version}}`; the golden breaks next release. Keep versioned accounts in `runtime/CHANGELOG.md`; read every bless diff.
+
 ## Adding a member to a closed set
 
 A family, a skip reason or a marker that `check-artifacts`' families use is a corpus sweep, and Family 18 binds only the marker lists. Before the release commit, grep an existing sibling (`root-absent`) across `framework/`, `docs/`, `runtime/src/` and `specs/`, then update every list and count naming it, or drop a needless count.
+
+**`check-artifacts`' `skipped` array names targets that could not be *reached*, never subjects that were empty.** Its reason set is closed; a family with nothing to examine reports no finding and no skip, and one its status gate stops records a single `status-gated` skip. State other bounded coverage once, in its doc comment and `framework/reference/analyze.md`, not as per-spec skips.
 
 ## Adding a rule category
 
@@ -58,10 +70,29 @@ Gate the commit on every check's exit status, mutants included, in one script: a
    - **Every enumeration, count and header** in a file the diff touches is read against the file as changed.
    - **Every figure the change states** (a byte size, a count, a line) is measured again on this tree. A change written from an older base, by a parallel worker among them, measured it before other landings moved it.
    - **A cost keyed on rule IDs** is measured with each surface selection `/ductus` installs (backend and cross, frontend and cross, cross alone), not only the 12 files this repository loads: 088's first AC2 fix judged no rule needlessly here and 13, 20 or 8 in a single-surface adopter (2026-11-26).
+   - **A rename's prose forms** are swept too, a source is fixed rather than its generated copy, and the criteria of each spec a hit lands in are read.
 4. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
 5. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
 
 A mutant that survives is a finding: read why before re-landing. After an edit to anchored code, `run.py --check` names what moved, and `framework-checks.yml` step (u) fails when the moved code anchors another spec's mutation list, so re-anchor that list in the same change. A primitive that starts writing a text file needs a case in `runtime/tests/crlf_preservation.rs`. A fixture record the parser refuses makes a test pass for the wrong reason, so a run must be visible in what it asserts. An edit to `framework/commands/implement.md` or `framework/commands/review.md` moves its `-basic` golden, whose fixture repo's commit shas it records: re-bless that one alone, as its message says, and read the diff.
+
+- **After changing runtime source, verify through the built binary — not the MCP tools.** `mcp__ductus__*` runs the session-start binary — in a shared checkout possibly another session's uncommitted build (`lsof -a -p <server> -d txt` against `stat -L`): after `cargo build --release`, use `./runtime/target/release/ductus <primitive> …` or `cargo test`; restart the session to use a changed primitive. Driving it from the CLI is **Driving a primitive from the CLI**.
+- **Do not invoke `cargo build` twice in one shell command and read only the second output.** The second prints a no-op `Finished`. Build once, capturing output (`out=$(cargo build 2>&1)`); to confirm the binary carries a change, `strings target/debug/ductus | grep '<new literal>'`.
+- **`cargo` exits 101 from the repo root, and 101 is also what a failing test suite returns — so a mis-rooted probe reads exactly like the failure it was meant to prove.** `Cargo.toml` is in `runtime/`: prefix each cargo call with its own `cd /…/ductus/runtime &&`, and confirm a failure from its output (`grep -E 'FAILED|assertion|panicked'`), not its exit code.
+- **With anything under `runtime/` staged, the pre-commit hook outlasts one Bash call — commit in the background, and never wait on it with `pgrep -f`.** The hook runs `cargo clippy` and `cargo test`, which can top 600 s. Commit with `run_in_background`; await its notice or poll `git log -1`. `pgrep -f` matches its own loop, so use `'[g]it commit'`.
+
+## Keeping the runtime current
+
+`scripts/check-runtime-currency.sh` is the command, and `runtime-currency.yml` runs it every Monday. Run it before a release, and fix an advisory, a stale dependency or a stale pin as soon as one is found, without waiting to be asked; one commit per fix (owner, 2026-11-02), its subject naming 022, which owns the lockfile, the pins and this script (`chore(022): …`), since a code commit naming no spec is reviewed under no spec (spec 084; owner, 2026-11-12). Its pins check replaces Dependabot/Renovate (owner, 2026-10-20). Fix, not allow, new clippy lints on code this crate owns (owner, 2026-10-14).
+
+`runtime/rust-toolchain.toml` pins `components = ["clippy", "rustfmt"]`, and every `cargo` command under `runtime/` auto-installs missing ones, hitting rustup's `detected conflict: 'bin/cargo-fmt'` bug; so such a workflow's `dtolnay/rust-toolchain` step sets `components: clippy, rustfmt`.
+
+## Driving a primitive from the CLI
+
+- **Pass `write-review`'s and `write-analysis`'s structured arguments as files — `runtime/target/release/ductus write-review --observations-json FILE` and the other `--{name}-json` flags — written by the agents that derived them, never inline over MCP.** The FILE sits in the system temp directory (`$TMPDIR`), which the CLI requires: it refuses one elsewhere, the scratchpad under `/private/tmp` included. An inline argument is re-sent on every write and re-read by every later call (owner, 2026-11-13). Any other primitive's structured argument goes on the CLI the same way (022 task 24).
+- For a primitive taking no structured argument, the MCP surface itself can be driven with `./runtime/target/release/ductus mcp` over stdio: `initialize`, `notifications/initialized`, then `tools/call`.
+- **On the CLI, `append-task`'s `--body` takes one item per flag.** Use `--body=…` if an item starts with `-`; omit the `Implement the behavior…` line `--slug` adds. `--parent-heading` is the phase heading minus leading `##` and space, em-dash exact.
+- **A boolean argument is a valueless flag on the CLI and a JSON boolean over MCP — `--checked true` is an error, `--checked` is the call.** Over MCP pass `checked: true`. On the CLI omitting it passes `false`, so `mark-task` or `mark-criterion` without `--checked` unticks. If a batch of calls fails uniformly, re-run one with its output shown.
 
 ## Measuring a run's cost
 
@@ -87,6 +118,8 @@ On 2026-11-26 087's review, 79 scope entries and about 1.1 MB to read, took four
 On 2026-11-26 088's review, 39 scope entries and about 1.02 MB read with every file up to 95 KB whole (the agent's recommendation, adopted by the operator), took four passes parts by behaviour, each beside a 230 to 290 KB slice, finishing at 278K to 401K tokens with their re-runs over the fix diff, and one criteria part at 202K to 215K. Its review after a reopen, 21 entries of which 8 changed, took one passes part at 318K to 326K and one criteria part at 183K to 189K. Call `discover-rule-files` with no `detected-surfaces`: `tech-stack-verified` skips detection here, and passing `backend` selects four files, leaving out `security-frontend.md`.
 
 A criterion saying a rule file's claims match the current text of the documents its Sources cite is judged only by fetching each document, never from recall (constitution §rules). 068's, 069's and 070's took 42, 62 and 54 fetches (2026-11-21). Brief that part to fetch, since a criteria part judged two such criteria from recall before it was told to.
+
+**When one commit reopens several specs, review their shared window once in depth and let each later review read only what changed since.** It also reads its artifacts and deliverable; its Summary says so. Carry the newest record's in-scope, still-holding `decisions:` with byte-identical text and disposition. Reviewers use `git show`.
 
 In one shared tree:
 
@@ -138,6 +171,8 @@ cp ../ductus/.claude/settings.local.json .claude/
 
 Keep each session on its own specs. `git pull --rebase` before each push, and after pulling runtime changes rebuild and restart the session, since the MCP server keeps the binary it started with.
 
+**The pre-commit hook generates from the commit's index in a scratch copy, so another session's unstaged sources, outputs and hunks neither ride along nor get overwritten.** A changed file reaches the index only when the commit stages it, or stages a `framework/` or `scripts/gen-*` source and the file is a generated output; the working copy follows only if it equals what was staged. Its `runtime/` checks still read the working tree (`AGENTS.md`'s Gotchas). Tests: `scripts/tests/test-pre-commit-staging.sh`.
+
 ## Running a review or an analysis from a worktree
 
 A review or analysis run in a shared tree reads every other session's uncommitted file into its window and its fix-round briefs, so run each in a clean worktree of `origin/main`, one per spec (027's, 048's, 062's and 067's on 2026-11-19):
@@ -150,6 +185,8 @@ runtime/target/release/ductus write-session --cli-config-dir .claude
 ```
 
 Without the last two lines `check-orphaned-references` reports false findings. In the worktree use only the CLI, since the `mcp__ductus__*` tools act on the session's own checkout, and commit there.
+
+**`npm ci` empties the target of a symlinked `node_modules`, so never run it in a worktree whose `node_modules` links to this checkout.** A verifier running framework-checks' `npm ci` in such a worktree emptied this checkout's install for every session here (2026-11-12). Give that worktree its own `npm ci`.
 
 - **Review.** Follow `framework/commands/review.md` through its primitives' CLI forms, with steps 3 to 7.2 split among three subagents that share one brief in `$TMPDIR`:
   - A, the security pass over the three `security-*.md` files;
@@ -190,3 +227,29 @@ Drive `apply-manifest` and `enforce-manifest` from a staging copy in `/ductus`'s
 **A bootstrap run executes the installed `ductus.md`, not the one it fetches, so a prose edit is tested by installing it.** Copy the edited file to the fixture's `.claude/commands/ductus.md` and run `/ductus --ref=<latest release tag>`: the release's copy then reads as stale, and the new text drives the run's pre-flight (029 task 15). Seed `.claude/settings.local.json` with the registry's `settings_template`, and unset `CLAUDE_CODE_SESSION_ID` and `DUCTUS_SESSION`. In `claude -p`, Claude Code refuses writes to `.mcp.json` and `.claude/` even under path allow rules, so such a run reports those writes as not made.
 
 **A first adoption can carry `[runtime] path`** in a `.ductus/config.toml` with no `[host]` table, which is no earlier-adoption signal (`framework/bootstrap/ductus.md` §Pre-flight Checks). Without one, run its shell commands with `HOME` pointed at a scratch home whose `~/.ductus/bin/ductus` is a copy of this tree's release build, which reports the pin, so Branch 2 takes it as current and no real store is touched. Start an older release's subject with an empty scratch store, so its own bootstrap acquires its release for real, and set `[runtime] path` before the upgrade. **Drive a real pi in RPC mode** (`pi --mode rpc --approve --no-session`, with `CLAUDE_CODE_SESSION_ID` and `DUCTUS_SESSION` unset): `get_commands`, a no-turn command, then a prompt template. Since 064 task 17, `pi -p` exits after its turn as well. This harness's classifier refuses a nested `claude -p --permission-mode bypassPermissions`.
+
+- **Gitignored adopter state survives a `git` reset, so a "reset" subject is not a fresh one.** Reverting restores tracked files only; an untracked `.mcp.json`, `.ductus/bin/` and `~/.ductus/bin/ductus` keep the last run's state. Check bootstrap-test preconditions on the tree; save gitignored files first.
+- **This repo's dogfooded copy of an adopter file is not the copy adopters get — test the shipped one.** `.githooks/pre-commit` (ours) and `framework/bootstrap/hooks/ductus-pre-commit` (shipped) are separate files. For anything the manifest ships, exercise the adopter's copy on an adopter-shaped tree.
+- **Editing a migration an adopter may already have run reaches no one who ran it — add a new entry ordered after it.** Pre-run Migrations runs only entries after `[migrations] last_applied` by (`introduced_in`, then `id`; spec 027), and `--ref=main` adopters run unreleased ones; `constitution-import` (050) is the instance.
+
+## Changing pi support
+
+**Pi's tool surface is the `.pi/extensions/ductus.ts` bridge — never also register the runtime in pi's own MCP client.** pi 0.99.0 and later ship one (`pi mcp`, `.pi/mcp.json`), but the bridge also registers `/{project}-status` and `/{project}-help`, which an MCP registration cannot, and both at once would serve every tool twice ([064](../../../specs/064-pi-host-support/spec.md) Resolved Questions; owner, 2026-11-09). `framework/bootstrap/pi/ductus-bridge.ts` stays stdio-only and dependency-free. After changing it, run `node scripts/tests/pi-bridge-harness.mjs`, then a real `pi` run, the only test of pi's loader.
+
+## Writing a script
+
+- **In a `set -e` script, `[ test ] && cmd` as the *last* command of a block exits the script when the test is false.** Write `if [ test ]; then cmd; fi`, or `[ test ] || continue` in a loop; never `|| true`, which swallows a real failure. Check the last command of every block, loop, function and trap.
+- **Two traps in this repo's audit scripts and in `ductus.md`'s tables.** In `"$(...)"`, bash 3.2 misparses a backticked heredoc: use a function; test in `/bin/bash`. `check-artifacts` reads a `ductus.md` row whose 2nd cell is one code span as a destination; use bullets.
+
+## Consolidating a spec
+
+**`/{project}:consolidate` migrates no content — it re-points inbound links and deletes the directory, scenarios and all. Migrate anything worth keeping by hand *before* `retire-feature`, or git history becomes the only copy.** Hand-correct referrers whose subject is the retiring spec, run `rewrite-spec-links` as a no-op proof, write the record into the target, then `retire-feature --allow-sequential`.
+
+## Reviewing an external pull request
+
+**Review an external pull request for correctness and simplicity before resolving its conflicts or merging it — a clean merge and a green hook say nothing about whether the change is right.** Read the diff, run every push workflow's steps on the PR tree from this repo, and check `done` specs' criteria before touching conflicts, then report; the user decides. Update a PR branch only when asked.
+
+## Cutting a release
+
+- **A change ships via a `ductus-v<version>` tag — the commit alone reaches no default-source adopter, and no version is cut until every spec is `done` (owner, 2026-11-11).** Bump `version`, `runtime/Cargo.toml` and `runtime/CHANGELOG.md` in one commit, pushed with the tag in one sitting; untagged pins halt `--ref=main` (owner, 2026-08-28).
+- **A pushed tag is not a published release, and `release not found` is the *normal* answer for the ~11 minutes in between.** The `release-assets` job publishes it late. Check `gh run view <id> --json status,conclusion`: `in_progress` means wait; only `failure` is an outage. Never delete-and-re-tag an in-progress run.

@@ -209,9 +209,10 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
 3 already promoted, 28 project-only — 54 total**, of which the project-only table
-now holds 25: `072-governing-documents-stay-within-one-read` removed the rows of
-three entries it retired, as the note beside that table says, and the promoted
-table 22, as the note beside it says.
+now holds 17: `072-governing-documents-stay-within-one-read` removed the rows of
+three entries it retired and `089-the-pipeline-s-own-cost-is-stated-and-bounded`
+the rows of eight it moved to a part, as the notes beside that table say, and the
+promoted table 22, as the note beside it says.
 
 **Entries are keyed by their `AGENTS.md` lead phrase, with the survey's positional
 ID kept in parentheses as a historical marker.** The positional ID was the original
@@ -301,7 +302,7 @@ Four rows have since left this table: *`unexamined` cannot be measured while the
 | A spec body must not carry a point-in-time status section | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
 | A spec's own completion commit can destroy content, and a `## Heading` absorbed into an unterminated code span is invisible to every check this project has — including the gate that reads it | **R** — drops the Family-25 scoping note; the blindness is in the shared markdown reader every adopter uses |
-| `write-review` derives `scope` itself, so a count you measured earlier and typed into the Summary can contradict the record it is written into — and nothing compares the two | One call writes both, so nothing can compare them; true wherever the primitive runs |
+| `write-review` derives `scope` itself and counts scope entries, not files | One call writes both, so nothing can compare them; true wherever the primitive runs |
 | Removing an embedded copy is a corpus sweep, not a deletion — grep for what pointed at it, including the artifacts that *describe* it | The pointer-not-copy rule already ships; this is what *replacing* one costs, classified by tense |
 | A `data-model.md` that claims "authoritative shapes" drifts from the runtime silently — check it against a record the runtime actually wrote, not against the code | **R** — check a schema table against an artifact the writer actually wrote, not against the code |
 | A conformance test whose subject is drawn from corpus state can go vacuous, and its vacuity guard will then assert that an unhealthy corpus must exist | Extends §design-principles' check-that-cannot-run to the case where the vacuity guard inverts |
@@ -323,18 +324,15 @@ Four rows have since left this table: *`unexamined` cannot be measured while the
 
 | Entry | Reason |
 | --- | --- |
-| A pushed tag is not a published release, and `release not found` is the *normal* answer for the ~11 minutes in between | This project's release pipeline, its job order and its crates.io step |
 | Waive an observation about the pipeline's own machinery made while reviewing framework work, with its reason — deferring it is what feeds the loop | The premise — a review executed *by* the machinery it reviews — holds only for this framework's own repository |
-| After changing runtime source, verify through the built binary — not the MCP tools | Adopters do not change runtime source |
+| After changing runtime source, verify through `runtime/target/release/ductus`, never the `mcp__ductus__*` tools | Adopters do not change runtime source |
 | `framework/commands/help.md` is generated — hand-edits to it are reverted on the next commit | Framework build step |
-| `check-artifacts`' `skipped` array names targets that could not be *reached*, never subjects that were empty | About *authoring* a check family; the interpretive half is already §design-principles |
-| Never write a literal `ductus-vX.Y.Z` into a `framework/commands/*.md` prose line — `BLESS` will template it into a time bomb | Framework build step, and the trap is this repo's parity goldens |
-| In a `set -e` script, `[ test ] && cmd` as the *last* command of a block exits the script when the test is false | Shell idiom in this project's own tooling rather than pipeline governance |
 | clap expands `{n}` in a doc comment as a newline, so a `#[derive(clap::Args)]` field's docs cannot contain one | Runtime source detail |
-| `cargo` exits 101 from the repo root, and 101 is also what a failing test suite returns — so a mis-rooted probe reads exactly like the failure it was meant to prove | This repo's toolchain and the harness's working-directory behaviour |
 | `grep` here is ugrep, and a bounded-context pattern exceeds its complexity limit — erroring once per file, which reads exactly like a scan that found nothing | This machine's tooling, not the framework's |
 
 Rows for 4 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
+
+Rows for 5 entries since moved out of `AGENTS.md` by `089-the-pipeline-s-own-cost-is-stated-and-bounded`, to `.ductus/docs/agents/developing-ductus.md`, were removed from this table.
 
 `R` marks a verdict reached through the reword test rather than directly.
 
@@ -359,11 +357,10 @@ The row for 1 entry since moved out of `AGENTS.md` by `079-review-and-analysis-w
 | Entry | Reason |
 | --- | --- |
 | No dead code — remove what nothing calls, reads, or reaches in the change that makes it dead | Recorded as this repository's rule at the operator's request (2026-09-25); promoted, it would govern code and route to a rule file |
-| Two extension points fan out in the exec walker, so neither is a stand-in for "one request, one response" in a test | This runtime's exec walker and its rule fixtures |
 | A word starting with `=` is a command lookup in zsh, so an unquoted `======` separator kills the command it sits in | A shell trap with no pipeline connection, like the zsh `path` entry |
-| A boolean argument is a valueless flag on the CLI and a JSON boolean over MCP — `--checked true` is an error, `--checked` is the call | Tool-call hygiene for this runtime's CLI; generalized it stops biting, like *use repo-relative paths in tool calls* |
 | The project root is not the git work tree's root, and every path that crosses between them must be converted | Runtime and command-source authoring; an adopter receives the behavior, not the rule |
-| An `assessSpecQuality` step's prose chooses the tier of rules the exec walker asks about, so a `-tier` word added to that prose can change what the step covers | Concerns authoring this framework's command sources |
+
+Rows for 3 entries since moved out of `AGENTS.md` by `089-the-pipeline-s-own-cost-is-stated-and-bounded`, to `.ductus/docs/agents/developing-ductus.md`, were removed from this table.
 
 ### Fourth round — classified 2026-10-15
 
@@ -381,15 +378,15 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 
 | Entry | Reason |
 | --- | --- |
-| Review an external pull request for correctness and simplicity before resolving its conflicts or merging it | This trunk-based repository takes outside work only as pull requests; what an adopter needs of it, re-verifying ticked criteria against the tree and picking checks by blast radius, already ships in §implement-phase and §grounding |
 | The runtime stays current | Adopters have no `runtime/` to keep current, as with the release entries |
 | Stop your own background tasks before writing a handoff | Concerns the agent's own background tasks and handoff notes, which the pipeline has no step for, like *use repo-relative paths in tool calls* |
 | A CI verdict comes from pushing `main` | This repository's trunk-based flow and release-tag distribution, as W1 and W3 |
-| Pi's tool surface is the `.pi/extensions/ductus.ts` bridge | Concerns maintaining this framework's Pi bridge |
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
 
 Rows for 1 entry since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports it, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
+
+Rows for 2 entries since moved out of `AGENTS.md` by `089-the-pipeline-s-own-cost-is-stated-and-bounded`, to `.ductus/docs/agents/developing-ductus.md`, were removed from this table.
 
 ### Fifth round — classified 2026-10-17
 
@@ -466,7 +463,6 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | --- | --- |
 | Commit directly to `main` — this repo uses trunk-based development (survey W1) | This repo's trunk-based flow; adopters choose their own branching |
 | Never create a repository named `govern` under this account again, and never reuse a retired project name (survey W2) | Concerns this project's distribution redirect, not an adopter's pipeline |
-| A change ships via a `ductus-v<version>` tag — the commit alone reaches no default-source adopter (survey W3) | Adopters have no `runtime/` and cut no release |
 | Never record another project's name in this repository — describe the shape instead (survey W8) | Arises from using outside projects to test this framework |
 | Read `framework/commands/{name}.md` before recommending, describing, or disambiguating a s (survey W9) | Loses nothing an adopter needs that §grounding does not already state |
 | A change to an agent-facing surface must cover every agent in the registry, not just Claude (survey W13) | The registry is the framework's own enumeration |
@@ -474,23 +470,18 @@ The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-
 | Use repo-relative paths in tool calls (survey W19) | Agent tool hygiene rather than pipeline governance; genericised it stops biting |
 | Never call specs "frozen archaeology" or use frozen-archaeology phrasing (survey W20) | The substance (specs are living documents) is already §spec-lifecycle; what remains is a phrasing ban local to this repo |
 | A change to a shared runtime surface lands in the spec that requires it, and `cross-spec-impact:` holds that spec's `done` until the surface's owner links back — 022 owns the runtime core and its shared surfaces, 066 the audit records and the completion gate, 067 the analyze and audit checks; a feature-specific primitive lives with its feature (survey W23) | Names this repository's own spec |
-| Backtick a primitive in an `## Instructions` step only when the walker can actually supply its arguments (survey W25) | Concerns authoring framework command sources |
-| Do not invoke `cargo build` twice in one shell command and read only the second output (survey W26) | A cargo-specific shell trap in this repo's toolchain |
 | No real adopter run exists: your own scratch-adopter bootstrap and the tests test composition (owner, 2026-11-16) (survey W33) | About testing this framework against adopters |
 | A run summary is evidence about what that agent wrote, not about what the framework does — verify every other claim against the source (survey W34) | Restates §grounding's prefer-the-source rule for a narrow case; the general rule already ships |
 | Use `npx markdownlint-cli2` to run markdown linting — do not suggest installing it globall (survey G1) | Tooling preference, not a rule |
-| The command generator substitutes `{project}` → `ductus` and `{cli-config-dir}` → `.claude (survey G2) | Framework build step |
 | An edit to `framework/commands/*.md` is invisible to that slash command until the generator re-runs — including to the command you are editing, in the same session (survey G3) | Framework build step |
 | The two frontmatter derivations are runtime primitives, not shipped scripts (survey G6) | Framework authoring |
 | `write_atomic_bytes` (the create-then-rename helper backing every primitive write) lands t (survey G7) | Runtime internals |
-| `runtime/rust-toolchain.toml` pins `components = ["clippy", "rustfmt"]`, and every `cargo` (survey G8) | Runtime build |
-| `<!-- audit:ignore-promotion -->` silences the framework self-audit's Family-9 (primitive- (survey G10) | Framework command authoring |
-| Gitignored adopter state survives a `git` reset, so a "reset" subject is not a fresh one (survey G14) | About testing adopters, not being one |
-| This repo's dogfooded copy of an adopter file is not the copy adopters get — test the shipped one (survey G15) | Structurally impossible for an adopter, who has only the shipped copy |
 | `path` is a reserved array in zsh and clobbering it destroys `PATH` (survey G16) | A shell trap with no pipeline connection |
 | No host-level enforcement of the deterministic (`ductus`) path — it is a deliberate non-goal (survey B1) | A framework design non-goal |
 
 Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan (`specs/072-governing-documents-stay-within-one-read/plan.md`) §Entry dispositions records where each went.
+
+Rows for 8 entries since moved out of `AGENTS.md` by `089-the-pipeline-s-own-cost-is-stated-and-bounded`, to `.ductus/docs/agents/developing-ductus.md`, were removed from this table.
 
 ### Relocated to a command reference — 2026-10-26
 
