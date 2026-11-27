@@ -104,11 +104,14 @@ The three dispositions:
      subjects is fixed by an edit the operator confirms in the run, never deferred
      whole to its own `tasks.md`; only the code that edit owes is a task (067's AC6).
      If it is `done` — a review or analyze run can examine a finished spec — it
-     is reopened `done → in-progress` as below, so the deferred work does not sit
-     unchecked on a spec no gate reads.
+     is reopened `done → in-progress` as below once the deferral leaves it owing
+     work, so the deferred work does not sit unchecked on a spec no gate reads.
    - **Another existing spec:** a scenario or body edit on that spec. If it is
-     `done`, it is reopened `done → in-progress`, and the confirmation names the
-     reopen before it happens, as `/{project}:groom`'s does.
+     `done`, the confirmation names the `done → in-progress` reopen before it
+     happens, as `/{project}:groom`'s does, and the reopen is made once
+     `check-owed-work` on that spec reports owed work after the deferral is
+     written (spec 084): a body edit that leaves no unchecked box and no unticked
+     criterion leaves it `done`.
    - **No covering spec:** the run offers to create one through
      `/{project}:specify`'s procedure, with its routing and creation
      confirmations. A created spec is the deferral's work. If the operator declines,
@@ -266,8 +269,8 @@ the inbox that fed it, are retired.
 
 An observation about the pipeline's own machinery, rather than the code under
 review, is the case most likely to feed a loop of reopens. Deferring it to a
-`done` spec reopens that spec, whose next review produces the next
-observation. The waiver, with its reason, is the disposition that ends
+`done` spec's work reopens that spec while the work is owed, and that spec's
+next review produces the next observation. The waiver, with its reason, is the disposition that ends
 the loop.
 
 ### `/{project}:implement`
@@ -494,7 +497,7 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC4: After the fix-and-route step writes anything, `/{project}:analyze` re-runs detection and writes `analysis.md` from the re-check. `check-review-gate` run immediately afterwards does not report that analysis stale.
 - [x] AC5: A `/{project}:implement` run that surfaces an issue outside the targeted spec captures nothing to the inbox. It appends an unchecked `Disposition out-of-spec finding:` task to the targeted spec's `tasks.md` before continuing the task in hand, and its completion summary lists the appended task.
 - [x] AC6: `review.md`, `analyze.md`, and `implement.md` route findings by referencing the Groom decision tree in `groom.md` rather than restating it, as `specify.md` already does.
-- [x] AC7: A finding deferred to an existing `done` spec names the `done → in-progress` reopen in its confirmation prompt, and performs the reopen through `set-status` with `from: done`.
+- [x] AC7: A finding deferred to an existing `done` spec names the `done → in-progress` reopen in its confirmation prompt, and performs the reopen through `set-status` with `from: done`. **Superseded in part:** since `ac21c388` (084 task 2) the reopen is performed only once the deferral is written and `check-owed-work` on that spec reports owed work, so a deferral that leaves no unchecked box and no unticked criterion, such as a body edit, leaves the spec `done`.
 - [x] AC8: A finding with no covering spec is deferred to a spec only when the operator creates one through `/{project}:specify`'s procedure in the same run. A declined creation leaves the finding waived with a reason or undispositioned, and the record never counts it as deferred to that spec.
 - [x] AC9: `review.md` and `analysis.md` frontmatter carry a `dispositions:` map (`fixed`, `deferred`, `waived`, `undispositioned`) and a `decisions:` list in place of `captured-issues`. The constitution's Frontmatter Schema declares each field and its type, and `validate-frontmatter` validates them.
 - [x] AC10: The Captured issues section is removed from `review.md`'s and `analysis.md`'s skeletons. `compute-review-scope` no longer returns its `captured-issues` window, and `diff-cross-spec` no longer returns `inbox-additions` or `inbox-standing`.
@@ -555,7 +558,7 @@ spec's links to it. Each also gets the contract change itself:
   works it like any other task (see §`/{project}:implement`). The alternatives
   lost something. A disposition held until the task boundary is lost when a run
   is interrupted mid-task. Dispositioning the finding the moment it surfaces
-  derails the task in hand, which `framework/commands/implement.md`'s
+  derails the task in hand, which `framework/reference/implement.md`'s
   walk-through step 5 forbids ("record and keep working"). The task route needs
   no new gate, because an unchecked task already blocks `done`. It also
   collapses the scope tiers into one rule: anything outside the task in hand
