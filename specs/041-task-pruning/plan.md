@@ -4,10 +4,12 @@ Implements [041 — Spec Directory Pruning](spec.md).
 
 ## Overview
 
-Ship `/{project}:prune` as a thin command over two deterministic runtime
+Ship `/{project}:prune` as a thin command over deterministic runtime
 primitives: `prune-tasks`, which reduces `tasks.md`, and `prune-plan`, which
 finds the `plan.md` sections outside the design record and removes the ones
-the operator confirms. Both do all the mechanical work — parse, classify,
+the operator confirms; under `--project`, `prune-project` reduces the four
+project files (below), and since spec 086 `prune-review` drops the
+`review.md` entries the spec does not own. Each does all the mechanical work — parse, classify,
 gate, and write atomically — and return compact summaries that never carry a
 file body. The command owns judgment only: resolve the session target (or walk
 the corpus under `--all`), render the preview, move a plan section's durable
@@ -252,9 +254,11 @@ something to report is a section outside the record, or `reopen-required`
 true on a `done` spec: such a spec is listed even with no such section or no
 `plan.md`, so a reopen that edits made before the run require reaches the
 corpus preview, and `no-plan-file` names only a spec with no `plan.md` and
-nothing else to report. MCP requires a tool's output schema to be an object
-(rmcp 2.2.0's `validate_and_strip`, `src/handler/server/common.rs`; the
-`#[tool]` macro panics at registration on any other root type), so each
+nothing else to report. Each result keeps an object root so every peer gets
+it structured: rmcp 3.11.0, the locked version, allows another root
+(SEP-2106) but strips a non-object output schema and structured result for a
+peer on an older protocol (`strip_non_object_output_for_legacy_peer`,
+`src/model.rs`), leaving that peer a text block. So each
 result is one struct with two flattened, optional halves — the
 single-feature summary, on the wire exactly as before, or the walk — and
 because the halves share one key space no key may sit in both, which is why
@@ -302,7 +306,7 @@ under `--all` — one row per spec with its status. The `tasks.md` reduction is
 confirmed through `gate-confirm` and applied. Then, per undecided plan
 section, the host reads the section with its own file tools, proposes where
 each durable piece goes (a Technical Decisions entry, the home `prune.md`
-step 8 routes project-only knowledge to, a pending task) and what is
+step 9 routes project-only knowledge to, a pending task) and what is
 dropped, and confirms the moves and the removal together, naming the reopen
 the moves imply on a `done` spec. A reopen the preview reports — edits made
 before the run already require it — is named in the preview, before
@@ -342,7 +346,7 @@ arguments from its context (`runtime/src/interpreter/mod.rs`, the `call!`
 macro), so the step dispatches with the feature and no `apply` — a preview.
 The exec walker's analyze tally counts each section on a `planned`-or-later
 spec as advisory (`runtime/src/interpreter/analyze_tally.rs`), as it counts
-every detection step's findings, so an exec record states them. Steps 17–21
+every detection step's findings, so an exec record states them. Steps 17–22
 follow it, and every present-tense citation of them names those numbers.
 
 ### Constitution, templates and docs
@@ -431,7 +435,7 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 
 ### An apply refuses a file that changed since it read it
 
-All three applies are read-modify-writes, so each guards the window between its
+The `prune-tasks`, `prune-plan` and `prune-project` applies are read-modify-writes, as spec 086's `prune-review` apply is, so each guards the window between its
 read and its rename (`BE-TXN-002`): an `append-task`, `mark-task` or other
 writer landing in it must not be dropped. The guard is the shared compare before
 persist in `runtime/src/primitives/mod.rs` (`ReadSnapshot`), and 022's plan
@@ -467,7 +471,7 @@ the host re-runs the command against the file as it now is.
 - **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs each as the file itself: `framework/bootstrap/ductus.md` §Project-specific shared files (strategy: create) maps `framework/templates/project/system.md`, `errors.md` and `events.md` to `specs/system.md`, `errors.md` and `events.md`, and only the spec templates land under `specs/templates/`. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
 - **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
 - **Every open is contained** (BE-INPUT-004; 075's analysis deferred it here). Each open goes through `validate_contained` against the project root: a project file that is, or lies under, a symbolic link leaving the project reads `outside-project` and is neither read nor written; a tracked file the search would read through one is left unread and named in the search's `outside-project`; every `create` home is checked before an apply writes anything and a refused one fails the whole call, so no half an apply is left; a rewrite re-checks its path under the write guard's re-read (*An apply refuses a file that changed since it read it*).
-- **Host judgment** follows the scenario. A procedure goes to a part under `.ductus/docs/agents/` or a README (spec 087), and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit that leaves a `done` spec owed work, as `check-owed-work` reads it, is named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
+- **Host judgment** follows the scenario. A procedure goes to a part under `.ductus/docs/agents/` or a README (spec 087), and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and an edit that leaves a `done` spec owed work, as `check-owed-work` reads it, is named first. An every-adopter entry is checked against the installed framework. Step 9 routes plan-section knowledge the same way.
 
 ### Title and slug
 

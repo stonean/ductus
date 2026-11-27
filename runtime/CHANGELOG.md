@@ -28,6 +28,33 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   say whether the spec's files could be told, absent when no entry reached
   that test. `compute-review-scope` carries the two ownership fields on a
   first review.
+- **A project file's parts are measured, walked and moved into (spec 087;
+  the agent's recommendations, adopted by the operator, 2026-11-25 and
+  2026-11-26).** A part is a markdown file directly under
+  `.ductus/docs/agents/`, `system/`, `events/` or `errors/`.
+  `check-artifact-size` with `project-files` lists the parts in `parts` and
+  `parts-count`, a part over the read size joining `oversized`, and the
+  integrity findings (`missing-part`, `unlinked-part`, `nested-file`,
+  `not-a-parts-directory`, `not-a-part`) in `part-findings` and
+  `part-findings-count`, an unreadable part, a part that is a link leaving
+  the project and an unlisted parts directory in `skipped`; staged, each part
+  carries `head-bytes` and `refused`, and the result `refused` and
+  `refused-count`. `prune-project` walks each part after the four files, by
+  its project file's grammar, leaves each part out of its literal search's
+  sources as it leaves each project file, and returns `part-files`, each
+  record with `part-of`, `part-findings` and `parts-unlisted`, a part's path
+  accepted where a project file's is. Its optional `move` argument (CLI
+  `--move-json FILE`) moves a file a project file links to into a parts
+  directory: a preview lists `move-candidates`, `move-search` and
+  `move-referrers`, and an apply rewrites each confirmed referrer and the
+  moved file's relative links under one hold of the compare-and-set lock. It
+  refuses the whole apply, writing nothing, on a `stale-referrers` entry, or
+  when a referrer, the moved file or its new path changed since it read
+  them, naming each in `refused`. `resolve-constitutions` lists each loaded shared constitution's
+  parts, under `.ductus/docs/constitution/` in its checkout, in `parts` and
+  `parts-count`, each measured against the read size. `ductus exec`'s analyze
+  tally counts `part-findings-count` as advisory. No field is removed,
+  renamed or retyped.
 - **`backfill-section-digest` gives each current analysis record the
   section digests its run would have written (spec 088, AC3; the agent's
   recommendation, adopted by the operator, 2026-11-26).** A new MCP tool and
@@ -204,6 +231,14 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   run, adds each file on disk that a commit attributed to the spec changed,
   beside the plan's Affected Files entries. Breaking for a consumer that
   expected a first review's scope to be the plan's entries alone.
+- **BREAKING: `check-artifact-size` reports a part's kind, and its staged
+  check refuses a grown part (spec 087).** `oversized[].kind` gains
+  `project-part` and its fixes' `kind` gains `split-part`, values of response
+  enums not documented as open. A staged call exits non-zero when a part is
+  refused, over the read size with no `HEAD` copy or larger than its `HEAD`
+  copy, so the shipped pre-commit hook refuses a commit that stages one.
+  Breaking for a consumer that matched every kind, and for such a commit,
+  which passed before.
 - **`check-artifacts`, `check-artifact-size` and `write-analysis` state the
   rules `framework/reference/analyze.md` held (spec 089; the agent's
   recommendation, adopted by the operator, 2026-11-27).** `check-artifacts`'

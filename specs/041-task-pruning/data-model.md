@@ -1,6 +1,6 @@
 # 041 — Spec Directory Pruning Data Model
 
-Defines the structures the two prune primitives own. `prune-tasks` reduces
+Defines the structures the four prune primitives own. `prune-tasks` reduces
 `tasks.md`: the in-memory **segmentation** it builds, the per-section
 **classification**, the two reduction **modes**, and its request/response
 **schema**. `prune-plan` reduces `plan.md`: its section segmentation, the
