@@ -222,6 +222,6 @@ Blocked on 086 task 8, the other lane's: it writes 086's `## Cost` section.
 
 ## 9. Disposition out-of-spec finding: 060's plan says its review window starts after the reopen's first commit
 
-- [ ] `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — its line on reviewing 022 says the window "is measured after the reopen's first commit, as the review reference's (`framework/reference/review.md`) §Window and coverage requires"; since 084's AC7 a review window starts where the spec's last review ended (`compute-review-scope`), so the claim has been stale since 084, found by task 5's draft
+- [x] `specs/060-exec-analyze-assesses-each-loaded-rule/plan.md` — its line on reviewing 022 says the window "is measured after the reopen's first commit, as the review reference's (`framework/reference/review.md`) §Window and coverage requires"; since 084's AC7 a review window starts where the spec's last review ended (`compute-review-scope`), so the claim has been stale since 084, found by task 5's draft — fixed: the sentence is dropped from 060's plan, a chore that adds no requirement (the agent's recommendation, adopted by the operator, 2026-11-27)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task
