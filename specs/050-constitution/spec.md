@@ -1,8 +1,8 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 cross-spec-impact: [036-quality-cross-rules, 066-audit-records-and-the-completion-gate, 067-analyze-and-audit-checks, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
-next-criterion: 27
+next-criterion: 28
 ---
 
 # 050 — Constitution
@@ -246,6 +246,7 @@ closing it.
 - [x] AC24: **A citation names no line number.** §grounding's *Cite what you consulted* bullet states the rule for a citation in a spec, plan, data model, research file, scenario or task list: it names a path with a symbol, test name, heading or quoted phrase, and never a line number or line range. No such file in this repository's spec root carries one, and each citation it holds names what it points at: an existing citation that already named a symbol, test, heading or quoted phrase had its line suffix stripped, the edit §drift-prevention's mechanical-sweep rule covers (first classified by `066-audit-records-and-the-completion-gate`), and each one that named none, like each prose line reference, was rewritten by hand to name what it pointed at when written (owner decision, 2026-11-17). An adopter's existing citations are not edited: the check reports each when its spec's analysis next runs, and it is fixed there (owner decision, 2026-11-17). `067-analyze-and-audit-checks`' `line-number-citations` family finds none. The bullet keeps its position and anchor (AC10) and holds for an adopter (AC5). `framework/commands/plan.md`, `framework/reference/plan.md` and `framework/reference/clarify.md` point at it instead of restating "never a bare line number". `AGENTS.md`'s *A `path:line` citation in a spec body is provenance* gotcha becomes a pointer to it.
 - [x] AC25: `framework/constitution.md`'s `## Guiding Principles` section carries no Technology or Business list, since no gate, check or command reads them and their content has a home elsewhere: a requirement about code in a rule file (AC22), one true of a single organization's projects in the constitution it registers under `[constitutions.*]` (AC17). The `<!-- §principles -->` marker, the heading, §cost-levers and §design-principles stay (AC10). The `succinctness-is-a-guiding-principle` scenario is deleted, leaving §text-first-artifacts' bullet the rule's one statement, and each live artifact that described a removed principle is corrected, a ticked criterion asserting one annotated as superseded by this spec (owner decision, 2026-11-17).
 - [x] AC26: `framework/constitution.md` §design-principles carries a hard filter that nothing the pipeline does uses more than its task needs: a download, a read or a file it does not need is a defect however far below a limit it stays, so a design is judged by what it costs and never by its distance from a cap, and `AGENTS.md` carries no restatement of the filter
+- [ ] AC27: `framework/constitution.md` §drift-prevention's Decision resolution states that the change superseding a requirement removes it from every artifact that states it, a checked task's text included, since a superseded requirement left in any artifact is dead code or a dead link.
 
 ## Open Questions
 

@@ -1,5 +1,5 @@
 ---
-next-task: 54
+next-task: 57
 ---
 
 # 050 — Constitution Tasks
@@ -52,3 +52,24 @@ A read-only sweep on 2026-11-18, at `6f1286dc`, by meaning and by every principl
 - [x] `scripts/audit/run-all.sh` exits 0 after committing, and `cargo test` passes, since `framework/constitution.md` is a `runtime.yml` trigger
 
 - **Done when**: the constitution carries the filter within its ceiling, `AGENTS.md` carries no copy of it, and the audit and `cargo test` pass
+
+## 54. The constitution says a superseded requirement is never kept (AC27, owner decision 2026-11-27)
+
+- [ ] Add AC27's rule to `framework/constitution.md` §drift-prevention's Decision resolution, with an equal cut elsewhere so the file stays within the 49,000-byte ceiling `scripts/lint-governing-size.sh` holds it to
+- [ ] Correct every live artifact that keeps a checked task as history, so none states the opposite of AC27
+
+- **Done when**: §drift-prevention's Decision resolution states AC27's rule, `framework/constitution.md` is at most 49,000 bytes by `wc -c`, its anchors are unchanged, and `scripts/audit/shipped-anchor-resolution.sh` passes
+
+## 55. Every spec's spent task sections are pruned (AC27, owner decision 2026-11-27)
+
+- [ ] Run `/ductus:prune --all`, keeping pending tasks, so no checked task's text survives in any spec: 612 checked boxes across the 83 `tasks.md` files at `cfb0bfd9`, by `grep -c '^\s*- \[x\]'` over each
+- [ ] Message the other session before pruning a spec it is working, 066 among them
+
+- **Done when**: no `specs/*/tasks.md` holds a checked task section, every pending task is kept, each pruned file carries a `next-task:` counter past its highest number, and `scripts/audit/run-all.sh` passes after the commit
+
+## 56. Each ticked criterion with a Superseded note states its current requirement (AC27, owner decision 2026-11-27)
+
+- [ ] Rewrite each ticked criterion carrying a Superseded note to the requirement that holds now, removing the note, or delete it where its behaviour is gone: 179 criteria in 48 specs at `cfb0bfd9`, the ticked `AC{n}:` lines of `specs/*/spec.md` matching `uperseded`
+- [ ] Ask the owner, one criterion at a time, where the current requirement cannot be read from the note and its source; message the other session before editing a spec it is working
+
+- **Done when**: no ticked criterion in `specs/*/spec.md` carries a Superseded note, each rewritten criterion holds what its spec requires now, and `check-owed-work` reads each touched spec as owing what it owed before
