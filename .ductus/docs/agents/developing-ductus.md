@@ -57,6 +57,7 @@ Gate the commit on every check's exit status, mutants included, in one script: a
      - Update each remaining hit, or name why it stays.
    - **Every enumeration, count and header** in a file the diff touches is read against the file as changed.
    - **Every figure the change states** (a byte size, a count, a line) is measured again on this tree. A change written from an older base, by a parallel worker among them, measured it before other landings moved it.
+   - **A cost keyed on rule IDs** is measured with each surface selection `/ductus` installs (backend and cross, frontend and cross, cross alone), not only the 12 files this repository loads: 088's first AC2 fix judged no rule needlessly here and 13, 20 or 8 in a single-surface adopter (2026-11-26).
 4. Check the index is empty, stage by name, and commit with `DUCTUS_SKIP_RUNTIME_CHECKS=1`.
 5. `git show --stat`, `git status --short`, then `scripts/audit/run-all.sh`, reading its exit status.
 
@@ -83,6 +84,8 @@ Since 020's AC17 a review loads only the rule files whose header names it. Here 
 
 On 2026-11-26 087's review, 79 scope entries and about 1.1 MB to read, took four passes parts sliced by behaviour, each running all five passes over all five rule files (231,962 bytes, `wc -c`, read whole) beside a 234 to 275 KB slice, about 500 KB a part, and two criteria parts (the agent's recommendation, adopted by the operator). The passes parts finished at 389K to 408K tokens, and 403K to 489K after re-running over the fix diff; the criteria parts at 171K to 289K.
 
+On 2026-11-26 088's review, 39 scope entries and about 1.02 MB read with every file up to 95 KB whole (the agent's recommendation, adopted by the operator), took four passes parts by behaviour, each beside a 230 to 290 KB slice, finishing at 278K to 401K tokens with their re-runs over the fix diff, and one criteria part at 202K to 215K. Its review after a reopen, 21 entries of which 8 changed, took one passes part at 318K to 326K and one criteria part at 183K to 189K. Call `discover-rule-files` with no `detected-surfaces`: `tech-stack-verified` skips detection here, and passing `backend` selects four files, leaving out `security-frontend.md`.
+
 A criterion saying a rule file's claims match the current text of the documents its Sources cite is judged only by fetching each document, never from recall (constitution §rules). 068's, 069's and 070's took 42, 62 and 54 fetches (2026-11-21). Brief that part to fetch, since a criteria part judged two such criteria from recall before it was told to.
 
 In one shared tree:
@@ -92,7 +95,7 @@ In one shared tree:
 
 ## Sizing an analysis's judges
 
-`/{project}:analyze`'s rule judges read the design subjects whole beside their rule part, so size a cell by bytes read too. Measured on 022's analysis of 2026-11-17: 310 rules in 368 KB of rule text, a spec, plan and data model of 208 KB, and 78 scenarios of 397 KB. Nine cells, three rule parts by three scenario groups balanced by bytes, each about 450 to 480 KB, all finished with whole reads, at 264K to 306K tokens.
+`/{project}:analyze`'s rule judges read the design subjects whole beside their rule part, so size a cell by bytes read too. Measured on 022's analysis of 2026-11-17: 310 rules in 368 KB of rule text, a spec, plan and data model of 208 KB, and 78 scenarios of 397 KB. Nine cells, three rule parts by three scenario groups balanced by bytes, each about 450 to 480 KB, all finished with whole reads, at 264K to 306K tokens. 088's analysis of 2026-11-26, three cells of 176 to 180 KB with no scenario, finished at 157K to 163K tokens a judge and 105K for step 15's reader; each later re-judge of a diff by `SendMessage` took 10 to 22 seconds, and a run against 8 changed sections about 35K tokens more a judge.
 
 Run an analysis here with `scripts/analyze/` (spec 060), from the repository root with `python3 -I`, each script taking the feature. Where a script falls short, fix it; never rebuild it in a temp directory. Each one's docstring holds its options and exit statuses.
 
