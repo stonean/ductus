@@ -89,9 +89,10 @@
 # maintainer-only files; this covers the spec corpus and is what adopters get.
 #
 # Last, `scripts/lint-governing-size.sh` holds AGENTS.md and the constitution
-# to their size ceilings, measured as staged (spec 072): a lesson added past a
-# ceiling retires, merges or relocates another in the same commit.
-# Unconditional — four git calls cost nothing.
+# to their size ceilings, and each framework/commands/*.md and
+# framework/reference/*.md file to the 50,000-byte read size, measured as
+# staged (specs 072 and 089): a lesson added past a ceiling retires, merges or
+# relocates another in the same commit. Unconditional — eight git calls.
 #
 # Installation: scripts/install-hooks.sh sets `git config core.hooksPath .githooks`.
 
@@ -411,5 +412,6 @@ fi
 # to stderr. `git commit --no-verify` is the deliberate bypass.
 "$ductus_bin" check-corpus-links > /dev/null
 
-# The governing documents' size ceilings (spec 072), against the staged blobs.
+# The governing documents', commands' and references' size ceilings (specs 072
+# and 089), against the staged blobs.
 scripts/lint-governing-size.sh

@@ -11,7 +11,7 @@ An adopter on 0.61.0 reported no stated way to see what a primitive answers abou
 ## Behavior
 
 - §grounding's Rules carry the rule as one bullet: a primitive is probed on an artifact not yet written in a `git clone --local` copy, never in the project's tree, the probe written there and committed when the primitive reads history, and the project's runtime binary run from the clone, not its MCP tools, which read the project.
-- The constitution stays within the 50,000 bytes `scripts/lint-governing-size.sh` holds (AC23).
+- The constitution stays within the ceiling `scripts/lint-governing-size.sh` holds it to (AC23).
 
 ## Edge Cases
 

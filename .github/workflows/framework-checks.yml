@@ -213,11 +213,13 @@ jobs:
       - name: (n) Configure generator
         run: bash scripts/tests/test-gen-configure-mcp.sh
 
-      # (o) AGENTS.md and the constitution have size ceilings (spec 072) so a
-      # lesson added past one retires another instead of growing the rulebook.
-      # The hook runs the lint on staged blobs; this catches a --no-verify
-      # commit. Its test shows the lint fails over a ceiling, on a missing or
-      # unreadable file, and passes at and under one.
+      # (o) AGENTS.md and the constitution have size ceilings below the
+      # read size, and each framework/commands/*.md and framework/reference/*.md
+      # file is held to it (specs 072 and 089), so a lesson added past one
+      # retires another instead of growing the rulebook. The hook runs the lint
+      # on staged blobs; this catches a --no-verify commit. Its test shows the
+      # lint fails over each row's ceiling, on a missing or unreadable file and
+      # on a glob matching nothing, and passes at and under one.
       - name: (o) Governing-document size ceilings
         run: |
           bash scripts/lint-governing-size.sh

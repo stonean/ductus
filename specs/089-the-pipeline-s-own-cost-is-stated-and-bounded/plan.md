@@ -15,7 +15,7 @@ Implements [089 — The pipeline's own cost is stated and bounded](spec.md).
 
 ## Overview
 
-- **AC1.** A §design-principles bullet states the cost rule. It lands in the commit that cuts the constitution, since the constitution sits 89 bytes under its 50,000-byte ceiling.
+- **AC1.** A §design-principles bullet states the cost rule. It lands in the commit that cuts the constitution, since the constitution sat 89 bytes under its 50,000-byte ceiling.
 - **AC3.** Four files are cut to fit, in this order: `AGENTS.md`, whose entries can route into a part; the constitution, whose rules can move into a reference; then `framework/reference/analyze.md` and `framework/reference/review.md`.
 - **AC2.** `scripts/lint-governing-size.sh` then gains its lowered ceilings and two glob rows, all in the commit where every governed file already fits.
 - **AC4.** Closes once 086 states its cost, since 085, 087 and 088 already do.

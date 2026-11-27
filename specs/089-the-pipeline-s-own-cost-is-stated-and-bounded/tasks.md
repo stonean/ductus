@@ -198,10 +198,10 @@ The file is projected near 48,500, plus task 4's 820.
 
 Blocked on tasks 1, 2, 3 and 5: this is the commit AC3 names, so every governed file fits before it.
 
-- [ ] `scripts/lint-governing-size.sh`: write `AGENTS.md`'s and the constitution's ceilings into `CEILINGS` as literals, each ⌈size ÷ 1,000⌉ × 1,000 of the file as this commit stages it, never derived when the script runs; add the `framework/commands/*.md` and `framework/reference/*.md` rows at 50,000, enumerated with `':(glob)'` pathspecs, and a glob matching no indexed file fails with its own message
-- [ ] `scripts/tests/test-lint-governing-size.sh`: seed every case's tree with one small command and reference file and case A with every indexed one; for each row, one byte over fails naming file, size, ceiling and fix, and exactly at passes; a command file no row names is governed; an empty glob fails; H re-aimed as the plan says; each case shown to fail with its row removed
-- [ ] The header and table comments in the script, `.githooks/pre-commit`'s and `framework-checks.yml` step (o)'s name the governed set and 089
-- [ ] Prose-claim sweep for "both ceilings", "50,000" beside `AGENTS.md` or the constitution, and the lint's governed set, in the live-artifact set (`scripts/stale-literals.sh`, and a meaning search of `.ductus/docs/`, `docs/`, `README.md`, `framework/`)
+- [x] `scripts/lint-governing-size.sh`: write `AGENTS.md`'s and the constitution's ceilings into `CEILINGS` as literals, each ⌈size ÷ 1,000⌉ × 1,000 of the file as this commit stages it, never derived when the script runs; add the `framework/commands/*.md` and `framework/reference/*.md` rows at 50,000, enumerated with `':(glob)'` pathspecs, and a glob matching no indexed file fails with its own message
+- [x] `scripts/tests/test-lint-governing-size.sh`: seed every case's tree with one small command and reference file and case A with every indexed one; for each row, one byte over fails naming file, size, ceiling and fix, and exactly at passes; a command file no row names is governed; an empty glob fails; H re-aimed as the plan says; each case shown to fail with its row removed
+- [x] The header and table comments in the script, `.githooks/pre-commit`'s and `framework-checks.yml` step (o)'s name the governed set and 089
+- [x] Prose-claim sweep for "both ceilings", "50,000" beside `AGENTS.md` or the constitution, and the lint's governed set, in the live-artifact set (`scripts/stale-literals.sh`, and a meaning search of `.ductus/docs/`, `docs/`, `README.md`, `framework/`)
 
 - **Done when**: both scripts pass at the commit, each new case fails with its row removed, `framework-checks.yml`'s steps pass via `scripts/run-workflow-steps.py`, `actionlint` passes, and `scripts/audit/run-all.sh` passes after the commit (AC2, AC3).
 

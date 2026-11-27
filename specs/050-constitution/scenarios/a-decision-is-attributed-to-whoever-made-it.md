@@ -12,7 +12,7 @@ An adopter on 0.61.0 reported that `framework/reference/clarify.md` step 4 alone
 
 - The constitution states the rule once, in §recommendations: a decision is attributed to whoever made it in the prose of every record a command writes, the operator's only when the operator made it, and one the agent recommended and the operator adopted as "the agent's recommendation, adopted by the operator, DATE".
 - `framework/reference/clarify.md` step 4 points at the rule instead of stating it.
-- The constitution stays within the 50,000 bytes `scripts/lint-governing-size.sh` holds (AC23).
+- The constitution stays within the ceiling `scripts/lint-governing-size.sh` holds it to (AC23).
 
 ## Edge Cases
 
