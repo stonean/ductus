@@ -6,6 +6,28 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **`prune-review` reduces a spec's `review.md` between reviews (spec 086,
+  AC5 and AC3; the agent's recommendations, adopted by the operator,
+  2026-11-26).** A new MCP tool and CLI command. A preview names each stored
+  decision, by its key, and each waiver anchor, by its rule, on a file still
+  on disk that does not belong to the spec, no plan entry naming it and no
+  commit attributed to the spec having changed it, by one walk of `HEAD`'s
+  history, and counts in `rewrites-count` each `## Excluded from scope` line
+  still naming its path's claimant specs. An apply with the preview's
+  `digest` removes those entries' lines and shortens each claimant line to
+  its path, every other byte kept, reads the result back and refuses a record
+  that will not splice line by line, and writes under the compare-and-set
+  guard. With `all` it previews every spec's record from one history walk,
+  and with `apply` and `digests` (CLI `--digests-json FILE`) writes each
+  record whose edits its digest still names, skipping one that changed.
+  `/{project}:prune` previews it and applies it once a run is confirmed.
+- **`process-decisions` and `process-waivers` report `dropped` and
+  `ownership` (spec 086, AC2).** `dropped` and `dropped-count` list the
+  entries a run drops for not belonging to the spec, bounded with the other
+  lists; `ownership`, `examined` or `not-examined`, and `ownership-reason`
+  say whether the spec's files could be told, absent when no entry reached
+  that test. `compute-review-scope` carries the two ownership fields on a
+  first review.
 - **`backfill-section-digest` gives each current analysis record the
   section digests its run would have written (spec 088, AC3; the agent's
   recommendation, adopted by the operator, 2026-11-26).** A new MCP tool and
@@ -163,6 +185,25 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Changed
 
+- **BREAKING: `write-review` refuses a finding or an observation on a file
+  the run's scope does not hold (spec 086, AC1).** It writes nothing and names
+  the argument and the file; an observation naming no file is accepted.
+  `/{project}:review` takes such an outcome out of the run before its write, a
+  gating one fixed or deferred to its home. Breaking for a caller that
+  recorded outcomes on files outside the scope.
+- **BREAKING: an unrestricted review drops a stored entry on a file that does
+  not belong to its spec (spec 086, AC2 to AC4).** A decision or waiver that
+  did not fire, on a file still on disk that the scope does not hold, which no
+  plan entry names and no commit attributed to the spec changed, is dropped
+  and named, never expired, on a spec's record and a run neither restricted
+  nor given `since`. One on a deleted file still expires, and a history that
+  cannot be read whole drops nothing. Breaking for a consumer that expected
+  such an entry retained.
+- **BREAKING: a first review reads what its spec's commits changed (spec 086,
+  AC6).** `compute-review-scope`, for a spec whose record at `HEAD` names no
+  run, adds each file on disk that a commit attributed to the spec changed,
+  beside the plan's Affected Files entries. Breaking for a consumer that
+  expected a first review's scope to be the plan's entries alone.
 - **`check-artifacts`, `check-artifact-size` and `write-analysis` state the
   rules `framework/reference/analyze.md` held (spec 089; the agent's
   recommendation, adopted by the operator, 2026-11-27).** `check-artifacts`'

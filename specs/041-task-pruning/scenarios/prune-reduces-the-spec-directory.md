@@ -21,7 +21,8 @@ This spec made `tasks.md` the whole of prune's scope and then promoted that to a
 | `spec.md` | Durable | Body never touched; its `status` changes only to reopen a `done` spec |
 | `scenarios/*.md`, `data-model.md` | Durable | Never touched |
 | `research.md` | Reference | Never touched |
-| `review.md`, `analysis.md` | Regenerated | Never written — each run rewrites its own body and prunes its own stale decisions; prune reads only `analysis.md`'s stored decisions, below |
+| `review.md` | Regenerated | Each review rewrites its own body; prune drops each stored decision and waiver anchor on a file the spec does not own and shortens each old Excluded from scope line to its path, every other byte kept (spec 086) |
+| `analysis.md` | Regenerated | Never written — each run rewrites its own body and prunes its own stale decisions; prune reads only its stored decisions, below |
 
 Anything else in the directory is the project's, not the pipeline's: prune neither reads nor reports a file outside this table.
 

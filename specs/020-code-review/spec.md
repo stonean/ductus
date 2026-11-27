@@ -50,6 +50,8 @@ Adds `/ductus:review`, a verb-named slash command that audits implementation cod
 > **Signpost:** [081](../081-reviews-and-checks-follow-what-changed/spec.md) made the review record state what its passes did not read: `unread`, which step 11 of `framework/commands/review.md` passes and `data-model.md`'s record table lists. From it `compute-review-scope` credited a commit naming no spec and touching no spec directory as read in every other window, until spec 084 moved such a commit's code out of every open spec's scope; `unread` still names what the spec's next review reads again.
 >
 > **Signpost:** [084 — Reopen for owed code, review every code change](../084-reopen-for-owed-code-review-every-code-change/spec.md) added `--project`, a review of the code no spec claims recorded in `{specs-root}/review.md`, which `--all` now includes, and gave the review one status write on the spec it reviews: `done → in-progress` once it unticks a criterion or defers a finding to that spec's own work, read from `check-owed-work`. On a `done` spec a ticked criterion judged not met changes only once the owner, or an invocation told to decide, says which side is correct.
+>
+> **Signpost:** [086 — Review records hold only what their scope judged](../086-review-records-hold-only-what-their-scope-judged/spec.md) changed what a review records and carries: `write-review` refuses a finding or observation on a file outside the run's scope, steps 8 and 9 pass each entry `process-decisions` and `process-waivers` drop for not belonging to the spec with the expired ones, and a first review's scope holds the files the spec's attributed commits changed.
 
 ## Summary
 

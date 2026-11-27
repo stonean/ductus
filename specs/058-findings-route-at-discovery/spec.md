@@ -36,6 +36,8 @@ sent. It holds only the todos a person captures with `/{project}:log`.
 > to do on another spec (`framework/reference/review.md` §Deferrals). A deferral whose work is complete while its finding still fires lapses,
 > and the finding needs a new disposition. [data-model.md](data-model.md)
 > records the renamed keys, and 076's data model the new fields.
+>
+> **Signpost:** [086 — Review records hold only what their scope judged](../086-review-records-hold-only-what-their-scope-judged/spec.md) drops a stored decision a review did not read when its file does not belong to the spec, no plan entry naming it and no commit attributed to the spec having changed it, where AC32 retained it, and gives `/{project}:prune` the same drop between reviews.
 
 ## Motivation
 
@@ -518,7 +520,7 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC29: `check-review-gate` blocks an `in-progress` spec whose `review.md` or `analysis.md` has no `dispositions:` map, and names the command to re-run. A record written before this change that carries `captured-issues` still parses, and `/{project}:analyze` does not report a `done` spec's map-less record as drift.
 - [x] AC30: `/{project}:analyze` offers no waiver for a hard-fail or blocking finding. Such a finding is fixed or deferred, and it keeps `blocking: true` in the record until the re-check no longer produces it or its deferral releases it.
 - [x] AC31: A deferral whose write fails (a refused scenario slug) is counted as undispositioned, never as deferred, and the report names the failure beside the finding. A chore fix that fails or proves not mechanical is reverted, never counted as fixed, and the finding takes another disposition.
-- [x] AC32: A deferred or waived decision made in one run is stored with its outcome, its work or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
+- [x] AC32: A deferred or waived decision made in one run is stored with its outcome, its work or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it. **Superseded in part (spec 086).** A review run that evaluated every source and was given no `since`, but whose scope does not hold a decision's file, drops the decision and names it when the file does not belong to the spec, rather than retaining it; `/{project}:prune` drops the same between reviews.
 - [x] AC33: `/{project}:implement` working a disposition task fixes, defers with confirmation, or waives the finding, and checks the task off only once one of the three has happened. A waiver writes its reason onto the checked task.
 - [x] AC34: A non-blocking finding surfaced while `/{project}:implement` works a disposition task is recorded on that task as a further body item with its own outcome, not appended as a new task, and the task is checked once every finding on it has a disposition; a blocking one becomes its own task.
 

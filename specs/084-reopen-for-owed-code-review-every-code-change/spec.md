@@ -9,6 +9,8 @@ next-criterion: 24
 
 A `done` spec reopens only when it owes code: an unchecked task or an unticked acceptance criterion. A code change owes a review whatever its spec's status, derived from history and recorded without a status change. The two are one definition: a spec is open only while code is owed, and a review is owed wherever code changed.
 
+> **Signpost:** [086 — Review records hold only what their scope judged](../086-review-records-hold-only-what-their-scope-judged/spec.md) makes the project record's review refuse an outcome on a file outside its scope and inherit no feature record's decision on code no spec claims, which that feature's next unrestricted review or `/{project}:prune` drops, and keeps in a first review's scope a file the spec's own commits changed although another open plan holds it, which AC23's "only when" allows.
+
 ## Motivation
 
 - §spec-lifecycle's third back-edge sent a `done` spec to `in-progress` on any edit under its directory that `classify-spec-edit` did not class as `correction` or `mechanical` ([079](../079-review-and-analysis-work-converges/spec.md)'s AC15 and AC25), so a typo in a scenario, any data-model edit and any other file reopened it, and each reopening owed an analysis, and often a review, before `done`.
