@@ -124,7 +124,7 @@ Lands after 086 task 7 reaches `origin/main`. The other lane (`ductus-2-f9`) mes
 
 - [x] 089's `cross-spec-impact:` gains 063, 066, 067 and 079
 - [x] A blockquoted signpost to 089 in 050, 063, 067, 072 and 075, each naming what 089 changed there, as the plan's *Cross-spec impact* says
-- [ ] Tell the other lane through `SendMessage`, before editing 066's or 079's spec and again once landed, and tell it that once task 6 lands the hook refuses any commit leaving a command or reference file over 50,000
+- [x] Tell the other lane through `SendMessage`, before editing 066's or 079's spec and again once landed, and tell it that once task 6 lands the hook refuses any commit leaving a command or reference file over 50,000
 - [x] 066's signpost; 079's signpost beside its Resolved Question on AC18, and its AC18 note, worded per the answer 086 task 7 recorded (asked of the owner if none is recorded) and landed with or after 086 task 7's notes, so one review of 079 covers AC6, AC18 and AC24
 - [x] Append to 060's task 15 a checkbox: state in 060's `spec.md` what a run of the scenario judgment costs and what it retires, or why none, beside a blockquoted signpost to 089 (089's AC1)
 - [x] `derive-dependencies` reports no drift and no cycle
@@ -218,7 +218,7 @@ Blocked on tasks 1, 2, 3 and 5: this is the commit AC3 names, so every governed 
 
 Blocked on 086 task 8, the other lane's: it writes 086's `## Cost` section.
 
-- [ ] Confirm each of 085, 086, 087 and 088 carries a `## Cost` section with a measurable unit and its method, what it retires or why none, and a blockquoted signpost to 089, and that each `## Cost` commit precedes its spec's `status(…): … → done` commit
+- [x] Confirm each of 085, 086, 087 and 088 carries a `## Cost` section with a measurable unit and its method, what it retires or why none, and a blockquoted signpost to 089, and that each `## Cost` commit precedes its spec's `status(…): … → done` commit
 
 - **Done when**: all four confirmations hold by `git log` and each spec's text.
 
