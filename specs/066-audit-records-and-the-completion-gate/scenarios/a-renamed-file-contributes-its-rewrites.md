@@ -6,26 +6,19 @@ section: "Record freshness"
 
 ## Context
 
-Review staleness was judged by two implementations of one rule: Family 19
-(`scripts/audit/review-freshness.sh`) and the transition gate's
-`SweepIndex::build` (`runtime/src/primitives/mechanical_sweep.rs`).
-[review-staleness-on-done-specs](review-staleness-on-done-specs.md) records why
-there were two, and why `mechanical_sweep_parity` held them together until
-Family 19 came to call the runtime (owner, 2026-11-04; spec 081 later retired
-Family 19 and the primitive it called).
+The mechanical-sweep exemption, which
+[review-staleness-on-done-specs](review-staleness-on-done-specs.md) states,
+builds the window's repo-wide rewrite set in `SweepIndex::build`
+(`runtime/src/primitives/mechanical_sweep.rs`) from a tree diff. With no rename
+detection, a renamed file was a delete plus an add and contributed nothing to
+that set, though in a renumber the file's own links are where the sweep's
+rewrite lands.
 
-They still built different repo-wide rewrite sets. Family 19 ran `git diff`,
-which detected renames under git's default config, so a renamed file was diffed
-against its old path and its substitutions counted toward the repo-wide pairs.
-`SweepIndex::build` used git2's tree diff with no rename detection, so the same
-file was a delete plus an add and contributed nothing.
-
-This surfaced on 2026-10-05 on PR #5's `063` → `064` / `064` → `065` renumber,
-where it was why the halves disagreed. The chaining that turned that
-disagreement into a wrong verdict had been fixed
+This surfaced on 2026-10-05 on PR #5's `063` → `064` / `064` → `065` renumber.
+The chaining that turned a missed rewrite into a wrong verdict had been fixed
 ([a-multi-number-renumber-is-one-rewrite](a-multi-number-renumber-is-one-rewrite.md));
-the disagreement itself had not. The parity test did not catch it because it
-compared the real corpus, which carried no renamed-file case.
+the missed rewrite itself had not. No test caught it, since the real corpus
+carried no renamed-file case.
 
 ## Behavior
 
@@ -38,10 +31,7 @@ renumber its own links are where the sweep's rewrite lands.
 **It inherits no setting.** The similarity threshold (50%) and the rename
 limit (10,000) are `RENAME_THRESHOLD` and `RENAME_LIMIT` in
 `mechanical_sweep.rs`, not libgit2's defaults or a contributor's git config,
-so the verdict does not depend on who asks. Family 19 asked this same code
-until spec 081 retired it; while it carried its own copy,
-`diff.renames=false` turned that copy's detection off, and a parity test held
-its values to the constants.
+so the verdict does not depend on who asks.
 
 **A window over the limit is unreadable.** `SweepIndex` counts the window's
 changed markdown paths before renames pair them and, above the limit, grants
@@ -63,12 +53,11 @@ that inherited any of it fails too.
   such a file an empty, and so exempt, entry; entries open on the first hunk.
 - **Copy detection stays off.** A copied file is new content, not a rewritten
   one.
-- **A record with no `reviewed-digest`** asks no rename question: it is
-  undeterminable, since Family 19's commit-diff proxy, which listed both sides
-  of a move, went with its copy of the rule.
+- **A record with no `reviewed-digest`** asks no rename question: it adds no
+  contract to a review's scope.
 - **The rule is 066's.** It is stated here, as
   [a-multi-number-renumber-is-one-rewrite](a-multi-number-renumber-is-one-rewrite.md)
-  states its own, and Family 19 reached it through `check-review-freshness` until spec 081 retired both.
+  states its own.
 
 ## Open Questions
 

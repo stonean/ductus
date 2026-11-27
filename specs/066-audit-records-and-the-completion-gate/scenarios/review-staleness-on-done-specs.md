@@ -6,30 +6,24 @@ section: "Record freshness"
 
 ## Context
 
-066's scenario `review-staleness-gate`, deleted by spec 081 with the check it specified, added `check-review-gate`'s `ReviewStale` block: a spec cannot reach `done` while durable contracts in its plan's Affected Files have changed since its recorded `reviewed-against`. That closes the transition. It does not close the state.
+A review record's `reviewed-digest` names the durable contracts the review read, and `compute-review-scope` compares it with those files as they are now, putting each changed one in the scope of the next review that runs (AC3). The comparison gates nothing: a changed contract owes an analysis and no review (spec 081), and the completion gate has no transition to check on a `done` spec (AC4).
 
-The gate fires **only** on `in-progress → done`. Once a spec is `done`, nothing re-evaluates its verdict, so contracts can move underneath it indefinitely and the recorded review goes on describing code that no longer exists. `check-artifacts`' `review-state-drift` family looks adjacent but is not: its data-model entry defined it as *"a `done` spec with `review.last-run` unset or `review.blocking: true`"* — a missing or blocking review, never a stale one. So a `done` spec whose review is merely out of date is reported clean by both mechanisms.
-
-Observed 2026-08-16. `017-derive-dont-ask` was taken through the back-edge for an unrelated reason and its gate immediately reported staleness against **four** durable contracts. Three of them — `data-model.md`, `detect-dependency-cycles.md`, `skip-prose-cross-references.md` — had changed during the `0.28.0` cycle, while 017 sat at `done`. Its recorded verdict dated from 2026-08-02 and described the repository as it was before the release. Nothing surfaced that for two weeks, and nothing would have: it became visible only because an unrelated edit forced a transition, which is the definition of an undetected state rather than an accepted one.
-
-The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This is the `QUAL-CLAIM-001` shape applied to the pipeline's own bookkeeping — a `done` spec presents a review verdict, and a reader cannot distinguish one that still describes the code from one that has not been looked at since the code moved.
+Without an exemption, the comparison reads a corpus-wide rename as a change to every contract the rename touched. Measured 2026-08-16 over the 46 `done` specs, 19 read stale, every one a consequence of 049's `govern → ductus` sweep and none a real change: `017-derive-dont-ask`'s three changed contracts all changed in `9da4a7a`, that sweep's commit.
 
 ## Behavior
 
-**Retired by spec 081.** `check-review-gate` no longer compares a review's digest, and Family 19 and `check-review-freshness` are gone. The comparison remains inside `compute-review-scope`, where a changed contract only joins the scope of a review that runs, and the rename exemption below still applies to it. The rest records the rule as it stood.
-
-The `check-artifacts` staleness arm this scenario first specified was not built; the fourth Resolved Question records why. What it delivered was `check-review-gate`'s review-record freshness.
-
-**A rename sweep does not stale a review.** The freshness computation — `analyze_subjects::freshness_of` over `is_review_contract` (a `scenarios/*.md` file or `data-model.md`), from whose result `stale_review_block` builds the block — drops a changed contract whose change since `reviewed-against` was a uniform repo-wide rename, through the `primitives::mechanical_sweep` exemption `review-freshness.sh` has always carried. When the two trees it needs are unavailable, the exemption does not run and every candidate is reported.
+**A mechanical sweep changes no contract.** The comparison, `analyze_subjects::freshness_of` over `is_review_contract` (a `scenarios/*.md` file or `data-model.md`), reached through `review_freshness`, drops a changed contract whose change since `reviewed-against` was a mechanical sweep, through `primitives::mechanical_sweep`, the exemption the analysis record's freshness applies too. When the two trees it needs are unavailable, the exemption does not run and every candidate is kept.
 
 **An abbreviated `reviewed-against` resolves.** The recorded sha is resolved with `revparse_single`, so a short sha names its commit rather than a zero-padded id that matches nothing.
 
-**The existing `review-state-drift` arms keep their grandfather rule.** A `done` spec with no review record at all predates `/{project}:review` and is exempt — keyed on the absence of `review.md` since spec 057, and that re-keying was not cosmetic: keyed on the block's absence, the relocation made the predicate true of every spec and the family would have exempted the whole corpus while exiting green.
+**The comparison reads the spec's own contracts.** It covers the spec's `scenarios/*.md` and `data-model.md`, never its plan's Affected Files, which old specs list with shared surfaces such as `AGENTS.md` that every later spec touches: tried that way on 2026-08-16, it blocked 34 of the corpus's 48 specs.
+
+**The `review-state-drift` arms keep their grandfather rule.** A `done` spec with no review record at all predates `/{project}:review` and is exempt, keyed on the absence of `review.md`: keyed on a record block in `spec.md`, which spec 057 moved out, the predicate would hold of every spec and the family would exempt the whole corpus while exiting green.
 
 ## Edge Cases
 
-- A mechanical sweep (a rename, a citation's line number removed) that touches a durable contract without changing its meaning: a uniform substitution must not report every `done` spec stale. `review-freshness.sh` has always carried this exemption; the shared Rust path did **not** inherit it, which is the defect the measurement found and the second Resolved Question records. It does now, via `primitives::mechanical_sweep`.
-- `reviewed-against` names a commit absent from a shallow clone: the rename exemption cannot run, so its candidates are reported rather than dropped. A CI checkout needs `fetch-depth: 0`, the same requirement Family 19 already carries and was already bitten by.
+- A mechanical sweep (a rename, a citation's line number removed) that touches a durable contract without changing its meaning puts no contract in a review's scope.
+- `reviewed-against` names a commit absent from a shallow clone: the exemption cannot run, so every candidate is kept rather than dropped.
 
 ## Open Questions
 
@@ -37,56 +31,4 @@ The `check-artifacts` staleness arm this scenario first specified was not built;
 
 ## Resolved Questions
 
-- **Which code path does `check-review-gate` actually share?**
-  `analyze_subjects::freshness_of` with `is_review_contract` — from whose
-  result `stale_review_block` only builds the block — not
-  `compute_review_scope::read_plan_affected`. Resolved 2026-08-16: this scenario's Behavior section and 022 task 88 both
-  named `read_plan_affected`, and `check_review_gate.rs` references it nowhere.
-  Following the letter would have been actively harmful — that function's own
-  doc comment records that the Affected-Files scoping *was* tried and rejected
-  because it blocked **34 of 48** specs (old specs list shared surfaces like
-  `AGENTS.md` that every later spec touches), and adopting it here would have
-  created exactly the second matching rule the same paragraph forbids. Both
-  texts corrected.
-
-- **How many `done` specs would the arm flag, and is advisory enough?**
-  Measured 2026-08-16, before the design was finalised, as this scenario
-  requires: **19 of 46**, and **all 19 were false positives**. Every one was a
-  consequence of 049's `govern → ductus` rename — `005-workflows`, for
-  instance, differed only in `/govern` → `/ductus` inside its `data-model.md`.
-  Advisory would not have saved it: a family that reports noise on 41% of the
-  corpus is one people stop reading, which is the failure the gate's own
-  history already records at 34-of-48.
-
-  The cause was the third error: this scenario asserted that the shared path
-  inherits `review-freshness.sh`'s mechanical-sweep exemption. It did not.
-  Family 19 had the exemption and reported **0**; the Rust gate had none and
-  would have reported 19. Two implementations of one rule, disagreeing on 19
-  specs, with nothing comparing them — the drift this scenario's own Behavior
-  section said would be "worse than none", already present.
-
-  The founding observation was itself an instance: `017-derive-dont-ask`'s
-  three "stale" contracts all changed in exactly one commit, `9da4a7a
-  feat(049): sweep the framework, scripts, and specs onto ductus`. The gate
-  fired on a rename.
-
-- **What was done about it?** The exemption was ported to Rust as
-  `primitives::mechanical_sweep` and wired into the gate's freshness
-  computation (now `analyze_subjects::freshness_of`), so the
-  transition gate stops firing on sweeps. A third divergence surfaced while
-  testing it: `git2::Oid::from_str` zero-pads an abbreviated sha into an id
-  that matches nothing, so the gate failed **open** on
-  `012-multi-agent-govern`'s `d904430` while Family 19's `git cat-file -e`
-  resolved it — fixed with `revparse_single`.
-
-  Family 19 kept its own Python implementation then, because the CI job that
-  ran the self-audit had no Rust toolchain and no runtime build, and the
-  `mechanical_sweep_parity` integration test ran both over the real corpus,
-  failing on the first disagreement. That reason lapsed when the audit jobs
-  gained the toolchain and a release build, and since 2026-11-04 Family 19
-  calls the runtime's `check-review-freshness` instead (066 plan, *Family 19
-  calls the runtime*), so the two gates are one implementation and the
-  corpus comparison went with the copy. Spec 081 (owner, 2026-11-11) retired
-  both.
-
-- **Does the `check-artifacts` staleness arm still need building?** No — resolved 2026-08-16: `framework-checks.yml` runs Family 19 over every `done` spec on every push to `main`, so contracts never move unwatched, and the two-week silence the Context describes was the rename exemption correctly holding; what remains is a visibility gap, better closed by surfacing Family 19's verdict in `/{project}:analyze` than by a third implementation of the rule. Spec 081 (owner, 2026-11-11) reversed the premise: it retired Family 19 and the gate's review-staleness check, and a review's digest gates nothing.
+- **Does a `done` spec's review owe a re-run when its contracts change?** No: a changed contract owes an analysis and no review (spec 081). It joins the scope of the next review that runs.

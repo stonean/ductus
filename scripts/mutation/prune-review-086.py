@@ -480,8 +480,8 @@ MUTATIONS = [
     (
         'M66 a dangling link reads as gone from disk',
         'src/primitives/compute_review_scope.rs',
-        'pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {\n    repo.join(path).symlink_metadata().is_ok()\n}',
-        'pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {\n    repo.join(path).exists()\n}',
+        'pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {\n    !super::leaves_project(repo, path) && repo.join(path).symlink_metadata().is_ok()\n}',
+        'pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {\n    !super::leaves_project(repo, path) && repo.join(path).exists()\n}',
         'primitives::prune_review::tests::a_prune_drops_what_an_unrestricted_review_drops',
     ),
     (

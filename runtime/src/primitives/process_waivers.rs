@@ -335,7 +335,10 @@ impl Pass<'_> {
     /// cover, or, when it does not fire, retain, drop or expire it.
     fn place(&self, kind: Kind<'_>, anchor: WaiverRef, shown: &Shown<'_>, out: &mut Classified) {
         let Shown { rule, at, reason } = shown;
-        let file_exists = self.repo.join(&anchor.file).exists();
+        // The anchor's file is committed text: one leaving the project is never probed,
+        // and reads as gone (`BE-INPUT-004`; 022's plan §Path arguments).
+        let file_exists = !super::leaves_project(self.repo, &anchor.file)
+            && self.repo.join(&anchor.file).exists();
         let count = self
             .counted
             .iter()
@@ -1254,6 +1257,32 @@ mod tests {
         assert_eq!(anchors(&result.applied), vec![("SEC-BE-014", "src/a.ts")]);
         assert_eq!(anchors(&result.retained), vec![("SEC-BE-014", "src/b.ts")]);
         assert_eq!(result.expired, [] as [WaiverRef; 0]);
+    }
+
+    /// A waiver's anchor file is committed text, so one reached through a directory
+    /// linked out of the project is never probed and reads as gone: a finding fired at
+    /// it is not waived, while the same waiver on a file inside applies (`BE-INPUT-004`).
+    #[cfg(unix)]
+    #[test]
+    fn an_anchor_through_a_link_leaving_the_project_is_never_probed() {
+        let tmp = setup(
+            "001-x",
+            &list_waiver(&["src/a.ts", "link/a.ts"]),
+            &["src/a.ts"],
+        );
+        let outside = TempDir::new().unwrap();
+        std::fs::write(outside.path().join("a.ts"), "code\n").unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("link")).unwrap();
+        let result = run(
+            &args(
+                "001-x",
+                &[("SEC-BE-014", "src/a.ts"), ("SEC-BE-014", "link/a.ts")],
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(anchors(&result.applied), vec![("SEC-BE-014", "src/a.ts")]);
+        assert_eq!(anchors(&result.expired), vec![("SEC-BE-014", "link/a.ts")]);
     }
 
     #[test]

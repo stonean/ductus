@@ -895,13 +895,17 @@ impl RunScope {
     }
 }
 
-/// Whether `path`, from the project root, names something on disk, a link counting as
-/// itself wherever it points: a stored entry on such a file says nothing about its finding
-/// while the file is there, and its finding is over once it is gone. [`RunScope::why_unread`]
+/// Whether `path`, from the project root, names something on disk, a link that stays
+/// inside the project counting as itself, its target there or not: a stored entry on such
+/// a file says nothing about its finding while the file is there, and its finding is over
+/// once it is gone. [`RunScope::why_unread`]
 /// and `prune-review` share it, so a prune drops what an unrestricted review would (spec
-/// 086, AC4).
+/// 086, AC4). The path is drawn from a record's committed text, so one that leaves the
+/// project, by a `..`, an absolute form or a link, is never probed and reads as gone, the
+/// missing subject 022's plan §Path arguments names (`BE-INPUT-004`), as [`hold_in_scope`]
+/// keeps one out of the scope.
 pub(crate) fn still_on_disk(repo: &Path, path: &str) -> bool {
-    repo.join(path).symlink_metadata().is_ok()
+    !super::leaves_project(repo, path) && repo.join(path).symlink_metadata().is_ok()
 }
 
 /// The `last-run` a pre-057 `spec.md` states in its `review:` frontmatter block,
@@ -4970,6 +4974,23 @@ mod tests {
         assert_eq!(cut, ["AC1"]);
     }
 
+    /// A criterion a sweep alone changed keeps its verdict only while ticked: an
+    /// unticked one owes a review whatever its verdict was (066 task 32, scenario
+    /// `criteria-are-verified-in-review`).
+    #[test]
+    fn an_unticked_swept_criterion_still_owes() {
+        let others = swept_elsewhere();
+        let after: Vec<(&str, &str)> = others.iter().map(|(p, t)| (*p, t.as_str())).collect();
+        let tmp = judged_then(JUDGED, SWEPT, &after);
+        let unticked = fs::read_to_string(spec_path_of(&tmp))
+            .unwrap()
+            .replace("- [x] AC1", "- [ ] AC1");
+        write(&spec_path_of(&tmp), &unticked);
+        let repo = Repository::open(tmp.path()).unwrap();
+        commit_all(&repo, "docs: untick");
+        assert_eq!(x(&tmp).criteria_owing, ["AC1"]);
+    }
+
     fn spec_path_of(tmp: &tempfile::TempDir) -> std::path::PathBuf {
         tmp.path().join("specs/001-x/spec.md")
     }
@@ -5241,6 +5262,39 @@ mod tests {
         };
         assert_eq!(scope.why_unread("src/b.rs", tmp.path()), None);
         assert!(scope.why_unread("lib/c.rs", tmp.path()).is_some());
+    }
+
+    /// A stored entry's path is committed text, so one that leaves the project is never
+    /// probed and reads as gone, whether it leaves by a `..`, an absolute form or a linked
+    /// directory, while a file inside and a link that stays inside still read as on disk
+    /// (`BE-INPUT-004`; 022's plan §Path arguments, *Paths drawn from committed text*).
+    #[cfg(unix)]
+    #[test]
+    fn a_stored_path_leaving_the_project_is_never_probed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        write(&project.join("src/a.rs"), "a\n");
+        write(&tmp.path().join("outside/secret.txt"), "s\n");
+        std::os::unix::fs::symlink(tmp.path().join("outside"), project.join("link")).unwrap();
+        std::os::unix::fs::symlink("src/a.rs", project.join("inner.rs")).unwrap();
+        let absolute = tmp.path().join("outside/secret.txt");
+
+        for leaving in [
+            "../outside/secret.txt",
+            "link/secret.txt",
+            absolute.to_str().unwrap(),
+        ] {
+            assert!(!still_on_disk(&project, leaving), "{leaving}");
+        }
+        assert!(still_on_disk(&project, "src/a.rs"));
+        assert!(still_on_disk(&project, "inner.rs"));
+
+        let scope = RunScope::Known {
+            read: BTreeSet::new(),
+            plan: PlanEntries::new(&[]),
+        };
+        assert_eq!(scope.why_unread("link/secret.txt", &project), None);
+        assert!(scope.why_unread("src/a.rs", &project).is_some());
     }
 
     /// A changed path holding a pattern character is the path it is: only a plan's

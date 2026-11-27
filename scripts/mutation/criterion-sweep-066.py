@@ -51,4 +51,11 @@ MUTATIONS = [
         '',
         'primitives::compute_review_scope::tests::a_criterion_a_sweep_alone_changed_keeps_its_verdict',
     ),
+    (
+        'M6 an unticked criterion a sweep alone changed keeps its verdict',
+        'src/primitives/criterion_verdicts.rs',
+        '            criterion.checked\n                && criterion.label.is_some()\n',
+        '            criterion.label.is_some()\n',
+        'primitives::compute_review_scope::tests::an_unticked_swept_criterion_still_owes',
+    ),
 ]

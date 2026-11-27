@@ -439,6 +439,16 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Fixed
 
+- **A stored entry's file that leaves the project is never probed (spec
+  066's review, 2026-11-27; `BE-INPUT-004`).** `process-decisions`,
+  `process-waivers` and `prune-review` read whether a stored decision's or
+  waiver's file is still on disk by probing the path its committed text
+  names, without containing it, so a `..`, an absolute path or a directory
+  linked out of the project was probed outside it, and its presence there
+  decided whether the entry was retained, dropped, applied or expired. Such a
+  path is now contained first and reads as gone, as a deleted file does: an
+  unrestricted review whose scope can be read expires the entry, no waiver on
+  it applies, and a prune keeps it for that review.
 - **A `departs:` item's rule ID is a code span as `CommonMark` reads one
   (spec 073, review of 2026-11-24).** The reader split the line on backticks,
   so a lone unclosed backtick named a rule and the entry waived it, and a rule

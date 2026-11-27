@@ -42,7 +42,7 @@ computed over a good window, here the window itself excludes the work.
 ## Behavior
 
 **A first run's default diff base is the parent of the status-transition commit, not the
-transition commit itself; `compute-review-scope` states when a later run's moves.** The commit that moved the spec into `in-progress`
+transition commit itself, on a spec short of `done`; `compute-review-scope` states a `done` spec's, and when a later run's moves.** The commit that moved the spec into `in-progress`
 is the boundary of the work window, and a boundary belongs inside the window it
 bounds. `find_in_progress_commit` still identifies the transition — the lookup
 is shared with `check-stuck` and is unchanged — and `compute-review-scope`
