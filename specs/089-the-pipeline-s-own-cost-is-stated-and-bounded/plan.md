@@ -39,7 +39,7 @@ Bytes are by `wc -c`, or by a Python split on headings outside fences summing to
 | --- | --- | --- | --- | --- |
 | `AGENTS.md` | 49,820 | 32,400 to 37,000 | 49,000 | the cut's size rounded up to the next 1,000 |
 | `framework/constitution.md` | 49,911 | about 48,700 to 49,000 | 49,000 | the cut's size rounded up to the next 1,000 |
-| `framework/reference/analyze.md` | 69,387 | about 47,500 | 50,000 | 50,000 |
+| `framework/reference/analyze.md` | 69,387 | 49,748 (cut) | 50,000 | 50,000 |
 | `framework/reference/review.md` | 65,138 | about 48,500, plus 086 task 4's addition | 50,000 | 50,000 |
 | `framework/reference/implement.md` | 14,055 | 14,055 (unchanged) | 50,000 | 50,000 |
 
@@ -88,20 +88,20 @@ Rules for every cut:
 
 The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and duplicates alone leaves it at about 51,100. The constitution makes the binary the source of a primitive's rules (§runtime-host-integration), and these spans are the primitives' detection rules.
 
-- **Copies and duplicates out** (about 18,300 net). The inventory's spans cut are:
+- **Copies and duplicates out.** The reference goes from 69,387 to 49,748 bytes. The inventory's spans cut are:
   - rules a description already states, such as `validate-frontmatter`'s row selection, `check-artifacts`' family conditions, `discover-rule-files`' judge and rejudge sets, and `write-analysis`' refusals;
   - restatements of a `framework/commands/analyze.md` step;
   - one rule another command applies (*Spec integrity*'s clarify and amend paths).
-- **Moved into descriptions** (about 3,500 net). Before it lands in a description, each moved sentence is checked against the code that enforces it.
-  - `CHECK_ARTIFACTS` gains about 2,655 bytes:
+- **Moved into descriptions** (2,968 bytes). Before it lands in a description, each moved sentence is checked against the code that enforces it.
+  - `CHECK_ARTIFACTS` gains 2,319 bytes:
     - the placeholder tokens;
     - the plan-title link rule;
     - *Acceptance-criterion path existence*'s scope, candidate grammar and `root-absent`, `ships-to-adopter` and `gitignored` rules, plus the unbackticked-path note;
     - *Body path existence*'s path reading and history rule;
     - *Line-number citations*' scope;
     - *Link-adjacent decision drift*'s coverage, exemptions and message shape.
-  - `CHECK_ARTIFACT_SIZE` gains about 185: bytes as a proxy, and no value switching the check off.
-  - `WRITE_ANALYSIS` gains about 150: `constitution-unresolved`.
+  - `CHECK_ARTIFACT_SIZE` gains 248: bytes as a proxy, and that a zero or non-numeric value is refused, so none switches the check off.
+  - `WRITE_ANALYSIS` gains 401: `constitution-unresolved` and `constitution-registry-unreadable`, the two reasons it adds itself.
   - The reference keeps one pointer line per section it moves text out of.
 - **Kept verbatim.**
   - Family 18's phrase, negator and verb lists, which `scripts/audit/marker-list-parity.sh` reads from this file (071's AC10).
@@ -109,7 +109,11 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
   - *Severity tiers*.
   - Every heading `framework/commands/analyze.md` points at, `scripts/audit/template-alignment.sh` enumerates or `check_step_references`' exempt list names.
   - Text the ticked criteria of 016, 033, 045, 046, 060, 071, 084 and 087 name, or that 027's, 000's and 067's scenarios and 068's and 069's specs name ("Which ID format governs a file").
-- **Its cost.** Every `/analyze` run loads all three descriptions (the generated `.claude/commands/ductus/analyze.md`'s `select:` line), so a run reads about 3,000 more bytes. No golden holds a description, and `runtime/tests/mcp.rs`' description test compares each tool's text with its subcommand's `long_about`, which share the constant. The 4,096-character bound there applies to `/target`'s always-loaded tools, none of these three.
+  - *Cross-service references*' class definitions, since `resolve-references`' description defines only `duplicate-repos`.
+  - The managed roots under *Project-level consistency*, which `check-orphaned-references`' description does not name.
+  - *Line-number citations*' scope line, which 067's AC5 says the reference states.
+  - *Finding dispositions*' order line, which the constitution's *Detect, decide, re-check, record* points at.
+- **Its cost.** Every `/analyze` run loads all three descriptions (the generated `.claude/commands/ductus/analyze.md`'s `select:` line), so a run reads 2,968 more bytes. No golden holds a description, and `runtime/tests/mcp.rs`' description test compares each tool's text with its subcommand's `long_about`, which share the constant. The 4,096-character bound there applies to `/target`'s always-loaded tools, none of these three.
 
 ### The review reference cuts copies only
 

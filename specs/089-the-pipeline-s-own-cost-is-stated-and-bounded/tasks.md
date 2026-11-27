@@ -111,10 +111,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 The headings `scripts/audit/template-alignment.sh` enumerates must stay verbatim. Totals: about 18,300 removable net, plus about 3,530 moved, so the file is projected near 47,500.
 
-- [ ] Cut the copies and duplicates the plan's *The analyze reference moves the primitives' rules into their descriptions* names, keeping every pinned span, heading and Family 18 list verbatim
-- [ ] Move the named rules into `CHECK_ARTIFACTS`, `CHECK_ARTIFACT_SIZE` and `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs`, each sentence first checked against the code that enforces it, and leave one pointer line per section
-- [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the three descriptions state the rules the reference held
-- [ ] `scripts/gen-claude-commands.sh`; `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --test mcp` and the `check_step_references` tests; `scripts/audit/marker-list-parity.sh`, `scripts/audit/template-alignment.sh` and `scripts/audit/step-reference-integrity.sh`
+- [x] Cut the copies and duplicates the plan's *The analyze reference moves the primitives' rules into their descriptions* names, keeping every pinned span, heading and Family 18 list verbatim
+- [x] Move the named rules into `CHECK_ARTIFACTS`, `CHECK_ARTIFACT_SIZE` and `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs`, each sentence first checked against the code that enforces it, and leave one pointer line per section
+- [x] `runtime/CHANGELOG.md` `[Unreleased]`: the three descriptions state the rules the reference held
+- [x] `scripts/gen-claude-commands.sh`; `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --test mcp` and the `check_step_references` tests; `scripts/audit/marker-list-parity.sh`, `scripts/audit/template-alignment.sh` and `scripts/audit/step-reference-integrity.sh`
 
 - **Done when**: `framework/reference/analyze.md` is at most 50,000 bytes by `wc -c`, every heading a step, audit family or `check_step_references` names still exists, each criterion the plan lists as pinning this file still holds, and the runtime checks above pass.
 
