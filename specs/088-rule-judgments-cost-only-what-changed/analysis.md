@@ -1,17 +1,17 @@
 ---
 spec: 088-rule-judgments-cost-only-what-changed
-last-run: 2026-11-27T00:18:16Z
-analyzed-against: 812b7a890e96e1128a31b154e6f71fcd1ce2bed0
+last-run: 2026-11-27T01:14:44Z
+analyzed-against: 983a63924a09f542de646dbdb13ffd56dc4fdfdf
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 2
 analyzed-digest:
-  data-model.md: 048859896e2a703ed2b4fa0e6bc003f746e10fa2a62c7632463a8abc8730764e
-  plan.md: aea4c6216bbfc648583264e85a18c25e2b9e8a8c69b5fd01bff0d3b4768e39c4
-  review.md: 90b188b8dd0dbb7b02d653b6ede4f8c31a1629143a3391e40da4c9e62454bcbd
-  spec.md: 5f5a62a41e6d21813edcd76b1647400f5184d88a2aa51895bcdf14129c03ecd8
-  tasks.md: 3a4abc0a8cea56673feb2bfa0bb0bb0c2a6cc1031ce925f0121248cd654014d5
+  data-model.md: 16f35f2d6ef5050a71927161866f13d7218722f3b210512e9a1811c5d738748e
+  plan.md: 53792919226a22179509ce5536b13fd22fc74dd65ea351ebba64bfcf6aa4782f
+  review.md: 3860fce3b21f1dafd29ed23d2cf2f09e66798819913bb455d368b3fb25f0a6ac
+  spec.md: 30fd8403b5bab8afb8412baf90e7502512db1601b1e1e1dfc39adf0662d4023e
+  tasks.md: 20a56efdd494bab51085142a6724a032a188b2309d447f2c6683f449b9d84234
 unexamined-by-reason:
   root-absent: 2
 rule-digest:
@@ -31,18 +31,18 @@ section-digest:
   "data-model.md": e3b0c44298fc1c14
   "data-model.md#088 — Rule judgments cost only what changed Data Model": 821def2eea8b57e5
   "data-model.md#Record fields": 2f6fa6c806fc7aaa
-  "data-model.md#`backfill-section-digest`": 6e30b149e1f88a81
-  "data-model.md#`discover-rule-files` with a `feature`: `rejudged-files`": 74d5a32548577f18
+  "data-model.md#`backfill-section-digest`": 0cd25469380d51bb
+  "data-model.md#`discover-rule-files` with a `feature`: `rejudged-files`": 97667c25f3808f46
   "plan.md": e3b0c44298fc1c14
   "plan.md#088 — Rule judgments cost only what changed Plan": 7af42861fcea065b
-  "plan.md#A changed rule file is compared rule by rule at `analyzed-against` (AC2)": 83d564c062d4dca4
-  "plan.md#Affected Files": db76bd64446278fc
+  "plan.md#A changed rule file is compared rule by rule at `analyzed-against` (AC2)": 75aa12faa898c0e0
+  "plan.md#Affected Files": 016552e721c20b2c
   "plan.md#Cross-spec impact": ebc10c22d96d19e9
   "plan.md#Data Model": 2d620264ae2ac773
   "plan.md#Overview": bc9743888dffee0a
   "plan.md#Primitive interface changes, classified under `BE-COMPAT-001`": c33d94bcd6153701
   "plan.md#Technical Decisions": ad85a1d406c0b799
-  "plan.md#Tests: each behavior fails with its condition removed": 692126048e2cf747
+  "plan.md#Tests: each behavior fails with its condition removed": 967f52b31744df58
   "plan.md#The backfill is one corpus-wide primitive (AC3)": 1aa4a4334a752cf5
   "plan.md#The migration and this repository's records": ca1f32ff04d93ae6
   "plan.md#The narrowing lives in `standing`, which every caller shares": cf29514fb2ac2b63
@@ -54,11 +54,11 @@ section-digest:
   "spec.md#Acceptance Criteria": e688691ce9767ee2
   "spec.md#Applicable Rules": 98e74abd7041bb4d
   "spec.md#Behavior": b18130632d4fbe36
-  "spec.md#Cost": 93a98d54368da50c
-  "spec.md#Edge Cases": 238793ee935b091b
+  "spec.md#Cost": 774cbfb9f54bc3d3
+  "spec.md#Edge Cases": 1918a556ac31f48a
   "spec.md#Motivation": a139ecee198696aa
   "spec.md#Open Questions": 20edda8881516e4e
-  "spec.md#Resolved Questions": ed4c13f09f3fbc57
+  "spec.md#Resolved Questions": d46e35e8b310373e
 rule-verdicts:
   BE-COMPAT-001: {verdict: addressed, cite: "plan.md#Primitive interface changes, classified under `BE-COMPAT-001`"}
   BE-INPUT-001: {verdict: addressed, cite: "data-model.md#`backfill-section-digest`"}
@@ -73,7 +73,7 @@ rules-judged: 306
 rules-carried: 0
 blocking: false
 dispositions:
-  fixed: 7
+  fixed: 0
   deferred: 0
   waived: 0
   undispositioned: 0
@@ -83,7 +83,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 7 fixed, 0 deferred, 0 waived, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 deferred, 0 waived, 0 undispositioned.
 
 ## Hard failures
 
@@ -111,10 +111,4 @@ dispositions:
 
 ## Fixed in this run
 
-- grounding — Technical Decisions, The backfill is one corpus-wide primitive, Pinned records: 'The runtime holds no reader of `[pinned] files`' is a claim of absence about current code, carrying no search or symbol citation (the cited ductus.md passage shows the host reads it, not that no primitive does). — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed** (decided by the rule)
-- grounding — Trade-offs, Rejected: ignoring `[pinned] files`: 'write-analysis does not read it' is stated as fact about current code with no file-and-symbol citation. — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, The narrowing lives in standing: 'the gate blocks done on [unjudged-rules]' (also in Trade-offs, Rejected: narrowing in discover-rule-files alone) asserts the gate's current behavior without naming the check or file that reads unjudged-rules. — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed** (decided by the rule)
-- grounding — Technical Decisions, Primitive interface changes, classified under `BE-COMPAT-001`: '`version` reads 0.64.0' states a current fact about the repository without naming the file that holds `version` (AGENTS.md's Workflow bullet names `version` beside `runtime/Cargo.toml`, so which file is not settled by the cite); the same claim recurs uncited in The migration section's The entry bullet. — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed** (decided by the rule)
-- grounding — Trade-offs, Rejected: the runtime reading `[pinned] files` itself: 'No primitive reads it' is stated as fact about current code with no file-and-symbol citation. — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed** (decided by the rule)
-- grounding — Motivation, Measured: 'write-analysis's `judged-rules` argument is not stored' is stated as fact about the record's schema with no file-and-symbol citation. — `specs/088-rule-judgments-cost-only-what-changed/spec.md` — **fixed** (decided by the rule)
-- rule-assessment — BE-COMPAT-001: the plan changes `write-analysis`'s record, `discover-rule-files`' `verdicts` and adds `backfill-section-digest` without classifying any of it as additive or breaking, which the rule's Verification requires — `specs/088-rule-judgments-cost-only-what-changed/plan.md` — **fixed**
+*None.*
