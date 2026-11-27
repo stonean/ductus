@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [082-rule-assessments-converge-across-runs]
 cross-spec-impact: [050-constitution, 066-audit-records-and-the-completion-gate, 082-rule-assessments-converge-across-runs]
 next-criterion: 4
