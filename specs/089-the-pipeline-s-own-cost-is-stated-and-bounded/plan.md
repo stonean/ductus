@@ -71,7 +71,7 @@ The remaining 220 or more bytes come from tightening under §text-first-artifact
 
 Two candidates stay where they are:
 
-- §validation-severity is the canonical tier assignment `validate-frontmatter` follows (067's scenario `frontmatter-severity-tiers-on-both-sides`), so it is not moved.
+- The constitution's Validation Severity subsection is the canonical tier assignment `validate-frontmatter` follows (067's scenario `frontmatter-severity-tiers-on-both-sides`), so it is not moved.
 - No other single-command passage moves into the analyze or review reference, since their margins belong to their own cuts.
 
 Rules for every cut:
@@ -87,22 +87,22 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
 - **Copies and duplicates out** (about 18,300 net). The inventory's spans cut are:
   - rules a description already states, such as `validate-frontmatter`'s row selection, `check-artifacts`' family conditions, `discover-rule-files`' judge and rejudge sets, and `write-analysis`' refusals;
   - restatements of a `framework/commands/analyze.md` step;
-  - one rule another command applies (§Spec integrity's clarify and amend paths).
+  - one rule another command applies (*Spec integrity*'s clarify and amend paths).
 - **Moved into descriptions** (about 3,500 net). Before it lands in a description, each moved sentence is checked against the code that enforces it.
   - `CHECK_ARTIFACTS` gains about 2,655 bytes:
     - the placeholder tokens;
     - the plan-title link rule;
-    - §Acceptance-criterion path existence's scope, candidate grammar and `root-absent`, `ships-to-adopter` and `gitignored` rules, plus the unbackticked-path note;
-    - §Body path existence's path reading and history rule;
-    - §Line-number citations' scope;
-    - §Link-adjacent decision drift's coverage, exemptions and message shape.
+    - *Acceptance-criterion path existence*'s scope, candidate grammar and `root-absent`, `ships-to-adopter` and `gitignored` rules, plus the unbackticked-path note;
+    - *Body path existence*'s path reading and history rule;
+    - *Line-number citations*' scope;
+    - *Link-adjacent decision drift*'s coverage, exemptions and message shape.
   - `CHECK_ARTIFACT_SIZE` gains about 185: bytes as a proxy, and no value switching the check off.
   - `WRITE_ANALYSIS` gains about 150: `constitution-unresolved`.
   - The reference keeps one pointer line per section it moves text out of.
 - **Kept verbatim.**
   - Family 18's phrase, negator and verb lists, which `scripts/audit/marker-list-parity.sh` reads from this file (071's AC10).
-  - §Record fields, which §audit-records names as field semantics' home.
-  - §Severity tiers.
+  - *Record fields*, which the constitution's audit-records subsection names as field semantics' home.
+  - *Severity tiers*.
   - Every heading `framework/commands/analyze.md` points at, `scripts/audit/template-alignment.sh` enumerates or `check_step_references`' exempt list names.
   - Text the ticked criteria of 016, 033, 045, 046, 060, 071, 084 and 087 name, or that 027's, 000's and 067's scenarios and 068's and 069's specs name ("Which ID format governs a file").
 - **Its cost.** Every `/analyze` run loads all three descriptions (the generated `.claude/commands/ductus/analyze.md`'s `select:` line), so a run reads about 3,000 more bytes. No golden holds a description, and `runtime/tests/mcp.rs`' description test compares each tool's text with its subcommand's `long_about`, which share the constant. The 4,096-character bound there applies to `/target`'s always-loaded tools, none of these three.
@@ -110,13 +110,13 @@ The agent's recommendation, adopted by the owner, 2026-11-27. Cutting copies and
 ### The review reference cuts copies only
 
 - **Out** (about 16,600 net), all text the inventory found that a description, the constitution or `framework/commands/review.md` already states, with no description growing.
-- **§Blocking semantics** keeps its heading and a one-line pointer to §spec-lifecycle's gate, evaluated by `check-review-gate`. So `framework/commands/review.md`'s "See §Blocking semantics", `check_step_references`' exempt list and 071's scenario `reference-sections-are-reached-by-a-step` stay true.
+- **Blocking semantics** keeps its heading and a one-line pointer to §spec-lifecycle's gate, evaluated by `check-review-gate`. So `framework/commands/review.md`'s pointer at that section, `check_step_references`' exempt list and 071's scenario `reference-sections-are-reached-by-a-step` stay true.
 - **Kept verbatim.**
   - Text the ticked criteria of 020 (AC16, AC18), 024 (AC8), 071 (AC13), 073 (AC14), 076 (AC6, AC16), 081 (AC4, AC11) and 087 (AC3) name.
   - The `## Load rules` lines `review_reference_names_the_rule_file_mapping` (`runtime/src/interpreter/payload.rs`) reads.
   - Every heading a command, `framework/constitution.md`, `AGENTS.md`, `framework/reference/implement.md`, `framework/reference/analyze.md` or `framework/bootstrap/ductus.md` points at.
-- **If it ends over 50,000 for any reason**, 086 task 4's addition to §Window and coverage included: its four spans whose rule no description states yet (about 2,200 bytes) move into `discover-rule-files`' and `process-waivers`' descriptions, the route the owner chose for analyze.
-- **§Window and coverage's cut** (2,585 bytes, the largest) rests on `compute-review-scope`'s description, read whole, which states the window's start, its base sources and the attribution rule. One line stating attribution and the artifact set stays (081's AC11).
+- **If it ends over 50,000 for any reason**, 086 task 4's addition to *Window and coverage* included: its four spans whose rule no description states yet (about 2,200 bytes) move into `discover-rule-files`' and `process-waivers`' descriptions, the route the owner chose for analyze.
+- ***Window and coverage*'s cut** (2,585 bytes, the largest) rests on `compute-review-scope`'s description, read whole, which states the window's start, its base sources and the attribution rule. One line stating attribution and the artifact set stays (081's AC11).
 
 ### The lint governs four rows, two of them globs (AC2)
 
@@ -163,10 +163,10 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 
 ## Trade-offs
 
-- **Splitting the analyze reference, or giving it its own ceiling.** Each keeps every `/analyze` run's load unchanged but needs an amend back-edge. A split also changes 071's one-reference-per-command contract and re-points each § pointer to a moved section; its own ceiling leaves one reference over the read size. Rejected by the owner, 2026-11-27.
+- **Splitting the analyze reference, or giving it its own ceiling.** Each keeps every `/analyze` run's load unchanged but needs an amend back-edge. A split also changes 071's one-reference-per-command contract and re-points each section pointer to a moved section; its own ceiling leaves one reference over the read size. Rejected by the owner, 2026-11-27.
 - **Moving the review reference's four conditional spans now.** This would add about 2,200 bytes to two descriptions that every `/review` run loads, which the cut does not need unless 086 task 4 pushes the file over.
-- **Removing §Blocking semantics' heading.** It would save about 100 bytes more, at the cost of an edit to `check_step_references`' test, to `framework/commands/review.md` and to 071's scenario.
-- **Moving Family 18's lists and §Record fields.** These are 1,970 bytes the cut does not need. The move would re-aim `marker-list-parity.sh` at a Rust string, reword 071's ticked AC10, and amend §audit-records' "Field semantics: each command's reference".
+- **Removing *Blocking semantics*' heading.** It would save about 100 bytes more, at the cost of an edit to `check_step_references`' test, to `framework/commands/review.md` and to 071's scenario.
+- **Moving Family 18's lists and *Record fields*.** These are 1,970 bytes the cut does not need. The move would re-aim `marker-list-parity.sh` at a Rust string, reword 071's ticked AC10, and amend the constitution's audit-records subsection, "Field semantics: each command's reference".
 - **A ratchet test holding each governing ceiling to its file's rounded size.** AC2 sets the ceiling at the cut, and a ratchet would fail an unrelated commit that shrank a file by 1,000 bytes.
 - **Known limitations.**
   - `AGENTS.md`'s and the constitution's end sizes are estimates until the cuts run; their ceilings are computed from the result, not the estimate.
