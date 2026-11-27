@@ -617,8 +617,10 @@ mod tests {
         )
     }
 
-    /// 001-x reopened with `src/old.rs` before its window and `src/new.rs` inside it,
-    /// its record holding `keys` uncommitted, so the window starts at the reopen.
+    /// 001-x in progress with `src/old.rs`, its own seed's, before its window and
+    /// `src/new.rs` inside it, the window starting at an earlier review's committed
+    /// record, so the run is no first review, which would read every file the spec's
+    /// commits changed (spec 086, AC6); its record holds `keys` uncommitted.
     fn windowed(keys: &[&str]) -> tempfile::TempDir {
         windowed_after(&[], keys)
     }
@@ -641,6 +643,13 @@ mod tests {
         commit_all(&repo, "chore: seed");
         write(&spec, "---\nstatus: in-progress\n---\n# 001\n");
         commit_all(&repo, "status(001): in-progress");
+        write(
+            &tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: 2026-09-20T00:00:00Z\nmust-violations: 0\n\
+             blocking: false\ndispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  \
+             undispositioned: 0\n---\n",
+        );
+        commit_all(&repo, "review(001): an earlier run");
         write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
         commit_all(&repo, "feat(001): new");
         let decisions: String = keys.iter().map(|key| waived(key)).collect();
@@ -979,8 +988,8 @@ mod tests {
                     == Some("chore: code no spec claims")
             })
             .unwrap();
-        // A shallow clone cut at its first commit: the window, which starts at the reopen,
-        // can still be placed, but a cut history cannot say what belongs.
+        // A shallow clone cut at its first commit: the window, which starts at the earlier
+        // review, can still be placed, but a cut history cannot say what belongs.
         std::fs::write(tmp.path().join(".git/shallow"), format!("{first}\n")).unwrap();
         let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
         assert_eq!(keys(&result.retained), [foreign], "{:?}", result.notices);

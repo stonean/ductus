@@ -597,8 +597,10 @@ mod tests {
         setup_after(feature, waivers_yaml, &[], existing_files)
     }
 
-    /// `setup`, with the spec reopened in a repository: each of `before` is committed
-    /// before its window starts, so the run's scope does not hold it, and each of
+    /// `setup`, with the spec in progress in a repository: each of `before` is committed
+    /// by its seed, before its window, which starts at an earlier review's committed
+    /// record, so the run is no first review, which would read every file the spec's
+    /// commits changed (spec 086, AC6), and its scope does not hold it; each of
     /// `existing_files` is uncommitted, so the scope does.
     fn setup_after(
         feature: &str,
@@ -648,6 +650,16 @@ mod tests {
         )
         .unwrap();
         commit_all(&repo, "status: in-progress");
+        std::fs::write(
+            dir.join("review.md"),
+            format!(
+                "---\nspec: {feature}\nlast-run: 2025-12-01T00:00:00Z\nmust-violations: 0\n\
+                 blocking: false\ndispositions:\n  fixed: 0\n  deferred: 0\n  waived: 0\n  \
+                 undispositioned: 0\n---\n"
+            ),
+        )
+        .unwrap();
+        commit_all(&repo, "review: an earlier run");
         // The waivers live in `review.md` now (spec 057 task 5). Callers still
         // pass entries indented for the old nested position, so they are
         // de-indented one level here rather than at eleven call sites — the

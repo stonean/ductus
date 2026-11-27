@@ -597,7 +597,21 @@ fn stage_fixture(command: &str, fixture: &str) -> tempfile::TempDir {
     // state so every primitive that calls `Repository::discover` finds a
     // valid history. Fixtures that don't exercise those primitives pay a
     // tiny git-init overhead but otherwise are unaffected.
-    init_git_repo(tmp.path());
+    // A first review reads every file a commit attributed to its spec changed (spec 086,
+    // AC6), so the review fixture's spec owns only its own directory: the staged harness,
+    // the procedure file, session, canned stdin and rules among it, and the source file
+    // its plan names land first in a commit no spec claims, and the spec directory in its
+    // own, or the scope would carry the procedure file whole into every request.
+    if fixture == "review-basic" {
+        let specs = tmp.path().join("specs");
+        let aside = tempfile::tempdir().unwrap();
+        fs::rename(&specs, aside.path().join("specs")).unwrap();
+        init_git_repo(tmp.path());
+        fs::rename(aside.path().join("specs"), &specs).unwrap();
+        commit_staged(tmp.path(), "docs(007): the spec");
+    } else {
+        init_git_repo(tmp.path());
+    }
 
     // The implement fixture needs a two-commit history (scenario
     // writecode-boundary-derivation): the initial commit above is the

@@ -64,7 +64,8 @@ rather than erroring, since an unusual history is not a defect to halt on.
 **No transition commit found** — when the spec's move into `in-progress` is
 uncommitted, the base is `HEAD` (`review-scope-includes-uncommitted-work`);
 when the spec never reached `in-progress` and no `--since` was given, the base
-is empty and the scope comes from the plan's `Affected Files` alone, on a first review.
+is empty and the scope comes from the plan's `Affected Files` and the files the
+spec's commits changed, on a first review (spec 086).
 
 ## Edge Cases
 

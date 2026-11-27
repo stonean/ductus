@@ -72,6 +72,17 @@ pub(crate) enum Ownership {
     },
 }
 
+impl Ownership {
+    /// A result's `ownership` and `ownership-reason`, the reason present only when not
+    /// examined.
+    pub(crate) fn state(&self) -> (OwnershipState, Option<String>) {
+        match self {
+            Self::Examined(_) => (OwnershipState::Examined, None),
+            Self::NotExamined { reason } => (OwnershipState::NotExamined, Some(reason.clone())),
+        }
+    }
+}
+
 /// One spec's ownership, resolved the first time a caller asks, as a run's scope is: a
 /// classifier asks only for a stored entry that did not fire on a file outside the scope,
 /// so a run with none walks no history.
@@ -104,19 +115,13 @@ impl<'a> LazyOwnership<'a> {
 
     /// A result's `ownership` and `ownership-reason`: both absent when no caller asked.
     pub(crate) fn state(&self) -> (Option<OwnershipState>, Option<String>) {
-        match self.cell.get() {
-            None => (None, None),
-            Some(Ownership::Examined(_)) => (Some(OwnershipState::Examined), None),
-            Some(Ownership::NotExamined { reason }) => {
-                (Some(OwnershipState::NotExamined), Some(reason.clone()))
-            }
-        }
+        self.cell.get().map_or((None, None), |ownership| {
+            let (state, reason) = ownership.state();
+            (Some(state), reason)
+        })
     }
 
     fn resolve(&self) -> Ownership {
-        let not_examined = |what: &str, error: &dyn std::fmt::Display| Ownership::NotExamined {
-            reason: format!("{what} could not be read ({error})"),
-        };
         let specs_root = match paths::Paths::load(self.repo) {
             Ok(layout) => layout.specs_root,
             Err(error) => return not_examined("the project's configuration", &error),
@@ -125,8 +130,26 @@ impl<'a> LazyOwnership<'a> {
             Ok(project) => project,
             Err(error) => return not_examined("the repository", &error),
         };
-        of_spec(&project, self.repo, &specs_root, self.feature)
-            .unwrap_or_else(|error| not_examined("the history", &error))
+        of_spec_or_why(&project, self.repo, &specs_root, self.feature)
+    }
+}
+
+/// [`of_spec`], with a history that could not be read reported as not examined, never as
+/// a spec owning nothing.
+pub(crate) fn of_spec_or_why(
+    project: &ProjectRepository,
+    repo: &Path,
+    specs_root: &str,
+    feature: &str,
+) -> Ownership {
+    of_spec(project, repo, specs_root, feature)
+        .unwrap_or_else(|error| not_examined("the history", &error))
+}
+
+/// Not examined, because `what` could not be read.
+fn not_examined(what: &str, error: &dyn std::fmt::Display) -> Ownership {
+    Ownership::NotExamined {
+        reason: format!("{what} could not be read ({error})"),
     }
 }
 

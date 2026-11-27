@@ -78,9 +78,12 @@ fn fixture(dir: &Path, entries: &str) -> Repository {
         &format!("specs/{FEATURE}/spec.md"),
         &spec_with(entries),
     );
-    // Committed with the spec, so the window does not hold it: the one file outside it.
-    write(dir, "src/out.rs", "fn f() {}\n");
     commit(&repository, "seed");
+    // The one file outside the scope: a commit no spec claims leaves its code to the
+    // project record (spec 084, AC6), and it belongs to no spec, so even a first review
+    // does not read it (spec 086, AC6).
+    write(dir, "src/out.rs", "fn f() {}\n");
+    commit(&repository, "chore: code no spec claims");
     for file in ["a", "b", "c"] {
         write(dir, &format!("src/{file}.rs"), "fn f() {}\n");
     }
@@ -585,7 +588,7 @@ fn refused_outside_the_scope(dir: &Path, findings: &[Value]) -> String {
 fn a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived() {
     let tmp = tempfile::tempdir().unwrap();
     fixture(tmp.path(), MUST_ENTRY);
-    // `src/out.rs` is committed with the spec, before the window the run takes.
+    // `src/out.rs` is committed by a commit no spec claims, so the run's scope leaves it.
     let err = refused_outside_the_scope(
         tmp.path(),
         &[

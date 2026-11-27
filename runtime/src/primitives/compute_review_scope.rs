@@ -38,6 +38,7 @@ use crate::primitives::check_stuck::{
     history_of, leaves_done, reopening_is_open, spec_root_listing,
 };
 use crate::primitives::commit_attribution::{Attributor, CommitClaims, SpecShare};
+use crate::primitives::spec_ownership::{self, Ownership};
 use crate::primitives::{
     FeatureForm, PrimitiveError, ProjectRepository, REVIEW_RECORD_FILE, Result, blob_text,
     check_unreviewed_code, frontmatter_status, is_project_artifact, load_review_record,
@@ -46,7 +47,7 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     BaseSource, ComputeReviewScopeArgs, ComputeReviewScopeResult, Frontmatter, ListsForm,
-    RecordFreshness, ReviewBlock,
+    OwnershipState, RecordFreshness, ReviewBlock,
 };
 
 /// Execute the `compute-review-scope` primitive: [`compute`], returned inline
@@ -73,6 +74,8 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         excluded_count: excluded.len(),
         commits_examined: scope.commits.map(|commits| commits.examined),
         commits_unclaimed: scope.commits.map(|commits| commits.unclaimed),
+        ownership: scope.ownership,
+        ownership_reason: scope.ownership_reason.clone(),
         criteria_owing_count: scope.criteria_owing.len(),
         criteria_owing: scope.criteria_owing.clone(),
         scope: Some(scope.scope.clone()),
@@ -135,6 +138,10 @@ pub(crate) struct ReviewScope {
     pub(crate) excluded: BTreeSet<String>,
     /// The window's commit counts; `None` when there is no window to walk.
     pub(crate) commits: Option<WindowCommits>,
+    /// See [`ComputeReviewScopeResult::ownership`].
+    pub(crate) ownership: Option<OwnershipState>,
+    /// See [`ComputeReviewScopeResult::ownership_reason`].
+    pub(crate) ownership_reason: Option<String>,
 }
 
 /// How many commits a window's walk examined, and how many of them no spec
@@ -244,21 +251,24 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         scope.insert(path.clone());
     }
 
-    // A plan entry unchanged in the window may mean missing work on a spec's
-    // first review, and on a later one only restates what was read. The record
-    // at `HEAD` decides, so a run's own uncommitted record does not change the
-    // answer between its two writes, and one naming no run (`last-run: null`)
-    // records no review.
+    // A spec's first review reads what belongs to it beyond the window, and a later one
+    // only what changed. The record at `HEAD` decides, so a run's own uncommitted record
+    // does not change the answer between its two writes, and one naming no run
+    // (`last-run: null`) records no review.
     let head_commit = repository.head()?.peel_to_commit()?;
     let head_tree = head_commit.tree()?;
-    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {
-        scope.extend(
-            plan_affected
-                .iter()
-                .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))
-                .cloned(),
-        );
-    }
+    let ownership = if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none()
+    {
+        Some(first_review_reads(
+            &project,
+            repo,
+            (&layout.specs_root, &args.feature),
+            (&plan_affected, &deleted),
+            (&mut scope, &mut excluded),
+        ))
+    } else {
+        None
+    };
 
     // What the record at `HEAD` leaves open is read again wherever the window starts,
     // or a re-run would clear a finding with its file unread, and so is what the record
@@ -307,7 +317,36 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
         deleted: deleted.into_iter().collect(),
         excluded,
         commits: window.commits,
+        ownership: ownership.as_ref().map(|(state, _)| *state),
+        ownership_reason: ownership.and_then(|(_, reason)| reason),
     })
+}
+
+/// What a spec's first review reads beyond its window (spec 086, AC6): each plan entry
+/// the window left unchanged, which may mean missing work, unless it is deleted or only
+/// another spec's commit changed it; and each file a commit attributed to the spec
+/// changed, anywhere in `HEAD`'s history, still on disk and inside the project, whoever
+/// else changed it, so the files a first review reads are derived rather than kept by
+/// hand. A history that cannot be read whole, as in a shallow clone, adds no such file,
+/// and the returned `ownership` says why (`QUAL-CLAIM-001`).
+fn first_review_reads(
+    project: &ProjectRepository,
+    repo: &Path,
+    (specs_root, feature): (&str, &str),
+    (plan_affected, deleted): (&[String], &BTreeSet<String>),
+    (scope, excluded): (&mut BTreeSet<String>, &mut BTreeSet<String>),
+) -> (OwnershipState, Option<String>) {
+    scope.extend(
+        plan_affected
+            .iter()
+            .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))
+            .cloned(),
+    );
+    let ownership = spec_ownership::of_spec_or_why(project, repo, specs_root, feature);
+    if let Ownership::Examined(owned) = &ownership {
+        hold_in_scope(owned.changed().iter(), repo, scope, excluded);
+    }
+    ownership.state()
 }
 
 /// The paths of `modified_since` the working tree reports not found, or under a
@@ -1743,8 +1782,10 @@ mod tests {
         assert_eq!(result.scope, expected);
     }
 
+    /// No window, and a first review still reads what the spec's commits changed (spec
+    /// 086, AC6).
     #[test]
-    fn no_in_progress_and_no_since_yields_empty_scope() {
+    fn no_in_progress_and_no_since_yields_an_empty_window() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
@@ -1752,8 +1793,8 @@ mod tests {
         let result = compute(&args("001-x", None), tmp.path()).unwrap();
         assert_eq!(result.diff_base, "");
         assert_eq!(result.base_source, BaseSource::None);
-        assert_eq!(result.scope, [] as [String; 0]);
         assert_eq!(result.modified_since, [] as [String; 0]);
+        assert_eq!(result.scope, ["specs/001-x/spec.md"]);
     }
 
     /// A project need not sit at its repository's root. History names its
@@ -2882,13 +2923,13 @@ mod tests {
     #[test]
     fn a_path_left_open_comes_back_from_excluded() {
         let (tmp, repo, _) = two_specs(&[], &[]);
-        change(&tmp, &repo, "src/old.rs", "feat(002): theirs");
-        assert!(x(&tmp).excluded.contains("src/old.rs"));
-        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/old.rs\n");
+        change(&tmp, &repo, "src/theirs.rs", "feat(002): theirs");
+        assert!(x(&tmp).excluded.contains("src/theirs.rs"));
+        let fields = format!("{DISPOSITIONS}open-findings:\n  - src/theirs.rs\n");
         commit_record(&tmp, &repo, &fields, "2026-11-01T00:00:00Z");
         let scope = x(&tmp);
-        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
-        assert!(!scope.excluded.contains("src/old.rs"));
+        assert!(has(&scope, "src/theirs.rs"), "{:?}", scope.scope);
+        assert!(!scope.excluded.contains("src/theirs.rs"));
     }
 
     /// A file gone has nothing to read, and a named path leaving the project is not
@@ -3598,8 +3639,10 @@ mod tests {
         (tmp, repo)
     }
 
-    /// `src/old.rs` predates the staging spec, and `src/u.rs` lands beside it with
-    /// no claim on it: only what the staging spec's commits changed comes along.
+    /// `src/u.rs` lands beside the staging spec with no claim on it: only what the
+    /// staging spec's commits changed comes along. `src/old.rs`, which the seed both
+    /// specs claim gave 001-x, predates the staging spec, and joins as 001-x's own on
+    /// its first review (spec 086, AC6), not by the fold.
     #[test]
     fn a_fold_below_done_brings_its_code_into_a_window_starting_at_the_fold() {
         let (tmp, repo) = done_upstream();
@@ -3620,7 +3663,8 @@ mod tests {
         assert_eq!(scope.base_source, BaseSource::Reopen);
         assert!(has(&scope, "src/s.rs"), "{:?}", scope.scope);
         assert!(has(&scope, "src/t.rs"), "{:?}", scope.scope);
-        assert!(!has(&scope, "src/u.rs") && !has(&scope, "src/old.rs"));
+        assert!(!has(&scope, "src/u.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/old.rs"), "{:?}", scope.scope);
         assert!(scope.owed_by.iter().any(|path| path == "src/s.rs"));
     }
 
@@ -3922,8 +3966,14 @@ mod tests {
                     "{path}: {:?}",
                     scope.excluded
                 );
+                // The seed both specs claim gives each `src/old.rs`, which a first
+                // review reads as its own (spec 086, AC6), so only these owe nothing.
+                assert!(
+                    !scope.owed_by.iter().any(|owed| owed == path),
+                    "{path}: {:?}",
+                    scope.owed_by
+                );
             }
-            assert!(scope.owed_by.is_empty(), "{:?}", scope.owed_by);
         }
     }
 
@@ -4028,10 +4078,13 @@ mod tests {
     }
 
     /// Specs 022-a and 034-b, both reopened by one committed transition, each with a
-    /// `tasks.md` holding one unticked task; `src/lib.rs` is code neither has changed.
+    /// `tasks.md` holding one unticked task; `src/lib.rs` is code neither has changed,
+    /// added by a commit no spec claims.
     fn two_open_specs() -> (tempfile::TempDir, Repository) {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("src/lib.rs"), "fn old() {}\n");
+        commit_all(&repo, "chore: the code");
         for dir in ["022-a", "034-b"] {
             write(
                 &tmp.path().join(format!("specs/{dir}/spec.md")),
@@ -4042,7 +4095,6 @@ mod tests {
                 "## 1. Work\n\n- [ ] do it\n",
             );
         }
-        write(&tmp.path().join("src/lib.rs"), "fn old() {}\n");
         commit_all(&repo, "chore: seed");
         for dir in ["022-a", "034-b"] {
             write(
@@ -4224,9 +4276,11 @@ mod tests {
         assert!(scope.excluded.contains("specs/002-y/tasks.md"));
     }
 
+    /// On a later review, so a first review's own files (spec 086, AC6) do not join.
     #[test]
     fn since_moves_only_the_start_and_the_scope_rule_still_applies() {
         let (tmp, repo, _) = two_specs(&[], &[]);
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
         let start = change(&tmp, &repo, "src/before.rs", "feat(001): before");
         change(&tmp, &repo, "src/other.rs", "feat(002): its work");
         change(&tmp, &repo, "src/mine.rs", "feat(001): this spec");
@@ -4459,8 +4513,149 @@ mod tests {
         write(&tmp.path().join("specs/001-x/plan.md"), "# Plan\n");
         commit_all(&repo, "docs(001): a plan with no files");
         let scope = x(&tmp);
-        assert_eq!(scope.scope, ["specs/001-x/plan.md"]);
+        assert_eq!(
+            scope.scope,
+            [
+                "specs/001-x/plan.md",
+                "specs/001-x/review.md",
+                "specs/001-x/spec.md"
+            ]
+        );
         assert!(scope.review_owed);
+    }
+
+    /// After a first commit no spec claims, 001-x planning `src/planned.rs`, whose own
+    /// commits before its move into `in-progress` added `src/early.rs` and
+    /// `src/shared.rs` and added then removed `src/gone.rs`, beside 002-y's commit
+    /// adding `src/theirs.rs`; 002-y's plan holds `plan_y`. Returns that first commit,
+    /// which holds neither spec.
+    fn owned_before_the_window(plan_y: &[&str]) -> (tempfile::TempDir, Repository, String) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("README.md"), "# Project\n");
+        let first = commit_all(&repo, "chore: the project");
+        let plan = |entries: &[&str]| {
+            let rows: Vec<String> = entries
+                .iter()
+                .map(|entry| format!("| `{entry}` | Edit |\n"))
+                .collect();
+            format!(
+                "# Plan\n\n## Affected Files\n\n| File | Action |\n| --- | --- |\n{}",
+                rows.concat()
+            )
+        };
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+        write(
+            &tmp.path().join("specs/001-x/plan.md"),
+            &plan(&["src/planned.rs"]),
+        );
+        commit_all(&repo, "docs(001): the spec");
+        write(
+            &tmp.path().join("specs/002-y/spec.md"),
+            &spec("in-progress"),
+        );
+        write(&tmp.path().join("specs/002-y/plan.md"), &plan(plan_y));
+        commit_all(&repo, "docs(002): the spec");
+        for file in ["src/early.rs", "src/shared.rs", "src/gone.rs"] {
+            write(&tmp.path().join(file), "fn early() {}\n");
+        }
+        commit_all(&repo, "feat(001): early work");
+        change(&tmp, &repo, "src/theirs.rs", "feat(002): its work");
+        fs::remove_file(tmp.path().join("src/gone.rs")).unwrap();
+        commit_all(&repo, "fix(001): drop gone");
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repo, "status(001): planned -> in-progress");
+        (tmp, repo, first)
+    }
+
+    /// A spec's first review reads each file its own commits changed, outside the window
+    /// and its plan too, whoever else changed it since, and nothing another spec's commit
+    /// alone changed or that is gone (spec 086, AC6). A later review reads what changed.
+    #[test]
+    fn a_first_review_reads_each_file_the_specs_commits_changed() {
+        let (tmp, repo, _) = owned_before_the_window(&[]);
+        change(&tmp, &repo, "src/shared.rs", "feat(002): its change");
+
+        let scope = x(&tmp);
+        for path in ["src/early.rs", "src/shared.rs", "src/planned.rs"] {
+            assert!(has(&scope, path), "{path}: {:?}", scope.scope);
+        }
+        assert!(
+            !scope.excluded.contains("src/shared.rs"),
+            "{:?}",
+            scope.excluded
+        );
+        assert!(!has(&scope, "src/theirs.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/gone.rs"), "{:?}", scope.scope);
+        assert!(
+            !scope.modified_since.contains(&"src/early.rs".to_string()),
+            "the file must predate the window: {:?}",
+            scope.modified_since
+        );
+        assert_eq!(
+            (scope.ownership, scope.ownership_reason),
+            (Some(OwnershipState::Examined), None)
+        );
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.ownership, Some(OwnershipState::Examined));
+        assert!(
+            result
+                .scope
+                .is_some_and(|scope| scope.contains(&"src/early.rs".to_string()))
+        );
+
+        commit_record(&tmp, &repo, DISPOSITIONS, "2026-11-01T00:00:00Z");
+        change(&tmp, &repo, "src/later.rs", "feat(001): the second pass");
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/early.rs"), "{:?}", scope.scope);
+        assert!(has(&scope, "src/later.rs"), "{:?}", scope.scope);
+        assert_eq!((scope.ownership, scope.ownership_reason), (None, None));
+        assert_eq!(
+            run(&args("001-x", None), tmp.path()).unwrap().ownership,
+            None
+        );
+    }
+
+    /// A history cut short, as in a shallow clone, cannot say what the spec's commits
+    /// changed: a first review then holds its plan's entries and window alone, and says
+    /// why, never reading as a complete scope (spec 086, AC6).
+    #[test]
+    fn a_cut_history_gives_a_first_review_its_plan_alone_and_says_so() {
+        let (tmp, _repo, first) = owned_before_the_window(&[]);
+        assert!(has(&x(&tmp), "src/early.rs"));
+        fs::write(tmp.path().join(".git/shallow"), format!("{first}\n")).unwrap();
+
+        let scope = x(&tmp);
+        assert_eq!(
+            scope.base_source,
+            BaseSource::Reopen,
+            "the window is placed"
+        );
+        assert!(has(&scope, "src/planned.rs"), "{:?}", scope.scope);
+        assert!(!has(&scope, "src/early.rs"), "{:?}", scope.scope);
+        assert_eq!(scope.ownership, Some(OwnershipState::NotExamined));
+        let reason = scope.ownership_reason.unwrap();
+        assert!(reason.contains("--unshallow"), "{reason}");
+    }
+
+    /// An owned file another open spec's plan holds, with uncommitted edits, is read on
+    /// the first review, as a file its own commit in the window changed would be (spec
+    /// 084, AC23).
+    #[test]
+    fn a_first_review_reads_an_owned_file_another_open_plan_holds() {
+        let (tmp, _repo, _) = owned_before_the_window(&["src/early.rs"]);
+        write(&tmp.path().join("src/early.rs"), "fn edited() {}\n");
+
+        let scope = x(&tmp);
+        assert!(has(&scope, "src/early.rs"), "{:?}", scope.scope);
+        assert!(
+            !scope.excluded.contains("src/early.rs"),
+            "{:?}",
+            scope.excluded
+        );
     }
 
     /// A run's own uncommitted record does not make its second write a later

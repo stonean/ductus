@@ -238,22 +238,22 @@ MUTATIONS = [
     (
         'M38 an unchanged plan entry stays on every review',
         'src/primitives/compute_review_scope.rs',
-        '    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {\n',
-        '    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() || diff_base.len() < 99 {\n',
+        '    let ownership = if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none()\n',
+        '    let ownership = if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() || diff_base.len() < 99\n',
         'compute_review_scope::tests::an_unchanged_plan_entry_stays_only_on_the_first_review',
     ),
     (
         "M39 a run's own uncommitted record ends its first review",
         'src/primitives/compute_review_scope.rs',
-        '    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {\n',
-        '    if !feature_dir.join(REVIEW_RECORD_FILE).exists() {\n',
+        '    let ownership = if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none()\n',
+        '    let ownership = if !feature_dir.join(REVIEW_RECORD_FILE).exists()\n',
         'compute_review_scope::tests::an_uncommitted_record_keeps_a_first_review_a_first_review',
     ),
     (
         "M40 a plan file another spec's commit changed returns on a first review",
         'src/primitives/compute_review_scope.rs',
-        '                .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))\n',
-        '                .filter(|path| !deleted.contains(*path))\n',
+        '            .filter(|path| !deleted.contains(*path) && !excluded.contains(*path))\n',
+        '            .filter(|path| !deleted.contains(*path))\n',
         'compute_review_scope::tests::a_plan_file_only_another_specs_commit_changed_moves_to_that_spec',
     ),
     (
@@ -359,7 +359,7 @@ MUTATIONS = [
         'src/primitives/compute_review_scope.rs',
         '            None => (String::new(), BaseSource::None),',
         '            None => (String::new(), BaseSource::Reopen),',
-        'compute_review_scope::tests::no_in_progress_and_no_since_yields_empty_scope',
+        'compute_review_scope::tests::no_in_progress_and_no_since_yields_an_empty_window',
     ),
     (
         'M58 the record leaves the excluded count out',
@@ -392,8 +392,8 @@ MUTATIONS = [
     (
         'M62 a record naming no run ends a first review',
         'src/primitives/compute_review_scope.rs',
-        '    if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none() {\n',
-        '    if project.read_at_head(&record_rel)?.is_none() {\n',
+        '    let ownership = if recorded_run(repository, &head_tree, &project.to_git(&record_rel))?.is_none()\n',
+        '    let ownership = if project.read_at_head(&record_rel)?.is_none()\n',
         'compute_review_scope::tests::a_record_with_no_run_is_a_first_review_and_owes_one',
     ),
     (
@@ -1106,8 +1106,8 @@ MUTATIONS = [
     (
         'M168 what a fold brought stays out of scope',
         'src/primitives/compute_review_scope.rs',
-        '        excluded.remove(path);\n        scope.insert(path.clone());\n    }\n\n    // A plan entry',
-        '        excluded.remove(path);\n    }\n\n    // A plan entry',
+        '        excluded.remove(path);\n        scope.insert(path.clone());\n    }\n\n    // A spec\'s first review',
+        '        excluded.remove(path);\n    }\n\n    // A spec\'s first review',
         'compute_review_scope::tests::a_fold_below_done_brings_its_code_into_a_window_starting_at_the_fold',
     ),
     (

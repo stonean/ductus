@@ -53,9 +53,9 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 Tasks 1 to 3 landed as `1718c8c1`, `96e2e2dc` and `63817dcb`. Call `spec_ownership::of_spec` in `compute`'s first-review branch, mapping its error to `not-examined` as `LazyOwnership::resolve` does, and reuse `OwnershipState` (`runtime/src/schema/primitives.rs`) for the result's `ownership`. A first review's owned files can move the exec goldens (`runtime/tests/golden/*-basic.jsonl`): re-bless each alone and read its diff, as tasks 2 and 3 did for `review-basic.jsonl`. Every `write-review` test that records an outcome runs through `run_in_scope` in `runtime/src/primitives/write_review.rs`, whose window a wider first-review scope can change.
 
-- [ ] In `compute`'s branch for a record naming no run, add each owned path on disk, not leaving the project and not deleted, and remove it from `excluded`; add `ownership` and `ownership-reason` to the result on a first review
-- [ ] `COMPUTE_REVIEW_SCOPE`; `framework/reference/review.md` §Window and coverage; 066's data model
-- [ ] Fixtures: a file a commit attributed to the spec changed, absent from the plan, joins a first review's scope; a cut history gives the plan entries alone with `ownership: not-examined`; a later review's result carries no `ownership`
+- [x] In `compute`'s branch for a record naming no run, add each owned path on disk, not leaving the project and not deleted, and remove it from `excluded`; add `ownership` and `ownership-reason` to the result on a first review
+- [x] `COMPUTE_REVIEW_SCOPE`; `framework/reference/review.md` §Window and coverage; 066's data model
+- [x] Fixtures: a file a commit attributed to the spec changed, absent from the plan, joins a first review's scope; a cut history gives the plan entries alone with `ownership: not-examined`; a later review's result carries no `ownership`
 
 - **Done when**: AC6 holds, each fixture proven to fail with its behavior removed, and `runtime/tests/golden/` changes only where a re-bless the commit reads moves it.
 
@@ -99,3 +99,11 @@ Measure as **§Measuring a run's cost** in `.ductus/docs/agents/developing-ductu
 - [ ] Write the figures into 086's `spec.md` body as a `## Cost` section, with what 086 retires or why none, decided from the code at that commit, beside a blockquoted signpost to `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md`, a blockquote so it adds no `dependencies:` edge
 
 - **Done when**: 086's `spec.md` states a run's cost in a measurable unit with its method, and what it retires or why none, beside a blockquoted signpost to 089; `derive-dependencies` reports 086's `dependencies:` unchanged and no cycle (089's AC4). Lands before 086's review (the agent's recommendation, adopted by the operator, 2026-11-26).
+
+## 9. The departure's scope filter is tested again
+
+`scripts/mutation/departure-waivers.py` M16 and M41 survive since `96e2e2dc` (re-run at `d963a791`): with `write-review` refusing every outcome outside the run's scope (AC1), `a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived` and `the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice` in `runtime/src/primitives/write_review/departure_waivers.rs` no longer reach `Departures::in_scope`, which still decides a finding on a path the run's own window carries in and a scope given `--since` its diff base does not hold (the plan's *Departures are unchanged*).
+
+- [ ] Tests: a finding on such a carried path (spec 079's `unread` or `open-findings` from the record the window starts at) is accepted, stays counted and is not waived by a departure entry, and the rule firing there in a covered file gives no notice
+
+- **Done when**: `scripts/mutation/departure-waivers.py` M16 and M41 are KILLED, each test named by one, and `run.py --check` passes over every list.

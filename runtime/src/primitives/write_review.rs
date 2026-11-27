@@ -897,7 +897,8 @@ fn refuse_an_empty_scope_over_a_finding(
 /// there, with what the record it starts at hands on, and that base verbatim
 /// otherwise. An empty base, what `compute-review-scope`
 /// returns for a spec that never entered `in-progress` or `done`, records a scope of zero, though that
-/// scope still holds a first review's plan entries. Any other base the derivation fails on refuses the write: a
+/// scope still holds a first review's plan entries and the files its spec's commits changed (spec 086).
+/// Any other base the derivation fails on refuses the write: a
 /// mistyped sha once recorded `scope: 0` beside `examined: 8`, a window no
 /// check could tell from an empty one, while the caller still holds its
 /// findings and can write them again over the base the scope came from.
@@ -4194,12 +4195,14 @@ mod tests {
         commit("feat(001): code");
         let mut args = base_args("001-x");
         args.diff_base = base;
+        // `src/a.rs` and, on this first review, the spec's own `spec.md`, which its seed
+        // added (spec 086, AC6).
         run(&args, tmp.path()).unwrap();
         let first = review_md(&tmp, "001-x");
-        assert!(first.contains("\nscope: 1\n"), "{first}");
+        assert!(first.contains("\nscope: 2\n"), "{first}");
         run(&args, tmp.path()).unwrap();
         let second = review_md(&tmp, "001-x");
-        assert!(second.contains("\nscope: 1\n"), "{second}");
+        assert!(second.contains("\nscope: 2\n"), "{second}");
     }
 
     /// An unstated claim is **absent**, never rendered as a computed zero —
@@ -4868,15 +4871,16 @@ mod tests {
         // non-blocking).
         //
         // Deriving unconditionally is what makes the two distinguishable: the
-        // window holds one changed file, so a flag that decided the number
-        // would record 0, and the derivation records 1.
+        // window holds one changed file, and this first review the spec's own
+        // `spec.md` too (spec 086, AC6), so a flag that decided the number
+        // would record 0, and the derivation records 2.
         let (tmp, base) = spec_repo_with_a_change("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
         args.diff_base = base;
         args.empty_scope = true;
         let result = run(&args, tmp.path()).unwrap();
         assert_eq!(result.exit_code, 0);
-        assert_eq!(result.scope, 1);
+        assert_eq!(result.scope, 2);
         let report = review_md(&tmp, "001-x");
         // The rendering half of the flag is untouched and still correct.
         assert!(report.contains("Review scope is empty"));
@@ -6746,13 +6750,21 @@ mod tests {
     }
 
     /// A record the last run left uncommitted is what this run writes over, not a file it
-    /// read, so it keeps no window from holding nothing.
+    /// read, so it keeps no window from holding nothing. An earlier run's record is
+    /// committed, so this is no first review, which would read every file the spec's
+    /// commits changed (spec 086, AC6).
     #[test]
     fn an_uncommitted_record_keeps_no_window_from_being_empty() {
         let tmp = tempdir().unwrap();
         repo_with_another_specs_commit(&tmp);
-        let head = git2::Repository::open(tmp.path())
-            .unwrap()
+        let repository = git2::Repository::open(tmp.path()).unwrap();
+        fs::write(
+            tmp.path().join("specs/001-x/review.md"),
+            "---\nspec: 001-x\nlast-run: 2026-06-01T00:00:00Z\nmust-violations: 0\nblocking: false\n---\n\n# Review\n",
+        )
+        .unwrap();
+        crate::primitives::git_fixture::commit_all(&repository, "review(001): an earlier run");
+        let head = repository
             .head()
             .unwrap()
             .peel_to_commit()

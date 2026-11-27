@@ -166,10 +166,13 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/interpreter/mod.rs` | Modify | Its dispatch arm; the exec review tests' window |
 | `runtime/src/main.rs` | Modify | Its command |
 | `runtime/tests/result_sizes.rs` | Modify | Cases for the new lists and the primitive |
-| `runtime/tests/mcp.rs` | Modify | The MCP write's window |
+| `runtime/tests/mcp.rs` | Modify | The MCP write's window; a read size above a first review's file form |
 | `runtime/tests/walker.rs` | Modify | The exec waiver tests' window |
-| `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the review command's edit |
+| `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the review command's edit and a first review's scope |
+| `runtime/tests/parity.rs` | Modify | The review fixture's harness committed apart from its spec |
+| `runtime/tests/fixtures/review-basic/specs/007-review/plan.md` | Modify | The fixture's two commits |
 | `scripts/mutation/spec-ownership-086.py` | Create | The ownership walk's mutants |
+| `scripts/mutation/first-review-scope-086.py` | Create | The first review's owned files' mutants |
 | `scripts/mutation/outcomes-outside-the-scope-086.py` | Create | The refusal's mutants |
 | `scripts/mutation/project-record-084.py` | Modify | An anchor `RunScope::of` moved |
 | `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal and `RunScope::of` moved |
@@ -186,6 +189,9 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/CHANGELOG.md` | Modify | `[Unreleased]` entries |
 | `specs/066-audit-records-and-the-completion-gate/data-model.md` | Modify | Refusal, `dropped`, `ownership`, first-review scope |
 | `specs/066-audit-records-and-the-completion-gate/spec.md` | Modify | Signpost |
+| `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md` | Modify | A first review with no base holds the owned files |
+| `specs/079-review-and-analysis-work-converges/data-model.md` | Modify | `modified-since`'s accounting on a first review |
+| `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md` | Modify | The scope's first-review entries |
 | `specs/041-task-pruning/data-model.md` | Modify | `prune-review`; the write guard's primitives |
 | `specs/041-task-pruning/spec.md` | Modify | Body prose on `review.md`; AC9 note; signpost |
 | `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md` | Modify | The `review.md` row |
@@ -225,10 +231,11 @@ This spec adds no `data-model.md`: each shape belongs to its primitive's owner, 
 | Spec | What changes | Discharge |
 | --- | --- | --- |
 | 020 | `/{project}:review` steps 8 and 9 pass and show dropped entries | Signpost |
+| 022 | Scenario `review-runtime-acceleration` states a first review's scope | That sentence, corrected where it stands; nothing owed |
 | 041 | `/{project}:prune` writes `review.md` through `prune-review`; AC9's "nothing to prune" | Signpost; data model; body prose; scenario row; AC9 note |
 | 058 | AC32: an unevaluated source's decision is dropped when its file does not belong | AC32 note; signpost |
-| 066 | `write-review`'s refusal; `process-decisions`, `process-waivers` and `compute-review-scope` fields | Signpost; data model |
-| 079 | AC24's retention, AC6's scope list, the edge case *A stored finding the run did not read* | Notes; edge case; signpost |
+| 066 | `write-review`'s refusal; `process-decisions`, `process-waivers` and `compute-review-scope` fields; a first review's scope | Signpost; data model; scenario `review-base-includes-the-transition-commit` |
+| 079 | AC24's retention, AC6's scope list, the edge case *A stored finding the run did not read*, `modified-since`'s accounting | Notes; edge case; data model; signpost |
 | 084 | The project record's review refuses out-of-scope outcomes and inherits no feature decision | Signpost |
 
 - **Notes.** Each note on a ticked criterion reads "Superseded in part (spec 086)", as 084's did. The ticked criterion stays ticked and its spec stays `done` (§spec-lifecycle).

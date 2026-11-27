@@ -1393,6 +1393,16 @@ pub struct ComputeReviewScopeResult {
     /// `commits-examined`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commits_unclaimed: Option<usize>,
+    /// On a spec's first review, whether the files a commit attributed to the spec
+    /// changed could be told, which then join the scope (spec 086, AC6): `examined`,
+    /// or `not-examined`, as in a shallow clone, when the scope holds the plan's
+    /// entries without them and `ownership-reason` says why. Inline in either form,
+    /// and absent on a later review.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership: Option<OwnershipState>,
+    /// Why ownership was not examined, present only then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership_reason: Option<String>,
     /// Entries in `criteria-owing`, in either form; absent when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub criteria_owing_count: usize,
