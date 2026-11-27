@@ -40,6 +40,77 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. The analyze reference is cut, its primitives' rules moved into their descriptions
 
+**Working notes.** These come from the inventory of `framework/reference/analyze.md` at `d963a791`, which read all 386 lines. Bytes are removable, by section. Routes: R1 means a description already states the text; R4 means the text duplicates a `framework/commands/analyze.md` step; *move* means the text goes into the named description, leaving a pointer. Before cutting each span, re-read it against its description.
+
+- **Frontmatter schema:** R1 559 (`validate-frontmatter`'s row selection).
+- **Spec integrity:**
+  - R1 269, the items `check-artifacts` lists.
+  - R5 214, the clarify and amend paths.
+  - Move the placeholder tokens (105) to `CHECK_ARTIFACTS`.
+- **Plan consistency:**
+  - R1 782.
+  - R4 251, step 15's parts procedure.
+  - Move the plan-title link rule (90).
+  - Keep the sentence about an unreadable part being unexamined (087 AC2).
+- **Plan record:** R1 102.
+- **Artifact size:**
+  - R1 479.
+  - R4 571, step 17.
+  - Move "bytes are a proxy … no value switches it off" (185) to `CHECK_ARTIFACT_SIZE`.
+- **Task consistency:** R1 234.
+- **Grounding:** R4 201.
+- **Decision reasons:** R4 119.
+- **Scenario consistency:** R1 327.
+- **Acceptance-criterion path existence:**
+  - R1 295.
+  - Move to `CHECK_ARTIFACTS`, about 1,650 net: the scope remainder, the candidate grammar, `root-absent`, `ships-to-adopter`, `gitignored`, and the unbackticked-path note.
+  - Keep the live-claim phrase bullet and the negated-creation bullet (Family 18), the heading, and each reason name (045 AC16).
+- **Unexamined targets:**
+  - R1 388, `write-analysis`' `unclassified` and `unjudged-rules`.
+  - R1 about 400 more: `check-artifacts` states the artifact-unreadable-at-`done` exception and the `outward-link` / `target-unparseable` parenthetical.
+  - R4 512, steps 5 and 9.
+  - Move `constitution-unresolved` (200) to `WRITE_ANALYSIS`.
+  - Keep the closed reason classes, which step 18 reads.
+- **Body path existence:**
+  - R1 197.
+  - Move to `CHECK_ARTIFACTS`, about 580 net: the scope remainder, path reading, and the history rule.
+  - Keep the body-phrase bullet (Family 18).
+- **Line-number citations:**
+  - R1 551.
+  - Move the scope sentence (80).
+  - Keep "prose reference not detected".
+- **Acceptance-criterion labels:** R1 about 200.
+- **Cross-service references:**
+  - R1 747, `resolve-references`' class definitions.
+  - Keep the severity mapping.
+- **Review state drift:** R1 429, R4 214.
+- **Analyze state drift:** R4 116.
+- **Disposition drift:** R4 114, R1 about 140.
+- **Link-adjacent decision drift:** move "Not covered", the scan exemptions and the message shape to `CHECK_ARTIFACTS`, about 720 net.
+- **Rules:**
+  - R1 699, `discover-rule-files`' listing and `other-headings`.
+  - R4 341, step 5.
+  - R2 503: the per-prefix enumeration in "Which ID format governs a file" becomes a pointer to the canonical-sources row.
+  - Keep the ladder itself (068, 069, `developing-ductus.md`).
+- **Applicable Rules citation consistency:** R4 702, steps 11, 12 and 14.
+- **Departure entries:** R4 317 (step 5.1), R1 452.
+- **Rule judging in a subagent:** R4 142. 060 AC10 pins the rest.
+- **Stored rule verdicts:**
+  - R1 2,351: `discover-rule-files`' judge, rejudge, reusable, `reason` and `rejudged-files`; `write-analysis`' `section-digest` and `unjudged-rules`.
+  - R4 539, step 11.
+  - Keep "a Verification can yield to another rule where that rule's file is also loaded".
+- **Project-level consistency:**
+  - R1 411, `check-orphaned-references`' roots.
+  - R4 502, steps 9 and 10.
+- **Finding dispositions:**
+  - R4 2,595, steps 18 to 22.
+  - R1 622, `write-analysis`' refusals.
+  - Keep the decisions' statelessness and key format.
+- **Record fields:** R1 441, the `rules-judged`/`rules-carried` and waived fill. Keep the rest.
+- **Untouched:** the intro, Artifact completeness, Scenario open questions, the Promotion criterion, Cross-spec references, Severity tiers.
+
+The headings `scripts/audit/template-alignment.sh` enumerates must stay verbatim. Totals: about 18,300 removable net, plus about 3,530 moved, so the file is projected near 47,500.
+
 - [ ] Cut the copies and duplicates the plan's *The analyze reference moves the primitives' rules into their descriptions* names, keeping every pinned span, heading and Family 18 list verbatim
 - [ ] Move the named rules into `CHECK_ARTIFACTS`, `CHECK_ARTIFACT_SIZE` and `WRITE_ANALYSIS` in `runtime/src/schema/descriptions.rs`, each sentence first checked against the code that enforces it, and leave one pointer line per section
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the three descriptions state the rules the reference held
@@ -61,6 +132,61 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 5. The review reference is cut
 
 Lands after 086 task 4's edit to §Window and coverage reaches `origin/main`. The other lane (`ductus-2-f9`) asked for that order and messages when it lands; tell it through `SendMessage` when the cut starts and when it lands. Task 4 adds about 820 bytes to three of that section's bullets: "A review reads its own spec's change, and the record names the rest", the empty-diff-base bullet, and "`scope` counts entries, not files". That puts the projection near 49,350. The last two bullets are ones the plan keeps verbatim, so re-read them after the rebase. `COMPUTE_REVIEW_SCOPE` states task 4's new rule, so its added text may reduce to a pointer.
+
+**Working notes.** These come from the inventory of `framework/reference/review.md` at `d963a791`, which read all 838 lines. Bytes are removable, by section. R1 means a description already states the text, R2 the constitution, R4 `framework/commands/review.md` or this file elsewhere, R5 another command. Before cutting each span, re-read it against its description.
+
+- **Resolve target and scope:**
+  - R1 530: `discover-rule-files`' header test and unknown-key notices; `write-review`'s empty scope.
+  - R4 91, the notices exit code, which Output repeats.
+  - Keep item 5 (071 AC13, and the installer's pointer).
+- **Load rules:**
+  - R1 320, the header paragraph.
+  - Keep the rule-file-to-pass lines (`review_reference_names_the_rule_file_mapping`).
+- **Run review passes:**
+  - R1 340.
+  - Keep the false-positive sentence (020 AC18).
+- **Criteria step:** R1 503.
+- **Write `review.md`:**
+  - R1 1,292: the examined and scope paragraph, leaving about a 110-byte pointer; the open-findings sentences; the finding-shape code block.
+  - R4 434: "A SHOULD kept as-is is waived", which Waivers and Deferrals restate.
+- **Apply `--fix`:** R4 161 (Auto-fix scope).
+- **Fix-round loop:**
+  - R1 971: snapshot and next base, exempt paths, the `read-re-read` states, the `check-prescriptions` verdicts, the elapsed figures, re-reads-off, the entry shapes.
+  - R2 137, the worktree sentence.
+  - Keep the first paragraph (067's plan).
+- **Record the run:**
+  - R1 404, the blocks `check-review-gate` states.
+  - Keep the field definitions.
+- **Window and coverage:**
+  - R1 2,585: the window start and base sources; attribution, keeping one line (081 AC11); the held-record sentence; the `reviewed-against` bullet.
+  - R2 554, the two blast-radius bullets.
+  - Keep the bullets `AGENTS.md` points at: `examined`, pre-fields unexamined, empty diff base, denominator at write time, and `scope` counts entries.
+- **Blocking semantics:** R2 2,011 out, leaving the heading and one pointer line.
+- **Waivers:**
+  - R1 1,924: the list is one judgment; covers, anchor and expiry; the departure paragraph, keeping the host's reading of `malformed-departures` and `departure-notices`.
+  - Keep the heading (073 AC14, 020 AC16).
+- **Per-run waiver processing:**
+  - R1 2,298, what `process-waivers` states.
+  - Keep the host steps.
+- **Malformed and duplicate waivers:**
+  - R1 297.
+  - Keep the open-schema paragraph (076 AC6).
+- **Deferrals:**
+  - R1 803 (`process-decisions`).
+  - Keep "When a deferral releases a gating finding" (076 AC16).
+- **The `observations` row:** R5 77.
+- **The `analyze` row:** R1 442.
+- **Notes for adopters:**
+  - R4 197, the header-test sentence.
+  - Keep the rule-directory bullet (024 AC8).
+
+The provenance tags inside these spans come to about 335 bytes. The fallback spans that need a description sentence first total about 2,218:
+
+- item 5's suffix mapping, surface selection and disabled-file filter (1,337), into `discover-rule-files`;
+- the waiver YAML example (456), into `process-waivers`;
+- the example frontmatter block (425).
+
+The file is projected near 48,500, plus task 4's 820.
 
 - [ ] Cut the copies the plan's *The review reference cuts copies only* names, keeping §Blocking semantics' heading with one pointer line, one line on attribution and the artifact set in §Window and coverage, and every pinned span and heading verbatim
 - [ ] If the result is over 50,000 bytes for any reason, move the four spans the plan names into `discover-rule-files`' and `process-waivers`' descriptions, with a `runtime/CHANGELOG.md` line, and run task 3's runtime checks
