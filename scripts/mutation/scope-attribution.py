@@ -1744,7 +1744,7 @@ MUTATIONS = [
     (
         'M266 an empty base is derived, and refuses',
         'src/primitives/write_review.rs',
-        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        return Ok((0, BTreeSet::new(), None));\n    }\n',
+        '    if args.diff_base.is_empty() {\n        refuse_unread_outside_the_scope(args, &BTreeSet::new())?;\n        refuse_outcomes_outside_the_scope(args, &RunScope::of([], &[]), true)?;\n        return Ok((0, BTreeSet::new(), None));\n    }\n',
         '',
         'write_review::tests::an_empty_base_is_an_empty_scope',
     ),
@@ -1794,7 +1794,7 @@ MUTATIONS = [
     (
         'M273 every scope entry is read as a pattern, so a changed path holding a brace names another file',
         'src/primitives/compute_review_scope.rs',
-        '                .filter(|entry| scope.plan_affected.contains(entry))',
+        '            .filter(|entry| plan_affected.contains(entry))',
         '                .filter(|_| true)',
         'compute_review_scope::tests::a_changed_path_holding_a_brace_names_only_itself',
     ),

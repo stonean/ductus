@@ -518,6 +518,32 @@ fn stdin_eof_while_awaiting_response_is_an_operational_error() {
     assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
 }
 
+/// `root` made a repository whose one commit holds everything on disk but `files`, each
+/// then written when absent, so a review window based there holds them, since a run
+/// records outcomes only on files its scope holds (spec 086, AC1). Returns that commit:
+/// the window's base and the `HEAD` its scope is resolved at.
+fn window_holding(root: &Path, files: &[&str]) -> String {
+    let repo = Repository::init(root).unwrap();
+    let mut index = repo.index().unwrap();
+    index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
+    for file in files {
+        let _ = index.remove_path(Path::new(file));
+    }
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let sig = Signature::now("Test", "test@example.com").unwrap();
+    let base = repo
+        .commit(Some("HEAD"), &sig, &sig, "chore: seed", &tree, &[])
+        .unwrap();
+    for file in files {
+        let path = root.join(file);
+        if !path.exists() {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, "fn a() {}\n").unwrap();
+        }
+    }
+    base.to_string()
+}
+
 /// Waiver-processing-order, exec-path binding: when `fired` is not seeded,
 /// the walker binds the findings accumulated by the `performReview` passes
 /// to `process-waivers`' `fired` argument, so a waiver whose rule still
@@ -578,8 +604,9 @@ fn process_waivers_binds_fired_from_accumulated_pass_findings() {
         "reviewed-at".into(),
         Value::String("2026-07-07T00:00:00Z".into()),
     );
-    context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("diff-base".into(), Value::String(String::new()));
+    let base = window_holding(tmp.path(), &["src/a.rs"]);
+    context.insert("reviewed-against".into(), Value::String(base.clone()));
+    context.insert("diff-base".into(), Value::String(base));
 
     let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"site\":\"a\",\"line-range\":\"1\",\"confidence\":\"high\"}]}}\n";
     let mut reader = Cursor::new(responses.to_string());
@@ -669,8 +696,9 @@ fn applied_waiver_threads_from_process_waivers_into_write_review() {
         "reviewed-at".into(),
         Value::String("2026-07-07T00:00:00Z".into()),
     );
-    context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("diff-base".into(), Value::String(String::new()));
+    let base = window_holding(tmp.path(), &["src/a.rs"]);
+    context.insert("reviewed-against".into(), Value::String(base.clone()));
+    context.insert("diff-base".into(), Value::String(base));
     // The firing finding — in a live exec run the performReview passes supply
     // it; seeded here so process-waivers can classify the waiver as applied.
     context.insert(
@@ -775,8 +803,11 @@ fn file_form_process_waivers_reaches_write_review_whole() {
         "reviewed-at".into(),
         Value::String("2026-07-07T00:00:00Z".into()),
     );
-    context.insert("reviewed-against".into(), Value::String("headsha0".into()));
-    context.insert("diff-base".into(), Value::String(String::new()));
+    // A window holding `src/a.rs`, changed since the commit (spec 086, AC1).
+    let base = repo.head().unwrap().target().unwrap().to_string();
+    std::fs::write(tmp.path().join("src/a.rs"), "fn a() { 1 }\n").unwrap();
+    context.insert("reviewed-against".into(), Value::String(base.clone()));
+    context.insert("diff-base".into(), Value::String(base));
     context.insert(
         "fired".into(),
         serde_json::json!([{ "rule": "SEC-BE-001", "file": "src/a.rs", "site": "a", "line-range": "1" }]),

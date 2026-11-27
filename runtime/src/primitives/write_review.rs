@@ -928,6 +928,7 @@ fn resolve_scope(
     };
     if args.diff_base.is_empty() {
         refuse_unread_outside_the_scope(args, &BTreeSet::new())?;
+        refuse_outcomes_outside_the_scope(args, &RunScope::of([], &[]), true)?;
         return Ok((0, BTreeSet::new(), None));
     }
     // The window's default start, when it is the run's own diff-base, also hands the
@@ -964,6 +965,8 @@ fn resolve_scope(
         .filter(|path| *path != own_record)
         .collect();
     refuse_unread_outside_the_scope(args, &entries)?;
+    let run_scope = RunScope::of(entries.iter().cloned(), &result.plan_affected);
+    refuse_outcomes_outside_the_scope(args, &run_scope, false)?;
     moved_scope::refuse_a_moved_scope(&args.reviewed_against, repo, &entries)?;
     Ok((
         u32::try_from(entries.len()).unwrap_or(u32::MAX),
@@ -1005,6 +1008,11 @@ fn resolve_project_scope(
         },
     };
     refuse_unread_outside_the_scope(args, &scope.scope)?;
+    refuse_outcomes_outside_the_scope(
+        args,
+        &RunScope::of(scope.scope.iter().cloned(), &[]),
+        false,
+    )?;
     moved_scope::refuse_a_moved_scope(&args.reviewed_against, repo, &scope.scope)?;
     Ok((
         u32::try_from(scope.scope.len()).unwrap_or(u32::MAX),
@@ -1039,6 +1047,57 @@ fn refuse_unread_outside_the_scope(
             "{} is not in the run's scope; list only the scope entries compute-review-scope \
              returned that the passes did not read",
             outside.join(", ")
+        ),
+    })
+}
+
+/// Refuse a finding, or an observation that names a file, on a file the run's scope
+/// does not hold (spec 086, AC1): a run records outcomes only on the files its own scope
+/// holds, so a run reviewing several specs cannot write one spec's outcomes into
+/// another's record. The scope is the one the record counts, an entry or a file a plan
+/// entry among its entries names ([`RunScope::holds`]). An observation's `:line` suffix
+/// is set aside, and one naming no file is not refused, since it has no file a scope
+/// could hold; a criterion's verdict names no file at all. With an empty `diff-base`
+/// the scope holds nothing, so every anchored outcome is refused there.
+fn refuse_outcomes_outside_the_scope(
+    args: &WriteReviewArgs,
+    scope: &RunScope,
+    empty_base: bool,
+) -> Result<()> {
+    let findings = args
+        .findings
+        .iter()
+        .enumerate()
+        .map(|(idx, finding)| (format!("findings[{idx}].file"), finding.file.as_str()));
+    let observations = args
+        .observations
+        .iter()
+        .enumerate()
+        .map(|(idx, observation)| {
+            (
+                format!("observations[{idx}].path"),
+                super::path_without_lines(&observation.path),
+            )
+        })
+        .filter(|(_, file)| !file.is_empty());
+    let Some((argument, file)) = findings
+        .chain(observations)
+        .find(|(_, file)| !scope.holds(file))
+    else {
+        return Ok(());
+    };
+    let how = if empty_base {
+        "an empty diff-base resolves a scope that holds no file; pass the diff-base \
+         compute-review-scope returned"
+    } else {
+        "record an outcome only on a file the scope compute-review-scope returned holds"
+    };
+    Err(PrimitiveError::InvalidArgument {
+        primitive: "write-review".into(),
+        argument,
+        reason: format!(
+            "`{}` is not in the run's scope; {how}",
+            crate::primitives::flatten_line(file)
         ),
     })
 }
@@ -2819,9 +2878,12 @@ fn refresh_departure_waivers(
 
 /// The second source of new waivers: each well-formed departure entry, of any tier,
 /// stored for the files its rule fires at in the run's scope that no waiver holds, hand
-/// `--waive` first, or, for a scoped entry, for the sites its `covers:` lists among them. A finding on a file the scope does not hold is nobody's here (spec
-/// 020's `waiver-expiry`: a waiver is bounded by the spec's own scope), so it stays
-/// counted. A rule firing nowhere stores nothing and refuses nothing, since an entry is
+/// `--waive` first, or, for a scoped entry, for the sites its `covers:` lists among them.
+/// `resolve_scope` refuses a finding on a file the run's scope does not hold (spec 086), and
+/// this scope, resolved from the run's `diff-base` as `--since`, leaves out what the record
+/// the window starts at hands on: a finding on such a file is nobody's here (spec 020's
+/// `waiver-expiry`: a waiver is bounded by the spec's own scope), so it stays counted. A
+/// rule firing nowhere stores nothing and refuses nothing, since an entry is
 /// the spec's standing decision rather than a request of this run. The waiver carries the
 /// entry's attribution, or `unattributed` and the run's time when history cannot say, and
 /// `departure: true`, which `process-waivers` expires when the entry is gone.
@@ -3820,6 +3882,138 @@ mod tests {
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
     }
 
+    /// Whether `err` refuses `argument` for `file`, the scope not holding it.
+    fn refused_outside(err: &PrimitiveError, argument: &str, file: &str) -> bool {
+        matches!(err, PrimitiveError::InvalidArgument { argument: named, reason, .. }
+            if named == argument && reason.contains(&format!("`{file}` is not in the run's scope")))
+    }
+
+    /// A finding and an observation on a file the run's scope does not hold are each
+    /// refused, naming the argument and the file, and nothing is written (spec 086, AC1).
+    #[test]
+    fn an_outcome_on_a_file_outside_the_scope_is_refused_writing_nothing() {
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        args.findings = vec![finding("SEC-BE-002", "must", "src/other.rs", "1-5", "high")];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            refused_outside(&err, "findings[0].file", "src/other.rs"),
+            "{err}"
+        );
+        args.findings = Vec::new();
+        args.observations = vec![
+            observation("bug: odd", "src/mine.rs:3"),
+            observation("perf: slow", "src/other.rs:12"),
+        ];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            refused_outside(&err, "observations[1].path", "src/other.rs"),
+            "{err}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+    }
+
+    /// What the scope holds is accepted: an observation at `file:line` in it, one naming no
+    /// file, and a finding on a file a first review's plan pattern names though no commit in
+    /// the window gave it the spec (spec 086, AC1).
+    #[test]
+    fn an_outcome_the_scope_holds_is_accepted() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let repository = git2::Repository::open(tmp.path()).unwrap();
+        write(&tmp.path().join("src/lib/planned.rs"), "fn p() {}\n");
+        commit_all(&repository, "chore: no spec's");
+        write(
+            &tmp.path().join("specs/001-x/plan.md"),
+            "## Affected Files\n\n| File | Action | Purpose |\n| --- | --- | --- |\n\
+             | `src/lib/*.rs` | Modify | p |\n",
+        );
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        args.findings = vec![finding(
+            "SEC-BE-002",
+            "must",
+            "src/lib/planned.rs",
+            "1-1",
+            "high",
+        )];
+        args.observations = vec![
+            observation("bug: odd", "src/mine.rs:3"),
+            observation("other: noted", ""),
+        ];
+        let out = run(&args, tmp.path()).unwrap();
+        assert_eq!(out.must_violations, 1, "{out:?}");
+        assert!(review_md(&tmp, "001-x").contains("src/lib/planned.rs"));
+    }
+
+    /// A finding a re-read reports on a file a fix round touched is accepted at the run's
+    /// last write, the fix being in its scope, though the first write would refuse it
+    /// (spec 086, AC1).
+    #[test]
+    fn a_re_reads_finding_on_a_file_a_fix_touched_is_accepted_at_the_last_write() {
+        use crate::primitives::git_fixture::write;
+        let tmp = tempdir().unwrap();
+        let parent = repo_with_another_specs_commit(&tmp);
+        let mut args = base_args("001-x");
+        args.diff_base = parent;
+        args.findings = vec![finding(
+            "SEC-BE-002",
+            "should",
+            "src/mine.rs",
+            "1-1",
+            "high",
+        )];
+        args.loop_open = true;
+        run(&args, tmp.path()).unwrap();
+        let mut early = args.clone();
+        early.findings = vec![finding(
+            "SEC-BE-002",
+            "should",
+            "src/fixed.rs",
+            "1-1",
+            "high",
+        )];
+        let err = run(&early, tmp.path()).unwrap_err();
+        assert!(
+            refused_outside(&err, "findings[0].file", "src/fixed.rs"),
+            "{err}"
+        );
+        write(&tmp.path().join("src/fixed.rs"), "fn fixed() {}\n");
+        args.loop_open = false;
+        args.findings = vec![finding(
+            "SEC-BE-002",
+            "should",
+            "src/fixed.rs",
+            "1-1",
+            "high",
+        )];
+        let out = run(&args, tmp.path()).unwrap();
+        assert_eq!(out.should_violations, 1, "{out:?}");
+    }
+
+    /// With an empty `diff-base` the scope holds no file, so an anchored outcome is
+    /// refused with the base to pass instead (spec 086, AC1).
+    #[test]
+    fn an_empty_diff_base_refuses_an_anchored_outcome_naming_the_base_to_pass() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.findings = vec![finding("SEC-BE-002", "must", "src/a.rs", "1-5", "high")];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            refused_outside(&err, "findings[0].file", "src/a.rs"),
+            "{err}"
+        );
+        assert!(
+            err.to_string()
+                .contains("pass the diff-base compute-review-scope returned"),
+            "{err}"
+        );
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+    }
+
     /// A record the window starts at hands the scope what it leaves open or left
     /// unread, past a later run passed over, and the denominator `write-review`
     /// derives for that window holds the same, so an `unread` entry naming it is the
@@ -4019,7 +4213,7 @@ mod tests {
                 Some("PROJ-9"),
             ),
         ];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(
             result.must_violations, 1,
             "only the own-spec deferral is counted"
@@ -4077,7 +4271,7 @@ mod tests {
         );
         missing.disposition.task = Some("4".into());
         args.findings = vec![missing];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
                 if argument == "findings[0].disposition.target"),
@@ -4089,7 +4283,7 @@ mod tests {
             Some("specs/002-y/spec.md"),
             None,
         )];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         let stored =
             decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
@@ -4122,7 +4316,7 @@ mod tests {
         observed.disposition.target = None;
         observed.disposition.work_item = Some("PROJ-2\u{1b}[31m".into());
         args.observations = vec![observed];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let report = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
         let body = report.splitn(3, "---\n").nth(2).unwrap();
         assert!(!body.contains('\u{1b}'), "{body}");
@@ -4159,7 +4353,7 @@ mod tests {
         let mut args = base_args("001-x");
         args.findings = vec![finding("SEC-1", "must", "src/a.rs", "1-2", "high")];
         args.applied_waivers = vec![waiver("SEC-1", "src/a.rs")];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
                 if argument == "expired-decisions"),
@@ -4175,7 +4369,7 @@ mod tests {
             reason: None,
             by_rule: false,
         }];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let stored =
             decisions::read_decisions(&tmp.path().join("specs/001-x"), "review.md").unwrap();
         assert!(
@@ -4202,7 +4396,7 @@ mod tests {
             ),
             finding("SEC-1", "must", "src/a.rs", "40-41", "high"),
         ];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "findings"),
             "{err:?}"
@@ -4222,7 +4416,7 @@ mod tests {
             Some("PROJ-1"),
         )];
         args.applied_waivers = vec![waiver("SEC-BE-014", "src/internal.ts")];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "findings"),
             "{err:?}"
@@ -4232,7 +4426,7 @@ mod tests {
         waived.disposition.reason = Some("noise".into());
         args.applied_waivers = vec![];
         args.findings = vec![waived];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidArgument { argument, .. }
                 if argument == "findings[0].disposition.outcome"),
@@ -4247,6 +4441,65 @@ mod tests {
     /// no repository or no commit keeps the placeholder.
     fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         super::run(&at_head(args, repo), repo)
+    }
+
+    /// [`run`] over a window that holds every file `args`' findings and observations
+    /// name, since a run records outcomes only on files its scope holds (spec 086, AC1):
+    /// `tmp` becomes a repository whose first commit, made of what it holds now, is the
+    /// window's base, each named file absent from disk is written after it, and `args`
+    /// takes that base when it names none.
+    fn run_in_scope(args: &WriteReviewArgs, tmp: &TempDir) -> Result<WriteReviewResult> {
+        use crate::primitives::git_fixture::write;
+        let named: Vec<String> = args
+            .findings
+            .iter()
+            .map(|finding| finding.file.clone())
+            .chain(args.observations.iter().map(|observation| {
+                crate::primitives::path_without_lines(&observation.path).to_string()
+            }))
+            .filter(|file| !file.is_empty())
+            .collect();
+        let repository = git2::Repository::open(tmp.path())
+            .unwrap_or_else(|_| git2::Repository::init(tmp.path()).unwrap());
+        let base = if repository.head().is_ok() {
+            let mut walk = repository.revwalk().unwrap();
+            walk.push_head().unwrap();
+            walk.map(|oid| oid.unwrap())
+                .find(|oid| repository.find_commit(*oid).unwrap().parent_count() == 0)
+                .unwrap()
+        } else {
+            // The seed leaves the named files out, so each is changed since the base
+            // even when the test wrote it first.
+            let mut index = repository.index().unwrap();
+            index
+                .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+                .unwrap();
+            for file in &named {
+                let _ = index.remove_path(Path::new(file));
+            }
+            let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+            let signature = git2::Signature::now("Test", "test@example.com").unwrap();
+            repository
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    "chore: seed",
+                    &tree,
+                    &[],
+                )
+                .unwrap()
+        };
+        for file in &named {
+            if !tmp.path().join(file).exists() {
+                write(&tmp.path().join(file), "fn f() {}\n");
+            }
+        }
+        let mut args = args.clone();
+        if args.diff_base.is_empty() {
+            args.diff_base = base.to_string();
+        }
+        run(&args, tmp.path())
     }
 
     /// `args` with the placeholder `reviewed-against` replaced by `repo`'s `HEAD`.
@@ -4596,7 +4849,7 @@ mod tests {
             finding("SEC-BE-001", "should", "src/a.rs", "10-20", "high"),
             finding("SEC-BE-001", "must", "src/a.rs", "15-25", "high"),
         ];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 1);
         assert_eq!(result.should_violations, 0);
     }
@@ -4609,7 +4862,7 @@ mod tests {
             finding("SEC-BE-001", "must", "src/a.rs", "10-20", "high"),
             finding("SEC-BE-001", "must", "src/a.rs", "50-60", "high"),
         ];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 2);
     }
 
@@ -4618,7 +4871,7 @@ mod tests {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
         args.findings = vec![finding("SEC-BE-002", "must", "src/a.rs", "1-5", "high")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert!(result.blocking);
         assert_eq!(result.exit_code, 1);
         let report = review_md(&tmp, "001-x");
@@ -4633,7 +4886,7 @@ mod tests {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
         args.findings = vec![finding("SIM-001", "must", "src/a.rs", "1-5", "low")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         assert_eq!(result.low_confidence, 1);
         assert!(!result.blocking);
@@ -4649,7 +4902,7 @@ mod tests {
             finding("QUAL-002", "should", "src/b.rs", "1-5", "high"),
             finding("SIM-003", "should", "src/c.rs", "1-5", "low"),
         ];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 1);
         assert_eq!(result.should_violations, 1);
         assert_eq!(result.low_confidence, 1);
@@ -4671,7 +4924,7 @@ mod tests {
             "high",
         )];
         args.applied_waivers = vec![waiver("SEC-BE-014", "src/internal.ts")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         assert_eq!(result.waived, 1);
         assert!(!result.blocking);
@@ -4807,13 +5060,22 @@ mod tests {
             finding("B-2", "should", "src/b.rs", "1-2", "high"),
         ];
         let before = spec_md(&tmp, "001-x");
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(
             report.contains("last-run: 2026-07-02T12:00:00Z"),
             "{report}"
         );
-        assert!(report.contains("reviewed-against: abc1234"), "{report}");
+        let head = git2::Repository::open(tmp.path())
+            .unwrap()
+            .head()
+            .unwrap()
+            .target()
+            .unwrap();
+        assert!(
+            report.contains(&format!("reviewed-against: {head}")),
+            "{report}"
+        );
         assert!(report.contains("must-violations: 1"), "{report}");
         assert!(report.contains("should-violations: 1"), "{report}");
         assert!(report.contains("low-confidence: 0"), "{report}");
@@ -5164,7 +5426,7 @@ mod tests {
         let before = fs::read_to_string(&inbox_path).unwrap();
         let mut args = base_args("001-x");
         args.observations = vec![observation("perf: a() is called in a loop", "src/a.rs")];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(
             fs::read_to_string(&inbox_path).unwrap(),
             before,
@@ -5418,7 +5680,7 @@ mod tests {
             fixed,
             dispositioned("perf: a loop", DispositionOutcome::Undispositioned, None),
         ];
-        run(&args, dir.path()).unwrap();
+        run_in_scope(&args, &dir).unwrap();
         let report = review_md(&dir, "001-x");
         assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
         assert!(
@@ -5472,7 +5734,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.findings = vec![must_at("SEC-1", "src/b.rs"), must_at("SEC-1", "src/a.rs")];
         args.new_waivers = vec![waive("SEC-1", "both are internal")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         assert_eq!(result.waived, 2);
         assert!(!result.blocking);
@@ -5529,7 +5791,7 @@ mod tests {
             reason: "earlier".into(),
         }];
         args.new_waivers = vec![waive("SEC-1", "this one too")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         let report = review_md(&tmp, "001-x");
         assert!(
@@ -5574,7 +5836,7 @@ mod tests {
             must("SEC-1", "src/a.rs", None, "20-22"),
         ];
         args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.waived, 1, "{result:?}");
         assert_eq!(
             result.must_violations, 2,
@@ -5600,7 +5862,7 @@ mod tests {
             must("SEC-1", "src/a.rs", None, "20-22"),
         ];
         args.applied_waivers = vec![waiver("SEC-1", "src/a.rs")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(
             (result.waived, result.must_violations),
             (3, 0),
@@ -5624,7 +5886,7 @@ mod tests {
             must("SEC-1", "src/b.rs", Some("alpha"), "1"),
         ];
         args.new_waivers = vec![waive("SEC-1", "decided")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(
             (result.waived, result.must_violations),
             (4, 0),
@@ -5673,7 +5935,7 @@ mod tests {
             let mut args = base_args("001-x");
             args.findings = findings;
             args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "walk")];
-            run(&args, tmp.path()).unwrap();
+            run_in_scope(&args, &tmp).unwrap();
             recorded(&tmp, "001-x")[0].anchors.as_ref().unwrap()[0].covers_count()
         };
         let one = vec![must("SEC-1", "src/a.rs", Some("walk"), "1-2")];
@@ -5745,7 +6007,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.findings = findings.clone();
         args.new_waivers = vec![waive("SEC-1", "decided")];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(alpha(&tmp), Some(2));
         let next = next_run(&tmp);
         assert!(next.expired.is_empty(), "{:?}", next.notices);
@@ -5765,7 +6027,7 @@ mod tests {
         let mut args = base_args("001-x");
         args.findings = findings.clone();
         args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(alpha(&tmp), Some(2), "not lowered below what fires");
         let next = next_run(&tmp);
         assert!(next.expired.is_empty(), "{:?}", next.notices);
@@ -5828,7 +6090,7 @@ mod tests {
             must("SEC-1", "src/b.rs", None, "1-2"),
         ];
         args.new_waivers = vec![waive("SEC-1", "why")];
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
                 if argument == "new-waivers[0]" && reason.contains("src/b.rs") && reason.contains("no site")),
@@ -5837,7 +6099,7 @@ mod tests {
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
 
         args.new_waivers = Vec::new();
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 2, "a site-less finding counts");
     }
 
@@ -5862,7 +6124,7 @@ mod tests {
             deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "10-12")),
             deferred_at(must("SEC-1", "src/a.rs", Some("other"), "30")),
         ];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let stored = stored_decisions_of(&tmp);
         let covers: Vec<(&str, Option<u32>)> = stored
             .iter()
@@ -5902,15 +6164,15 @@ mod tests {
         let mut args = base_args("001-x");
         args.decided_by = Some("dev@example.com".into());
         args.findings = two(None);
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(2));
 
         args.findings = two(Some(SITE_KEY)).into_iter().take(1).collect();
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(1), "lowered");
 
         args.findings = two(Some(SITE_KEY));
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(stored_decisions_of(&tmp)[0].covers, Some(1), "never raised");
     }
 
@@ -5971,7 +6233,7 @@ mod tests {
             let mut args = base_args("001-x");
             args.decided_by = Some("dev@example.com".into());
             args.findings = findings.clone();
-            run(&args, tmp.path()).unwrap();
+            run_in_scope(&args, &tmp).unwrap();
             assert_eq!(covers_of(&tmp, key), Some(covers), "{key}");
             let next = next_run(&tmp, findings);
             assert!(next.expired.is_empty(), "{key}: {:?}", next.notices);
@@ -5986,7 +6248,7 @@ mod tests {
             .into_iter()
             .map(|range| deferred_at(must("SEC-1", "src/a.rs", Some("alpha"), range)))
             .collect();
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(covers_of(&tmp, alpha), Some(4));
         args.findings = across.clone();
         for finding in &mut args.findings {
@@ -5994,7 +6256,7 @@ mod tests {
                 finding.decision_key = Some(alpha.into());
             }
         }
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(covers_of(&tmp, alpha), Some(2), "lowered to what fires");
         let next = next_run(&tmp, &across);
         assert!(next.expired.is_empty(), "{:?}", next.notices);
@@ -6009,7 +6271,7 @@ mod tests {
         let mut args = base_args("001-x");
         args.decided_by = Some("dev@example.com".into());
         args.findings = vec![deferred_at(must("SEC-1", "src/a.rs", None, "1-2"))];
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
                 if argument == "findings[0].disposition"
@@ -6025,7 +6287,7 @@ mod tests {
             ("rule SEC-1 at src/a.rs", "findings[0].disposition"),
         ] {
             args.findings[0].decision_key = Some(key.into());
-            let error = run(&args, tmp.path()).unwrap_err();
+            let error = run_in_scope(&args, &tmp).unwrap_err();
             assert!(
                 matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == refused),
                 "{key}: {error}"
@@ -6044,7 +6306,7 @@ mod tests {
         let mut elsewhere = deferred_at(must("SEC-1", "src/a.rs", Some("walk2"), "1-2"));
         elsewhere.decision_key = Some(SITE_KEY.into());
         args.findings = vec![elsewhere];
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
                 if argument == "findings[0].decision-key"
@@ -6055,7 +6317,7 @@ mod tests {
         assert!(!tmp.path().join("specs/001-x/review.md").exists());
 
         args.findings[0].decision_key = Some("rule SEC-1 at src/a.rs in `walk2`".into());
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert!(review_md(&tmp, "001-x").contains("key: rule SEC-1 at src/a.rs in `walk2`"));
     }
 
@@ -6077,7 +6339,7 @@ mod tests {
             let mut args = base_args("001-x");
             args.findings = findings.clone();
             args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
-            let result = run(&args, tmp.path()).unwrap();
+            let result = run_in_scope(&args, &tmp).unwrap();
             assert_eq!(
                 (result.waived, result.must_violations),
                 (1, 1),
@@ -6093,7 +6355,7 @@ mod tests {
             deferred_at(must("SEC-1", "src/a.rs", Some("walk"), "1-30")),
             deferred_at(must("SEC-1", "src/a.rs", Some("talk"), "10-12")),
         ];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 2, "{result:?}");
         let mut keys: Vec<String> = stored_decisions_of(&tmp)
             .into_iter()
@@ -6121,7 +6383,7 @@ mod tests {
         ];
         args.applied_waivers = vec![anchor_at("SEC-1", "src/a.rs", "alpha")];
         args.new_waivers = vec![waive("SEC-1", "beta too")];
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0, "{result:?}");
         let stored = recorded(&tmp, "001-x");
         assert_eq!(stored.len(), 2, "{}", review_md(&tmp, "001-x"));
@@ -6172,7 +6434,7 @@ mod tests {
             args.decided_by = by.map(str::to_string);
             args.findings = vec![must_at("SEC-1", "src/a.rs")];
             args.new_waivers = vec![waive(rule, reason)];
-            let error = run(&args, tmp.path()).unwrap_err();
+            let error = run_in_scope(&args, &tmp).unwrap_err();
             assert!(
                 matches!(&error, PrimitiveError::InvalidArgument { argument: named, .. } if named == argument),
                 "{name}: {error}"
@@ -6185,7 +6447,7 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.findings = vec![must_at("SEC-1", "src/a.rs")];
         args.new_waivers = vec![waive("SEC-1", "why"), waive("SEC-1", "again")];
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "new-waivers[1].rule"),
             "{error}"
@@ -6202,9 +6464,9 @@ mod tests {
         args.findings = vec![must_at("SEC-1", "src/a.rs")];
         args.new_waivers = vec![waive("SEC-1", "internal")];
         args.loop_open = true;
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         args.loop_open = false;
-        let result = run(&args, tmp.path()).unwrap();
+        let result = run_in_scope(&args, &tmp).unwrap();
         assert_eq!(result.must_violations, 0);
         let report = review_md(&tmp, "001-x");
         assert_eq!(report.matches("rule: SEC-1").count(), 1, "{report}");
@@ -6219,13 +6481,13 @@ mod tests {
         args.decided_by = Some("dev@example.com".into());
         args.findings = vec![must_at("SEC-1", "src/a.rs")];
         args.new_waivers = vec![waive("SEC-1", "internal")];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         args.findings = Vec::new();
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(review_md(&tmp, "001-x").matches("rule: SEC-1").count(), 1);
 
         args.reviewed_at = "2026-07-03T12:00:00Z".into();
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "new-waivers[0]"),
             "{error}"
@@ -6243,7 +6505,7 @@ mod tests {
         deferred.disposition.work_item = Some("JIRA-1".into());
         deferred.disposition.target = None;
         first.observations = vec![deferred.clone()];
-        run(&first, tmp.path()).unwrap();
+        run_in_scope(&first, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("contract-break: true"), "{report}");
         assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"]);
@@ -6252,7 +6514,7 @@ mod tests {
         let mut matched = deferred;
         matched.contract_break = false;
         next.observations = vec![matched.clone()];
-        run(&next, tmp.path()).unwrap();
+        run_in_scope(&next, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("\ncontract-breaks: 1\n"), "{report}");
         assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"]);
@@ -6271,7 +6533,7 @@ mod tests {
             by_rule: false,
         }];
         after.observations = vec![matched];
-        run(&after, tmp.path()).unwrap();
+        run_in_scope(&after, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("\ncontract-breaks: 0\n"), "{report}");
         assert!(listed_open(&tmp, "001-x").is_empty(), "{report}");
@@ -6294,7 +6556,7 @@ mod tests {
         deferred.disposition.work_item = Some("JIRA-1".into());
         deferred.disposition.target = None;
         first.observations = vec![deferred.clone()];
-        run(&first, tmp.path()).unwrap();
+        run_in_scope(&first, &tmp).unwrap();
 
         let mut next = base_args("001-x");
         let mut matched = deferred;
@@ -6302,7 +6564,7 @@ mod tests {
         matched.path = String::new();
         matched.contract_break = marked;
         next.observations = vec![matched];
-        run(&next, tmp.path()).unwrap();
+        run_in_scope(&next, &tmp).unwrap();
         assert_eq!(listed_open(&tmp, "001-x"), vec!["src/a.rs"], "{marked}");
     }
 
@@ -6317,7 +6579,7 @@ mod tests {
         deferred.disposition.work_item = Some("JIRA-1".into());
         deferred.disposition.target = None;
         first.observations = vec![deferred.clone()];
-        run(&first, tmp.path()).unwrap();
+        run_in_scope(&first, &tmp).unwrap();
 
         let mut next = base_args("001-x");
         next.decided_by = Some("dev@example.com".into());
@@ -6326,7 +6588,7 @@ mod tests {
         matched.path = String::new();
         matched.contract_break = false;
         next.observations = vec![matched];
-        let error = run(&next, tmp.path()).unwrap_err();
+        let error = run_in_scope(&next, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "observations[0].path"),
             "{error}"
@@ -6375,7 +6637,7 @@ mod tests {
             DispositionOutcome::Undispositioned,
             None,
         )];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(listed_open(&tmp, "001-x"), vec!["src/b.rs"]);
         assert_eq!(
             decisions::key_anchor("bug: a thing — `src/b.rs:3:9`"),
@@ -6536,14 +6798,14 @@ mod tests {
         own.disposition.target = Some("specs/001-x/tasks.md".into());
         own.disposition.task = Some("2".into());
         args.observations = vec![own];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
 
         std::fs::write(
             &tasks,
             format!("{deferred}\n## 3. Other\n\n- [ ] other\n\n- **Done when**: done.\n"),
         )
         .unwrap();
-        let error = run(&args, tmp.path()).unwrap_err();
+        let error = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. } if argument == "feature" && reason.contains("other") && !reason.contains("fix")),
             "{error}"
@@ -6561,7 +6823,7 @@ mod tests {
             DispositionOutcome::Undispositioned,
             None,
         )];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(
             report.contains("A broken contract among its observations"),
@@ -6571,7 +6833,7 @@ mod tests {
 
     /// The refusal over a rule's stored waiver, with the record left as it was.
     fn refused_over_the_rules_waiver(args: &WriteReviewArgs, tmp: &TempDir, before: &str) {
-        let error = run(args, tmp.path()).unwrap_err();
+        let error = run_in_scope(args, tmp).unwrap_err();
         assert!(
             matches!(&error, PrimitiveError::InvalidArgument { argument, reason, .. }
                 if argument == "expired-decisions" && reason.contains("does not dispose")),
@@ -6591,7 +6853,7 @@ mod tests {
         let mut waived = rule_waived("bug: src/a.rs");
         waived.path = "src/a.rs".into();
         first.observations = vec![waived];
-        run(&first, tmp.path()).unwrap();
+        run_in_scope(&first, &tmp).unwrap();
         let before = review_md(&tmp, "001-x");
         assert!(before.contains("decided-by: rule"), "{before}");
         let key = "bug: src/a.rs — `src/a.rs`";
@@ -6615,7 +6877,7 @@ mod tests {
             reason: Some("the rule says so".into()),
             by_rule: true,
         }];
-        run(&carried, tmp.path()).unwrap();
+        run_in_scope(&carried, &tmp).unwrap();
         let report = review_md(&tmp, "001-x");
         assert!(report.contains("decided-by: dev@example.com"), "{report}");
         assert!(!report.contains("decided-by: rule"), "{report}");
@@ -6636,8 +6898,8 @@ mod tests {
             DispositionOutcome::Waived,
             Some("a person's reason"),
         )];
-        run(&first, person.path()).unwrap();
-        run(&first, person.path()).unwrap();
+        run_in_scope(&first, &person).unwrap();
+        run_in_scope(&first, &person).unwrap();
         let report = review_md(&person, "001-x");
         assert!(report.contains("decided-by: dev@example.com"), "{report}");
 
@@ -6651,11 +6913,11 @@ mod tests {
             let mut waived = rule_waived("bug: src/a.rs");
             waived.path = "src/a.rs".into();
             first.observations = vec![waived];
-            run(&first, tmp.path()).unwrap();
+            run_in_scope(&first, &tmp).unwrap();
             let mut next = base_args("001-x");
             next.decided_by = None;
             next.observations = vec![broken("src/a.rs", outcome, None)];
-            run(&next, tmp.path()).unwrap();
+            run_in_scope(&next, &tmp).unwrap();
         }
     }
 
@@ -6711,7 +6973,7 @@ mod tests {
             ),
             observation("perf: not a break", "src/perf.rs"),
         ];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         assert_eq!(
             listed_open(&tmp, "001-x"),
             [
@@ -6790,8 +7052,8 @@ mod tests {
             DispositionOutcome::Undispositioned,
             None,
         )];
-        run(&own, tmp.path()).unwrap();
-        run(&own, tmp.path()).unwrap();
+        run_in_scope(&own, &tmp).unwrap();
+        run_in_scope(&own, &tmp).unwrap();
     }
 
     /// A person agreeing with the rule's waiver makes no new decision, so the record
@@ -6893,7 +7155,7 @@ mod tests {
             observation("other: noted", ""),
             observation("leak: a handle kept", "src/c.rs"),
         ];
-        run(&args, dir.path()).unwrap();
+        run_in_scope(&args, &dir).unwrap();
         let report = review_md(&dir, "001-x");
         let at = |needle: &str| report.find(needle).unwrap();
         assert!(at("Security: a token") < at("leak: a handle"), "{report}");
@@ -7429,9 +7691,9 @@ mod tests {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let mut args = base_args("001-x");
         args.findings = vec![finding("SEC-BE-001", "must", "src/a.rs", "1-5", "high")];
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let first = review_md(&tmp, "001-x");
-        run(&args, tmp.path()).unwrap();
+        run_in_scope(&args, &tmp).unwrap();
         let second = review_md(&tmp, "001-x");
         assert_eq!(first, second);
     }
@@ -7453,7 +7715,7 @@ mod tests {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: [unclosed");
         let mut args = base_args("001-x");
         args.findings = vec![finding("SEC-BE-001", "must", "src/a.rs", "1-5", "high")];
-        let err = run(&args, tmp.path()).unwrap_err();
+        let err = run_in_scope(&args, &tmp).unwrap_err();
         assert!(
             matches!(err, PrimitiveError::Yaml { .. }),
             "expected Yaml error, got {err:?}"
@@ -7945,7 +8207,7 @@ mod tests {
                     observation
                 })
                 .collect();
-            let error = run(&args, tmp.path()).unwrap_err();
+            let error = run_in_scope(&args, &tmp).unwrap_err();
             assert!(
                 matches!(&error, PrimitiveError::InvalidArgument { argument, .. } if argument == "observations"),
                 "{first:?} beside {second:?}: {error}"

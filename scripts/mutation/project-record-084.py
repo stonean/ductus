@@ -208,8 +208,8 @@ MUTATIONS = [
     (
         'M28 the project record\'s waivers are read against no scope',
         'src/primitives/compute_review_scope.rs',
-        '                    read: scope.scope,\n                    plan: PlanEntries::new(&[]),',
-        '                    read: BTreeSet::new(),\n                    plan: PlanEntries::new(&[]),',
+        '                Ok(Ok(scope)) => Self::of(scope.scope, &[]),',
+        '                Ok(Ok(scope)) => Self::of({ let _ = scope; BTreeSet::new() }, &[]),',
         'process_waivers::tests::the_project_records_waivers_are_classified_with_no_feature',
     ),
     (

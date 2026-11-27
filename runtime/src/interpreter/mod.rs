@@ -1871,8 +1871,9 @@ mod tests {
             "reviewed-at".into(),
             Value::String("2026-07-04T00:00:00Z".into()),
         );
-        context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String(String::new()));
+        let base = review_window(tmp.path(), &["runtime/src/a.rs", "runtime/src/b.rs"]);
+        context.insert("reviewed-against".into(), Value::String(base.clone()));
+        context.insert("diff-base".into(), Value::String(base));
 
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
@@ -2126,8 +2127,9 @@ mod tests {
             "reviewed-at".into(),
             Value::String("2026-07-04T00:00:00Z".into()),
         );
-        context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String(String::new()));
+        let base = review_window(tmp.path(), &["a.rs"]);
+        context.insert("reviewed-against".into(), Value::String(base.clone()));
+        context.insert("diff-base".into(), Value::String(base));
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
         let mut walker = Walker::new(
@@ -2148,10 +2150,25 @@ mod tests {
         );
     }
 
+    /// A repository at `root` whose one commit holds what `root` holds, with each of `files`
+    /// written after it, so a review window based there holds them, since a run records
+    /// outcomes only on files its scope holds (spec 086, AC1). Returns that commit: the
+    /// window's base and the `HEAD` its scope is resolved at.
+    fn review_window(root: &std::path::Path, files: &[&str]) -> String {
+        use crate::primitives::git_fixture::{commit_all, write};
+        let repository = git2::Repository::init(root).unwrap();
+        let base = commit_all(&repository, "chore: seed").to_string();
+        for file in files {
+            write(&root.join(file), "fn f() {}\n");
+        }
+        base
+    }
+
     /// The walker to a `write-review` step on one `performReview` response.
     fn walk_one_review_pass(
         tmp: &std::path::Path,
         responses: &str,
+        files: &[&str],
     ) -> std::io::Result<WalkOutcome> {
         let dir = tmp.join("specs/001-x");
         std::fs::create_dir_all(&dir).unwrap();
@@ -2183,8 +2200,9 @@ mod tests {
             "reviewed-at".into(),
             Value::String("2026-07-04T00:00:00Z".into()),
         );
-        context.insert("reviewed-against".into(), Value::String("abc1234".into()));
-        context.insert("diff-base".into(), Value::String(String::new()));
+        let base = review_window(tmp, files);
+        context.insert("reviewed-against".into(), Value::String(base.clone()));
+        context.insert("diff-base".into(), Value::String(base));
         let mut reader = Cursor::new(responses.to_string());
         let mut writer: Vec<u8> = Vec::new();
         Walker::new(
@@ -2206,7 +2224,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[],\"observations\":[{\"text\":\"bug: breaks AC1\",\"path\":\"src/a.rs:4\",\"contract-break\":true},{\"text\":\"perf: slow\",\"path\":\"src/b.rs\"}]}}\n";
         assert_eq!(
-            walk_one_review_pass(tmp.path(), responses).unwrap(),
+            walk_one_review_pass(tmp.path(), responses, &["src/a.rs", "src/b.rs"]).unwrap(),
             WalkOutcome::Complete
         );
         let review = std::fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();

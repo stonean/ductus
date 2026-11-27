@@ -2236,6 +2236,22 @@ async fn write_review_renders_report_via_mcp() {
         "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
     )
     .unwrap();
+    // A window holding `src/a.rs`: the spec committed, the file written after it, since a
+    // run records outcomes only on files its scope holds (spec 086, AC1).
+    let repo = git2::Repository::init(tmp.path()).unwrap();
+    let mut index = repo.index().unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+    let base = repo
+        .commit(Some("HEAD"), &sig, &sig, "chore: seed", &tree, &[])
+        .unwrap()
+        .to_string();
+    fs::create_dir_all(tmp.path().join("src")).unwrap();
+    fs::write(tmp.path().join("src/a.rs"), "fn a() {}\n").unwrap();
 
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
@@ -2244,8 +2260,8 @@ async fn write_review_renders_report_via_mcp() {
         json!({
             "feature": "001-x",
             "reviewed-at": "2026-07-06T00:00:00Z",
-            "reviewed-against": "abc1234",
-            "diff-base": "",
+            "reviewed-against": base,
+            "diff-base": base,
             "findings": [{
                 "rule": "SEC-BE-001", "severity": "must", "file": "src/a.rs",
                 "line-range": "1-5", "confidence": "high"

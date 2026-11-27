@@ -806,10 +806,7 @@ impl RunScope {
     pub(crate) fn resolve(feature: Option<&str>, since: Option<&str>, repo: &Path) -> Self {
         let Some(feature) = feature else {
             return match check_unreviewed_code::project_scope(repo, since) {
-                Ok(Ok(scope)) => Self::Known {
-                    read: scope.scope,
-                    plan: PlanEntries::new(&[]),
-                },
+                Ok(Ok(scope)) => Self::of(scope.scope, &[]),
                 // A window that cannot be placed leaves nothing known to be read.
                 Ok(Err(_)) | Err(_) => Self::Unreadable,
             };
@@ -819,17 +816,24 @@ impl RunScope {
             since: since.map(str::to_string),
         };
         compute(&args, repo).map_or(Self::Unreadable, |scope| {
-            let planned: Vec<String> = scope
-                .scope
-                .iter()
-                .filter(|entry| scope.plan_affected.contains(entry))
-                .cloned()
-                .collect();
-            Self::Known {
-                plan: PlanEntries::new(&planned),
-                read: scope.scope.into_iter().collect(),
-            }
+            Self::of(scope.scope, &scope.plan_affected)
         })
+    }
+
+    /// The scope a run resolved: its `entries`, of which those `plan_affected` lists
+    /// are also the plan entries they may be, so a caller holding a resolved scope tests
+    /// the scope it counts with no second derivation (spec 086).
+    pub(crate) fn of(entries: impl IntoIterator<Item = String>, plan_affected: &[String]) -> Self {
+        let read: BTreeSet<String> = entries.into_iter().collect();
+        let planned: Vec<String> = read
+            .iter()
+            .filter(|entry| plan_affected.contains(entry))
+            .cloned()
+            .collect();
+        Self::Known {
+            plan: PlanEntries::new(&planned),
+            read,
+        }
     }
 
     /// Whether the run's scope holds `path`: a scope entry, or a file the plan names.

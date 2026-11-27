@@ -564,18 +564,43 @@ fn an_edited_reason_reaches_the_stored_waiver_and_the_report() {
     );
 }
 
+/// `write-review` refuses a violation on a file outside the run's scope, writing
+/// nothing, since the run did not read it (spec 086, AC1); the entry waives its rule
+/// only in the scope.
+fn refused_outside_the_scope(dir: &Path, findings: &[Value]) -> String {
+    let args: WriteReviewArgs = serde_json::from_value(json!({
+        "feature": FEATURE, "reviewed-at": T1, "reviewed-against": head(dir),
+        "diff-base": seed(dir), "empty-scope": false, "findings": findings,
+    }))
+    .unwrap();
+    let err = write_review::run(&args, dir).unwrap_err().to_string();
+    assert!(
+        !dir.join(format!("specs/{FEATURE}/review.md")).exists(),
+        "a refusal writes nothing"
+    );
+    err
+}
+
 #[test]
-fn a_violation_outside_the_review_scope_is_not_waived_and_still_counts() {
+fn a_violation_outside_the_review_scope_is_refused_and_one_inside_is_waived() {
     let tmp = tempfile::tempdir().unwrap();
     fixture(tmp.path(), MUST_ENTRY);
     // `src/out.rs` is committed with the spec, before the window the run takes.
-    let findings = [
-        finding(MUST_RULE, "must", "src/a.rs"),
-        finding(MUST_RULE, "must", "src/out.rs"),
-    ];
+    let err = refused_outside_the_scope(
+        tmp.path(),
+        &[
+            finding(MUST_RULE, "must", "src/a.rs"),
+            finding(MUST_RULE, "must", "src/out.rs"),
+        ],
+    );
+    assert!(
+        err.contains("`src/out.rs` is not in the run's scope"),
+        "{err}"
+    );
+    let findings = [finding(MUST_RULE, "must", "src/a.rs")];
     let (_, written) = run_review(tmp.path(), &findings, T1, &json!({}));
-    assert_eq!(written.must_violations, 1, "{written:?}");
-    assert!(written.blocking);
+    assert_eq!(written.must_violations, 0, "{written:?}");
+    assert!(!written.blocking);
     assert_eq!(written.waived, 1);
     let stored = waivers(tmp.path());
     assert_eq!(stored.len(), 1, "{stored:?}");
@@ -1362,8 +1387,9 @@ fn a_covered_site_where_the_rule_does_not_fire_is_no_notice() {
 }
 
 /// Spec 073's Edge Cases: the rule firing in a covered file the tree holds but the run's
-/// scope does not is no notice, since the run did not read that file; the finding there
-/// still counts, unwaived.
+/// scope does not is no notice, and nothing is waived there, since the run did not read
+/// that file. The finding is not the run's to record (spec 086, AC1): `write-review`
+/// refuses it, and the run the host makes without it names no notice.
 #[test]
 fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
     let tmp = tempfile::tempdir().unwrap();
@@ -1371,18 +1397,19 @@ fn the_rule_firing_in_a_covered_file_outside_the_scope_is_no_notice() {
         tmp.path(),
         "- departs: `BE-COMPAT-001`\n  - reason: r\n  - covers:\n    - `src/out.rs` in `walk`\n",
     );
-    let (_, written) = run_review(
-        tmp.path(),
-        &[at_site("src/out.rs", Some("other"))],
-        T1,
-        &json!({}),
+    let err = refused_outside_the_scope(tmp.path(), &[at_site("src/out.rs", Some("other"))]);
+    assert!(
+        err.contains("`src/out.rs` is not in the run's scope"),
+        "{err}"
     );
+    let (_, written) = run_review(tmp.path(), &[], T1, &json!({}));
     assert_eq!(written.departure_notices, [] as [String; 0], "{written:?}");
     assert_eq!(
         (written.waived, written.must_violations),
-        (0, 1),
+        (0, 0),
         "{written:?}"
     );
+    assert_eq!(waivers(tmp.path()), [] as [Value; 0]);
 }
 
 /// Spec 073's Edge Cases and `BE-INPUT-004`: a covered file reached through a symbolic

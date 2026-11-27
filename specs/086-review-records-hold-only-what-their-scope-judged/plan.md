@@ -139,7 +139,9 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/primitives/spec_ownership.rs` | Create | The files a spec owns; one walk for many specs |
 | `runtime/src/primitives/mod.rs` | Modify | Declare the two modules |
 | `runtime/src/primitives/compute_review_scope.rs` | Modify | `RunScope` from a resolved scope; owned files on a first review; `ownership` |
-| `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope |
+| `runtime/src/primitives/write_review.rs` | Modify | Refuse an outcome outside the scope; its tests' window |
+| `runtime/src/primitives/write_review/departure_waivers.rs` | Modify | A departure's tests where an outcome outside the scope is refused |
+| `runtime/src/primitives/write_review/project_record.rs` | Modify | The project record refuses the same way |
 | `runtime/src/primitives/process_decisions.rs` | Modify | `dropped`, `ownership`, the new retained class |
 | `runtime/src/primitives/process_waivers.rs` | Modify | `dropped`, `ownership` |
 | `runtime/src/primitives/prune_review.rs` | Create | The record reduction |
@@ -147,9 +149,16 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `runtime/src/schema/descriptions.rs` | Modify | Five descriptions |
 | `runtime/src/schema/registry.rs` | Modify | Register `prune-review` |
 | `runtime/src/mcp/server.rs` | Modify | Its tool |
-| `runtime/src/interpreter/mod.rs` | Modify | Its dispatch arm |
+| `runtime/src/interpreter/mod.rs` | Modify | Its dispatch arm; the exec review tests' window |
 | `runtime/src/main.rs` | Modify | Its command |
 | `runtime/tests/result_sizes.rs` | Modify | Cases for the new lists and the primitive |
+| `runtime/tests/mcp.rs` | Modify | The MCP write's window |
+| `runtime/tests/walker.rs` | Modify | The exec waiver tests' window |
+| `runtime/tests/golden/review-basic.jsonl` | Modify | Re-blessed for the review command's edit |
+| `scripts/mutation/spec-ownership-086.py` | Create | The ownership walk's mutants |
+| `scripts/mutation/outcomes-outside-the-scope-086.py` | Create | The refusal's mutants |
+| `scripts/mutation/project-record-084.py` | Modify | An anchor `RunScope::of` moved |
+| `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal and `RunScope::of` moved |
 | `framework/runtime-tools.txt` | Modify | List `prune-review` |
 | `framework/bootstrap/configure/claude.md` | Modify | Regenerated allow entry |
 | `framework/bootstrap/configure/pi.md` | Modify | Regenerated allow entry |

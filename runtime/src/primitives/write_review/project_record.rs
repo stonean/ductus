@@ -128,6 +128,29 @@ fn a_project_review_records_the_unclaimed_commit_in_the_spec_roots_record() {
     assert!(!tmp.path().join("specs/001-a/review.md").exists());
 }
 
+/// The project record's write refuses an outcome outside its scope as a spec's does:
+/// the install's `hooks/pre-push`, before the window, is refused and nothing is
+/// written, and `src/a.rs`, which the window holds, is recorded (spec 086, AC1).
+#[test]
+fn a_project_review_refuses_an_outcome_outside_its_scope() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (repository, added) = seeded_project(tmp.path());
+    let before = record_text(tmp.path());
+    let mut args = review_args(&repository, added);
+    args.findings = vec![must("hooks/pre-push", Disposition::default())];
+    let err = run(&args, tmp.path()).unwrap_err();
+    assert!(is_invalid(&err, "findings[0].file"), "{err}");
+    assert!(
+        err.to_string()
+            .contains("`hooks/pre-push` is not in the run's scope"),
+        "{err}"
+    );
+    assert_eq!(record_text(tmp.path()), before, "a refusal writes nothing");
+    args.findings = vec![must("src/a.rs", Disposition::default())];
+    let result = run(&args, tmp.path()).unwrap();
+    assert_eq!(result.must_violations, 1, "{result:?}");
+}
+
 /// What only a spec has is refused for the project, never dropped, and each
 /// refusal leaves the seed as it was.
 #[test]

@@ -31,11 +31,11 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 2. `write-review` refuses an outcome outside the scope
 
-- [ ] `RunScope` gains a constructor from a resolved scope, which `RunScope::resolve` calls; `resolve_scope` builds one from the scope it resolved
-- [ ] Refuse, before any write, each `findings[].file` and each `observations[].path` without its `:line` suffix that the scope does not hold, an empty `path` exempt, naming the argument and the file; with an empty `diff-base` the reason says to pass the diff base `compute-review-scope` returned
-- [ ] Tests: a finding and an observation on a file outside the scope are refused and nothing is written; an observation at `file:line` inside the scope, one with no path and a finding on a file a first review's plan pattern names are accepted; a re-read's finding on a file a fix round touched is accepted at the run's last write; the project record's write refuses the same way
-- [ ] `WRITE_REVIEW` in `runtime/src/schema/descriptions.rs`, and `specs/066-audit-records-and-the-completion-gate/data-model.md`'s `write-review` section
-- [ ] `framework/commands/review.md` step 10 and §Passes in a subagent in `framework/reference/review.md`: an outcome on a file outside the scope is marked by the passes and taken out before step 11, a gating one fixed when mechanical or deferred to the home §Groom decision tree in `.ductus/reference/groom.md` chooses, one at a time, any other named in the report and recorded nowhere
+- [x] `RunScope` gains a constructor from a resolved scope, which `RunScope::resolve` calls; `resolve_scope` builds one from the scope it resolved
+- [x] Refuse, before any write, each `findings[].file` and each `observations[].path` without its `:line` suffix that the scope does not hold, an empty `path` exempt, naming the argument and the file; with an empty `diff-base` the reason says to pass the diff base `compute-review-scope` returned
+- [x] Tests: a finding and an observation on a file outside the scope are refused and nothing is written; an observation at `file:line` inside the scope, one with no path and a finding on a file a first review's plan pattern names are accepted; a re-read's finding on a file a fix round touched is accepted at the run's last write; the project record's write refuses the same way
+- [x] `WRITE_REVIEW` in `runtime/src/schema/descriptions.rs`, and `specs/066-audit-records-and-the-completion-gate/data-model.md`'s `write-review` section
+- [x] `framework/commands/review.md` step 10 and §Passes in a subagent in `framework/reference/review.md`: an outcome on a file outside the scope is marked by the passes and taken out before step 11, a gating one fixed when mechanical or deferred to the home §Groom decision tree in `.ductus/reference/groom.md` chooses, one at a time, any other named in the report and recorded nowhere
 
 - **Done when**: AC1 holds, its tests are proven to fail with the refusal removed, `cargo test` passes, the two command files state the spec's Edge Case on an outcome outside the scope, and the commit records each registry layout's impact (`claude-style`, `pi`).
 
