@@ -1211,8 +1211,8 @@ MUTATIONS = [
     (
         'M183 a decision on an unread file expires',
         'src/primitives/process_decisions.rs',
-        'else if let Some(why) = decisions::key_anchor(&key)',
-        'else if let Some(why) = decisions::key_anchor("")',
+        'else if let Some((path, why)) = decisions::key_anchor(&key)',
+        'else if let Some((path, why)) = decisions::key_anchor("")',
         'process_decisions::tests::a_silent_decision_on_a_file_the_run_did_not_read_is_retained',
     ),
     (

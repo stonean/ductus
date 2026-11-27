@@ -41,11 +41,11 @@ Blocked on 084 reaching `done`: 084's Resolved Questions, *Landing order*, has e
 
 ## 3. Review drops what does not belong
 
-- [ ] `process-decisions`: in today's `NotRead` case, on a run neither restricted nor given `since` and on the record of a spec, ask `spec_ownership`; a file that does not belong joins `dropped` with its notice, one not examined is retained under a new class naming the reason; add `dropped`, `dropped-count`, `ownership` and `ownership-reason`, bounded with the other lists
-- [ ] `process-waivers`: the same in `Pass::place`'s `why_unread` branch, for a run with no `skipped-passes` and no `since`
-- [ ] `framework/commands/review.md` steps 8 and 9 pass each `dropped` entry with the expired ones and show its notice; `framework/reference/review.md` §Per-run waiver processing states the rule
-- [ ] `PROCESS_DECISIONS` and `PROCESS_WAIVERS`; 066's data model; `runtime/tests/result_sizes.rs`' two cases
-- [ ] Fixtures: a stored decision and a waiver on a file that does not belong are dropped and named, and absent from the next `write-review`'s record; one on a belonging file unchanged since the last review is retained; a decision on a deleted file is expired, not dropped (AC4); a restricted run and a `since` run drop nothing; a shallow history reports `not-examined` and drops nothing; a decision on code no spec claims, stored before 084's scope change, is dropped and `{specs-root}/review.md` does not gain it (AC3)
+- [x] `process-decisions`: in today's `NotRead` case, on a run neither restricted nor given `since` and on the record of a spec, ask `spec_ownership`; a file that does not belong joins `dropped` with its notice, one not examined is retained under a new class naming the reason; add `dropped`, `dropped-count`, `ownership` and `ownership-reason`, bounded with the other lists
+- [x] `process-waivers`: the same in `Pass::place`'s `why_unread` branch, for a run with no `skipped-passes` and no `since`
+- [x] `framework/commands/review.md` steps 8 and 9 pass each `dropped` entry with the expired ones and show its notice; `framework/reference/review.md` §Per-run waiver processing states the rule
+- [x] `PROCESS_DECISIONS` and `PROCESS_WAIVERS`; 066's data model; `runtime/tests/result_sizes.rs`' two cases
+- [x] Fixtures: a stored decision and a waiver on a file that does not belong are dropped and named, and absent from the next `write-review`'s record; one on a belonging file unchanged since the last review is retained; a decision on a deleted file is expired, not dropped (AC4); a restricted run and a `since` run drop nothing; a shallow history reports `not-examined` and drops nothing; a decision on code no spec claims, stored before 084's scope change, is dropped and `{specs-root}/review.md` does not gain it (AC3)
 
 - **Done when**: AC2, AC4 and the review half of AC3 hold, each fixture proven to fail with its behavior removed, and the commit records each registry layout's impact (`claude-style`, `pi`).
 

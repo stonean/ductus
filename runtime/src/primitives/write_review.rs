@@ -3994,6 +3994,70 @@ mod tests {
         assert_eq!(out.should_violations, 1, "{out:?}");
     }
 
+    /// AC2 and AC3: a decision and a waiver on code no spec claims, stored as a review
+    /// before 084's scope change could store them, are reported dropped by the spec's next
+    /// unrestricted review; passed with the expired ones, as `/review` steps 8 and 9 pass
+    /// them, they leave the written record, and the project record does not gain them
+    /// (spec 086).
+    #[test]
+    fn dropped_entries_leave_the_record_and_the_project_record_gains_none() {
+        use crate::primitives::git_fixture::{commit_all, write};
+        use crate::schema::primitives::{ProcessDecisionsArgs, ProcessWaiversArgs};
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        write(&tmp.path().join("src/unclaimed.rs"), "fn u() {}\n");
+        commit_all(&repository, "chore: code no spec claims");
+        let spec = |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
+        let base = commit_all(&repository, "chore: seed").to_string();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        commit_all(&repository, "status(001): start");
+        write(&tmp.path().join("src/mine.rs"), "fn m() {}\n");
+        commit_all(&repository, "feat(001): its work");
+        seed_waivers(
+            &tmp,
+            "001-x",
+            "waivers:\n  - rule: SEC-1\n    anchors:\n      - file: src/unclaimed.rs\n        site: s\n        covers: 1\n    reason: r\n    waived-at: 2026-05-01T00:00:00Z\n    waived-by: dev@example.com\ndecisions:\n  - key: \"bug: odd — `src/unclaimed.rs`\"\n    outcome: waived\n    reason: a person's reason\n    decided-at: 2026-05-01T00:00:00Z\n    decided-by: dev@example.com",
+        );
+        let decisions = crate::primitives::process_decisions::compute(
+            &ProcessDecisionsArgs {
+                feature: Some("001-x".into()),
+                record: crate::schema::primitives::DecisionRecord::Review,
+                fired: Vec::new(),
+                fired_violations: Vec::new(),
+                fired_json: None,
+                fired_violations_json: None,
+                restricted: false,
+                since: None,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let waivers = crate::primitives::process_waivers::compute(
+            &ProcessWaiversArgs {
+                feature: Some("001-x".into()),
+                ..ProcessWaiversArgs::default()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(decisions.dropped.len(), 1, "{:?}", decisions.notices);
+        assert_eq!(waivers.dropped.len(), 1, "{:?}", waivers.notices);
+        let before = review_md(&tmp, "001-x");
+        assert!(before.contains("src/unclaimed.rs"), "{before}");
+        let mut args = base_args("001-x");
+        args.diff_base = base;
+        args.expired_decisions = decisions.dropped;
+        args.expired_waivers = waivers.dropped;
+        run(&args, tmp.path()).unwrap();
+        let report = review_md(&tmp, "001-x");
+        assert!(!report.contains("src/unclaimed.rs"), "{report}");
+        assert!(!tmp.path().join("specs/review.md").exists());
+    }
+
     /// With an empty `diff-base` the scope holds no file, so an anchored outcome is
     /// refused with the base to pass instead (spec 086, AC1).
     #[test]

@@ -42,15 +42,15 @@ MUTATIONS = [
     (
         'M4 no summary line says why decisions were retained',
         'src/primitives/process_decisions.rs',
-        '        if count > 0 {\n            notices.push(class.summary(count));\n',
-        '        if false {\n            notices.push(class.summary(count));\n',
+        '        if count > 0 {\n            notices.push(class.summary(count, classified.ownership_reason.as_deref()));\n',
+        '        if false {\n            notices.push(class.summary(count, classified.ownership_reason.as_deref()));\n',
         'process_decisions::tests::retained_decisions_reach_the_file_and_not_the_result',
     ),
     (
         'M5 a scope that could not be read is summarized as a file not read',
         'src/primitives/process_decisions.rs',
-        '            let class = if matches!(scope.get(), Some(RunScope::Unreadable)) {\n',
-        '            let class = if false {\n',
+        '            let unreadable = matches!(scope.get(), Some(RunScope::Unreadable));\n',
+        '            let unreadable = false;\n',
         'process_decisions::tests::a_scope_that_cannot_be_read_has_its_own_summary_line',
     ),
     (

@@ -134,8 +134,8 @@ MUTATIONS = [
     (
         'M16 a result whose only list is notices is never bounded',
         'src/primitives/process_waivers.rs',
-        '        && classified.retained.is_empty()\n        && classified.notices.is_empty();',
-        '        && classified.retained.is_empty();',
+        '        && classified.dropped.is_empty()\n        && classified.notices.is_empty();',
+        '        && classified.dropped.is_empty();',
         'process_waivers::tests::the_lists_past_the_read_size',
     ),
     (

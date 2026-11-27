@@ -25,6 +25,7 @@
     )
 )]
 
+use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -34,6 +35,8 @@ use crate::primitives::check_stuck::{TreeListings, history_of};
 use crate::primitives::commit_attribution::{Attributor, SpecShare};
 use crate::primitives::compute_review_scope::PlanEntries;
 use crate::primitives::{FeatureForm, ProjectRepository, Result, parse_feature_dir};
+use crate::schema::paths;
+use crate::schema::primitives::OwnershipState;
 
 /// The files one spec owns.
 pub(crate) struct Owned {
@@ -67,6 +70,64 @@ pub(crate) enum Ownership {
         /// Why, worded for the operator.
         reason: String,
     },
+}
+
+/// One spec's ownership, resolved the first time a caller asks, as a run's scope is: a
+/// classifier asks only for a stored entry that did not fire on a file outside the scope,
+/// so a run with none walks no history.
+pub(crate) struct LazyOwnership<'a> {
+    repo: &'a Path,
+    feature: &'a str,
+    cell: OnceCell<Ownership>,
+}
+
+impl<'a> LazyOwnership<'a> {
+    /// The ownership of the spec directory `feature` in the project at `repo`, not yet
+    /// resolved.
+    pub(crate) fn new(repo: &'a Path, feature: &'a str) -> Self {
+        Self {
+            repo,
+            feature,
+            cell: OnceCell::new(),
+        }
+    }
+
+    /// Whether `path`, from the project root, belongs to the spec, or why that is not
+    /// known. A failure to read the project or its history is not examined, never a
+    /// file that does not belong.
+    pub(crate) fn belongs(&self, path: &str) -> std::result::Result<bool, &str> {
+        match self.cell.get_or_init(|| self.resolve()) {
+            Ownership::Examined(owned) => Ok(owned.belongs(path)),
+            Ownership::NotExamined { reason } => Err(reason),
+        }
+    }
+
+    /// A result's `ownership` and `ownership-reason`: both absent when no caller asked.
+    pub(crate) fn state(&self) -> (Option<OwnershipState>, Option<String>) {
+        match self.cell.get() {
+            None => (None, None),
+            Some(Ownership::Examined(_)) => (Some(OwnershipState::Examined), None),
+            Some(Ownership::NotExamined { reason }) => {
+                (Some(OwnershipState::NotExamined), Some(reason.clone()))
+            }
+        }
+    }
+
+    fn resolve(&self) -> Ownership {
+        let not_examined = |what: &str, error: &dyn std::fmt::Display| Ownership::NotExamined {
+            reason: format!("{what} could not be read ({error})"),
+        };
+        let specs_root = match paths::Paths::load(self.repo) {
+            Ok(layout) => layout.specs_root,
+            Err(error) => return not_examined("the project's configuration", &error),
+        };
+        let project = match ProjectRepository::discover(self.repo) {
+            Ok(project) => project,
+            Err(error) => return not_examined("the repository", &error),
+        };
+        of_spec(&project, self.repo, &specs_root, self.feature)
+            .unwrap_or_else(|error| not_examined("the history", &error))
+    }
 }
 
 /// What the spec directory `feature`, under `specs_root`, owns: [`of_specs`] for

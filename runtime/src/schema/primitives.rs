@@ -1079,7 +1079,8 @@ pub struct ProcessWaiversArgs {
     #[arg(long = "skipped-pass")]
     pub skipped_passes: Vec<String>,
     /// The run's `--since`, when it took one, since a waiver on a file the run's
-    /// scope does not hold is retained. Absent, the default window's scope.
+    /// scope does not hold is retained, and a run given it drops none as not
+    /// belonging to the spec (spec 086). Absent, the default window's scope.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub since: Option<String>,
@@ -1103,6 +1104,9 @@ pub struct ProcessWaiversResult {
     /// Entries in `retained`, in either form.
     #[serde(default)]
     pub retained_count: usize,
+    /// Entries in `dropped`, in either form.
+    #[serde(default)]
+    pub dropped_count: usize,
     /// Entries in `notices`, in either form.
     #[serde(default)]
     pub notices_count: usize,
@@ -1120,20 +1124,36 @@ pub struct ProcessWaiversResult {
     /// expire. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expired: Option<Vec<WaiverRef>>,
-    /// Anchors left untouched this run because it was dimension-restricted and
-    /// they did not fire against the passes that ran — neither applied nor
-    /// expired, so `write-review` keeps them in `review.md`'s frontmatter.
-    /// Absent in the file form.
+    /// Anchors that did not fire and were left untouched this run: it was
+    /// dimension-restricted, its scope does not hold the anchor's file, which
+    /// belongs to the spec or whose ownership was not examined, or the scope
+    /// could not be read. Neither applied nor expired, so `write-review` keeps them
+    /// in `review.md`'s frontmatter. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retained: Option<Vec<WaiverRef>>,
-    /// Ordered notice lines: `waiver expired: …`, `waiver retained: …`,
-    /// `malformed waiver …`, and `duplicate waiver: …`, in entry order. Absent
-    /// in the file form.
+    /// Anchors of a spec's record that did not fire on a run with no `skipped-passes`
+    /// and no `since`, on a file still on disk that the run's scope does not hold and
+    /// that does not belong to the spec: no plan entry names it and no commit
+    /// attributed to the spec changed it (spec 086). The host passes them to
+    /// `write-review` with the expired ones, in `expired-waivers`, and shows each
+    /// one's notice. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dropped: Option<Vec<WaiverRef>>,
+    /// Whether this run could tell which files belong to the spec, absent when no
+    /// anchor reached that test (spec 086).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership: Option<OwnershipState>,
+    /// Why ownership was not examined, present only then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership_reason: Option<String>,
+    /// Ordered notice lines: `waiver expired: …`, `waiver dropped: …`, `waiver
+    /// retained: …`, `malformed waiver …`, and `duplicate waiver: …`, in entry
+    /// order. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notices: Option<Vec<String>>,
-    /// In the file form, the file holding the four lists whole, from the
-    /// project root: a JSON object with `applied`, `expired`, `retained` and
-    /// `notices`, pretty-printed.
+    /// In the file form, the file holding the five lists whole, from the
+    /// project root: a JSON object with `applied`, `expired`, `retained`,
+    /// `dropped` and `notices`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
 }
@@ -1208,8 +1228,9 @@ pub struct ProcessDecisionsArgs {
     #[arg(long)]
     pub restricted: bool,
     /// The run's `--since`, when it took one, since on the review record a decision
-    /// on a file the run's scope does not hold is retained. Absent, the default
-    /// window's scope.
+    /// on a file the run's scope does not hold is retained, and a run given it drops
+    /// none as not belonging to the spec (spec 086). Absent, the default window's
+    /// scope.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub since: Option<String>,
@@ -1232,6 +1253,9 @@ pub struct ProcessDecisionsResult {
     pub retained_count: usize,
     /// Entries in `lapsed`, in either form.
     pub lapsed_count: usize,
+    /// Entries in `dropped`, in either form.
+    #[serde(default)]
+    pub dropped_count: usize,
     /// Entries in `notices`, in either form.
     pub notices_count: usize,
     /// Stored decisions whose key fired this run, less the deferrals reported
@@ -1261,21 +1285,49 @@ pub struct ProcessDecisionsResult {
     /// Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lapsed: Option<Vec<DecisionRef>>,
-    /// Ordered notice lines: `decision expired: …`, `deferral lapsed: …`,
-    /// `deferral target unreadable: …`, `malformed decision …`, and
-    /// `duplicate decision: …`, in entry order, then one `N decisions
-    /// retained — …` line for each reason a decision was retained (the scope
-    /// could not be read, the source was not evaluated, the file was not
-    /// read), each retained decision's own `decision retained: …` line being
-    /// in the file's `retained-notices`. Absent in the file form.
+    /// Stored decisions of a spec's review record whose key did not fire on a run
+    /// neither restricted nor given `since`, on a file still on disk that the run's
+    /// scope does not hold and that does not belong to the spec: no plan entry names
+    /// it and no commit attributed to the spec changed it (spec 086). The host passes
+    /// them to the writer in `expired-decisions`, which drops them, and shows each
+    /// one's notice. Absent in the file form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dropped: Option<Vec<DecisionRef>>,
+    /// Whether this run could tell which files belong to the spec, absent when no
+    /// stored decision reached that test (spec 086).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership: Option<OwnershipState>,
+    /// Why ownership was not examined, present only then.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ownership_reason: Option<String>,
+    /// Ordered notice lines: `decision expired: …`, `decision dropped: …`,
+    /// `deferral lapsed: …`, `deferral target unreadable: …`, `malformed
+    /// decision …`, and `duplicate decision: …`, in entry order, then one `N
+    /// decisions retained — …` line for each reason a decision was retained (the
+    /// scope could not be read, the source was not evaluated, the file was not
+    /// read, its ownership was not examined), each retained decision's own
+    /// `decision retained: …` line being in the file's `retained-notices`. Absent
+    /// in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notices: Option<Vec<String>>,
     /// The file holding the lists whole, from the project root, in the file
     /// form and whenever a decision is retained: a JSON object with
-    /// `matched`, `expired`, `retained`, `lapsed`, `notices` and
+    /// `matched`, `expired`, `retained`, `lapsed`, `dropped`, `notices` and
     /// `retained-notices`, pretty-printed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
+}
+
+/// Whether a run could tell which files belong to a spec (spec 086): its plan and the
+/// whole of `HEAD`'s history were read, or not, as in a shallow clone, when
+/// `ownership-reason` says why.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum OwnershipState {
+    /// The plan and the whole history were read.
+    Examined,
+    /// Something was not read, so no file was judged not to belong.
+    NotExamined,
 }
 
 // -- compute-review-scope ----------------------------------------------------

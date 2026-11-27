@@ -85,7 +85,16 @@ enum Prep {
     /// `prune-project`'s `move-candidates` grow with a project file's links,
     /// and a move's `move-referrers` with the tracked files naming its file.
     Move,
+    /// [`UNOWNED_ENTRIES`] files a commit no spec claims adds, each with a waiver and a
+    /// decision in the subject's `review.md` (spec 086): `process-waivers`' and
+    /// `process-decisions`' `dropped` grow with a record's entries on files that belong
+    /// to no spec, and the corpus holds none.
+    Unowned,
 }
+
+/// How many entries [`Prep::Unowned`] writes of each kind: enough that each
+/// classifier's `dropped` and its notices pass the default read size.
+const UNOWNED_ENTRIES: usize = 300;
 
 /// How many departure entries [`Prep::Departures`] writes: enough that the
 /// result's three lists pass the default read size of 50,000 bytes.
@@ -323,6 +332,16 @@ fn modes(name: &str, ctx: &Context) -> Vec<(&'static str, Value, Prep)> {
                 Prep::Move,
             ),
         ],
+        "process-decisions" => vec![(
+            "the subject's record holding decisions on files no spec owns past the read size",
+            json!({"feature": f, "record": "review"}),
+            Prep::Unowned,
+        )],
+        "process-waivers" => vec![(
+            "the subject's record holding waivers on files no spec owns past the read size",
+            json!({"feature": f}),
+            Prep::Unowned,
+        )],
         "traverse-deps" => vec![(
             "a cycle through every spec",
             json!({"feature": corpus::slug(ctx.size.specs)}),
@@ -454,6 +473,7 @@ fn call_on_copy(template: &Path, name: &str, args: &Value, prep: Prep) -> Outcom
         Prep::Departures => write_departure_entries(copy.path()),
         Prep::Parts => write_parts(copy.path()),
         Prep::Move => write_move(copy.path()),
+        Prep::Unowned => write_unowned(copy.path()),
     }
     let mut server = Server::start(copy.path());
     let response = server.request("tools/call", &json!({"name": name, "arguments": args}));
@@ -522,6 +542,52 @@ fn write_departure_entries(root: &Path) {
         );
     }
     std::fs::write(&path, text).unwrap();
+}
+
+/// Add [`UNOWNED_ENTRIES`] files under `vendor/` in a commit no spec claims, and write
+/// the subject's `review.md` holding a waiver and a decision on each, none of which fires.
+fn write_unowned(root: &Path) {
+    let vendor = root.join("vendor");
+    std::fs::create_dir_all(&vendor).unwrap();
+    let mut waivers = String::new();
+    let mut decisions = String::new();
+    for i in 0..UNOWNED_ENTRIES {
+        let rel = format!("vendor/unowned-{i:03}.rs");
+        std::fs::write(root.join(&rel), format!("fn unowned_{i}() {{}}\n")).unwrap();
+        let _ = write!(
+            waivers,
+            "  - rule: CORPUS-RULE-{i:03}\n    anchors:\n      - file: {rel}\n        site: walk\n        covers: 1\n    reason: the corpus waiver {i}\n    waived-at: 2026-01-01T00:00:00Z\n    waived-by: corpus@example.com\n"
+        );
+        let _ = write!(
+            decisions,
+            "  - key: \"bug: the corpus finding {i} — `{rel}`\"\n    outcome: waived\n    reason: the corpus decision {i}\n    decided-at: 2026-01-01T00:00:00Z\n    decided-by: corpus@example.com\n"
+        );
+    }
+    let repo = git2::Repository::open(root).unwrap();
+    let mut index = repo.index().unwrap();
+    index
+        .add_all(["vendor/*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let sig = git2::Signature::now("Corpus", "corpus@example.com").unwrap();
+    let parent = repo.head().unwrap().peel_to_commit().unwrap();
+    repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        "chore: vendor code no spec claims",
+        &tree,
+        &[&parent],
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("specs").join(SUBJECT).join("review.md"),
+        format!(
+            "---\nspec: {SUBJECT}\nlast-run: 2026-01-01T00:00:00Z\nblocking: false\nwaivers:\n{waivers}decisions:\n{decisions}---\n\n# Review — {SUBJECT}\n"
+        ),
+    )
+    .unwrap();
 }
 
 fn write_parts(root: &Path) {

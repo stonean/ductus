@@ -19,7 +19,13 @@
 //!   contract that waivers anchored to skipped dimensions apply unchanged.
 //!   Only an unrestricted run can expire a waiver for not firing. So too a non-firing
 //!   waiver on a file still on disk that the run's scope does not hold, which it did
-//!   not read (spec 079).
+//!   not read (spec 079), when the file belongs to the spec or whether it does was not
+//!   examined.
+//! - **drop** — such a waiver on a spec's record, on a run with no `skipped-passes`
+//!   and no `since`, whose file does not belong to the spec: no plan entry names it and
+//!   no commit attributed to the spec changed it, so no review of the spec will read it
+//!   (spec 086). The `waiver dropped: …` notice says why, never that the rule stopped
+//!   firing, and `write-review` drops the anchor with the expired ones.
 //! - **malformed** — a field is missing/empty, `anchors` included; warn and skip, and
 //!   never report it expired. `write-review` compares anchors only, so a malformed
 //!   waiver still loses each anchor an expired one shares.
@@ -45,7 +51,7 @@
 //! once (spec 073); an anchor its entry still decides is classified as any other.
 //! Read-only: frontmatter mutation belongs to `write-review`.
 //!
-//! The four lists grow with a spec's waivers, and a departure entry adds one per rule and
+//! The five lists grow with a spec's waivers, and a departure entry adds one per rule and
 //! in-scope file, so [`run`] bounds them as `process-decisions` does (`bounded_lists::place`;
 //! spec 073, BE-PAYLOAD-001): inline while the result fits `[artifacts] read-size-bytes`, and
 //! past it in the file `lists-file` names, with each list's count inline in both forms. A
@@ -65,6 +71,7 @@ use serde::Deserialize;
 use crate::primitives::PrimitiveError;
 use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::review_subject::ReviewSubject;
+use crate::primitives::spec_ownership::LazyOwnership;
 use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
     Result, StoredAnchor, WaiverPaths, anchors_unusable, bounded_lists, decisions, departures,
@@ -81,6 +88,9 @@ pub(crate) struct Classified {
     pub(crate) applied: Vec<WaiverRef>,
     pub(crate) expired: Vec<WaiverRef>,
     pub(crate) retained: Vec<WaiverRef>,
+    pub(crate) dropped: Vec<WaiverRef>,
+    pub(crate) ownership: Option<crate::schema::primitives::OwnershipState>,
+    pub(crate) ownership_reason: Option<String>,
     pub(crate) notices: Vec<String>,
 }
 
@@ -104,21 +114,27 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
         "applied": &classified.applied,
         "expired": &classified.expired,
         "retained": &classified.retained,
+        "dropped": &classified.dropped,
         "notices": &classified.notices,
     });
     let nothing = classified.applied.is_empty()
         && classified.expired.is_empty()
         && classified.retained.is_empty()
+        && classified.dropped.is_empty()
         && classified.notices.is_empty();
     let mut result = ProcessWaiversResult {
         form: ListsForm::Inline,
         applied_count: classified.applied.len(),
         expired_count: classified.expired.len(),
         retained_count: classified.retained.len(),
+        dropped_count: classified.dropped.len(),
         notices_count: classified.notices.len(),
         applied: Some(classified.applied),
         expired: Some(classified.expired),
         retained: Some(classified.retained),
+        dropped: Some(classified.dropped),
+        ownership: classified.ownership,
+        ownership_reason: classified.ownership_reason,
         notices: Some(classified.notices),
         lists_file: None,
     };
@@ -136,6 +152,7 @@ pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResul
         result.applied = None;
         result.expired = None;
         result.retained = None;
+        result.dropped = None;
         result.notices = None;
         result.lists_file = Some(file);
     }
@@ -183,17 +200,27 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
     // so such a waiver stays too, read only when one did not fire (spec 079).
     // One rule's findings at one site of a file whose line ranges overlap are one, and
     // findings at different sites are counted apart.
+    // Which files belong to the spec is asked only of an unfired anchor on a file outside
+    // the scope, on a spec's record and a run that read its whole window (spec 086).
     let pass = Pass {
         args,
         repo,
         counted: collapse_at_sites(&args.fired),
         restricted: !args.skipped_passes.is_empty(),
         scope: OnceCell::new(),
+        ownership: args
+            .feature
+            .as_deref()
+            .filter(|_| args.since.is_none())
+            .map(|feature| LazyOwnership::new(repo, feature)),
     };
     let mut classified = Classified {
         applied: Vec::new(),
         expired: Vec::new(),
         retained: Vec::new(),
+        dropped: Vec::new(),
+        ownership: None,
+        ownership_reason: None,
         notices: Vec::new(),
     };
     let mut seen: Vec<(String, String, Option<String>)> = Vec::new();
@@ -277,6 +304,9 @@ pub(crate) fn compute(args: &ProcessWaiversArgs, repo: &Path) -> Result<Classifi
         }
     }
 
+    if let Some(ownership) = &pass.ownership {
+        (classified.ownership, classified.ownership_reason) = ownership.state();
+    }
     Ok(classified)
 }
 
@@ -296,6 +326,7 @@ struct Pass<'a> {
     counted: Vec<&'a FiredFinding>,
     restricted: bool,
     scope: OnceCell<RunScope>,
+    ownership: Option<LazyOwnership<'a>>,
 }
 
 impl Pass<'_> {
@@ -346,10 +377,36 @@ impl Pass<'_> {
         {
             // `why` interpolates the stored file, so it is flattened with the rest.
             let shown_why = super::flatten_line(&why);
-            out.notices.push(format!(
-                "waiver retained: rule {rule} at {at} — {shown_why} ({reason})"
-            ));
-            out.retained.push(anchor);
+            let known = matches!(self.scope.get(), Some(RunScope::Known { .. }));
+            match self
+                .ownership
+                .as_ref()
+                .filter(|_| known)
+                .map(|ownership| ownership.belongs(&anchor.file))
+            {
+                Some(Ok(false)) => {
+                    out.notices.push(format!(
+                        "waiver dropped: rule {rule} at {at} — no plan entry names `{}` and no \
+                         commit attributed to the spec changed it ({reason})",
+                        super::flatten_line(&anchor.file)
+                    ));
+                    out.dropped.push(anchor);
+                }
+                Some(Err(not)) => {
+                    out.notices.push(format!(
+                        "waiver retained: rule {rule} at {at} — {shown_why}, and whether it \
+                         belongs to this spec was not examined: {} ({reason})",
+                        super::flatten_line(not)
+                    ));
+                    out.retained.push(anchor);
+                }
+                Some(Ok(true)) | None => {
+                    out.notices.push(format!(
+                        "waiver retained: rule {rule} at {at} — {shown_why} ({reason})"
+                    ));
+                    out.retained.push(anchor);
+                }
+            }
         } else {
             out.notices
                 .push(format!("waiver expired: rule {rule} at {at} ({reason})"));
@@ -549,9 +606,29 @@ mod tests {
         before: &[&str],
         existing_files: &[&str],
     ) -> TempDir {
+        setup_unclaimed_first(feature, waivers_yaml, &[], before, existing_files)
+    }
+
+    /// [`setup_after`], with each of `unclaimed` added first by a commit no spec claims, so
+    /// it lies outside the window and belongs to no spec (spec 086).
+    fn setup_unclaimed_first(
+        feature: &str,
+        waivers_yaml: &str,
+        unclaimed: &[&str],
+        before: &[&str],
+        existing_files: &[&str],
+    ) -> TempDir {
         use crate::primitives::git_fixture::commit_all;
         let tmp = TempDir::new().unwrap();
         let repo = git2::Repository::init(tmp.path()).unwrap();
+        if !unclaimed.is_empty() {
+            for rel in unclaimed {
+                let path = tmp.path().join(rel);
+                std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+                std::fs::write(path, "code\n").unwrap();
+            }
+            commit_all(&repo, "chore: code no spec claims");
+        }
         let dir = tmp.path().join("specs").join(feature);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
@@ -774,6 +851,111 @@ mod tests {
         assert_eq!(result.retained.len(), 1);
         assert!(
             result.notices[0].contains("this run did not read `src/api/internal.ts`"),
+            "{:?}",
+            result.notices
+        );
+    }
+
+    /// Two waivers, one at `src/foreign.ts`, which belongs to no spec, and one at
+    /// `src/owned.ts`, which the spec's own first commit added, neither in the window.
+    const TWO_FILES: &str = "  - rule: SEC-BE-014\n    anchors:\n      - file: src/foreign.ts\n        site: s\n        covers: 1\n    reason: why foreign\n    waived-at: 2026-05-10T14:40:00Z\n    waived-by: dev@example.com\n  - rule: SEC-BE-014\n    anchors:\n      - file: src/owned.ts\n        site: s\n        covers: 1\n    reason: why owned\n    waived-at: 2026-05-10T14:40:00Z\n    waived-by: dev@example.com\n";
+
+    /// AC2: an unfired waiver on a file outside the scope that does not belong to the
+    /// spec is dropped and named, never expired; one on a file that belongs, unchanged
+    /// since the record was written, is retained (spec 086).
+    #[test]
+    fn a_waiver_on_a_file_that_does_not_belong_is_dropped_and_named() {
+        let tmp = setup_unclaimed_first(
+            "001-x",
+            TWO_FILES,
+            &["src/foreign.ts"],
+            &["src/owned.ts"],
+            &[],
+        );
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        let files = |refs: &[WaiverRef]| -> Vec<String> {
+            refs.iter().map(|waiver| waiver.file.clone()).collect()
+        };
+        assert_eq!(
+            files(&result.dropped),
+            ["src/foreign.ts"],
+            "{:?}",
+            result.notices
+        );
+        assert_eq!(
+            files(&result.retained),
+            ["src/owned.ts"],
+            "{:?}",
+            result.notices
+        );
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
+        assert!(
+            result.notices.iter().any(|n| n
+                .starts_with("waiver dropped: rule SEC-BE-014 at src/foreign.ts")
+                && n.contains("no plan entry names `src/foreign.ts`")),
+            "{:?}",
+            result.notices
+        );
+        assert_eq!(
+            result.ownership,
+            Some(crate::schema::primitives::OwnershipState::Examined)
+        );
+        let out = super::run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(out.dropped_count, 1);
+    }
+
+    /// A restricted run and a run given `since` judge no waiver by ownership (spec 086).
+    #[test]
+    fn a_restricted_run_and_a_since_run_drop_no_waiver() {
+        let tmp = setup_unclaimed_first(
+            "001-x",
+            TWO_FILES,
+            &["src/foreign.ts"],
+            &["src/owned.ts"],
+            &[],
+        );
+        let restricted = run(&restricted_args("001-x", &[], &["security"]), tmp.path()).unwrap();
+        let mut narrowed = args("001-x", &[]);
+        narrowed.since = Some("HEAD".to_string());
+        let since = run(&narrowed, tmp.path()).unwrap();
+        for result in [restricted, since] {
+            assert_eq!(result.retained.len(), 2, "{:?}", result.notices);
+            assert_eq!(result.dropped, [] as [WaiverRef; 0]);
+            assert_eq!(result.ownership, None);
+        }
+    }
+
+    /// A shallow history cannot say what belongs, so no waiver is dropped, and the
+    /// notice names the reason (spec 086).
+    #[test]
+    fn a_shallow_history_drops_no_waiver_and_says_why() {
+        let tmp = setup_unclaimed_first(
+            "001-x",
+            TWO_FILES,
+            &["src/foreign.ts"],
+            &["src/owned.ts"],
+            &[],
+        );
+        let repo = git2::Repository::open(tmp.path()).unwrap();
+        let mut walk = repo.revwalk().unwrap();
+        walk.push_head().unwrap();
+        let first = walk
+            .map(|oid| oid.unwrap())
+            .find(|oid| repo.find_commit(*oid).unwrap().parent_count() == 0)
+            .unwrap();
+        std::fs::write(tmp.path().join(".git/shallow"), format!("{first}\n")).unwrap();
+        let result = run(&args("001-x", &[]), tmp.path()).unwrap();
+        assert_eq!(result.retained.len(), 2, "{:?}", result.notices);
+        assert_eq!(result.dropped, [] as [WaiverRef; 0]);
+        assert_eq!(
+            result.ownership,
+            Some(crate::schema::primitives::OwnershipState::NotExamined)
+        );
+        assert!(
+            result
+                .notices
+                .iter()
+                .any(|n| n.contains("was not examined") && n.contains("--unshallow")),
             "{:?}",
             result.notices
         );

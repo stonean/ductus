@@ -132,6 +132,20 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 
 "Nothing to prune" now also needs no drop and no rewrite.
 
+### Compatibility
+
+**`BE-COMPAT-001`**, within major version zero, as 087's plan classifies its changes (`version` reads 0.64.0; the agent's recommendation, adopted by the operator, 2026-11-26).
+
+- **Breaking:**
+  - `write-review` refuses a finding or an observation on a file outside the scope, which it accepted before.
+  - `process-decisions` and `process-waivers` drop an unfired entry on a file that does not belong, which they retained before.
+  - A first review's `compute-review-scope` scope gains the files the spec's commits changed.
+- **Additive:**
+  - `dropped`, `dropped-count`, `ownership` and `ownership-reason` on both classifiers.
+  - `ownership` and `ownership-reason` on `compute-review-scope`.
+  - `prune-review`, a new primitive.
+- No field is removed, renamed or retyped.
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -159,6 +173,10 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `scripts/mutation/outcomes-outside-the-scope-086.py` | Create | The refusal's mutants |
 | `scripts/mutation/project-record-084.py` | Modify | An anchor `RunScope::of` moved |
 | `scripts/mutation/scope-attribution.py` | Modify | Anchors the refusal and `RunScope::of` moved |
+| `scripts/mutation/review-drops-unowned-086.py` | Create | The classifiers' drop's mutants |
+| `scripts/mutation/process-decisions-results-bounded.py` | Modify | An anchor the `dropped` list moved |
+| `scripts/mutation/process-decisions-retained.py` | Modify | Anchors the drop moved |
+| `scripts/mutation/waivers-bounded.py` | Modify | An anchor the `dropped` list moved |
 | `framework/runtime-tools.txt` | Modify | List `prune-review` |
 | `framework/bootstrap/configure/claude.md` | Modify | Regenerated allow entry |
 | `framework/bootstrap/configure/pi.md` | Modify | Regenerated allow entry |
@@ -174,6 +192,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 | `specs/079-review-and-analysis-work-converges/spec.md` | Modify | AC24 and AC6 notes; the stored-finding edge case; signpost |
 | `specs/058-findings-route-at-discovery/spec.md` | Modify | AC32 note; signpost |
 | `specs/020-code-review/spec.md` | Modify | Signpost |
+| `specs/020-code-review/scenarios/waiver-expiry.md` | Modify | Rule 4 names the drop |
 | `specs/084-reopen-for-owed-code-review-every-code-change/spec.md` | Modify | Signpost |
 
 Each layout's generated copies of the two commands, `.claude/commands/ductus/*.md` and `.pi/prompts/ductus-*.md`, follow from the hook.

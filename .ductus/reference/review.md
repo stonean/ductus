@@ -578,11 +578,11 @@ findings, which the host passes as `fired`, one entry per finding with its
 `site` and `line-range`, so two reports of one finding at its site count once and findings at different sites are counted apart, as `write-review` counts the `covers` it stores. A waiver can only be judged against findings that exist,
 so an empty scope leaves the waivers untouched, and a dimension-restricted run
 retains those anchored to skipped dimensions rather than expiring them. The
-result's `applied`, `expired`, `retained` and `notices` lists, which grow with the
-waivers a spec holds, go to the host inline; past the read size (`form` is `file`)
-they are absent and held whole in `lists-file`, under their own names, each `-count`
-inline in both forms, and the host reads `applied` and `expired` from there to pass
-to `write-review`.
+result's `applied`, `expired`, `retained`, `dropped` and `notices` lists, which grow
+with the waivers a spec holds, go to the host inline; past the read size (`form` is
+`file`) they are absent and held whole in `lists-file`, under their own names, each
+`-count` inline in both forms, and the host reads `applied`, `expired` and `dropped`
+from there to pass to `write-review`.
 
 1. **Apply** when the file exists at the anchored path AND the rule still
    fires at its site, at most as many times as the anchor covers — an unscoped
@@ -602,7 +602,14 @@ to `write-review`.
 3. **Retain** a waiver whose rule did not fire on a file still on disk that the
    run's scope does not hold: nothing read that file, so its finding may still
    stand, and a person's reason must not go on a narrow window's say-so. The same
-   holds for a stored decision naming such a file (`process-decisions`).
+   holds for a stored decision naming such a file (`process-decisions`). **Drop**
+   one instead, on a spec's record and a run neither restricted nor given `--since`,
+   when its file does not belong to the spec: no plan Affected Files entry names it
+   and no commit attributed to the spec changed it, so no review of the spec will
+   read it (spec 086). The `waiver dropped:` or `decision dropped:` notice names it
+   as dropped, never as a finding that stopped firing, and the host passes it to
+   `write-review` with the expired ones. One whose ownership could not be examined,
+   as in a shallow clone, is retained, its notice naming why.
 4. **Do not extend** a waiver to a file or site it does not list. If the same
    rule fires at a path or site other than the waiver's anchors, that is a
    separate finding; the operator records a fresh `--waive` if it is also

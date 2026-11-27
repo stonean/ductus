@@ -31,7 +31,7 @@ MUTATIONS = [
     (
         'M2 the lists stay inline in the file form',
         'src/primitives/process_decisions.rs',
-        '        result.matched = None;\n        result.expired = None;\n        result.retained = None;\n        result.lapsed = None;\n        result.notices = None;\n',
+        '        result.matched = None;\n        result.expired = None;\n        result.retained = None;\n        result.lapsed = None;\n        result.dropped = None;\n        result.notices = None;\n',
         '',
         'process_decisions::tests::a_result_past_the_read_size_names_a_file_holding_every_list',
     ),

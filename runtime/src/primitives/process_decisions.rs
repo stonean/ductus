@@ -24,6 +24,12 @@
 //! - **retained** — the key did not fire, but the run did not evaluate every
 //!   source, or its scope does not hold the file a review key names, so absence
 //!   proves nothing and the entry is kept (spec 079).
+//! - **dropped** — the key did not fire on a run neither restricted nor given
+//!   `since`, on a file still on disk that the run's scope does not hold and that
+//!   does not belong to the spec, so no review of the spec will read it (spec
+//!   086). The writer drops the entry, and the notice says why, never that the
+//!   finding stopped firing (`QUAL-CLAIM-001`). One whose ownership was not
+//!   examined is retained, naming the reason.
 //! - **malformed** — a required field or an outcome's companion is missing,
 //!   or a field its outcome forbids is present; reported, applied to nothing,
 //!   and never pruned.
@@ -50,6 +56,7 @@ use std::path::Path;
 use crate::primitives::compute_review_scope::RunScope;
 use crate::primitives::decisions::{self, Work, read_decisions};
 use crate::primitives::review_subject::ReviewSubject;
+use crate::primitives::spec_ownership::LazyOwnership;
 use crate::primitives::write_review::collapse_at_sites;
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, flatten_line,
@@ -93,7 +100,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
             .filter(|&&(why, _)| why == class)
             .count();
         if count > 0 {
-            notices.push(class.summary(count));
+            notices.push(class.summary(count, classified.ownership_reason.as_deref()));
         }
     }
     let lists = serde_json::json!({
@@ -101,6 +108,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         "expired": &classified.expired,
         "retained": &classified.retained,
         "lapsed": &classified.lapsed,
+        "dropped": &classified.dropped,
         "notices": &notices,
         "retained-notices": &retained_notices,
     });
@@ -111,11 +119,15 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         expired_count: classified.expired.len(),
         retained_count: classified.retained.len(),
         lapsed_count: classified.lapsed.len(),
+        dropped_count: classified.dropped.len(),
         notices_count: notices.len(),
         matched: Some(classified.matched),
         expired: Some(classified.expired),
         retained: (!any_retained).then(Vec::new),
         lapsed: Some(classified.lapsed),
+        dropped: Some(classified.dropped),
+        ownership: classified.ownership,
+        ownership_reason: classified.ownership_reason,
         notices: Some(notices),
         lists_file: None,
     };
@@ -127,6 +139,7 @@ pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsR
         result.expired = None;
         result.retained = None;
         result.lapsed = None;
+        result.dropped = None;
         result.notices = None;
         result.lists_file = Some(file);
     } else if any_retained {
@@ -152,6 +165,12 @@ pub(crate) struct Classified {
     pub(crate) retained: Vec<DecisionRef>,
     /// See [`ProcessDecisionsResult::lapsed`].
     pub(crate) lapsed: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::dropped`].
+    pub(crate) dropped: Vec<DecisionRef>,
+    /// See [`ProcessDecisionsResult::ownership`].
+    pub(crate) ownership: Option<crate::schema::primitives::OwnershipState>,
+    /// See [`ProcessDecisionsResult::ownership_reason`].
+    pub(crate) ownership_reason: Option<String>,
     /// See [`ProcessDecisionsResult::notices`]. Holds each retained
     /// decision's own notice, which [`run`] moves to the list file.
     pub(crate) notices: Vec<String>,
@@ -166,6 +185,46 @@ impl Classified {
         self.notices
             .push(format!("decision expired: {key} — {why}"));
         self.expired.push(decision);
+    }
+
+    /// Place `decision`, whose key did not fire, on `path`, which the run's scope does not
+    /// hold, `why` saying so: retained when the scope could not be read, when ownership is
+    /// not asked, as on a restricted or `since` run, or when the file belongs to the spec;
+    /// dropped when it does not; and retained naming why when its ownership was not
+    /// examined (spec 086).
+    fn place_unread(
+        &mut self,
+        (key, path, why): (&str, &str, &str),
+        scope_unreadable: bool,
+        ownership: Option<&LazyOwnership<'_>>,
+        decision: DecisionRef,
+    ) {
+        if scope_unreadable {
+            self.retain(Retained::ScopeUnreadable, why, decision);
+            return;
+        }
+        match ownership.map(|ownership| ownership.belongs(path)) {
+            Some(Ok(false)) => self.drop_unowned(key, path, decision),
+            Some(Err(reason)) => {
+                let why = format!(
+                    "{why}, and whether it belongs to this spec was not examined: {reason}"
+                );
+                self.retain(Retained::OwnershipNotExamined, &why, decision);
+            }
+            Some(Ok(true)) | None => self.retain(Retained::NotRead, why, decision),
+        }
+    }
+
+    /// Drop `decision`, whose key is `key`, on `file`, which does not belong to the spec,
+    /// with a notice saying so rather than that the finding stopped firing.
+    fn drop_unowned(&mut self, key: &str, file: &str, decision: DecisionRef) {
+        self.notices.push(format!(
+            "decision dropped: {key} — no plan entry names `{}` and no commit attributed to \
+             the spec changed it ({})",
+            flatten_line(file),
+            describe(&decision)
+        ));
+        self.dropped.push(decision);
     }
 
     /// Keep `decision`, which did not fire, with its own notice saying `why`,
@@ -192,23 +251,37 @@ pub(crate) enum Retained {
     NotEvaluated,
     /// The run's scope does not hold the file the review key names.
     NotRead,
+    /// The run's scope does not hold the file, and whether it belongs to the spec
+    /// could not be told, so it may not be dropped (spec 086).
+    OwnershipNotExamined,
 }
 
 impl Retained {
     /// Every class, in the order [`run`] reports them.
-    const ALL: [Self; 3] = [Self::ScopeUnreadable, Self::NotEvaluated, Self::NotRead];
+    const ALL: [Self; 4] = [
+        Self::ScopeUnreadable,
+        Self::NotEvaluated,
+        Self::NotRead,
+        Self::OwnershipNotExamined,
+    ];
 
-    /// The summary line for `count` decisions of this class.
-    fn summary(self, count: usize) -> String {
+    /// The summary line for `count` decisions of this class, `ownership` naming why
+    /// ownership was not examined.
+    fn summary(self, count: usize, ownership: Option<&str>) -> String {
         let (noun, each) = if count == 1 {
             ("decision", "it is")
         } else {
             ("decisions", "each is")
         };
         let why = match self {
-            Self::ScopeUnreadable => "this run's scope could not be read",
-            Self::NotEvaluated => "this run did not evaluate every source",
-            Self::NotRead => "this run did not read the file its key names",
+            Self::ScopeUnreadable => "this run's scope could not be read".to_string(),
+            Self::NotEvaluated => "this run did not evaluate every source".to_string(),
+            Self::NotRead => "this run did not read the file its key names".to_string(),
+            Self::OwnershipNotExamined => format!(
+                "this run did not read the file its key names, and whether it belongs to this \
+                 spec was not examined: {}",
+                flatten_line(ownership.unwrap_or_default())
+            ),
         };
         format!(
             "{count} {noun} retained — {why}; {each} in the `retained` list, with its notice in `retained-notices`, of the file `lists-file` names"
@@ -250,6 +323,13 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
     // Resolved only when a stored finding on a file did not fire, since it walks the
     // window. A review reads its scope, so only its record can have left a file unread.
     let scope: OnceCell<RunScope> = OnceCell::new();
+    // Asked only of an unfired entry on a file outside the scope, on a spec's record and
+    // a run that evaluated every source in its own window (spec 086).
+    let ownership = args
+        .feature
+        .as_deref()
+        .filter(|_| args.since.is_none() && args.record == DecisionRecord::Review)
+        .map(|feature| LazyOwnership::new(repo, feature));
     for (index, entry) in stored.iter().enumerate() {
         let decision = match entry.to_ref() {
             Ok(decision) => decision,
@@ -315,7 +395,7 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
                 "its source was not evaluated this run",
                 decision,
             );
-        } else if let Some(why) = decisions::key_anchor(&key)
+        } else if let Some((path, why)) = decisions::key_anchor(&key)
             .filter(|_| args.record == DecisionRecord::Review)
             .and_then(|path| {
                 scope
@@ -323,18 +403,18 @@ pub(crate) fn compute(args: &ProcessDecisionsArgs, repo: &Path) -> Result<Classi
                         RunScope::resolve(args.feature.as_deref(), args.since.as_deref(), repo)
                     })
                     .why_unread(path, repo)
+                    .map(|why| (path, why))
             })
         {
-            let class = if matches!(scope.get(), Some(RunScope::Unreadable)) {
-                Retained::ScopeUnreadable
-            } else {
-                Retained::NotRead
-            };
-            result.retain(class, &why, decision);
+            let unreadable = matches!(scope.get(), Some(RunScope::Unreadable));
+            result.place_unread((&key, path, &why), unreadable, ownership.as_ref(), decision);
         } else {
             let why = format!("the finding no longer fires ({})", describe(&decision));
             result.expire(&key, &why, decision);
         }
+    }
+    if let Some(ownership) = &ownership {
+        (result.ownership, result.ownership_reason) = ownership.state();
     }
     Ok(result)
 }
@@ -540,9 +620,21 @@ mod tests {
     /// 001-x reopened with `src/old.rs` before its window and `src/new.rs` inside it,
     /// its record holding `keys` uncommitted, so the window starts at the reopen.
     fn windowed(keys: &[&str]) -> tempfile::TempDir {
+        windowed_after(&[], keys)
+    }
+
+    /// [`windowed`], with each of `unclaimed` added first by a commit no spec claims, so
+    /// it lies outside the window and belongs to no spec (spec 086).
+    fn windowed_after(unclaimed: &[&str], keys: &[&str]) -> tempfile::TempDir {
         use crate::primitives::git_fixture::{commit_all, write};
         let tmp = tempfile::tempdir().unwrap();
         let repo = git2::Repository::init(tmp.path()).unwrap();
+        if !unclaimed.is_empty() {
+            for file in unclaimed {
+                write(&tmp.path().join(file), "fn f() {}\n");
+            }
+            commit_all(&repo, "chore: code no spec claims");
+        }
         let spec = tmp.path().join("specs/001-x/spec.md");
         write(&spec, "---\nstatus: planned\n---\n# 001\n");
         write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
@@ -810,6 +902,108 @@ mod tests {
         let result = compute(&args(DecisionRecord::Review, &[key], false), tmp.path()).unwrap();
         assert_eq!(result.matched.len(), 1);
         assert_eq!(result.retained, [] as [DecisionRef; 0]);
+    }
+
+    /// AC2: an unfired decision on a file outside the scope that does not belong to the
+    /// spec is dropped and named, never expired; one on a file that belongs, unchanged
+    /// since the record was written, is retained (spec 086).
+    #[test]
+    fn a_silent_decision_on_a_file_that_does_not_belong_is_dropped_and_named() {
+        let foreign = "bug: a finding — `src/foreign.rs:3`";
+        let owned = "bug: a finding — `src/old.rs`";
+        let tmp = windowed_after(&["src/foreign.rs"], &[foreign, owned]);
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(keys(&result.dropped), [foreign], "{:?}", result.notices);
+        assert_eq!(keys(&result.retained), [owned], "{:?}", result.notices);
+        assert_eq!(result.expired, [] as [DecisionRef; 0]);
+        assert!(
+            result
+                .notices
+                .iter()
+                .any(|n| n.starts_with(&format!("decision dropped: {foreign}"))
+                    && n.contains("no plan entry names `src/foreign.rs`")),
+            "{:?}",
+            result.notices
+        );
+        assert_eq!(
+            result.ownership,
+            Some(crate::schema::primitives::OwnershipState::Examined)
+        );
+        let out = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(out.dropped_count, 1);
+    }
+
+    /// AC4: a decision on a file deleted from disk expires, as before, ahead of any test
+    /// of whether the file belonged (spec 086).
+    #[test]
+    fn a_silent_decision_on_a_deleted_file_expires_and_is_not_dropped() {
+        let gone = "bug: a finding — `src/foreign.rs`";
+        let tmp = windowed_after(&["src/foreign.rs"], &[gone]);
+        std::fs::remove_file(tmp.path().join("src/foreign.rs")).unwrap();
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(keys(&result.expired), [gone]);
+        assert_eq!(result.dropped, [] as [DecisionRef; 0]);
+        assert_eq!(result.ownership, None, "nothing reached the ownership test");
+    }
+
+    /// A restricted run and a run given `since` judge no decision by ownership: each is
+    /// retained, and no ownership is reported (spec 086, Edge Cases).
+    #[test]
+    fn a_restricted_run_and_a_since_run_drop_nothing() {
+        let foreign = "bug: a finding — `src/foreign.rs`";
+        let tmp = windowed_after(&["src/foreign.rs"], &[foreign]);
+        let restricted = compute(&args(DecisionRecord::Review, &[], true), tmp.path()).unwrap();
+        let mut narrowed = args(DecisionRecord::Review, &[], false);
+        narrowed.since = Some("HEAD".to_string());
+        let since = compute(&narrowed, tmp.path()).unwrap();
+        for result in [restricted, since] {
+            assert_eq!(keys(&result.retained), [foreign], "{:?}", result.notices);
+            assert_eq!(result.dropped, [] as [DecisionRef; 0]);
+            assert_eq!(result.ownership, None);
+        }
+    }
+
+    /// A shallow history cannot say what belongs, so nothing is dropped: the decision is
+    /// retained under its own class, naming the reason (spec 086).
+    #[test]
+    fn a_shallow_history_drops_nothing_and_says_why() {
+        let foreign = "bug: a finding — `src/foreign.rs`";
+        let tmp = windowed_after(&["src/foreign.rs"], &[foreign]);
+        let repo = git2::Repository::open(tmp.path()).unwrap();
+        let mut walk = repo.revwalk().unwrap();
+        walk.push_head().unwrap();
+        let first = walk
+            .map(|oid| oid.unwrap())
+            .find(|oid| {
+                repo.find_commit(*oid).unwrap().summary().ok().flatten()
+                    == Some("chore: code no spec claims")
+            })
+            .unwrap();
+        // A shallow clone cut at its first commit: the window, which starts at the reopen,
+        // can still be placed, but a cut history cannot say what belongs.
+        std::fs::write(tmp.path().join(".git/shallow"), format!("{first}\n")).unwrap();
+        let result = compute(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert_eq!(keys(&result.retained), [foreign], "{:?}", result.notices);
+        assert_eq!(result.dropped, [] as [DecisionRef; 0]);
+        assert_eq!(
+            result.ownership,
+            Some(crate::schema::primitives::OwnershipState::NotExamined)
+        );
+        assert!(
+            result
+                .ownership_reason
+                .as_deref()
+                .is_some_and(|reason| reason.contains("--unshallow")),
+            "{result:?}"
+        );
+        let out = run(&args(DecisionRecord::Review, &[], false), tmp.path()).unwrap();
+        assert!(
+            out.notices
+                .iter()
+                .flatten()
+                .any(|n| n.contains("whether it belongs to this spec was not examined")),
+            "{out:?}"
+        );
     }
 
     /// A narrowed window reads less, so the same file is unread under it.
@@ -1382,9 +1576,10 @@ mod tests {
                     &bounded.expired,
                     &bounded.retained,
                     &bounded.lapsed,
+                    &bounded.dropped,
                     &bounded.notices
                 ),
-                (&None, &None, &None, &None, &None)
+                (&None, &None, &None, &None, &None, &None)
             );
             let want = (
                 whole.matched.len(),
@@ -1399,6 +1594,7 @@ mod tests {
                 "expired": whole.expired,
                 "retained": whole.retained,
                 "lapsed": whole.lapsed,
+                "dropped": whole.dropped,
                 "notices": notices,
                 "retained-notices": retained_notices,
             });
