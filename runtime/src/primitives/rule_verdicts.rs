@@ -30,7 +30,8 @@
 //!    when it cannot stand in, and every rule of the file is stale);
 //! 4. no rule its Statement or Verification names changed so, or was removed,
 //!    and, while a file is judged whole, it names no ID that no loaded rule
-//!    defines, which that file may have held (spec 088);
+//!    defines and the framework does not ship, which that file may have held
+//!    (spec 088);
 //! 5. the rule was judged: the record's `unjudged-rules` does not list it.
 //!
 //! A rule that did not fire has no verdict to be current, so a current rule is
@@ -43,6 +44,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path};
 
 use crate::primitives::analyze_subjects::{is_design_subject, section_digest, subject_digest_with};
+use crate::primitives::check_rule_ids::shipped_rule_ids;
 use crate::primitives::departures::{self, Attribution};
 use crate::primitives::resolve_anchor::heading_lines;
 use crate::primitives::rule_sections::{named_rule_ids, parse_rule_sections, section_digests};
@@ -507,7 +509,8 @@ struct RuleEdits {
     narrowed: BTreeMap<String, BTreeSet<String>>,
     /// Every changed, added or removed rule's ID, each rule of a file judged
     /// again whole and, while one is, each ID a loaded rule names that no
-    /// loaded rule defines: what a naming rule is stale for.
+    /// loaded rule defines and the framework does not ship: what a naming
+    /// rule is stale for.
     changed: BTreeSet<String>,
     /// Each file judged again whole, with why.
     rejudged_files: Vec<(String, CopyUnavailable)>,
@@ -552,7 +555,9 @@ impl RuleEdits {
         }
         // A file judged whole cannot say which rules it held, so a name no
         // loaded rule defines may be one it no longer holds: that name is
-        // changed too, and each rule naming it stale (spec 088, AC2).
+        // changed too, and each rule naming it stale (spec 088, AC2). A
+        // shipped rule's ID is not, since one no loaded file defines sits in
+        // a surface the project did not install.
         if !edits.rejudged_files.is_empty() {
             let defined: BTreeSet<&str> = files
                 .iter()
@@ -563,6 +568,7 @@ impl RuleEdits {
                 .flat_map(|file| &file.rules)
                 .flat_map(|rule| &rule.names)
                 .filter(|name| !defined.contains(name.as_str()))
+                .filter(|name| !shipped_rule_ids().contains(name.as_str()))
                 .cloned()
                 .collect();
             edits.changed.extend(undefined);
@@ -1589,12 +1595,14 @@ mod tests {
     /// Spec 088, AC2: a file judged whole cannot say which rules it held, so
     /// a rule in another file naming an ID no loaded rule defines, one the
     /// file may no longer hold, is judged with it, and a rule naming a defined
-    /// rule nothing changed is not; while every changed file's copy stands
-    /// in, such a name stales nothing.
+    /// rule nothing changed, or a shipped rule no loaded file defines, is not;
+    /// while every changed file's copy stands in, such a name stales nothing.
     #[test]
     fn a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines() {
         const S3: &str = "### TS-SHOULD-003\n\n> A SHOULD g, beside TS-MUST-099.\n\n**Verification:** Check six.\n";
         const S4: &str = "### TS-SHOULD-004\n\n> A SHOULD h, beside TS-SHOULD-002.\n\n**Verification:** Check seven.\n";
+        // `BE-AUTHN-001` is shipped, and no file of the fixture defines it.
+        const S5: &str = "### TS-SHOULD-005\n\n> A SHOULD i, beside BE-AUTHN-001.\n\n**Verification:** Check eight.\n";
         let tmp = tempdir().unwrap();
         let repository = git2::Repository::init(tmp.path()).unwrap();
         let (feature, commit) = committed(
@@ -1602,7 +1610,7 @@ mod tests {
             tmp.path(),
             &[
                 ("a-cross.md", named_a()),
-                ("b-cross.md", [S1, S2, S3, S4].join("\n")),
+                ("b-cross.md", [S1, S2, S3, S4, S5].join("\n")),
             ],
         );
         let original = loaded_from(tmp.path(), &BOTH);
@@ -1636,6 +1644,7 @@ mod tests {
         );
         assert_eq!(whole.currency("TS-SHOULD-002"), Some(&Currency::NotFired));
         assert_eq!(whole.currency("TS-SHOULD-004"), Some(&Currency::NotFired));
+        assert_eq!(whole.currency("TS-SHOULD-005"), Some(&Currency::NotFired));
     }
 
     /// Spec 088, AC2: a shallow clone whose history stops after the

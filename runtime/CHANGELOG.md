@@ -177,9 +177,11 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   `verdicts` names it under the new `rejudged-files` with its `reason`
   (`no-analyzed-against`, `commit-not-held`, `not-at-commit`,
   `judged-copy-differs` or `history-unreadable`), absent when no file is.
-  While a file is, each rule naming an ID no loaded rule defines is judged
-  too, since that file may have held it (the agent's recommendation, adopted
-  by the operator, 2026-11-26, in 088's review).
+  While a file is, each rule naming an ID no loaded rule defines and the
+  framework does not ship is judged too, since that file may have held it;
+  a shipped rule no loaded file defines sits in a surface the project did
+  not install (the agent's recommendations, adopted by the operator,
+  2026-11-26, in 088's review).
 - **The adopter CI template's audit-record gate runs `check-audit-records`
   (spec 085, AC1 and AC4).** The step "Audit-record gate on done specs" in
   `framework/templates/ci/adopter-generators.yml` parsed each `spec.md`,

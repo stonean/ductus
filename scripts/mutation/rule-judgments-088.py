@@ -277,4 +277,11 @@ MUTATIONS = [
         '                .filter(|_| true)\n',
         'primitives::rule_verdicts::tests::a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines',
     ),
+    (
+        'M38 a file judged whole stales each rule naming a shipped rule no loaded file defines',
+        'src/primitives/rule_verdicts.rs',
+        '                .filter(|name| !shipped_rule_ids().contains(name.as_str()))\n',
+        '',
+        'primitives::rule_verdicts::tests::a_file_judged_whole_judges_each_rule_naming_an_id_no_loaded_rule_defines',
+    ),
 ]

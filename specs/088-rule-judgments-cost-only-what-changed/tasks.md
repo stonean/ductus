@@ -64,3 +64,11 @@ Blocked on tasks 1 to 4: the cost is measured on the shipped code, at a commit a
 - [x] `framework/bootstrap/ductus.md` §Permission Setup — the claude `settings_template` seeds one rule per CLI subcommand the bootstrap and its migrations run, and no `scripts/audit/` family compares it with the `.ductus/bin/ductus {subcommand}` calls `framework/migrations/*.md` spell, so a migration that adds a CLI call without its seed entry is reported by nothing (found adding 088's `backfill-section-digest` entry, task 4) — waived: AGENTS.md waives an observation about the pipeline's own machinery made in framework work unless it shows code breaking its contract, and this shows none: each of the five CLI subcommands the migrations run is seeded (checked at `08510de3`; the agent's recommendation, adopted by the operator, 2026-11-26)
 
 - **Done when**: the finding is fixed, deferred, or waived, with a waiver's reason written on the task.
+
+## 8. A shipped rule's ID stales nothing while a file is judged whole (AC2)
+
+- [x] `RuleEdits::between` in `runtime/src/primitives/rule_verdicts.rs` leaves out of the undefined-ID set each ID `shipped_rule_ids` (`runtime/src/primitives/check_rule_ids.rs`) holds, since a shipped rule no loaded file defines sits in a surface the project did not install, not in the file judged whole (the agent's recommendation, adopted by the operator, 2026-11-26)
+- [x] In the same change: 088's data model, Edge Cases, Resolved Questions and Cost, `DISCOVER_RULE_FILES` and `runtime/CHANGELOG.md` state it, the Cost section with the single-surface counts before and after
+- [x] A test that a rule naming a shipped ID no loaded file defines keeps its verdict while a file is judged whole, and a mutant in `scripts/mutation/rule-judgments-088.py` that its test turns red
+
+- **Done when**: the refinement, its test and its mutant land with cargo fmt --check, cargo clippy --all-targets -- -D warnings and the whole cargo test passing, and 088's artifacts state it.

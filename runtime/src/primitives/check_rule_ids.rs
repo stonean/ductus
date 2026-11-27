@@ -223,7 +223,10 @@ pub(crate) fn compute(args: &CheckRuleIdsArgs, repo: &Path) -> Result<Checked> {
 /// citation of a rule whose file a project never installed is told from one
 /// no rule defines. The index is generated from `framework/rules/*.md`, and
 /// `shipped_rule_index_matches_the_framework_rules` fails when it drifts.
-fn shipped_rule_ids() -> &'static HashSet<&'static str> {
+/// `rule_verdicts` reads it too: a shipped rule no loaded file defines sits
+/// in a surface the project did not install, never in a file judged whole
+/// (spec 088, AC2).
+pub(crate) fn shipped_rule_ids() -> &'static HashSet<&'static str> {
     static IDS: OnceLock<HashSet<&'static str>> = OnceLock::new();
     IDS.get_or_init(|| {
         include_str!("shipped_rule_ids.txt")
