@@ -36,6 +36,20 @@ Line references in this Motivation and in the Resolved Questions are to the tree
 - **Request order.** Requests go out in a fixed order: rule files in the sorted order `list_rule_files` returns (`runtime/src/primitives/discover_rule_files.rs`), rules in heading order within a file, MUST-tier rules at step 11 and SHOULD-tier rules at step 12. Request ids, and so the goldens, are reproducible.
 - **A malformed response or an interrupted walk partway through the rules.** A response that fails validation halts the walk with `error: schema-mismatch`, as any extension response does (`Walker::validate_llm_response`, `runtime/src/interpreter/mod.rs`). Because `write-analysis` runs at step 20, a halted or interrupted walk writes no record, never a partial one counting only the rules answered so far.
 
+## Cost
+
+> **Signpost:** [089 — The pipeline's own cost is stated and bounded](../089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md) asks a spec that adds a check to state what a run of it costs, in a measurable unit, and what it retires.
+
+The scripts' judgment of each scenario's Context and Behavior (`framework/reference/analyze.md` §Scenario consistency (advisory); scenario `rule-judging-runs-from-repo-scripts`) costs a run what follows. The specs are measured by `git ls-tree -l` over this repository's 83 at `c2c0e0c3`, and the briefs by `wc -c` of what `briefs.py` renders.
+
+- **Subagents.** One scenario reader for each group of scenarios within `--cell-bytes`, 480,000 bytes by default. That is none for the 32 specs with no scenario and one for each of the 51 with scenarios, since the largest set, 022's 79 scenarios, is 410,042 bytes.
+- **Bytes a reader loads.**
+  - Its scenarios: a median 8,273 bytes over those 51 specs, and at most 410,042.
+  - Its brief: the template's 1,780 bytes and one line per scenario, 9,757 bytes rendered for 022.
+  - The 643 bytes of that reference section and the 266 of the constitution's paragraph on scenarios, which the brief points it at.
+- **Script work.** `check.py` compares each of a reader's scenarios against its read account by size, and `record.py` adds one finding for each scenario and section a reader reports. Neither makes a runtime call it did not make before.
+- **What it retires.** Nothing. The reference already asked the host for the judgment, and no script briefed it. `check-artifacts`' `scenario-consistency` family checks that a scenario has a task and judges no section, so it stays.
+
 ## Acceptance Criteria
 
 - [x] AC1: An exec analyze assesses each rule in the tier the rule itself carries, never in a tier taken from the step alone, so no rule is assessed in both step 11 and step 12

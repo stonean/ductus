@@ -193,4 +193,4 @@ Each discharge is a blockquoted signpost back-linking 089, a blockquote so it ad
   - A reworded ticked criterion owes a review, so the note costs one review of 079 (`compute-review-scope` reads it `review-owed`). It lands with or after 086 task 7's notes on 079's AC6 and AC24, so one review of 079 covers all three. That review is owed before the release tag, as every open spec's is.
 - **063, 066, 067** (added to `cross-spec-impact:`): own `check-artifact-size`, `write-analysis` and `check-artifacts`, whose descriptions take the moved rules. No behavior changes.
 - **The other lane.** 066 is its spec, and 086 task 7 edits 079's spec. So the other lane is told, through `SendMessage`, before this lane edits either and once the edit lands.
-- **060** gets a checkbox on its task 15 rather than a declaration. That task runs after 089 closes, so a declaration would hold 089's `done` on later work.
+- **060** gets a checkbox on its task 15 rather than a declaration. The cost statement is 060's own work, so a declaration would hold 089's `done` on another spec's task.

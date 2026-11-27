@@ -102,11 +102,25 @@ Coverage:
      part; record.py writes each part-findings entry as an Advisory
      project-parts finding, and counts an unreadable part once, under
      artifact-unreadable (spec 087)
+  AS. split.py gives the scenarios one reader when they fit --cell-bytes,
+     several covering each scenario once when they do not, and none for a
+     spec with no scenario; briefs.py fills each reader's brief from
+     scenario-brief.md, naming its scenarios and Scenario consistency
+     (advisory), and prints its prompt
+  AT. check.py fails a scenario reader's hand-back that leaves a scenario
+     unjudged, reads one short, gives a check other than context or
+     behavior, or two findings for one scenario and check, and exits 2 on a
+     manifest with no scenario-readers list
+  AU. combine.py carries each scenario finding, and record.py writes it as
+     an Advisory scenario-consistency finding keyed by its scenario and check,
+     and refuses while a scenario reader's hand-back is missing
   Z. the whole chain, detect.py through record.py --write, against the real
      release binary, its spec citing a shipped rule the fixture never
      installed, so check-rule-ids' not-installed is non-empty, and its
      system.md an index with a linked part and an unlinked one: both are
-     step 15's subjects, and the unlinked one is a project-parts finding
+     step 15's subjects, and the unlinked one is a project-parts finding;
+     its one scenario has a reader, whose finding the record holds as a
+     scenario-consistency finding
 
 ANALYZE_SCRIPTS, when set, names the directory of scripts to run, so a
 mutant can be run against these cases. Usage:
@@ -312,11 +326,28 @@ class Project:
                        "integrity-checked": {i: i not in unchecked for i in ("code-block", "rationale", "system", "contract")}},
                       f)
 
-    def all_hand_backs(self, verdicts_by_cell=None, unchecked=()):
+    def scenarios(self, findings=(), drop=(), short=None):
+        """Write each scenario reader's output: every scenario of its group
+        judged and read whole but those in drop and the path in short, with
+        each (scenario, check, message) in findings at the reader whose group
+        holds it."""
+        for r in self.manifest()["scenario-readers"]:
+            acct = {f"specs/{F}/{s}": [os.path.getsize(os.path.join(self.root, "specs", F, s))] * 2
+                    for s in r["subjects"]}
+            if short in acct:
+                acct[short][0] -= 10
+            with open(r["out"], "w") as f:
+                json.dump({"reader": r["reader"], "judged": [s for s in r["subjects"] if s not in drop],
+                           "findings": [{"path": s, "check": c, "message": msg} for s, c, msg in findings
+                                        if s in r["subjects"]],
+                           "bytes-read": acct}, f)
+
+    def all_hand_backs(self, verdicts_by_cell=None, unchecked=(), scenario_findings=()):
         time.sleep(1.1)  # an output must be newer than the manifest's whole-second stamp
         for c in self.manifest()["cells"]:
             self.hand_back(c["cell"], (verdicts_by_cell or {}).get(c["cell"]))
         self.step15(unchecked)
+        self.scenarios(scenario_findings)
 
     def calls(self, primitive):
         with open(os.path.join(self.stub, "calls.log")) as f:
@@ -872,6 +903,7 @@ def ar(p, name):
     time.sleep(1.1)  # an output must be newer than the manifest's whole-second stamp
     for c in p.manifest()["cells"]:
         p.hand_back(c["cell"])
+    p.scenarios()
     p.step15(skip=(LOOSE,))
     short = p.run("check.py", F)
     p.step15()
@@ -903,6 +935,83 @@ def ar(p, name):
            + json.dumps([s, found, wa]))
 
 
+SCENARIOS = [f"scenarios/{n}.md" for n in ("one", "three", "two")]
+
+
+def as_(p, name):
+    p.split()
+    one = p.manifest()["scenario-readers"]
+    briefs = p.run("briefs.py", F)
+    brief = open(one[0]["brief"]).read() if one and os.path.isfile(one[0]["brief"]) else ""
+    p.split("--cell-bytes", "1000")
+    many = p.manifest()["scenario-readers"]
+    flat = sorted(s for r in many for s in r["subjects"])
+    shutil.rmtree(os.path.join(p.root, "specs", F, "scenarios"))
+    p.run("detect.py", F)
+    p.split()
+    none = p.manifest()["scenario-readers"]
+    check_(name, len(one) == 1 and one[0]["subjects"] == SCENARIOS
+           and briefs.returncode == 0 and "{{" not in brief and "§Scenario consistency (advisory)" in brief
+           and all(f"`specs/{F}/{s}` (" in brief for s in SCENARIOS)
+           and "scenario reader(s) first" in briefs.stdout and one[0]["brief"] in briefs.stdout
+           and len(many) == 3 and flat == sorted(SCENARIOS) and none == [],
+           briefs.stdout + briefs.stderr + json.dumps([one, many, none]))
+
+
+def at(p, name):
+    p.split()
+    p.all_hand_backs()
+    whole = p.run("check.py", F)
+    bad = {}
+    for label, kw in (("unjudged", {"drop": ("scenarios/two.md",)}),
+                      ("short", {"short": f"specs/{F}/scenarios/one.md"}),
+                      ("check", {"findings": [("scenarios/one.md", "edge-cases", "m")]}),
+                      ("twice", {"findings": [("scenarios/one.md", "context", "a"),
+                                              ("scenarios/one.md", "context", "b")]})):
+        p.scenarios(**kw)
+        r = p.run("check.py", F)
+        bad[label] = (r.returncode, r.stdout + r.stderr)
+    p.scenarios()
+    mpath = os.path.join(p.work, "manifest.json")
+    m = p.manifest()
+    del m["scenario-readers"]
+    with open(mpath, "w") as f:
+        json.dump(m, f)
+    old = p.run("check.py", F)
+    check_(name, whole.returncode == 0 and "scenarios-1: ok" in whole.stdout
+           and bad["unjudged"][0] == 1 and "no judgment of ['scenarios/two.md']" in bad["unjudged"][1]
+           and bad["short"][0] == 1 and f"specs/{F}/scenarios/one.md read" in bad["short"][1]
+           and bad["check"][0] == 1 and "check 'edge-cases' is none of" in bad["check"][1]
+           and bad["twice"][0] == 1 and "two context findings" in bad["twice"][1]
+           and old.returncode == 2 and "no scenario-readers list" in old.stderr,
+           whole.stdout + json.dumps(bad) + old.stderr)
+
+
+def au(p, name):
+    record_setup(p)
+    p.scenarios([("scenarios/one.md", "context", "has no Context section")])
+    comb = p.run("combine.py", F)
+    merged = json.load(open(os.path.join(p.work, "merged.json"))) if comb.returncode == 0 else {}
+    r = p.run("record.py", F, p.plan, "--write")
+    wa = (p.calls("write-analysis") or [[]])[0]
+    try:
+        fs = json.load(open(os.path.join(p.stub, "captured-findings-json")))
+    except OSError:
+        fs = []
+    found = [f for f in fs if f["family"] == "scenario-consistency"]
+    os.remove(p.manifest()["scenario-readers"][0]["out"])
+    gone = p.run("record.py", F, p.plan)
+    check_(name, comb.returncode == 0 and [f["path"] for f in merged.get("scenarios", [])] == ["scenarios/one.md"]
+           and r.returncode == 0 and found == [{
+               "tier": "advisory", "family": "scenario-consistency", "path": f"specs/{F}/scenarios/one.md",
+               "live": True, "message": "scenarios/one.md: has no Context section",
+               "decision-key": f"scenario-consistency — specs/{F}/scenarios/one.md: context",
+               "disposition": {"outcome": "undispositioned"}}]
+           and wa[wa.index("--advisory") + 1] == "4" and "3 scenarios judged" in r.stdout
+           and gone.returncode == 1 and "scenarios-1" in gone.stderr,
+           comb.stdout + comb.stderr + r.stdout + r.stderr + gone.stderr + json.dumps([found, wa]))
+
+
 def z(name):
     """detect.py through record.py --write against the real release binary,
     in a fixture project holding one rule file and an unfolded staging spec."""
@@ -924,7 +1033,11 @@ def z(name):
         write(f"specs/{F}/plan.md", "# 001 — Demo Plan\n\n## Overview\n\nHow it works.\n\n"
               "## Technical Decisions\n\n### One decision\n\nTaken because it is simplest.\n")
         write(f"specs/{F}/tasks.md", "# 001 — Demo Tasks\n\n## 1. Build the demo\n\n- [x] Build it\n\n"
-              "- **Done when**: it exists.\n")
+              "- **Done when**: it exists.\n\n## 2. The edge (scenario edge)\n\n"
+              "- [x] Implement the behavior described in `scenarios/edge.md`\n\n"
+              "- **Done when**: the edge is handled.\n")
+        write(f"specs/{F}/scenarios/edge.md", "---\nsection: \"Acceptance Criteria\"\n---\n\n# Edge\n\n"
+              "## Context\n\nAn edge.\n\n## Behavior\n\n- The demo handles it.\n")
         write("specs/feat.1-staging/spec.md", f"---\nstatus: draft\ndependencies: []\nfolds-into: {F}\n---\n\n"
               "# feat.1 — Staging\n\nStaged.\n\n## Acceptance Criteria\n\n- [ ] AC1: It folds\n\n"
               "## Open Questions\n\n## Resolved Questions\n")
@@ -971,6 +1084,12 @@ def z(name):
         json.dump({"grounding": [], "integrity": [], "decision-reasons": [],
                    "integrity-checked": {"code-block": True, "rationale": True, "system": True, "contract": True},
                    "bytes-read": read15}, open(s15["out"], "w"))
+        for r in m["scenario-readers"]:
+            json.dump({"reader": r["reader"], "judged": r["subjects"],
+                       "findings": [{"path": "scenarios/edge.md", "check": "context",
+                                     "message": "its Context names no situation"}],
+                       "bytes-read": {f"specs/{F}/{p}": [os.path.getsize(os.path.join(root, "specs", F, p))] * 2
+                                      for p in r["subjects"]}}, open(r["out"], "w"))
         steps.append(run("check.py", F))
         steps.append(run("combine.py", F))
         with open(os.path.join(base, "plan.json"), "w") as f:
@@ -984,7 +1103,9 @@ def z(name):
                 and "last-run:" in text and f"{first}:" in text and "plan.md#One decision" in text
                 and "rule-not-installed" in text
                 and s15.get("system-parts") == [".ductus/docs/system/linked.md", ".ductus/docs/system/unlinked.md"]
-                and "project-parts" in text and ".ductus/docs/system/unlinked.md" in text)
+                and "project-parts" in text and ".ductus/docs/system/unlinked.md" in text
+                and [r["subjects"] for r in m["scenario-readers"]] == [["scenarios/edge.md"]]
+                and "scenario-consistency" in text and "its Context names no situation" in text)
         check_(name, good, "".join(f"[{i} exit {x.returncode}] {x.stdout[-600:]}{x.stderr[-600:]}"
                                    for i, x in enumerate(steps)))
     finally:
@@ -1047,6 +1168,9 @@ def main():
     case("AQ. detect.py merges a scenario's counts and names one it cannot read", aq)
     case("AP. step 15 states the plan-against-spec judgment, or it is unchecked", ap)
     case("AR. step 15 reads specs/system.md's parts, and each part finding is Advisory", ar)
+    case("AS. split.py and briefs.py give the scenarios their readers", as_)
+    case("AT. check.py holds each scenario reader to every scenario of its group", at)
+    case("AU. record.py writes each scenario reader's finding as Advisory", au)
     z("Z. the whole chain against the real release binary")
     if failures:
         print(f"{failures} failure(s)", file=sys.stderr)

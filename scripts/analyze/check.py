@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Check every judge's and the step-15 reader's hand-back before it is used
-(spec 060, scenario rule-judging-runs-from-repo-scripts;
-framework/reference/analyze.md, Rule judging in a subagent).
+"""Check every judge's, the step-15 reader's and each scenario reader's
+hand-back before it is used (spec 060, scenario
+rule-judging-runs-from-repo-scripts; framework/reference/analyze.md, Rule
+judging in a subagent).
 
 usage: python3 -I scripts/analyze/check.py FEATURE
 
@@ -27,8 +28,13 @@ For each cell in the manifest it checks that:
 The step-15 hand-back is checked for its read account, each part of
 specs/system.md split.py listed to read included, and its shape. An
 integrity item it reports unchecked is printed, and record.py records it
-under integrity-not-checked. Each judge's malformed-headings are printed,
-and record.py refuses them until the plan file names each. Writes
+under integrity-not-checked. Each scenario reader's hand-back is checked for
+its shape, a judgment of every scenario of its group and of none outside
+it, each finding at one of them with a check of context or behavior and at
+most one for each scenario and check, and its read account, every scenario
+of its group read whole (framework/reference/analyze.md, Scenario
+consistency (advisory)). Each judge's malformed-headings are printed, and
+record.py refuses them until the plan file names each. Writes
 <work>/check.json.
 
 Exit status: 0 when every hand-back passes; 1 naming each failure, so the
@@ -48,6 +54,7 @@ import analyze_lib as lib  # noqa: E402
 
 KINDS = ("addressed", "finding", "waived")
 INTEGRITY = ("code-block", "rationale", "system", "contract")
+SCENARIO_CHECKS = ("context", "behavior")
 
 
 def read_out(path, created_epoch):
@@ -65,15 +72,25 @@ def read_out(path, created_epoch):
     return out, None
 
 
-def shape(out, step15=False):
-    """Problems with the hand-back's field shapes, found before any is used."""
+def shape(out, kind="cell"):
+    """Problems with the hand-back's field shapes, found before any is used:
+    kind is a judge's cell, step15 or scenarios."""
     ps = []
     acct = out.get("bytes-read")
     if not isinstance(acct, dict) or not all(
             isinstance(v, list) and len(v) == 2 and all(isinstance(n, int) for n in v)
             for v in acct.values()):
         ps.append("bytes-read is not a map of path to [bytes read, size]")
-    if step15:
+    if kind == "scenarios":
+        if not isinstance(out.get("judged"), list) or not all(isinstance(x, str) for x in out["judged"]):
+            ps.append("judged is not a list of scenario paths")
+        found = out.get("findings")
+        if not isinstance(found, list) or not all(
+                isinstance(f, dict) and all(isinstance(f.get(k), str) for k in ("path", "check", "message"))
+                for f in found):
+            ps.append("findings is not a list of {path, check, message}")
+        return ps
+    if kind == "step15":
         for key in ("grounding", "integrity", "decision-reasons"):
             if not isinstance(out.get(key), list) or not all(isinstance(x, dict) for x in out[key]):
                 ps.append(f"{key} is not a list of objects")
@@ -191,7 +208,7 @@ def check(feature, m):
     unchecked = []
     s = m["step15"]
     out, err = read_out(s["out"], created)
-    ps = [err] if err else shape(out, step15=True)
+    ps = [err] if err else shape(out, "step15")
     if not ps:
         outs["step15"] = out
         ps = read_account(out, [f"{d}/{p}" for p in s["subjects"]] + ([s["system"]] if s.get("system") else [])
@@ -201,8 +218,40 @@ def check(feature, m):
             notes.setdefault("step15", []).append(
                 f"integrity item {i} was not checked; record.py records it under integrity-not-checked")
     problems["step15"] = ps
+    for r in m["scenario-readers"]:
+        problems[r["reader"]] = scenario_problems(d, r, created, outs)
     return {"problems": problems, "outs": outs, "unresolved": bad, "notes": notes,
             "malformed": malformed, "unchecked": unchecked}
+
+
+def scenario_problems(d, r, created, outs):
+    """Problems with scenario reader r's hand-back, which is put in outs
+    under its name once its shape passes: every scenario of its group judged
+    and read whole, none outside it, and each finding at one of them, about
+    its context or behavior, once for each scenario and check."""
+    out, err = read_out(r["out"], created)
+    ps = [err] if err else shape(out, "scenarios")
+    if ps:
+        return ps
+    outs[r["reader"]] = out
+    group, judged = set(r["subjects"]), set(out["judged"])
+    if group - judged:
+        ps.append(f"no judgment of {sorted(group - judged)}")
+    if judged - group:
+        ps.append(f"judgments of scenarios outside this reader's group: {sorted(judged - group)}")
+    seen = set()
+    for f in out["findings"]:
+        at = (f["path"], f["check"])
+        if f["path"] not in group:
+            ps.append(f"a finding at {f['path']}, outside this reader's group")
+        if f["check"] not in SCENARIO_CHECKS:
+            ps.append(f"{f['path']}: check {f['check']!r} is none of {SCENARIO_CHECKS}")
+        if not f["message"].strip():
+            ps.append(f"{f['path']}: a finding needs a message")
+        if at in seen:
+            ps.append(f"{f['path']}: two {f['check']} findings")
+        seen.add(at)
+    return ps + read_account(out, [f"{d}/{p}" for p in r["subjects"]])
 
 
 def failures(result):
@@ -218,10 +267,13 @@ def run(argv):
     lib.write_json(os.path.join(lib.work_dir(feature), "check.json"),
                    {k: result[k] for k in ("problems", "notes", "malformed", "unchecked")})
     outs, problems = result["outs"], result["problems"]
-    for c in [x["cell"] for x in m["cells"]] + ["step15"]:
+    readers = [r["reader"] for r in m["scenario-readers"]]
+    for c in [x["cell"] for x in m["cells"]] + ["step15"] + readers:
         o = outs.get(c) or {}
         if c == "step15":
             counts = {k: len(o.get(k) or []) for k in ("grounding", "integrity", "decision-reasons")}
+        elif c in readers:
+            counts = {k: len(o.get(k) or []) for k in ("judged", "findings")}
         else:
             kinds = [v.get("verdict") for v in (o.get("verdicts") or {}).values()]
             counts = {"judged": len(o.get("judged") or []), "unjudged": len(o.get("unjudged") or []),

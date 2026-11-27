@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Write each judge's brief and the step-15 reader's brief from the cells
-manifest and the templates beside this script, and print the prompt to
-start each subagent with (spec 060, scenario
-rule-judging-runs-from-repo-scripts).
+"""Write each judge's brief, the step-15 reader's brief and each scenario
+reader's brief from the cells manifest and the templates beside this
+script, and print the prompt to start each subagent with (spec 060,
+scenario rule-judging-runs-from-repo-scripts).
 
 usage: python3 -I scripts/analyze/briefs.py FEATURE
 
 The templates point each judge at the canonical text, steps 11, 12 and 15
-of framework/commands/analyze.md and the reference sections they name,
-and add only the run's facts: the subjects, the share, the loaded rule
-files, the departure entries, the lines the Read tool may cut, and the
-JSON check.py reads back.
+of framework/commands/analyze.md and the reference sections they name, a
+scenario reader at framework/reference/analyze.md's Scenario consistency
+(advisory), and add only the run's facts: the subjects, the share, the
+loaded rule files, the departure entries, the lines the Read tool may cut,
+and the JSON check.py reads back.
 
 Exit status: 0 written; 1 a template placeholder was left unfilled; 2 the
 manifest or a template could not be read.
@@ -126,9 +127,17 @@ def run(argv):
                                               "LONG": long_note(m, s["subjects"])})
     with open(s["brief"], "w", encoding="utf-8") as f:
         f.write(text)
-    print(f"== {m['feature']}: run the step-15 reader first, then the {len(prompts)} judges, each a fresh "
-          "subagent with this prompt:")
-    for cell, brief, out in [("step15", s["brief"], s["out"])] + prompts:
+    readers = []
+    for r in m["scenario-readers"]:
+        text = fill(template("scenario-brief.md"), {**base, "READER": r["reader"], "OUT": r["out"],
+                                                    "SUBJECTS": subject_lines(m, r["subjects"]),
+                                                    "LONG": long_note(m, r["subjects"])})
+        with open(r["brief"], "w", encoding="utf-8") as f:
+            f.write(text)
+        readers.append((r["reader"], r["brief"], r["out"]))
+    print(f"== {m['feature']}: run the step-15 reader and the {len(readers)} scenario reader(s) first, then "
+          f"the {len(prompts)} judges, each a fresh subagent with this prompt:")
+    for cell, brief, out in [("step15", s["brief"], s["out"])] + readers + prompts:
         print(f"  {cell}: Read {brief} whole and follow it. Write your JSON to {out}. "
               "End your report with END OF REPORT.")
 

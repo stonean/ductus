@@ -127,8 +127,8 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 The scenario `rule-judging-runs-from-repo-scripts` puts the host's orchestration around AC10's subagents in `scripts/analyze/`. Rebuilt in a temp directory, it was lost with the session and refined by nobody (owner, 2026-11-18). There is one script for each step. A cells manifest, `manifest.json`, is written by the split and read by every later step, so no share, group, feature or address is fixed in code:
 
 - `detect.py` runs the deterministic steps.
-- `split.py` cuts `verdicts.judge` and `verdicts.rejudge` into shares, keeping `verdicts.changed-sections` for the briefs and the record (spec 082, AC7), and the scenarios into groups.
-- `briefs.py` renders `judge-brief.md` and `step15-brief.md`.
+- `split.py` cuts `verdicts.judge` and `verdicts.rejudge` into shares, keeping `verdicts.changed-sections` for the briefs and the record (spec 082, AC7), and the scenarios into groups, for the judges' cells and for the scenario readers.
+- `briefs.py` renders `judge-brief.md`, `step15-brief.md` and `scenario-brief.md`.
 - `check.py` checks each hand-back.
 - `combine.py` merges the cells.
 - `record.py` calls `process-decisions` and `write-analysis`.
@@ -147,7 +147,10 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
 - **Shares keep each rule file whole and balance by rendered bytes.** A cell is one share beside the spec, plan, data model and a scenario group. Scenarios are grouped only when one cell would pass `--cell-bytes`, into the fewest groups that keep each cell within it. A share or cell that cannot fit, because a rule file or a scenario is larger than its budget, is named in a note. The defaults are `DEFAULT_SHARE_BYTES` and `DEFAULT_CELL_BYTES`:
   - 135,000 bytes a share, just over the largest of the three rendered shares the 2026-11-18 analyses judged whole (114,213 to 132,784 bytes, by `wc -c`);
   - 480,000 a cell, the top of the 450 to 480 KB cells that `.ductus/docs/agents/developing-ductus.md` §Sizing an analysis's judges records finishing whole reads.
-- **The briefs point at the canonical text.** A judge reads steps 11, 12 or 15 and the reference sections they name, so a template restates none of them. It carries only the run's facts and the JSON `check.py` reads back.
+- **The scenarios have their own readers.** The host's judgment of each scenario's Context and Behavior, which `framework/reference/analyze.md` §Scenario consistency (advisory) asks for and step 8 leaves to the host, goes to scenario readers: one for each of the fewest groups balanced by bytes that keep each within `--cell-bytes`, and none for a spec with no scenario. A reader reads only its scenarios. Its hand-back names every scenario of its group as judged and gives each finding's section as `context` or `behavior`, with no unjudged answer, so `check.py` fails a scenario left out. By `git ls-tree -l` at `c2c0e0c3`, 51 of the 83 specs have scenarios, a median 8,273 bytes of them and at most 410,042, 022's 79, so at the default budget every spec takes one reader. Rejected:
+  - the step-15 reader, which for 022 would read its 159,971 bytes of spec and plan and `specs/system.md`'s 878 beside the scenarios, 570,891 bytes, past the 480,000 a cell finishes whole;
+  - the judges, since a cell exists only for a share, so a run whose verdicts are all reusable has none, and with several shares each scenario would be judged once per share.
+- **The briefs point at the canonical text.** A judge reads steps 11, 12 or 15 and the reference sections they name, and a scenario reader `framework/reference/analyze.md` §Scenario consistency (advisory) and the constitution's paragraph on scenarios, so a template restates none of them. It carries only the run's facts and the JSON `check.py` reads back.
 - **A cite is checked with `read-section`.** Its exact-text heading match uses the same `heading_lines` parse that `write-analysis`'s `cite_resolves` does, so a cite `check.py` passes is one the record keeps.
 - **A disagreement goes to the host, never to a default.** Cells agreeing on a finding give a finding. A finding beside a cell that read other scenarios and found none is unsettled, since that cell may have read what addresses it. `record.py` refuses any rule its plan file does not settle.
 - **What is recorded is what the judges wrote.** `record.py` refuses:
@@ -155,7 +158,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
   - a design subject edited, added or removed since the split;
   - a malformed rule heading a judge reported that the plan file does not name.
 
-  It checks and merges the hand-backs again itself rather than trusting `combine.py`'s output. It records an integrity item step 15 did not check under `integrity-not-checked`, and a broken cross-service reference as an Advisory finding. Any target the run could not read passes `restricted` to `process-decisions`, so a stored decision whose source went unseen is retained.
+  It checks and merges the hand-backs again itself rather than trusting `combine.py`'s output. It records an integrity item step 15 did not check under `integrity-not-checked`, a broken cross-service reference as an Advisory finding, and each scenario reader's finding as an Advisory `scenario-consistency` finding keyed by its scenario and section, so a stored decision outlives a reworded message. Any target the run could not read passes `restricted` to `process-decisions`, so a stored decision whose source went unseen is retained.
 - **A failure is never an exit 0.** Each script exits 1 when a check fails, and 2 when an input or setting cannot be read, a call runs out of time, or the script itself fails. `decided-by` is `git config user.email`, and an empty one refuses.
 - **The test stubs the runtime, and one case runs the real one.** `scripts/tests/test-analyze-scripts.py` runs each script in a fixture repository against a stub runtime. Its last case runs the whole chain against the release binary. The scripts read each list the runtime always writes strictly, so a field the runtime renames fails that case rather than reading as empty. `check-rule-ids`' `not-installed`, a list the runtime omits when empty, the case makes non-empty. `framework-checks.yml` step (ab) runs it after the job builds the runtime.
 
@@ -180,7 +183,7 @@ They stay in this repository, since the Shared Files manifest in `framework/boot
 | `specs/022-deterministic-runtime/data-model.md` | Modify | Reason table and prose; `assessSpecQuality` exec note and `loaded-rule-files` |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Status flips; block-quoted signpost linking 060 |
 | `version`, `runtime/Cargo.toml`, `runtime/Cargo.lock`, `runtime/CHANGELOG.md` | Modify | Release `0.54.2` |
-| `scripts/analyze/*.py`, `scripts/analyze/*.md` | Create | The host's rule-judging orchestration and its two brief templates |
+| `scripts/analyze/*.py`, `scripts/analyze/*.md` | Create | The host's rule-judging orchestration and its brief templates |
 | `scripts/tests/test-analyze-scripts.py` | Create | Each script against a stub runtime |
 | `.github/workflows/framework-checks.yml` | Modify | Step (ab) runs the test |
 | `.ductus/docs/agents/developing-ductus.md` | Modify | §Sizing an analysis's judges names the scripts and the disagreement rule |

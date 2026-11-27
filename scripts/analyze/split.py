@@ -24,7 +24,12 @@ cannot be brought within its budget, a rule file or a scenario larger than
 it, is named in a note. Step 15 has its own reader, whose subjects take the
 parts of specs/system.md that check-artifact-size --project-files, called
 with no feature as step 15 calls it, lists (spec 087): a measured part is
-read, and an unreadable one is named for the reader to leave unjudged.
+read, and an unreadable one is named for the reader to leave unjudged. The
+scenarios have their own readers, which judge each scenario's Context and
+Behavior (framework/reference/analyze.md, Scenario consistency (advisory)):
+one for each of the fewest groups balanced by bytes that keep each within
+--cell-bytes, and none for a spec with no scenario. A scenario larger than
+--cell-bytes is named in a note.
 
 Needs detect.py's results, current for the feature as it stands, whose
 check-departures entries the briefs name. Prints discover-rule-files'
@@ -113,6 +118,28 @@ def system_parts(system_path):
     mine = [p for p in parts if p.get("project-file") == system_path]
     return ([p["path"] for p in mine if p.get("state") == "measured"],
             [p["path"] for p in mine if p.get("state") != "measured"])
+
+
+def scenario_readers(scen, cell_bytes, w, run_id):
+    """([reader], [note]): one reader for each of the fewest groups of the
+    (path, bytes) scenarios, balanced by bytes, that keep each within
+    cell_bytes, and none when there is no scenario. A reader reads only its
+    scenarios, so a group's budget is the whole cell's."""
+    if not scen:
+        return [], []
+    sizes = dict(scen)
+    parts, loads = fit(scen, math.ceil(sum(sizes.values()) / cell_bytes), cell_bytes)
+    notes = []
+    if max(loads) > cell_bytes:
+        notes.append(f"a scenario reader holds {max(loads)} bytes, over --cell-bytes {cell_bytes}: "
+                     "a scenario is larger than a cell")
+    readers = []
+    for i, group in enumerate((sorted(g, key=str.lower) for g in parts if g), 1):
+        name = f"scenarios-{i}"
+        readers.append({"reader": name, "subjects": group, "bytes": sum(sizes[p] for p in group),
+                        "brief": os.path.join(w, f"brief-{name}.md"),
+                        "out": os.path.join(w, f"out-{name}-{run_id}.json")})
+    return readers, notes
 
 
 def run(argv):
@@ -223,6 +250,8 @@ def run(argv):
                           "bytes": shares[letter]["bytes"] + sum(sizes[p] for p in subj),
                           "brief": os.path.join(w, f"brief-{cell}.md"),
                           "out": os.path.join(w, f"out-{cell}-{run_id}.json")})
+    readers, reader_notes = scenario_readers(scen, cell_bytes, w, run_id)
+    notes += reader_notes
     s15 = [p for p in ("spec.md", "plan.md") if p in sizes]
     system = "specs/system.md" if os.path.isfile("specs/system.md") else None
     parts, parts_unreadable = system_parts("specs/system.md")
@@ -242,6 +271,7 @@ def run(argv):
                    "system-parts-unreadable": parts_unreadable,
                    "brief": os.path.join(w, "brief-step15.md"),
                    "out": os.path.join(w, f"out-step15-{run_id}.json")},
+        "scenario-readers": readers,
         "notes": notes,
     }
     lib.write_json(lib.manifest_path(feature), manifest)
@@ -249,11 +279,14 @@ def run(argv):
           f"{len(manifest['changed-sections'])} changed sections, {len(manifest['reusable'])} reusable verdicts "
           f"({verdicts.get('reason') or 'current'}); {len(shares)} shares x {len(groups)} scenario groups "
           f"= {len(cells)} cells, plus a step-15 reader with {len(parts)} part(s) of specs/system.md "
-          f"to read and {len(parts_unreadable)} unreadable")
+          f"to read and {len(parts_unreadable)} unreadable, and {len(readers)} scenario reader(s) "
+          f"for {len(scen)} scenario(s)")
     for letter, s in shares.items():
         print(f"  share {letter}: {len(s['ids'])} rules, {s['bytes']} bytes, {', '.join(s['rule-files'])}")
     for c in cells:
         print(f"  cell {c['cell']}: {c['bytes']} bytes, {len(c['subjects'])} subjects")
+    for r in readers:
+        print(f"  {r['reader']}: {r['bytes']} bytes, {len(r['subjects'])} scenarios")
     for n in notes:
         print(f"  note: {n}")
     print(f"manifest: {lib.manifest_path(feature)}")

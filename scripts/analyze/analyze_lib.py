@@ -321,7 +321,14 @@ def manifest_path(feature):
 
 
 def load_manifest(feature):
+    """The cells manifest, refusing one with no scenario-readers list: a
+    manifest split.py wrote before the scenario readers would otherwise read
+    as a spec with no scenario to judge."""
     p = manifest_path(feature)
     if not os.path.isfile(p):
         raise Unreadable(f"{p} does not exist; run scripts/analyze/split.py {feature} first")
-    return read_json(p)
+    m = read_json(p)
+    if not isinstance(m, dict) or not isinstance(m.get("scenario-readers"), list):
+        raise Unreadable(f"{p} has no scenario-readers list; run scripts/analyze/split.py {feature} "
+                         "and briefs.py again")
+    return m

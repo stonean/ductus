@@ -10,11 +10,11 @@ AC10 has the host judge steps 11 and 12 in subagents, and `framework/reference/a
 
 ## Behavior
 
-- The orchestration lives in this repository's `scripts/`, one script per step it automates, runnable on any feature: the detection steps through the release binary with a compact summary; the share split, from `discover-rule-files`' result, never a fixed list; the judge and step-15 briefs, from a template in the repository; the hand-back check, each judge's answers against its share and each cite against the design subject's headings; the cell combine, for any number of rule shares and scenario groups; and the record, `process-decisions` and `write-analysis` from a findings file, `decided-by` from `git config user.email`.
+- The orchestration lives in this repository's `scripts/`, one script per step it automates, runnable on any feature: the detection steps through the release binary with a compact summary; the share split, from `discover-rule-files`' result, never a fixed list; the judge, step-15 and scenario briefs, from a template in the repository, the scenario brief for the host's judgment of each scenario's Context and Behavior (`framework/reference/analyze.md` §Scenario consistency (advisory)), each scenario read whole; the hand-back check, each judge's answers against its share, each cite against the design subject's headings, and each scenario reader's account against every scenario it was given; the cell combine, for any number of rule shares and scenario groups; and the record, `process-decisions` and `write-analysis` from a findings file, each scenario finding Advisory, `decided-by` from `git config user.email`.
 - The scripts write only staging files under the system temp directory, which the CLI requires; `analysis.md` is written through `write-analysis` alone.
 - Each script has a test that fails when its behavior is removed (`QUAL-TEST-001`).
 - `AGENTS.md` names the scripts, so a session analysing here uses them and fixes them where they fall short rather than writing its own.
-- Rule judgment stays in subagents; the host still checks each hand-back before using it.
+- Rule and scenario judgment stays in subagents; the host still checks each hand-back before using it.
 
 ## Edge Cases
 

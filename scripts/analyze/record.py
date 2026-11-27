@@ -35,7 +35,9 @@ does not name, is passed only as its verdict, which write-analysis records
 as a contradiction counted in no tier (spec 082, AC7). Each broken cross-service reference
 and each repository the registry holds twice is an Advisory finding, and so is
 each part-findings entry of detection's check-artifact-size result, family
-project-parts (spec 087); none of these goes in the plan's findings. The
+project-parts (spec 087), and each scenario reader's finding, family
+scenario-consistency, keyed by its scenario and check so a stored decision
+outlives a reworded message; none of these goes in the plan's findings. The
 unexamined targets are those detect.py's results name, an integrity item
 step 15 did not check, and the plan's; any the run could not read sets
 process-decisions' restricted, so a stored decision is retained rather than
@@ -145,6 +147,22 @@ def part_findings(det):
             for f in listed(r, "part-findings", "check-artifact-size")]
 
 
+def scenario_findings(feature, m, outs):
+    """Each scenario reader's finding as an Advisory scenario-consistency
+    finding (framework/reference/analyze.md, Scenario consistency
+    (advisory)), its decision-key naming the scenario and the section it is
+    about, so a stored decision matches the finding however the reader words
+    it, and two scenarios' like findings never share a key."""
+    out = []
+    for r in m["scenario-readers"]:
+        for f in outs[r["reader"]]["findings"]:
+            path = f"specs/{feature}/{f['path']}"
+            out.append({"tier": "advisory", "family": "scenario-consistency", "path": path, "live": True,
+                        "message": f"{f['path']}: {f['message']}",
+                        "decision-key": f"scenario-consistency — {path}: {f['check']}"})
+    return out
+
+
 def demoted(m, rid, v):
     """Whether a finding is a contradiction alone (spec 082, AC7): its rule
     was judged against the changed sections only, its earlier verdict was not
@@ -224,6 +242,7 @@ def run(argv):
             findings.append(rule_finding(feature, r["id"], r, r.get("tier")))
     findings += reference_findings(feature, det)
     findings += part_findings(det)
+    findings += scenario_findings(feature, m, result["outs"])
     keys = [key(f) for f in findings if f.get("live", True)]
     dupes = sorted(k for k, n in collections.Counter(keys).items() if n > 1)
     if dupes:
@@ -292,6 +311,7 @@ def run(argv):
     print(f"== {feature}: hard-fail {tiers.get('hard-fail', 0)}, blocking {tiers.get('blocking', 0)}, "
           f"advisory {tiers.get('advisory', 0)}; unexamined {dict(un)}{' (restricted)' if restricted else ''}; "
           f"{len(merged['judged'])} rules judged, {len(verdicts)} fired; "
+          f"{sum(len(r['subjects']) for r in m['scenario-readers'])} scenarios judged; "
           f"{len(decided.get('expired') or [])} decisions expire")
     for f in findings:
         print(f"  [{f['tier']}] {'' if f.get('live', True) else '(gone) '}{key(f)[:140]} "

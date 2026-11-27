@@ -5,9 +5,9 @@ analysis's judges).
 
 usage: python3 -I scripts/analyze/combine.py FEATURE
 
-Runs check.py's checks first and refuses on any failure, step 15's
-included. Then, for each rule, over the cells of its share, one per scenario
-group:
+Runs check.py's checks first and refuses on any failure, step 15's and
+the scenario readers' included. Then, for each rule, over the cells of its
+share, one per scenario group:
 
 - every cell not fired: not fired;
 - a departure's rule fired in any cell: waived;
@@ -22,7 +22,8 @@ group:
   data model where a cell does, else the first cell's scenario.
 
 A rule counts as judged only when every cell of its share judged it.
-Writes <work>/merged.json for the host to read. record.py merges the
+Writes <work>/merged.json for the host to read, with step 15's hand-back
+and each scenario reader's findings beside the rules. record.py merges the
 hand-backs again itself, so a merged.json older than them is never recorded.
 
 Exit status: 0 written, unsettled rules or not, each one printed; 1 when a
@@ -88,12 +89,14 @@ def run(argv):
         raise lib.Refused(f"hand-backs fail their check: {', '.join(failed)}; run check.py")
     merged = merge(m, result["outs"], result["unresolved"])
     merged["step15"] = result["outs"]["step15"]
+    merged["scenarios"] = [f for r in m["scenario-readers"] for f in result["outs"][r["reader"]]["findings"]]
     merged["malformed"] = result["malformed"]
     lib.write_json(os.path.join(lib.work_dir(feature), "merged.json"), merged)
     kinds = [v["verdict"] for v in merged["verdicts"].values()]
     print(f"== {feature}: judged {len(merged['judged'])}, unjudged {len(merged['unjudged'])}; "
           f"addressed {kinds.count('addressed')}, finding {kinds.count('finding')}, "
-          f"waived {kinds.count('waived')}, unsettled {len(merged['unsettled'])}")
+          f"waived {kinds.count('waived')}, unsettled {len(merged['unsettled'])}; "
+          f"{len(merged['scenarios'])} scenario finding(s)")
     for rid, v in merged["verdicts"].items():
         if v["verdict"] == "finding":
             print(f"  finding {rid} ({v['tier']}) at {v['at']}: {v['message']}")
