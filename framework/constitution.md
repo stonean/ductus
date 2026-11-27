@@ -24,6 +24,7 @@ Constraints on anything the pipeline asks an author or a check to do. Each is a 
 - **Never design a pipeline feature that depends on human diligence.** What requires an author to *remember* is skipped when it matters most: derive the input from artifacts, frontmatter, or history, or do not ship it.
 - **A check whose subject is drawn from repository state can go vacuous, and a naive vacuity guard will then demand that an unhealthy repository exist.** **Build the subject** — a fixture carrying the condition, asserted in both directions — and let the pass over real state report *nothing to compare* as a distinct, non-failing state.
 - **Use what a task needs, and no more, however far below a limit.** Using more is a defect, and so is cutting what it needs (§text-first-artifacts' required content).
+- **A spec that adds a check, an audit-record field or a primitive states what a run of it costs, in a measurable unit (model turns, bytes loaded, commits or wall time), and which existing one it retires, or why none.**
 
 <!-- §grounding -->
 
@@ -57,7 +58,6 @@ A recommendation is a claim: the agent MUST work it out to its result **before**
 
 ### Rules
 
-- **Prefer the source to the recollection.** Open the code, artifact, or command before asserting what it does.
 - **A connected database is a primary source, not a hazard.** Confirm schema and data from dev or read-only state, found through the project's configuration and any live-source pointer its `AGENTS.md` declares; reads need no authorization, writes need the task's.
 - **Run the project's own command — never a hand-rolled equivalent.** Its declared scripts, targets and CI steps are the command; a substitute that succeeds proves only itself, so iterate narrowly but report the project's command's result. A failing one is a finding to dispose of, not route around; if it cannot do the task, say which command you bypassed and why, and propose a declared one for a recurring operation as a task. A declared command authorizes nothing destructive; nothing enforces this rule.
 - **Probe a primitive on an artifact not yet written in a `git clone --local` copy, never in the project's tree** — the probe written there, committed when the primitive reads history, and the project's runtime binary run from the clone, not its MCP tools, which read the project; a probe in the tree is an edit the pipeline reads.
@@ -261,7 +261,7 @@ Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in 
 
 ### Brownfield Inbox
 
-`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. An item is a todo, never a status or handoff note (§tasks-phase). Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. The brownfield backlog drains toward empty as adoption completes; the file persists while people log todos. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
+`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. An item is a todo, never a status or handoff note (§tasks-phase). Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
 
 #### Finding dispositions
 
@@ -269,11 +269,10 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 
 - **Three dispositions.** **Fixed** — a chore, or an analysis's edit to a design subject of the spec in hand for a gating finding there once the operator confirms it, fixed in the run and on disk. **Deferred** — to pipeline work chosen by `.ductus/reference/groom.md` **§Groom decision tree**, reopening a `done` target, to an external work item, or both; a question is deferred with its trigger, in Resolved Questions. **Waived** — not addressed, with its reason, in the run's own record.
 - **A departure entry waives its rule before any finding exists.** Analyze records the rule `waived`, never failing, apart from those that passed; review reads the same entry.
-- **Detect, decide, re-check, record.** Detection writes nothing, each gating write is confirmed first, and the record is written from a re-check (`.ductus/reference/analyze.md` **§Finding dispositions**).
+- **Detect, decide, re-check, record**: `.ductus/reference/analyze.md` **§Finding dispositions**.
 - **A review or analysis run creates work only for a gating finding**, and an observation showing the spec's own code breaks its contract counts as one. Any other observation is fixed in the run when mechanical and otherwise waived with its reason, recorded as decided by the rule. Only a gating finding's waiver, deferral or design edit reaches the operator, one at a time, and a person's stored decision wins.
-- **In `/{project}:implement`, scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it; outside the spec → one of the three dispositions. `tasks.md` is still no capture queue: a missing requirement becomes a scenario or spec edit.
-- **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
-- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations and broken contracts are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
+- **In `/{project}:implement`, scope decides a finding's destination**: `.ductus/reference/implement.md` **§Walk through tasks (per task, in order)**.
+- **Of a run record's findings, only a gating one holds `done`.** Review MUST and SHOULD violations and broken contracts are fixed, deferred or waived, analyze hard-fail and blocking findings fixed or deferred; of deferrals, only one to another spec's work releases one.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
 
 <!-- §brownfield-process -->
@@ -369,7 +368,7 @@ Other fields are permitted and ignored by uninterested consumers, except the res
 
 #### Host integration (for agent runtimes)
 
-Backticked primitive names are the runtime's MCP tools, bare `<verb>-<noun>` (one principle 5 leaves off MCP runs through the CLI). Hosts prefix them — Claude Code `mcp__ductus__`; Pi `ductus__`, through the `.pi/extensions/ductus.ts` bridge rather than pi's own MCP client — so match the prefix. With the server registered, **call the tool** for each step, fetching a lazy schema first (`ToolSearch`); the server is required, so without it, stop and say to restart or re-run `/ductus`: neither the CLI, which lacks arguments, nor the shell pipelines principle 3 names stand in. **The binary is the source of a primitive's rules.** A command's reference, `framework/reference/<command>.md` (installed at `.ductus/reference/<command>.md`), keeps what a step does with the result, host judgment and policy, and is read only where a step points at it; a command's Instructions open with a one-line pointer here.
+Backticked primitive names are the runtime's MCP tools, bare `<verb>-<noun>` (one principle 5 leaves off MCP runs through the CLI). Hosts prefix them: Claude Code `mcp__ductus__`; Pi `ductus__`, through the `.pi/extensions/ductus.ts` bridge rather than pi's own MCP client. With the server registered, **call the tool** for each step, fetching a lazy schema first (`ToolSearch`); without the server, which is required, stop and say to restart or re-run `/ductus`, since neither the CLI, which lacks arguments, nor the shell pipelines principle 3 names stand in. **The binary is the source of a primitive's rules.** A command's reference, `framework/reference/<command>.md`, keeps what a step does with the result, host judgment and policy, and is read only where a step points at it; a command's Instructions open with a one-line pointer here.
 
 #### Eligibility criteria
 
@@ -392,8 +391,6 @@ The runtime ships in lockstep with the framework: a release includes the binary 
 #### What the runtime is not
 
 To prevent scope creep, the runtime MUST NOT be a spec authoring tool, a workflow orchestrator, a long-running service, or a storage layer. Lifting any of these exclusions requires a constitutional amendment.
-
-Each capability arrives in its own feature spec, from spec 022 on.
 
 <!-- §drift-prevention -->
 
@@ -426,11 +423,11 @@ For every kind of fact described in multiple places, one location is authoritati
 When document B describes content authored in document A, B back-links to A — a relative link, an anchor reference (`§anchor`), or a section name. Changing A includes auditing every back-link to A.
 
 - **No dead references in live artifacts.** When renaming or removing a name — a spec slug, a capability, a command, an identifier, even a parenthetical descriptor — update every reference across the project's live artifacts in the same change: specs (`done` bodies included), project files and their parts, rules, command sources, scripts, CI, docs, README. The sweep is kept apart from unrelated edits, and **mechanical** when each change is one token substitution, uniform across those artifacts, mapping a deprecated label to its current one, or a citation's line number removed; the analysis record's freshness and the review record's digest read such a sweep as no change. **Keep the sweep's own target list current**.
-- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. The runtime judges a sweep from its diff, so a reworded line is not mechanical. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
+- **A retired filename is not a retired name — sweep it by meaning, not by token.** Where a file is still read under its old name, a resolution ladder or fallback tier, a migration procedure, and the prose, shell and configuration spelling either keep it; elsewhere an artifact stating current behavior uses the current name, and only the record of the decision keeps the retired one. A ticked criterion is swept like any other reference, because only the filename moved; annotation is for a criterion whose behavior was superseded. A reference follows a moved file's content: a split file's referrers re-point to each part they cite.
 - **A behavior change needs a prose-claim sweep, not just an identifier sweep** — stale claims carry none of the changed tokens, so grep by meaning.
 - **Never edit an installed command file directly** — change its source, or pin it.
 - **Renaming a repository orphans contributor-local state that no migration can reach** — move path-keyed agent state on each machine.
-- **An anchor reference resolves by line, and a line wrap alone breaks it.** A `§name` resolves when its text begins with a heading of a document its line names, a registered shared constitution's marker, a heading of the citing file, or a constitution marker; one into a document the check cannot read is recorded unexamined, and a subsection has no marker, so cite its marked section.
+- **An anchor reference resolves by line, and a line wrap alone breaks it** (`resolve-anchor`); a subsection has no marker, so cite its marked section.
 - **A sweep can make a quoted instruction point at itself — classify by who emits it, never by the string.**
 - **Replacing an embedded copy with a pointer is a corpus sweep, not a deletion** — it changes what a document asserts, so it is not mechanical; find what describes the copy, criteria included.
 - **A document declaring itself the authoritative shape of something the tooling writes drifts silently — check it against a record the tooling actually wrote, not against the code.**

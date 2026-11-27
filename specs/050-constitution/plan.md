@@ -485,11 +485,12 @@ Rows for 8 entries since moved out of `AGENTS.md` by `089-the-pipeline-s-own-cos
 
 ### Relocated to a command reference — 2026-10-26
 
-The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified. **Amended 2026-11-11:** the *`unexamined` cannot be measured while the spec is `in-progress`* entry was retired with its rule when 067's `status-gated-families-are-not-silent` ran the path families at `in-progress`, so its row here and its promote row above are gone.
+The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified. **Amended 2026-11-11:** the *`unexamined` cannot be measured while the spec is `in-progress`* entry was retired with its rule when 067's `status-gated-families-are-not-silent` ran the path families at `in-progress`, so its row here and its promote row above are gone. **Amended 2026-11-27:** `089-the-pipeline-s-own-cost-is-stated-and-bounded` moved the scope tiers to `/{project}:implement`'s reference, and the *finding made during implementation* row, like the last, keys an entry that had cited the constitution and no table.
 
 | Entry | Reason |
 | --- | --- |
 | `examined` counts the in-scope files the passes *read* | `framework/reference/review.md` §Window and coverage |
+| A finding made during implementation becomes a task on the spec in hand | `framework/reference/implement.md` §Walk through tasks (per task, in order) |
 | A review record written before the record gained its coverage and digest fields is unexamined, not clean | `framework/reference/review.md` §Window and coverage |
 | A spec with no review recorded, never `in-progress` or `done`, derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
 | `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |

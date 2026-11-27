@@ -41,7 +41,7 @@ Bytes are by `wc -c`, or by a Python split on headings outside fences summing to
 | `framework/constitution.md` | 49,911 | about 48,700 to 49,000 | 49,000 | the cut's size rounded up to the next 1,000 |
 | `framework/reference/analyze.md` | 69,387 | about 47,500 | 50,000 | 50,000 |
 | `framework/reference/review.md` | 65,138 | about 48,500, plus 086 task 4's addition | 50,000 | 50,000 |
-| `framework/reference/implement.md` | 14,055 | about 14,500 | 50,000 | 50,000 |
+| `framework/reference/implement.md` | 14,055 | 14,055 (unchanged) | 50,000 | 50,000 |
 
 A ceiling is computed from the file's size at the commit that sets it: ⌈size ÷ 1,000⌉ × 1,000. AC2 holds each governing ceiling below 50,000, so each governing document must end at or under 49,000.
 
@@ -58,21 +58,25 @@ An entry true for every adopter that the constitution does not state stays as on
 
 ### The constitution keeps every rule, and must end at or under 49,000
 
-It needs at least 1,211 bytes out: 49,911 now, plus about 300 for AC1's bullet, less 49,000. Measured candidates come to about 990 bytes net of the pointers they leave (byte counts of each passage by Python regex at `d963a791`):
+It needs at least 1,156 bytes out: 49,911, plus 244 for AC1's bullet, less 49,000. The cut ends at 48,999 (`wc -c`):
 
-- **Moved to `framework/reference/implement.md`** (about 340 net). Two §brownfield-inbox bullets only `/implement` applies, *In `/{project}:implement`, scope decides the destination* (315) and *Record, do not derail* (107), with one pointer left. 050's scenario `findings-route-by-scope` says the first bullet is in §brownfield-inbox, so its signpost is corrected. `AGENTS.md`'s entry on a finding made during implementation is re-pointed.
+- **Pointed at `framework/reference/implement.md`.** §brownfield-inbox's two `/implement` bullets, *In `/{project}:implement`, scope decides the destination* (315 bytes) and *Record, do not derail* (107), become one pointer to the reference's *Walk through tasks* step 5. That step already states both, so the reference does not change. 050's AC15 says §brownfield-inbox states the tiers, so AC15 gains a *Superseded in part by 089* note, which owes 050 one review (the agent's recommendation, adopted by the operator, 2026-11-27). 050's scenario `findings-route-by-scope` signpost and `AGENTS.md`'s entry on a finding made during implementation are re-pointed, and 050's plan gains that entry's row under *Relocated to a command reference*.
 - **Copies of a primitive's rules cut to a pointer.**
-  - *An anchor reference resolves by line* (388, about 250 out), whose resolution rules `resolve-anchor`'s description states.
-  - *Of a run record's findings, only a gating one holds `done`* (352, about 200 out), whose gate conditions `check-review-gate`'s description states.
-  - *Detect, decide, re-check, record* (207, about 100 out), which already points at the analyze reference.
-- **Tightened.** §runtime-host-integration's host paragraph (913, about 100 out).
+  - *An anchor reference resolves by line*, to `resolve-anchor`.
+  - *Detect, decide, re-check, record*, to the analyze reference's *Finding dispositions*, whose order bullet task 3 keeps.
+  - The last sentence of *Of a run record's findings, only a gating one holds `done`*, which `check-review-gate`'s description states (the dispositions-map block). The rest of that bullet stays, since 076's plan describes its tiers.
+- **Tightened** under §text-first-artifacts' as-short-as rule:
+  - §runtime-host-integration's host paragraph;
+  - *Prefer the source to the recollection*, which §grounding's opening states;
+  - §brownfield-inbox's backlog-drains sentence;
+  - §drift-prevention's sentence that a reworded line is not mechanical, which its definition of a mechanical sweep implies;
+  - *Each capability arrives in its own feature spec*, which §pipeline-boundaries' bar on implementing without a spec covers.
 
-The remaining 220 or more bytes come from tightening under §text-first-artifacts' as-short-as rule, which only the cut can measure.
-
-Two candidates stay where they are:
+These candidates stay where they are:
 
 - The constitution's Validation Severity subsection is the canonical tier assignment `validate-frontmatter` follows (067's scenario `frontmatter-severity-tiers-on-both-sides`), so it is not moved.
 - No other single-command passage moves into the analyze or review reference, since their margins belong to their own cuts.
+- §spec-lifecycle's sentence that the gate composes with `/analyze` and the shipped CI template stays, since 046's Resolved Questions quote it.
 
 Rules for every cut:
 
@@ -145,8 +149,7 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/constitution.md` | Modify | AC1's bullet; the cut; the two `/implement` bullets replaced by a pointer |
-| `framework/reference/implement.md` | Modify | Receives the two `/implement` bullets |
+| `framework/constitution.md` | Modify | AC1's bullet; the cut; the two `/implement` bullets replaced by a pointer to the implement reference |
 | `framework/reference/analyze.md` | Modify | Cut to 50,000 or under |
 | `framework/reference/review.md` | Modify | Cut to 50,000 or under |
 | `runtime/src/schema/descriptions.rs` | Modify | `CHECK_ARTIFACTS`, `CHECK_ARTIFACT_SIZE`, `WRITE_ANALYSIS` take the moved rules |
@@ -157,7 +160,8 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 | `.githooks/pre-commit`, `.github/workflows/framework-checks.yml` | Modify | Comments name the governed set |
 | `.ductus/reference/*.md`, `.claude/commands/ductus/*.md`, `.pi/prompts/*.md` | Regenerate | Generator outputs of the reference and command edits |
 | `specs/089-the-pipeline-s-own-cost-is-stated-and-bounded/spec.md` | Modify | `## Cost`; `cross-spec-impact:` gains 063, 066, 067 and 079 |
-| `specs/{050,063,066,067,072,075,079}-*/spec.md` | Modify | Blockquoted signposts to 089; 079's AC18 note |
+| `specs/{050,063,066,067,072,075,079}-*/spec.md` | Modify | Blockquoted signposts to 089; 050's AC15 note; 079's AC18 note |
+| `specs/050-constitution/plan.md` | Modify | §Classification follows task 1's moves and task 2's re-pointed entry (Family 38) |
 | `specs/050-constitution/scenarios/findings-route-by-scope.md` | Modify | Its signpost names the implement reference as the moved bullet's home |
 | `specs/060-exec-analyze-assesses-each-loaded-rule/tasks.md` | Modify | Task 15 states its cost (AC1) |
 
@@ -176,7 +180,7 @@ It is bound by AC1, so its spec gains a `## Cost` section as 085, 087 and 088 ha
 
 Each discharge is a blockquoted signpost back-linking 089, a blockquote so it adds no `dependencies:` edge and closes no cycle (089 links 050 and 072).
 
-- **050** owns the constitution's content: the cost bullet, the lowered ceiling, and the two bullets moved to the implement reference.
+- **050** owns the constitution's content: the cost bullet, the lowered ceiling, and the two `/implement` bullets now a pointer to the implement reference. AC15's note owes 050 one review, before the release tag.
 - **072** owns the lint: the lowered ceilings and the two glob rows. Its AC1 and AC10 still hold, since a lower ceiling still keeps each file at most 50,000 bytes and no higher than its size when the check was added.
 - **075**: `AGENTS.md`'s ceiling is below the read size and its cut ran through `/prune --project`.
 - **079** (added to `cross-spec-impact:`): 089 holds each reference to the read size, which 079's Resolved Question on AC18 rejected (2026-11-16) before the copies were measured.

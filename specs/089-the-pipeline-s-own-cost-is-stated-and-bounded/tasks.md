@@ -30,11 +30,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. The constitution gains the cost rule and is cut
 
-- [ ] Add AC1's bullet to §design-principles, beside *Use what a task needs*
-- [ ] Move *In `/{project}:implement`, scope decides the destination* and *Record, do not derail* into `framework/reference/implement.md`, leaving one pointer in §brownfield-inbox; correct the signpost in 050's scenario `findings-route-by-scope` that places the first bullet there, and re-point `AGENTS.md`'s entry on a finding made during implementation
-- [ ] Cut the three primitive-rule copies and tighten the host paragraph as the plan's *The constitution keeps every rule* lists, then tighten elsewhere under the as-short-as rule until the file is at most 49,000 bytes: before cutting a passage, search `specs/*/spec.md` and `specs/*/scenarios/*.md` for it, keep any passage another spec quotes or correct that spec through its back-edge, and keep every anchor
-- [ ] If 49,000 cannot be reached without dropping required content, stop and ask the owner the ceiling as an open question through `/ductus:amend`
-- [ ] `scripts/gen-claude-commands.sh` for the reference edit
+- [x] Add AC1's bullet to §design-principles, beside *Use what a task needs*
+- [x] Move *In `/{project}:implement`, scope decides the destination* and *Record, do not derail* into `framework/reference/implement.md`, leaving one pointer in §brownfield-inbox; correct the signpost in 050's scenario `findings-route-by-scope` that places the first bullet there, and re-point `AGENTS.md`'s entry on a finding made during implementation
+- [x] Cut the three primitive-rule copies and tighten the host paragraph as the plan's *The constitution keeps every rule* lists, then tighten elsewhere under the as-short-as rule until the file is at most 49,000 bytes: before cutting a passage, search `specs/*/spec.md` and `specs/*/scenarios/*.md` for it, keep any passage another spec quotes or correct that spec through its back-edge, and keep every anchor
+- [x] If 49,000 cannot be reached without dropping required content, stop and ask the owner the ceiling as an open question through `/ductus:amend`
+- [x] `scripts/gen-claude-commands.sh` for the reference edit
 
 - **Done when**: `framework/constitution.md` holds the AC1 bullet and is at most 49,000 bytes by `wc -c` (its size recorded in the commit message), its 31 `<!-- §anchor -->` markers are unchanged (diffed before and after), `scripts/audit/shipped-anchor-resolution.sh` passes, and no ticked criterion or scenario that quotes a cut or moved passage is left false.
 
@@ -105,7 +105,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - **Finding dispositions:**
   - R4 2,595, steps 18 to 22.
   - R1 622, `write-analysis`' refusals.
-  - Keep the decisions' statelessness and key format.
+  - Keep the decisions' statelessness and key format, and one line stating the order, which the constitution's *Detect, decide, re-check, record* points at.
 - **Record fields:** R1 441, the `rules-judged`/`rules-carried` and waived fill. Keep the rest.
 - **Untouched:** the intro, Artifact completeness, Scenario open questions, the Promotion criterion, Cross-spec references, Severity tiers.
 
@@ -127,7 +127,7 @@ The headings `scripts/audit/template-alignment.sh` enumerates must stay verbatim
 - [ ] Append to 060's task 15 a checkbox: state in 060's `spec.md` what a run of the scenario judgment costs and what it retires, or why none, beside a blockquoted signpost to 089 (089's AC1)
 - [ ] `derive-dependencies` reports no drift and no cycle
 
-- **Done when**: every spec in 089's `cross-spec-impact:` links back to 089, 060's task 15 carries the checkbox, and `derive-dependencies` reports every affected spec's `dependencies:` unchanged and no cycle. The review of 079 the note owes runs before the release tag.
+- **Done when**: every spec in 089's `cross-spec-impact:` links back to 089, 060's task 15 carries the checkbox, and `derive-dependencies` reports every affected spec's `dependencies:` unchanged and no cycle. The review of 079 the note owes runs before the release tag. So does the review of 050 that task 2's AC15 note owes (`compute-review-scope` reads 050 `review-owed`).
 
 ## 5. The review reference is cut
 
