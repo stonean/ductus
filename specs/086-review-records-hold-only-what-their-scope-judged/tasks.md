@@ -82,10 +82,10 @@ This task's Done when runs `/ductus:prune`, which calls `prune-review` through t
 
 ## 7. The owners' specs
 
-Task 3 already swept 020's scenario `waiver-expiry` rule 4 for the drop (`63817dcb`), and task 2 renamed the departure test 073's `review.md` cited (`96e2e2dc`); 020's signpost is still owed here.
+Task 3 already swept 020's scenario `waiver-expiry` rule 4 for the drop (`63817dcb`), and task 2 renamed the departure test 073's `review.md` cited (`96e2e2dc`); 020's signpost is still owed here. Task 4 keeps an owned file in a first review's scope although another open spec's plan holds its uncommitted edits (`a_first_review_reads_an_owned_file_another_open_plan_holds`): 084's AC23 states only when a path may leave the scope, so its text holds, and the plan's *Owned files* bullet says so; the owner decides whether AC23 carries a note.
 
-- [ ] Ask the owner once whether the notes on 079's AC24 and AC6, 058's AC32 and 041's AC9 may each read "Superseded in part (spec 086)" with the spec staying `done` (084's correction rule), and record the answer in the commit
-- [ ] 079: AC24 and AC6 notes, and the edge case *A stored finding the run did not read*; 058: AC32 note; 041: AC9 note, its body sentence that prune never writes `review.md`, and the `review.md` row of its scenario `prune-reduces-the-spec-directory`
+- [ ] Ask the owner once whether the notes on 079's AC24 and AC6, 058's AC32 and 041's AC9 may each read "Superseded in part (spec 086)" with the spec staying `done` (084's correction rule), and whether 084's AC23 takes one too, and record the answer in the commit
+- [ ] 079: AC24 and AC6 notes, and the edge case *A stored finding the run did not read*; 058: AC32 note; 041: AC9 note, its body sentence that prune never writes `review.md`, and the `review.md` row of its scenario `prune-reduces-the-spec-directory`; 084: an AC23 note when the answer asks for one
 - [ ] Signposts, each a blockquote linking this spec: 020, 041, 058, 066, 079 and 084
 - [ ] `runtime/CHANGELOG.md` `[Unreleased]`: the refusal, `dropped` and `ownership`, the first review's scope, and `prune-review`
 

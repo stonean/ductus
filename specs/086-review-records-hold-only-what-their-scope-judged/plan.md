@@ -98,7 +98,7 @@ A new module, `runtime/src/primitives/spec_ownership.rs`, is the only answer to 
 ### A first review reads what the spec's commits changed (AC6)
 
 - **Branch.** `compute`'s branch for a spec whose record at `HEAD` names no run (`recorded_run`) keeps adding the plan's Affected Files entries.
-- **Owned files.** That branch also adds each path `spec_ownership` gives the spec that exists on disk, is not a link leaving the project (`leaves_project`), and is not in `deleted`. It then removes each such path from `excluded`, as the folded-in paths already leave it. A path another spec's commit also changed stays in scope, by 079's *One path, two commits*.
+- **Owned files.** That branch also adds each path `spec_ownership` gives the spec that exists on disk, is not a link leaving the project (`leaves_project`), and is not in `deleted`. It then removes each such path from `excluded`, as the folded-in paths already leave it. A path another spec's commit also changed stays in scope, by 079's *One path, two commits*, and so does one with uncommitted edits that another open spec's plan holds: 084's AC23 leaves such a path out only when neither the spec's plan nor its own commits hold it, and on a first review its own commits are all of history, not the window's alone.
 - **Not examined.** When ownership is not examined, the scope holds the plan entries alone, and the result's `ownership` says `not-examined` with its reason (`QUAL-CLAIM-001`). On a first review the field is always present, and on a later one it is absent.
 - **Readers.** `framework/reference/review.md` §Window and coverage says a first review holds the plan's entries as written. It gains the owned files and the field. So does `COMPUTE_REVIEW_SCOPE` (`runtime/src/schema/descriptions.rs`).
 
@@ -236,7 +236,7 @@ This spec adds no `data-model.md`: each shape belongs to its primitive's owner, 
 | 058 | AC32: an unevaluated source's decision is dropped when its file does not belong | AC32 note; signpost |
 | 066 | `write-review`'s refusal; `process-decisions`, `process-waivers` and `compute-review-scope` fields; a first review's scope | Signpost; data model; scenario `review-base-includes-the-transition-commit` |
 | 079 | AC24's retention, AC6's scope list, the edge case *A stored finding the run did not read*, `modified-since`'s accounting | Notes; edge case; data model; signpost |
-| 084 | The project record's review refuses out-of-scope outcomes and inherits no feature decision | Signpost |
+| 084 | The project record's review refuses out-of-scope outcomes and inherits no feature decision; AC23's exclusion yields to a first review's owned files | Signpost; an AC23 note if the owner asks for one (task 7) |
 
 - **Notes.** Each note on a ticked criterion reads "Superseded in part (spec 086)", as 084's did. The ticked criterion stays ticked and its spec stays `done` (§spec-lifecycle).
 - **Signposts.** Each signpost is a blockquote, which adds no `dependencies:` edge (`derive-dependencies`) and no owed work.
