@@ -6,7 +6,7 @@ section: "Record freshness"
 
 ## Context
 
-`check-review-freshness` (task 11, retired by spec 081) returned `freshness.paths`, and `write-review`'s `analyze-freshness` and `check-review-gate`'s freshness answers carry the same `RecordFreshness` shape (`runtime/src/schema/primitives.rs`). The data model's only bound is "`paths` holds at most the spec's durable contracts", which is no size limit, and it is inaccurate: `freshness_of` (`runtime/src/primitives/analyze_subjects.rs`) also lists each recorded digest key no longer on disk. `BE-PAYLOAD-001` requires a response that returns a collection to commit to a maximum size. 078's second review (2026-11-04) found it in this spec's task 11 and deferred it here.
+`write-review`'s `analyze-freshness` and `check-review-gate`'s freshness answers carry `freshness.paths`, a `RecordFreshness` shape (`runtime/src/schema/primitives.rs`). The data model's only bound is "`paths` holds at most the spec's durable contracts", which is no size limit, and it is inaccurate: `freshness_of` (`runtime/src/primitives/analyze_subjects.rs`) also lists each recorded digest key no longer on disk. `BE-PAYLOAD-001` requires a response that returns a collection to commit to a maximum size. 078's second review (2026-11-04) found it in this spec's task 11 and deferred it here.
 
 ## Behavior
 

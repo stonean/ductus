@@ -16,10 +16,8 @@ committed trees. `modified-since` is a `diff-base..HEAD` tree diff, and the
 default base comes from the spec's status history. Neither sees anything that
 has not been committed.
 
-This is the third instance of the committed-tree horizon. That scenario named
-two, `stale_review_block` and `compute-review-scope`'s inbox window, and fixed
-both. `modified-since` is the one it did not name, and it is the one that
-decides the review's subject.
+This is a further instance of the committed-tree horizon, and the one that
+decides the review's subject: `modified-since`.
 
 Reported by an adopter on 0.58.0. They reopened a `done` spec by flipping it to
 `in-progress`, which is what `/{project}:amend` writes. Then they edited a

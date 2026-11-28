@@ -8,7 +8,7 @@ section: "The completion gate"
 
 [050](../../050-constitution/spec.md)'s `a-declared-cross-spec-impact-gates-done` requires that a declared cross-spec obligation gate `done`, and that discharge be provable rather than asserted. This scenario is the runtime half: the frontmatter field, the gate check, and where each sits.
 
-The gate's earlier obligation of this category, the fold check, was removed by 051's `a-pending-fold-never-holds-done`; this check inherits only its reasoning — a spec carrying an obligation nobody has discharged is not a candidate for `done` — and shares none of its code.
+An owed fold never holds `done` (051's `a-pending-fold-never-holds-done`), while an undischarged impact does: a spec carrying an obligation nobody has discharged is not a candidate for `done`. The two checks share no code.
 
 ## Behavior
 

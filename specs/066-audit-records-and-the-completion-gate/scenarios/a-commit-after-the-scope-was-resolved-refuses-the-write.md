@@ -6,7 +6,7 @@ section: "The review record"
 
 ## Context
 
-An adopter on 0.61.0 reported that the review scope moves under a running review. `write-review` re-derives the scope at write time (`resolve_scope` runs `compute-review-scope` against the run's `diff-base` and the current tree), so a commit landing between the run's `compute-review-scope` and its `write-review` joins a scope the passes never saw. Since spec 081 a commit naming no spec is credited as read in every other window once a committed record whose window, `diff-base` to `reviewed-against`, holds it leaves its path out of `unread`: a host that passes the write-time HEAD as `reviewed-against` credits a path nobody read. Spec 084 removed that credit; the guard stays, since the spec's own next window may start where the record's ends.
+An adopter on 0.61.0 reported that the review scope moves under a running review. `write-review` re-derives the scope at write time (`resolve_scope` runs `compute-review-scope` against the run's `diff-base` and the current tree), so a commit landing between the run's `compute-review-scope` and its `write-review` joins a scope the passes never saw. The record's window ends at `reviewed-against`, and the spec's own next window may start where it ends, so a host that passes the write-time HEAD as `reviewed-against` leaves a path nobody read outside every later window.
 
 ## Behavior
 
@@ -19,9 +19,9 @@ An adopter on 0.61.0 reported that the review scope moves under a running review
 
 ## Edge Cases
 
-- Uncommitted work is in the scope at write time and is never credited (credit reads commits), so another session's uncommitted edit is no refusal.
+- Uncommitted work is in the scope at write time and the check reads commits, so another session's uncommitted edit is no refusal.
 - A path the passes read uncommitted that another session committed mid-review refuses: the committed content may differ from what was read.
-- A commit after the write and before the record's own commit is outside this check; the record's window ends at `reviewed-against`, so nothing credits it.
+- A commit after the write and before the record's own commit is outside this check; the record's window ends at `reviewed-against`, so the next window starts there and holds it.
 
 ## Open Questions
 

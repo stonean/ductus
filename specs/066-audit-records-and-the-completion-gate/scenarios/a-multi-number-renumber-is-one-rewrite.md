@@ -10,7 +10,7 @@ The mechanical-sweep exemption keeps a rename sweep from reading as a contract c
 
 ## Behavior
 
-The repo-wide rewrites apply simultaneously: one left-to-right pass, longest match first, ties broken by `(from, to)`. A sweep carrying `063` → `064` and `064` → `065` rewrites `../063-x/spec.md` to `../064-x/spec.md`, never on through to `../065-x/spec.md`. `changed_beyond_spelling` applies the same rule (audit Family 19 applied it until spec 081 retired it), and `mechanical_sweep_parity` holds it to it.
+The repo-wide rewrites apply simultaneously: one left-to-right pass, longest match first, ties broken by `(from, to)`. A sweep carrying `063` → `064` and `064` → `065` rewrites `../063-x/spec.md` to `../064-x/spec.md`, never on through to `../065-x/spec.md`. `changed_beyond_spelling` applies the same rule, and `mechanical_sweep_parity` holds it to it.
 
 ## Edge Cases
 

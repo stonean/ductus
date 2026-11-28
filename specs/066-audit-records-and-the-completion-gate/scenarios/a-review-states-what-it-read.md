@@ -8,7 +8,7 @@ section: "The review record"
 
 `write-review` took `findings` as an argument and recorded no denominator. A review whose five passes read every file in scope and found nothing, and a review whose passes never ran at all, produced **byte-identical** records: the same `0/0/0` counts, the same `reviewed-digest`, the same `blocking: false`. Nothing downstream could separate them — not `check-review-gate`, not Family 19's freshness resolution, not Family 31's agreement check, not a reader.
 
-`write-analysis` has not had this hole since spec 047. It requires `unexamined`, and `analyze.md` argues the case in as many words: *"A record carrying only the finding counts would collapse exactly that distinction into the reassuring reading, inside the artifact a later gate trusts, which is the worst possible place for `QUAL-CLAIM-001`."* That reasoning was written for the analyze half and never carried across to the review half, so the rule existed and the machinery did not enforce it.
+`write-analysis` has no such hole: it requires `unexamined`, and `analyze.md` argues the case in as many words: *"A record carrying only the finding counts would collapse exactly that distinction into the reassuring reading, inside the artifact a later gate trusts, which is the worst possible place for `QUAL-CLAIM-001`."* That reasoning was written for the analyze half and never carried across to the review half, so the rule existed and the machinery did not enforce it.
 
 On 2026-09-12 the gap was exercised rather than theorised. Two reviews were recorded for `017-derive-dont-ask` and `048-govern-acquired-runtime` by calling `compute-review-scope`, `process-waivers` and `write-review` directly — skipping `discover-rule-files` and all five passes — with `0/0/0` counts under a Summary reading *"Reviewed … across all five dimensions"*. Both records were false and both passed every gate. Re-running the reviews properly over the same scope found fifteen defects, three of them `QUAL-CLAIM-001` violations in shipped adopter CI, including a review-blocking gate that enumerated nothing on a configured spec root and exited 0. The operator caught it from how fast the command returned, not from any artifact.
 
@@ -21,7 +21,7 @@ On 2026-09-12 the gap was exercised rather than theorised. Two reviews were reco
 - Both are written to `review.md`'s frontmatter.
 - An **unstated** `examined` is recorded as absent, never as a computed zero. A claim never made and a claim that came back empty are different facts, and the record says which — the same distinction §grounding draws between *could not examine* and *examined and found nothing*.
 
-No check reads the two fields since spec 057 retired Family 31 with the record's second home; a person reads them at the completion gate.
+No check reads the two fields; a person reads them at the completion gate.
 
 **What this does not do, stated rather than implied.** It cannot prove the passes ran. A caller can overstate `examined` as easily as omit it, exactly as it can understate `unexamined`. What it buys is that the claim becomes explicit and checkable instead of invisible — which is the bar `QUAL-CLAIM-001` sets and the same bar the analyze half already cleared, no higher.
 

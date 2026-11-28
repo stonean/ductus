@@ -1,5 +1,5 @@
 ---
-next-task: 58
+next-task: 59
 ---
 
 # 050 — Constitution Tasks
