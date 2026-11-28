@@ -32,6 +32,7 @@ Each append primitive strips **one** leading list marker from caller-supplied bu
 - The checked forms `- [x]` and `- [X]` are stripped like `- [ ]`. A caller passing a checked box to `append-task` gets an unchecked one, because a newly appended task is unchecked by definition.
 - Text whose content legitimately begins with a dash but is not a list marker — `--fix reverts a drifted done spec` — is untouched: the grammar requires a dash followed by a space, and `--fix` does not match.
 - Text that is only a marker reduces to empty and is rejected by each primitive's existing empty-argument guard rather than writing a bare bullet.
+- `append-question` also strips one `*`, `+`, `1.` or `1)` marker, the forms `read-spec` reads as an entry (`question_text` in `runtime/src/primitives/append_question.rs`), so a question passed as `1. Which store?` dedups against the entry `read-spec` reports.
 - A doubled marker supplied deliberately (`- [ ] - [ ] text`) loses one level, not both. There is no case for supporting it, and stripping to exhaustion is the looping behavior rejected above.
 
 ## Open Questions

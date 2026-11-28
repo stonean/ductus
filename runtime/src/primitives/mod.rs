@@ -860,12 +860,27 @@ pub(crate) fn load_record<T: serde::de::DeserializeOwned>(path: &Path) -> Record
     }
 }
 
-/// The text of an audit record's artifact: [`RecordLoad::Absent`] when the
-/// file is missing, and [`RecordLoad::Unreadable`] with the reason when it
-/// cannot be read as UTF-8 text. [`load_record`]'s first half, for a reader
-/// that parses one text more than once (`check-audit-records`' probe).
+/// Whether `path` is missing: its own metadata, a link not followed, answers not
+/// found, or not a directory because a parent is a file. Any other answer, a
+/// dangling link or a parent that refuses search among them, is a file that
+/// exists and cannot be read, which no caller may take for never written.
+fn is_missing(path: &Path) -> bool {
+    matches!(
+        std::fs::symlink_metadata(path),
+        Err(error) if matches!(
+            error.kind(),
+            std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+        )
+    )
+}
+
+/// The text of an audit record's artifact: [`RecordLoad::Absent`] only when the
+/// file is missing ([`is_missing`]), and [`RecordLoad::Unreadable`] with the
+/// reason when anything else keeps it from being read as UTF-8 text, a dangling
+/// link included. [`load_record`]'s first half, for a reader that parses one
+/// text more than once (`check-audit-records`' probe).
 pub(crate) fn read_record(path: &Path) -> RecordLoad<String> {
-    if !path.exists() {
+    if is_missing(path) {
         return RecordLoad::Absent;
     }
     match std::fs::read_to_string(path) {
@@ -1069,9 +1084,11 @@ pub(crate) fn anchors_unusable(anchors: &[StoredAnchor]) -> bool {
 /// does not, and fails the whole list. Owning the location here is what keeps
 /// those readers from disagreeing about it.
 ///
-/// An absent file, a file that opens no frontmatter block, or an absent key
-/// yields an empty list: no record, or a record with nothing decided, is a
-/// state, and `write-review` and `write-analysis` overwrite such a file whole.
+/// A missing file ([`is_missing`]), a file that opens no frontmatter block, or an
+/// absent key yields an empty list: no record, or a record with nothing decided, is
+/// a state, and `write-review` and `write-analysis` overwrite such a file whole. A
+/// dangling link, a directory in its place or a file that cannot be read is an
+/// error, never an empty list.
 /// A block that never closes is [`PrimitiveError::UnclosedFrontmatter`], and
 /// a key whose value will not deserialize into the list is
 /// [`PrimitiveError::Yaml`] — errors, **never** an empty list: a `decisions:`
@@ -1083,7 +1100,7 @@ pub(crate) fn read_recorded_list<T: serde::de::DeserializeOwned>(
     key: &str,
 ) -> Result<Vec<T>> {
     let path = feature_dir.join(file);
-    if !path.is_file() {
+    if is_missing(&path) {
         return Ok(Vec::new());
     }
     let content = read_text(&path)?;
@@ -3567,7 +3584,7 @@ pub(crate) fn split_blocks_reading(content: &str, reading: BlockReading) -> Vec<
         let content_line = if skipped {
             Cow::Borrowed("")
         } else {
-            strip_inline_comments(line)
+            without_inline_comments(line)
         };
         let trimmed = content_line.trim_start();
         if skipped || trimmed.is_empty() {
@@ -3649,36 +3666,6 @@ fn close_block(blocks: &mut Vec<MarkdownBlock>, open: Option<(usize, Vec<String>
             text: lines.join("\n"),
         });
     }
-}
-
-/// Remove every inline HTML-comment span (one that opens *and* closes on the
-/// same line) from `line`, leaving the surrounding markdown intact.
-///
-/// [`SkipScanner`] deliberately reports such a line as *not* skipped, because
-/// its surrounding content is real — which would let the commented text reach
-/// a block. Delimiters inside a code span are inert here for the same reason
-/// they are inert there.
-fn strip_inline_comments(line: &str) -> Cow<'_, str> {
-    if !line.contains("<!--") {
-        return Cow::Borrowed(line);
-    }
-    let mut out = String::new();
-    let mut rest = line;
-    let mut stripped = false;
-    while let Some(open) = find_outside_code(rest, "<!--") {
-        let after = &rest[open + 4..];
-        let Some(close) = find_outside_code(after, "-->") else {
-            break;
-        };
-        out.push_str(&rest[..open]);
-        rest = &after[close + 3..];
-        stripped = true;
-    }
-    if !stripped {
-        return Cow::Borrowed(line);
-    }
-    out.push_str(rest);
-    Cow::Owned(out)
 }
 
 /// `true` when `trimmed` opens a list item — a `-`, `*`, or `+` bullet, or an
@@ -5005,6 +4992,27 @@ mod tests {
             matches!(load_review_record(dir.path()), RecordLoad::Unreadable(_)),
             "a map missing `undispositioned` must not read as zero undispositioned"
         );
+    }
+
+    /// A record that is a dangling link exists and cannot be read, so it is
+    /// unreadable and an error, never the never-run state or an empty list; a
+    /// missing file is still absent and empty (QUAL-CLAIM-001).
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_record_is_unreadable_not_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink("gone.md", dir.path().join("review.md")).unwrap();
+        assert!(matches!(
+            read_record(&dir.path().join("review.md")),
+            RecordLoad::Unreadable(_)
+        ));
+        assert!(read_recorded_list::<String>(dir.path(), "review.md", "waivers").is_err());
+        assert!(matches!(
+            read_record(&dir.path().join("analysis.md")),
+            RecordLoad::Absent
+        ));
+        let empty: Vec<String> = read_recorded_list(dir.path(), "analysis.md", "waivers").unwrap();
+        assert_eq!(empty, [] as [String; 0]);
     }
 
     #[test]

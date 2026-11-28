@@ -22,7 +22,7 @@ Three convention-layer defects from the 2026-07-11 review, bundled because they 
 
 - A file whose lists genuinely restart at 1 mid-Instructions (two separate procedures) is not a supported shape; the parser follows the numbering it sees.
 - The phrase fallback and the primitive-based gate never both fire for one step (primitive wins).
-- Removing prune.md from the allowlist is part of this scenario; help.md, amend.md, log.md, clarify.md, and groom.md remain allowlisted until their own rewrites land.
+- Removing prune.md from the allowlist is part of this scenario; help.md, amend.md, log.md, clarify.md, and groom.md stayed allowlisted until their own rewrites landed; `runtime/legacy-prose-commands.txt` now lists `framework/commands/amend.md` and `framework/commands/help.md` as transitional.
 
 ## Open Questions
 

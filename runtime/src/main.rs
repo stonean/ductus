@@ -894,6 +894,19 @@ fn drop_target_for_a_project_review(context: &mut serde_json::Map<String, serde_
     }
 }
 
+/// The command file's path relative to the project root, with `/` separators:
+/// the `file` of every error location `ductus exec` emits. `path` is
+/// `repo.join(candidate)` ([`locate_exec_command`]), so the strip always
+/// succeeds.
+fn repo_relative_command_file(repo: &std::path::Path, path: &std::path::Path) -> String {
+    path.strip_prefix(repo)
+        .unwrap_or(path)
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
 /// Terminal `error` envelope for a command-file parse failure under
 /// `ductus exec`. Protocol contract (spec 022 + the versioning-enforcement
 /// resolution): every non-zero exit in the 1–127 clean band is preceded
@@ -914,15 +927,7 @@ fn emit_exec_parse_error(
             location: Some(loc),
             ..
         } => Some(ErrorLocation {
-            // `path` is `repo.join(candidate)` ([`locate_exec_command`]), so the
-            // strip always succeeds; the location is repo-relative with `/`.
-            file: path
-                .strip_prefix(repo)
-                .unwrap_or(path)
-                .components()
-                .map(|c| c.as_os_str().to_string_lossy())
-                .collect::<Vec<_>>()
-                .join("/"),
+            file: repo_relative_command_file(repo, path),
             line: loc.start_line,
             col: loc.start_col,
         }),
@@ -1202,7 +1207,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         &mut reader,
         &mut writer,
     ) {
-        Ok(walker) => walker,
+        Ok(walker) => walker.with_command_file(repo_relative_command_file(repo, path)),
         Err(err) => {
             emit_exec_error("config-unreadable", &err.to_string());
             warn(format_args!("{err}"));

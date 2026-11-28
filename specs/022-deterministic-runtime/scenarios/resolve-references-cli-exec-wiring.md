@@ -14,7 +14,7 @@ section: "Follow-on scenarios"
 
 ## Edge Cases
 
-- The longer-term fix — generating the five parallel name registries from a single source — is tracked in the inbox as consolidation work, not this scenario.
+- The longer-term fix landed as `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`: the parser's `PRIMITIVE_NAMES` is that slice, the MCP server's tool names derive from it, and set-equality tests hold the clap enum and `framework/runtime-tools.txt` to it.
 
 ## Open Questions
 

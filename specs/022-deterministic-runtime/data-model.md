@@ -97,9 +97,11 @@ Newline-delimited JSON. Each line is one complete JSON object terminated by `\n`
   "code": "<machine-readable code, e.g. 'parse-error'>",
   "message": "<human-readable description>",
   "runtime-version": "<semver>",
-  "location": { "file": "...", "line": 0, "col": 0 }
+  "location": { "file": "<repo-relative command file>", "line": 0, "col": 0 }
 }
 ```
+
+`location` is present on a parse error and on an error raised at a primitive step, its `file` the command file the walk read (repo-relative, `/` separators); an error with no step to name, such as `unknown-extension` or `invalid-argument`, omits it.
 
 ### Inbound (host → runtime) messages
 
@@ -764,8 +766,7 @@ Request payload:
   "template-path": "framework/templates/spec/spec.md",
   "template-content": "...",
   "section": "Motivation",
-  "feature-description": "...",
-  "existing-content": null
+  "feature-description": "..."
 }
 ```
 

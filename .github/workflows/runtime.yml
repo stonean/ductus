@@ -157,7 +157,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             runtime/target
-          key: ${{ runner.os }}-runtime-${{ hashFiles('runtime/Cargo.lock') }}
+          key: ${{ runner.os }}-runtime-${{ hashFiles('runtime/Cargo.lock', 'runtime/rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-runtime-
 
@@ -275,7 +275,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             runtime/target
-          key: ${{ runner.os }}-runtime-${{ hashFiles('runtime/Cargo.lock') }}
+          key: ${{ runner.os }}-runtime-${{ hashFiles('runtime/Cargo.lock', 'runtime/rust-toolchain.toml') }}
           restore-keys: |
             ${{ runner.os }}-runtime-
 

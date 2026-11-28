@@ -673,8 +673,11 @@ pub struct AnalyzeBlock {
     ///   `references-not-checked`, `applicable-rules-not-checked`,
     ///   `grounding-not-checked`, `integrity-not-checked`,
     ///   `decision-reasons-not-checked` (the host detection an exec walk never
-    ///   runs). A real gap in what the run could see, and the class worth
-    ///   acting on.
+    ///   runs), and `constitution-unresolved` and
+    ///   `constitution-registry-unreadable` (registered shared constitutions
+    ///   the run could not load, or a registry it could not read), which
+    ///   `write-analysis` derives and never accepts. A real gap in what the
+    ///   run could see, and the class worth acting on.
     ///
     /// Omitted when empty, so a fully-examined run carries no map rather
     /// than a map of zeroes.
@@ -817,8 +820,10 @@ pub struct DiscoverRuleFilesResult {
     pub selected_count: usize,
     /// Ordered stdout notice lines to emit verbatim: a line per unknown key
     /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
-    /// warnings, then disabled-rule-file notices, then a line per `*.md`
-    /// entry that is no regular file, then the closing `loading rule files: …`
+    /// warnings, then disabled-rule-file notices, then a line per file its
+    /// header gives to analysis alone (spec 020, AC17; none under `all`), then
+    /// a line per `*.md` entry that is no regular file, then the closing
+    /// `loading rule files: …`
     /// line. Absent in the file form, since a line per unknown key grows with
     /// the config (022 task 32).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1119,9 +1124,11 @@ pub struct ProcessWaiversResult {
     /// Anchors that expired this run (the file is gone, the rule no longer
     /// fires at the site, more findings fire there than the anchor covers, or
     /// the entry was recorded before sites); `write-review` drops each one on
-    /// the next write, and a waiver with its last anchor. On a
-    /// dimension-restricted run (see `skipped-passes`) only the last two
-    /// expire. Absent in the file form.
+    /// the next write, and a waiver with its last anchor, as does a departure
+    /// waiver's anchor its spec's `## Applicable Rules` no longer decides. On a
+    /// dimension-restricted run (see `skipped-passes`) only the last two of
+    /// the four conditions and a departure waiver's anchor expire. Absent in
+    /// the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expired: Option<Vec<WaiverRef>>,
     /// Anchors that did not fire and were left untouched this run: it was
@@ -1427,11 +1434,11 @@ pub struct ComputeReviewScopeResult {
     /// file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plan_affected: Option<Vec<String>>,
-    /// The `modified-since` paths absent from the working tree: deleted since
-    /// the diff base, so out of `scope`, which no review can read them in
-    /// (066 scenario
-    /// `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`).
-    /// Absent in the file form.
+    /// The `modified-since` paths a review cannot read: deleted since the diff
+    /// base, so out of `scope` (066 scenario
+    /// `review-scope-reads-every-cell-path-and-sets-deleted-files-apart`). A
+    /// path leaving the project through a link, the link entry itself
+    /// included, is in it too and is never probed. Absent in the file form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted: Option<Vec<String>>,
     /// The `modified-since` paths the scope left out, by the rule
@@ -2638,8 +2645,8 @@ pub struct Frontmatter {
     /// Declared rather than derived: nothing in the repository can compute
     /// it, and no generator rewrites it. Its presence means the fold has
     /// not happened yet, which is outstanding work — so the pipeline view
-    /// reports the spec as pending, and the pre-`done` gate blocks on it
-    /// while the target is in this tree, where the fold can be done.
+    /// reports the spec as pending and `check-unfolded-specs` names it, and it
+    /// never holds `done` (spec 051's `a-pending-fold-never-holds-done`).
     ///
     /// The named spec routinely does **not** exist in this working tree: a
     /// branch-scoped spec exists because upstream moved, so its target
@@ -3448,11 +3455,15 @@ pub struct AnchorReference {
     pub path: Option<String>,
 }
 
+/// The [`AnchorReference::kind`] of a claim about the markers file: the one
+/// definition `resolve-anchor` stamps and the backfill below reads.
+pub(crate) const KIND_MARKERS: &str = "markers";
+
 /// Backfill for [`AnchorReference::kind`] when deserializing a result written
 /// before the field existed. Every such reference was scanned against the
 /// markers file, because that was the only behavior.
 fn default_anchor_kind() -> String {
-    "markers".to_string()
+    KIND_MARKERS.to_string()
 }
 
 /// Result for `resolve-anchor`. Inline up to `[artifacts] read-size-bytes`,
@@ -6952,7 +6963,7 @@ pub struct CreateFeatureArgs {
     /// The upstream spec this branch-scoped spec folds back into, written
     /// to its `folds-into:` frontmatter.
     ///
-    /// Required with `branch_id` and meaningless without it. A
+    /// Required with `branch-id`, and refused without it. A
     /// branch-scoped spec exists in order to be folded, so there is no
     /// way to create one that names no target: the number exists to keep
     /// the merge clean, and the target is what makes the spec actionable
@@ -7941,11 +7952,8 @@ pub enum ReviewGateBlock {
     /// check asks only whether `last-run` is *set*, so an operator who ran
     /// `/{project}:analyze`, then resolved MUST violations, then completed the
     /// spec passed the gate on an analysis from before the fixes. Spec 047's
-    /// `analyze-record-freshness` scenario records the measurement that made
-    /// the subject set safe: across this repo's 54 recorded specs the naive
-    /// rule flagged all 54, because the corpus-wide analyze run had written
-    /// its own `analyze:` block into every one of them; with that block
-    /// excluded, 1 of 54 flags and it is a true positive.
+    /// `analyze-record-freshness` scenario states the subject set and its
+    /// exclusions.
     AnalyzeStale,
     /// The analysis is current and passing, but its record names a loaded rule in
     /// `unjudged-rules` (spec 082): a rule no run has judged over these artifacts,
@@ -12049,9 +12057,6 @@ mod tests {
         assert_eq!(rv["cross-spec-paths"][0], "specs/007-sibling/spec.md");
         // Absent on an ordinary window, so no existing consumer sees a new key.
         assert!(rv.get("guidance").is_none());
-        // The inbox window and standing count left this result (spec 058).
-        assert!(rv.get("inbox-additions").is_none());
-        assert!(rv.get("inbox-standing").is_none());
         assert_eq!(round_trip(&result), result);
     }
 
@@ -12098,7 +12103,6 @@ mod tests {
             item_count: 3,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();
-        assert!(rv.get("deduped").is_none());
         assert_eq!(rv["item-count"], 3);
         assert_eq!(round_trip(&result), result);
     }

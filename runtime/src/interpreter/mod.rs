@@ -128,6 +128,9 @@ pub struct Walker<'a, R: BufRead, W: Write> {
     /// is bound `apply: true` — in its arguments, never the context, so an
     /// extension payload built from the context does not carry it.
     gate_confirmed: bool,
+    /// The command file's repo-relative path, `/`-separated: the `file` of an
+    /// error's location ([`ErrorLocation`] says a payload path is repo-relative).
+    command_file: String,
 }
 
 /// Top-level outcome of [`Walker::run`].
@@ -178,7 +181,17 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             analyze_tally: analyze.then(analyze_tally::AnalyzeTally::new),
             rules: None,
             gate_confirmed: false,
+            command_file: format!("framework/commands/{}.md", procedure.command),
         })
+    }
+
+    /// Name the command file the procedure was parsed from, repo-relative with
+    /// `/` separators, which an error's location carries. Without it the file is
+    /// `framework/commands/{command}.md`, the first place `ductus exec` looks.
+    #[must_use]
+    pub fn with_command_file(mut self, file: impl Into<String>) -> Self {
+        self.command_file = file.into();
+        self
     }
 
     /// Walk the procedure to completion. Emits envelopes as a side effect.
@@ -257,7 +270,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                     code.clone(),
                     message.clone(),
                     Some(ErrorLocation {
-                        file: self.procedure.command.clone(),
+                        file: self.command_file.clone(),
                         line: location.start_line,
                         col: location.start_col,
                     }),
@@ -324,7 +337,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                     code.clone(),
                     message.clone(),
                     Some(ErrorLocation {
-                        file: self.procedure.command.clone(),
+                        file: self.command_file.clone(),
                         line: location.start_line,
                         col: location.start_col,
                     }),
@@ -1606,7 +1619,8 @@ mod tests {
             &mut reader,
             &mut writer,
         )
-        .unwrap();
+        .unwrap()
+        .with_command_file("framework/bootstrap/test.md");
         let result = serde_json::json!({
             "form": "file",
             "scope-count": 2,
@@ -1635,6 +1649,10 @@ mod tests {
         .unwrap();
         assert_eq!(last["type"], "error", "{last}");
         assert_eq!(last["code"], "lists-file-unreadable", "{last}");
+        assert_eq!(
+            last["location"]["file"], "framework/bootstrap/test.md",
+            "{last}"
+        );
     }
 
     #[test]
@@ -1693,6 +1711,43 @@ mod tests {
         assert_eq!(lines[0]["type"], "progress");
         assert_eq!(lines[0]["primitive"], "read-spec");
         assert_eq!(lines[1]["type"], "complete");
+    }
+
+    /// An error's location names the command file, repo-relative, never the
+    /// command's name (`ErrorLocation.file` is a path).
+    #[test]
+    fn an_error_location_names_the_command_file_not_the_command() {
+        let procedure = Procedure {
+            command: "test".into(),
+            steps: vec![Step::Primitive {
+                number: StepNumber(vec![1]),
+                name: "read-spec".into(),
+                prose: String::new(),
+                location: loc(),
+            }],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            fixture_repo(),
+            ctx_with_feature("999-nonexistent"),
+            &mut reader,
+            &mut writer,
+        )
+        .unwrap()
+        .with_command_file("framework/bootstrap/test.md");
+        walker.run().unwrap();
+        let error: Value = std::str::from_utf8(&writer)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str::<Value>(l).unwrap())
+            .find(|line| line["type"] == "error")
+            .unwrap();
+        assert_eq!(
+            error["location"]["file"], "framework/bootstrap/test.md",
+            "{error}"
+        );
     }
 
     #[test]
@@ -4626,6 +4681,7 @@ mod tests {
             ),
             ("process-waivers", serde_json::json!({"feature": feature})),
             ("prune-plan", serde_json::json!({"feature": feature})),
+            ("prune-review", serde_json::json!({"feature": feature})),
             ("prune-tasks", serde_json::json!({"feature": feature})),
             (
                 "read-re-read",
@@ -4705,7 +4761,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 42);
+        assert_eq!(cases.len(), 43);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(

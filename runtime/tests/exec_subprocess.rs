@@ -571,6 +571,43 @@ fn exec_resolves_command_via_parameterized_host_block() {
     assert_eq!(envelopes[0]["primitive"], "read-spec");
 }
 
+/// An error the walker raises names the file the command was read from,
+/// repo-relative, though that file is not the first candidate: `run_exec` hands
+/// the walker the path it located (spec 022, `ErrorLocation.file`).
+#[test]
+fn exec_error_location_names_the_installed_command_file() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/exec-pi-legacy-host");
+    copy_dir_recursive(&fixture, tmp.path());
+
+    let output = ductus_command(runtime_binary())
+        .arg("exec")
+        .arg("smoke")
+        .arg("feature=999-nonexistent")
+        .current_dir(tmp.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn runtime");
+
+    assert!(!output.status.success(), "expected nonzero exit");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let envelope: Value = stdout
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .find(|envelope| envelope["type"] == "error")
+        .expect("an error envelope on stdout");
+    assert_eq!(envelope["code"], "primitive-failure", "{envelope}");
+    assert_eq!(
+        envelope["location"]["file"], ".pi/prompts/acme-smoke.md",
+        "location.file is the located command file, repo-relative: {envelope}"
+    );
+}
+
 #[test]
 fn exec_resolves_command_via_session_file_cli_config_dir() {
     ensure_binary_built();

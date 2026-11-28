@@ -222,6 +222,10 @@ pub(crate) fn compute(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<Revi
     // tree says is not there is deleted: one present but unreadable (permission
     // denied) stays in the scope, since a review owes it a read the same as any
     // other; a path under a parent that became a file cannot exist, so it is gone.
+    // A path that leaves the project through a link, the link entry itself included
+    // and as one under a directory since replaced by a committed link to elsewhere
+    // does, is in `deleted` too, and is never probed (BE-INPUT-004; `still_on_disk`
+    // reads it the same way).
     let deleted = deleted_paths(repo, &modified_since);
 
     // Uncommitted work has no commit to attribute, so it joins whole, even on a path
@@ -349,18 +353,21 @@ fn first_review_reads(
 }
 
 /// The paths of `modified_since` the working tree reports not found, or under a
-/// parent that is now a file (see the comment in [`compute`]).
+/// parent that is now a file, and each that leaves the project through a link, the
+/// link entry itself included, which is judged before and never probed (see the
+/// comment in [`compute`]).
 fn deleted_paths(repo: &Path, modified_since: &[String]) -> BTreeSet<String> {
     modified_since
         .iter()
         .filter(|path| {
-            matches!(
-                std::fs::symlink_metadata(repo.join(path)),
-                Err(error) if matches!(
-                    error.kind(),
-                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+            super::leaves_project(repo, path)
+                || matches!(
+                    std::fs::symlink_metadata(repo.join(path)),
+                    Err(error) if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                    )
                 )
-            )
         })
         .cloned()
         .collect()
@@ -1159,7 +1166,7 @@ fn attribute_window(
         window.others.extend(others);
     }
     let head = repository.head()?.peel_to_commit()?.id();
-    let on_disk = |path: &str| repo.join(path).symlink_metadata().is_ok();
+    let on_disk = |path: &str| still_on_disk(repo, path);
     window.folded_in = fold.brought(head, &on_disk, &folded)?.0;
     Ok(window)
 }
@@ -1284,8 +1291,8 @@ impl FoldTest<'_> {
     }
 
     /// The paths of every commit each spec in `folded` claimed, by touching its
-    /// directory or naming it, from all of `tip`'s history: outside any spec's
-    /// directory, which is that spec's text, and still there by `holds`, the disk for
+    /// directory or naming it, from all of `tip`'s history: outside the spec
+    /// root, which is the artifacts' text, and still there by `holds`, the disk for
     /// a review, since it reads a file, and a commit's tree for a caller reading the
     /// commit alone. A path a commit several specs claimed comes whole, the safe side
     /// of a rule that reads plans a retired spec no longer has. The commits come
@@ -1934,6 +1941,66 @@ mod tests {
             "{result:?}"
         );
         assert!(result.deleted.is_empty(), "{:?}", result.deleted);
+    }
+
+    /// A path under a directory since replaced by a committed link to a directory
+    /// outside the project is deleted, never probed through the link: it stays out
+    /// of `scope` though the outside directory holds a file of that name
+    /// (BE-INPUT-004).
+    #[cfg(unix)]
+    #[test]
+    fn a_path_through_a_link_leaving_the_project_is_deleted() {
+        let (tmp, repo, _parent) = repo_in_progress_with_an_untouched_file();
+        let outside = tempfile::tempdir().unwrap();
+        write(&outside.path().join("old.rs"), "fn outside() {}\n");
+        fs::remove_dir_all(tmp.path().join("src")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("src")).unwrap();
+        commit_all(&repo, "feat: src becomes a link");
+        let result = compute(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result.modified_since.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+        assert!(
+            result.deleted.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.deleted
+        );
+        assert!(
+            !result.scope.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.scope
+        );
+        assert!(
+            result.deleted.contains(&"src".to_string()),
+            "the link entry: {:?}",
+            result.deleted
+        );
+        assert!(
+            !result.scope.contains(&"src".to_string()),
+            "{:?}",
+            result.scope
+        );
+    }
+
+    /// A path a fold brings under a directory since replaced by a committed link to
+    /// elsewhere is not read through the link, though the outside directory holds a
+    /// file of that name (BE-INPUT-004).
+    #[cfg(unix)]
+    #[test]
+    fn a_fold_brings_no_path_through_a_link_leaving_the_project() {
+        let (tmp, repo) = done_upstream();
+        stage(&tmp, &repo, "in-progress", Some("001-x"));
+        remove_staging(&tmp, true);
+        let outside = tempfile::tempdir().unwrap();
+        write(&outside.path().join("s.rs"), "fn outside() {}\n");
+        fs::remove_dir_all(tmp.path().join("src")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("src")).unwrap();
+        commit_all(&repo, "fold(1234.1): into 001-x");
+
+        let scope = x(&tmp);
+        assert!(!has(&scope, "src/s.rs"), "{:?}", scope.scope);
     }
 
     /// A path whose parent directory is now a file can no longer exist, so it is

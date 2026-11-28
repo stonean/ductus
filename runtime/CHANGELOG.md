@@ -439,6 +439,44 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Fixed
 
+- **`compute-review-scope`'s `deleted` names a path that leaves the project
+  through a link (spec 022's review, 2026-11-27; `BE-INPUT-004`).** A path in
+  `modified-since` under a directory since replaced by a committed link to
+  elsewhere was probed through the link, so it stayed in `scope` and out of
+  `deleted` when the outside directory held a file of that name. It is now
+  judged before any probe and is in `deleted`, as `still_on_disk` already read
+  it, the link entry itself included; a result changes only for a history in
+  which a tracked directory became such a link. A path whose probe is refused
+  for permission stays in `scope`. A fold's brought paths are screened the same
+  way.
+- **BREAKING: an audit record that is a dangling link reads as unreadable,
+  not never run (spec 022's review, 2026-11-27; `QUAL-CLAIM-001`).**
+  `check-audit-records` and the readers of a spec's audit records took a
+  `review.md` or `analysis.md` they could not stat as absent: a dangling link,
+  or a file under a parent that refuses search, counted as no record, and a
+  `waivers:` or `decisions:` list read from it as empty. Only a file that is
+  not found, or whose parent is not a directory, is absent now; anything else
+  is unreadable and names why, and a directory standing where a record belongs
+  is an error, not an empty list. `check-audit-records` reports such a record
+  unreadable where it counted it exempt; `write-review`, `write-analysis` and
+  `invalidate-review`, through `read_recorded_list`, error where they read an
+  empty list and wrote over the link. Breaking under `BE-COMPAT-001`: a new
+  error, and a new unreadable finding, where a call used to succeed.
+- **`ductus exec`'s error locations name the command file, repo-relative
+  (spec 022's review, 2026-11-27).** An error the walker raised on a
+  primitive's dispatch or result carried the command's name, such as `review`,
+  in `location.file`, which `ErrorLocation` documents as a repo-relative path;
+  it is now the file the command was read from, with `/` separators, as the
+  parse-error envelope's is. `location.line` and `location.col` are unchanged.
+- **Descriptions only; no result changes (spec 022's review, 2026-11-27).**
+  `read-spec`'s `folds-into` no longer says the pre-`done` gate blocks on a
+  pending fold, which never holds `done`; `write-analysis`'s
+  `unexamined-by-reason`, `discover-rule-files`' `notices`, `process-waivers`'
+  `expired` and `create-feature`'s `fold-into` now state what the code does;
+  the gate's `AnalyzeStale` doc cites no measurement its scenario does not
+  hold; and `compute-review-scope`'s description says a staging spec's brought
+  paths are dropped unless under the spec root, with its `deleted` wording
+  naming a path that leaves the project through a link.
 - **`write-review` reports an unreadable `analysis.md` as undeterminable
   (spec 050's review, 2026-11-27; `QUAL-CLAIM-001`).** Its
   `analyze-freshness` reported a present `analysis.md` whose record could not

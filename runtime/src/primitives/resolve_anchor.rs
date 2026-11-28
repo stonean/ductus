@@ -104,7 +104,8 @@ use crate::primitives::{
     Result, SkipScanner, contained_path, inline_code_spans, read_text, resolve_path,
 };
 use crate::schema::primitives::{
-    AnchorReference, ConstitutionOutcome, ListsForm, ResolveAnchorArgs, ResolveAnchorResult,
+    AnchorReference, ConstitutionOutcome, KIND_MARKERS, ListsForm, ResolveAnchorArgs,
+    ResolveAnchorResult,
 };
 
 /// Execute the `resolve-anchor` primitive: [`compute`], returned through
@@ -419,7 +420,6 @@ pub fn compute(args: &ResolveAnchorArgs, repo: &Path) -> Result<Anchors> {
     Ok(tally.finish())
 }
 
-const KIND_MARKERS: &str = "markers";
 const KIND_QUALIFIED: &str = "qualified";
 const KIND_INTRA_DOCUMENT: &str = "intra-document";
 const KIND_CROSS_DOCUMENT: &str = "cross-document";

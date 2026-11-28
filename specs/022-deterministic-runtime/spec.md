@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 cross-spec-impact: [012-multi-agent-govern, 015-tarball-fetch, 021-runtime-boundary, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 055-shared-constitution, 061-updates-track-the-latest-release-tag]
 next-criterion: 33
@@ -122,10 +122,10 @@ This surface satisfies §runtime-boundary principle 5 ("MCP is the seam"). It is
 
 Invoked as `ductus exec <command> [args...]`. The agent host spawns the runtime as a subprocess and communicates via newline-delimited JSON over stdio:
 
-- `{"type":"llm-request","extension-point":"<name>","request":{...}}` — runtime suspends; awaits an LLM-driven response from the host.
-- `{"type":"llm-response","response":{...}}` — host returns the LLM's structured output; runtime resumes.
-- `{"type":"gate-confirm","gate":"<name>","prompt":"..."}` — runtime suspends; awaits user confirmation routed through the host.
-- `{"type":"gate-response","confirmed":<bool>}` — host returns the user's decision.
+- `{"type":"llm-request","extension-point":"<name>","request-id":"<id>","request":{...}}` — runtime suspends; awaits an LLM-driven response from the host.
+- `{"type":"llm-response","request-id":"<id>","response":{...}}` — host returns the LLM's structured output, echoing the request's `request-id`; runtime resumes.
+- `{"type":"gate-confirm","gate":"<name>","request-id":"<id>","prompt":"..."}` — runtime suspends; awaits user confirmation routed through the host.
+- `{"type":"gate-response","request-id":"<id>","confirmed":<bool>}` — host returns the user's decision, echoing the gate's `request-id`.
 - `{"type":"progress","message":"..."}` — informational, non-blocking.
 - `{"type":"complete","result":{...}}` — procedure finished; runtime exits 0.
 - `{"type":"error","code":"...","message":"..."}` — procedure halted; runtime exits non-zero.

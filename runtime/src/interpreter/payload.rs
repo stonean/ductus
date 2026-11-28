@@ -4,7 +4,8 @@
 //! `write-boundary`) that LLM extension points need into the typed
 //! [`WriteCodeRequest`] / [`WriteSpecBodyRequest`] /
 //! [`AssessSpecQualityRequest`] / [`AskClarifyQuestionRequest`] /
-//! [`RouteInboxItemRequest`] / [`VerifyCriteriaRequest`] shapes defined in
+//! [`RouteInboxItemRequest`] / [`RouteFoldRequest`] / [`VerifyCriteriaRequest`] /
+//! [`PerformReviewRequest`] shapes defined in
 //! [`crate::schema::extensions`]. The interpreter calls
 //! [`build_extension_request`] just before emitting an `llm-request` envelope;
 //! the result replaces the previous "dump the walker context as the request"

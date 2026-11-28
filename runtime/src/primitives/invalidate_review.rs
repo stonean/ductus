@@ -108,9 +108,10 @@ fn plan(
     let recorded_waivers: Vec<crate::primitives::write_review::RawWaiverFull> =
         crate::primitives::read_recorded_waivers(&feature_dir)?;
 
-    // An absent or unreadable record is already in the state this produces, so
-    // there is nothing to invalidate. Writing a record of nulls over a file
-    // that will not parse would also destroy whatever it still holds.
+    // An absent record, or one whose fields will not parse, is already in the state
+    // this produces, so there is nothing to invalidate. Writing a record of nulls over a
+    // file that will not parse would also destroy whatever it still holds. A record that
+    // is a dangling link or a directory never reaches here: the waiver read above errors.
     let Some(previous) = crate::primitives::load_review_record(&feature_dir)
         .as_present()
         .and_then(|record| record.last_run.clone())
