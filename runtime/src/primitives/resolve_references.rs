@@ -175,9 +175,17 @@ pub(crate) fn load_services(repo: &Path) -> Result<Services> {
     }
     let content = read_text(&toml_path)?;
     config_keys::warn_unknown_keys(&toml_path, &content, &["services"]);
-    Services::from_toml_str(&content).map_err(|source| match source {
+    parse_services(&toml_path, &content)
+}
+
+/// Parse `content`, the config at `toml_path`, into the registry, with the
+/// errors [`load_services`] halts on, each naming `toml_path`. Shared with
+/// `register-service`, which parses the text its guarded read holds rather
+/// than reading the file a second time.
+pub(crate) fn parse_services(toml_path: &Path, content: &str) -> Result<Services> {
+    Services::from_toml_str(content).map_err(|source| match source {
         ServicesError::Parse(source) => PrimitiveError::Toml {
-            path: toml_path,
+            path: toml_path.to_path_buf(),
             source,
         },
         ServicesError::Invalid {
@@ -185,7 +193,7 @@ pub(crate) fn load_services(repo: &Path) -> Result<Services> {
             field,
             reason,
         } => PrimitiveError::InvalidServiceEntry {
-            path: toml_path,
+            path: toml_path.to_path_buf(),
             alias,
             field,
             reason,
@@ -203,8 +211,9 @@ pub(crate) fn load_services(repo: &Path) -> Result<Services> {
 /// What that statement obliges of *this* table: `/{project}:link` already
 /// writes `[services]`, so the converse obligation is live here rather than
 /// latent. It is satisfied because that command *transcribes* — it prompts
-/// for the local checkout path, records what the operator typed verbatim,
-/// and warns without blocking when it does not resolve — so the operator is
+/// for the local checkout path, its `register-service` primitive records
+/// what the operator typed verbatim, and it warns without blocking when the
+/// path does not resolve — so the operator is
 /// still the origin of the value. A change that had `/{project}:link`
 /// derive the path from anything else would move this read into the
 /// validated tier.

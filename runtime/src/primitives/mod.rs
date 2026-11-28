@@ -86,6 +86,7 @@ pub mod read_re_read;
 pub mod read_section;
 pub mod read_spec;
 pub mod read_tasks;
+pub mod register_service;
 pub mod relocate_audit_records;
 pub mod remove_inbox_item;
 pub mod render_help;
@@ -690,6 +691,24 @@ pub enum PrimitiveError {
         /// Which field was rejected: `repo` or `path`.
         field: String,
         /// One-line description of why, phrased to follow the field name.
+        reason: String,
+    },
+    /// `register-service` would append a `[services.<alias>]` table the
+    /// config cannot take: the result does not parse (an inline-table
+    /// `services`, which a header cannot extend), or does not read back as
+    /// the registry plus the new entry. Nothing is written (spec 030, scenario
+    /// `registration-writes-through-a-primitive`).
+    #[error(
+        "cannot add [services.{alias}] to {path}: {reason}; nothing was written, so change the \
+         config by hand",
+        path = .path.display()
+    )]
+    ServicesNotExtensible {
+        /// Project-relative path of the config file.
+        path: PathBuf,
+        /// The alias whose table was refused, a bare TOML key.
+        alias: String,
+        /// Why the appended table was refused.
         reason: String,
     },
     /// `[artifacts] read-size-bytes` is present but is not a positive whole
@@ -2108,8 +2127,9 @@ pub(crate) fn output_within(
 /// - A **hand-edit** is the origin for `[constitutions.*]` today.
 /// - A command that *transcribes an operator's answer* does not break it.
 ///   `/{project}:link` writes `[services]` this way — it prompts for the
-///   local checkout path and records what was typed verbatim — so the
-///   framework performs the write while the operator remains the source.
+///   local checkout path and `register-service` records what was typed
+///   verbatim — so the framework performs the write while the operator
+///   remains the source.
 /// - A writer that **originates** the value breaks it: a path derived from
 ///   a network response, an archive's contents, an LLM's output, or any
 ///   other input the operator never reviewed. Adding one moves that

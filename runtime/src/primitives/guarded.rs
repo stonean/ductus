@@ -4,7 +4,8 @@
 //!
 //! `append-question`, `append-task`, `label-criteria`, `mark-criterion`,
 //! `mark-task`, `set-status`, `append-inbox`, `remove-inbox-item`,
-//! `merge-managed-block` and `merge-permissions` each read one file, compute
+//! `merge-managed-block`, `merge-permissions`, `backfill-section-digest` (once
+//! per record it writes) and `register-service` each read one file, compute
 //! its replacement and rename that over it. [`read_required`] and
 //! [`write_guarded`] are the two halves they share: the read keeps a
 //! [`ReadSnapshot`], and the write refuses with

@@ -6,6 +6,21 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Added
 
+- **`register-service` makes `/{project}:link`'s registration write (spec
+  030, scenario `registration-writes-through-a-primitive`; the agent's
+  recommendation, adopted by the operator, 2026-11-28).** A new MCP tool and
+  CLI command. It adds one `[services.<alias>]` table, holding `repo`, `path`
+  and an optional `description`, to the active project config, or creates
+  `.ductus/config.toml` holding only the table: appended after the file's
+  last byte in the file's own line endings, each value a one-line escaped
+  TOML string, the result read back through the registry's reader and
+  written under the compare-and-set guard. It refuses, writing nothing, an
+  alias that is not a bare TOML key or is already registered, a repo that is
+  not URL-shaped, an empty path, a config the registry's readers refuse, and
+  one the table cannot extend, such as an inline-table `services`; a
+  duplicate repo and a path resolving to no directory are warnings.
+  `/{project}:link` step 2 calls it, where a host's file tools made the
+  write before.
 - **`prune-review` reduces a spec's `review.md` between reviews (spec 086,
   AC5 and AC3; the agent's recommendations, adopted by the operator,
   2026-11-26).** A new MCP tool and CLI command. A preview names each stored

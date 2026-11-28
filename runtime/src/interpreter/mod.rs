@@ -87,11 +87,12 @@ use crate::schema::primitives::{
     MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs, ProcessDecisionsArgs,
     ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneReviewArgs, PruneTasksArgs,
     ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs, ReadTasksArgs,
-    RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RuleVerdict,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, ValidateFrontmatterArgs,
-    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    RegisterServiceArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs,
+    RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs,
+    ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RuleVerdict, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -1330,6 +1331,7 @@ fn dispatch_primitive(
         "append-task" => call!(AppendTaskArgs, append_task),
         "append-inbox" => call!(AppendInboxArgs, append_inbox),
         "remove-inbox-item" => call!(RemoveInboxItemArgs, remove_inbox_item),
+        "register-service" => call!(RegisterServiceArgs, register_service),
         "derive-routing-candidates" => {
             call!(DeriveRoutingCandidatesArgs, derive_routing_candidates)
         }

@@ -28,11 +28,12 @@ use ductus::schema::primitives::{
     MergeManagedBlockArgs, MergePermissionsArgs, MergeStatusHookArgs, MigrateSessionFileArgs,
     ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneReviewArgs,
     PruneTasksArgs, ReadDeprecationLabelsArgs, ReadReReadArgs, ReadSectionArgs, ReadSpecArgs,
-    ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, RenderHelpArgs, RenderStatusArgs,
-    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    ResolveSessionArgs, RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs, TraverseDepsArgs, UnreviewedPushMode,
-    UnreviewedState, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
+    ReadTasksArgs, RegisterServiceArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs,
+    RenderHelpArgs, RenderStatusArgs, ResolveAnchorArgs, ResolveConstitutionsArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs, RetargetSessionsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, StartFixRoundsArgs,
+    TraverseDepsArgs, UnreviewedPushMode, UnreviewedState, ValidateFrontmatterArgs,
+    WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -196,6 +197,8 @@ enum Command {
     AppendInbox(AppendInboxArgs),
     #[command(about = descriptions::summary(descriptions::REMOVE_INBOX_ITEM), long_about = descriptions::REMOVE_INBOX_ITEM)]
     RemoveInboxItem(RemoveInboxItemArgs),
+    #[command(about = descriptions::summary(descriptions::REGISTER_SERVICE), long_about = descriptions::REGISTER_SERVICE)]
+    RegisterService(RegisterServiceArgs),
     #[command(about = descriptions::summary(descriptions::DERIVE_ROUTING_CANDIDATES), long_about = descriptions::DERIVE_ROUTING_CANDIDATES)]
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     #[command(about = descriptions::summary(descriptions::CHECK_CORPUS_LINKS), long_about = descriptions::CHECK_CORPUS_LINKS)]
@@ -1456,6 +1459,9 @@ fn main() -> ExitCode {
         Command::AppendInbox(args) => emit_result(primitives::append_inbox::run(&args, &repo)),
         Command::RemoveInboxItem(args) => {
             emit_result(primitives::remove_inbox_item::run(&args, &repo))
+        }
+        Command::RegisterService(args) => {
+            emit_result(primitives::register_service::run(&args, &repo))
         }
         Command::DeriveRoutingCandidates(args) => {
             emit_result(primitives::derive_routing_candidates::run(&args, &repo))

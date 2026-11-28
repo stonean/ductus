@@ -8418,6 +8418,48 @@ pub struct RemoveInboxItemResult {
     pub remaining_count: u32,
 }
 
+// -- register-service ----------------------------------------------------------
+
+/// Args for `register-service`: one `[services.<alias>]` table to add to the
+/// project config, `/{project}:link`'s **Additive write** (spec 030, scenario
+/// `registration-writes-through-a-primitive`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegisterServiceArgs {
+    /// The service's alias, the `<alias>` of `[services.<alias>]`: a bare
+    /// TOML key (letters, digits, `-` and `_`) the registry does not hold.
+    #[arg(long)]
+    pub alias: String,
+    /// The canonical repository URL, a scheme, `://` and a host, recorded
+    /// verbatim and never fetched.
+    #[arg(long)]
+    pub repo: String,
+    /// The local checkout, relative to the project root or absolute,
+    /// recorded verbatim; one that resolves to no directory is warned of.
+    #[arg(long)]
+    pub path: String,
+    /// An optional one-line note on the service's purpose; an empty one
+    /// writes none.
+    #[arg(long)]
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// Result for `register-service`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegisterServiceResult {
+    /// Project-relative path of the config file written.
+    pub path: String,
+    /// Whether the call created the file.
+    pub created: bool,
+    /// The `[services.<alias>]` table as written, in the file's line endings.
+    pub block: String,
+    /// One sentence per warning, which never refuses the write: a repo
+    /// another alias registers, and a path resolving to no directory.
+    pub warnings: Vec<String>,
+}
+
 // -- check-artifacts -----------------------------------------------------------
 
 /// Args for `check-artifacts`. Runs `/ductus:analyze`'s residual deterministic

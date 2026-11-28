@@ -88,6 +88,7 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "diff-cross-spec",
     "append-inbox",
     "remove-inbox-item",
+    "register-service",
     "check-artifacts",
     "check-artifact-size",
     "check-owed-work",

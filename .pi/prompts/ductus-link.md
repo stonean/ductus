@@ -26,19 +26,21 @@ This command does not require a session target — it edits the project-level `[
 
 ## Instructions
 
-This command is host-driven: it has no runtime primitive, so the host's file tools read and write `.ductus/config.toml`. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
+> **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
+
+The host prompts for and validates each field, and the register-service primitive writes the `[services.<alias>]` block; `--list` reads `.ductus/config.toml` with the host's file tools. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
 
 <!-- audit:ignore-promotion -->
 1. Parse the arguments. With `--list`, run the **List the registry** branch (read-only) and stop. With three positional values (alias, repo, path) plus an optional `--description <text>`, take them as pre-supplied field values, validate them, and prompt only for anything missing or invalid. With no arguments, collect every field interactively.
 
-2. <!-- llm:registerService --> Run the registration flow: prompt for each missing field one at a time — alias, then repo URL, then local path, then an optional description (empty to skip) — validating each value as it is entered (see **Validation**). Then write the `[services.<alias>]` block additively to `.ductus/config.toml`, preserving every other table (see **Additive write**). A duplicate alias is rejected before any write; a duplicate repo is warned but allowed.
+2. <!-- llm:registerService --> Run the registration flow: prompt for each missing field one at a time — alias, then repo URL, then local path, then an optional description (empty to skip) — validating each value as it is entered (see **Validation**). Then invoke register-service with the alias, repo URL, local path and description, which writes the `[services.<alias>]` block additively to the active config file, preserving every other byte (see **Additive write**). It refuses a duplicate alias, or a field its rules reject, before any write: explain the refusal and re-prompt that field. A duplicate repo and a path that resolves to no directory are warned of in its result, never refused.
 
 <!-- audit:ignore-promotion -->
-3. Confirm the result: echo the resulting `[services.<alias>]` block, surface any path-resolution warning, and point the user at `/ductus:status` to see the linked spec's status once the service is checked out.
+3. Confirm the result: echo the `block` register-service returned, surface each of its `warnings`, and point the user at `/ductus:status` to see the linked spec's status once the service is checked out.
 
 ## Procedure
 
-The host always walks this procedure — there is no runtime shortcut. It is the contract the `registerService` step fulfills.
+The host walks the prompts and the validation, and the `register-service` primitive makes the write (**Additive write**), applying the rules its compiled description states (`ductus register-service --help`). This procedure is the contract the `registerService` step fulfills.
 
 ### Argument forms
 
@@ -64,11 +66,15 @@ Per field, as entered:
 - **path** — the local checkout location, relative to the repo root or absolute, recorded exactly as written, and **rejected** when empty, since every reader of the registry halts on an empty one, which would resolve to this repository. If it does not currently resolve to a directory, **warn** but do **not** block: a missing checkout is the valid `not-checked-out` state, surfaced at resolution time, not a config error.
 - **description** — free text, optional, informational only; no behavior depends on it.
 
+`register-service` applies the alias, repo and path rules again, and the duplicate-alias rejection, refusing before any write.
+
 ### Additive write
 
-- Read the active config file per Scope Boundaries above (when neither location exists, create `.ductus/config.toml` with just the new block — a write outside the `/ductus` migration never creates a partial `.ductus/config.toml` alongside a legacy file).
-- Add a `[services.<alias>]` table with `repo`, `path`, and `description` (omit `description` when skipped). Preserve every other table — `[host]`, `[project]`, `[paths]`, `[rules]`, `[pinned]`, `[migrations]`, `[review]`, and any sibling `[services.*]` entries — byte-for-byte. (The operative rule is "preserve every table other than the one being added"; the list is illustrative, not exhaustive.) This is the additive discipline already used for `.mcp.json` and permission merges.
-- Write atomically (tempfile + rename).
+The `register-service` primitive performs it, so a host walking this command and `ductus exec link` make one write:
+
+- It writes the active config file per Scope Boundaries above (when neither location exists, it creates `.ductus/config.toml` with just the new block — a write outside the `/ductus` migration never creates a partial `.ductus/config.toml` alongside a legacy file).
+- It adds a `[services.<alias>]` table with `repo`, `path`, and `description` (omitted when skipped), appended after the file's last byte, so every other table — `[host]`, `[project]`, `[paths]`, `[rules]`, `[pinned]`, `[migrations]`, `[review]`, and any sibling `[services.*]` entries — stays byte-for-byte. (The operative rule is "preserve every table other than the one being added"; the list is illustrative, not exhaustive.) This is the additive discipline already used for `.mcp.json` and permission merges.
+- It writes atomically (tempfile + rename), and refuses, writing nothing, when the config changed since its read or the appended table would not read back as the registry plus the new entry.
 
 ### List the registry
 

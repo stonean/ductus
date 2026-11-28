@@ -27,8 +27,8 @@ use std::path::Path;
 use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, BackfillSectionDigestArgs,
-    InvalidateReviewArgs, PruneReviewArgs, PruneTasksArgs, RemoveInboxItemArgs,
-    RewriteSpecLinksArgs, WriteAnalysisArgs, WriteReviewArgs,
+    InvalidateReviewArgs, PruneReviewArgs, PruneTasksArgs, RegisterServiceArgs,
+    RemoveInboxItemArgs, RewriteSpecLinksArgs, WriteAnalysisArgs, WriteReviewArgs,
 };
 
 /// Every `\n` in `text` is preceded by `\r` — i.e. the file is uniformly CRLF
@@ -102,6 +102,39 @@ fn rewrite_spec_links_preserves_crlf() {
     assert!(after.contains("../050-alpha/spec.md"), "{after}");
     // Only the link changed: every other line survives verbatim.
     assert!(after.contains("More prose.\r\n"), "{after}");
+}
+
+/// The appended `[services.<alias>]` table takes the config's CRLF endings,
+/// the escaped description's line break included, which stays one escape.
+#[test]
+fn register_service_preserves_crlf() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    let config = repo.join(".ductus/config.toml");
+    write_crlf(&config, "[paths]\nspecs-root = \"specs\"\n");
+
+    let result = primitives::register_service::run(
+        &RegisterServiceArgs {
+            alias: "api".into(),
+            repo: "https://github.com/acme/api".into(),
+            path: "../api".into(),
+            description: Some("first line\nsecond line".into()),
+        },
+        repo,
+    )
+    .unwrap();
+    assert!(!result.created);
+
+    assert_crlf(&config, "register-service");
+    let after = read(&config);
+    assert!(
+        after.starts_with("[paths]\r\nspecs-root = \"specs\"\r\n\r\n[services.api]\r\n"),
+        "{after}"
+    );
+    assert!(
+        after.contains("description = \"first line\\nsecond line\"\r\n"),
+        "{after}"
+    );
 }
 
 #[test]

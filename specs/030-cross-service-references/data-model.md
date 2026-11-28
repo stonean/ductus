@@ -4,7 +4,7 @@ Data structures introduced by [030 — Cross-Service References](spec.md). This 
 
 ## Service registry entry
 
-Declared in `.ductus/config.toml` under `[services.<alias>]`. The table is optional; an adopter with no cross-service references omits it entirely. Entries are added with the `/{project}:link` command, which validates the inputs and writes well-formed TOML; direct hand-editing remains possible.
+Declared in `.ductus/config.toml` under `[services.<alias>]`. The table is optional; an adopter with no cross-service references omits it entirely. Entries are added with the `/{project}:link` command, which validates the inputs and writes each entry through the `register-service` primitive as well-formed TOML, appended so every other byte of the file is kept; direct hand-editing remains possible.
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |

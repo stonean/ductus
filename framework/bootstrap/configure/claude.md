@@ -113,6 +113,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__diff-cross-spec`
    - `mcp__ductus__append-inbox`
    - `mcp__ductus__remove-inbox-item`
+   - `mcp__ductus__register-service`
    - `mcp__ductus__check-artifacts`
    - `mcp__ductus__check-artifact-size`
    - `mcp__ductus__check-owed-work`

@@ -210,6 +210,12 @@ fn case(name: &str, ctx: &Context) -> Case {
         "resolve-anchor" | "validate-frontmatter" => call(json!({"path": spec})),
         "read-section" => call(json!({"path": spec, "headings": ["Acceptance Criteria"]})),
         "append-inbox" => call(json!({"text": "A new corpus todo"})),
+        "register-service" => call(json!({
+            "alias": "corpus-api",
+            "repo": "https://example.com/acme/corpus-api",
+            "path": "../corpus-api",
+            "description": "A service the corpus links to"
+        })),
         "append-question" => call(json!({"feature": f, "question": "Is case zero handled?"})),
         "append-task" => call(
             json!({"feature-path": p, "title": "Handle case group zero", "done-when": "case group zero's tests pass", "body": ["Write case group zero, with its test"]}),

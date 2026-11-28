@@ -68,15 +68,16 @@ use crate::schema::primitives::{
     PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneReviewArgs,
     PruneReviewResult, PruneTasksArgs, PruneTasksResult, ReadReReadArgs, ReadReReadResult,
     ReadSectionArgs, ReadSectionResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs,
-    ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult, RemoveInboxItemArgs,
-    RemoveInboxItemResult, RenderHelpArgs, RenderHelpResult, RenderStatusArgs, RenderStatusResult,
-    ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult,
-    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
-    ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs, RetargetSessionsResult,
-    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
-    SetStatusArgs, SetStatusResult, StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs,
-    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
-    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    ReadTasksResult, RegisterServiceArgs, RegisterServiceResult, RelocateAuditRecordsArgs,
+    RelocateAuditRecordsResult, RemoveInboxItemArgs, RemoveInboxItemResult, RenderHelpArgs,
+    RenderHelpResult, RenderStatusArgs, RenderStatusResult, ResolveAnchorArgs, ResolveAnchorResult,
+    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
+    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult,
+    StartFixRoundsArgs, StartFixRoundsResult, TraverseDepsArgs, TraverseDepsResult,
+    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
+    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -1105,6 +1106,19 @@ impl GovRuntimeServer {
         params: Parameters<RemoveInboxItemArgs>,
     ) -> Result<Json<RemoveInboxItemResult>, String> {
         primitives::remove_inbox_item::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "register-service",
+        description = descriptions::REGISTER_SERVICE
+    )]
+    async fn register_service(
+        &self,
+        params: Parameters<RegisterServiceArgs>,
+    ) -> Result<Json<RegisterServiceResult>, String> {
+        primitives::register_service::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }
