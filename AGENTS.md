@@ -27,7 +27,7 @@ When adding files under `framework/`, place them by purpose, not by extension.
 `ductus` is a text-first framework. The implementation is intentionally narrow:
 
 - **Markdown** — every primary artifact (constitution, specs, plans, tasks, scenarios, rules, commands, templates) is plain markdown ([§text-first-artifacts](framework/constitution.md#text-first-artifacts)).
-- **Bash scripts** under `scripts/` — generators (`gen-*.sh`), the pre-commit hook installer (`install-hooks.sh`), and lints (`lint-*.sh`). All deterministic; no application logic.
+- **Bash and Python scripts** under `scripts/` — generators (`gen-*.sh`), the pre-commit hook installer (`install-hooks.sh`), lints (`lint-*.sh`), and mutation lists, analyze scripts and CI helpers (`*.py`). All deterministic; no application logic.
 - **GitHub Actions YAML** under `.github/workflows/` — CI configuration only.
 - **Node.js / `markdownlint-cli2`** — lint only; never a build dependency or published. `npm ci` installs it to `node_modules/`, which `lint-markdown` prefers. Child processes need the real Node `bin` on `PATH`, not an nvm function.
 - **Rust** under `runtime/` — the `ductus` runtime crate (bin + lib, edition 2024, MSRV `1.89`, `rmcp` SDK). Capabilities are MCP tools unless `cli-only` in `framework/runtime-tools.txt`; it calls no LLM.

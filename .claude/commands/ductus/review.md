@@ -55,7 +55,7 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
 - **Scope** — the spec's own change since its window's start, committed or not:
   `compute-review-scope`'s description states the rule, and what it leaves out
   is named in the record — see step 1.
-- **Config** — five `.ductus/config.toml` keys influence this command:
+- **Config** — these `.ductus/config.toml` keys influence this command:
   - `[review] tech-stack-verified` (boolean, default `false`): when `true`,
     step 1's tech-stack alignment check is skipped until the operator clears
     the key. Set, with operator confirmation, on the first successful check. A present
@@ -82,6 +82,9 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
     re-read and waived with it, and each run prints it. An empty value
     counts as unset. A malformed value halts the run at step 10, before any
     fix, naming the setting and the file.
+  - `[review] unreviewed-push` (`"block"` or `"warn"`, default `"block"`):
+    read by `check-unreviewed-code` before anything else, so any other value
+    halts a project review at step 1, naming the key and the file.
   - `[artifacts] read-size-bytes` (integer, default 50,000): the size past
     which a step's result moves its lists to the file `lists-file` names, as
     each primitive's description states. A malformed value halts the call
@@ -112,7 +115,7 @@ can advance to `done`. The recommended sequence is:
 ```
 
 `/ductus:implement` MUST NOT mark a spec `done` while the target's `review.md`
-records `must-violations: > 0`. See **§Blocking semantics** in `.ductus/reference/review.md`.
+records `blocking: true`. See **§Blocking semantics** in `.ductus/reference/review.md`.
 
 ## Instructions
 

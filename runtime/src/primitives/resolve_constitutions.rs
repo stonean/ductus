@@ -444,17 +444,18 @@ mod tests {
     }
 
     /// The record carries a bounded description, so every surface that names
-    /// a source gets the same truncated value (AC12, `BE-PAYLOAD-001`).
+    /// a source gets the same truncated value, at the 100 characters the data
+    /// model states (AC12, `BE-PAYLOAD-001`).
     #[test]
     fn a_long_description_is_truncated_in_the_record() {
-        let long = "y".repeat(DESCRIPTION_BUDGET + 40);
+        let long = "y".repeat(140);
         let dir = repo_with_config(Some(&format!(
             "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
              description = \"{long}\"\n"
         )));
 
         let result = run_in(&dir);
-        let expected = format!("{}…", "y".repeat(DESCRIPTION_BUDGET));
+        let expected = format!("{}…", "y".repeat(100));
         assert_eq!(
             result.skipped[0].description.as_deref(),
             Some(expected.as_str())

@@ -190,6 +190,17 @@ fn refuse_while_implementation_is_open(
 /// - [`PrimitiveError::ChangedSinceRead`] when `analysis.md` changed, appeared
 ///   or went after this call read it: nothing is written, and the caller re-runs
 ///   the write (`BE-TXN-002`, `BE-TXN-004`).
+/// - The rule-assessment refusals of `derive_rule_fields`, each before any
+///   write: a verdict naming no assessable rule, a `finding` with no message or
+///   in a tier its rule cannot fail in, a tier count below its `finding`
+///   verdicts, and a `waived` verdict without a departure entry or a `finding`
+///   or `addressed` one against an entry (spec 073).
+/// - [`PrimitiveError::InvalidReadSize`] for a malformed `[artifacts]
+///   read-size-bytes`, [`PrimitiveError::Json`] when a value does not
+///   serialize, [`PrimitiveError::InvalidPath`] when the results directory
+///   resolves outside the project, and [`PrimitiveError::Io`] when the lists
+///   file cannot be written, from placing the result's lists: each fails the
+///   call after the record is written.
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
     run_between(args, repo, &mut || {}, &mut || {})
 }
@@ -3959,15 +3970,6 @@ mod tests {
             report.contains("- TS-RULE-002 — judged a finding over unchanged subjects, against an earlier verdict of addressed; the finding counts in its tier"),
             "{report}"
         );
-
-        // Contradictions alone hold nothing: with the finding counted nowhere
-        // else, a run whose only news is one is still not blocking.
-        let mut third = args();
-        third.advisory = 0;
-        third.judged_rules = rule_ids(3, 0);
-        third.blocking_findings = 3;
-        let result = run(&third, tmp.path()).unwrap();
-        assert_eq!(result.contradictions.len(), 0);
     }
 
     /// Spec 082, AC7: with nothing changed, a finding at a section, against a

@@ -955,7 +955,11 @@ async fn traverse_deps_returns_compatibility() {
     )
     .await;
     let obj = structured_object(&result);
-    assert!(obj["compatible"].is_boolean());
+    // A dependency is compatible only at `planned` or later, and the fixture's
+    // 001-basic is `clarified`.
+    assert_eq!(obj["compatible"], false, "{obj:?}");
+    assert_eq!(obj["dependencies"][0]["feature"], "001-basic");
+    assert_eq!(obj["dependencies"][0]["status"], "clarified");
     // Acyclic fixture must carry an empty `cycles` array — confirms the
     // schema field is wired through the MCP surface and stays empty when
     // the reachable subgraph has no SCCs.
@@ -1144,6 +1148,22 @@ async fn mark_criterion_against_scratch_copy_flips_checkbox() {
     assert_eq!(obj["previous"], false);
 }
 
+/// Stage every change in the work tree and commit it on `HEAD`, with no
+/// parent while `HEAD` is unborn.
+fn commit_all(repo: &git2::Repository, message: &str) -> git2::Oid {
+    let mut index = repo.index().unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+    let parent = repo.head().ok().map(|head| head.peel_to_commit().unwrap());
+    let parents: Vec<&git2::Commit> = parent.iter().collect();
+    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+        .unwrap()
+}
+
 /// Build a tempdir copy of the fixture and `git init` + `git commit -m init`
 /// against it so primitives that walk git history (`check-stuck`,
 /// `derive-boundary`) have a real repo to operate on.
@@ -1151,22 +1171,30 @@ fn init_git_fixture() -> tempfile::TempDir {
     let tmp = tempfile::tempdir().unwrap();
     common::copy_dir_recursive(&fixture_repo(), tmp.path());
     let repo = git2::Repository::init(tmp.path()).unwrap();
-    let mut index = repo.index().unwrap();
-    index
-        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
-        .unwrap();
-    index.write().unwrap();
-    let tree_id = index.write_tree().unwrap();
-    let tree = repo.find_tree(tree_id).unwrap();
-    let sig = git2::Signature::now("Test", "test@example.com").unwrap();
-    repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[])
-        .unwrap();
+    commit_all(&repo, "init");
     tmp
 }
 
 #[tokio::test]
 async fn check_stuck_returns_commit_count() {
+    // The spec's move into `in-progress`, then two commits on its `tasks.md`:
+    // the count is those two, from the move on.
     let tmp = init_git_fixture();
+    let repo = git2::Repository::open(tmp.path()).unwrap();
+    let spec = tmp.path().join("specs/001-basic/spec.md");
+    let body = fs::read_to_string(&spec).unwrap();
+    fs::write(
+        &spec,
+        body.replace("status: clarified", "status: in-progress"),
+    )
+    .unwrap();
+    let start = commit_all(&repo, "start");
+    let tasks = tmp.path().join("specs/001-basic/tasks.md");
+    for note in ["A note.", "Another note."] {
+        let body = fs::read_to_string(&tasks).unwrap();
+        fs::write(&tasks, format!("{body}\n{note}\n")).unwrap();
+        commit_all(&repo, note);
+    }
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(
         &client,
@@ -1175,18 +1203,26 @@ async fn check_stuck_returns_commit_count() {
     )
     .await;
     let obj = structured_object(&result);
-    assert!(obj["commit-count"].is_number());
+    assert_eq!(obj["commit-count"], 2, "{obj:?}");
+    assert_eq!(obj["since-sha"], start.to_string());
     assert_eq!(obj["threshold"], 3);
 }
 
 #[tokio::test]
 async fn derive_boundary_returns_diff_paths() {
     let tmp = init_git_fixture();
+    let repo = git2::Repository::open(tmp.path()).unwrap();
+    let init = repo.head().unwrap().target().unwrap();
+    fs::write(tmp.path().join("NOTES.md"), "A later commit.\n").unwrap();
+    let head = commit_all(&repo, "later");
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(&client, "derive-boundary", json!({"feature": "001-basic"})).await;
     let obj = structured_object(&result);
-    assert!(obj["boundary"].is_array());
-    assert!(obj["first-commit"].is_string());
+    // The spec's directory and each path a commit changed since its first.
+    assert_eq!(obj["boundary"], json!(["NOTES.md", "specs/001-basic/**"]));
+    // The spec's first commit, not the head a later commit moved past it.
+    assert_eq!(obj["first-commit"], init.to_string());
+    assert_eq!(obj["current-head"], head.to_string());
 }
 
 /// `run-generator` hands any project file to `bash`, so the server does not
@@ -1451,9 +1487,8 @@ async fn process_decisions_classifies_via_mcp() {
 
 #[tokio::test]
 async fn compute_review_scope_returns_structured_scope_via_mcp() {
-    use git2::{IndexAddOption, Repository, Signature};
     let tmp = tempfile::tempdir().unwrap();
-    let repo = Repository::init(tmp.path()).unwrap();
+    let repo = git2::Repository::init(tmp.path()).unwrap();
     let dir = tmp.path().join("specs/001-x");
     fs::create_dir_all(&dir).unwrap();
     fs::write(
@@ -1461,13 +1496,7 @@ async fn compute_review_scope_returns_structured_scope_via_mcp() {
         "---\nstatus: planned\ndependencies: []\n---\n\n# x\n",
     )
     .unwrap();
-    let mut index = repo.index().unwrap();
-    index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
-    index.write().unwrap();
-    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
-    let sig = Signature::now("Test", "test@example.com").unwrap();
-    repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[])
-        .unwrap();
+    commit_all(&repo, "init");
 
     let client = start_pair(tmp.path().to_path_buf()).await;
     let result = call_tool(&client, "compute-review-scope", json!({"feature": "001-x"})).await;
@@ -1495,19 +1524,10 @@ const SMALL_READ_SIZE: usize = 480;
 /// read-size-bytes` set to [`SMALL_READ_SIZE`] (066 scenario
 /// `scope-results-have-a-bounded-size`).
 fn over_the_read_size(n: usize) -> tempfile::TempDir {
-    use git2::{IndexAddOption, Repository, Signature};
     let tmp = tempfile::tempdir().unwrap();
-    let repo = Repository::init(tmp.path()).unwrap();
+    let repo = git2::Repository::init(tmp.path()).unwrap();
     let commit = |message: &str| {
-        let mut index = repo.index().unwrap();
-        index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
-        index.write().unwrap();
-        let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
-        let sig = Signature::now("Test", "test@example.com").unwrap();
-        let parent = repo.head().ok().map(|head| head.peel_to_commit().unwrap());
-        let parents: Vec<&git2::Commit> = parent.iter().collect();
-        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
-            .unwrap();
+        commit_all(&repo, message);
     };
     let write = |rel: &str, body: &str| {
         let path = tmp.path().join(rel);
@@ -2240,17 +2260,7 @@ async fn write_review_renders_report_via_mcp() {
     // A window holding `src/a.rs`: the spec committed, the file written after it, since a
     // run records outcomes only on files its scope holds (spec 086, AC1).
     let repo = git2::Repository::init(tmp.path()).unwrap();
-    let mut index = repo.index().unwrap();
-    index
-        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
-        .unwrap();
-    index.write().unwrap();
-    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
-    let sig = git2::Signature::now("Test", "test@example.com").unwrap();
-    let base = repo
-        .commit(Some("HEAD"), &sig, &sig, "chore: seed", &tree, &[])
-        .unwrap()
-        .to_string();
+    let base = commit_all(&repo, "chore: seed").to_string();
     fs::create_dir_all(tmp.path().join("src")).unwrap();
     fs::write(tmp.path().join("src/a.rs"), "fn a() {}\n").unwrap();
 

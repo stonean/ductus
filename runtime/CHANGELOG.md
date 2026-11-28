@@ -439,6 +439,12 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Fixed
 
+- **`write-review` reports an unreadable `analysis.md` as undeterminable
+  (spec 050's review, 2026-11-27; `QUAL-CLAIM-001`).** Its
+  `analyze-freshness` reported a present `analysis.md` whose record could not
+  be read as `never-run`, the state of no analysis at all, which spec 057's
+  AC5 rules out. It is now `undeterminable`, naming the file and why it could
+  not be read, and it still blocks nothing.
 - **A stored entry's file that leaves the project is never probed (spec
   066's review, 2026-11-27; `BE-INPUT-004`).** `process-decisions`,
   `process-waivers` and `prune-review` read whether a stored decision's or

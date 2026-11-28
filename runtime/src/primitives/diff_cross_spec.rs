@@ -80,7 +80,7 @@ pub(crate) struct ImpactSurface {
 /// than an error (scenario derive-boundary-uncommitted-spec-dir): there is
 /// no window to diff, so there is nothing to report. Erroring here would
 /// only relocate the halt `derive-boundary` no longer raises — the same
-/// `/{project}:implement` walk hits this primitive at steps 7 and 13.
+/// `/{project}:implement` walk hits this primitive at steps 7 and 10.
 pub(crate) fn compute(args: &DiffCrossSpecArgs, repo: &Path) -> Result<ImpactSurface> {
     let layout = paths::Paths::load(repo)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
@@ -554,7 +554,7 @@ mod tests {
     fn missing_spec_history_is_the_empty_result() {
         // Scenario derive-boundary-uncommitted-spec-dir: erroring here would
         // relocate the halt `derive-boundary` no longer raises, since the
-        // same /ductus:implement walk reaches this primitive at steps 7 and 13.
+        // same /ductus:implement walk reaches this primitive at steps 7 and 10.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("README.md"), "# repo\n");

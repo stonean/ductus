@@ -126,7 +126,7 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), to 49,997 when §recommendations gained a rule (§An answer is applied as chosen), and to 49,982 when §text-first-artifacts gained one (§Artifacts are as short as their required content); it is 49,955 bytes at `54715126`, within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 26 bytes for each character its project name has beyond nine, since `{project}` appears 26 times at `54715126`, so it stays within the 51,200-byte caps for a name of up to 56 characters. The read size is the target because Pi's read tool returns at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on it stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
+`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), to 49,997 when §recommendations gained a rule (§An answer is applied as chosen), and to 49,982 when §text-first-artifacts gained one (§Artifacts are as short as their required content); it is 49,955 bytes at `54715126`, within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it below that read size, at the 49,000-byte ceiling spec 089 sets. An adopter's installed copy differs by 26 bytes for each character its project name has beyond nine, since `{project}` appears 26 times at `54715126`, so it stays within the 51,200-byte caps for a name of up to 56 characters. The read size is the target because Pi's read tool returns at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on it stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
 | Section | Before | At `54715126` |
 | --- | --- | --- |
@@ -215,7 +215,7 @@ Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote
 now holds 17: `072-governing-documents-stay-within-one-read` removed the rows of
 three entries it retired and `089-the-pipeline-s-own-cost-is-stated-and-bounded`
 the rows of eight it moved to a part, as the notes beside that table say, and the
-promoted table 22, as the note beside it says.
+promoted table 21, as the note beside it says.
 
 **Entries are keyed by their `AGENTS.md` lead phrase, with the survey's positional
 ID kept in parentheses as a historical marker.** The positional ID was the original
@@ -428,7 +428,7 @@ Seven practices an adopter reported as true of every project, classified one at 
 
 ### Promoted — universal
 
-The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges` (`ad4fae5b`) to `create-scenario`'s compiled description, is gone (`fcb13a75`).
+The row for the `create-scenario` entry, since moved out of `AGENTS.md` by `079-review-and-analysis-work-converges` (`ad4fae5b`) to `create-scenario`'s compiled description, is gone (`fcb13a75`), as is W24's, whose entry `084-reopen-for-owed-code-review-every-code-change` deleted with the reopen rule it stated (`1b3bb4ac`).
 
 | Entry | Reason |
 | --- | --- |
@@ -514,7 +514,6 @@ The cut to one read moved these universal rules' canonical text out of the const
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/constitution.md` | Modify | Receives every promoted rule as a bullet under the section owning its subject, plus the criterion-verification rule, §spec-lifecycle's statement that an edit changing no claim leaves a `done` spec `done` (AC13), and a §drift-prevention canonical-sources row naming this spec |
-| `AGENTS.md` | Modify | The line-citation gotcha becomes a pointer (task 48) |
 | `framework/constitution.md` | Modify | §design-principles' use-what-a-task-needs filter, and §cost-levers' example cut to fit the ceiling (task 53) |
 | `AGENTS.md` | Modify | 40dea24c's restatement of the filter removed, and the bullet it displaced restored (task 53) |
 | `framework/constitution.md` | Modify | Decision resolution states that a superseded requirement is never kept, and the retired-filename bullet drops its annotation sentence (task 54) |
@@ -529,14 +528,14 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/reference/analyze.md` | Modify | The in-progress measurement rule, and §Record fields for the analyze record's field meanings |
 | `framework/reference/groom.md` | Modify | §Inbox upkeep receives the remove-by-text rule |
 | `framework/commands/groom.md` | Modify | Step 9 points at `framework/reference/groom.md` §Inbox upkeep |
-| `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the 50,000-byte read size |
-| `scripts/tests/test-lint-governing-size.sh` | Modify | Check H holds both ceilings to `DEFAULT_READ_SIZE_BYTES` |
+| `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling sits below the 50,000-byte read size, at 49,000 since spec 089 |
+| `scripts/tests/test-lint-governing-size.sh` | Modify | Check H holds both governing ceilings below `DEFAULT_READ_SIZE_BYTES`, as spec 089 sets them |
 | `CLAUDE.md` | Modify | Imports `@framework/constitution.md` above `@AGENTS.md` |
 | `framework/templates/project/claude-md.md` | Modify | Imports `@.ductus/constitution.md` above `@AGENTS.md` |
 | `framework/migrations/claude-md-import-syntax.md` | Modify | Converts the `@import .ductus/constitution.md` line instead of removing it |
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
 | `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
-| `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matched the text then; spec 084 replaced that back-edge with owed code |
+| `framework/commands/amend.md` | Modify | Its account of the back-edges it takes states §spec-lifecycle's rule |
 | `framework/reference/clarify.md`, `framework/reference/plan.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | Point at §grounding's *Cite what you consulted* in place of restating it (task 48); clarify points at §recommendations' attribution rule (task 51) |
 | `framework/reference/review.md` | Modify | §Run review passes checks a claim against the tree before recording it; Observations fixes design rationale as a comment |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |

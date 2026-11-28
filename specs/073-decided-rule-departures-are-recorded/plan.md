@@ -83,11 +83,11 @@ Decided by the operator, 2026-11-23, of three options (`` `file` in `site` ``, a
 
 ### The constitution gains one bullet and loses two restated sentences
 
-`framework/constitution.md` is 49,831 bytes (`wc -c` at the parent of `6a0a5277`, 073's task 7) against the 50,000-byte ceiling `scripts/lint-governing-size.sh` enforces. Finding dispositions gains, before "Detect, decide, re-check, record." (176 bytes):
+`framework/constitution.md` is 49,831 bytes (`wc -c` at the parent of `6a0a5277`, 073's task 7) against the 50,000-byte ceiling `scripts/lint-governing-size.sh` enforced then. Finding dispositions gains, before "Detect, decide, re-check, record." (176 bytes):
 
 > - **A departure entry waives its rule before any finding exists.** Analyze records the rule `waived`, never failing, apart from those that passed; review reads the same entry.
 
-and "Three dispositions" loses " The inbox is not a disposition. A question is deferred with its trigger." (73 bytes). Both are copies: §design-principles says "The inbox is none of the three", and §spec-requirements that a deferred decision "is resolved *with* its trigger". Nothing asserts either sentence (grep of the live artifacts, 2026-11-12). Result: 49,934 bytes. AC6's record row is the analysis-record table's `rule-verdicts` field, which names the three verdicts (`addressed`, `finding`, `waived`), 35 bytes more, leaving the file at 49,969 bytes at 073's change (`wc -c`, 2026-11-13), within the ceiling `scripts/lint-governing-size.sh` holds; the `rule-verdicts` bullet of `framework/reference/analyze.md` §Record fields, 066's data model and `docs/analyze.md` describe it too.
+and "Three dispositions" loses " The inbox is not a disposition. A question is deferred with its trigger." (73 bytes). Both are copies: §design-principles says "The inbox is none of the three", and §spec-requirements that a deferred decision "is resolved *with* its trigger". Nothing asserts either sentence (grep of the live artifacts, 2026-11-12). Result: 49,934 bytes. AC6's record row is the analysis-record table's `rule-verdicts` field, which names the three verdicts (`addressed`, `finding`, `waived`), 35 bytes more, leaving the file at 49,969 bytes at 073's change (`wc -c`, 2026-11-13), within the ceiling `scripts/lint-governing-size.sh` then held; the `rule-verdicts` bullet of `framework/reference/analyze.md` §Record fields, 066's data model and `docs/analyze.md` describe it too.
 
 ### The test that reads history runs in the job that has it
 

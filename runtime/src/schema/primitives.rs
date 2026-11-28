@@ -1842,7 +1842,7 @@ pub struct CheckPrescriptionsResult {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReviewFinding {
-    /// Rule ID (e.g., "SEC-BE-014").
+    /// Rule ID (e.g., "BE-AUTHN-001").
     pub rule: String,
     /// Severity tier. A closed set, so an unrecognized value is rejected at
     /// deserialization rather than filed as the permissive tier — this field
@@ -3294,7 +3294,7 @@ pub struct CheckStuckArgs {
     /// Feature directory name.
     #[arg(long)]
     pub feature: String,
-    /// Commit-count threshold above which the task is considered stuck.
+    /// Commit-count threshold at which the task is considered stuck.
     #[arg(long)]
     pub threshold: u32,
 }
@@ -3943,7 +3943,7 @@ pub struct CheckRuleIdsArgs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RuleCitation {
-    /// Rule ID as cited (e.g., "SEC-AUTH-001").
+    /// Rule ID as cited (e.g., "SEC-AUTHN-001").
     pub rule_id: String,
     /// Whether the ID exists in any rule file.
     pub found: bool,
@@ -4843,7 +4843,8 @@ pub struct ExtractArchiveResult {
     /// Absolute path of the destination directory, inside the system temp
     /// directory, as `dest` was validated.
     pub dest: String,
-    /// Repo-relative paths of every regular file extracted, in archive order.
+    /// Paths of every regular file extracted, relative to `dest`, in archive
+    /// order.
     pub files: Vec<String>,
     /// Count of regular files extracted (directories are not counted).
     pub count: u32,
@@ -7813,9 +7814,8 @@ pub struct UnreviewedCodeCounts {
 // -- check-review-gate -------------------------------------------------------
 
 /// Args for `check-review-gate`. Evaluates `/ductus:implement`'s pre-done
-/// review gate for one feature: the feature directory's markdown lint,
-/// then the review record in `review.md`, in the completion gate's
-/// documented order (first failing check wins).
+/// review gate for one feature: its checks in the order this primitive's
+/// description states (first failing check wins).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckReviewGateArgs {
@@ -7932,7 +7932,7 @@ pub enum ReviewGateBlock {
     /// of content, not commits — `analyzed_against` is provenance and moving
     /// `HEAD` over content the analysis already read does not stale it.
     ///
-    /// Ordered last, after [`Self::NotAnalyzed`] and [`Self::AnalyzeFindings`],
+    /// Ordered after [`Self::NotAnalyzed`] and [`Self::AnalyzeFindings`],
     /// because it is the weakest of the three claims — the others say the
     /// analysis is missing or failing, this one says a passing analysis is out of
     /// date.
@@ -8079,9 +8079,9 @@ pub struct CheckReviewGateResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_by: Option<ReviewGateBlock>,
     /// The canonical blocked message for the failing check (the
-    /// `blocked: …` texts documented in `/ductus:implement`'s completion
-    /// gate, with the adopter's `[host] project` command namespace
-    /// substituted); absent on pass.
+    /// `blocked: …` text the primitive builds for that check, with the
+    /// adopter's `[host] project` command namespace substituted); absent on
+    /// pass.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Follow-up guidance accompanying the message — the
@@ -8283,8 +8283,9 @@ pub struct DiffCrossSpecResult {
     /// project root: a JSON object with that one key, one entry per line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lists_file: Option<String>,
-    /// Next-step guidance, present only when no commit touches the spec
-    /// dir. Without it the empty lists above would read as *"no cross-spec
+    /// Next-step guidance, present only when the window cannot be placed:
+    /// no commit touches the spec dir yet, or the history is too shallow to
+    /// place its start. Without it the empty lists above would read as *"no cross-spec
     /// impact"* — a positive claim — when the truth is that there is no
     /// window to diff and the impact is **unknowable**. Its presence tells
     /// the caller to report the difference rather than the reassurance

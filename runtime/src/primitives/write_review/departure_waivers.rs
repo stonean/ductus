@@ -1,7 +1,8 @@
-//! Tests (spec 073 AC5, AC8): a spec's departure entries waive their rule
-//! in the review, composed the way a review run composes the two primitives —
-//! `process-waivers` classifies the recorded waivers against what fires, then
-//! `write-review` records the run with its result.
+//! Tests (spec 073 AC5, AC8, AC10 to AC13; spec 086 AC1): a spec's departure
+//! entries waive their rule in the review, composed the way a review run
+//! composes the two primitives — `process-waivers` classifies the recorded
+//! waivers against what fires, then `write-review` records the run with its
+//! result.
 //!
 //! Each fixture commits a spec holding the entries, so attribution reads real history.
 

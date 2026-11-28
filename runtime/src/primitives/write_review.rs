@@ -1128,15 +1128,20 @@ fn analyze_freshness_of(
     };
     let root = paths::Paths::load(repo)?.specs_root;
     let rel_dir = format!("{root}/{feature}");
-    // An unreadable record is reported as never-run here, deliberately: this
-    // is an advisory row in a review's stdout, not a gate, and the gate is
-    // where the absent/undeterminable distinction is load-bearing. Blocking a
-    // review's summary line on a damaged analyze record would let one record's
-    // damage suppress an unrelated command's output.
-    let record = crate::primitives::load_analyze_record(feature_dir);
-    Ok(match record.as_present() {
-        Some(analyze) => analyze_subjects::analyze_freshness(repo, &rel_dir, Some(analyze)),
-        None => RecordFreshness::NeverRun,
+    // An unreadable record is undeterminable, never never-run (spec 057, AC5):
+    // the row is advisory and `Undeterminable` blocks nothing, so naming the
+    // damage costs the review's output nothing.
+    Ok(match crate::primitives::load_analyze_record(feature_dir) {
+        crate::primitives::RecordLoad::Present(analyze) => {
+            analyze_subjects::analyze_freshness(repo, &rel_dir, Some(&analyze))
+        }
+        crate::primitives::RecordLoad::Unreadable(reason) => RecordFreshness::Undeterminable {
+            reason: format!(
+                "{rel_dir}/{} exists but its record could not be read: {reason}",
+                crate::primitives::ANALYSIS_RECORD_FILE
+            ),
+        },
+        crate::primitives::RecordLoad::Absent => RecordFreshness::NeverRun,
     })
 }
 
@@ -4707,6 +4712,29 @@ mod tests {
         assert_eq!(result.exit_code, 0);
     }
 
+    /// An `analysis.md` whose record cannot be read is undeterminable, never
+    /// never-run (spec 057, AC5): the row names the damage, and still blocks
+    /// nothing.
+    #[test]
+    fn an_unreadable_analyze_record_reports_undeterminable() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        fs::write(
+            tmp.path().join("specs/001-x/analysis.md"),
+            "---\nspec: [unclosed\n---\n\n# Analysis — 001-x\n",
+        )
+        .unwrap();
+        let result = run(&base_args("001-x"), tmp.path()).unwrap();
+        let RecordFreshness::Undeterminable { reason } = &result.analyze_freshness else {
+            panic!("{:?}", result.analyze_freshness);
+        };
+        assert!(
+            reason.contains("specs/001-x/analysis.md exists but its record could not be read"),
+            "{reason}"
+        );
+        assert!(!result.blocking);
+        assert_eq!(result.exit_code, 0);
+    }
+
     /// The whole point of the working-tree reference point. This primitive has
     /// just rewritten `review.md`, an analyze subject, so the record it reports
     /// on is superseded from this moment.
@@ -4727,19 +4755,7 @@ mod tests {
         .unwrap();
         // A real repo, and a record pointing at its only commit.
         let repository = git2::Repository::init(tmp.path()).unwrap();
-        let sha = {
-            let mut index = repository.index().unwrap();
-            index
-                .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
-                .unwrap();
-            index.write().unwrap();
-            let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
-            let sig = git2::Signature::now("Test", "test@example.com").unwrap();
-            repository
-                .commit(Some("HEAD"), &sig, &sig, "base", &tree, &[])
-                .unwrap()
-                .to_string()
-        };
+        let sha = crate::primitives::git_fixture::commit_all(&repository, "base").to_string();
         // Give the record a digest of the subjects as they are now, so it is
         // judgeable at all. Without one the honest answer is undeterminable,
         // which is what every pre-digest record reports.
@@ -7936,11 +7952,12 @@ mod tests {
     }
 
     /// The line is single-line by contract, so an over-long description is
-    /// truncated rather than wrapped.
+    /// truncated rather than wrapped, at the 100 characters spec 055's data
+    /// model states.
     #[test]
     fn an_over_long_description_is_truncated_not_wrapped() {
         let tmp = spec_repo("055-x", "status: in-progress");
-        let long = "x".repeat(crate::primitives::resolve_constitutions::DESCRIPTION_BUDGET + 40);
+        let long = "x".repeat(140);
         with_described_constitution(&tmp, "acme", "nowhere", &long);
         run(&base_args("055-x"), tmp.path()).unwrap();
         let report = review_md(&tmp, "055-x");
@@ -7948,14 +7965,8 @@ mod tests {
             .lines()
             .find(|l| l.starts_with("- `acme`"))
             .expect("the skipped source is named");
-        assert!(
-            line.contains(&format!(
-                "{}…",
-                "x".repeat(crate::primitives::resolve_constitutions::DESCRIPTION_BUDGET)
-            )),
-            "{line}"
-        );
-        assert!(!line.contains(&long), "{line}");
+        assert!(line.contains(&format!("{}…", "x".repeat(100))), "{line}");
+        assert!(!line.contains(&"x".repeat(101)), "{line}");
     }
 
     #[test]
