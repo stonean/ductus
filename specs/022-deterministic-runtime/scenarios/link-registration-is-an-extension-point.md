@@ -23,7 +23,7 @@ section: "LLM extension points"
 - With no config file, the primitive creates `.ductus/config.toml` holding only the new block; with only a legacy file present, the block lands there and no `.ductus/config.toml` is created, as `link.md`'s **Additive write** states.
 - A value holding a quote, a backslash or a newline is written as an escaped TOML string, so the block reads back as the value given.
 - A config that does not parse, or one an appended `[services.<alias>]` table would leave unparseable (a `services` key written as an inline table or as dotted keys), is refused with nothing written, naming the file.
-- A config another writer changed between the primitive's read and its rename is refused with nothing written, as 022's data model §A refused write states for the guarded read-modify-writes.
+- A config another writer changed between the primitive's read and its rename is refused with nothing written, as the guarded read-modify-writes in `specs/022-deterministic-runtime/data-model.md` are.
 
 ## Open Questions
 
