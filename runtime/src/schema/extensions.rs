@@ -7,8 +7,10 @@
 //! `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship
 //! ahead of their scenarios per the extension-request-hygiene scenario,
 //! `verifyCriteria`, `/{project}:review`'s criteria step (066's scenario
-//! `criteria-are-verified-in-review`), and `routeFold`, `/{project}:fold`'s
-//! body-edit-or-scenario decision (spec 051). The runtime emits these as the `request`
+//! `criteria-are-verified-in-review`), `routeFold`, `/{project}:fold`'s
+//! body-edit-or-scenario decision (spec 051), and `registerService`,
+//! `/{project}:link`'s registration step (scenario
+//! `link-registration-is-an-extension-point`). The runtime emits these as the `request`
 //! field of `llm-request` envelopes and validates incoming `llm-response`
 //! payloads against them.
 
@@ -671,6 +673,63 @@ pub struct RouteFoldResponse {
     pub reason: Option<String>,
 }
 
+// -- registerService -----------------------------------------------------------
+
+/// One entry the `[services]` registry already holds, which the registration
+/// flow checks a new alias and repo against.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegisteredService {
+    /// The entry's alias, its `[services.<alias>]` key.
+    pub alias: String,
+    /// The entry's `repo`, verbatim.
+    pub repo: String,
+}
+
+/// Request payload for `registerService`, `/{project}:link`'s registration
+/// step (spec 022, scenario `link-registration-is-an-extension-point`). The
+/// fields the walk's arguments supplied ride inline; the host prompts for
+/// those `missing` names, validates every field as `link.md`'s **Validation**
+/// states, and answers with all four.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegisterServiceRequest {
+    /// The `alias=` argument, absent when the walk was given none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alias: Option<String>,
+    /// The `repo=` argument, absent when the walk was given none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    /// The `path=` argument, absent when the walk was given none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// The `description=` argument, absent when the walk was given none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The fields to prompt for, in the flow's order (`alias`, `repo`,
+    /// `path`, `description`): each one the walk was given no argument for.
+    pub missing: Vec<String>,
+    /// Every entry `[services]` registers, in alias order.
+    pub registered: Vec<RegisteredService>,
+}
+
+/// Response payload for `registerService`: the fields the operator gave,
+/// which the walk passes to `register-service` verbatim.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegisterServiceResponse {
+    /// The service's alias.
+    pub alias: String,
+    /// The canonical repository URL.
+    pub repo: String,
+    /// The local checkout, as the operator wrote it.
+    pub path: String,
+    /// The optional note on the service's purpose; absent or empty writes
+    /// none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
 // -- verifyCriteria ------------------------------------------------------------
 
 /// One acceptance criterion presented for verification. Mirrors the
@@ -794,8 +853,8 @@ pub enum ValidationError {
 ///
 /// Returns [`ValidationError::UnknownExtension`] when `identifier` is not
 /// `assessSpecQuality`, `writeCode`, `writeSpecBody`, `performReview`,
-/// `askClarifyQuestion`, `routeInboxItem`, `routeFold`, or
-/// `verifyCriteria`; otherwise [`ValidationError::Schema`] when
+/// `askClarifyQuestion`, `routeInboxItem`, `routeFold`, `registerService`,
+/// or `verifyCriteria`; otherwise [`ValidationError::Schema`] when
 /// deserialization fails.
 pub fn validate_response(identifier: &str, response: &Value) -> Result<(), ValidationError> {
     macro_rules! check {
@@ -825,6 +884,7 @@ pub fn validate_response(identifier: &str, response: &Value) -> Result<(), Valid
         "askClarifyQuestion" => check!(AskClarifyQuestionResponse),
         "routeInboxItem" => check!(RouteInboxItemResponse),
         "routeFold" => check!(RouteFoldResponse),
+        "registerService" => check!(RegisterServiceResponse),
         "verifyCriteria" => check!(VerifyCriteriaResponse),
         other => Err(ValidationError::UnknownExtension(other.into())),
     }
@@ -1888,6 +1948,66 @@ mod tests {
             ValidationError::Schema { identifier, .. } => assert_eq!(identifier, "routeFold"),
             other => panic!("expected schema mismatch, got {other:?}"),
         }
+    }
+
+    /// A `registerService` response carries the alias, repo and path the
+    /// walk passes on, the description optional; one lacking a required field
+    /// is a schema mismatch, so no partial entry reaches the write.
+    #[test]
+    fn register_service_response_requires_alias_repo_and_path() {
+        use super::{RegisterServiceResponse, ValidationError, validate_response};
+
+        let full = serde_json::json!({
+            "alias": "api", "repo": "https://h/o/api", "path": "../api", "description": "x"
+        });
+        validate_response("registerService", &full).unwrap();
+        let parsed: RegisterServiceResponse = serde_json::from_value(full).unwrap();
+        assert_eq!(parsed.description.as_deref(), Some("x"));
+        validate_response(
+            "registerService",
+            &serde_json::json!({ "alias": "api", "repo": "https://h/o/api", "path": "../api" }),
+        )
+        .unwrap();
+        for missing in ["alias", "repo", "path"] {
+            let mut body = serde_json::json!({
+                "alias": "api", "repo": "https://h/o/api", "path": "../api"
+            });
+            body.as_object_mut().unwrap().remove(missing);
+            match validate_response("registerService", &body).unwrap_err() {
+                ValidationError::Schema { identifier, .. } => {
+                    assert_eq!(identifier, "registerService");
+                }
+                other => panic!("{missing}: expected schema mismatch, got {other:?}"),
+            }
+        }
+    }
+
+    /// A field the walk was not given is absent from the request rather than
+    /// sent empty, so a host never reads an unset field as an empty answer.
+    #[test]
+    fn register_service_request_omits_unsupplied_fields() {
+        use super::{RegisterServiceRequest, RegisteredService};
+
+        let request = RegisterServiceRequest {
+            alias: Some("api".into()),
+            repo: None,
+            path: None,
+            description: None,
+            missing: vec!["repo".into(), "path".into(), "description".into()],
+            registered: vec![RegisteredService {
+                alias: "web".into(),
+                repo: "https://h/o/web".into(),
+            }],
+        };
+        let value = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "alias": "api",
+                "missing": ["repo", "path", "description"],
+                "registered": [{ "alias": "web", "repo": "https://h/o/web" }]
+            })
+        );
     }
 
     #[test]

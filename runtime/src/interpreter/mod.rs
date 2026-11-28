@@ -105,6 +105,11 @@ const ASSESS_SPEC_QUALITY: &str = "assessSpecQuality";
 
 /// The extension point `/clarify` step 6 asks per open question through.
 const ASK_CLARIFY_QUESTION: &str = "askClarifyQuestion";
+/// `/link`'s registration step, whose response the walk writes through
+/// [`REGISTER_SERVICE_PRIMITIVE`].
+const REGISTER_SERVICE: &str = "registerService";
+/// The primitive that makes `/link`'s registration write.
+const REGISTER_SERVICE_PRIMITIVE: &str = "register-service";
 
 /// One run of the walker. The caller owns the procedure, repo path, and
 /// reader/writer streams; the walker borrows them for its lifetime.
@@ -236,9 +241,9 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
                 number,
                 identifier,
                 prose,
-                location: _,
+                location,
             } => {
-                let outcome = self.handle_extension(number, identifier, prose)?;
+                let outcome = self.handle_extension(number, identifier, prose, *location)?;
                 Ok(outcome)
             }
             Step::Prose { number, text, .. } => {
@@ -325,8 +330,21 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         } else {
             dispatch_primitive(name, &self.context, &self.repo)
         };
+        self.take_dispatched(name, dispatched, location, &step_label)
+    }
+
+    /// Take a dispatched primitive's outcome into the walk: a result through
+    /// [`Self::take_result`], an error as the `error` envelope that halts the
+    /// walk, located at the step that dispatched it.
+    fn take_dispatched(
+        &mut self,
+        name: &str,
+        dispatched: Result<Value, DispatchError>,
+        location: crate::schema::procedure::SourceRange,
+        step_label: &str,
+    ) -> std::io::Result<Option<WalkOutcome>> {
         match dispatched {
-            Ok(result) => self.take_result(name, result, location, &step_label),
+            Ok(result) => self.take_result(name, result, location, step_label),
             Err(err) => {
                 let code = match &err {
                     DispatchError::UnknownPrimitive(_) => "unknown-primitive".to_string(),
@@ -499,6 +517,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         number: &StepNumber,
         identifier: &str,
         prose: &str,
+        location: crate::schema::procedure::SourceRange,
     ) -> std::io::Result<Option<WalkOutcome>> {
         if identifier == ASSESS_SPEC_QUALITY {
             return self.handle_assessments(number, prose);
@@ -512,8 +531,49 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             Ok(response) => response,
             Err(outcome) => return Ok(Some(outcome)),
         };
+        let registration = (identifier == REGISTER_SERVICE).then(|| response.clone());
         self.accept_response(number, identifier, response)?;
-        Ok(None)
+        match registration {
+            Some(fields) => self.register_service(number, &fields, location),
+            None => Ok(None),
+        }
+    }
+
+    /// `/link`'s registration step: the validated `registerService` response
+    /// is the operator's answer, which `register-service` writes, so a walk
+    /// that reaches its end has registered the service (spec 022, scenario
+    /// `link-registration-is-an-extension-point`). The primitive is bound to
+    /// the response's four fields alone, never the walk's context, whose
+    /// other keys a primitive result may have set; its result joins the
+    /// context, and a refusal halts the walk at this step with
+    /// `primitive-failure`, nothing written.
+    fn register_service(
+        &mut self,
+        number: &StepNumber,
+        response: &Value,
+        location: crate::schema::procedure::SourceRange,
+    ) -> std::io::Result<Option<WalkOutcome>> {
+        let step_label = format_step_number(number);
+        self.emit_progress(
+            format!("dispatching primitive `{REGISTER_SERVICE_PRIMITIVE}`"),
+            Some(step_label.clone()),
+            Some(REGISTER_SERVICE_PRIMITIVE.into()),
+        )?;
+        let bindings: Map<String, Value> = ["alias", "repo", "path", "description"]
+            .into_iter()
+            .filter_map(|key| {
+                response
+                    .get(key)
+                    .map(|value| (key.to_string(), value.clone()))
+            })
+            .collect();
+        let dispatched = dispatch_primitive(REGISTER_SERVICE_PRIMITIVE, &bindings, &self.repo);
+        self.take_dispatched(
+            REGISTER_SERVICE_PRIMITIVE,
+            dispatched,
+            location,
+            &step_label,
+        )
     }
 
     /// `/analyze` steps 11 and 12: ask the host about each loaded rule of
@@ -1835,6 +1895,93 @@ mod tests {
         assert_eq!(lines[0]["request-id"], "req-1");
         assert_eq!(lines[1]["type"], "progress");
         assert_eq!(lines[2]["type"], "complete");
+    }
+
+    /// `/link`'s registration step: the validated `registerService` response
+    /// is written through `register-service`, bound to the response's fields
+    /// alone, so a `path` the walk's context holds never reaches the write;
+    /// the primitive's result joins the context.
+    #[test]
+    fn a_register_service_response_is_written_through_the_primitive() {
+        let tmp = tempfile::tempdir().unwrap();
+        let procedure = Procedure {
+            command: "link".into(),
+            steps: vec![Step::Extension {
+                number: StepNumber(vec![2]),
+                identifier: REGISTER_SERVICE.into(),
+                prose: String::new(),
+                location: loc(),
+            }],
+        };
+        let response = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"alias\":\"api\",\"repo\":\"https://h/o/api\",\"path\":\"../api\"}}\n";
+        let mut reader = Cursor::new(response.to_string());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut context = Map::new();
+        context.insert(
+            "description".into(),
+            Value::String("from the context".into()),
+        );
+        let mut walker = Walker::new(
+            &procedure,
+            tmp.path().to_path_buf(),
+            context,
+            &mut reader,
+            &mut writer,
+        )
+        .unwrap();
+        assert_eq!(walker.run().unwrap(), WalkOutcome::Complete);
+        assert_eq!(
+            walker.context.get("block").and_then(Value::as_str),
+            Some("[services.api]\nrepo = \"https://h/o/api\"\npath = \"../api\"\n")
+        );
+        drop(walker);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join(".ductus/config.toml")).unwrap(),
+            "[services.api]\nrepo = \"https://h/o/api\"\npath = \"../api\"\n",
+            "the context's description is not the response's"
+        );
+        let lines: Vec<Value> = std::str::from_utf8(&writer)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        assert_eq!(
+            lines[2]["primitive"], REGISTER_SERVICE_PRIMITIVE,
+            "{lines:?}"
+        );
+        assert_eq!(lines.last().unwrap()["type"], "complete");
+    }
+
+    /// A registration the primitive refuses halts the walk at the step with
+    /// `primitive-failure`, and nothing is written.
+    #[test]
+    fn a_refused_registration_halts_the_walk() {
+        let tmp = tempfile::tempdir().unwrap();
+        let procedure = Procedure {
+            command: "link".into(),
+            steps: vec![Step::Extension {
+                number: StepNumber(vec![2]),
+                identifier: REGISTER_SERVICE.into(),
+                prose: String::new(),
+                location: loc(),
+            }],
+        };
+        let response = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"alias\":\"api\",\"repo\":\"not a url\",\"path\":\"../api\"}}\n";
+        let mut reader = Cursor::new(response.to_string());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            tmp.path().to_path_buf(),
+            Map::new(),
+            &mut reader,
+            &mut writer,
+        )
+        .unwrap();
+        match walker.run().unwrap() {
+            WalkOutcome::Errored { code, .. } => assert_eq!(code, "primitive-failure"),
+            WalkOutcome::Complete => panic!("expected Errored, got Complete"),
+        }
+        assert!(!tmp.path().join(".ductus/config.toml").exists());
     }
 
     #[test]

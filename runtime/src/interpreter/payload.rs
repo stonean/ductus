@@ -44,8 +44,9 @@ use crate::primitives::rule_verdicts;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
     ContentForm, FoldSourceScenario, LoadedReviewRuleFile, PerformReviewRequest, PlanRelevantFile,
-    ReviewRuleFile, ReviewScopeFile, RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec,
-    VerifyCriteriaRequest, VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
+    RegisterServiceRequest, RegisteredService, ReviewRuleFile, ReviewScopeFile, RouteFoldRequest,
+    RouteInboxItemRequest, RouteInboxSpec, VerifyCriteriaRequest, VerifyCriterion,
+    WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
 };
 use crate::schema::paths;
 use crate::schema::primitives::ReadTasksArgs;
@@ -191,6 +192,10 @@ impl PayloadError {
 ///   resolved via `path`/`feature`, its own scenarios, and the upstream
 ///   spec its `folds-into` names (see [`build_route_fold_request`]). Typed
 ///   shape only.
+/// - `registerService` — builds [`RegisterServiceRequest`] from the
+///   `alias`, `repo`, `path` and `description` arguments and the entries
+///   `[services]` registers (see [`build_register_service_request`]). Typed
+///   shape only.
 /// - `verifyCriteria` — builds [`VerifyCriteriaRequest`] from the spec
 ///   resolved via `path`/`feature` and the review's merged
 ///   `acceptance-criteria` result (see
@@ -229,6 +234,7 @@ pub fn build_extension_request(
         "askClarifyQuestion" => build_ask_clarify_question_request(context, repo),
         "routeInboxItem" => build_route_inbox_item_request(context, repo),
         "routeFold" => build_route_fold_request(context, repo),
+        "registerService" => build_register_service_request(context, repo),
         "verifyCriteria" => build_verify_criteria_request(context, repo),
         other => Err(PayloadError::UnknownExtension {
             identifier: other.to_string(),
@@ -1230,6 +1236,55 @@ fn build_route_fold_request(
         "routeFold",
         typed_only(&typed),
         &["scenarios", "target-sections"],
+        None,
+    )
+}
+
+/// The fields `/{project}:link`'s registration step prompts for, in its order.
+const REGISTER_SERVICE_FIELDS: [&str; 4] = ["alias", "repo", "path", "description"];
+
+/// The request for `/{project}:link`'s registration step (spec 022, scenario
+/// `link-registration-is-an-extension-point`): each field an `alias=`,
+/// `repo=`, `path=` or `description=` argument supplied, the names of the
+/// rest in `missing`, and every entry `[services]` registers, read through
+/// the registry's one reader, so a config it refuses halts the walk here
+/// rather than reading as no registry. A walk of `link` is seeded with no
+/// session target (`ductus exec` drops it), so a `path` here is the
+/// operator's argument, never the targeted spec directory. Past the read size
+/// `registered` moves to the lists file.
+fn build_register_service_request(
+    context: &Map<String, Value>,
+    repo: &Path,
+) -> Result<Value, PayloadError> {
+    let [alias, repo_url, path, description] = REGISTER_SERVICE_FIELDS
+        .map(|key| context.get(key).and_then(Value::as_str).map(str::to_string));
+    let missing = REGISTER_SERVICE_FIELDS
+        .iter()
+        .zip([&alias, &repo_url, &path, &description])
+        .filter(|(_, value)| value.is_none())
+        .map(|(key, _)| (*key).to_string())
+        .collect();
+    let registered = crate::primitives::resolve_references::load_services(repo)?
+        .0
+        .into_iter()
+        .map(|(alias, entry)| RegisteredService {
+            alias,
+            repo: entry.repo,
+        })
+        .collect();
+    let typed = RegisterServiceRequest {
+        alias,
+        repo: repo_url,
+        path,
+        description,
+        missing,
+        registered,
+    };
+    bound_lists(
+        repo,
+        "registerService",
+        typed_only(&typed),
+        &["registered"],
         None,
     )
 }
@@ -4159,6 +4214,73 @@ mod tests {
         let value = build_route_fold_request(&ctx, tmp.path()).unwrap();
         assert_eq!(value["fold-target"], "");
         assert_eq!(value["target-content"], "");
+    }
+
+    /// The fields the walk's arguments supplied ride inline, the rest are
+    /// named in `missing` in the flow's order, and the registry's entries are
+    /// listed for the host's duplicate checks.
+    #[test]
+    fn build_register_service_request_names_the_supplied_the_missing_and_the_registered() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[services.web]\nrepo = \"https://h/o/web\"\npath = \"../web\"\n",
+        )
+        .unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("alias".into(), serde_json::json!("api"));
+        ctx.insert("path".into(), serde_json::json!("../api"));
+        let value =
+            build_extension_request("registerService", &ctx, tmp.path(), "link", "").unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "alias": "api",
+                "path": "../api",
+                "missing": ["repo", "description"],
+                "registered": [{ "alias": "web", "repo": "https://h/o/web" }]
+            })
+        );
+    }
+
+    /// A config the registry's reader refuses halts the request rather than
+    /// reading as an empty registry, as it halts every reader.
+    #[test]
+    fn build_register_service_request_halts_on_a_registry_it_cannot_read() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[services.web]\nrepo = \"https://h/o/web\"\n",
+        )
+        .unwrap();
+        let err = build_extension_request("registerService", &Map::new(), tmp.path(), "link", "")
+            .unwrap_err();
+        assert!(matches!(err, PayloadError::ConfigUnreadable(_)), "{err:?}");
+    }
+
+    /// Past the read size the registry's entries move to the request's lists
+    /// file, counted inline, and `missing` stays inline (`BE-PAYLOAD-001`).
+    #[test]
+    fn build_register_service_request_moves_the_registry_past_the_read_size() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[artifacts]\nread-size-bytes = 40\n\n[services.web]\nrepo = \"https://h/o/web\"\npath = \"../web\"\n",
+        )
+        .unwrap();
+        let value = build_extension_request("registerService", &Map::new(), tmp.path(), "link", "")
+            .unwrap();
+        assert!(value.get("registered").is_none(), "{value}");
+        assert_eq!(value["registered-count"], 1, "{value}");
+        assert_eq!(value["missing"].as_array().unwrap().len(), 4, "{value}");
+        let lists = request_lists(tmp.path(), &value);
+        assert_eq!(
+            lists["registered"],
+            serde_json::json!([{ "alias": "web", "repo": "https://h/o/web" }])
+        );
     }
 
     #[test]

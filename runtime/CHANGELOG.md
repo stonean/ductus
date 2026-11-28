@@ -21,6 +21,16 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   duplicate repo and a path resolving to no directory are warnings.
   `/{project}:link` step 2 calls it, where a host's file tools made the
   write before.
+- **`ductus exec link` walks `/{project}:link` to its end (spec 022,
+  scenario `link-registration-is-an-extension-point`).** `registerService`
+  is a typed extension point: its request carries the `alias=`, `repo=`,
+  `path=` and `description=` arguments the walk was given, the names of the
+  rest in `missing`, and the entries `[services]` registers (bounded past
+  the read size); its response, the four fields, is validated and passed to
+  `register-service`, whose refusal halts the walk at the step with
+  `primitive-failure`. A walk of `link` is seeded with no session target, so
+  a target's `path` is never read as the service's checkout. Before, the
+  walk halted at step 2 with `unknown-extension`.
 - **`prune-review` reduces a spec's `review.md` between reviews (spec 086,
   AC5 and AC3; the agent's recommendations, adopted by the operator,
   2026-11-26).** A new MCP tool and CLI command. A preview names each stored

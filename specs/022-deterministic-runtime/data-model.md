@@ -630,7 +630,7 @@ The complement of `append-inbox` and the deterministic surface behind `/ductus:g
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario and, since 066's task 27, is sent by `/ductus:review`'s criteria step (its step 7.2) as its criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario and, since 066's task 27, is sent by `/ductus:review`'s criteria step (its step 7.2) as its criterion-verification seam; `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051); and `registerService`, `/ductus:link`'s registration step (scenario [link-registration-is-an-extension-point](scenarios/link-registration-is-an-extension-point.md)). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through. A list the walker read back from a file-form result's list file is left out of that tail, as the primitive's file form left it out, so the tail carries each result's counts, but `form` and `lists-file` as the walk's last result left them, and a restored list reaches a request only through the typed prefix; a list file that cannot be read halts the walk at that primitive's step with `lists-file-unreadable` (spec 080).
 
 ### Request bodies past the read size
 
@@ -652,6 +652,7 @@ The marker names are `content-form` and `request-lists-file`, never `form` or `l
 | `routeFold` | `spec-content`, `target-content` | `scenarios`, `target-sections` |
 | `verifyCriteria` | `spec-content` | `criteria` |
 | `routeInboxItem` | none | `available-specs`, `candidates`, `unclaimed-paths` |
+| `registerService` | none | `registered` |
 
 ### `assessSpecQuality`
 
@@ -928,6 +929,37 @@ Response payload:
 ```
 
 `route` is one of the request's `routes` vocabulary (closed set — anything else is a schema mismatch). Exactly one of `section` (on `body-edit`) and `scenario` (on `scenario`) is meaningful; both are optional in the schema rather than modelled as a sum type, because a missing field on the chosen arm is something the *command* surfaces to the operator at its confirmation prompt rather than a deserialization failure. `reason` is optional prose the host may surface at that prompt, which is where the routing is approved before any write.
+
+### `registerService` (follow-on)
+
+Introduced by the [link-registration-is-an-extension-point](scenarios/link-registration-is-an-extension-point.md) scenario: `/ductus:link`'s step 2, one round trip in which the host prompts for each field the request names in `missing`, validates every field as `link.md`'s **Validation** states, and answers with all of them.
+
+Request payload:
+
+```json
+{
+  "alias": "api",
+  "missing": ["repo", "path", "description"],
+  "registered": [
+    { "alias": "web", "repo": "https://github.com/acme/web" }
+  ]
+}
+```
+
+`alias`, `repo`, `path` and `description` are the walk's `alias=`, `repo=`, `path=` and `description=` arguments, each absent when the walk was given none and then named in `missing`, in that order; the walker refuses a positional argument with `invalid-argument`, and `--list` has no exec form. A walk of `link` is seeded with no session target, which `link.md` does not take, so a target's `path`, the spec directory, is never sent as the checkout. `registered` is every entry `[services]` holds, in alias order, read through the registry's one reader, so a config it refuses halts the walk at this request, naming the file. The request carries no body; past the read size `registered` moves to the lists file (§Request bodies past the read size).
+
+Response payload:
+
+```json
+{
+  "alias": "api",
+  "repo": "https://github.com/acme/api",
+  "path": "../api",
+  "description": "owns the data models"
+}
+```
+
+`description` is optional. The walker passes the four fields, and nothing from its context, to `register-service` (spec 030's scenario `registration-writes-through-a-primitive`), whose result joins the context; a registration it refuses, an alias already registered or a field its rules reject, halts the walk at the step with `primitive-failure`, nothing written. A walk that reaches its end has written the `[services.<alias>]` block.
 
 ### `verifyCriteria` (follow-on)
 

@@ -173,6 +173,7 @@ The extension point inventory across the initial release and follow-on scenarios
 - `routeInboxItem` — `/ductus:groom`'s routing decision.
 - `verifyCriteria` — `/ductus:review`'s criteria step, its step 7.2, which judges each acceptance criterion against the code.
 - `routeFold` — `/ductus:fold`'s body-edit-or-scenario decision.
+- `registerService` — `/ductus:link`'s registration step: the host prompts for the fields the walk's arguments left unset, and the walk writes the answer through `register-service`, the primitive spec 030 adds for the registry write (scenario [link-registration-is-an-extension-point](scenarios/link-registration-is-an-extension-point.md)).
 
 > **Signpost:** `routeFold`, and the branch-scoped feature-directory form the shared `parse_feature_dir` recognizes, came from [051 — Branch-scoped spec numbering](../051-branch-scoped-spec-numbering/spec.md).
 

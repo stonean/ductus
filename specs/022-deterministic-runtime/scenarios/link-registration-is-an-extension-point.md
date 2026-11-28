@@ -6,7 +6,7 @@ section: "LLM extension points"
 
 ## Context
 
-`/ductus:link`'s registration step (`framework/commands/link.md` step 2, spec 030) carries the marker `<!-- llm:registerService -->`. `specs/022-deterministic-runtime/spec.md` §Parseable slash command procedures requires a marker's identifier to match an entry in its §LLM extension points, and that section says the data model carries every extension point's schema. No `registerService` entry exists, so `ductus exec link` halts at the step with `unknown-extension` (022's review of 2026-11-27, deferred to this spec's own task by the operator).
+`/ductus:link`'s registration step (`framework/commands/link.md` step 2, spec 030) carries the marker `<!-- llm:registerService -->`. `specs/022-deterministic-runtime/spec.md` §Parseable slash command procedures requires a marker's identifier to match an entry in its §LLM extension points, and that section says the data model carries every extension point's schema. 022's review of 2026-11-27 found no `registerService` entry, so `ductus exec link` halted at the step with `unknown-extension`, and the operator deferred it to this spec's own task.
 
 ## Behavior
 

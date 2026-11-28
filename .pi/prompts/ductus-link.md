@@ -28,7 +28,7 @@ This command does not require a session target — it edits the project-level `[
 
 > **For agent runtimes**: the Invoke steps below call the ductus runtime's MCP tools; without the server, stop and say to restart or re-run `/ductus` (§runtime-host-integration).
 
-The host prompts for and validates each field, and the register-service primitive writes the `[services.<alias>]` block; `--list` reads `.ductus/config.toml` with the host's file tools. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
+The host prompts for and validates each field, and the register-service primitive writes the `[services.<alias>]` block; `--list` reads `.ductus/config.toml` with the host's file tools. Under `ductus exec link` a pre-supplied field is an `alias=`, `repo=`, `path=` or `description=` argument, step 2's `registerService` request names the fields left to prompt for, and the walk writes the host's answer through register-service itself; `--list` has no exec form. The full procedure — argument forms, per-field validation, the additive write, and `--list` — is in the **Procedure** reference below.
 
 <!-- audit:ignore-promotion -->
 1. Parse the arguments. With `--list`, run the **List the registry** branch (read-only) and stop. With three positional values (alias, repo, path) plus an optional `--description <text>`, take them as pre-supplied field values, validate them, and prompt only for anything missing or invalid. With no arguments, collect every field interactively.

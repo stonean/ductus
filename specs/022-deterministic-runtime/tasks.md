@@ -8,7 +8,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 65. registerService is an extension point ductus exec serves
 
-- [ ] Implement the behavior described in `scenarios/link-registration-is-an-extension-point.md`
+- [x] Implement the behavior described in `scenarios/link-registration-is-an-extension-point.md`
 
 - **Done when**: `registerService` is in spec.md's §LLM extension points and the data model with its request and response schemas, `runtime/src/schema/extensions.rs` types and validates them, `build_extension_request` in `runtime/src/interpreter/payload.rs` builds its request, the scenario's open question is resolved, and a test walks `ductus exec link` to its end on a fixture with a canned response and holds the block the walk wrote, each as `scenarios/link-registration-is-an-extension-point.md` states.
 

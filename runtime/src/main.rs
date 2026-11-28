@@ -897,6 +897,19 @@ fn drop_target_for_a_project_review(context: &mut serde_json::Map<String, serde_
     }
 }
 
+/// A walk of `link`, which takes no session target, is seeded without one:
+/// its registration step reads `path` as the service's local checkout, and a
+/// seeded target's `path` is the targeted spec directory (spec 022, scenario
+/// `link-registration-is-an-extension-point`). It runs before the `key=value`
+/// arguments are overlaid, so a `path=` given to the walk stands.
+fn drop_target_for_link(command: &str, context: &mut serde_json::Map<String, serde_json::Value>) {
+    if command == "link" {
+        for key in ["feature", "path", "scenario", "scenario-path", "set-at"] {
+            context.remove(key);
+        }
+    }
+}
+
 /// The command file's path relative to the project root, with `/` separators:
 /// the `file` of every error location `ductus exec` emits. `path` is
 /// `repo.join(candidate)` ([`locate_exec_command`]), so the strip always
@@ -1194,6 +1207,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             return ExitCode::from(1);
         }
     };
+    drop_target_for_link(command, &mut context);
     for (key, value) in overrides {
         context.insert(key.to_string(), Value::String(value.to_string()));
     }
@@ -1675,8 +1689,8 @@ mod tests {
     use super::{
         Cli, audit_records_blocks, audit_records_lines, backfill_blocks, cli_command,
         derive_dependencies_blocks, derive_references_blocks, drop_target_for_a_project_review,
-        refused_lines, seed_context, unreviewed_code_blocks, unreviewed_code_lines,
-        unwritable_lines,
+        drop_target_for_link, refused_lines, seed_context, unreviewed_code_blocks,
+        unreviewed_code_lines, unwritable_lines,
     };
     use ductus::schema::primitives::{
         BackfillSectionDigestResult, DeriveDependenciesResult, DeriveReferencesResult, ListsForm,
@@ -2388,6 +2402,33 @@ mod tests {
         let context = seed_context(tmp.path(), None).unwrap();
         assert_eq!(context["feature"], "055-a");
         assert_eq!(context["write-boundary"][0], "src/**");
+    }
+
+    /// A walk of `link` leaves the seeded target out of its context, so its
+    /// registration step never reads the spec directory as a checkout; any
+    /// other command keeps it.
+    #[test]
+    fn a_link_walk_drops_the_seeded_target() {
+        let seeded = || {
+            let mut context = serde_json::Map::new();
+            for (key, value) in [
+                ("feature", "030-a"),
+                ("path", "specs/030-a"),
+                ("scenario", "x"),
+                ("scenario-path", "specs/030-a/scenarios/x.md"),
+                ("set-at", "2026-11-28T00:00:00Z"),
+                ("cli-config-dir", ".claude"),
+            ] {
+                context.insert(key.into(), serde_json::Value::String(value.into()));
+            }
+            context
+        };
+        let mut link = seeded();
+        drop_target_for_link("link", &mut link);
+        assert_eq!(link.keys().collect::<Vec<_>>(), ["cli-config-dir"]);
+        let mut target = seeded();
+        drop_target_for_link("target", &mut target);
+        assert_eq!(target, seeded());
     }
 
     /// AC23, first case: run as an agent whose own target differs from the

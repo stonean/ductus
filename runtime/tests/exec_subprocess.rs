@@ -962,3 +962,157 @@ fn exec_refuses_a_command_name_outside_the_slug_grammar() {
         assert!(!stdout.contains("not found"), "{name}: reached a lookup");
     }
 }
+
+/// `ductus exec link` walks the shipped `/ductus:link` to its end: the
+/// registration step's `registerService` request carries the `alias=` and
+/// `repo=` arguments and names the fields left to prompt for, the canned
+/// response is written through `register-service`, and the config gains the
+/// `[services.<alias>]` table with every other byte kept (spec 022, scenario
+/// `link-registration-is-an-extension-point`). A session target is set, and
+/// its `path`, the spec directory, reaches neither the request nor the write.
+#[test]
+fn exec_link_walks_to_its_end_and_writes_the_registered_service() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    let command = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/commands/link.md"),
+    )
+    .unwrap();
+    write_procedure_repo(tmp.path(), "link", &command);
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    let before = "[paths]\nspecs-root = \"specs\"\n\n[services.web]\nrepo = \"https://github.com/acme/web\"\npath = \"../web\"\n";
+    fs::write(tmp.path().join(".ductus/config.toml"), before).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/session.toml"),
+        "feature = \"030-a\"\npath = \"specs/030-a\"\n",
+    )
+    .unwrap();
+
+    let mut child = ductus_command(runtime_binary())
+        .args([
+            "exec",
+            "link",
+            "alias=api",
+            "repo=https://github.com/acme/api",
+        ])
+        .current_dir(tmp.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn runtime");
+    let mut stdin = child.stdin.take().unwrap();
+    stdin
+        .write_all(
+            b"{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"alias\":\"api\",\"repo\":\"https://github.com/acme/api\",\"path\":\"../api\",\"description\":\"owns the data models\"}}\n",
+        )
+        .unwrap();
+    drop(stdin);
+
+    let stdout = child.stdout.take().unwrap();
+    let envelopes: Vec<Value> = BufReader::new(stdout)
+        .lines()
+        .map(Result::unwrap)
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str(&line).unwrap())
+        .collect();
+    let status = child.wait().unwrap();
+    assert!(status.success(), "exit: {status:?}: {envelopes:?}");
+
+    let request = &envelopes[0];
+    assert_eq!(request["type"], "llm-request", "{envelopes:?}");
+    assert_eq!(request["extension-point"], "registerService");
+    assert_eq!(
+        request["request"],
+        serde_json::json!({
+            "alias": "api",
+            "repo": "https://github.com/acme/api",
+            "missing": ["path", "description"],
+            "registered": [{ "alias": "web", "repo": "https://github.com/acme/web" }]
+        })
+    );
+    let messages: Vec<&str> = envelopes
+        .iter()
+        .filter_map(|envelope| envelope["message"].as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "received llm-response for `registerService`",
+            "dispatching primitive `register-service`",
+        ],
+        "{envelopes:?}"
+    );
+    assert_eq!(
+        envelopes.last().unwrap()["type"],
+        "complete",
+        "{envelopes:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(tmp.path().join(".ductus/config.toml")).unwrap(),
+        format!(
+            "{before}\n[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"../api\"\ndescription = \"owns the data models\"\n"
+        )
+    );
+}
+
+/// A registration `register-service` refuses halts the walk at the
+/// registration step with `primitive-failure`, located in the command file,
+/// and writes nothing: here an alias the registry already holds.
+#[test]
+fn exec_link_halts_on_a_refused_registration_writing_nothing() {
+    ensure_binary_built();
+    let tmp = tempfile::tempdir().unwrap();
+    let command = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../framework/commands/link.md"),
+    )
+    .unwrap();
+    write_procedure_repo(tmp.path(), "link", &command);
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    let before = "[services.api]\nrepo = \"https://github.com/acme/old\"\npath = \"../old\"\n";
+    fs::write(tmp.path().join(".ductus/config.toml"), before).unwrap();
+
+    let mut child = ductus_command(runtime_binary())
+        .args(["exec", "link"])
+        .current_dir(tmp.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn runtime");
+    let mut stdin = child.stdin.take().unwrap();
+    stdin
+        .write_all(
+            b"{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"alias\":\"api\",\"repo\":\"https://github.com/acme/api\",\"path\":\"../api\"}}\n",
+        )
+        .unwrap();
+    drop(stdin);
+
+    let stdout = child.stdout.take().unwrap();
+    let envelopes: Vec<Value> = BufReader::new(stdout)
+        .lines()
+        .map(Result::unwrap)
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str(&line).unwrap())
+        .collect();
+    let status = child.wait().unwrap();
+    assert_eq!(status.code(), Some(1), "{envelopes:?}");
+    let error = envelopes.last().unwrap();
+    assert_eq!(error["type"], "error", "{envelopes:?}");
+    assert_eq!(error["code"], "primitive-failure", "{envelopes:?}");
+    assert!(
+        error["message"]
+            .as_str()
+            .unwrap()
+            .contains("already registered"),
+        "{error}"
+    );
+    assert_eq!(
+        error["location"]["file"], "framework/commands/link.md",
+        "{error}"
+    );
+    assert_eq!(
+        fs::read_to_string(tmp.path().join(".ductus/config.toml")).unwrap(),
+        before
+    );
+}
