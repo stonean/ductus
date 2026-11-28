@@ -4,8 +4,8 @@
 //! `write-boundary`) that LLM extension points need into the typed
 //! [`WriteCodeRequest`] / [`WriteSpecBodyRequest`] /
 //! [`AssessSpecQualityRequest`] / [`AskClarifyQuestionRequest`] /
-//! [`RouteInboxItemRequest`] / [`RouteFoldRequest`] / [`VerifyCriteriaRequest`] /
-//! [`PerformReviewRequest`] shapes defined in
+//! [`RouteInboxItemRequest`] / [`RouteFoldRequest`] / [`RegisterServiceRequest`] /
+//! [`VerifyCriteriaRequest`] / [`PerformReviewRequest`] shapes defined in
 //! [`crate::schema::extensions`]. The interpreter calls
 //! [`build_extension_request`] just before emitting an `llm-request` envelope;
 //! the result replaces the previous "dump the walker context as the request"
@@ -211,7 +211,8 @@ impl PayloadError {
 /// `content-form: path` ([`ContentForm`]). A body the runtime could not read
 /// is never bounded: it stays as inline sends it. A request still past the
 /// size then moves the lists that grow with entries, and its legacy tail, to a
-/// file ([`bound_lists`]). `routeInboxItem` carries no body, only lists.
+/// file ([`bound_lists`]). `routeInboxItem` and `registerService` carry no
+/// body, only lists.
 ///
 /// # Errors
 ///
@@ -401,7 +402,7 @@ fn bound_lists(
 /// Serialize a typed request as the entire payload, with no legacy context
 /// tail. Shared epilogue for the builders the data model documents as
 /// bare-typed (`assessSpecQuality`, `askClarifyQuestion`, `routeInboxItem`,
-/// `routeFold`, `verifyCriteria`) — the previous raw walker-context dump is exactly the
+/// `routeFold`, `registerService`, `verifyCriteria`) — the previous raw walker-context dump is exactly the
 /// behavior those builders replace.
 fn typed_only<T: Serialize>(typed: &T) -> Value {
     serde_json::to_value(typed).unwrap_or(Value::Null)

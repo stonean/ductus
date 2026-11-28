@@ -10,7 +10,7 @@ This spec ships a substantial new artifact: a Rust binary, `ductus`, built from 
 2. **The primitive operations** implemented in-process, each with a deterministic core and a thin CLI/MCP/JSON-protocol wrapper. State-modifying primitives use tempfile-plus-rename atomicity.
 3. **A markdown procedure parser** for slash command Instructions sections, hand-walked over `pulldown-cmark`'s event stream. The parser produces a typed AST the interpreter walks.
 4. **An interpreter** that walks the AST, calls primitives in-process, and round-trips JSON messages over stdio for LLM extension points and gates.
-5. **Three extension points** (`assessSpecQuality`, `writeCode`, `writeSpecBody`) with versioned request/response schemas defined in `data-model.md` and serialized via `serde`.
+5. **Extension points** — the initial three, `assessSpecQuality`, `writeCode` and `writeSpecBody`, and the follow-on points spec.md §LLM extension points lists — with versioned request/response schemas defined in `data-model.md` and serialized via `serde`.
 6. **Six rewritten slash command files** under `framework/commands/`, adopting the parseable conventions.
 7. **Two new CI workflows**: `runtime.yml` (per-PR build + test on changes to runtime source paths) and a release workflow triggered by tags that cross-compiles and uploads artifacts.
 8. **Parseability check** in `framework-checks.yml` — `scripts/lint-procedure-parseability.sh` runs `ductus parse --check` against every `framework/commands/*.md` and `framework/bootstrap/*.md` file, tolerating legacy prose only for a file on the `runtime/legacy-prose-commands.txt` allowlist.
